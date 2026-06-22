@@ -1,0 +1,66 @@
+{
+  "name": "4GUARD RF Terminal",
+  "short_name": "4G Terminal",
+  "description": "4GUARD WMS RF Terminal — Operaciones de almacén offline-first",
+  "theme_color": "#1B2B4B",
+  "background_color": "#0D1A2E",
+  "display": "standalone",
+  "orientation": "landscape",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "assets/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Recepción",
+      "short_name": "Recepción",
+      "url": "/receiving",
+      "icons": [{ "src": "assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Picking",
+      "short_name": "Picking",
+      "url": "/picking",
+      "icons": [{ "src": "assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false
+}

@@ -1,0 +1,55 @@
+<!-- apps/rf-terminal/src/app/shared/components/scan-input/scan-input.component.html -->
+<div class="scan-input-wrapper" [class.scan-input-wrapper--scanning]="isScanning()">
+  <!-- Label -->
+  <label [for]="'scan-field-' + label" class="scan-input__label">
+    <span class="scan-input__label-icon" aria-hidden="true">📷</span>
+    {{ label }}
+  </label>
+
+  <!-- Campo de escaneo -->
+  <div class="scan-input__field-wrapper">
+    <input
+      #inputRef
+      [id]="'scan-field-' + label"
+      type="text"
+      class="scan-input__field"
+      [class.scan-input__field--scanning]="isScanning()"
+      [disabled]="disabled"
+      [placeholder]="placeholder"
+      [value]="inputValue()"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="characters"
+      spellcheck="false"
+      (input)="onInput($event)"
+      (keydown)="onKeyDown($event)"
+      aria-autocomplete="none"
+      [attr.aria-label]="label"
+    />
+
+    <!-- Indicador de escaneo activo -->
+    @if (isScanning()) {
+      <div class="scan-input__scanner-indicator" aria-hidden="true" role="status">
+        <span class="scan-input__scanner-dot"></span>
+        <span class="scan-input__scanner-text">Escaneando...</span>
+      </div>
+    }
+
+    <!-- Botón limpiar -->
+    @if (inputValue() && !disabled) {
+      <button
+        type="button"
+        id="scan-clear-btn"
+        class="scan-input__clear-btn"
+        (click)="clear()"
+        aria-label="Limpiar campo de escaneo">
+        ✕
+      </button>
+    }
+  </div>
+
+  <!-- Hint -->
+  <p class="scan-input__hint">
+    Escanea el código de barras o ingrésalo manualmente y presiona Enter
+  </p>
+</div>

@@ -1,0 +1,92 @@
+/**
+ * ============================================================
+ * 4GUARD RF Terminal — Global Styles (PWA Tablet)
+ * ============================================================
+ */
+
+/* Tokens base (comparte colores de la paleta 4GUARD) */
+@import '../../apps/admin-console/src/assets/design-tokens.css';
+
+/* Tokens específicos de tablet RF */
+@import './assets/rf-design-tokens.css';
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* Deshabilitar selección de texto en tablet para evitar acciones accidentales */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  /* Evitar ajuste automático de texto en iOS */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Desactivar doble-tap zoom */
+  touch-action: manipulation;
+}
+
+body {
+  font-family: var(--font-primary);
+  font-size: var(--rf-font-size-md);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  color: var(--rf-text-primary);
+  background-color: var(--rf-background);
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height para mobile */
+  overflow-x: hidden;
+}
+
+/* ── Touch targets globales ─────────────────────────────── */
+/* Todo elemento interactivo debe cumplir 44x44px mínimo */
+button,
+[role="button"],
+a,
+input,
+select,
+textarea,
+label[for] {
+  min-height: var(--rf-touch-min);
+  min-width: var(--rf-touch-min);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ── Tipografía RF ────────────────────────────────────────── */
+h1, h2, h3 {
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--rf-text-primary);
+}
+
+h1 { font-size: var(--rf-font-size-3xl); }
+h2 { font-size: var(--rf-font-size-2xl); }
+h3 { font-size: var(--rf-font-size-xl); }
+
+/* ── Focus visible ────────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--rf-action-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
+}
+
+/* ── Scrollbar invisible en tablet ─────────────────────── */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+/* ── Selección de texto en campos permitidos ─────────────── */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

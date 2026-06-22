@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1B2B4B" />
+
+    <!-- SEO -->
+    <title>4GUARD WMS — Consola Administrativa</title>
+    <meta name="description" content="4GUARD Warehouse Management System 3PL — Consola Administrativa. Gestión de inventario, recepciones, despachos y control de calidad." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="author" content="4GUARD WMS" />
+
+    <!-- Open Graph (interno, sin crawl externo) -->
+    <meta property="og:title" content="4GUARD WMS Admin Console" />
+    <meta property="og:description" content="Sistema de Gestión de Almacenes 3PL" />
+    <meta property="og:type" content="website" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <fg-admin-root id="app-root">
+      <!-- Splash screen mientras carga Angular -->
+      <div id="initial-loader" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: #0D1A2E;
+        flex-direction: column;
+        gap: 16px;
+      ">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="8" fill="#1B2B4B"/>
+          <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle"
+            font-family="Inter, sans-serif" font-size="22" font-weight="700" fill="#00897B">4G</text>
+        </svg>
+        <div style="
+          width: 120px; height: 3px; background: #1B2B4B; border-radius: 2px; overflow: hidden;
+        ">
+          <div style="
+            height: 100%; width: 40%; background: #00897B;
+            animation: loading 1.2s ease-in-out infinite alternate;
+          "></div>
+        </div>
+        <style>
+          @keyframes loading {
+            from { transform: translateX(0); }
+            to   { transform: translateX(200%); }
+          }
+        </style>
+      </div>
+    </fg-admin-root>
+  </body>
+</html>

@@ -1,0 +1,227 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "analytics": false,
+    "packageManager": "npm"
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+
+    "admin-console": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "css",
+          "inlineTemplate": false,
+          "inlineStyle": false,
+          "standalone": true
+        }
+      },
+      "root": "apps/admin-console",
+      "sourceRoot": "apps/admin-console/src",
+      "prefix": "fg-admin",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/admin-console",
+            "index": "apps/admin-console/src/index.html",
+            "browser": "apps/admin-console/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "apps/admin-console/tsconfig.app.json",
+            "assets": [
+              { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" },
+              { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" }
+            ],
+            "styles": ["apps/admin-console/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
+                { "type": "anyComponentStyle", "maximumWarning": "4kb", "maximumError": "8kb" }
+              ],
+              "outputHashing": "all",
+              "optimization": true,
+              "sourceMap": false,
+              "namedChunks": false,
+              "aot": true,
+              "extractLicenses": true
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": { "buildTarget": "admin-console:build:production" },
+            "development": { "buildTarget": "admin-console:build:development" }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4200,
+            "host": "localhost"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "apps/admin-console/tsconfig.spec.json",
+            "karmaConfig": "apps/admin-console/karma.conf.js",
+            "assets": [
+              { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" }
+            ],
+            "styles": ["apps/admin-console/src/styles.css"],
+            "scripts": []
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["apps/admin-console/src/**/*.ts", "apps/admin-console/src/**/*.html"]
+          }
+        }
+      }
+    },
+
+    "rf-terminal": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "css",
+          "inlineTemplate": false,
+          "inlineStyle": false,
+          "standalone": true
+        }
+      },
+      "root": "apps/rf-terminal",
+      "sourceRoot": "apps/rf-terminal/src",
+      "prefix": "fg-rf",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/rf-terminal",
+            "index": "apps/rf-terminal/src/index.html",
+            "browser": "apps/rf-terminal/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "apps/rf-terminal/tsconfig.app.json",
+            "serviceWorker": "apps/rf-terminal/src/ngsw-config.json",
+            "assets": [
+              { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" },
+              { "glob": "favicon.ico", "input": "apps/rf-terminal/src", "output": "/" },
+              { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" }
+            ],
+            "styles": ["apps/rf-terminal/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                { "type": "initial", "maximumWarning": "600kb", "maximumError": "1.2mb" },
+                { "type": "anyComponentStyle", "maximumWarning": "4kb", "maximumError": "8kb" }
+              ],
+              "outputHashing": "all",
+              "optimization": true,
+              "sourceMap": false,
+              "namedChunks": false,
+              "aot": true,
+              "extractLicenses": true
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": { "buildTarget": "rf-terminal:build:production" },
+            "development": { "buildTarget": "rf-terminal:build:development" }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4201,
+            "host": "localhost"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "apps/rf-terminal/tsconfig.spec.json",
+            "karmaConfig": "apps/rf-terminal/karma.conf.js",
+            "assets": [
+              { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" }
+            ],
+            "styles": ["apps/rf-terminal/src/styles.css"],
+            "scripts": []
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["apps/rf-terminal/src/**/*.ts", "apps/rf-terminal/src/**/*.html"]
+          }
+        }
+      }
+    },
+
+    "shared-core": {
+      "projectType": "library",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "css",
+          "inlineTemplate": false,
+          "inlineStyle": false,
+          "standalone": true
+        }
+      },
+      "root": "libs/shared-core",
+      "sourceRoot": "libs/shared-core/src",
+      "prefix": "fg",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "libs/shared-core/ng-package.json",
+            "tsConfig": "libs/shared-core/tsconfig.lib.json"
+          },
+          "configurations": {
+            "production": { "tsConfig": "libs/shared-core/tsconfig.lib.prod.json" },
+            "development": { "tsConfig": "libs/shared-core/tsconfig.lib.json" }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "libs/shared-core/tsconfig.spec.json",
+            "karmaConfig": "libs/shared-core/karma.conf.js"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["libs/shared-core/src/**/*.ts", "libs/shared-core/src/**/*.html"]
+          }
+        }
+      }
+    }
+
+  }
+}

@@ -1,0 +1,8 @@
+/* apps/admin-console/src/app/app.component.css */
+/* El componente raíz ocupa el 100% del viewport */
+
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}

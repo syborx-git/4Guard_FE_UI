@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Viewport táctil optimizado para tablets industriales -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#0D1A2E" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- SEO -->
+    <title>4GUARD RF Terminal</title>
+    <meta name="description" content="4GUARD WMS RF Terminal — Aplicación PWA para operaciones de almacén en tablet. Recepción, picking y control de calidad offline-first." />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png" />
+
+    <!-- Google Fonts: Inter (peso más grande para tablet) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <fg-rf-root id="rf-app-root">
+      <!-- Splash PWA -->
+      <div id="rf-loader" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: #060D17;
+        flex-direction: column;
+        gap: 20px;
+      ">
+        <div style="
+          width: 72px; height: 72px;
+          background: #00897B;
+          border-radius: 16px;
+          display: flex; align-items: center; justify-content: center;
+          font-family: Inter, sans-serif;
+          font-size: 28px; font-weight: 800;
+          color: white;
+        ">RF</div>
+        <p style="
+          font-family: Inter, sans-serif;
+          color: rgba(255,255,255,0.5);
+          font-size: 14px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        ">4GUARD Terminal</p>
+      </div>
+    </fg-rf-root>
+  </body>
+</html>

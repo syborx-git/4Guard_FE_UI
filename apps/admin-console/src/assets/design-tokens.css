@@ -1,0 +1,207 @@
+/**
+ * ============================================================
+ * 4GUARD WMS — Design Tokens (Global CSS Custom Properties)
+ * apps/admin-console/src/assets/design-tokens.css
+ * ============================================================
+ *
+ * Este archivo define el sistema de diseño Antigravity para 4GUARD.
+ * Importar en styles.css con: @import './assets/design-tokens.css';
+ *
+ * Paleta semántica basada en roles de comunicación visual:
+ *   • Azul Naval   → Autoridad / UI Base
+ *   • Rojo Vibrante → Alertas Críticas / Bloqueos QM
+ *   • Amarillo Ámbar → Cuarentena / Estado 20
+ *   • Verde Esmeralda → Disponible / Estado 30
+ */
+
+:root {
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Azul Naval (Autoridad / UI Base)
+     ────────────────────────────────────────────────────────── */
+  --color-primary:         #1B2B4B;
+  --color-primary-light:   #2E4A7A;
+  --color-primary-lighter: #3D6499;
+  --color-primary-dark:    #0D1A2E;
+  --color-primary-darker:  #060D17;
+  --color-primary-50:      rgba(27, 43, 75, 0.05);
+  --color-primary-100:     rgba(27, 43, 75, 0.10);
+  --color-primary-200:     rgba(27, 43, 75, 0.20);
+
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Rojo Vibrante (Alertas Críticas / Bloqueo QM)
+     ────────────────────────────────────────────────────────── */
+  --color-danger:          #E53935;
+  --color-danger-light:    #FF6B6B;
+  --color-danger-dark:     #B71C1C;
+  --color-danger-50:       rgba(229, 57, 53, 0.05);
+  --color-danger-100:      rgba(229, 57, 53, 0.10);
+  --color-danger-200:      rgba(229, 57, 53, 0.20);
+
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Amarillo Ámbar (Cuarentena / Estado 20)
+     ────────────────────────────────────────────────────────── */
+  --color-warning:         #F9A825;
+  --color-warning-light:   #FFD54F;
+  --color-warning-dark:    #E65100;
+  --color-warning-50:      rgba(249, 168, 37, 0.05);
+  --color-warning-100:     rgba(249, 168, 37, 0.10);
+  --color-warning-200:     rgba(249, 168, 37, 0.20);
+
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Verde Esmeralda (Disponible / Estado 30)
+     ────────────────────────────────────────────────────────── */
+  --color-success:         #00897B;
+  --color-success-light:   #4DB6AC;
+  --color-success-dark:    #004D40;
+  --color-success-50:      rgba(0, 137, 123, 0.05);
+  --color-success-100:     rgba(0, 137, 123, 0.10);
+  --color-success-200:     rgba(0, 137, 123, 0.20);
+
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Neutros / Superficie
+     ────────────────────────────────────────────────────────── */
+  --color-surface:         #F5F7FA;
+  --color-surface-2:       #ECEEF2;
+  --color-background:      #E8EBF0;
+  --color-card:            #FFFFFF;
+  --color-card-hover:      #F8F9FC;
+  --color-border:          #D1D5DB;
+  --color-border-light:    #E5E7EB;
+  --color-divider:         #F3F4F6;
+
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Texto
+     ────────────────────────────────────────────────────────── */
+  --color-text-primary:    #1A1F36;
+  --color-text-secondary:  #6B7280;
+  --color-text-tertiary:   #9CA3AF;
+  --color-text-inverse:    #FFFFFF;
+  --color-text-on-primary: #FFFFFF;
+  --color-text-link:       #2E4A7A;
+  --color-text-link-hover: #1B2B4B;
+
+  /* ──────────────────────────────────────────────────────────
+     COLOR — Semantic Status (FSM States)
+     ────────────────────────────────────────────────────────── */
+  --status-10-color:   #2E4A7A;   /* Recibido */
+  --status-10-bg:      rgba(46, 74, 122, 0.10);
+  --status-20-color:   #E65100;   /* Cuarentena (ámbar oscuro para legibilidad) */
+  --status-20-bg:      rgba(249, 168, 37, 0.15);
+  --status-30-color:   #00897B;   /* Disponible */
+  --status-30-bg:      rgba(0, 137, 123, 0.10);
+  --status-40-color:   #1B2B4B;   /* Reservado */
+  --status-40-bg:      rgba(27, 43, 75, 0.10);
+  --status-50-color:   #BF360C;   /* En Picking */
+  --status-50-bg:      rgba(191, 54, 12, 0.10);
+  --status-60-color:   #004D40;   /* Despachado */
+  --status-60-bg:      rgba(0, 77, 64, 0.10);
+  --status-70-color:   #B71C1C;   /* Bloqueado QM */
+  --status-70-bg:      rgba(183, 28, 28, 0.10);
+  --status-80-color:   #6B7280;   /* Dado de Baja */
+  --status-80-bg:      rgba(107, 114, 128, 0.10);
+
+  /* ──────────────────────────────────────────────────────────
+     TIPOGRAFÍA
+     ────────────────────────────────────────────────────────── */
+  --font-primary:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:       'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  --font-size-xs:    0.625rem;   /* 10px */
+  --font-size-sm:    0.75rem;    /* 12px */
+  --font-size-base:  0.875rem;   /* 14px */
+  --font-size-md:    1rem;       /* 16px */
+  --font-size-lg:    1.125rem;   /* 18px */
+  --font-size-xl:    1.25rem;    /* 20px */
+  --font-size-2xl:   1.5rem;     /* 24px */
+  --font-size-3xl:   1.875rem;   /* 30px */
+  --font-size-4xl:   2.25rem;    /* 36px */
+
+  --font-weight-light:    300;
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --font-weight-extrabold:800;
+
+  --line-height-tight:  1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed:1.75;
+
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide:   0.025em;
+  --letter-spacing-wider:  0.05em;
+  --letter-spacing-widest: 0.1em;
+
+  /* ──────────────────────────────────────────────────────────
+     ESPACIADO (escala de 4px)
+     ────────────────────────────────────────────────────────── */
+  --space-1:  0.25rem;   /* 4px  */
+  --space-2:  0.5rem;    /* 8px  */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+
+  /* ──────────────────────────────────────────────────────────
+     BORDES
+     ────────────────────────────────────────────────────────── */
+  --radius-sm:   0.25rem;   /* 4px  */
+  --radius-md:   0.375rem;  /* 6px  */
+  --radius-lg:   0.5rem;    /* 8px  */
+  --radius-xl:   0.75rem;   /* 12px */
+  --radius-2xl:  1rem;      /* 16px */
+  --radius-3xl:  1.5rem;    /* 24px */
+  --radius-full: 9999px;
+
+  --border-width-1: 1px;
+  --border-width-2: 2px;
+
+  /* ──────────────────────────────────────────────────────────
+     SOMBRAS
+     ────────────────────────────────────────────────────────── */
+  --shadow-xs:  0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm:  0 1px 3px 0 rgba(0, 0, 0, 0.10), 0 1px 2px -1px rgba(0, 0, 0, 0.10);
+  --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.10);
+  --shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+  --shadow-xl:  0 20px 25px -5px rgba(0, 0, 0, 0.10), 0 8px 10px -6px rgba(0, 0, 0, 0.10);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  --shadow-primary: 0 4px 14px 0 rgba(27, 43, 75, 0.30);
+  --shadow-success: 0 4px 14px 0 rgba(0, 137, 123, 0.25);
+  --shadow-danger:  0 4px 14px 0 rgba(229, 57, 53, 0.25);
+
+  /* ──────────────────────────────────────────────────────────
+     TRANSICIONES
+     ────────────────────────────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   350ms ease;
+  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ──────────────────────────────────────────────────────────
+     Z-INDEX (escala)
+     ────────────────────────────────────────────────────────── */
+  --z-dropdown:  100;
+  --z-sticky:    200;
+  --z-fixed:     300;
+  --z-overlay:   400;
+  --z-modal:     500;
+  --z-popover:   600;
+  --z-toast:     700;
+  --z-tooltip:   800;
+
+  /* ──────────────────────────────────────────────────────────
+     LAYOUT — admin-console
+     ────────────────────────────────────────────────────────── */
+  --sidebar-width:          260px;
+  --sidebar-collapsed-width: 72px;
+  --header-height:           64px;
+  --content-max-width:       1440px;
+}

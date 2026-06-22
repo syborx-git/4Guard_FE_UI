@@ -1,0 +1,104 @@
+<!-- apps/admin-console/src/app/shared/components/shell/shell.component.html -->
+<div class="shell" [class.shell--collapsed]="isSidebarCollapsed()">
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar" role="navigation" aria-label="Menú principal">
+    <!-- Logo -->
+    <div class="sidebar__logo">
+      <div class="sidebar__logo-mark">4G</div>
+      @if (!isSidebarCollapsed()) {
+        <div class="sidebar__logo-text">
+          <span class="sidebar__brand">4GUARD</span>
+          <span class="sidebar__subtitle">WMS Console</span>
+        </div>
+      }
+    </div>
+
+    <!-- Toggle collapse -->
+    <button
+      id="sidebar-toggle-btn"
+      class="sidebar__toggle"
+      (click)="toggleSidebar()"
+      [attr.aria-expanded]="!isSidebarCollapsed()"
+      aria-label="Colapsar menú">
+      {{ isSidebarCollapsed() ? '→' : '←' }}
+    </button>
+
+    <!-- Navegación -->
+    <nav class="sidebar__nav">
+      <ul class="sidebar__nav-list" role="list">
+        @for (item of visibleNavItems(); track item.route) {
+          <li class="sidebar__nav-item">
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="sidebar__nav-link--active"
+              [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+              class="sidebar__nav-link"
+              [attr.aria-label]="item.label"
+              [attr.title]="isSidebarCollapsed() ? item.label : null">
+              <span class="sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+              @if (!isSidebarCollapsed()) {
+                <span class="sidebar__nav-label">{{ item.label }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <!-- User profile -->
+    <div class="sidebar__user">
+      <div class="sidebar__avatar" aria-hidden="true">
+        {{ authState.userInitials() }}
+      </div>
+      @if (!isSidebarCollapsed()) {
+        <div class="sidebar__user-info">
+          <span class="sidebar__user-name">{{ authState.userFullName() }}</span>
+          <span class="sidebar__user-role">{{ authState.roleLabel() }}</span>
+        </div>
+        <button
+          id="logout-btn"
+          class="sidebar__logout"
+          (click)="logout()"
+          aria-label="Cerrar sesión">
+          ⇥
+        </button>
+      }
+    </div>
+  </aside>
+
+  <!-- ─── MAIN CONTENT ────────────────────────────────────── -->
+  <div class="shell__main">
+
+    <!-- Header -->
+    <header class="shell__header" role="banner">
+      <div class="shell__header-left">
+        <h1 class="shell__page-title">4GUARD WMS</h1>
+      </div>
+      <div class="shell__header-right">
+        <!-- Indicador de sincronización offline -->
+        @if (syncState.hasPending()) {
+          <div
+            class="sync-indicator"
+            [class.sync-indicator--offline]="syncState.isOffline()"
+            [class.sync-indicator--syncing]="syncState.isSyncing()"
+            role="status"
+            [attr.aria-label]="syncState.statusMessage()">
+            <span class="sync-indicator__dot"></span>
+            <span class="sync-indicator__text">{{ syncState.statusMessage() }}</span>
+          </div>
+        }
+        <!-- Sucursal activa -->
+        <div class="shell__branch-badge">
+          <span class="shell__branch-label">Sucursal:</span>
+          <span class="shell__branch-id">{{ authState.branchId() }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Router content -->
+    <main class="shell__content" role="main" id="main-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
