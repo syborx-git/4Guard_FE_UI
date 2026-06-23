@@ -1,0 +1,203 @@
+/**
+ * @file shipping-list.component.css
+ * @description Estilos para la lista de despacho (Shipping/Outbound).
+ */
+
+.shipping-container {
+  padding: var(--space-6);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  animation: fade-in var(--transition-normal);
+}
+
+.shipping-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.shipping-header h1 {
+  font-size: var(--font-size-3xl);
+  color: var(--color-primary);
+  margin-bottom: var(--space-1);
+}
+
+.shipping-header p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* Alert panel for overdue orders */
+.alert-panel {
+  background-color: var(--color-danger-50);
+  border: 1px solid var(--color-danger-light);
+  color: var(--color-danger-dark);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: var(--font-weight-medium);
+}
+
+.alert-icon {
+  font-size: var(--font-size-xl);
+}
+
+/* Table card */
+.shipping-table-card {
+  background-color: var(--color-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
+}
+
+.table-filters {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.filter-control {
+  min-width: 180px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-divider);
+  font-size: var(--font-size-base);
+}
+
+.table th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  background-color: var(--color-surface);
+}
+
+.table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.table tbody tr:hover {
+  background-color: var(--color-card-hover);
+}
+
+/* Priority Indicators (1 = Max, 5 = Min) */
+.priority-pill {
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-bold);
+  display: inline-block;
+  text-align: center;
+}
+
+.priority-1 {
+  background-color: var(--color-danger-100);
+  color: var(--color-danger-dark);
+}
+
+.priority-2 {
+  background-color: var(--color-warning-100);
+  color: var(--color-warning-dark);
+}
+
+.priority-3 {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary);
+}
+
+.priority-4,
+.priority-5 {
+  background-color: var(--color-success-100);
+  color: var(--color-success-dark);
+}
+
+/* Status styles */
+.status-pill {
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+}
+
+.status-pending {
+  background-color: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+
+.status-assigned {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-light);
+}
+
+.status-picking {
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-dark);
+}
+
+.status-ready {
+  background-color: var(--color-success-50);
+  color: var(--color-success-dark);
+}
+
+.status-dispatched {
+  background-color: var(--color-success-200);
+  color: var(--color-success-dark);
+}
+
+/* Buttons */
+.btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-light);
+}
+
+.btn-secondary {
+  background-color: var(--color-surface-2);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-border-light);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}

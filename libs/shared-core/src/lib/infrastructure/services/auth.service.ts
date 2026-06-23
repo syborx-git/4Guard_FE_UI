@@ -18,6 +18,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, map } from 'rxjs';
 import { AuthResponse, JwtPayload, LoginRequest, User } from '../../domain/models/user.model';
 import { UserRole } from '../../domain/enums/role.enum';
+import { environment } from '../../../environments/environment';
 
 /** Claves de localStorage para persistencia de sesión */
 const STORAGE_KEYS = {
@@ -58,7 +59,7 @@ export class AuthService {
    */
   login(credentials: LoginRequest): Observable<User> {
     this._isLoading.set(true);
-    return this.http.post<AuthResponse>('/api/auth/login', credentials).pipe(
+    return this.http.post<AuthResponse>(`${environment.apiBaseUrl}/api/auth/login`, credentials).pipe(
       tap((response) => {
         this.saveSession(response);
         this._isLoading.set(false);
@@ -83,7 +84,7 @@ export class AuthService {
   refreshToken(): Observable<string> {
     const refreshToken = this.getRefreshToken();
     return this.http
-      .post<AuthResponse>('/api/auth/refresh', { refreshToken })
+      .post<AuthResponse>(`${environment.apiBaseUrl}/api/auth/refresh`, { refreshToken })
       .pipe(
         tap((response) => this.saveSession(response)),
         map((response) => response.accessToken),

@@ -1,0 +1,169 @@
+/**
+ * @file admin-panel.component.css
+ * @description Estilos para el panel de administración general.
+ */
+
+.admin-panel-container {
+  padding: var(--space-6);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  animation: fade-in var(--transition-normal);
+}
+
+.panel-header {
+  margin-bottom: var(--space-6);
+}
+
+.panel-header h1 {
+  font-size: var(--font-size-3xl);
+  color: var(--color-primary);
+  margin-bottom: var(--space-1);
+}
+
+.panel-header p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* Grid de Tarjetas de Configuración */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.setting-card {
+  background-color: var(--color-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  border: 1px solid var(--color-border-light);
+}
+
+.setting-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-200);
+}
+
+.card-icon {
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--space-3);
+  display: inline-block;
+}
+
+.setting-card h3 {
+  font-size: var(--font-size-xl);
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.setting-card p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+  min-height: 42px;
+}
+
+/* Form Groups y Controls */
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-group label {
+  display: block;
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.form-control {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-control:focus {
+  border-color: var(--color-primary-light);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* Acciones y Botones */
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-base);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-light);
+}
+
+.btn-secondary {
+  background-color: var(--color-surface-2);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-border-light);
+}
+
+/* Sucursales List */
+.branch-list {
+  list-style: none;
+  border-top: 1px solid var(--color-divider);
+  padding-top: var(--space-3);
+}
+
+.branch-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.branch-name {
+  font-weight: var(--font-weight-medium);
+}
+
+.branch-status {
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.status-active {
+  background-color: var(--color-success-50);
+  color: var(--color-success-dark);
+}
+
+.status-inactive {
+  background-color: var(--color-danger-50);
+  color: var(--color-danger-dark);
+}

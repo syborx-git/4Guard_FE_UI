@@ -1,0 +1,125 @@
+<!-- sync-monitor.component.html — P11 -->
+<div class="sync" role="main" aria-label="Monitor de Sincronización">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="sync__header">
+    <h1 class="sync__title">🔄 Monitor de Sync</h1>
+    <!-- Indicador de conectividad -->
+    <div class="conn-indicator" role="status"
+      [class.conn-indicator--online]="isOnline()"
+      [class.conn-indicator--offline]="!isOnline()"
+      [attr.aria-label]="isOnline() ? 'En línea' : 'Sin conexión'">
+      <span class="conn-dot" aria-hidden="true"></span>
+      <span class="conn-label">{{ isOnline() ? 'En línea' : 'Sin conexión' }}</span>
+    </div>
+  </div>
+
+  <!-- ── Stats ─────────────────────────────────────────────── -->
+  <div class="sync__stats">
+    <div class="sync-stat" [class.sync-stat--warn]="pendingCount() > 0">
+      <span class="sync-stat__val">{{ pendingCount() }}</span>
+      <span class="sync-stat__lbl">Pendientes</span>
+    </div>
+    <div class="sync-stat" [class.sync-stat--error]="errorCount() > 0">
+      <span class="sync-stat__val">{{ errorCount() }}</span>
+      <span class="sync-stat__lbl">Con reintentos</span>
+    </div>
+    <div class="sync-stat sync-stat--ok">
+      <span class="sync-stat__val">{{ syncedHistory().length }}</span>
+      <span class="sync-stat__lbl">Sincronizados</span>
+    </div>
+  </div>
+
+  <!-- ── Botón Sync Manual ─────────────────────────────────── -->
+  <div class="sync__manual">
+    @if (isSyncing()) {
+      <div class="sync-progress" role="progressbar"
+        [attr.aria-valuenow]="manualSyncProgress()"
+        aria-valuemin="0" aria-valuemax="100">
+        <div class="sync-progress__bar" [style.width.%]="manualSyncProgress()"></div>
+        <span class="sync-progress__pct" aria-hidden="true">{{ manualSyncProgress() }}%</span>
+      </div>
+    } @else {
+      <button
+        id="sync-manual-btn"
+        class="sync-btn"
+        [disabled]="!isOnline() || pendingCount() === 0"
+        (click)="manualSync()"
+        [attr.aria-label]="'Sincronizar ' + pendingCount() + ' operaciones pendientes'">
+        <span class="sync-btn__icon" aria-hidden="true">☁</span>
+        <span>Sincronizar ahora ({{ pendingCount() }})</span>
+      </button>
+    }
+
+    @if (lastSync()) {
+      <p class="sync__last" role="status">
+        Última sync: {{ formatTime(lastSync()!.toISOString()) }}
+      </p>
+    }
+
+    @if (!isOnline()) {
+      <div class="offline-warning" role="alert">
+        <span aria-hidden="true">📵</span>
+        <span>Sin conexión. Las operaciones se sincronizarán automáticamente al reconectarse.</span>
+      </div>
+    }
+  </div>
+
+  <!-- ── Cola Pendiente ────────────────────────────────────── -->
+  @if (pendingCount() > 0) {
+    <div class="sync__section">
+      <h2 class="sync__section-title">
+        Cola pendiente
+        <span class="section-badge section-badge--warn">{{ pendingCount() }}</span>
+      </h2>
+      <div class="sync-list" role="list" aria-label="Operaciones pendientes de sincronización">
+        @for (entry of queue(); track entry.id) {
+          <div class="sync-entry sync-entry--pending" role="listitem">
+            <div class="sync-entry__type" [class]="'type-' + entry.type.toLowerCase()">
+              {{ getTypeLabel(entry.type) }}
+            </div>
+            <div class="sync-entry__body">
+              <span class="sync-entry__desc">{{ entry.description }}</span>
+              <span class="sync-entry__time">{{ formatTime(entry.timestamp) }}</span>
+            </div>
+            @if (entry.retries > 0) {
+              <span class="sync-entry__retries" role="img" [attr.aria-label]="entry.retries + ' reintentos'">
+                ↻ {{ entry.retries }}
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Historial Sincronizado ────────────────────────────── -->
+  @if (syncedHistory().length > 0) {
+    <div class="sync__section">
+      <h2 class="sync__section-title">
+        Historial
+        <span class="section-badge section-badge--ok">{{ syncedHistory().length }}</span>
+      </h2>
+      <div class="sync-list" role="list" aria-label="Operaciones sincronizadas">
+        @for (entry of syncedHistory(); track entry.id) {
+          <div class="sync-entry sync-entry--synced" role="listitem">
+            <span class="sync-entry__ok" aria-hidden="true">✓</span>
+            <div class="sync-entry__body">
+              <span class="sync-entry__desc">{{ entry.description }}</span>
+              <span class="sync-entry__time">{{ formatTime(entry.timestamp) }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Sin pendientes ────────────────────────────────────── -->
+  @if (pendingCount() === 0 && !isSyncing()) {
+    <div class="sync__empty" role="status">
+      <span aria-hidden="true">☁✓</span>
+      <span>Todo sincronizado. No hay operaciones pendientes.</span>
+    </div>
+  }
+
+</div>

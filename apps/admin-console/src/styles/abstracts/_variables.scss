@@ -1,0 +1,79 @@
+// ============================================================
+// 4GUARD WMS — abstracts/_variables.scss
+// Tokens de diseño: colores, radios, z-index, sombras
+// ============================================================
+
+// ── Colores base ─────────────────────────────────────────────
+$bg-primary:        #0E0E0D;
+$surface:           #131412;
+$surface-secondary: #1F201E;
+$surface-elevated:  #343533;
+
+$gold-primary:      #EAC349;
+$gold-light:        #FFE088;
+$gold-subtle:       rgba(234, 195, 73, 0.12);
+$gold-border:       rgba(234, 195, 73, 0.25);
+$gold-hover-bg:     rgba(234, 195, 73, 0.08);
+
+$purple-corporate:  #2D1B44;
+$purple-light:      #D5BDF0;
+$purple-subtle:     rgba(45, 27, 68, 0.6);
+
+$text-primary:      #E4E2DE;
+$text-secondary:    #CCC4CE;
+$text-tertiary:     #958E98;
+$text-inverse:      #0E0E0D;
+
+$border-default:    #958E98;
+$border-subtle:     rgba(149, 142, 152, 0.3);
+$border-gold:       rgba(234, 195, 73, 0.4);
+
+$danger:            #EF5350;
+$danger-dark:       #B71C1C;
+$danger-bg:         rgba(239, 83, 80, 0.10);
+$success:           #66BB6A;
+$success-bg:        rgba(102, 187, 106, 0.10);
+$warning:           #FFA726;
+$warning-bg:        rgba(255, 167, 38, 0.10);
+$info:              #42A5F5;
+$info-bg:           rgba(66, 165, 245, 0.10);
+
+// ── Radios ───────────────────────────────────────────────────
+$radius-xs:   2px;
+$radius-sm:   4px;   // Componentes pequeños (chips, badges)
+$radius-md:   8px;   // Componentes estándar (cards, inputs)
+$radius-lg:   12px;  // Componentes destacados (modales)
+$radius-full: 9999px;
+
+// ── Sombras ──────────────────────────────────────────────────
+// Preferir elevación por color, no sombras grandes
+$shadow-none: none;
+$shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+$shadow-sm:   0 2px 4px rgba(0, 0, 0, 0.5);
+$shadow-gold: 0 0 16px rgba(234, 195, 73, 0.12);
+
+// ── Z-index ──────────────────────────────────────────────────
+$z-base:     1;
+$z-dropdown: 100;
+$z-sticky:   200;
+$z-fixed:    300;
+$z-overlay:  400;
+$z-modal:    500;
+$z-toast:    700;
+$z-tooltip:  800;
+
+// ── Transiciones ─────────────────────────────────────────────
+$ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+$duration-fast:   150ms;
+$duration-normal: 300ms;
+$duration-slow:   500ms;
+
+$transition-fast:   #{$duration-fast} #{$ease-standard};
+$transition-normal: #{$duration-normal} #{$ease-standard};
+$transition-slow:   #{$duration-slow} #{$ease-standard};
+
+// ── Layout ───────────────────────────────────────────────────
+$sidebar-width:           256px;
+$sidebar-collapsed-width: 64px;
+$header-height:           64px;
+$content-max-width:       1440px;

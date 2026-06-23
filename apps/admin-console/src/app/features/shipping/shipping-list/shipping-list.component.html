@@ -1,0 +1,108 @@
+<div class="shipping-container">
+  <div class="shipping-header">
+    <div>
+      <h1>Despacho de Salidas</h1>
+      <p>Gestión y asignación de órdenes de transferencia para despacho de mercadería.</p>
+    </div>
+  </div>
+
+  <!-- Alerta de Órdenes Vencidas -->
+  @if (overdueCount() > 0) {
+    <div class="alert-panel">
+      <span class="alert-icon">⚠️</span>
+      <span>Atención: Hay {{ overdueCount() }} órdenes de transferencia vencidas o en riesgo crítico de vencimiento.</span>
+    </div>
+  }
+
+  <div class="shipping-table-card">
+    <!-- Filtros de la Tabla -->
+    <div class="table-filters">
+      <input type="text" class="form-control filter-control" placeholder="Buscar por número..." [value]="filterText()" (input)="onFilterChange($event)">
+      
+      <select class="form-control filter-control" [value]="selectedStatus()" (change)="onStatusChange($event)">
+        <option value="">Todos los estados</option>
+        <option value="PENDING">Pendiente de Asignar</option>
+        <option value="ASSIGNED">Asignada (Picking)</option>
+        <option value="READY_TO_SHIP">Listo para Despacho</option>
+        <option value="DISPATCHED">Despachado</option>
+      </select>
+
+      <select class="form-control filter-control" [value]="selectedPriority()" (change)="onPriorityChange($event)">
+        <option value="">Todas las prioridades</option>
+        <option value="1">Prioridad 1 (Máxima/Crítica)</option>
+        <option value="2">Prioridad 2 (Alta)</option>
+        <option value="3">Prioridad 3 (Media)</option>
+        <option value="4">Prioridad 4 (Baja)</option>
+        <option value="5">Prioridad 5 (Mínima)</option>
+      </select>
+    </div>
+
+    <!-- Tabla de Despacho -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Número Orden</th>
+          <th>Cliente</th>
+          <th>Tipo</th>
+          <th>Prioridad</th>
+          <th>Fecha Límite</th>
+          <th>Operario Asignado</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (order of filteredOrders(); track order.id) {
+          <tr>
+            <td style="font-weight: var(--font-weight-semibold); font-family: var(--font-mono);">
+              {{ order.orderNumber }}
+            </td>
+            <td>{{ order.clientName }}</td>
+            <td>{{ getOrderTypeLabel(order.type) }}</td>
+            <td>
+              <span class="priority-pill" [ngClass]="'priority-' + order.priority">
+                P{{ order.priority }}
+              </span>
+            </td>
+            <td [style.color]="isOverdue(order.dueDate) ? 'var(--color-danger)' : 'inherit'">
+              {{ order.dueDate | date:'short' }}
+              @if (isOverdue(order.dueDate)) {
+                <small style="font-weight: bold; display: block;">¡Vencido!</small>
+              }
+            </td>
+            <td>
+              @if (order.status !== 'READY_TO_SHIP' && order.status !== 'DISPATCHED') {
+                <select class="form-select" (change)="onAssignOperator(order, $event)">
+                  <option value="">Sin Asignar</option>
+                  @for (op of operators(); track op.id) {
+                    <option [value]="op.id" [selected]="order.assignedOperatorId === op.id">
+                      {{ op.name }}
+                    </option>
+                  }
+                </select>
+              } @else {
+                <span>{{ order.assignedOperatorName || 'N/A' }}</span>
+              }
+            </td>
+            <td>
+              <span class="status-pill" [ngClass]="getStatusClass(order.status)">
+                {{ getStatusLabel(order.status) }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-primary" [disabled]="order.status !== 'READY_TO_SHIP'" (click)="dispatchOrder(order)">
+                Despachar
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--color-text-secondary); padding: var(--space-8);">
+              No hay órdenes de transferencia que coincidan con la búsqueda.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

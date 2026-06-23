@@ -1,0 +1,80 @@
+<div class="admin-panel-container">
+  <div class="panel-header">
+    <h1>Administración del Sistema</h1>
+    <p>Gestión de configuraciones globales, sucursales y parámetros operativos del WMS.</p>
+  </div>
+
+  <div class="settings-grid">
+    <!-- Configuración del Sistema -->
+    <div class="setting-card">
+      <span class="card-icon">⚙️</span>
+      <h3>Configuración Global</h3>
+      <p>Ajusta el intervalo de sincronización y los tiempos de expiración de sesión.</p>
+      
+      <div class="form-group">
+        <label for="sync-interval">Intervalo de Sincronización Offline (segundos)</label>
+        <input id="sync-interval" type="number" class="form-control" [value]="syncInterval()" (input)="updateSyncInterval($event)">
+      </div>
+
+      <div class="form-group">
+        <label for="session-timeout">Expiración de Sesión (minutos)</label>
+        <input id="session-timeout" type="number" class="form-control" [value]="sessionTimeout()" (input)="updateSessionTimeout($event)">
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-primary" (click)="saveSystemConfig()">Guardar Cambios</button>
+      </div>
+    </div>
+
+    <!-- Gestión de Sucursales -->
+    <div class="setting-card">
+      <span class="card-icon">🏢</span>
+      <h3>Sucursales / Almacenes</h3>
+      <p>Monitorea y da de alta sucursales activas en el sistema.</p>
+
+      <ul class="branch-list">
+        @for (branch of branches(); track branch.id) {
+          <li class="branch-item">
+            <div>
+              <span class="branch-name">{{ branch.name }}</span>
+              <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Código: {{ branch.code }}</div>
+            </div>
+            <span class="branch-status" [class.status-active]="branch.active" [class.status-inactive]="!branch.active">
+              {{ branch.active ? 'Activo' : 'Inactivo' }}
+            </span>
+          </li>
+        }
+      </ul>
+
+      <div class="card-actions" style="margin-top: var(--space-6);">
+        <button class="btn btn-secondary" (click)="addBranch()">+ Nueva Sucursal</button>
+      </div>
+    </div>
+
+    <!-- Estado del Servidor & Licencias -->
+    <div class="setting-card">
+      <span class="card-icon">🛡️</span>
+      <h3>Estado y Seguridad</h3>
+      <p>Detalles del servidor API, base de datos local y licencia de uso.</p>
+      
+      <div style="margin-bottom: var(--space-4);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span style="color: var(--color-text-secondary);">API Server Status:</span>
+          <span style="font-weight: var(--font-weight-semibold); color: var(--color-success);">ONLINE</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span style="color: var(--color-text-secondary);">Base de Datos:</span>
+          <span style="font-weight: var(--font-weight-semibold); color: var(--color-primary-light);">Dexie.js v3.2.4</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span style="color: var(--color-text-secondary);">Licencia Comercial:</span>
+          <span style="font-weight: var(--font-weight-semibold); color: var(--color-success-dark);">Válida · 3PL Unlimited</span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-secondary" (click)="runDiagnostics()">Ejecutar Diagnóstico</button>
+      </div>
+    </div>
+  </div>
+</div>

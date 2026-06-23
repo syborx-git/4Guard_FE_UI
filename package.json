@@ -28,12 +28,15 @@
     "dexie": "^3.2.7",
     "rxjs": "~7.8.0",
     "tslib": "^2.6.0",
-    "zone.js": "~0.14.4"
+    "zone.js": "~0.14.4",
+    "chart.js": "^4.4.0",
+    "ng2-charts": "^5.0.4"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.3.0",
     "@angular/cli": "^17.3.0",
     "@angular/compiler-cli": "^17.3.0",
+    "sass": "^1.69.0",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^20.0.0",
     "jasmine-core": "~5.1.0",

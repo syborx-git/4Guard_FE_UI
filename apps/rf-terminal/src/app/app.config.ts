@@ -14,7 +14,7 @@ import { provideAnimationsAsync }                   from '@angular/platform-brow
 import { isDevMode }                                from '@angular/core';
 import { provideServiceWorker }                     from '@angular/service-worker';
 
-import { jwtInterceptor, branchInterceptor } from '@4guard/shared-core';
+import { jwtInterceptor, branchInterceptor, mockBackendInterceptor } from '@4guard/shared-core';
 import { rfRoutes }                          from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -24,7 +24,7 @@ export const appConfig: ApplicationConfig = {
 
     // ── HTTP Client con interceptores ────────────────────────────────────────
     provideHttpClient(
-      withInterceptors([jwtInterceptor, branchInterceptor]),
+      withInterceptors([jwtInterceptor, branchInterceptor, mockBackendInterceptor]),
     ),
 
     // ── Animaciones ───────────────────────────────────────────────────────────

@@ -1,0 +1,373 @@
+/* ================================================================
+   P9 — Picking FEFO Guiado — picking-list.component.css
+   Funcionalidad crítica: pantalla ROJA cuando viola FEFO
+   ================================================================ */
+
+.picking {
+  min-height: 100dvh;
+  background: #0D1A2E;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  transition: background 250ms ease;
+  cursor: text;
+}
+
+/* ── FEFO Violation — Pantalla Roja ─────────────────────── */
+.picking--fefo-violation {
+  background: #7B0000 !important;
+  animation: red-flash 0.5s ease;
+}
+
+@keyframes red-flash {
+  0%   { background: #B71C1C; }
+  25%  { background: #D32F2F; }
+  50%  { background: #7B0000; }
+  75%  { background: #D32F2F; }
+  100% { background: #7B0000; }
+}
+
+.picking--success {
+  background: #004D40;
+  animation: green-flash 0.8s ease;
+}
+
+@keyframes green-flash {
+  0%   { background: #00897B; }
+  100% { background: #004D40; }
+}
+
+/* ── FEFO Alert overlay ──────────────────────────────────── */
+.fefo-alert {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  text-align: center;
+  padding: 2rem;
+  animation: fefo-enter 200ms ease;
+}
+
+@keyframes fefo-enter {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.fefo-alert__icon {
+  font-size: 5rem;
+  line-height: 1;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5));
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%,100% { transform: rotate(0deg); }
+  25%     { transform: rotate(-8deg); }
+  75%     { transform: rotate(8deg); }
+}
+
+.fefo-alert__title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.fefo-alert__desc {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+  max-width: 340px;
+}
+
+.fefo-alert__sscc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 0.75rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.fefo-alert__sscc--correct {
+  background: rgba(0,0,0,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.fefo-alert__sscc-label {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fefo-alert__sscc-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 0.04em;
+}
+
+.fefo-alert__countdown {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+  font-style: italic;
+}
+
+/* ── Hidden scan input ───────────────────────────────────── */
+.scan-hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.picking__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.picking__title {
+  font-size: 1.375rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.picking__order {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
+}
+
+/* Progress ring */
+.picking__progress-ring { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
+.progress-svg { width: 100%; height: 100%; }
+.progress-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.progress-val {
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #F9A825;
+  font-family: monospace;
+}
+
+/* ── Current Line ────────────────────────────────────────── */
+.pick-current {
+  background: rgba(249,168,37,0.08);
+  border: 2px solid rgba(249,168,37,0.35);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.pick-current__badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #F9A825;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pick-current__location {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pick-current__loc-icon { font-size: 1.25rem; }
+
+.pick-current__loc-code {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+}
+
+.pick-current__item { display: flex; flex-direction: column; gap: 2px; }
+
+.pick-current__sscc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #F9A825;
+}
+
+.pick-current__desc {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.pick-current__lot {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+}
+
+.pick-current__qty {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.pick-current__qty-val {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.pick-current__qty-lbl {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Action buttons */
+.pick-current__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pick-action-btn {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 0.75rem;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms;
+  font-family: inherit;
+}
+
+.pick-action-btn--correct {
+  background: rgba(0,137,123,0.2);
+  border: 1.5px solid rgba(0,137,123,0.4);
+  color: #4DB6AC;
+}
+
+.pick-action-btn--correct:active {
+  background: rgba(0,137,123,0.35);
+  transform: scale(0.97);
+}
+
+.pick-action-btn--wrong {
+  background: rgba(229,57,53,0.15);
+  border: 1.5px solid rgba(229,57,53,0.35);
+  color: #FF6B6B;
+}
+
+.pick-action-btn--wrong:active {
+  background: rgba(229,57,53,0.3);
+  transform: scale(0.97);
+}
+
+/* ── Complete state ──────────────────────────────────────── */
+.pick-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  background: rgba(0,137,123,0.1);
+  border: 2px solid rgba(0,137,123,0.35);
+  border-radius: 1.25rem;
+  text-align: center;
+}
+
+.pick-complete__check {
+  font-size: 3.5rem;
+  line-height: 1;
+  color: #4DB6AC;
+}
+
+.pick-complete__title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.pick-complete__desc {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ── Lines List ──────────────────────────────────────────── */
+.pick-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.pick-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 0.75rem;
+  transition: all 150ms;
+}
+
+.pick-line--active {
+  background: rgba(249,168,37,0.08);
+  border-color: rgba(249,168,37,0.3);
+}
+
+.pick-line--done {
+  opacity: 0.5;
+  background: rgba(0,137,123,0.06);
+  border-color: rgba(0,137,123,0.2);
+}
+
+.pick-line__status-dot {
+  font-size: 1.125rem;
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.4);
+}
+
+.pick-line--active .pick-line__status-dot { color: #F9A825; }
+.pick-line--done   .pick-line__status-dot { color: #4DB6AC; }
+
+.pick-line__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pick-line__sku  { font-size: 0.65rem; color: rgba(255,255,255,0.4); font-family: monospace; }
+.pick-line__desc { font-size: 0.875rem; font-weight: 600; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-line__loc  { font-size: 0.7rem; color: rgba(255,255,255,0.35); }
+
+.pick-line__qty {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+.pick-line__qty-done  { font-size: 1rem; font-weight: 800; color: #F9A825; }
+.pick-line__qty-sep   { font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+.pick-line__qty-total { font-size: 0.875rem; color: rgba(255,255,255,0.5); }
+
+.pick-line--done .pick-line__qty-done { color: #4DB6AC; }

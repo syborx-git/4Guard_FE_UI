@@ -1,0 +1,143 @@
+<!-- apps/rf-terminal/.../picking/picking-list/picking-list.component.html -->
+<!-- P9 — Picking FEFO Guiado [HU-071] -->
+<div class="picking"
+  [class.picking--fefo-violation]="fefoViolation()"
+  [class.picking--success]="successFlash()"
+  role="main"
+  (click)="focusScan()"
+  aria-label="Pantalla de Picking FEFO">
+
+  <!-- Input oculto para láser -->
+  <input
+    #pickScanInput
+    type="text"
+    class="scan-hidden-input"
+    [ngModel]="currentInput()"
+    (ngModelChange)="currentInput.set($event)"
+    (keydown)="onKeydown($event)"
+    autocomplete="off"
+    aria-hidden="true"
+    tabindex="-1">
+
+  <!-- ══ VIOLACIÓN FEFO — Pantalla Roja ══════════════════════ -->
+  @if (fefoViolation()) {
+    <div class="fefo-alert" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="fefo-alert__icon" aria-hidden="true">🚫</div>
+      <h2 class="fefo-alert__title">¡VIOLACIÓN FEFO!</h2>
+      <p class="fefo-alert__desc">
+        El SSCC escaneado <strong>{{ violationSSCC() }}</strong> no corresponde
+        al lote más antiguo. Debes tomar el ítem indicado primero.
+      </p>
+      <div class="fefo-alert__sscc">
+        <span class="fefo-alert__sscc-label">Escaneado:</span>
+        <span class="fefo-alert__sscc-val">{{ violationSSCC() }}</span>
+      </div>
+      <div class="fefo-alert__sscc fefo-alert__sscc--correct">
+        <span class="fefo-alert__sscc-label">Correcto (FEFO):</span>
+        <span class="fefo-alert__sscc-val">{{ currentLine()?.sscc }}</span>
+      </div>
+      <p class="fefo-alert__countdown">Desbloqueando en 3 segundos…</p>
+    </div>
+  }
+
+  <!-- ══ NORMAL MODE ══════════════════════════════════════════ -->
+  @if (!fefoViolation()) {
+
+    <!-- Header con progreso -->
+    <div class="picking__header">
+      <div>
+        <h1 class="picking__title">📦 Picking FEFO</h1>
+        <p class="picking__order">Orden: ORD-001 · Cliente: Nespresso</p>
+      </div>
+      <div class="picking__progress-ring" role="progressbar"
+        [attr.aria-valuenow]="progressPct()"
+        aria-valuemin="0" aria-valuemax="100">
+        <svg viewBox="0 0 56 56" class="progress-svg" aria-hidden="true">
+          <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
+          <circle cx="28" cy="28" r="22" fill="none"
+            stroke="#F9A825" stroke-width="4"
+            stroke-linecap="round"
+            [attr.stroke-dasharray]="2 * 3.14159 * 22"
+            [attr.stroke-dashoffset]="(2 * 3.14159 * 22) * (1 - progressPct() / 100)"
+            transform="rotate(-90 28 28)"
+            style="transition: stroke-dashoffset 400ms ease"/>
+        </svg>
+        <div class="progress-center">
+          <span class="progress-val">{{ completedCount() }}/{{ totalCount() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Línea actual (instrucción principal) -->
+    @if (currentLine() && !isComplete()) {
+      <div class="pick-current" role="region" aria-label="Línea actual a recoger">
+        <div class="pick-current__badge">SIGUIENTE →</div>
+        <div class="pick-current__location">
+          <span class="pick-current__loc-icon" aria-hidden="true">📍</span>
+          <span class="pick-current__loc-code">{{ currentLine()!.location }}</span>
+        </div>
+        <div class="pick-current__item">
+          <span class="pick-current__sscc">{{ currentLine()!.sscc }}</span>
+          <span class="pick-current__desc">{{ currentLine()!.description }}</span>
+          <span class="pick-current__lot">Lote: {{ currentLine()!.lot }} · Vence: {{ currentLine()!.expiresAt }}</span>
+        </div>
+        <div class="pick-current__qty">
+          <span class="pick-current__qty-val">{{ currentLine()!.qty }}</span>
+          <span class="pick-current__qty-lbl">unidades</span>
+        </div>
+
+        <!-- Botones de demo -->
+        <div class="pick-current__actions">
+          <button
+            id="pick-correct-btn"
+            class="pick-action-btn pick-action-btn--correct"
+            (click)="simulateScan(currentLine()!.sscc); $event.stopPropagation()"
+            aria-label="Simular escaneo correcto">
+            ✓ Simular escaneo correcto
+          </button>
+          <button
+            id="pick-wrong-btn"
+            class="pick-action-btn pick-action-btn--wrong"
+            (click)="simulateWrongScan(); $event.stopPropagation()"
+            aria-label="Simular violación FEFO">
+            ✗ Simular FEFO incorrecto
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Orden completa -->
+    @if (isComplete()) {
+      <div class="pick-complete" role="status" aria-live="polite">
+        <span class="pick-complete__check" aria-hidden="true">✓</span>
+        <h2 class="pick-complete__title">¡Picking Completado!</h2>
+        <p class="pick-complete__desc">Todas las líneas fueron recolectadas correctamente (FEFO).</p>
+      </div>
+    }
+
+    <!-- Lista de líneas -->
+    <div class="pick-lines" role="list" aria-label="Lista de líneas de picking">
+      @for (line of pickLines(); track line.lineId) {
+        <div class="pick-line"
+          [class.pick-line--done]="line.status === 'DONE'"
+          [class.pick-line--active]="line.lineId === currentLine()?.lineId && line.status !== 'DONE'"
+          role="listitem">
+          <div class="pick-line__status-dot" aria-hidden="true">
+            {{ line.status === 'DONE' ? '✓' : line.lineId === currentLine()?.lineId ? '▶' : '○' }}
+          </div>
+          <div class="pick-line__info">
+            <span class="pick-line__sku">{{ line.sku }}</span>
+            <span class="pick-line__desc">{{ line.description }}</span>
+            <span class="pick-line__loc">{{ line.location }} · {{ line.lot }}</span>
+          </div>
+          <div class="pick-line__qty">
+            <span class="pick-line__qty-done">{{ line.qtyDone }}</span>
+            <span class="pick-line__qty-sep">/</span>
+            <span class="pick-line__qty-total">{{ line.qty }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+  }
+</div>

@@ -1,0 +1,149 @@
+// ============================================================
+// 4GUARD RF Terminal — styles.scss
+// Variante táctil del design system (tablet industrial)
+// ============================================================
+
+// Reutilizar las mismas abstracts del admin (misma paleta)
+@use '../../../admin-console/src/styles/abstracts/variables'  as *;
+@use '../../../admin-console/src/styles/abstracts/typography' as *;
+@use '../../../admin-console/src/styles/abstracts/spacing'    as *;
+@use '../../../admin-console/src/styles/abstracts/mixins'     as *;
+@use '../../../admin-console/src/styles/abstracts/animations' as *;
+@use '../../../admin-console/src/styles/themes/dark';
+
+// ── Touch targets mínimos: 44px ───────────────────────────────
+$rf-touch-min:  44px;
+$rf-touch-lg:   56px;
+
+// ── Reset + base táctil ───────────────────────────────────────
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: $font-ui;
+  font-size: $text-md;
+  font-weight: $fw-medium;
+  color: $text-primary;
+  background: $bg-primary;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+// ── Touch targets globales ────────────────────────────────────
+button,
+[role="button"],
+a,
+input,
+select { min-height: $rf-touch-min; }
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+// ── Tipografía RF (mayor para almacén) ────────────────────────
+h1 { font-family: $font-ui; font-size: 2rem;   font-weight: $fw-bold;   color: $text-primary; }
+h2 { font-family: $font-ui; font-size: 1.5rem; font-weight: $fw-bold;   color: $text-primary; }
+h3 { font-family: $font-ui; font-size: 1.25rem;font-weight: $fw-semibold;color: $text-primary; }
+
+// ── Código de escaneo ─────────────────────────────────────────
+.scan-code {
+  font-family: $font-mono;
+  font-size: 2.5rem;
+  font-weight: $fw-bold;
+  color: $gold-primary;
+  letter-spacing: $ls-wider;
+  line-height: 1;
+}
+
+// ── Focus visible en tablet ───────────────────────────────────
+:focus-visible {
+  outline: 3px solid $gold-primary;
+  outline-offset: 3px;
+  border-radius: $radius-sm;
+}
+
+// ── Inputs habilitados para selección ────────────────────────
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+// ── Material Symbols ─────────────────────────────────────────
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: inherit;
+  line-height: 1;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+// ── Botón táctil RF ───────────────────────────────────────────
+.rf-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1 + 4px;
+  min-height: $rf-touch-lg;
+  padding: 0 $space-3;
+  border-radius: $radius-md;
+  font-family: $font-ui;
+  font-size: $text-lg;
+  font-weight: $fw-bold;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &--primary {
+    background: $gold-primary;
+    color: $bg-primary;
+    &:active { background: $gold-light; transform: scale(0.98); }
+  }
+
+  &--danger {
+    background: $danger-bg;
+    color: $danger;
+    border-color: rgba($danger, 0.4);
+    &:active { background: $danger; color: white; }
+  }
+
+  &--ghost {
+    background: rgba(255,255,255,0.05);
+    color: $text-secondary;
+    border-color: $border-subtle;
+    &:active { background: rgba(255,255,255,0.10); }
+  }
+}
+
+// ── Card RF ───────────────────────────────────────────────────
+.rf-card {
+  background: $surface-secondary;
+  border: 1px solid $gold-border;
+  border-radius: $radius-md;
+  padding: $space-3;
+}
+
+// ── Scrollbar oculta en tablet ────────────────────────────────
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }

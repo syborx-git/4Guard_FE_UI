@@ -1,0 +1,60 @@
+<!-- apps/rf-terminal/.../features/menu/task-menu/task-menu.component.html -->
+<!-- P7 — Menú de Tareas Principal RF -->
+<div class="task-menu" role="main" aria-label="Menú de Tareas">
+
+  <!-- Header info -->
+  <div class="task-menu__header">
+    <div class="task-menu__user">
+      <div class="user-avatar" aria-hidden="true">{{ authState.userInitials() || 'OP' }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ authState.userFullName() || 'Operario Demo' }}</span>
+        <span class="user-role">{{ authState.roleLabel() || 'Operario de Almacén' }}</span>
+      </div>
+    </div>
+    <div class="task-menu__status">
+      @if (syncState.hasPending()) {
+        <div class="pending-badge" role="status">
+          <span class="pending-badge__dot" aria-hidden="true"></span>
+          {{ syncState.pendingCount() }} pendiente{{ syncState.pendingCount() > 1 ? 's' : '' }}
+        </div>
+      } @else {
+        <div class="online-badge" role="status" aria-label="En línea">
+          <span aria-hidden="true">●</span> En línea
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Greeting -->
+  <div class="task-menu__greeting">
+    <h1 class="greeting-title">¿Qué tarea realizarás?</h1>
+    <p class="greeting-sub">Selecciona una operación para comenzar</p>
+  </div>
+
+  <!-- Task Buttons Grid -->
+  <div class="task-grid" role="list" aria-label="Opciones de tareas disponibles">
+    @for (btn of taskButtons; track btn.id) {
+      <button
+        [id]="btn.id"
+        class="task-btn task-btn--{{ btn.color }}"
+        (click)="navigate(btn.route)"
+        role="listitem"
+        [attr.aria-label]="btn.label + ': ' + btn.sublabel">
+        <span class="task-btn__icon" aria-hidden="true">{{ btn.icon }}</span>
+        <span class="task-btn__label">{{ btn.label }}</span>
+        <span class="task-btn__sub">{{ btn.sublabel }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- Footer quick links -->
+  <div class="task-menu__footer">
+    <button class="footer-link" (click)="navigate('/sync')" aria-label="Ver estado de sincronización">
+      <span aria-hidden="true">🔄</span> Sync
+    </button>
+    <div class="footer-divider" aria-hidden="true"></div>
+    <span class="footer-branch">BR-MTY-01</span>
+    <div class="footer-divider" aria-hidden="true"></div>
+    <span class="footer-time">{{ 'Turno Matutino' }}</span>
+  </div>
+</div>

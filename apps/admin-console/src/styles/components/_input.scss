@@ -1,0 +1,161 @@
+// ============================================================
+// 4GUARD WMS — components/_input.scss
+// Input, Select, Textarea — con focus dorado
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+
+// ── Form group ────────────────────────────────────────────────
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+// ── Label — siempre encima del campo ─────────────────────────
+.form-label {
+  font-family: $font-ui;
+  font-size: $text-sm;
+  font-weight: $fw-medium;
+  color: $text-secondary;
+  letter-spacing: $ls-wide;
+
+  &--required::after {
+    content: ' *';
+    color: $danger;
+  }
+}
+
+// ── Base input ────────────────────────────────────────────────
+%input-base {
+  width: 100%;
+  height: $min-height-input;
+  padding: 0 $space-2;
+
+  background: $surface-secondary;
+  border: 1px solid $surface-elevated;
+  border-radius: $radius-sm;
+
+  font-family: $font-ui;
+  font-size: $text-base;
+  font-weight: $fw-regular;
+  color: $text-primary;
+  caret-color: $gold-primary;
+
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+  outline: none;
+
+  &::placeholder {
+    color: $text-tertiary;
+    opacity: 1;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: $border-default;
+  }
+
+  &:focus {
+    border-color: $gold-primary;
+    box-shadow: 0 0 0 3px rgba(234, 195, 73, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  // Estado de error
+  &.is-error {
+    border-color: $danger;
+    box-shadow: 0 0 0 3px $danger-bg;
+  }
+}
+
+.form-input    { @extend %input-base; }
+.form-textarea {
+  @extend %input-base;
+  height: auto;
+  min-height: 96px;
+  padding: $space-1 + 4px $space-2;
+  resize: vertical;
+  line-height: $lh-normal;
+}
+
+// ── Select ────────────────────────────────────────────────────
+.form-select {
+  @extend %input-base;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23958E98'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 20px;
+  padding-right: $space-4;
+  cursor: pointer;
+
+  option {
+    background: $surface-elevated;
+    color: $text-primary;
+  }
+}
+
+// ── Error message ─────────────────────────────────────────────
+.form-error {
+  font-size: $text-sm;
+  color: $danger;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .material-symbols-outlined { font-size: 14px; }
+}
+
+// ── Helper text ───────────────────────────────────────────────
+.form-hint {
+  font-size: $text-sm;
+  color: $text-tertiary;
+}
+
+// ── Search box ────────────────────────────────────────────────
+.search-box {
+  position: relative;
+
+  .search-box__icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $text-tertiary;
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  .form-input {
+    padding-left: $space-4;
+
+    &:focus ~ .search-box__icon,
+    &:not(:placeholder-shown) ~ .search-box__icon {
+      color: $gold-primary;
+    }
+  }
+
+  .search-box__clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: $text-tertiary;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: $radius-sm;
+    line-height: 1;
+    font-size: 16px;
+    transition: color $transition-fast;
+
+    &:hover { color: $text-primary; }
+  }
+}

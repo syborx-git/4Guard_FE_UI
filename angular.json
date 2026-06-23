@@ -30,18 +30,21 @@
             "browser": "apps/admin-console/src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "apps/admin-console/tsconfig.app.json",
+            "stylePreprocessorOptions": {
+              "includePaths": ["apps/admin-console/src/styles"]
+            },
             "assets": [
               { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" },
               { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" }
             ],
-            "styles": ["apps/admin-console/src/styles.css"],
+            "styles": ["apps/admin-console/src/styles.scss"],
             "scripts": []
           },
           "configurations": {
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "4kb", "maximumError": "8kb" }
+                { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "16kb" }
               ],
               "outputHashing": "all",
               "optimization": true,
@@ -80,7 +83,7 @@
             "assets": [
               { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" }
             ],
-            "styles": ["apps/admin-console/src/styles.css"],
+            "styles": ["apps/admin-console/src/styles.scss"],
             "scripts": []
           }
         },
@@ -116,19 +119,22 @@
             "polyfills": ["zone.js"],
             "tsConfig": "apps/rf-terminal/tsconfig.app.json",
             "serviceWorker": "apps/rf-terminal/src/ngsw-config.json",
+            "stylePreprocessorOptions": {
+              "includePaths": ["apps/rf-terminal/src/styles"]
+            },
             "assets": [
               { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" },
               { "glob": "favicon.ico", "input": "apps/rf-terminal/src", "output": "/" },
               { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" }
             ],
-            "styles": ["apps/rf-terminal/src/styles.css"],
+            "styles": ["apps/rf-terminal/src/styles.scss"],
             "scripts": []
           },
           "configurations": {
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "600kb", "maximumError": "1.2mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "4kb", "maximumError": "8kb" }
+                { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "16kb" }
               ],
               "outputHashing": "all",
               "optimization": true,
@@ -167,7 +173,7 @@
             "assets": [
               { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" }
             ],
-            "styles": ["apps/rf-terminal/src/styles.css"],
+            "styles": ["apps/rf-terminal/src/styles.scss"],
             "scripts": []
           }
         },

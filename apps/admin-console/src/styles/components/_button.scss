@@ -1,0 +1,141 @@
+// ============================================================
+// 4GUARD WMS — components/_button.scss
+// Botones: Primary (dorado), Secondary (outline), Danger
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// ── Base ──────────────────────────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+
+  font-family: $font-ui;
+  font-size: $text-sm;
+  font-weight: $fw-semibold;
+  letter-spacing: $ls-wide;
+  line-height: 1;
+
+  height: $min-height-btn;
+  padding: 0 $space-2;
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition:
+    background $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast,
+    box-shadow $transition-fast,
+    transform $transition-fast;
+
+  @include focus-ring($gold-primary);
+
+  &:active { transform: scale(0.98); }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  // ── Íconos Material Symbols ──────────────────────────────────
+  .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  // ── Variantes de tamaño ──────────────────────────────────────
+  &--sm {
+    height: 32px;
+    padding: 0 $space-1 + 4px;
+    font-size: $text-xs;
+    border-radius: $radius-xs;
+  }
+
+  &--lg {
+    height: $min-height-btn-lg;
+    padding: 0 $space-3;
+    font-size: $text-md;
+    border-radius: $radius-md;
+  }
+
+  &--icon-only {
+    width: $min-height-btn;
+    padding: 0;
+  }
+}
+
+// ── Primary — dorado sólido ───────────────────────────────────
+.btn--primary {
+  background: $gold-primary;
+  color: $bg-primary;
+  border-color: $gold-primary;
+  font-weight: $fw-bold;
+
+  &:hover:not(:disabled) {
+    background: $gold-light;
+    border-color: $gold-light;
+    box-shadow: 0 0 16px rgba(234, 195, 73, 0.30);
+  }
+}
+
+// ── Secondary — outline dorado ────────────────────────────────
+.btn--secondary {
+  background: transparent;
+  color: $gold-primary;
+  border-color: $gold-border;
+
+  &:hover:not(:disabled) {
+    background: $gold-hover-bg;
+    border-color: $gold-primary;
+  }
+}
+
+// ── Ghost — sin borde ────────────────────────────────────────
+.btn--ghost {
+  background: transparent;
+  color: $text-secondary;
+  border-color: transparent;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    color: $text-primary;
+  }
+}
+
+// ── Danger ────────────────────────────────────────────────────
+.btn--danger {
+  background: $danger-bg;
+  color: $danger;
+  border-color: rgba($danger, 0.3);
+
+  &:hover:not(:disabled) {
+    background: $danger;
+    color: $text-primary;
+    border-color: $danger;
+  }
+}
+
+// ── Loading state ─────────────────────────────────────────────
+.btn--loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    @include spin-animation(18px, currentColor);
+  }
+}

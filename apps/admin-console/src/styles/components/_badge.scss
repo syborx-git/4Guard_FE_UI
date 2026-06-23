@@ -1,0 +1,78 @@
+// ============================================================
+// 4GUARD WMS — components/_badge.scss
+// Status chips FSM (8 estados) + Badges genéricos
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/colors' as *;
+@use '../abstracts/animations' as *;
+
+// ── Status Chip base ──────────────────────────────────────────
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: $radius-full;
+  font-family: $font-ui;
+  font-size: $text-sm;
+  font-weight: $fw-semibold;
+  letter-spacing: $ls-wide;
+  white-space: nowrap;
+  transition: opacity $transition-fast;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: $radius-full;
+    flex-shrink: 0;
+  }
+}
+
+// ── Generar variantes para cada estado FSM ────────────────────
+$statuses: 10, 20, 30, 40, 50, 60, 70, 80;
+
+@each $s in $statuses {
+  .status-chip--#{$s} {
+    @include status-chip($s);
+
+    .status-chip__dot {
+      background: fsm-color($s, text);
+    }
+  }
+}
+
+// ── Animaciones para estados activos/críticos ─────────────────
+.status-chip--20 .status-chip__dot,
+.status-chip--50 .status-chip__dot {
+  animation: pulse 1.5s $ease-standard infinite;
+}
+
+.status-chip--70 .status-chip__dot {
+  animation: pulse 0.8s $ease-standard infinite;
+}
+
+.status-chip--80 { opacity: 0.65; }
+
+// ── Badge numérico ────────────────────────────────────────────
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: $radius-full;
+  font-family: $font-ui;
+  font-size: $text-xs;
+  font-weight: $fw-bold;
+  line-height: 1;
+
+  &--gold    { background: $gold-primary; color: $bg-primary; }
+  &--danger  { background: $danger; color: white; }
+  &--warning { background: $warning; color: $bg-primary; }
+  &--info    { background: $info; color: $bg-primary; }
+  &--subtle  { background: $border-subtle; color: $text-secondary; }
+}

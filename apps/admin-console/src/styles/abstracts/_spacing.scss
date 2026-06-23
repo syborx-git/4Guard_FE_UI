@@ -1,0 +1,43 @@
+// ============================================================
+// 4GUARD WMS — abstracts/_spacing.scss
+// Sistema basado en múltiplos de 8px
+// ============================================================
+
+// ── Escala de espaciado (8px base) ───────────────────────────
+$space-1:  8px;    // 0.5rem
+$space-2:  16px;   // 1rem
+$space-3:  24px;   // 1.5rem
+$space-4:  32px;   // 2rem
+$space-5:  40px;   // 2.5rem
+$space-6:  48px;   // 3rem
+$space-8:  64px;   // 4rem
+$space-10: 80px;   // 5rem
+
+// ── Insets estándar ──────────────────────────────────────────
+$inset-sm:  $space-2 $space-3;          // 16px 24px
+$inset-md:  $space-3 $space-4;          // 24px 32px
+$inset-lg:  $space-4 $space-6;          // 32px 48px
+
+// ── Función helper ────────────────────────────────────────────
+
+/// Convierte múltiplo de 8 a px
+/// @param {Number} $multiplier - Múltiplo de 8
+@function sp($multiplier) {
+  @return #{$multiplier * 8}px;
+}
+
+// ── Gap estándar para grids ───────────────────────────────────
+$gap-sm:  $space-2;   // 16px
+$gap-md:  $space-3;   // 24px
+$gap-lg:  $space-4;   // 32px
+
+// ── Padding de componentes ────────────────────────────────────
+$padding-xs:  $space-1;     // 8px  — Badges, chips
+$padding-sm:  12px;         // 12px — Botones pequeños
+$padding-md:  $space-2;     // 16px — Botones estándar
+$padding-lg:  $space-3;     // 24px — Cards
+
+// ── Heights mínimas ───────────────────────────────────────────
+$min-height-input:  40px;
+$min-height-btn:    40px;
+$min-height-btn-lg: 48px;

@@ -1,0 +1,37 @@
+// ============================================================
+// 4GUARD WMS — abstracts/_colors.scss
+// Mapa de colores semánticos para la FSM de 8 estados
+// ============================================================
+
+@use 'variables' as *;
+
+// ── Mapa FSM States ───────────────────────────────────────────
+// Código → (text-color, background, border)
+$fsm-colors: (
+  10: (text: #6B9EE8, bg: rgba(107, 158, 232, 0.10), border: rgba(107, 158, 232, 0.25)),
+  20: (text: $warning,  bg: $warning-bg,  border: rgba(255, 167, 38, 0.30)),
+  30: (text: $success,  bg: $success-bg,  border: rgba(102, 187, 106, 0.30)),
+  40: (text: $text-primary, bg: rgba(255,255,255,0.05), border: $border-subtle),
+  50: (text: #FF8A65, bg: rgba(255, 138, 101, 0.10), border: rgba(255, 138, 101, 0.25)),
+  60: (text: #4CAF50, bg: rgba(76, 175, 80, 0.08), border: rgba(76, 175, 80, 0.20)),
+  70: (text: $danger,   bg: $danger-bg,   border: rgba(239, 83, 80, 0.35)),
+  80: (text: $text-tertiary, bg: rgba(149, 142, 152, 0.08), border: $border-subtle),
+);
+
+/// Obtener propiedad de un estado FSM
+/// @param {Number} $status — código del estado (10-80)
+/// @param {String} $prop   — 'text' | 'bg' | 'border'
+@function fsm-color($status, $prop) {
+  $entry: map-get($fsm-colors, $status);
+  @if $entry {
+    @return map-get($entry, $prop);
+  }
+  @return $text-tertiary;
+}
+
+// ── Mixin: Status chip para un estado específico ───────────────
+@mixin status-chip($status) {
+  color:            fsm-color($status, text);
+  background:       fsm-color($status, bg);
+  border: 1px solid fsm-color($status, border);
+}

@@ -51,6 +51,7 @@ export type { TransferOrder, TransferOrderLine } from './lib/domain/models/trans
 // ─── Infrastructure — Interceptors ────────────────────────────────────────────
 export { jwtInterceptor }    from './lib/infrastructure/interceptors/jwt.interceptor';
 export { branchInterceptor } from './lib/infrastructure/interceptors/branch.interceptor';
+export { mockBackendInterceptor } from './lib/infrastructure/interceptors/mock-backend.interceptor';
 
 // ─── Infrastructure — Services (Singletons) ───────────────────────────────────
 export { AuthService }    from './lib/infrastructure/services/auth.service';

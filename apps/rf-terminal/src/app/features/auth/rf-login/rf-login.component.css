@@ -1,0 +1,336 @@
+/* ================================================================
+   P6 — Login RF — rf-login.component.css
+   Diseño oscuro de alto contraste. Touch targets >= 56px.
+   ================================================================ */
+
+.rf-login {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #0D1A2E 0%, #1B2B4B 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 1.5rem;
+}
+
+/* ── Logo ────────────────────────────────────────────────── */
+.rf-login__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.rf-logo-mark {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #F9A825, #FFD54F);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.25rem;
+  color: #0D1A2E;
+  box-shadow: 0 6px 20px rgba(249,168,37,0.4);
+  flex-shrink: 0;
+}
+
+.rf-logo-text { display: flex; flex-direction: column; }
+
+.rf-logo-name {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.rf-logo-sub {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+/* ── Offline banner ──────────────────────────────────────── */
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: rgba(249,168,37,0.12);
+  border: 1.5px solid rgba(249,168,37,0.35);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #FFD54F;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* ── Mode tabs ───────────────────────────────────────────── */
+.rf-login__tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.06);
+  border-radius: 1rem;
+  padding: 0.375rem;
+}
+
+.rf-tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.rf-tab--active {
+  background: rgba(255,255,255,0.12);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ── Scan Panel ──────────────────────────────────────────── */
+.rf-scan-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.rf-scan-hint {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.rf-scan-btn {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 3px solid rgba(249,168,37,0.4);
+  background: radial-gradient(circle at center, rgba(249,168,37,0.15) 0%, rgba(249,168,37,0.05) 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 250ms ease;
+  box-shadow: 0 0 40px rgba(249,168,37,0.15), inset 0 0 20px rgba(249,168,37,0.05);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rf-scan-btn:hover:not(:disabled) {
+  border-color: rgba(249,168,37,0.8);
+  box-shadow: 0 0 60px rgba(249,168,37,0.25), inset 0 0 30px rgba(249,168,37,0.1);
+  transform: scale(1.04);
+}
+
+.rf-scan-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.rf-scan-btn--scanning {
+  border-color: rgba(0,137,123,0.6);
+  box-shadow: 0 0 40px rgba(0,137,123,0.2);
+  animation: scan-ring 1.5s ease-in-out infinite;
+}
+
+@keyframes scan-ring {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,137,123,0.1), 0 0 0 0 rgba(0,137,123,0.4); }
+  50%       { box-shadow: 0 0 40px rgba(0,137,123,0.2), 0 0 0 20px rgba(0,137,123,0); }
+}
+
+.rf-scan-btn__icon {
+  font-size: 3rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.rf-scan-btn__icon--spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  color: #4DB6AC;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.rf-scan-btn__label {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 0.05em;
+}
+
+.rf-scan-btn__sub {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.rf-scan-btn:disabled {
+  cursor: not-allowed;
+}
+
+.rf-scan-demo {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.35);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* ── PIN Panel ───────────────────────────────────────────── */
+.rf-pin-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.pin-display {
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(249,168,37,0.3);
+  border-radius: 1rem;
+  padding: 1rem 2rem;
+  width: 100%;
+  text-align: center;
+}
+
+.pin-dots {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #F9A825;
+  letter-spacing: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pin-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(229,57,53,0.12);
+  border: 1.5px solid rgba(229,57,53,0.35);
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #FF6B6B;
+  width: 100%;
+  animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* ── Numpad ──────────────────────────────────────────────── */
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.numpad-key {
+  min-height: 64px;
+  border-radius: 0.75rem;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: #FFFFFF;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.numpad-key:active {
+  background: rgba(249,168,37,0.2);
+  border-color: rgba(249,168,37,0.5);
+  transform: scale(0.95);
+}
+
+.numpad-key--clear {
+  background: rgba(229,57,53,0.1);
+  border-color: rgba(229,57,53,0.25);
+  color: #FF6B6B;
+  font-size: 1rem;
+}
+
+.numpad-key--del {
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.6);
+  font-size: 1.25rem;
+}
+
+/* ── Confirm button ──────────────────────────────────────── */
+.rf-confirm-btn {
+  width: 100%;
+  min-height: 64px;
+  background: linear-gradient(135deg, #00897B, #26A69A);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 1rem;
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  transition: all 200ms;
+  box-shadow: 0 6px 20px rgba(0,137,123,0.35);
+  letter-spacing: 0.04em;
+}
+
+.rf-confirm-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00695C, #00897B);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0,137,123,0.4);
+}
+
+.rf-confirm-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.rf-confirm-btn:disabled {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.3);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-spin {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+.rf-pin-hint {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+}

@@ -1,0 +1,87 @@
+<div class="qm-container">
+  <div class="qm-header">
+    <div>
+      <h1>Control de Calidad (QM)</h1>
+      <p>Gestione el estado de cuarentena y los bloqueos de calidad de los lotes de inventario.</p>
+    </div>
+  </div>
+
+  <!-- Tabs de Control de Calidad -->
+  <div class="qm-tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'quarantine'" (click)="setTab('quarantine')">
+      ⚠️ Cuarentena 
+      <span class="badge-count count-warning">{{ quarantineCount() }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'blocked'" (click)="setTab('blocked')">
+      🔒 Bloqueados QM
+      <span class="badge-count count-danger">{{ blockedCount() }}</span>
+    </button>
+  </div>
+
+  <div class="qm-table-card">
+    <!-- Filtros de la Tabla -->
+    <div class="table-filters">
+      <input type="text" class="form-control filter-control" placeholder="Buscar por SKU o Lote..." [value]="filterText()" (input)="onFilterChange($event)">
+      <select class="form-control filter-control" [value]="selectedClient()" (change)="onClientChange($event)">
+        <option value="">Todos los clientes</option>
+        @for (client of clients(); track client) {
+          <option [value]="client">{{ client }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Tabla de Ítems QM -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Descripción</th>
+          <th>Lote</th>
+          <th>Cliente</th>
+          <th>Ubicación</th>
+          <th>Fecha Ingreso</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of filteredItems(); track item.id) {
+          <tr>
+            <td style="font-weight: var(--font-weight-semibold);">{{ item.sku }}</td>
+            <td>{{ item.description }}</td>
+            <td style="font-family: var(--font-mono);">{{ item.batchNumber }}</td>
+            <td>{{ item.clientName }}</td>
+            <td>{{ item.locationId || 'Sin Ubicación' }}</td>
+            <td>{{ item.receivedAt | date:'medium' }}</td>
+            <td class="action-cell">
+              <button class="btn btn-primary" (click)="goToInspection(item.id)">
+                Inspeccionar
+              </button>
+              
+              @if (activeTab() === 'quarantine') {
+                <button class="btn btn-success" (click)="quickApprove(item)">
+                  Aprobar
+                </button>
+                <button class="btn btn-danger" (click)="quickBlock(item)">
+                  Bloquear
+                </button>
+              } @else {
+                <button class="btn btn-success" (click)="releaseItem(item)">
+                  Liberar
+                </button>
+                <button class="btn btn-secondary" (click)="scrapItem(item)">
+                  Dar de Baja
+                </button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--color-text-secondary); padding: var(--space-8);">
+              No hay ítems registrados bajo esta categoría.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

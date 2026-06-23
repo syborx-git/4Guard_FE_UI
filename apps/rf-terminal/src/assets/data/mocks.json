@@ -1,0 +1,39 @@
+{
+  "offline_users": [
+    { "id": "u-005", "fullName": "Roberto Sánchez", "pin": "1234", "role": "ROLE_WAREHOUSE_OPERATOR", "branchId": "BR-MTY-01" },
+    { "id": "u-003", "fullName": "Miguel Torres", "pin": "5678", "role": "ROLE_DOCK_SUPERVISOR", "branchId": "BR-MTY-01" }
+  ],
+  "active_receipts": [
+    {
+      "id": "REC-2024-001",
+      "asnReference": "ASN-NESPRESSO-240616",
+      "clientName": "Nespresso",
+      "dockId": "AND-01",
+      "expectedItems": 5,
+      "scannedItems": 3,
+      "buffer": [
+        { "sscc": "SSCC-0009", "sku": "SKU-ATUN-007", "description": "Atún en Agua 180g", "status": 10, "scannedAt": "2024-06-16T07:50:00Z" },
+        { "sscc": "SSCC-0001", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "status": 20, "scannedAt": "2024-06-16T07:55:00Z" },
+        { "sscc": "SSCC-0002", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "status": 20, "scannedAt": "2024-06-16T08:00:00Z" }
+      ]
+    }
+  ],
+  "picking_task": {
+    "id": "PICK-001",
+    "orderId": "TO-2024-001",
+    "clientName": "Nespresso",
+    "lines": [
+      { "lineId": "PL-001", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "qty": 12, "qtyDone": 0, "location": "A-1-01", "sscc": "SSCC-0001", "lot": "L2024-001", "expiresAt": "2025-06-10T00:00:00Z", "status": "PENDING" },
+      { "lineId": "PL-002", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "qty": 6, "qtyDone": 0, "location": "A-1-02", "sscc": "SSCC-0002", "lot": "L2024-002", "expiresAt": "2025-06-12T00:00:00Z", "status": "PENDING" },
+      { "lineId": "PL-003", "sku": "SKU-CEREAL-006", "description": "Cereal Integral 750g", "qty": 24, "qtyDone": 0, "location": "A-2-01", "sscc": "SSCC-0008", "lot": "L2024-008", "expiresAt": "2025-03-15T00:00:00Z", "status": "PENDING" }
+    ]
+  },
+  "sync_queue": [],
+  "zone_lease": {
+    "zoneId": "AND-01",
+    "zoneName": "Andén 01",
+    "operatorId": "u-005",
+    "expiresAt": "2024-06-16T09:00:00Z",
+    "remainingSeconds": 3240
+  }
+}

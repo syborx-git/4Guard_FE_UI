@@ -1,0 +1,61 @@
+// ============================================================
+// 4GUARD WMS — themes/_dark.scss
+// Variables CSS globales (custom properties) del tema oscuro
+// ============================================================
+
+@use '../abstracts/variables' as *;
+
+:root {
+  // ── Fondo y superficies ──────────────────────────────────────
+  --bg-primary:         #{$bg-primary};
+  --surface:            #{$surface};
+  --surface-secondary:  #{$surface-secondary};
+  --surface-elevated:   #{$surface-elevated};
+
+  // ── Dorado corporativo ────────────────────────────────────────
+  --gold:               #{$gold-primary};
+  --gold-light:         #{$gold-light};
+  --gold-subtle:        #{$gold-subtle};
+  --gold-border:        #{$gold-border};
+  --gold-hover-bg:      #{$gold-hover-bg};
+
+  // ── Morado corporativo ────────────────────────────────────────
+  --purple:             #{$purple-corporate};
+  --purple-light:       #{$purple-light};
+
+  // ── Texto ─────────────────────────────────────────────────────
+  --text-primary:       #{$text-primary};
+  --text-secondary:     #{$text-secondary};
+  --text-tertiary:      #{$text-tertiary};
+  --text-inverse:       #{$text-inverse};
+
+  // ── Bordes ────────────────────────────────────────────────────
+  --border:             #{$border-default};
+  --border-subtle:      #{$border-subtle};
+  --border-gold:        #{$border-gold};
+
+  // ── Estados semánticos ────────────────────────────────────────
+  --danger:             #{$danger};
+  --danger-bg:          #{$danger-bg};
+  --success:            #{$success};
+  --success-bg:         #{$success-bg};
+  --warning:            #{$warning};
+  --warning-bg:         #{$warning-bg};
+  --info:               #{$info};
+  --info-bg:            #{$info-bg};
+
+  // ── Radios ────────────────────────────────────────────────────
+  --radius-sm:          #{$radius-sm};
+  --radius-md:          #{$radius-md};
+  --radius-lg:          #{$radius-lg};
+  --radius-full:        #{$radius-full};
+
+  // ── Transiciones ─────────────────────────────────────────────
+  --transition-fast:    #{$transition-fast};
+  --transition-normal:  #{$transition-normal};
+
+  // ── Layout ────────────────────────────────────────────────────
+  --sidebar-width:      #{$sidebar-width};
+  --sidebar-collapsed:  #{$sidebar-collapsed-width};
+  --header-height:      #{$header-height};
+}

@@ -1,0 +1,240 @@
+// ============================================================
+// 4GUARD WMS — layouts/_sidebar.scss
+// Sidebar dark: #131412, activo #2D1B44, indicador dorado
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// ── Shell layout ─────────────────────────────────────────────
+.shell {
+  display: grid;
+  grid-template-columns: $sidebar-width 1fr;
+  height: 100vh;
+  overflow: hidden;
+  transition: grid-template-columns $transition-normal;
+
+  &--collapsed {
+    grid-template-columns: $sidebar-collapsed-width 1fr;
+  }
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+.sidebar {
+  background: $surface;
+  border-right: 1px solid $border-subtle;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: $z-fixed;
+  transition: width $transition-normal;
+  @include custom-scrollbar;
+}
+
+// ── Logo ─────────────────────────────────────────────────────
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  min-height: $header-height;
+  border-bottom: 1px solid $border-subtle;
+  flex-shrink: 0;
+}
+
+.sidebar__logo-mark {
+  width: 36px;
+  height: 36px;
+  background: $gold-primary;
+  border-radius: $radius-sm;
+  @include flex-center;
+  flex-shrink: 0;
+
+  font-family: $font-display;
+  font-size: $text-sm;
+  font-weight: $fw-bold;
+  color: $bg-primary;
+  letter-spacing: $ls-wider;
+}
+
+.sidebar__brand {
+  font-family: $font-display;
+  font-size: $text-lg;
+  font-weight: $fw-bold;
+  @include gold-gradient-text;
+  letter-spacing: $ls-tight;
+  white-space: nowrap;
+}
+
+.sidebar__tagline {
+  font-size: $text-xs;
+  color: $text-tertiary;
+  letter-spacing: $ls-widest;
+  text-transform: uppercase;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+// ── Toggle collapse ───────────────────────────────────────────
+.sidebar__toggle {
+  position: absolute;
+  right: -12px;
+  top: 32px;
+  width: 24px;
+  height: 24px;
+  background: $surface-elevated;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-full;
+  @include flex-center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all $transition-fast;
+  color: $text-tertiary;
+
+  .material-symbols-outlined { font-size: 14px; }
+
+  &:hover {
+    background: $gold-primary;
+    color: $bg-primary;
+    border-color: $gold-primary;
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────
+.sidebar__nav {
+  flex: 1;
+  padding: $space-2 $space-1 + 4px;
+  overflow-y: auto;
+  @include custom-scrollbar;
+}
+
+.sidebar__section-label {
+  font-size: $text-xs;
+  font-weight: $fw-semibold;
+  color: $text-tertiary;
+  letter-spacing: $ls-widest;
+  text-transform: uppercase;
+  padding: $space-2 12px $space-1;
+}
+
+.sidebar__nav-item { list-style: none; }
+
+.sidebar__nav-link {
+  display: flex;
+  align-items: center;
+  gap: $space-1 + 4px;
+  padding: 10px 12px;
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  font-family: $font-ui;
+  font-size: $text-sm;
+  font-weight: $fw-medium;
+  text-decoration: none;
+  transition: all $transition-fast;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+
+  .material-symbols-outlined {
+    font-size: 20px;
+    flex-shrink: 0;
+    transition: color $transition-fast;
+  }
+
+  &:hover {
+    background: rgba(255,255,255,0.04);
+    color: $text-primary;
+  }
+
+  // Indicador lateral dorado (estado activo)
+  &.active,
+  &--active {
+    background: $purple-corporate;
+    color: $gold-primary;
+    font-weight: $fw-semibold;
+
+    .material-symbols-outlined { color: $gold-primary; }
+
+    // Línea dorada lateral
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 6px; bottom: 6px;
+      width: 2px;
+      background: $gold-primary;
+      border-radius: $radius-full;
+    }
+  }
+}
+
+.sidebar__nav-label { flex: 1; }
+.sidebar__nav-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+// ── User profile ─────────────────────────────────────────────
+.sidebar__user {
+  padding: $space-2;
+  border-top: 1px solid $border-subtle;
+  display: flex;
+  align-items: center;
+  gap: $space-1 + 4px;
+  flex-shrink: 0;
+}
+
+.sidebar__avatar {
+  width: 36px;
+  height: 36px;
+  background: $purple-corporate;
+  border: 1px solid $gold-border;
+  border-radius: $radius-full;
+  @include flex-center;
+  font-family: $font-display;
+  font-size: $text-sm;
+  font-weight: $fw-bold;
+  color: $gold-primary;
+  flex-shrink: 0;
+  letter-spacing: $ls-wider;
+}
+
+.sidebar__user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__user-name {
+  font-size: $text-sm;
+  font-weight: $fw-semibold;
+  color: $text-primary;
+  @include truncate;
+}
+
+.sidebar__user-role {
+  font-size: $text-xs;
+  color: $text-tertiary;
+  @include truncate;
+}
+
+.sidebar__logout {
+  background: none;
+  border: none;
+  color: $text-tertiary;
+  cursor: pointer;
+  padding: $space-1;
+  border-radius: $radius-sm;
+  @include flex-center;
+  transition: all $transition-fast;
+  flex-shrink: 0;
+
+  .material-symbols-outlined { font-size: 18px; }
+
+  &:hover {
+    color: $danger;
+    background: $danger-bg;
+  }
+}

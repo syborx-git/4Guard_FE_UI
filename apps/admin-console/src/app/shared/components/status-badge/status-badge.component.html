@@ -1,9 +1,9 @@
-<!-- apps/admin-console/src/app/shared/components/status-badge/status-badge.component.html -->
+<!-- status-badge.component.html -->
 <span
-  class="status-badge"
-  [class]="statusClass"
+  class="status-chip"
+  [class]="'status-chip--' + status"
   [attr.aria-label]="'Estado: ' + label"
   role="status">
-  <span class="status-badge__dot" aria-hidden="true"></span>
-  <span class="status-badge__label">{{ label }}</span>
+  <span class="status-chip__dot" aria-hidden="true"></span>
+  <span class="status-chip__label">{{ label }}</span>
 </span>
