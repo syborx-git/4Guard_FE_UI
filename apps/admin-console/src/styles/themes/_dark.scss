@@ -6,15 +6,29 @@
 @use '../abstracts/variables' as *;
 
 :root {
-  // ── Fondo y superficies ──────────────────────────────────────
-  --bg-primary:         #{$bg-primary};
-  --surface:            #{$surface};
+  // ── Fondo y superficies (Obsidian Black) ──────────────────────
+  --bg-primary:         #{$bg-primary}; // #0E0E0D
+  --color-background:   #{$bg-primary}; // Mapea a color-background de los componentes
+  
+  --surface:            #{$surface};    // #131412
+  --color-surface:      #{$surface};
+  
   --surface-secondary:  #{$surface-secondary};
-  --surface-elevated:   #{$surface-elevated};
+  --color-surface-2:    #{$surface-secondary};
+  
+  --surface-elevated:   #{$surface-elevated}; // #343533
 
-  // ── Dorado corporativo ────────────────────────────────────────
+  // ── Tarjetas y contenedores (Royal Purple) ────────────────────
+  --color-card:         #{$purple-corporate}; // #2D1B44
+  --color-card-hover:   rgba(45, 27, 68, 0.8);
+
+  // ── Dorado corporativo (Antique Gold) ────────────────────────
   --gold:               #{$gold-primary};
+  --color-primary:      #{$gold-primary}; // Antique Gold como color primario
+  
   --gold-light:         #{$gold-light};
+  --color-primary-light:#{$gold-light};
+  
   --gold-subtle:        #{$gold-subtle};
   --gold-border:        #{$gold-border};
   --gold-hover-bg:      #{$gold-hover-bg};
@@ -25,13 +39,23 @@
 
   // ── Texto ─────────────────────────────────────────────────────
   --text-primary:       #{$text-primary};
+  --color-text-primary: #{$text-primary}; // Mapea a color-text-primary de los componentes
+  
   --text-secondary:     #{$text-secondary};
+  --color-text-secondary:#{$text-secondary};
+  
   --text-tertiary:      #{$text-tertiary};
+  --color-text-tertiary:#{$text-tertiary};
+  
   --text-inverse:       #{$text-inverse};
 
-  // ── Bordes ────────────────────────────────────────────────────
+  // ── Bordes y separadores ──────────────────────────────────────
   --border:             #{$border-default};
+  --color-border:       #{$border-default};
+  
   --border-subtle:      #{$border-subtle};
+  --color-border-light: #{$border-subtle};
+  
   --border-gold:        #{$border-gold};
 
   // ── Estados semánticos ────────────────────────────────────────
@@ -58,4 +82,11 @@
   --sidebar-width:      #{$sidebar-width};
   --sidebar-collapsed:  #{$sidebar-collapsed-width};
   --header-height:      #{$header-height};
+  
+  // ── Sombras (Prohibir dropshadows según la guía - Usar elevación tonal) ──
+  --shadow-xs:          none;
+  --shadow-sm:          none;
+  --shadow-md:          none;
+  --shadow-lg:          none;
 }
+
