@@ -8,7 +8,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { AuthState } from '@4guard/shared-core';
+import { AuthState, AuthService } from '@4guard/shared-core';
 
 type LoginMode = 'scan' | 'pin';
 
@@ -20,8 +20,9 @@ type LoginMode = 'scan' | 'pin';
   styleUrl: './rf-login.component.css',
 })
 export class RfLoginComponent {
-  private readonly authState = inject(AuthState);
-  private readonly router    = inject(Router);
+  private readonly authState   = inject(AuthState);
+  private readonly authService = inject(AuthService);
+  private readonly router      = inject(Router);
 
   protected readonly mode       = signal<LoginMode>('scan');
   protected readonly pin        = signal<string>('');
@@ -31,10 +32,10 @@ export class RfLoginComponent {
   protected readonly isOffline  = signal(!navigator.onLine);
 
   // Mock users for offline PIN auth
-  private readonly MOCK_PINS: Record<string, { name: string; role: string }> = {
-    '1234': { name: 'Roberto Sánchez', role: 'ROLE_WAREHOUSE_OPERATOR' },
-    '5678': { name: 'Miguel Torres',   role: 'ROLE_DOCK_SUPERVISOR' },
-    '0000': { name: 'Ana López',       role: 'ROLE_QM_INSPECTOR' },
+  private readonly MOCK_PINS: Record<string, { name: string; role: string; email: string }> = {
+    '1234': { name: 'Roberto Sánchez', role: 'ROLE_WAREHOUSE_OPERATOR', email: 'op@4guard.mx' },
+    '5678': { name: 'Miguel Torres',   role: 'ROLE_DOCK_SUPERVISOR',    email: 'dock@4guard.mx' },
+    '0000': { name: 'Ana López',       role: 'ROLE_QM_INSPECTOR',       email: 'qm@4guard.mx' },
   };
 
   protected get pinDisplay(): string {
@@ -74,7 +75,7 @@ export class RfLoginComponent {
     setTimeout(() => {
       this.isScanning.set(false);
       // Simula autenticación exitosa con usuario operario
-      this.handleAuthSuccess();
+      this.handleAuthSuccess('op@4guard.mx');
     }, 2000);
   }
 
@@ -91,12 +92,19 @@ export class RfLoginComponent {
     this.isLoading.set(true);
     setTimeout(() => {
       this.isLoading.set(false);
-      this.handleAuthSuccess();
+      this.handleAuthSuccess(user.email);
     }, 800);
   }
 
-  private handleAuthSuccess(): void {
-    // En modo demo redirige al menú principal del RF terminal
-    this.router.navigate(['/menu']);
+  private handleAuthSuccess(email: string): void {
+    // Autenticar al usuario para persistir la sesión y permitir que pase authGuard
+    this.authService.login({ email, password: 'password123' }).subscribe({
+      next: () => {
+        this.router.navigate(['/menu']);
+      },
+      error: (err) => {
+        this.error.set('Error al simular inicio de sesión.');
+      }
+    });
   }
 }

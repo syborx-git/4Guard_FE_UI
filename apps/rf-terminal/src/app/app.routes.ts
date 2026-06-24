@@ -24,6 +24,14 @@ export const rfRoutes: Routes = [
       import('./shared/components/rf-shell/rf-shell.component').then((m) => m.RfShellComponent),
     canActivate: [authGuard],
     children: [
+      // Menú principal
+      {
+        path: 'menu',
+        loadChildren: () =>
+          import('./features/menu/menu.routes').then((m) => m.menuRoutes),
+        title: '4GUARD Terminal — Menú',
+      },
+
       // Recepción de mercancía (andén)
       {
         path: 'receiving',
@@ -68,7 +76,23 @@ export const rfRoutes: Routes = [
         title: '4GUARD Terminal — Calidad',
       },
 
-      { path: '', redirectTo: 'receiving', pathMatch: 'full' },
+      // Sincronización
+      {
+        path: 'sync',
+        loadChildren: () =>
+          import('./features/sync/sync.routes').then((m) => m.syncRoutes),
+        title: '4GUARD Terminal — Sincronización',
+      },
+
+      // Reporte de anomalía
+      {
+        path: 'anomaly',
+        loadComponent: () =>
+          import('./features/anomaly/anomaly-report/anomaly-report.component').then((m) => m.AnomalyReportComponent),
+        title: '4GUARD Terminal — Reportar Anomalía',
+      },
+
+      { path: '', redirectTo: 'menu', pathMatch: 'full' },
     ],
   },
 
