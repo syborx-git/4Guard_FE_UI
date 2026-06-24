@@ -4,9 +4,9 @@
  * Botón flotante siempre visible. Formulario de reporte con foto simulada.
  */
 
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators, inject } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 
 type ReportStatus = 'form' | 'submitting' | 'submitted';
 

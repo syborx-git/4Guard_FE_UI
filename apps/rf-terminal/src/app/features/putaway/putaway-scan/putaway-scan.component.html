@@ -1,0 +1,92 @@
+<!-- apps/rf-terminal/src/app/features/putaway/putaway-scan/putaway-scan.component.html -->
+<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de escaneo de putaway (ubicación)">
+
+  <!-- Input OCULTO — captura el láser industrial -->
+  <input
+    #scanInput
+    type="text"
+    class="scan-hidden-input"
+    [ngModel]="currentInput()"
+    (ngModelChange)="currentInput.set($event)"
+    (input)="onScanInput($event)"
+    (keydown)="onKeydown($event)"
+    autocomplete="off"
+    spellcheck="false"
+    aria-hidden="true"
+    tabindex="-1">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="rscan__header">
+    <div>
+      <h1 class="rscan__title">📦 Ubicación (Putaway)</h1>
+      <p class="rscan__sub">Rack Principal · Operario 01</p>
+    </div>
+    <div class="rscan__progress" role="status"
+      [attr.aria-label]="completedCount() + ' de ' + expectedTotal() + ' ubicados'">
+      <span class="rscan__progress-val">{{ completedCount() }}<span class="rscan__progress-sep">/</span>{{ expectedTotal() }}</span>
+      <span class="rscan__progress-lbl">Ubicados</span>
+    </div>
+  </div>
+
+  <!-- ── Scan zone ──────────────────────────────────────── -->
+  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
+    [class.rscan__zone--processing]="isProcessing()"
+    aria-label="Zona de escaneo — apunta el lector al SSCC del pallet">
+    <span class="rscan__zone-icon" aria-hidden="true">
+      {{ isProcessing() ? '⟳' : '⬛' }}
+    </span>
+    <span class="rscan__zone-text">
+      {{ isProcessing() ? 'Procesando…' : 'Escanea el SSCC del Pallet' }}
+    </span>
+    <span class="rscan__zone-sub">o haz clic para enfocar</span>
+  </div>
+
+  <!-- Botón de simulación de scan -->
+  <button
+    id="rf-sim-putaway-btn"
+    class="rscan__sim-btn"
+    (click)="simulateScan(); $event.stopPropagation()">
+    📷 Simular Escaneo
+  </button>
+
+  <!-- Error message -->
+  @if (lastError()) {
+    <div class="rscan__error" role="alert" aria-live="assertive">
+      {{ lastError() }}
+    </div>
+  }
+
+  <!-- ── Buffer de Ubicación ──────────────────────────────── -->
+  <div class="rscan__buffer">
+    <h2 class="rscan__buffer-title">
+      Pallets Ubicados
+      @if (completedCount() > 0) {
+        <span class="rscan__buffer-count" aria-hidden="true">{{ completedCount() }}</span>
+      }
+    </h2>
+
+    <div class="buffer-list" role="list" aria-label="Pallets ubicados">
+      @for (item of buffer(); track item.sscc) {
+        <div class="buffer-item" role="listitem">
+          <div class="buffer-item__code">{{ item.sscc }}</div>
+          <div class="buffer-item__info">
+            <span class="buffer-item__sku">{{ item.sku }}</span>
+            <span class="buffer-item__desc">{{ item.description }}</span>
+          </div>
+          <div class="buffer-item__right">
+            <span class="status-badge status-badge--location">
+              {{ item.targetLocation }}
+            </span>
+            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="buffer-empty">
+          <span aria-hidden="true">📭</span>
+          <span>Sin pallets ubicados en esta sesión.</span>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>
