@@ -15,7 +15,7 @@
 import { Injectable, inject, signal, computed, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, map } from 'rxjs';
+import { Observable, tap, map, of, delay } from 'rxjs';
 import { AuthResponse, JwtPayload, LoginRequest, User } from '../../domain/models/user.model';
 import { UserRole } from '../../domain/enums/role.enum';
 import { environment } from '../../../environments/environment';
@@ -59,12 +59,57 @@ export class AuthService {
    */
   login(credentials: LoginRequest): Observable<User> {
     this._isLoading.set(true);
-    return this.http.post<AuthResponse>(`${environment.apiBaseUrl}/api/auth/login`, credentials).pipe(
-      tap((response) => {
-        this.saveSession(response);
+    
+    // Asignar rol según el prefijo/dominio del correo para permitir pruebas de RBAC
+    let role = UserRole.ADMIN;
+    let fullName = 'Carlos Herrera';
+    
+    const email = credentials.email.toLowerCase();
+    if (email.includes('manager')) {
+      role = UserRole.WAREHOUSE_MANAGER;
+      fullName = 'Sofía Ramírez';
+    } else if (email.includes('dock')) {
+      role = UserRole.DOCK_SUPERVISOR;
+      fullName = 'Miguel Torres';
+    } else if (email.includes('qm')) {
+      role = UserRole.QM_INSPECTOR;
+      fullName = 'Ana López';
+    } else if (email.includes('op')) {
+      role = UserRole.WAREHOUSE_OPERATOR;
+      fullName = 'Roberto Sánchez';
+    } else if (email.includes('auditor')) {
+      role = UserRole.AUDITOR;
+      fullName = 'David Salazar';
+    } else if (email.includes('client')) {
+      role = UserRole.CLIENT;
+      fullName = 'Representante Nestlé';
+    }
+
+    const dummyUser: User = {
+      id: `u-${role.toLowerCase()}`,
+      fullName,
+      email: credentials.email,
+      role,
+      branchId: 'BR-MTY-01',
+      branchName: 'Sucursal Monterrey',
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const dummyResponse: AuthResponse = {
+      accessToken: `mock-jwt-token-for-${role}-${Date.now()}`,
+      refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
+      expiresIn: 3600,
+      user: dummyUser
+    };
+
+    return of(dummyUser).pipe(
+      delay(300), // Simula latencia
+      tap(() => {
+        this.saveSession(dummyResponse);
         this._isLoading.set(false);
-      }),
-      map((response) => response.user),
+      })
     );
   }
 
@@ -82,13 +127,34 @@ export class AuthService {
    * Retorna el nuevo access token como string.
    */
   refreshToken(): Observable<string> {
-    const refreshToken = this.getRefreshToken();
-    return this.http
-      .post<AuthResponse>(`${environment.apiBaseUrl}/api/auth/refresh`, { refreshToken })
-      .pipe(
-        tap((response) => this.saveSession(response)),
-        map((response) => response.accessToken),
-      );
+    const user = this.currentUser();
+    const role = user?.role ?? UserRole.ADMIN;
+    const dummyToken = `mock-jwt-token-for-${role}-${Date.now()}`;
+    
+    return of(dummyToken).pipe(
+      tap((newToken) => {
+        const rawUser = localStorage.getItem(STORAGE_KEYS.USER);
+        const userObj: User = rawUser ? JSON.parse(rawUser) : {
+          id: 'u-admin',
+          fullName: 'Carlos Herrera',
+          email: 'admin@4guard.mx',
+          role: UserRole.ADMIN,
+          branchId: 'BR-MTY-01',
+          branchName: 'Sucursal Monterrey',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const response: AuthResponse = {
+          accessToken: newToken,
+          refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
+          expiresIn: 3600,
+          user: userObj
+        };
+        this.saveSession(response);
+      })
+    );
   }
 
   /**
@@ -111,6 +177,11 @@ export class AuthService {
   isTokenValid(): boolean {
     const token = this.getAccessToken();
     if (!token) return false;
+
+    // Aceptar automáticamente los tokens simulados de desarrollo
+    if (token.startsWith('mock-jwt-token')) {
+      return true;
+    }
 
     try {
       const payload = this.decodeJwtPayload(token);

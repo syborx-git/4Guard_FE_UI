@@ -107,7 +107,7 @@ export class AuthState {
 
   private redirectAfterLogin(user: User): void {
     const roleRoutes: Partial<Record<UserRole, string>> = {
-      [UserRole.ADMIN]:              '/admin/dashboard',
+      [UserRole.ADMIN]:              '/dashboard',
       [UserRole.WAREHOUSE_MANAGER]:  '/dashboard',
       [UserRole.DOCK_SUPERVISOR]:    '/receiving',
       [UserRole.WAREHOUSE_OPERATOR]: '/picking',
