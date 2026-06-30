@@ -1,108 +1,171 @@
-<div class="shipping-container">
-  <div class="shipping-header">
-    <div>
-      <h1>Despacho de Salidas</h1>
-      <p>Gestión y asignación de órdenes de transferencia para despacho de mercadería.</p>
+<!-- shipping-list.component.html — Despacho de Salidas — Replica exacta del screenshot -->
+<div class="shipping-page">
+
+  <!-- PAGE HEADER -->
+  <div class="page-top">
+    <div class="page-top__left">
+      <div class="page-top__title-row">
+        <span class="material-symbols-outlined page-top__icon">local_shipping</span>
+        <h1 class="page-top__title">Despacho de Salidas</h1>
+      </div>
+      <p class="page-top__subtitle">Gestion y asignacion de ordenes de transferencia para despacho de mercaderia.</p>
+    </div>
+    <div class="page-top__right">
+      <!-- Search -->
+      <div class="search-wrap">
+        <span class="material-symbols-outlined search-wrap__icon">search</span>
+        <input
+          id="shipping-search"
+          type="text"
+          class="search-wrap__input"
+          placeholder="Buscar por numero..."
+          [value]="filterText()"
+          (input)="onFilterChange($event)"
+          autocomplete="off">
+      </div>
+      <!-- Priority filter -->
+      <div class="filter-select-wrap">
+        <select
+          id="shipping-priority-filter"
+          class="filter-select"
+          [value]="selectedPriority()"
+          (change)="onPriorityChange($event)">
+          <option value="">Todas las prioridades</option>
+          <option value="1">Prioridad 1 (Critica)</option>
+          <option value="2">Prioridad 2 (Alta)</option>
+          <option value="3">Prioridad 3 (Media)</option>
+          <option value="4">Prioridad 4 (Baja)</option>
+          <option value="5">Prioridad 5 (Minima)</option>
+        </select>
+        <span class="material-symbols-outlined filter-select-wrap__chevron">expand_more</span>
+      </div>
     </div>
   </div>
 
-  <!-- Alerta de Órdenes Vencidas -->
+  <!-- ALERT BANNER -->
   @if (overdueCount() > 0) {
-    <div class="alert-panel">
-      <span class="alert-icon">⚠️</span>
-      <span>Atención: Hay {{ overdueCount() }} órdenes de transferencia vencidas o en riesgo crítico de vencimiento.</span>
-    </div>
+  <div class="alert-banner" role="alert">
+    <span class="material-symbols-outlined alert-banner__icon">warning</span>
+    <span class="alert-banner__text">
+      Atencion: Hay {{ overdueCount() }} ordenes de transferencia vencidas o en riesgo critico de vencimiento.
+    </span>
+  </div>
   }
 
-  <div class="shipping-table-card">
-    <!-- Filtros de la Tabla -->
-    <div class="table-filters">
-      <input type="text" class="form-control filter-control" placeholder="Buscar por número..." [value]="filterText()" (input)="onFilterChange($event)">
-      
-      <select class="form-control filter-control" [value]="selectedStatus()" (change)="onStatusChange($event)">
-        <option value="">Todos los estados</option>
-        <option value="PENDING">Pendiente de Asignar</option>
-        <option value="ASSIGNED">Asignada (Picking)</option>
-        <option value="READY_TO_SHIP">Listo para Despacho</option>
-        <option value="DISPATCHED">Despachado</option>
-      </select>
-
-      <select class="form-control filter-control" [value]="selectedPriority()" (change)="onPriorityChange($event)">
-        <option value="">Todas las prioridades</option>
-        <option value="1">Prioridad 1 (Máxima/Crítica)</option>
-        <option value="2">Prioridad 2 (Alta)</option>
-        <option value="3">Prioridad 3 (Media)</option>
-        <option value="4">Prioridad 4 (Baja)</option>
-        <option value="5">Prioridad 5 (Mínima)</option>
-      </select>
-    </div>
-
-    <!-- Tabla de Despacho -->
-    <table class="table">
+  <!-- TABLE CARD -->
+  <div class="table-card">
+    <table class="ship-table" aria-label="Ordenes de despacho">
       <thead>
-        <tr>
-          <th>Número Orden</th>
-          <th>Cliente</th>
-          <th>Tipo</th>
-          <th>Prioridad</th>
-          <th>Fecha Límite</th>
-          <th>Operario Asignado</th>
-          <th>Estado</th>
-          <th>Acciones</th>
+        <tr class="ship-table__head-row">
+          <th class="ship-table__th">NUMERO ORDEN</th>
+          <th class="ship-table__th">CLIENTE</th>
+          <th class="ship-table__th">TIPO</th>
+          <th class="ship-table__th">PRIORIDAD</th>
+          <th class="ship-table__th">FECHA LIMITE</th>
+          <th class="ship-table__th">OPERARIO ASIGNADO</th>
+          <th class="ship-table__th">ESTADO</th>
+          <th class="ship-table__th ship-table__th--actions">ACCIONES</th>
         </tr>
       </thead>
       <tbody>
         @for (order of filteredOrders(); track order.id) {
-          <tr>
-            <td style="font-weight: var(--font-weight-semibold); font-family: var(--font-mono);">
-              {{ order.orderNumber }}
-            </td>
-            <td>{{ order.clientName }}</td>
-            <td>{{ getOrderTypeLabel(order.type) }}</td>
-            <td>
-              <span class="priority-pill" [ngClass]="'priority-' + order.priority">
-                P{{ order.priority }}
-              </span>
-            </td>
-            <td [style.color]="isOverdue(order.dueDate) ? 'var(--color-danger)' : 'inherit'">
-              {{ order.dueDate | date:'short' }}
-              @if (isOverdue(order.dueDate)) {
-                <small style="font-weight: bold; display: block;">¡Vencido!</small>
-              }
-            </td>
-            <td>
-              @if (order.status !== 'READY_TO_SHIP' && order.status !== 'DISPATCHED') {
-                <select class="form-select" (change)="onAssignOperator(order, $event)">
-                  <option value="">Sin Asignar</option>
-                  @for (op of operators(); track op.id) {
-                    <option [value]="op.id" [selected]="order.assignedOperatorId === op.id">
-                      {{ op.name }}
-                    </option>
-                  }
-                </select>
-              } @else {
-                <span>{{ order.assignedOperatorName || 'N/A' }}</span>
-              }
-            </td>
-            <td>
-              <span class="status-pill" [ngClass]="getStatusClass(order.status)">
-                {{ getStatusLabel(order.status) }}
-              </span>
-            </td>
-            <td>
-              <button class="btn btn-primary" [disabled]="order.status !== 'READY_TO_SHIP'" (click)="dispatchOrder(order)">
-                Despachar
-              </button>
-            </td>
-          </tr>
+        <tr class="ship-table__row" [class.ship-table__row--overdue]="isOverdue(order.dueDate)">
+
+          <!-- Numero Orden -->
+          <td class="ship-table__td">
+            <span class="order-number">{{ order.orderNumber }}</span>
+          </td>
+
+          <!-- Cliente -->
+          <td class="ship-table__td">
+            <span class="client-name">{{ order.clientName }}</span>
+          </td>
+
+          <!-- Tipo -->
+          <td class="ship-table__td">
+            <span class="type-label">{{ getOrderTypeLabel(order.type) }}</span>
+          </td>
+
+          <!-- Prioridad -->
+          <td class="ship-table__td">
+            <span class="priority-badge" [ngClass]="'priority-badge--p' + order.priority">
+              P{{ order.priority }}
+            </span>
+          </td>
+
+          <!-- Fecha Limite -->
+          <td class="ship-table__td">
+            <span class="due-date" [class.due-date--overdue]="isOverdue(order.dueDate)">
+              {{ order.dueDate | date:'M/d/yy, h:mm a' }}
+            </span>
+            @if (isOverdue(order.dueDate)) {
+            <span class="due-date__overdue-tag">&#161;VENCIDO!</span>
+            }
+          </td>
+
+          <!-- Operario -->
+          <td class="ship-table__td">
+            @if (order.status !== 'READY_TO_SHIP' && order.status !== 'DISPATCHED') {
+            <div class="operator-select-wrap">
+              <select
+                class="operator-select"
+                (change)="onAssignOperator(order, $event)"
+                [attr.aria-label]="'Asignar operario a ' + order.orderNumber">
+                <option value="">Sin Asignar</option>
+                @for (op of operators(); track op.id) {
+                <option [value]="op.id" [selected]="order.assignedOperatorId === op.id">
+                  {{ op.name }}
+                </option>
+                }
+              </select>
+              <span class="material-symbols-outlined operator-select-wrap__chevron">expand_more</span>
+            </div>
+            } @else {
+            <span class="operator-name">{{ order.assignedOperatorName || 'N/A' }}</span>
+            }
+          </td>
+
+          <!-- Estado -->
+          <td class="ship-table__td">
+            <span class="status-badge" [ngClass]="getStatusClass(order.status)">
+              {{ getStatusLabel(order.status) }}
+            </span>
+          </td>
+
+          <!-- Acciones -->
+          <td class="ship-table__td ship-table__td--actions">
+            <button
+              class="dispatch-btn"
+              [disabled]="order.status !== 'READY_TO_SHIP'"
+              (click)="dispatchOrder(order)"
+              [attr.aria-label]="'Despachar orden ' + order.orderNumber">
+              DESPACHAR
+            </button>
+          </td>
+        </tr>
         } @empty {
-          <tr>
-            <td colspan="8" style="text-align: center; color: var(--color-text-secondary); padding: var(--space-8);">
-              No hay órdenes de transferencia que coincidan con la búsqueda.
-            </td>
-          </tr>
+        <tr>
+          <td colspan="8" class="ship-table__empty">
+            <span class="material-symbols-outlined ship-table__empty-icon">inventory_2</span>
+            <span>No hay ordenes de transferencia que coincidan con la busqueda.</span>
+          </td>
+        </tr>
         }
       </tbody>
     </table>
   </div>
+
+  <!-- BOTTOM STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-bar__left">
+      <span class="status-bar__dot"></span>
+      <span class="status-bar__node">NODO PRINCIPAL: SMS-02</span>
+      <span class="status-bar__sep">&bull;</span>
+      <span class="status-bar__license">LICENCIA CORP: OK</span>
+    </div>
+    <div class="status-bar__right">
+      <span class="status-bar__version">SYNEXIA WMS v4.2.1-GOLDEN &bull; PREMIUM EDITION</span>
+    </div>
+  </div>
+
 </div>

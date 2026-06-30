@@ -25,6 +25,7 @@ export {
 
 // ─── Domain — Models ──────────────────────────────────────────────────────────
 export type { User, JwtPayload, AuthResponse, LoginRequest } from './lib/domain/models/user.model';
+export type { Branch, LoginResponse } from './lib/domain/models/login.model';
 
 export {
   UnitOfMeasure,
@@ -55,6 +56,7 @@ export { mockBackendInterceptor } from './lib/infrastructure/interceptors/mock-b
 
 // ─── Infrastructure — Services (Singletons) ───────────────────────────────────
 export { AuthService }    from './lib/infrastructure/services/auth.service';
+export { LoginService }    from './lib/infrastructure/services/login.service';
 export { BackendService } from './lib/infrastructure/services/backend.service';
 export type { ApiError, QueryParams } from './lib/infrastructure/services/backend.service';
 export { SyncService }    from './lib/infrastructure/services/sync.service';

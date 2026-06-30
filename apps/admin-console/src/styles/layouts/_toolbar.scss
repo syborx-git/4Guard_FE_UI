@@ -37,6 +37,79 @@
   border-bottom: 1px solid rgba(234, 195, 73, 0.15);
 }
 
+// ── Shell Header (main area top bar) ─────────────────────────
+.shell__header {
+  height: $header-height;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: $z-sticky;
+  background: rgba($bg-primary, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shell__header-left {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.shell__header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+// ── Page Title (4GUARD WMS branding) ─────────────────────────
+.shell__page-title {
+  font-family: $font-display;
+  font-size: $text-xl;
+  font-weight: $fw-bold;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #EAC349 0%, #FFE088 55%, #EAC349 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// ── Branch Badge ──────────────────────────────────────────────
+.shell__branch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: $radius-full;
+  background: rgba(45, 27, 68, 0.6);
+  border: 1px solid rgba(234, 195, 73, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.shell__branch-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $text-tertiary;
+  font-family: $font-ui;
+}
+
+.shell__branch-id {
+  font-family: $font-mono;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: $gold-primary;
+}
+
+
+
 .toolbar__left {
   display: flex;
   align-items: center;
