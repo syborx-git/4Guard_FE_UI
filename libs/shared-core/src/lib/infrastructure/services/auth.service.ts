@@ -116,10 +116,15 @@ export class AuthService {
   /**
    * Cierra la sesión del usuario actual.
    * Limpia tokens, estado y redirige al login.
+   * @param reason Razón opcional para mostrar en la pantalla de login.
    */
-  logout(): void {
+  logout(reason?: string): void {
     this.clearSession();
-    this.router.navigate(['/login']);
+    if (reason) {
+      this.router.navigate(['/login'], { queryParams: { reason } });
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 
   /**

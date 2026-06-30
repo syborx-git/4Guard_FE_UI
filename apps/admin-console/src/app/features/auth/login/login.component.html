@@ -55,6 +55,14 @@
           </div>
         }
 
+        <!-- Info global -->
+        @if (loginInfo()) {
+          <div class="login-info" role="alert" aria-live="polite" style="background-color: #e3f2fd; color: #0d47a1; padding: 12px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            <span class="login-info__icon">ℹ</span>
+            <span class="login-info__msg">{{ loginInfo() }}</span>
+          </div>
+        }
+
         <form
           id="login-form"
           class="login-form"

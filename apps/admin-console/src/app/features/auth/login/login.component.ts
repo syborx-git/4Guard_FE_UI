@@ -5,10 +5,10 @@
  * Botón "Continuar" deshabilitado hasta formato válido.
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthState } from '@4guard/shared-core';
 
 @Component({
@@ -18,14 +18,16 @@ import { AuthState } from '@4guard/shared-core';
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly fb        = inject(FormBuilder);
   private readonly authState = inject(AuthState);
   private readonly router    = inject(Router);
+  private readonly route     = inject(ActivatedRoute);
 
   protected readonly isLoading  = this.authState.isLoading;
   protected readonly showPwd    = signal(false);
   protected readonly loginError = signal<string | null>(null);
+  protected readonly loginInfo  = signal<string | null>(null);
 
   protected readonly form = this.fb.group({
     email:    ['', [Validators.required, Validators.email]],
@@ -43,6 +45,13 @@ export class LoginComponent {
     return this.form.valid;
   }
 
+  ngOnInit(): void {
+    const reason = this.route.snapshot.queryParamMap.get('reason');
+    if (reason === 'inactivity') {
+      this.loginInfo.set('Sesión cerrada por inactividad.');
+    }
+  }
+
   protected togglePwd(): void {
     this.showPwd.update((v) => !v);
   }
@@ -50,6 +59,7 @@ export class LoginComponent {
   protected onSubmit(): void {
     if (!this.form.valid) return;
     this.loginError.set(null);
+    this.loginInfo.set(null);
 
     const { email, password } = this.form.getRawValue();
 
