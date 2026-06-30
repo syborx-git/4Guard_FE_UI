@@ -5,7 +5,7 @@
  * Botón "Continuar" deshabilitado hasta formato válido.
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -32,6 +32,7 @@ export class LoginComponent {
   protected readonly isLoading = signal<boolean>(false);
   protected readonly showPwd = signal<boolean>(false);
   protected readonly loginError = signal<string | null>(null);
+  protected readonly loginInfo  = signal<string | null>(null);
 
   // Variables auxiliares para el proceso de recuperación de contraseña
   protected readonly isSendingForgot = signal<boolean>(false);

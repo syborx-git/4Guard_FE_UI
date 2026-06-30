@@ -96,9 +96,10 @@ export class AuthState {
 
   /**
    * Cierra la sesión del usuario actual.
+   * @param reason Razón opcional del cierre de sesión.
    */
-  logout(): void {
-    this.authService.logout();
+  logout(reason?: string): void {
+    this.authService.logout(reason);
   }
 
   /**
