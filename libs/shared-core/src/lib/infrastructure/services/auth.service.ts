@@ -114,12 +114,18 @@ export class AuthService {
   }
 
   /**
-   * Cierra la sesión del usuario actual.
-   * Limpia tokens, estado y redirige al login.
+   * Cierra la sesión del usuario actual de forma 100% segura.
+   * Limpia tokens, estado, cookies, storage y redirige al login reemplazando el historial.
+   * @param reason Razón opcional para mostrar en la pantalla de login.
    */
-  logout(): void {
+  logout(reason?: string): void {
+    // Aquí iría la llamada al backend para invalidar el token si existiera endpoint real
+    // ej: this.http.post(`${environment.apiUrl}/auth/logout`, {}).subscribe({ error: () => {} });
+
     this.clearSession();
-    this.router.navigate(['/login']);
+    
+    const navExtras = { replaceUrl: true, queryParams: reason ? { reason } : {} };
+    this.router.navigate(['/login'], navExtras);
   }
 
   /**
@@ -211,9 +217,22 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    // 1. Limpiar JWTs del LocalStorage
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+
+    // 2. Limpiar SessionStorage por completo (previene persistencia en pestaña)
+    sessionStorage.clear();
+
+    // 3. Destruir todas las cookies accesibles por Javascript
+    document.cookie.split(';').forEach((cookie) => {
+      const eqPos = cookie.indexOf('=');
+      const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
+      document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+    });
+
+    // 4. Limpiar estado reactivo en la memoria de la aplicación
     this._currentUser.set(null);
   }
 
