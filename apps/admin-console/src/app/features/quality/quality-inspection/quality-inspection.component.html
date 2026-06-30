@@ -2,8 +2,8 @@
   @if (item()) {
     <div class="inspection-header">
       <div>
-        <h1>Inspección de Calidad: Lote {{ item()?.batchNumber }}</h1>
-        <p>Lleve a cabo el checklist de inspección y decida la liberación o bloqueo del lote.</p>
+        <h1 class="luxury-serif" style="font-size: 1.875rem;">Inspección de Calidad: Lote {{ item()?.batchNumber }}</h1>
+        <p class="luxury-desc">Lleve a cabo el checklist de inspección y decida la liberación o bloqueo del lote.</p>
       </div>
       <button class="btn btn-secondary" (click)="goBack()">Volver al listado</button>
     </div>

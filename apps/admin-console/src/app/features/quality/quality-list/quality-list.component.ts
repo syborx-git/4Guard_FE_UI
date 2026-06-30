@@ -18,7 +18,7 @@ import { Item, InventoryStatus, UnitOfMeasure } from '@4guard/shared-core';
 export class QualityListComponent {
   private readonly router = inject(Router);
 
-  protected readonly activeTab = signal<'quarantine' | 'blocked'>('quarantine');
+  protected readonly activeTab = signal<'quarantine' | 'blocked' | 'approved'>('quarantine');
   protected readonly filterText = signal('');
   protected readonly selectedClient = signal('');
 
@@ -104,12 +104,19 @@ export class QualityListComponent {
     this.items().filter(i => i.status === InventoryStatus.QM_BLOCKED).length
   );
 
+  protected readonly approvedCount = computed(() => 
+    this.items().filter(i => i.status === InventoryStatus.AVAILABLE).length
+  );
+
   protected readonly filteredItems = computed(() => {
     const tab = this.activeTab();
     const query = this.filterText().toLowerCase().trim();
     const client = this.selectedClient();
 
-    const expectedStatus = tab === 'quarantine' ? InventoryStatus.QUARANTINE : InventoryStatus.QM_BLOCKED;
+    const expectedStatus =
+      tab === 'quarantine' ? InventoryStatus.QUARANTINE :
+      tab === 'blocked'    ? InventoryStatus.QM_BLOCKED :
+                             InventoryStatus.AVAILABLE;
 
     return this.items().filter(i => {
       if (i.status !== expectedStatus) return false;
@@ -121,7 +128,7 @@ export class QualityListComponent {
     });
   });
 
-  protected setTab(tab: 'quarantine' | 'blocked'): void {
+  protected setTab(tab: 'quarantine' | 'blocked' | 'approved'): void {
     this.activeTab.set(tab);
   }
 
