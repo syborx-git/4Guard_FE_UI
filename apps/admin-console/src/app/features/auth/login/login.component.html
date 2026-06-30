@@ -1,21 +1,35 @@
 <!-- apps/admin-console/src/app/features/auth/login/login.component.html -->
-<div class="login-page" role="main" aria-label="Inicio de sesión">
+<div class="login-page" role="main" aria-label="Inicio de sesion">
 
-  <!-- ─── PANEL IZQUIERDO — Branding ─────────────────────── -->
+  <!-- PANEL IZQUIERDO - Branding -->
   <aside class="login-brand" aria-hidden="true">
     <div class="login-brand__overlay"></div>
+    <div class="login-brand__grid"></div>
     <div class="login-brand__content">
+
+      <!-- Logo -->
       <div class="login-brand__logo">
         <div class="login-brand__logo-mark">4G</div>
         <div class="login-brand__logo-text">
           <span class="login-brand__name">4GUARD</span>
-          <span class="login-brand__tagline">WMS 3PL</span>
+          <span class="login-brand__tagline">WMS 3PL &bull; PREMIUM SUITE</span>
         </div>
       </div>
+
+      <!-- Copy principal -->
       <div class="login-brand__copy">
-        <h1 class="login-brand__headline">Torre de Control<br>Logístico</h1>
-        <p class="login-brand__desc">Visibilidad total. Control absoluto. Trazabilidad en tiempo real para operaciones de clase mundial.</p>
+        <h1 class="login-brand__headline">
+          Torre de Control<br>
+          <em class="login-brand__headline-em">Logistico</em>
+        </h1>
+        <p class="login-brand__desc">
+          Visibilidad total. <strong>Control</strong> absoluto. Trazabilidad en tiempo real
+          para operaciones de <strong>clase</strong> mundial de alta gama.
+        </p>
+        <div class="login-brand__divider"></div>
       </div>
+
+      <!-- Stats -->
       <div class="login-brand__stats">
         <div class="stat">
           <span class="stat__value">8</span>
@@ -30,122 +44,179 @@
           <span class="stat__label">Trazabilidad</span>
         </div>
       </div>
+
+      <!-- Footer branding -->
+      <div class="login-brand__bottom">
+        <span class="login-brand__system-label">
+          SISTEMA LOGISTICO COMPATIBLE CON ESCALABILIDAD EMPRESARIAL GLOBAL
+        </span>
+      </div>
     </div>
   </aside>
 
-  <!-- ─── PANEL DERECHO — Formulario ─────────────────────── -->
+  <!-- PANEL DERECHO - Formulario -->
   <main class="login-form-panel">
+
+    <!-- Status bar top -->
+    <div class="login-status-bar">
+      <div class="login-status-bar__left">
+        <div class="login-status-bar__logo-mark">4G</div>
+        <span class="login-status-bar__label">Golden Boy &mdash; Admin Console</span>
+      </div>
+      <div class="login-status-bar__right">
+        <span class="login-status-bar__dot"></span>
+        <span class="login-status-bar__online">SYNEXIA SERVER: ONLINE</span>
+      </div>
+    </div>
+
     <div class="login-form-container">
 
-      <!-- Logo Golden Boy en top -->
-      <div class="login-form__header">
-        <div class="login-form__logo-mark">4G</div>
-        <span class="login-form__logo-text">Golden Boy — Admin Console</span>
-      </div>
-
       <div class="login-form__card">
-        <h2 class="login-form__title">Iniciar Sesión</h2>
-        <p class="login-form__subtitle">Ingresa tus credenciales de acceso al sistema</p>
+        @if (view() === 'login') {
+
+        <h2 class="login-form__title">Iniciar Sesion</h2>
+        <p class="login-form__subtitle">
+          Ingresa tus credenciales de acceso de alta gama para ingresar al sistema
+        </p>
 
         <!-- Error global -->
         @if (loginError()) {
-          <div class="login-error" role="alert" aria-live="assertive">
-            <span class="login-error__icon">⚠</span>
-            <span class="login-error__msg">{{ loginError() }}</span>
-          </div>
+        <div class="login-error" role="alert" aria-live="assertive">
+          <span class="login-error__icon">&#9888;</span>
+          <span class="login-error__msg">{{ loginError() }}</span>
+        </div>
         }
 
-        <form
-          id="login-form"
-          class="login-form"
-          [formGroup]="form"
-          (ngSubmit)="onSubmit()"
-          novalidate
+        <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate
           autocomplete="off">
 
           <!-- Email -->
-          <div class="field" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
-            <label class="field__label" for="email">Correo electrónico</label>
-            <div class="field__input-wrap">
-              <span class="field__icon" aria-hidden="true">✉</span>
-              <input
-                id="email"
-                type="email"
-                class="field__input"
-                formControlName="email"
-                placeholder="usuario@empresa.com"
-                autocomplete="email"
-                aria-required="true"
-                [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid"
-                aria-describedby="email-error">
+          <div class="field-group">
+            <label class="field__label" for="email">CORREO ELECTRONICO</label>
+            <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
+              <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
+              <input id="email" type="email" class="field__input" formControlName="email"
+                placeholder="admin@4guard.mx" autocomplete="email" aria-required="true"
+                [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error">
             </div>
-            @if (emailCtrl.touched && emailCtrl.hasError('required')) {
-              <span id="email-error" class="field__error">El correo es requerido</span>
-            } @else if (emailCtrl.touched && emailCtrl.hasError('email')) {
-              <span id="email-error" class="field__error">Formato de correo inválido</span>
+            @if (emailCtrl.touched && emailCtrl.invalid) {
+            <span id="email-error" class="field__error-msg">
+              Por favor, ingresa un correo corporativo valido
+            </span>
             }
           </div>
 
-          <!-- Contraseña (solo visible si email es válido) -->
-          @if (isEmailValid) {
-            <div class="field field--password" [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid">
-              <label class="field__label" for="password">Contraseña</label>
-              <div class="field__input-wrap">
-                <span class="field__icon" aria-hidden="true">🔑</span>
-                <input
-                  id="password"
-                  [type]="showPwd() ? 'text' : 'password'"
-                  class="field__input"
-                  formControlName="password"
-                  placeholder="••••••••"
-                  autocomplete="current-password"
-                  aria-required="true"
-                  [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
-                <button
-                  type="button"
-                  class="field__toggle-pwd"
-                  (click)="togglePwd()"
-                  [attr.aria-label]="showPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                  {{ showPwd() ? '🙈' : '👁' }}
-                </button>
-              </div>
-              @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
-                <span class="field__error">La contraseña es requerida</span>
-              }
+          <!-- Contrasena -->
+          <div class="field-group">
+            <div class="field__label-row">
+              <label class="field__label" for="password">CONTRASENA DE SEGURIDAD</label>
+              <button type="button" (click)="setView('forgot')"
+                class="field__forgot-link">olvido su contrasena?</button>
             </div>
-          }
-
-          <!-- Link recuperar contraseña -->
-          <div class="login-form__forgot">
-            <a routerLink="/forgot-password" class="login-form__link">¿Olvidaste tu contraseña?</a>
+            <div class="field__input-wrap" [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid">
+              <span class="field__icon field__icon--key" aria-hidden="true">&#128273;</span>
+              <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
+                formControlName="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password" aria-required="true"
+                [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
+              <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
+                [attr.aria-label]="showPwd() ? 'Ocultar contrasena' : 'Mostrar contrasena'">
+                {{ showPwd() ? '&#128584;' : '&#128065;' }}
+              </button>
+            </div>
+            @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
+            <span class="field__error-msg">La contrasena es requerida</span>
+            }
           </div>
 
-          <!-- Botón Continuar -->
-          <button
-            id="login-submit-btn"
-            type="submit"
-            class="login-btn"
+          <!-- Boton Principal -->
+          <button id="login-submit-btn" type="submit" class="login-btn"
             [disabled]="!isFormValid || isLoading()"
             [class.login-btn--loading]="isLoading()"
-            aria-label="Continuar con el inicio de sesión">
+            aria-label="Entrar al Consola">
             @if (isLoading()) {
-              <span class="login-btn__spinner" aria-hidden="true"></span>
-              <span>Autenticando...</span>
+            <span class="login-btn__spinner" aria-hidden="true"></span>
+            <span>AUTENTICANDO...</span>
             } @else {
-              <span>Continuar</span>
-              <span class="login-btn__arrow" aria-hidden="true">→</span>
+            <span>ENTRAR AL CONSOLA</span>
             }
           </button>
 
           <!-- Hint de demo -->
           <p class="login-form__hint">
-            <strong>Demo:</strong> admin&#64;4guard.mx / cualquier contraseña
+            Acceso Demo Autorizado: admin&#64;4guard.mx / cualquier contrasena
           </p>
         </form>
+
+        } @else if (view() === 'forgot') {
+
+        <h2 class="login-form__title">Recuperar Contrasena</h2>
+        <p class="login-form__subtitle">
+          Introduce tu correo electronico registrado para verificar tu identidad y generar una nueva contrasena.
+        </p>
+
+        @if (forgotError()) {
+        <div class="login-error" role="alert" aria-live="assertive">
+          <span class="login-error__icon">&#9888;</span>
+          <span class="login-error__msg">{{ forgotError() }}</span>
+        </div>
+        }
+
+        @if (forgotSuccess()) {
+        <div class="login-error login-error--success" role="status" aria-live="polite">
+          <span class="login-error__icon" style="color: #4CAF50;">&#10003;</span>
+          <span class="login-error__msg" style="color: #4CAF50;">Enlace de recuperacion enviado. Revisa tu correo.</span>
+        </div>
+        }
+
+        <form id="forgot-form" class="login-form" (ngSubmit)="onForgotSubmit()" novalidate autocomplete="off">
+          <div class="field-group">
+            <label class="field__label" for="forgot-email">CORREO ELECTRONICO</label>
+            <div class="field__input-wrap" [class.field--error]="forgotEmailCtrl.touched && forgotEmailCtrl.invalid">
+              <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
+              <input id="forgot-email" type="email" class="field__input" [formControl]="forgotEmailCtrl"
+                placeholder="usuario&#64;empresa.com" autocomplete="email" aria-required="true"
+                [attr.aria-invalid]="forgotEmailCtrl.touched && forgotEmailCtrl.invalid"
+                aria-describedby="forgot-email-error">
+            </div>
+            @if (forgotEmailCtrl.touched && forgotEmailCtrl.invalid) {
+            <span id="forgot-email-error" class="field__error-msg">
+              Por favor, ingresa un correo corporativo valido
+            </span>
+            }
+          </div>
+
+          <button id="forgot-submit-btn" type="submit" class="login-btn"
+            [disabled]="forgotEmailCtrl.invalid || isSendingForgot()"
+            [class.login-btn--loading]="isSendingForgot()"
+            aria-label="Enviar enlace de recuperacion">
+            @if (isSendingForgot()) {
+            <span class="login-btn__spinner" aria-hidden="true"></span>
+            <span>ENVIANDO...</span>
+            } @else {
+            <span>ENVIAR ENLACE DE RECUPERACION</span>
+            }
+          </button>
+
+          <div class="text-center-link">
+            <button type="button" (click)="setView('login')" class="field__forgot-link">
+              &larr; Volver al inicio de sesion
+            </button>
+          </div>
+        </form>
+
+        }
       </div>
 
+      <!-- Footer -->
       <footer class="login-form__footer">
-        <span>4GUARD WMS &copy; 2024 IronShark</span>
+        <div class="login-form__footer-links">
+          <a href="#" class="login-form__footer-link">Terminos y Condiciones</a>
+          <span class="separator" aria-hidden="true">&bull;</span>
+          <a href="#" class="login-form__footer-link">Politica de Privacidad</a>
+          <span class="separator" aria-hidden="true">&bull;</span>
+          <a href="#" class="login-form__footer-link">Soporte Premium</a>
+        </div>
+        <span class="login-form__footer-copy">4GUARD WMS &copy; 2026 IRONSHARK &bull; REDISENO LUXURY SYNEXIA</span>
       </footer>
     </div>
   </main>

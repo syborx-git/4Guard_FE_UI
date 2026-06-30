@@ -1,80 +1,150 @@
-<div class="admin-panel-container">
-  <div class="panel-header">
-    <h1>Administración del Sistema</h1>
-    <p>Gestión de configuraciones globales, sucursales y parámetros operativos del WMS.</p>
+<!-- admin-panel.component.html — Administracion del Sistema — Replica exacta del screenshot -->
+<div class="admin-page">
+
+  <!-- PAGE HEADER -->
+  <div class="page-top">
+    <div class="page-top__title-row">
+      <span class="material-symbols-outlined page-top__icon">settings</span>
+      <h1 class="page-top__title">Administracion del Sistema</h1>
+    </div>
+    <p class="page-top__subtitle">Gestion de configuraciones globales, sucursales y parametros operativos del WMS.</p>
   </div>
 
-  <div class="settings-grid">
-    <!-- Configuración del Sistema -->
-    <div class="setting-card">
-      <span class="card-icon">⚙️</span>
-      <h3>Configuración Global</h3>
-      <p>Ajusta el intervalo de sincronización y los tiempos de expiración de sesión.</p>
-      
-      <div class="form-group">
-        <label for="sync-interval">Intervalo de Sincronización Offline (segundos)</label>
-        <input id="sync-interval" type="number" class="form-control" [value]="syncInterval()" (input)="updateSyncInterval($event)">
+  <!-- THREE COLUMNS GRID -->
+  <div class="admin-grid">
+
+    <!-- CARD 1: Configuracion Global -->
+    <div class="admin-card">
+      <div class="admin-card__header">
+        <span class="material-symbols-outlined admin-card__icon admin-card__icon--gray">view_module</span>
+        <span class="admin-card__title">CONFIGURACION GLOBAL</span>
+      </div>
+      <p class="admin-card__desc">
+        Ajusta el intervalo de sincronizacion y los tiempos de expiracion de sesion del almacenamiento del navegador.
+      </p>
+
+      <div class="admin-card__body">
+        <div class="field-group">
+          <label class="field-group__label" for="sync-interval">
+            INTERVALO DE SINCRONIZACION OFFLINE (SEGUNDOS)
+          </label>
+          <input
+            id="sync-interval"
+            type="number"
+            class="field-group__input"
+            [value]="syncInterval()"
+            (input)="updateSyncInterval($event)"
+            min="5"
+            max="600">
+        </div>
+
+        <div class="field-group">
+          <label class="field-group__label" for="session-timeout">
+            EXPIRACION DE SESION (MINUTOS)
+          </label>
+          <input
+            id="session-timeout"
+            type="number"
+            class="field-group__input"
+            [value]="sessionTimeout()"
+            (input)="updateSessionTimeout($event)"
+            min="5"
+            max="480">
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="session-timeout">Expiración de Sesión (minutos)</label>
-        <input id="session-timeout" type="number" class="form-control" [value]="sessionTimeout()" (input)="updateSessionTimeout($event)">
-      </div>
-
-      <div class="card-actions">
-        <button class="btn btn-primary" (click)="saveSystemConfig()">Guardar Cambios</button>
+      <div class="admin-card__footer">
+        <button
+          id="save-config-btn"
+          class="action-btn action-btn--gold"
+          (click)="saveSystemConfig()">
+          GUARDAR CAMBIOS
+        </button>
       </div>
     </div>
 
-    <!-- Gestión de Sucursales -->
-    <div class="setting-card">
-      <span class="card-icon">🏢</span>
-      <h3>Sucursales / Almacenes</h3>
-      <p>Monitorea y da de alta sucursales activas en el sistema.</p>
+    <!-- CARD 2: Sucursales / Almacenes -->
+    <div class="admin-card">
+      <div class="admin-card__header">
+        <span class="material-symbols-outlined admin-card__icon admin-card__icon--gray">domain</span>
+        <span class="admin-card__title">SUCURSALES / ALMACENES</span>
+      </div>
+      <p class="admin-card__desc">
+        Monitorea y da de alta sucursales activas en el sistema logistico.
+      </p>
 
-      <ul class="branch-list">
+      <div class="admin-card__body branch-list">
         @for (branch of branches(); track branch.id) {
-          <li class="branch-item">
-            <div>
-              <span class="branch-name">{{ branch.name }}</span>
-              <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Código: {{ branch.code }}</div>
-            </div>
-            <span class="branch-status" [class.status-active]="branch.active" [class.status-inactive]="!branch.active">
-              {{ branch.active ? 'Activo' : 'Inactivo' }}
-            </span>
-          </li>
+        <div class="branch-item">
+          <div class="branch-item__info">
+            <span class="branch-item__name">{{ branch.name }}</span>
+            <span class="branch-item__code">{{ branch.code }}</span>
+          </div>
+          <span class="branch-badge" [class.branch-badge--active]="branch.active" [class.branch-badge--inactive]="!branch.active">
+            {{ branch.active ? 'ACTIVO' : 'INACTIVO' }}
+          </span>
+        </div>
         }
-      </ul>
+      </div>
 
-      <div class="card-actions" style="margin-top: var(--space-6);">
-        <button class="btn btn-secondary" (click)="addBranch()">+ Nueva Sucursal</button>
+      <div class="admin-card__footer">
+        <button
+          id="add-branch-btn"
+          class="action-btn action-btn--ghost"
+          (click)="addBranch()">
+          + NUEVA SUCURSAL
+        </button>
       </div>
     </div>
 
-    <!-- Estado del Servidor & Licencias -->
-    <div class="setting-card">
-      <span class="card-icon">🛡️</span>
-      <h3>Estado y Seguridad</h3>
-      <p>Detalles del servidor API, base de datos local y licencia de uso.</p>
-      
-      <div style="margin-bottom: var(--space-4);">
-        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
-          <span style="color: var(--color-text-secondary);">API Server Status:</span>
-          <span style="font-weight: var(--font-weight-semibold); color: var(--color-success);">ONLINE</span>
+    <!-- CARD 3: Estado y Seguridad -->
+    <div class="admin-card">
+      <div class="admin-card__header">
+        <span class="material-symbols-outlined admin-card__icon admin-card__icon--gray">monitoring</span>
+        <span class="admin-card__title">ESTADO Y SEGURIDAD</span>
+      </div>
+      <p class="admin-card__desc">
+        Detalles del servidor API, base de datos de almacenamiento local y licencia de uso de alta gama.
+      </p>
+
+      <div class="admin-card__body status-list">
+        <div class="status-row">
+          <span class="status-row__label">API Server Status:</span>
+          <span class="status-row__value status-row__value--online">ONLINE</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
-          <span style="color: var(--color-text-secondary);">Base de Datos:</span>
-          <span style="font-weight: var(--font-weight-semibold); color: var(--color-primary-light);">Dexie.js v3.2.4</span>
+        <div class="status-row">
+          <span class="status-row__label">Base de Datos:</span>
+          <span class="status-row__value status-row__value--purple">Dexie.js v3.2.4 (Cifrada)</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
-          <span style="color: var(--color-text-secondary);">Licencia Comercial:</span>
-          <span style="font-weight: var(--font-weight-semibold); color: var(--color-success-dark);">Válida · 3PL Unlimited</span>
+        <div class="status-row">
+          <span class="status-row__label">Licencia Comercial:</span>
+          <span class="status-row__value status-row__value--white">Valida &bull; 3PL Unlimited</span>
         </div>
       </div>
 
-      <div class="card-actions">
-        <button class="btn btn-secondary" (click)="runDiagnostics()">Ejecutar Diagnóstico</button>
+      <div class="admin-card__footer">
+        <button
+          id="run-diagnostics-btn"
+          class="action-btn action-btn--purple"
+          (click)="runDiagnostics()">
+          EJECUTAR DIAGNOSTICO
+        </button>
       </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-bar__left">
+      <span class="status-bar__dot"></span>
+      <span class="status-bar__node">NODO PRINCIPAL: SMS-02</span>
+      <span class="status-bar__sep">&bull;</span>
+      <span class="status-bar__license">LICENCIA CORP: OK</span>
+    </div>
+    <div class="status-bar__right">
+      <span class="status-bar__version">SYNEXIA WMS v4.2.1-GOLDEN &bull; PREMIUM EDITION</span>
     </div>
   </div>
+
 </div>

@@ -203,7 +203,11 @@ export class AuthService {
 
   // ─── Métodos privados ─────────────────────────────────────────────────────
 
-  private saveSession(response: AuthResponse): void {
+  /**
+   * Guarda las credenciales de la sesión activa en el almacenamiento local y actualiza el estado.
+   * Método expuesto para soportar flujos de login en múltiples pasos (ej. selección de sucursal).
+   */
+  saveSession(response: AuthResponse): void {
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN,  response.accessToken);
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
