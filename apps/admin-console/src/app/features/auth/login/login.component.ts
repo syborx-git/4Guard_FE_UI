@@ -5,13 +5,16 @@
  * Botón "Continuar" deshabilitado hasta formato válido.
  */
 
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AuthState, LoginService, LoginResponse } from '@4guard/shared-core';
 import { of } from 'rxjs';
 import { delay } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
+import { AuthState } from '../../../core/auth/auth.state';
+import { AuthService } from '../../../core/services/auth.service';
+import { LoginResponse } from '../../../core/models/auth.models';
 
 @Component({
   selector: 'fg-login',
@@ -23,7 +26,7 @@ import { delay } from 'rxjs/operators';
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authState = inject(AuthState);
-  private readonly loginService = inject(LoginService);
+  private readonly authService = inject(AuthService);
 
   // Variable de estado para alternar vistas condicionalmente ('login' o 'forgot')
   protected readonly view = signal<'login' | 'forgot'>('login');
@@ -39,9 +42,9 @@ export class LoginComponent {
   protected readonly forgotSuccess = signal<boolean>(false);
   protected readonly forgotError = signal<string | null>(null);
 
-  // Formulario reactivo para el ingreso de credenciales
+  // Formulario reactivo para el ingreso de credenciales (admite email o username)
   protected readonly form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
@@ -95,7 +98,7 @@ export class LoginComponent {
   }
 
   /**
-   * Procesa la autenticación y realiza la redirección directa si el usuario pertenece a Toluca.
+   * Procesa la autenticación llamando al servicio local y actualizando el estado global.
    */
   protected onSubmit(): void {
     if (!this.form.valid || this.isLoading()) return;
@@ -104,25 +107,19 @@ export class LoginComponent {
 
     const { email, password } = this.form.getRawValue();
 
-    this.loginService.login({ email: email!, password: password! }).subscribe({
+    this.authService.login({ identifier: email!, password: password! }).subscribe({
       next: (res: LoginResponse) => {
         this.isLoading.set(false);
-
-        // Criterio de aceptación 1: Redirección directa si pertenece a Toluca
-        if (res.user.branchId === 'BR-TOL-01') {
-          this.authState.completeLogin(
-            res.user,
-            res.accessToken,
-            res.refreshToken
-          );
+        if (res.success && res.data) {
+          this.authState.login(res.data);
         } else {
-          // Si pertenece a otra sucursal (ej. Querétaro), mostrar error corporativo amigable
-          this.loginError.set('La sucursal asignada no está activa o disponible para este usuario.');
+          this.loginError.set(res.message || 'Credenciales incorrectas.');
         }
       },
-      error: (err: Error) => {
+      error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);
-        this.loginError.set(err.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.');
+        const errorMsg = err.error?.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+        this.loginError.set(errorMsg);
       },
     });
   }

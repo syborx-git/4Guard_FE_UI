@@ -7,7 +7,8 @@
 
 import { inject }                     from '@angular/core';
 import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
-import { AuthState, UserRole }         from '@4guard/shared-core';
+import { UserRole }                    from '@4guard/shared-core';
+import { AuthState }                   from '../auth/auth.state';
 
 export const rbacGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const authState = inject(AuthState);

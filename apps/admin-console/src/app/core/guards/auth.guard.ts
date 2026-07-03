@@ -1,18 +1,17 @@
 /**
  * @file auth.guard.ts
- * @description Guard funcional de autenticación para admin-console.
- * Bloquea el acceso a rutas protegidas si no hay sesión activa.
+ * @description Guard de ruta para verificar si hay una sesión JWT válida activa.
  */
 
-import { inject }           from '@angular/core';
+import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService }      from '@4guard/shared-core';
+import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = () => {
-  const auth   = inject(AuthService);
+  const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isAuthenticated() && auth.isTokenValid()) {
+  if (authService.isAuthenticated()) {
     return true;
   }
 

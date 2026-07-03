@@ -6,7 +6,7 @@
 
 import { Component, HostListener, inject, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthState } from '@4guard/shared-core';
+import { AuthState } from './core/auth/auth.state';
 
 @Component({
   selector: 'fg-admin-root',

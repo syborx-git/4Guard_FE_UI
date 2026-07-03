@@ -20,7 +20,8 @@ import {
 } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
-import { jwtInterceptor, branchInterceptor, mockBackendInterceptor } from '@4guard/shared-core';
+import { branchInterceptor, mockBackendInterceptor } from '@4guard/shared-core';
+import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { adminRoutes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {

@@ -92,16 +92,16 @@
 
           <!-- Email -->
           <div class="field-group">
-            <label class="field__label" for="email">CORREO ELECTRONICO</label>
+            <label class="field__label" for="email">CORREO ELECTRONICO O USUARIO</label>
             <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
               <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
-              <input id="email" type="email" class="field__input" formControlName="email"
-                placeholder="admin@4guard.mx" autocomplete="email" aria-required="true"
+              <input id="email" type="text" class="field__input" formControlName="email"
+                placeholder="enrique o enrique@4guard.com" autocomplete="email" aria-required="true"
                 [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error">
             </div>
             @if (emailCtrl.touched && emailCtrl.invalid) {
             <span id="email-error" class="field__error-msg">
-              Por favor, ingresa un correo corporativo valido
+              Por favor, ingresa un correo o usuario valido
             </span>
             }
           </div>
@@ -143,7 +143,7 @@
 
           <!-- Hint de demo -->
           <p class="login-form__hint">
-            Acceso Demo Autorizado: admin&#64;4guard.mx / cualquier contrasena
+            Acceso Autorizado Backend: enrique / admin123
           </p>
         </form>
 
