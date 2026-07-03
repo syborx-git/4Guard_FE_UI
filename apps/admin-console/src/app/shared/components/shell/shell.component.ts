@@ -7,7 +7,8 @@
 
 import { Component, inject, signal, computed } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthState, SyncState, UserRole } from '@4guard/shared-core';
+import { SyncState, UserRole } from '@4guard/shared-core';
+import { AuthState } from '../../../core/auth/auth.state';
 
 interface NavItem {
   label:   string;

@@ -9,7 +9,8 @@
  */
 
 import { Directive, Input, TemplateRef, ViewContainerRef, inject, OnInit } from '@angular/core';
-import { AuthState, UserRole } from '@4guard/shared-core';
+import { UserRole } from '@4guard/shared-core';
+import { AuthState } from '../../core/auth/auth.state';
 
 @Directive({
   selector: '[fgRbac]',
