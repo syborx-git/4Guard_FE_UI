@@ -2,9 +2,9 @@
  * @file user.models.ts
  * @description Interfaces tipadas basadas en la documentación Swagger del backend 4GUARD WMS.
  *
- * Endpoint documentado:
- *   PUT /api/v1/users/{id}/reset-password-temp
- *   Permiso requerido: USERS_UPDATE
+ * Endpoints documentados:
+ *   PUT /api/v1/users/reset-password-temp?usernameOrEmail={valor}  — Pública, sin token
+ *   PUT /api/v1/users/change-password                              — Con Bearer token
  */
 
 /**
@@ -42,8 +42,27 @@ export interface UserDto {
 
 /**
  * Respuesta específica del endpoint:
- *   PUT /api/v1/users/{id}/reset-password-temp
+ *   PUT /api/v1/users/reset-password-temp?usernameOrEmail={valor}
  *
- * data: string — La contraseña temporal generada. Ejemplo: "4G-temp-ABCD"
+ * data: string — La contraseña temporal generada. Ejemplo: "4G-697c20ed*"
  */
 export type ResetPasswordTempResponse = ApiResponse<string>;
+
+/**
+ * Body para el endpoint:
+ *   PUT /api/v1/users/change-password
+ *
+ * Requiere Authorization: Bearer {accessToken}
+ */
+export interface ChangePasswordRequest {
+  newPassword: string;
+}
+
+/**
+ * Respuesta del endpoint:
+ *   PUT /api/v1/users/change-password
+ *
+ * data: null — El backend no devuelve payload en este caso.
+ */
+export type ChangePasswordResponse = ApiResponse<null>;
+

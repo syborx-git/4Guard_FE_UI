@@ -28,12 +28,12 @@ export class InactivityService implements OnDestroy {
   private readonly BASE_URL = 'http://localhost:8080/api/v1/auth';
 
   // Configuración de tiempos (15 minutos de inactividad, 60 segundos de aviso)
-  private readonly INACTIVITY_TIME = 20 * 1000; // 20 segundos para pruebas
-  private readonly WARNING_TIME = 15; // 15 segundos para pruebas
+  private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutos de inactividad
+  private readonly WARNING_TIME = 60; // 60 segundos de aviso
 
   // Estado reactivo expuesto con signals
   readonly showWarning = signal<boolean>(false);
-  readonly countdown = signal<number>(15);
+  readonly countdown = signal<number>(60);
   readonly isProcessing = signal<boolean>(false);
 
   private activitySub?: Subscription;

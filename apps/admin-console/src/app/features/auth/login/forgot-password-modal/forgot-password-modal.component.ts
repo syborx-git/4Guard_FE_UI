@@ -1,18 +1,19 @@
 /**
  * @file forgot-password-modal.component.ts
- * @description HU-003 — Modal de recuperacion de acceso.
+ * @description HU-003 — Modal de recuperación de acceso.
  *
  * Flujo:
- *   1. Se abre desde el Login al presionar "¿Olvido su contrasena?"
- *   2. El usuario ingresa su USUARIO (no email)
- *   3. Se simula una peticion al backend
- *   4. Se muestra pantalla de exito con instrucciones para contactar al Supervisor
+ *   1. Se abre desde el Login al presionar "¿Olvidó su contraseña?"
+ *   2. El usuario ingresa su usuario o correo electrónico
+ *   3. Se llama al endpoint público PUT /api/v1/users/reset-password-temp
+ *   4. En éxito: se muestra la contraseña temporal para que el usuario la copie
+ *   5. En error 404: se muestra el mensaje del backend en el formulario
  *
  * IMPORTANTE:
- *   - NO modifica rutas ni navega a otras paginas.
+ *   - NO modifica rutas ni navega a otras páginas.
  *   - NO usa alert().
  *   - Se cierra con ESC o click fuera del card.
- *   - La logica de negocio se delega al backend via endpoints Swagger.
+ *   - La lógica de negocio se delega al backend via UsersService.
  */
 
 import {
@@ -21,12 +22,16 @@ import {
   output,
   HostListener,
   OnDestroy,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Subscription } from 'rxjs';
+import { UsersService } from '../../../../core/services/users.service';
 
 /** Estados internos del modal */
-type ModalView = 'form' | 'loading' | 'success';
+type ModalView = 'form' | 'loading' | 'success' | 'error';
 
 @Component({
   selector: 'fg-forgot-password-modal',
@@ -36,34 +41,39 @@ type ModalView = 'form' | 'loading' | 'success';
   styleUrl: './forgot-password-modal.component.css',
 })
 export class ForgotPasswordModalComponent implements OnDestroy {
+  private readonly usersService = inject(UsersService);
+
   /**
    * Evento emitido al padre (LoginComponent) para indicar que el modal debe cerrarse.
    * El padre controla la visibilidad con showForgotModal().
    */
   readonly closed = output<void>();
 
-  // ── Estado interno ───────────────────────────────────────
-  protected readonly view = signal<ModalView>('form');
-  protected readonly submittedUsername = signal('');
-  protected readonly fieldError = signal('');
+  // ── Estado interno ────────────────────────────────────────
+  protected readonly view              = signal<ModalView>('form');
+  protected readonly fieldError        = signal('');
+  protected readonly temporaryPassword = signal('');
+  protected readonly copied            = signal(false);
 
-  // ── Control del campo Usuario ────────────────────────────
-  protected readonly usernameCtrl = new FormControl('', [
+  // ── Control del campo Usuario o Email ──────────────────────
+  protected readonly identifierCtrl = new FormControl('', [
     Validators.required,
     Validators.minLength(3),
-    Validators.maxLength(50),
+    Validators.maxLength(100),
   ]);
 
   // Timer ref para limpieza en OnDestroy
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+  private apiSubscription?: Subscription;
 
-  // ── Cerrar con tecla ESC ─────────────────────────────────
+  // ── Cerrar con tecla ESC ────────────────────────────────────
   @HostListener('document:keydown.escape')
   onEscKey(): void {
     this.close();
   }
 
-  // ── Cerrar al hacer click fuera del card ─────────────────
+  // ── Cerrar al hacer click fuera del card ────────────────────
   protected onBackdropClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (target.classList.contains('fp-backdrop')) {
@@ -73,20 +83,22 @@ export class ForgotPasswordModalComponent implements OnDestroy {
 
   /**
    * Emite el evento de cierre y reinicia el estado del modal con un pequeño
-   * retardo para que la animacion de fade-out se complete antes del reset.
+   * retardo para que la animación de fade-out se complete antes del reset.
    */
   protected close(): void {
     this.closed.emit();
 
     this.resetTimer = setTimeout(() => {
       this.view.set('form');
-      this.usernameCtrl.reset();
+      this.identifierCtrl.reset();
       this.fieldError.set('');
+      this.temporaryPassword.set('');
+      this.copied.set(false);
     }, 300);
   }
 
   /**
-   * Validacion en tiempo real: limpia el error al escribir.
+   * Validación en tiempo real: limpia el error al escribir.
    */
   protected onInputChange(): void {
     if (this.fieldError()) {
@@ -95,76 +107,83 @@ export class ForgotPasswordModalComponent implements OnDestroy {
   }
 
   /**
-   * Procesa la solicitud de recuperacion.
+   * Procesa la solicitud de contraseña temporal llamando al backend.
    *
-   * Validaciones previas al envio:
-   *   - Campo no vacio
-   *   - Minimo 3 caracteres
-   *
-   * TODO: Consumir endpoint de recuperacion
-   *   POST /api/v1/auth/recovery-request
-   *   Body: { username: string }
-   *
-   * TODO: Registrar evento en auditoria
-   *   POST /api/v1/audit/events
-   *   Body: { eventType: 'RECOVERY_REQUEST', username: string, timestamp: ISO }
+   * Endpoint: PUT /api/v1/users/reset-password-temp?usernameOrEmail={valor}
+   * Sin token — endpoint público.
    */
   protected onSubmit(): void {
-    const rawValue = this.usernameCtrl.value?.trim() ?? '';
+    const rawValue = this.identifierCtrl.value?.trim() ?? '';
 
-    // Validacion en tiempo real: campo vacio
     if (!rawValue) {
-      this.fieldError.set('Ingresa tu usuario.');
-      this.usernameCtrl.markAsTouched();
+      this.fieldError.set('Ingresa tu usuario o correo electrónico.');
+      this.identifierCtrl.markAsTouched();
       return;
     }
 
-    // Validacion: longitud minima
     if (rawValue.length < 3) {
-      this.fieldError.set('El usuario debe tener al menos 3 caracteres.');
-      this.usernameCtrl.markAsTouched();
+      this.fieldError.set('Debe tener al menos 3 caracteres.');
+      this.identifierCtrl.markAsTouched();
       return;
     }
 
-    // Limpiar error y pasar a estado loading
     this.fieldError.set('');
     this.view.set('loading');
 
-    // Lista simulada de usuarios conocidos en el sistema
-    const validUsers = ['enrique', 'carlos', 'chris4g', 'Chris4G', 'admin', 'admin123'];
+    this.apiSubscription?.unsubscribe();
+    this.apiSubscription = this.usersService
+      .requestPasswordReset(rawValue)
+      .subscribe({
+        next: (response) => {
+          if (response.success && response.data) {
+            this.temporaryPassword.set(response.data);
+            this.view.set('success');
+          } else {
+            // El backend retornó 200 pero sin datos (caso improbable)
+            this.view.set('form');
+            this.fieldError.set(response.message || 'No se pudo generar la contraseña temporal.');
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.view.set('form');
+          const backendMessage = err.error?.message;
 
-    // Simulacion de llamada al backend (1500ms)
-    // TODO: Reemplazar con llamada real al servicio de recuperacion
-    setTimeout(() => {
-      // TODO: Registrar evento en auditoria
-      // TODO: Manejar errores del backend
-
-      const userExists = validUsers.includes(rawValue);
-
-      if (!userExists) {
-        // Regresa a la vista del formulario y muestra el error discretamente
-        this.view.set('form');
-        this.fieldError.set('Usuario no encontrado.');
-        this.usernameCtrl.markAsTouched();
-        return;
-      }
-
-      // Registro exitoso
-      this.submittedUsername.set(rawValue);
-      this.view.set('success');
-    }, 1500);
+          if (err.status === 404 && backendMessage) {
+            this.fieldError.set(backendMessage);
+          } else if (err.status === 0) {
+            this.fieldError.set('Sin conexión al servidor. Verifica la red e inténtalo de nuevo.');
+          } else {
+            this.fieldError.set(backendMessage || 'Ocurrió un error. Inténtalo nuevamente.');
+          }
+          this.identifierCtrl.markAsTouched();
+        },
+      });
   }
 
   /**
-   * Boton "Aceptar" en la pantalla de exito: cierra el modal y regresa al Login.
+   * Copia la contraseña temporal al portapapeles y muestra feedback visual.
+   */
+  protected copyToClipboard(): void {
+    const password = this.temporaryPassword();
+    if (!password) return;
+
+    navigator.clipboard.writeText(password).then(() => {
+      this.copied.set(true);
+      if (this.copiedTimer) clearTimeout(this.copiedTimer);
+      this.copiedTimer = setTimeout(() => this.copied.set(false), 2500);
+    });
+  }
+
+  /**
+   * Botón "Aceptar" en la pantalla de éxito: cierra el modal y regresa al Login.
    */
   protected onAccept(): void {
     this.close();
   }
 
   ngOnDestroy(): void {
-    if (this.resetTimer) {
-      clearTimeout(this.resetTimer);
-    }
+    if (this.resetTimer)  clearTimeout(this.resetTimer);
+    if (this.copiedTimer) clearTimeout(this.copiedTimer);
+    this.apiSubscription?.unsubscribe();
   }
 }

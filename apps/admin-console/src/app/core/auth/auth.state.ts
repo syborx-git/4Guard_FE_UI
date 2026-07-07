@@ -101,11 +101,18 @@ export class AuthState {
   }
 
   /**
-   * Realiza el login exitoso, actualiza el estado y navega al dashboard.
+   * Realiza el login exitoso, actualiza el estado y navega según el estado de la cuenta.
+   *
+   * Si el usuario debe cambiar su contraseña (changePasswordRequired === true),
+   * navega a /change-password en lugar del dashboard.
    */
   login(session: JwtSession): void {
     this.setSession(session);
-    this.router.navigate(['/dashboard']);
+    if (session.user.changePasswordRequired) {
+      this.router.navigate(['/change-password']);
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
   }
 
   /**
