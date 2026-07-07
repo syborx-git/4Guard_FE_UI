@@ -1,0 +1,69 @@
+/**
+ * @file auth.interceptor.ts
+ * @description Interceptor HTTP funcional y reactivo para 4GUARD WMS.
+ *
+ * Responsabilidades:
+ *  - Inyectar el token '4g_token' (Bearer) a todas las peticiones salientes.
+ *  - Excluir endpoints públicos y de autenticación base (/login y /refresh).
+ *  - Interceptar errores 401 Unauthorized de forma transparente.
+ *  - Detener peticiones en vuelo ante un 401, ejecutar refresh token asíncronamente
+ *    y reintentar de forma transparente la petición original con el nuevo token.
+ *  - Forzar cierre de sesión si el refresh también falla con 401.
+ */
+
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { catchError, switchMap, throwError } from 'rxjs';
+import { AuthService } from '../services/auth.service';
+
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);
+  const url = req.url.toLowerCase();
+
+  // Excluir endpoints públicos o de login/refresh
+  const isAuthOrPublic =
+    url.includes('/login') ||
+    url.includes('/refresh') ||
+    url.includes('/assets/') ||
+    url.includes('/public');
+
+  let activeReq = req;
+
+  if (!isAuthOrPublic) {
+    const token = localStorage.getItem('4g_token') || authService.getAccessToken();
+    if (token) {
+      activeReq = req.clone({
+        headers: req.headers.set('Authorization', `Bearer ${token}`)
+      });
+    }
+  }
+
+  return next(activeReq).pipe(
+    catchError((error: HttpErrorResponse) => {
+      // Interceptar 401 Unauthorized
+      if (error.status === 401 && !isAuthOrPublic) {
+        
+        // Detener flujo, llamar a refreshToken() y reintentar con el nuevo token obtenido
+        return authService.refreshToken().pipe(
+          switchMap((response) => {
+            const newToken = response?.data?.accessToken || localStorage.getItem('4g_token');
+            
+            // Clonar la petición original con el nuevo Bearer Token
+            const retriedReq = req.clone({
+              headers: req.headers.set('Authorization', `Bearer ${newToken}`)
+            });
+            
+            return next(retriedReq);
+          }),
+          catchError((refreshError) => {
+            // Si el refresh falla con un 401 u otro error, forzar cierre de sesión inmediato
+            authService.clearSessionAndRedirect('session_expired');
+            return throwError(() => refreshError);
+          })
+        );
+      }
+
+      return throwError(() => error);
+    })
+  );
+};

@@ -1,3 +1,5 @@
+<!-- users-list.component.html -->
+<!-- HU-003: Gestión de Usuarios con Generar Clave Temporal -->
 <div class="users-container">
   <div class="users-header">
     <div>
@@ -9,7 +11,12 @@
 
   <div class="users-table-card">
     <div class="table-controls">
-      <input type="text" class="form-control search-input" placeholder="Buscar por nombre o correo..." [value]="searchTerm()" (input)="onSearch($event)">
+      <input
+        type="text"
+        class="form-control search-input"
+        placeholder="Buscar por nombre o correo..."
+        [value]="searchTerm()"
+        (input)="onSearch($event)">
     </div>
 
     <table class="table">
@@ -35,14 +42,35 @@
             </td>
             <td>{{ user.branchName || 'N/A' }}</td>
             <td>
-              <button class="status-toggle" [class.status-active]="user.active" [class.status-inactive]="!user.active" (click)="toggleUserStatus(user)">
+              <button
+                class="status-toggle"
+                [class.status-active]="user.active"
+                [class.status-inactive]="!user.active"
+                (click)="toggleUserStatus(user)">
                 {{ user.active ? 'Activo' : 'Inactivo' }}
               </button>
             </td>
             <td>
-              <button class="btn btn-secondary" style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);" (click)="editUser(user)">
-                Editar
-              </button>
+              <!-- Acciones de la fila: Editar + Generar Clave Temporal -->
+              <div class="row-actions">
+                <button
+                  class="btn btn-secondary"
+                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
+                  (click)="editUser(user)">
+                  Editar
+                </button>
+
+                <!-- HU-003: Botón Generar Clave Temporal -->
+                <button
+                  class="btn btn-key"
+                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
+                  [disabled]="isGenerating()"
+                  (click)="openGenerateConfirm(user)"
+                  [attr.aria-label]="'Generar clave temporal para ' + user.name"
+                  title="Generar Clave Temporal">
+                  🔑 Clave Temporal
+                </button>
+              </div>
             </td>
           </tr>
         } @empty {
@@ -57,7 +85,9 @@
   </div>
 </div>
 
-<!-- Modal para Crear/Editar Usuario -->
+<!-- ══════════════════════════════════════════════════════════
+     Modal: Crear / Editar Usuario
+     ══════════════════════════════════════════════════════════ -->
 @if (isModalOpen()) {
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
@@ -65,7 +95,7 @@
         <h2>{{ editingUserId() ? 'Editar Usuario' : 'Nuevo Usuario' }}</h2>
         <button class="modal-close" (click)="closeModal()">&times;</button>
       </div>
-      
+
       <div class="form-group">
         <label for="user-name">Nombre Completo</label>
         <input id="user-name" type="text" class="form-control" [(ngModel)]="userForm.name">
@@ -101,4 +131,31 @@
       </div>
     </div>
   </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     HU-003: Diálogo de Confirmación — Generar Contraseña Temporal
+     Se muestra al hacer click en "Clave Temporal"
+     ══════════════════════════════════════════════════════════ -->
+@if (confirmingUser()) {
+  <fg-confirm-dialog
+    title="Generar contraseña temporal"
+    [message]="'¿Deseas generar una contraseña temporal para ' + confirmingUser()!.name + '?'"
+    confirmLabel="Generar"
+    [isLoading]="isGenerating()"
+    (confirmed)="onGenerateConfirmed()"
+    (cancelled)="onGenerateCancelled()">
+  </fg-confirm-dialog>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     HU-003: Modal Premium — Contraseña Temporal Generada
+     Se muestra cuando el backend responde 200
+     ══════════════════════════════════════════════════════════ -->
+@if (tempPassword() && tempPasswordUser()) {
+  <fg-temp-password-modal
+    [password]="tempPassword()!"
+    [userName]="tempPasswordUser()!.name"
+    (closed)="onTempPasswordModalClosed()">
+  </fg-temp-password-modal>
 }

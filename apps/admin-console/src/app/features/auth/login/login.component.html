@@ -72,139 +72,159 @@
     <div class="login-form-container">
 
       <div class="login-form__card">
-        @if (view() === 'login') {
 
-        <h2 class="login-form__title">Iniciar Sesion</h2>
-        <p class="login-form__subtitle">
-          Ingresa tus credenciales de acceso de alta gama para ingresar al sistema
-        </p>
+        <!-- ════════════════════════════════════════════════════
+             VISTA 1: FORMULARIO TRADICIONAL
+             ════════════════════════════════════════════════════ -->
+        @if (viewState() === 'login') {
+          <h2 class="login-form__title">Iniciar Sesion</h2>
+          <p class="login-form__subtitle">
+            Ingresa tus credenciales de acceso de alta gama para ingresar al sistema
+          </p>
 
-        <!-- Error global -->
-        @if (loginError()) {
-        <div class="login-error" role="alert" aria-live="assertive">
-          <span class="login-error__icon">&#9888;</span>
-          <span class="login-error__msg">{{ loginError() }}</span>
-        </div>
-        }
-
-        <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate
-          autocomplete="off">
-
-          <!-- Email -->
-          <div class="field-group">
-            <label class="field__label" for="email">CORREO ELECTRONICO O USUARIO</label>
-            <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
-              <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
-              <input id="email" type="text" class="field__input" formControlName="email"
-                placeholder="enrique o enrique@4guard.com" autocomplete="email" aria-required="true"
-                [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error">
+          <!-- Error global -->
+          @if (loginError()) {
+            <div class="login-error" role="alert" aria-live="assertive">
+              <span class="login-error__icon">&#9888;</span>
+              <span class="login-error__msg">{{ loginError() }}</span>
+              
+              <!-- Badge de intentos fallidos restantes (HU-010) -->
+              @if (attemptsRemaining() !== null) {
+                <span class="login-error__badge">
+                  Intentos restantes: {{ attemptsRemaining() }}
+                </span>
+              }
             </div>
-            @if (emailCtrl.touched && emailCtrl.invalid) {
-            <span id="email-error" class="field__error-msg">
-              Por favor, ingresa un correo o usuario valido
-            </span>
-            }
-          </div>
+          }
 
-          <!-- Contrasena -->
-          <div class="field-group">
-            <div class="field__label-row">
-              <label class="field__label" for="password">CONTRASENA DE SEGURIDAD</label>
-              <button type="button" (click)="setView('forgot')"
-                class="field__forgot-link">olvido su contrasena?</button>
+          <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate
+            autocomplete="off">
+
+            <!-- Email / Usuario -->
+            <div class="field-group">
+              <label class="field__label" for="email">CORREO ELECTRONICO O USUARIO</label>
+              <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
+                <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
+                <input id="email" type="text" class="field__input" formControlName="email"
+                  placeholder="enrique o enrique@4guard.com" autocomplete="email" aria-required="true"
+                  [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error">
+              </div>
+              @if (emailCtrl.touched && emailCtrl.invalid) {
+                <span id="email-error" class="field__error-msg">
+                  Por favor, ingresa un correo o usuario valido
+                </span>
+              }
             </div>
-            <div class="field__input-wrap" [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid">
-              <span class="field__icon field__icon--key" aria-hidden="true">&#128273;</span>
-              <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
-                formControlName="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password" aria-required="true"
-                [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
-              <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
-                [attr.aria-label]="showPwd() ? 'Ocultar contrasena' : 'Mostrar contrasena'">
-                {{ showPwd() ? '&#128584;' : '&#128065;' }}
+
+            <!-- Contrasena -->
+            <div class="field-group">
+              <div class="field__label-row">
+                <label class="field__label" for="password">CONTRASENA DE SEGURIDAD</label>
+                <!-- HU-003: Abre el modal de recuperacion — NO cambia ruta -->
+                <button
+                  type="button"
+                  id="forgot-password-trigger"
+                  class="field__forgot-link"
+                  (click)="openForgotModal()"
+                  aria-label="Abrir recuperacion de acceso">
+                  olvido su contrasena?
+                </button>
+              </div>
+              
+              <!-- HU-010: Bind [class.animate-shake] para vibración horizontal -->
+              <div class="field__input-wrap" 
+                   [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid"
+                   [class.animate-shake]="animateShake()">
+                <span class="field__icon field__icon--key" aria-hidden="true">&#128273;</span>
+                <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
+                  formControlName="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password" aria-required="true"
+                  [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
+                <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
+                  [attr.aria-label]="showPwd() ? 'Ocultar contrasena' : 'Mostrar contrasena'">
+                  {{ showPwd() ? '&#128584;' : '&#128065;' }}
+                </button>
+              </div>
+              @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
+                <span class="field__error-msg">La contrasena es requerida</span>
+              }
+            </div>
+
+            <!-- Boton Principal -->
+            <button id="login-submit-btn" type="submit" class="login-btn"
+              [disabled]="!isFormValid || isLoading()"
+              [class.login-btn--loading]="isLoading()"
+              aria-label="Entrar al Consola">
+              @if (isLoading()) {
+                <span class="login-btn__spinner" aria-hidden="true"></span>
+                <span>AUTENTICANDO...</span>
+              } @else {
+                <span>ENTRAR AL CONSOLA</span>
+              }
+            </button>
+
+            <!-- Hint de demo -->
+            <p class="login-form__hint">
+              Acceso Autorizado Backend: enrique / admin123
+            </p>
+          </form>
+        } @else if (viewState() === 'locked-temporary') {
+          <!-- VISTA 2: BLOQUEO TEMPORAL (HU-010) -->
+          <div class="locked-view">
+            <div class="locked-view__icon-wrap">
+              <span class="material-symbols-outlined locked-view__icon">lock</span>
+            </div>
+            
+            <h2 class="locked-view__title">Acceso pausado por seguridad</h2>
+            <p class="locked-view__desc">
+              Has superado el número máximo de intentos fallidos. Tu cuenta ha sido bloqueada temporalmente por seguridad.
+            </p>
+            
+            <div class="locked-view__timer-box">
+              <span class="locked-view__timer-label">TIEMPO PARA REINTENTAR</span>
+              <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
+            </div>
+
+            <div class="locked-view__actions">
+              <button 
+                type="button" 
+                class="locked-view__btn locked-view__btn--outline"
+                (click)="contactSupport()">
+                Contactar a Soporte
               </button>
             </div>
-            @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
-            <span class="field__error-msg">La contrasena es requerida</span>
-            }
           </div>
-
-          <!-- Boton Principal -->
-          <button id="login-submit-btn" type="submit" class="login-btn"
-            [disabled]="!isFormValid || isLoading()"
-            [class.login-btn--loading]="isLoading()"
-            aria-label="Entrar al Consola">
-            @if (isLoading()) {
-            <span class="login-btn__spinner" aria-hidden="true"></span>
-            <span>AUTENTICANDO...</span>
-            } @else {
-            <span>ENTRAR AL CONSOLA</span>
-            }
-          </button>
-
-          <!-- Hint de demo -->
-          <p class="login-form__hint">
-            Acceso Autorizado Backend: enrique / admin123
-          </p>
-        </form>
-
-        } @else if (view() === 'forgot') {
-
-        <h2 class="login-form__title">Recuperar Contrasena</h2>
-        <p class="login-form__subtitle">
-          Introduce tu correo electronico registrado para verificar tu identidad y generar una nueva contrasena.
-        </p>
-
-        @if (forgotError()) {
-        <div class="login-error" role="alert" aria-live="assertive">
-          <span class="login-error__icon">&#9888;</span>
-          <span class="login-error__msg">{{ forgotError() }}</span>
-        </div>
-        }
-
-        @if (forgotSuccess()) {
-        <div class="login-error login-error--success" role="status" aria-live="polite">
-          <span class="login-error__icon" style="color: #4CAF50;">&#10003;</span>
-          <span class="login-error__msg" style="color: #4CAF50;">Enlace de recuperacion enviado. Revisa tu correo.</span>
-        </div>
-        }
-
-        <form id="forgot-form" class="login-form" (ngSubmit)="onForgotSubmit()" novalidate autocomplete="off">
-          <div class="field-group">
-            <label class="field__label" for="forgot-email">CORREO ELECTRONICO</label>
-            <div class="field__input-wrap" [class.field--error]="forgotEmailCtrl.touched && forgotEmailCtrl.invalid">
-              <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
-              <input id="forgot-email" type="email" class="field__input" [formControl]="forgotEmailCtrl"
-                placeholder="usuario&#64;empresa.com" autocomplete="email" aria-required="true"
-                [attr.aria-invalid]="forgotEmailCtrl.touched && forgotEmailCtrl.invalid"
-                aria-describedby="forgot-email-error">
+        } @else if (viewState() === 'locked-permanent') {
+          <!-- ════════════════════════════════════════════════════
+               VISTA 3: BLOQUEO DEFINITIVO (HU-010)
+               ════════════════════════════════════════════════════ -->
+          <div class="locked-view">
+            <div class="locked-view__icon-wrap locked-view__icon-wrap--forbidden">
+              <span class="material-symbols-outlined locked-view__icon locked-view__icon--red">gavel</span>
             </div>
-            @if (forgotEmailCtrl.touched && forgotEmailCtrl.invalid) {
-            <span id="forgot-email-error" class="field__error-msg">
-              Por favor, ingresa un correo corporativo valido
-            </span>
-            }
+            
+            <h2 class="locked-view__title">Acceso Restringido Definitivamente</h2>
+            <p class="locked-view__desc">
+              Esta cuenta ha sido inhabilitada permanentemente en el WMS. Se han enviado correos automáticos de auditoría y seguridad al Administrador del Sistema.
+            </p>
+
+            <div class="locked-view__info-alert">
+              <span class="material-symbols-outlined locked-view__info-icon">mail</span>
+              <span class="locked-view__info-text">
+                Notificación de seguridad enviada al correo registrado del operador.
+              </span>
+            </div>
+
+            <div class="locked-view__actions">
+              <button 
+                type="button" 
+                class="locked-view__btn locked-view__btn--outline"
+                (click)="contactSupport()">
+                Contactar a Soporte
+              </button>
+            </div>
           </div>
-
-          <button id="forgot-submit-btn" type="submit" class="login-btn"
-            [disabled]="forgotEmailCtrl.invalid || isSendingForgot()"
-            [class.login-btn--loading]="isSendingForgot()"
-            aria-label="Enviar enlace de recuperacion">
-            @if (isSendingForgot()) {
-            <span class="login-btn__spinner" aria-hidden="true"></span>
-            <span>ENVIANDO...</span>
-            } @else {
-            <span>ENVIAR ENLACE DE RECUPERACION</span>
-            }
-          </button>
-
-          <div class="text-center-link">
-            <button type="button" (click)="setView('login')" class="field__forgot-link">
-              &larr; Volver al inicio de sesion
-            </button>
-          </div>
-        </form>
-
         }
+
       </div>
 
       <!-- Footer -->
@@ -222,3 +242,11 @@
   </main>
 
 </div>
+
+<!-- HU-003: Modal de Recuperacion de Acceso -->
+<!-- Se renderiza sobre todo el layout sin cambiar rutas -->
+@if (showForgotModal()) {
+  <fg-forgot-password-modal
+    (closed)="closeForgotModal()">
+  </fg-forgot-password-modal>
+}

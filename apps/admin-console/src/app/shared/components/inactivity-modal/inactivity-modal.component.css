@@ -1,0 +1,228 @@
+/* ================================================================
+   InactivityModal — HU-004 Cierre de Sesión por Inactividad
+   Estilo Soft UI / Luxury Minimalist - SynexIA Design System
+   ================================================================ */
+
+/* ── Backdrop (Privacy Blur Overlay) ───────────────────────── */
+.ia-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(18, 20, 20, 0.65); /* Fondo oscuro translúcido (#121414 con opacidad) */
+  backdrop-filter: blur(16px); /* Desenfoque muy fuerte para ocultar datos sensibles */
+  -webkit-backdrop-filter: blur(16px);
+  animation: iaBackdropIn 250ms ease both;
+}
+
+@keyframes iaBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.ia-card {
+  width: 100%;
+  max-width: 440px;
+  background: #FFFFFF; /* Tarjeta blanca pura */
+  border-radius: 24px; /* Esquinas muy redondeadas */
+  padding: 2.25rem 2rem 1.75rem;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.02),
+    0 16px 48px rgba(0, 0, 0, 0.08),
+    0 32px 80px rgba(0, 0, 0, 0.06);
+  border: 1px solid #ECECEC;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  animation: iaCardIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  outline: none;
+}
+
+@keyframes iaCardIn {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* ── Icono ────────────────────────────────────────────────── */
+.ia-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(201, 168, 96, 0.12), rgba(201, 168, 96, 0.05));
+  border: 1px solid rgba(201, 168, 96, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ia-icon {
+  font-size: 26px !important;
+  color: #C9A860; /* Prestige Gold */
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 32;
+}
+
+/* ── Encabezado ───────────────────────────────────────────── */
+.ia-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ia-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #41495A; /* Midnight Navy */
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ia-subtitle {
+  font-size: 0.83rem;
+  color: #6B7280;
+  line-height: 1.55;
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Contador ─────────────────────────────────────────────── */
+.ia-countdown-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.25rem;
+  background: #F8F9FA;
+  border: 1.5px solid #ECECEC;
+  border-radius: 16px;
+  transition: all 180ms ease;
+}
+
+.ia-countdown-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.12em;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.ia-countdown-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #C9A860; /* Prestige Gold para el tiempo restante */
+  letter-spacing: -0.02em;
+}
+
+/* ── Botones ──────────────────────────────────────────────── */
+.ia-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ia-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.8rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 180ms ease;
+  text-align: center;
+}
+
+.ia-btn-icon {
+  font-size: 18px !important;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Botón Primario: Mantener Activa (Prestige Gold) */
+.ia-btn--primary {
+  background: linear-gradient(135deg, #B8963A, #C9A860);
+  border: none;
+  color: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(201, 168, 96, 0.28);
+}
+
+.ia-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #C9A860, #DDB96A);
+  box-shadow: 0 4px 16px rgba(201, 168, 96, 0.38);
+  transform: translateY(-1px);
+}
+
+.ia-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ia-btn--primary:disabled {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Botón Secundario: Cerrar Sesión Ahora */
+.ia-btn--secondary {
+  background: transparent;
+  border: 1.5px solid #ECECEC;
+  color: #6B7280;
+}
+
+.ia-btn--secondary:hover:not(:disabled) {
+  background: #F8F9FA;
+  border-color: #D1D5DB;
+  color: #41495A;
+}
+
+/* ── Spinner ──────────────────────────────────────────────── */
+.ia-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: iaSpin 600ms linear infinite;
+}
+
+@keyframes iaSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Nota de Seguridad ────────────────────────────────────── */
+.ia-note {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.85rem;
+  background: #FAFAF9;
+  border: 1px solid #ECECEC;
+  border-radius: 10px;
+}
+
+.ia-note-icon {
+  font-size: 15px !important;
+  color: #9CA3AF;
+  flex-shrink: 0;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ia-note-text {
+  font-size: 0.72rem;
+  color: #6B7280;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  line-height: 1.4;
+}

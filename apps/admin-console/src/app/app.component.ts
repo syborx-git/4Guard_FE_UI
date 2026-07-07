@@ -4,54 +4,22 @@
  * Actúa como host del router outlet y del diseño global.
  */
 
-import { Component, HostListener, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthState } from './core/auth/auth.state';
+import { InactivityService } from './core/services/inactivity.service';
+import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
+import { InactivityModalComponent } from './shared/components/inactivity-modal/inactivity-modal.component';
 
 @Component({
   selector: 'fg-admin-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ToastContainerComponent, InactivityModalComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent {
   title = '4GUARD WMS — Consola Administrativa';
 
-  private readonly authState = inject(AuthState);
-  private inactivityTimer: any;
-  private readonly TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
-
-  ngOnInit(): void {
-    this.resetTimer();
-  }
-
-  ngOnDestroy(): void {
-    this.clearTimer();
-  }
-
-  @HostListener('window:mousemove')
-  @HostListener('window:keydown')
-  @HostListener('window:click')
-  @HostListener('window:scroll')
-  onUserActivity(): void {
-    if (this.authState.isAuthenticated()) {
-      this.resetTimer();
-    }
-  }
-
-  private resetTimer(): void {
-    this.clearTimer();
-    this.inactivityTimer = setTimeout(() => {
-      if (this.authState.isAuthenticated()) {
-        this.authState.logout('inactivity');
-      }
-    }, this.TIMEOUT_MS);
-  }
-
-  private clearTimer(): void {
-    if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer);
-    }
-  }
+  // Inyectar el servicio para activar el tracking de inactividad global
+  protected readonly inactivityService = inject(InactivityService);
 }

@@ -231,3 +231,45 @@
   border-color: var(--color-primary-light);
   outline: none;
 }
+
+/* ── HU-003: Acciones de fila ─────────────────────────────── */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Botón Generar Clave Temporal — acento gold consistente con el sistema */
+.btn-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: linear-gradient(135deg, rgba(201, 168, 96, 0.12), rgba(201, 168, 96, 0.06));
+  border: 1px solid rgba(201, 168, 96, 0.35);
+  color: var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: var(--font-weight-medium);
+  transition: all 160ms ease;
+  white-space: nowrap;
+}
+
+.btn-key:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(201, 168, 96, 0.22), rgba(201, 168, 96, 0.12));
+  border-color: rgba(201, 168, 96, 0.6);
+  box-shadow: 0 2px 8px rgba(201, 168, 96, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-key:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-key:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+

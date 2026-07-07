@@ -1,0 +1,47 @@
+<!-- confirm-dialog.component.html -->
+<!-- Diálogo de confirmación genérico y reutilizable — 4GUARD WMS -->
+<div class="cd-backdrop" role="dialog" aria-modal="true" [attr.aria-labelledby]="'cd-title'">
+  <div class="cd-card" tabindex="-1">
+
+    <!-- Icono de advertencia -->
+    <div class="cd-icon-wrap">
+      <span class="material-symbols-outlined cd-icon">lock_reset</span>
+    </div>
+
+    <!-- Contenido -->
+    <div class="cd-body">
+      <h2 id="cd-title" class="cd-title">{{ title() }}</h2>
+      <p class="cd-message">{{ message() }}</p>
+    </div>
+
+    <!-- Acciones -->
+    <div class="cd-actions">
+
+      <!-- Cancelar — deshabilitado en loading -->
+      <button
+        id="cd-cancel-btn"
+        type="button"
+        class="cd-btn cd-btn--secondary"
+        [disabled]="isLoading()"
+        (click)="onCancel()">
+        Cancelar
+      </button>
+
+      <!-- Confirmar — muestra spinner en loading -->
+      <button
+        id="cd-confirm-btn"
+        type="button"
+        class="cd-btn cd-btn--primary"
+        [disabled]="isLoading()"
+        (click)="onConfirm()">
+        @if (isLoading()) {
+          <span class="cd-spinner" aria-hidden="true"></span>
+          <span>Generando...</span>
+        } @else {
+          <span>{{ confirmLabel() }}</span>
+        }
+      </button>
+
+    </div>
+  </div>
+</div>
