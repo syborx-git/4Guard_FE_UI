@@ -5,9 +5,10 @@
  */
 
 import { Routes } from '@angular/router';
-import { authGuard }  from './core/guards/auth.guard';
-import { rbacGuard }  from './core/guards/rbac.guard';
-import { UserRole }   from '@4guard/shared-core';
+import { authGuard }         from './core/guards/auth.guard';
+import { rbacGuard }         from './core/guards/rbac.guard';
+import { changePasswordGuard } from './core/guards/change-password.guard';
+import { UserRole }           from '@4guard/shared-core';
 
 export const adminRoutes: Routes = [
   // Ruta pública: Login
@@ -16,6 +17,17 @@ export const adminRoutes: Routes = [
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
     title: '4GUARD WMS — Iniciar Sesión',
+  },
+
+  // Cambio de contraseña obligatorio — fuera del shell (sin navbar)
+  // Requiere sesión activa + changePasswordRequired === true
+  {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./features/auth/change-password/change-password.component')
+        .then((m) => m.ChangePasswordComponent),
+    canActivate: [changePasswordGuard],
+    title: '4GUARD WMS — Cambiar Contraseña',
   },
 
   // Rutas protegidas bajo el shell principal

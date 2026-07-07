@@ -16,6 +16,8 @@ export interface AuthenticatedUser {
   role: string;
   roleLevel: number;
   permissions: string[];
+  /** Indica si el usuario debe cambiar su contraseña en el próximo inicio de sesión. */
+  changePasswordRequired: boolean;
 }
 
 export interface JwtSession {
