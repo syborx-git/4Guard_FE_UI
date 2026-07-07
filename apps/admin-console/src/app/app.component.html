@@ -1,3 +1,10 @@
 <!-- apps/admin-console/src/app/app.component.html -->
 <!-- El router-outlet renderiza el ShellComponent o el LoginComponent -->
 <router-outlet />
+<!-- Toasts globales — renderizados sobre todo el contenido -->
+<fg-toast-container />
+<!-- HU-004: Modal de advertencia de inactividad -->
+@if (inactivityService.showWarning()) {
+  <fg-inactivity-modal />
+}
+

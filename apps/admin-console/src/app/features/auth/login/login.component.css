@@ -652,3 +652,172 @@
   text-transform: uppercase;
   margin-top: 0.1rem;
 }
+
+/* ── HU-010: Intentos Restantes & Shaking ──────────────────── */
+.login-error__badge {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0.35rem;
+  color: #EF5350;
+  background: rgba(239, 83, 80, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.animate-shake {
+  animation: shakeHoriz 400ms ease-in-out;
+}
+
+@keyframes shakeHoriz {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* ── HU-010: Vistas de Bloqueo (Soft UI Premium) ───────────── */
+.locked-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.15rem;
+  padding: 0.5rem 0;
+  animation: lockFadeIn 250ms ease both;
+}
+
+@keyframes lockFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.locked-view__icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: rgba(107, 33, 168, 0.1); /* Sutil Royal Purple */
+  border: 1px solid rgba(107, 33, 168, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.locked-view__icon-wrap--forbidden {
+  background: rgba(239, 83, 80, 0.1);
+  border-color: rgba(239, 83, 80, 0.22);
+}
+
+.locked-view__icon {
+  font-size: 26px !important;
+  color: #6B21A8; /* Royal Purple */
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 32;
+}
+
+.locked-view__icon--red {
+  color: #EF5350;
+}
+
+.locked-view__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #41495A; /* Midnight Navy */
+  margin: 0;
+}
+
+.locked-view__desc {
+  font-size: 0.83rem;
+  color: #6B7280;
+  line-height: 1.55;
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Caja de temporizador regresivo */
+.locked-view__timer-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.1rem;
+  background: #F8F9FA;
+  border: 1.5px solid #ECECEC;
+  border-radius: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.locked-view__timer-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.12em;
+}
+
+.locked-view__timer-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #6B21A8; /* Royal Purple para el reloj del bloqueo temporal */
+  letter-spacing: 0.04em;
+}
+
+/* Alerta de correo para bloqueo permanente */
+.locked-view__info-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(107, 33, 168, 0.05);
+  border: 1px solid rgba(107, 33, 168, 0.15);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.locked-view__info-icon {
+  font-size: 16px !important;
+  color: #6B21A8;
+  flex-shrink: 0;
+}
+
+.locked-view__info-text {
+  font-size: 0.72rem;
+  color: #6B21A8;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Acciones */
+.locked-view__actions {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.locked-view__btn {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 160ms ease;
+  text-align: center;
+}
+
+.locked-view__btn--outline {
+  background: transparent;
+  border: 1.5px solid #ECECEC;
+  color: #6B7280;
+}
+
+.locked-view__btn--outline:hover {
+  background: #F8F9FA;
+  border-color: #C9A860; /* Prestige Gold en hover */
+  color: #41495A;
+}

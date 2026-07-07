@@ -1,109 +1,95 @@
 /**
  * @file login.component.ts
- * @description P1 — Login Administrativo (HU-001).
- * Formulario centrado con validación reactiva de email.
- * Botón "Continuar" deshabilitado hasta formato válido.
+ * @description P1 — Login Administrativo (HU-001 / HU-003 / HU-010).
+ *
+ * Implementa control de autenticación y bloqueo de cuenta por intentos fallidos (HU-010).
+ * Maneja los estados:
+ *   - Normal / Intento fallido con badge y vibración (401 Unauthorized)
+ *   - Bloqueo Temporal con cuenta regresiva MM:SS (423 Locked)
+ *   - Bloqueo Definitivo con advertencia de auditoría por email (403 Forbidden)
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { of } from 'rxjs';
-import { delay } from 'rxjs/operators';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Subscription, interval } from 'rxjs';
+import { takeWhile } from 'rxjs/operators';
 import { AuthState } from '../../../core/auth/auth.state';
 import { AuthService } from '../../../core/services/auth.service';
 import { LoginResponse } from '../../../core/models/auth.models';
+import { ForgotPasswordModalComponent } from './forgot-password-modal/forgot-password-modal.component';
+
+type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
 
 @Component({
   selector: 'fg-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent {
-  private readonly fb = inject(FormBuilder);
-  private readonly authState = inject(AuthState);
+export class LoginComponent implements OnDestroy {
+  private readonly fb          = inject(FormBuilder);
+  private readonly authState   = inject(AuthState);
   private readonly authService = inject(AuthService);
 
-  // Variable de estado para alternar vistas condicionalmente ('login' o 'forgot')
-  protected readonly view = signal<'login' | 'forgot'>('login');
+  // ── Estado del layout / vistas (HU-010) ──────────────────
+  protected readonly viewState = signal<LoginViewState>('login');
+  protected readonly showForgotModal = signal<boolean>(false);
 
-  // Señales reactivas para el estado de carga y errores
-  protected readonly isLoading = signal<boolean>(false);
-  protected readonly showPwd = signal<boolean>(false);
+  // ── Estado de carga y errores ────────────────────────────
+  protected readonly isLoading  = signal<boolean>(false);
+  protected readonly showPwd    = signal<boolean>(false);
   protected readonly loginError = signal<string | null>(null);
-  protected readonly loginInfo  = signal<string | null>(null);
 
-  // Variables auxiliares para el proceso de recuperación de contraseña
-  protected readonly isSendingForgot = signal<boolean>(false);
-  protected readonly forgotSuccess = signal<boolean>(false);
-  protected readonly forgotError = signal<string | null>(null);
+  // ── Gestión de Intentos Fallidos (HU-010) ────────────────
+  protected readonly attemptsRemaining = signal<number | null>(null);
+  protected readonly animateShake      = signal<boolean>(false);
 
-  // Formulario reactivo para el ingreso de credenciales (admite email o username)
+  // ── Bloqueo Temporal (HU-010) ────────────────────────────
+  protected readonly lockTimeRemaining = signal<number>(0); // En segundos
+  protected readonly formattedLockTime = signal<string>('00:00');
+  private lockTimerSubscription?: Subscription;
+
+  // ── Formulario reactivo ──────────────────────────────────
   protected readonly form = this.fb.group({
-    email: ['', [Validators.required]],
+    email:    ['', [Validators.required]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
-  // Control independiente para el correo de recuperación
-  protected readonly forgotEmail = this.fb.control('', [Validators.required, Validators.email]);
+  get emailCtrl()    { return this.form.controls.email; }
+  get passwordCtrl() { return this.form.controls.password; }
 
-  // Getters para acceso limpio a controles del formulario de credenciales
-  get emailCtrl() {
-    return this.form.controls.email;
-  }
-
-  get passwordCtrl() {
-    return this.form.controls.password;
-  }
-
-  // Getter para acceso limpio al control de recuperación de contraseña
-  get forgotEmailCtrl() {
-    return this.forgotEmail;
-  }
-
-  /**
-   * Determina si el campo de correo electrónico cumple con las validaciones básicas.
-   */
-  protected get isEmailValid(): boolean {
-    return this.emailCtrl.valid;
-  }
-
-  /**
-   * Determina si todo el formulario de inicio de sesión es válido.
-   */
   protected get isFormValid(): boolean {
     return this.form.valid;
   }
 
-  /**
-   * Alterna la visibilidad de la contraseña en el input.
-   */
+  // ── Acciones de vista ────────────────────────────────────
+
   protected togglePwd(): void {
     this.showPwd.update((v) => !v);
   }
 
-  /**
-   * Modifica la vista actual y limpia errores/valores anteriores.
-   */
-  protected setView(newView: 'login' | 'forgot'): void {
-    this.view.set(newView);
+  protected openForgotModal(): void {
     this.loginError.set(null);
-    this.forgotError.set(null);
-    this.forgotSuccess.set(false);
-    this.forgotEmail.reset();
+    this.showForgotModal.set(true);
+  }
+
+  protected closeForgotModal(): void {
+    this.showForgotModal.set(false);
   }
 
   /**
-   * Procesa la autenticación llamando al servicio local y actualizando el estado global.
+   * Procesa el inicio de sesión y gestiona las respuestas de error del servidor (HU-010).
    */
   protected onSubmit(): void {
     if (!this.form.valid || this.isLoading()) return;
+    
     this.loginError.set(null);
     this.isLoading.set(true);
+    this.animateShake.set(false);
 
     const { email, password } = this.form.getRawValue();
 
@@ -118,31 +104,93 @@ export class LoginComponent {
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);
-        const errorMsg = err.error?.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.';
-        this.loginError.set(errorMsg);
+        this.handleLoginError(err);
       },
     });
   }
 
   /**
-   * Procesa la solicitud de recuperación de contraseña simulando un envío asíncrono.
+   * Centraliza e intercepta los escenarios de error devueltos por Spring Boot (HU-010).
    */
-  protected onForgotSubmit(): void {
-    if (this.forgotEmail.invalid || this.isSendingForgot()) return;
-    this.forgotError.set(null);
-    this.forgotSuccess.set(false);
-    this.isSendingForgot.set(true);
+  private handleLoginError(err: HttpErrorResponse): void {
+    const errorData = err.error || {};
+    
+    switch (err.status) {
+      case 401: // Intento Fallido Normal
+        const remaining = errorData.attemptsRemaining ?? 3;
+        this.attemptsRemaining.set(remaining);
+        this.loginError.set(errorData.message || 'Contraseña incorrecta. Acceso denegado.');
+        
+        // Detona la vibración horizontal temporal en el input de contraseña
+        this.animateShake.set(true);
+        setTimeout(() => this.animateShake.set(false), 500);
+        break;
 
-    // Simula una llamada asíncrona de recuperación (800ms)
-    of(true).pipe(delay(800)).subscribe({
-      next: () => {
-        this.isSendingForgot.set(false);
-        this.forgotSuccess.set(true);
-      },
-      error: () => {
-        this.isSendingForgot.set(false);
-        this.forgotError.set('No se pudo enviar el enlace de recuperación. Inténtalo más tarde.');
-      }
-    });
+      case 423: // Bloqueo Temporal Activo
+        const secondsLeft = errorData.lockTimeRemaining ?? 900; // Por defecto 15 minutos
+        this.startLockCountdown(secondsLeft);
+        this.viewState.set('locked-temporary');
+        break;
+
+      case 403: // Bloqueo Definitivo Activo
+        this.viewState.set('locked-permanent');
+        break;
+
+      default:
+        this.loginError.set(errorData.message || 'Error de conexión con el servidor 4GUARD.');
+        break;
+    }
+  }
+
+  /**
+   * Inicia el temporizador dinámico en cuenta regresiva que actualiza la UI segundo a segundo.
+   */
+  private startLockCountdown(initialSeconds: number): void {
+    this.lockTimerSubscription?.unsubscribe();
+    this.lockTimeRemaining.set(initialSeconds);
+    this.updateFormattedTime(initialSeconds);
+
+    this.lockTimerSubscription = interval(1000)
+      .pipe(
+        takeWhile(() => this.lockTimeRemaining() > 0)
+      )
+      .subscribe({
+        next: () => {
+          const current = this.lockTimeRemaining() - 1;
+          this.lockTimeRemaining.set(current);
+          this.updateFormattedTime(current);
+
+          if (current === 0) {
+            // Desbloqueado: regresar al formulario de login
+            this.viewState.set('login');
+            this.loginError.set(null);
+            this.attemptsRemaining.set(null);
+          }
+        }
+      });
+  }
+
+  /**
+   * Formatea los segundos restantes a formato MM:SS.
+   */
+  private updateFormattedTime(totalSeconds: number): void {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    const minutesStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
+    const secondsStr = seconds < 10 ? `0${seconds}` : `${seconds}`;
+    
+    this.formattedLockTime.set(`${minutesStr}:${secondsStr}`);
+  }
+
+  /**
+   * Permite simular el envío o contacto a soporte técnico.
+   */
+  protected contactSupport(): void {
+    window.location.href = 'mailto:soporte@4guard.com?subject=Desbloqueo de Cuenta 4GUARD WMS';
+  }
+
+  ngOnDestroy(): void {
+    this.lockTimerSubscription?.unsubscribe();
   }
 }

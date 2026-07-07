@@ -21,7 +21,7 @@ import {
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
 import { branchInterceptor, mockBackendInterceptor } from '@4guard/shared-core';
-import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { adminRoutes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -34,9 +34,9 @@ export const appConfig: ApplicationConfig = {
     ),
 
     // ── HTTP Client con interceptores ────────────────────────────────────────
-    // Orden importante: JWT primero, luego Branch, luego Mock Backend
+    // Orden importante: Auth primero, luego Branch, luego Mock Backend
     provideHttpClient(
-      withInterceptors([jwtInterceptor, branchInterceptor, mockBackendInterceptor]),
+      withInterceptors([authInterceptor, branchInterceptor, mockBackendInterceptor]),
     ),
 
     // ── Animaciones ───────────────────────────────────────────────────────────
