@@ -44,7 +44,7 @@
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "16kb" }
+                { "type": "anyComponentStyle", "maximumWarning": "30kb", "maximumError": "40kb" }
               ],
               "outputHashing": "all",
               "optimization": true,
@@ -134,7 +134,7 @@
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "600kb", "maximumError": "1.2mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "16kb" }
+                { "type": "anyComponentStyle", "maximumWarning": "30kb", "maximumError": "40kb" }
               ],
               "outputHashing": "all",
               "optimization": true,

@@ -1,150 +1,1245 @@
-<!-- admin-panel.component.html — Administracion del Sistema — Replica exacta del screenshot -->
+<!-- apps/admin-console/src/app/features/admin/admin-panel/admin-panel.component.html -->
 <div class="admin-page">
 
-  <!-- PAGE HEADER -->
-  <div class="page-top">
-    <div class="page-top__title-row">
-      <span class="material-symbols-outlined page-top__icon">settings</span>
-      <h1 class="page-top__title">Administracion del Sistema</h1>
+  <!-- ==================== MAIN DASHBOARD (GRID OF CARDS) ==================== -->
+  @if (selectedModule() === null) {
+    <!-- PAGE HEADER -->
+    <div class="page-top">
+      <div class="page-top__title-row">
+        <span class="material-symbols-outlined page-top__icon">settings</span>
+        <h1 class="page-top__title">Consola de Administración WMS</h1>
+      </div>
+      <p class="page-top__subtitle">Configura la jerarquía física de tu almacén, gestiona la seguridad y monitorea las operaciones en tiempo real.</p>
     </div>
-    <p class="page-top__subtitle">Gestion de configuraciones globales, sucursales y parametros operativos del WMS.</p>
-  </div>
 
-  <!-- THREE COLUMNS GRID -->
-  <div class="admin-grid">
-
-    <!-- CARD 1: Configuracion Global -->
-    <div class="admin-card">
-      <div class="admin-card__header">
-        <span class="material-symbols-outlined admin-card__icon admin-card__icon--gray">view_module</span>
-        <span class="admin-card__title">CONFIGURACION GLOBAL</span>
-      </div>
-      <p class="admin-card__desc">
-        Ajusta el intervalo de sincronizacion y los tiempos de expiracion de sesion del almacenamiento del navegador.
-      </p>
-
-      <div class="admin-card__body">
-        <div class="field-group">
-          <label class="field-group__label" for="sync-interval">
-            INTERVALO DE SINCRONIZACION OFFLINE (SEGUNDOS)
-          </label>
-          <input
-            id="sync-interval"
-            type="number"
-            class="field-group__input"
-            [value]="syncInterval()"
-            (input)="updateSyncInterval($event)"
-            min="5"
-            max="600">
-        </div>
-
-        <div class="field-group">
-          <label class="field-group__label" for="session-timeout">
-            EXPIRACION DE SESION (MINUTOS)
-          </label>
-          <input
-            id="session-timeout"
-            type="number"
-            class="field-group__input"
-            [value]="sessionTimeout()"
-            (input)="updateSessionTimeout($event)"
-            min="5"
-            max="480">
+    <!-- MAIN DASHBOARD CONTENT -->
+    <div class="dashboard-scroll">
+      
+      <!-- SECCIÓN: ESTRUCTURA DE ALMACÉN -->
+      <div class="module-section">
+        <h2 class="module-section__title">🏢 Estructura de Almacén (WMS Catalogs)</h2>
+        <div class="modules-grid">
+          @for (m of modules; track m.id) {
+            @if (m.category === 'STRUCTURE') {
+              <div class="module-card" (click)="selectModule(m.id)">
+                <div class="module-card__header">
+                  <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+                  <span class="module-card__title">{{ m.title }}</span>
+                </div>
+                <p class="module-card__desc">{{ m.description }}</p>
+                <div class="module-card__action">Configurar <span class="material-symbols-outlined">arrow_forward</span></div>
+              </div>
+            }
+          }
         </div>
       </div>
 
-      <div class="admin-card__footer">
-        <button
-          id="save-config-btn"
-          class="action-btn action-btn--gold"
-          (click)="saveSystemConfig()">
-          GUARDAR CAMBIOS
+      <!-- SECCIÓN: CATÁLOGOS DE MERCANCÍA -->
+      <div class="module-section">
+        <h2 class="module-section__title">📦 Catálogos de Mercancía</h2>
+        <div class="modules-grid">
+          @for (m of modules; track m.id) {
+            @if (m.category === 'MERCHANDISE') {
+              <div class="module-card" (click)="selectModule(m.id)">
+                <div class="module-card__header">
+                  <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+                  <span class="module-card__title">{{ m.title }}</span>
+                </div>
+                <p class="module-card__desc">{{ m.description }}</p>
+                <div class="module-card__action">Configurar <span class="material-symbols-outlined">arrow_forward</span></div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- SECCIÓN: SEGURIDAD Y ACCESO -->
+      <div class="module-section">
+        <h2 class="module-section__title">🔐 Seguridad y Control de Acceso</h2>
+        <div class="modules-grid">
+          @for (m of modules; track m.id) {
+            @if (m.category === 'SECURITY') {
+              <div class="module-card" (click)="selectModule(m.id)">
+                <div class="module-card__header">
+                  <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+                  <span class="module-card__title">{{ m.title }}</span>
+                </div>
+                <p class="module-card__desc">{{ m.description }}</p>
+                <div class="module-card__action">Configurar <span class="material-symbols-outlined">arrow_forward</span></div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- SECCIÓN: SOPORTE Y MONITOREO -->
+      <div class="module-section">
+        <h2 class="module-section__title">📊 Monitoreo Técnico y Auditoría</h2>
+        <div class="modules-grid">
+          @for (m of modules; track m.id) {
+            @if (m.category === 'SUPPORT') {
+              <div class="module-card" (click)="selectModule(m.id)">
+                @if (m.badgeCount && m.badgeCount() > 0) {
+                  <span class="module-card__badge">{{ m.badgeCount() }}</span>
+                }
+                <div class="module-card__header">
+                  <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+                  <span class="module-card__title">{{ m.title }}</span>
+                </div>
+                <p class="module-card__desc">{{ m.description }}</p>
+                <div class="module-card__action">Consultar <span class="material-symbols-outlined">arrow_forward</span></div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM STATUS BAR -->
+    <div class="status-bar">
+      <div class="status-bar__left">
+        <span class="status-bar__dot"></span>
+        <span class="status-bar__node">CONEXIÓN API: ESTABLE</span>
+        <span class="status-bar__sep">&bull;</span>
+        <span class="status-bar__license">LICENCIA: ACTIVE 3PL CORP</span>
+      </div>
+      <div class="status-bar__right">
+        <span class="status-bar__version">4GUARD WMS v4.5.0-GOLDEN &bull; PREMIUM HUB</span>
+      </div>
+    </div>
+
+  } @else {
+    
+    <!-- ==================== CRUD WORKSPACE (DUAL PANE LAYOUT) ==================== -->
+    <div class="crud-layout">
+      
+      <!-- SUB-MODULES NAVIGATION SIDEBAR -->
+      <aside class="crud-sidebar">
+        <button class="back-dashboard-btn" (click)="selectModule(null)">
+          <span class="material-symbols-outlined">arrow_back</span>
+          <span>Volver al Dashboard</span>
         </button>
-      </div>
-    </div>
+        
+        <div class="sidebar-category">
+          <span class="sidebar-category__title">Estructura WMS</span>
+          <ul class="sidebar-menu">
+            <li [class.active]="selectedModule() === 'organizations'" (click)="selectModule('organizations')">
+              <span class="material-symbols-outlined">corporate_fare</span> Organizaciones
+            </li>
+            <li [class.active]="selectedModule() === 'branches'" (click)="selectModule('branches')">
+              <span class="material-symbols-outlined">domain</span> Sucursales
+            </li>
+            <li [class.active]="selectedModule() === 'sections'" (click)="selectModule('sections')">
+              <span class="material-symbols-outlined">grid_view</span> Secciones
+            </li>
+            <li [class.active]="selectedModule() === 'locations'" (click)="selectModule('locations')">
+              <span class="material-symbols-outlined">location_on</span> Ubicaciones
+            </li>
+          </ul>
+        </div>
 
-    <!-- CARD 2: Sucursales / Almacenes -->
-    <div class="admin-card">
-      <div class="admin-card__header">
-        <span class="material-symbols-outlined admin-card__icon admin-card__icon--gray">domain</span>
-        <span class="admin-card__title">SUCURSALES / ALMACENES</span>
-      </div>
-      <p class="admin-card__desc">
-        Monitorea y da de alta sucursales activas en el sistema logistico.
-      </p>
+        <div class="sidebar-category">
+          <span class="sidebar-category__title">Mercancía</span>
+          <ul class="sidebar-menu">
+            <li [class.active]="selectedModule() === 'clients'" (click)="selectModule('clients')">
+              <span class="material-symbols-outlined">partner_exchange</span> Clientes / Owners
+            </li>
+            <li [class.active]="selectedModule() === 'skus'" (click)="selectModule('skus')">
+              <span class="material-symbols-outlined">inventory</span> Catálogo SKUs
+            </li>
+          </ul>
+        </div>
 
-      <div class="admin-card__body branch-list">
-        @for (branch of branches(); track branch.id) {
-        <div class="branch-item">
-          <div class="branch-item__info">
-            <span class="branch-item__name">{{ branch.name }}</span>
-            <span class="branch-item__code">{{ branch.code }}</span>
+        <div class="sidebar-category">
+          <span class="sidebar-category__title">Seguridad</span>
+          <ul class="sidebar-menu">
+            <li [class.active]="selectedModule() === 'users'" (click)="selectModule('users')">
+              <span class="material-symbols-outlined">manage_accounts</span> Usuarios
+            </li>
+            <li [class.active]="selectedModule() === 'roles'" (click)="selectModule('roles')">
+              <span class="material-symbols-outlined">shield_person</span> Roles y Permisos
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-category">
+          <span class="sidebar-category__title">Monitoreo y Soporte</span>
+          <ul class="sidebar-menu">
+            <li [class.active]="selectedModule() === 'inventory'" (click)="selectModule('inventory')">
+              <span class="material-symbols-outlined">shelves</span> Inventario Activo
+            </li>
+            <li [class.active]="selectedModule() === 'movements'" (click)="selectModule('movements')">
+              <span class="material-symbols-outlined">history</span> Bitácora Movs
+            </li>
+            <li [class.active]="selectedModule() === 'incidences'" (click)="selectModule('incidences')">
+              <span class="material-symbols-outlined">report_problem</span> Calidad / Incidencias
+              @if (activeIncidencesCount() > 0) {
+                <span class="menu-badge bg-danger">{{ activeIncidencesCount() }}</span>
+              }
+            </li>
+            <li [class.active]="selectedModule() === 'audit'" (click)="selectModule('audit')">
+              <span class="material-symbols-outlined">find_in_page</span> Logs de Auditoría
+            </li>
+            <li [class.active]="selectedModule() === 'notifications'" (click)="selectModule('notifications')">
+              <span class="material-symbols-outlined">notifications_active</span> Alertas Técnicas
+              @if (unreadNotificationsCount() > 0) {
+                <span class="menu-badge bg-warning">{{ unreadNotificationsCount() }}</span>
+              }
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- ACTIVE CRUD WORKSPACE -->
+      <main class="crud-main">
+        <!-- HEADER -->
+        <header class="crud-main-header">
+          <div>
+            <span class="module-breadcrumb">ADMINISTRACIÓN / {{ selectedModule() | uppercase }}</span>
+            <h2 class="module-active-title">
+              @switch (selectedModule()) {
+                @case ('organizations') { Gestión de Organizaciones }
+                @case ('branches') { Gestión de Sucursales (Branches) }
+                @case ('sections') { Secciones de Almacén }
+                @case ('locations') { Catálogo de Ubicaciones (Locations) }
+                @case ('clients') { Gestión de Clientes (Depositantes) }
+                @case ('skus') { Catálogo de Productos / SKUs }
+                @case ('users') { Control de Usuarios y Seguridad }
+                @case ('roles') { Roles y Matriz de Permisos }
+                @case ('inventory') { Monitor de Inventario Activo }
+                @case ('movements') { Bitácora Histórica de Movimientos }
+                @case ('incidences') { Control de Incidencias de Calidad }
+                @case ('audit') { Consola de Auditoría Forense }
+                @case ('notifications') { Notificaciones y Alertas del Sistema }
+              }
+            </h2>
           </div>
-          <span class="branch-badge" [class.branch-badge--active]="branch.active" [class.branch-badge--inactive]="!branch.active">
-            {{ branch.active ? 'ACTIVO' : 'INACTIVO' }}
-          </span>
-        </div>
-        }
-      </div>
 
-      <div class="admin-card__footer">
-        <button
-          id="add-branch-btn"
-          class="action-btn action-btn--ghost"
-          (click)="addBranch()">
-          + NUEVA SUCURSAL
-        </button>
+          <!-- ACTIONS BAR -->
+          <div class="crud-actions-row">
+            <!-- Search bar -->
+            <div class="search-wrapper">
+              <span class="material-symbols-outlined search-icon">search</span>
+              <input 
+                type="text" 
+                class="search-input" 
+                [placeholder]="'Buscar registros en ' + selectedModule() + '...'"
+                [value]="searchTerm()"
+                (input)="onSearch($event)">
+            </div>
+
+            <!-- Page Size Dropdown -->
+            <div class="page-size-wrapper">
+              <span class="page-size-label">MOSTRAR</span>
+              <select class="page-size-select" [value]="pageSize()" (change)="updatePageSize($event)">
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+
+            <!-- Create Button (omit for read-only tables: movements, audit) -->
+            @if (selectedModule() !== 'movements' && selectedModule() !== 'audit' && selectedModule() !== 'notifications' && selectedModule() !== 'inventory') {
+              <button class="add-record-btn" (click)="openAddModal()">
+                <span class="material-symbols-outlined">add</span>
+                <span>Añadir</span>
+              </button>
+            }
+          </div>
+        </header>
+
+        <!-- DATA CONTAINER -->
+        <div class="table-container">
+          <table class="fg-table">
+            <thead>
+              @switch (selectedModule()) {
+                @case ('organizations') {
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre de Organización</th>
+                    <th>Tax ID / RFC</th>
+                    <th>Tipo</th>
+                    <th>Estatus</th>
+                    <th>Creación</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('branches') {
+                  <tr>
+                    <th>Código</th>
+                    <th>Organización</th>
+                    <th>Nombre de Sucursal</th>
+                    <th>Zona Horaria</th>
+                    <th>Dirección</th>
+                    <th>Estatus</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('sections') {
+                  <tr>
+                    <th>Código</th>
+                    <th>Sucursal</th>
+                    <th>Nombre de Sección</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('locations') {
+                  <tr>
+                    <th>Sucursal</th>
+                    <th>Sección</th>
+                    <th>Coordenadas (Z-P-R-N)</th>
+                    <th>XYZ</th>
+                    <th>Tipo</th>
+                    <th>Capacidad</th>
+                    <th>Bloqueada</th>
+                    <th>Razón de Bloqueo</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('clients') {
+                  <tr>
+                    <th>Organización</th>
+                    <th>Nombre de Cliente</th>
+                    <th>ID Externo (ERP)</th>
+                    <th>Estatus</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('skus') {
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Código SKU</th>
+                    <th>Nombre Comercial</th>
+                    <th>Descripción</th>
+                    <th>Peso</th>
+                    <th>U. Medida</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('users') {
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Nombre Completo</th>
+                    <th>Sucursal</th>
+                    <th>Rol WMS</th>
+                    <th>Estatus</th>
+                    <th>Perm. Locked</th>
+                    <th>Ult. Acceso</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('roles') {
+                  <tr>
+                    <th>Nombre del Rol</th>
+                    <th>Nivel Jerárquico</th>
+                    <th>Rol Sistema</th>
+                    <th>Permisos Asignados</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('inventory') {
+                  <tr>
+                    <th>SSCC (Contenedor)</th>
+                    <th>SKU / Nombre</th>
+                    <th>Ubicación</th>
+                    <th>Cantidad</th>
+                    <th>Lote</th>
+                    <th>Fechas (Fab / Venc)</th>
+                    <th>Folio SAP</th>
+                    <th>Estado Calidad</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('movements') {
+                  <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Tipo Movimiento</th>
+                    <th>SSCC</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Operador</th>
+                    <th>Razón del Movimiento</th>
+                  </tr>
+                }
+                @case ('incidences') {
+                  <tr>
+                    <th>Folio</th>
+                    <th>Contenedor (SSCC)</th>
+                    <th>Tipo Incidencia</th>
+                    <th>Gravedad</th>
+                    <th>Reportó</th>
+                    <th>Estatus</th>
+                    <th>Fecha Reporte</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+                @case ('audit') {
+                  <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Operador</th>
+                    <th>Entidad</th>
+                    <th>ID Entidad</th>
+                    <th>Acción</th>
+                    <th>Dirección IP</th>
+                    <th class="text-right">Detalle</th>
+                  </tr>
+                }
+                @case ('notifications') {
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Severidad</th>
+                    <th>Título Alerta</th>
+                    <th>Mensaje</th>
+                    <th>Estatus</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                }
+              }
+            </thead>
+            <tbody>
+              @for (item of filteredAndPagedData().items; track item.id) {
+                @switch (selectedModule()) {
+                  @case ('organizations') {
+                    <tr>
+                      <td class="font-mono text-gold font-bold">{{ item.code }}</td>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.taxId || 'N/A' }}</td>
+                      <td><span class="tech-badge">{{ item.type }}</span></td>
+                      <td>
+                        <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="icon-btn" [title]="item.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleOrgStatus(item.id)">
+                          <span class="material-symbols-outlined">{{ item.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('branches') {
+                    <tr>
+                      <td class="font-mono text-gold font-bold">{{ item.code }}</td>
+                      <td>{{ item.orgName }}</td>
+                      <td>{{ item.name }}</td>
+                      <td class="font-mono text-xs">{{ item.timezone }}</td>
+                      <td class="text-xs text-muted max-w-xs truncate">{{ item.addressLine1 }}</td>
+                      <td>
+                        <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="icon-btn" [title]="item.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleBranchStatus(item.id)">
+                          <span class="material-symbols-outlined">{{ item.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('sections') {
+                    <tr>
+                      <td class="font-mono text-gold font-bold">{{ item.code }}</td>
+                      <td>{{ item.branchName }}</td>
+                      <td>{{ item.name }}</td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('locations') {
+                    <tr>
+                      <td>{{ item.branchName }}</td>
+                      <td class="font-mono text-xs">{{ item.sectionName }}</td>
+                      <td class="font-mono font-bold">{{ item.zone }}-{{ item.aisle }}-{{ item.rack }}-{{ item.position }}</td>
+                      <td class="font-mono text-xs text-muted">X:{{ item.coordX }} Y:{{ item.coordY }} Z:{{ item.coordZ }}</td>
+                      <td><span class="tech-badge">{{ item.type }}</span></td>
+                      <td class="font-mono">{{ item.capacityUnits }} U</td>
+                      <td>
+                        <span class="status-badge" [class]="item.isBlocked ? 'badge-danger' : 'badge-success'">
+                          {{ item.isBlocked ? 'BLOQUEADA' : 'LIBRE' }}
+                        </span>
+                      </td>
+                      <td class="text-xs text-danger max-w-xs truncate">{{ item.blockReason || '-' }}</td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="icon-btn" [class.text-warning]="item.isBlocked" [title]="item.isBlocked ? 'Desbloquear Ubicación' : 'Bloquear Ubicación'" (click)="toggleLocationBlock(item)">
+                          <span class="material-symbols-outlined">{{ item.isBlocked ? 'lock_open' : 'lock' }}</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('clients') {
+                    <tr>
+                      <td>{{ item.orgName }}</td>
+                      <td class="font-bold text-white">{{ item.name }}</td>
+                      <td class="font-mono text-xs">{{ item.externalId }}</td>
+                      <td>
+                        <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="icon-btn" [title]="item.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleClientStatus(item.id)">
+                          <span class="material-symbols-outlined">{{ item.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('skus') {
+                    <tr>
+                      <td>{{ item.clientName }}</td>
+                      <td class="font-mono text-gold font-bold">{{ item.code }}</td>
+                      <td class="font-bold text-white">{{ item.name }}</td>
+                      <td class="text-xs text-muted max-w-xs truncate" [title]="item.description">{{ item.description || '-' }}</td>
+                      <td class="font-mono text-right">{{ item.weight | number:'1.3-3' }} kg</td>
+                      <td><span class="tech-badge">{{ item.unit }}</span></td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('users') {
+                    <tr>
+                      <td class="font-mono font-bold text-white">{{ item.username }}</td>
+                      <td class="text-xs">{{ item.email }}</td>
+                      <td>{{ item.firstName }} {{ item.lastName }}</td>
+                      <td>{{ item.branchName || 'Acceso Corporativo' }}</td>
+                      <td><span class="tech-badge bg-primary-opaque text-primary">{{ item.role }}</span></td>
+                      <td>
+                        <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="status-badge" [class]="item.permanentlyLocked ? 'badge-danger' : 'badge-success'">
+                          {{ item.permanentlyLocked ? 'BLOQUEADO' : 'LIBRE' }}
+                        </span>
+                      </td>
+                      <td class="text-xs text-muted font-mono">{{ item.lastLoginAt ? (item.lastLoginAt | date:'dd/MM/yyyy HH:mm') : 'Nunca' }}</td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        @if (item.failedAttempts > 0 || item.permanentlyLocked) {
+                          <button class="icon-btn text-success" title="Restablecer intentos fallidos / Desbloquear" (click)="unlockUserAccount(item)">
+                            <span class="material-symbols-outlined">lock_open</span>
+                          </button>
+                        }
+                        <button class="icon-btn" [class.text-danger]="item.permanentlyLocked" title="Bloqueo Permanente" (click)="toggleUserPermanentLock(item)">
+                          <span class="material-symbols-outlined">{{ item.permanentlyLocked ? 'gpp_bad' : 'verified_user' }}</span>
+                        </button>
+                        <button class="icon-btn" [title]="item.status === 'ACTIVE' ? 'Suspender' : 'Activar'" (click)="toggleUserStatus(item.id)">
+                          <span class="material-symbols-outlined">{{ item.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('roles') {
+                    <tr>
+                      <td class="font-bold text-white">{{ item.name }}</td>
+                      <td class="font-mono text-center">{{ item.level }}</td>
+                      <td>
+                        <span class="status-badge" [class]="item.isSystem ? 'badge-success' : 'badge-warning'">
+                          {{ item.isSystem ? 'SISTEMA' : 'PERSONALIZADO' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="tech-badge bg-info-opaque text-info">{{ item.permissions.length }} Permisos</span>
+                      </td>
+                      <td class="actions-cell">
+                        <button class="icon-btn" title="Editar / Ver Permisos" (click)="openEditModal(item)">
+                          <span class="material-symbols-outlined">edit_note</span>
+                        </button>
+                        @if (!item.isSystem) {
+                          <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                            <span class="material-symbols-outlined">delete</span>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                  @case ('inventory') {
+                    <tr>
+                      <td class="font-mono font-bold text-gold">{{ item.sscc }}</td>
+                      <td>
+                        <div class="flex-column">
+                          <span class="font-mono font-bold text-xs text-white">{{ item.skuCode }}</span>
+                          <span class="text-xs text-muted max-w-xs truncate">{{ item.skuName }}</span>
+                        </div>
+                      </td>
+                      <td class="text-xs font-mono text-white">{{ item.locationCode }}</td>
+                      <td class="font-mono font-bold text-right text-gold">{{ item.quantity }} U</td>
+                      <td class="font-mono text-xs">{{ item.lotNumber }}</td>
+                      <td class="text-xs font-mono text-muted">
+                        F: {{ item.manufactureDate ? (item.manufactureDate | date:'dd/MM/yyyy') : '-' }} <br>
+                        V: {{ item.expirationDate ? (item.expirationDate | date:'dd/MM/yyyy') : 'Indefinido' }}
+                      </td>
+                      <td class="font-mono text-xs">{{ item.sapFolio }}</td>
+                      <td>
+                        <div class="flex-items-center gap-xs">
+                          <span class="status-badge" [class]="getStatusBadgeClass(item.state)">
+                            {{ item.state }}
+                          </span>
+                          @if (item.quarantineReason) {
+                            <span class="material-symbols-outlined text-danger text-xs" [title]="item.quarantineReason">info</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="actions-cell">
+                        <!-- Quarantined Toggle Button -->
+                        <button class="icon-btn" [class.text-danger]="item.state === 'QUARANTINE'" [title]="item.state === 'AVAILABLE' ? 'Retener (Poner en Cuarentena)' : 'Liberar a Disponible'" (click)="toggleInventoryQuarantine(item)">
+                          <span class="material-symbols-outlined">{{ item.state === 'AVAILABLE' ? 'gavel' : 'verified' }}</span>
+                        </button>
+                        
+                        <!-- Select dropdown for quick quality state switch -->
+                        <select class="quality-mini-select" (change)="changeInventoryQualityState(item, $event)" [value]="item.state">
+                          <option value="AVAILABLE">DISPONIBLE</option>
+                          <option value="IN_QUALITY">CALIDAD</option>
+                          <option value="DAMAGED">DAÑADO</option>
+                          <option value="QUARANTINE">CUARENTENA</option>
+                        </select>
+                      </td>
+                    </tr>
+                  }
+                  @case ('movements') {
+                    <tr>
+                      <td class="font-mono text-xs text-muted">{{ item.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                      <td>
+                        <span class="status-badge" [class]="getActionBadgeClass(item.type)">
+                          {{ item.type }}
+                        </span>
+                      </td>
+                      <td class="font-mono text-gold font-bold text-xs">{{ item.sscc }}</td>
+                      <td class="text-xs">{{ item.originLocation }}</td>
+                      <td class="text-xs text-white">{{ item.destinationLocation }}</td>
+                      <td class="font-mono text-xs">{{ item.username }}</td>
+                      <td class="text-xs text-muted max-w-xs truncate" [title]="item.reason">{{ item.reason }}</td>
+                    </tr>
+                  }
+                  @case ('incidences') {
+                    <tr>
+                      <td class="font-mono font-bold text-gold">{{ item.folio }}</td>
+                      <td class="font-mono text-xs">{{ item.sscc }}</td>
+                      <td><span class="tech-badge">{{ item.type }}</span></td>
+                      <td>
+                        <span class="status-badge" [class]="getSeverityBadgeClass(item.severity)">
+                          {{ item.severity }}
+                        </span>
+                      </td>
+                      <td class="font-mono text-xs">{{ item.reporterUsername }}</td>
+                      <td>
+                        <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td class="font-mono text-xs text-muted">{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td class="actions-cell">
+                        <button class="action-btn-small" (click)="openIncidenceResolution(item)">
+                          {{ item.status === 'CLOSED' ? 'Ver Detalles' : 'Resolver' }}
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('audit') {
+                    <tr>
+                      <td class="font-mono text-xs text-muted">{{ item.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                      <td class="font-bold text-white">{{ item.username }}</td>
+                      <td class="text-xs"><span class="tech-badge">{{ item.entityType }}</span></td>
+                      <td class="font-mono text-xs">{{ item.entityId }}</td>
+                      <td>
+                        <span class="status-badge" [class]="getActionBadgeClass(item.action)">
+                          {{ item.action }}
+                        </span>
+                      </td>
+                      <td class="font-mono text-xs text-muted">{{ item.ipAddress }}</td>
+                      <td class="actions-cell">
+                        <button class="icon-btn text-gold" title="Ver comparador JSON" (click)="openAuditDetail(item)">
+                          <span class="material-symbols-outlined">difference</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  @case ('notifications') {
+                    <tr [class.notification-unread]="!item.read">
+                      <td class="font-mono text-xs text-muted">{{ item.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                      <td>
+                        <span class="status-badge" [class]="getSeverityBadgeClass(item.severity)">
+                          {{ item.severity }}
+                        </span>
+                      </td>
+                      <td class="font-bold text-white text-sm">{{ item.title }}</td>
+                      <td class="text-xs text-muted max-w-sm truncate" [title]="item.message">{{ item.message }}</td>
+                      <td>
+                        <span class="status-badge" [class]="item.read ? 'badge-neutral' : 'badge-warning'">
+                          {{ item.read ? 'LEÍDA' : 'NUEVA' }}
+                        </span>
+                      </td>
+                      <td class="actions-cell">
+                        <button class="icon-btn text-info" title="Ver Metadatos Técnicos" (click)="openNotificationDetail(item)">
+                          <span class="material-symbols-outlined">code</span>
+                        </button>
+                        <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                }
+              } @empty {
+                <tr>
+                  <td colspan="12" class="table-empty-row">
+                    <span class="material-symbols-outlined empty-icon">sentiment_dissatisfied</span>
+                    <p>No se encontraron registros que coincidan con la búsqueda.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PAGINACIÓN -->
+        <footer class="table-footer">
+          <div class="table-footer__info">
+            Mostrando registros del <b>{{ (currentPage() - 1) * pageSize() + 1 }}</b> al 
+            <b>{{ Math.min(currentPage() * pageSize(), filteredAndPagedData().total) }}</b> 
+            de un total de <b>{{ filteredAndPagedData().total }}</b> registros.
+          </div>
+
+          <div class="table-footer__pagination">
+            <button 
+              class="pagination-arrow" 
+              [disabled]="currentPage() === 1" 
+              (click)="changePage(currentPage() - 1)">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            
+            <span class="pagination-current">
+              PÁGINA <b>{{ currentPage() }}</b> DE <b>{{ filteredAndPagedData().totalPages }}</b>
+            </span>
+
+            <button 
+              class="pagination-arrow" 
+              [disabled]="currentPage() === filteredAndPagedData().totalPages" 
+              (click)="changePage(currentPage() + 1)">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </footer>
+      </main>
+    </div>
+  }
+
+  <!-- ==================== FORMULARIO DE EDICIÓN / MODAL DINÁMICO ==================== -->
+  @if (isFormModalOpen()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <header class="modal-card__header">
+          <h3 class="modal-card__title">
+            {{ editingItemId() ? 'Editar Registro' : 'Añadir Nuevo Registro' }} — {{ selectedModule() | uppercase }}
+          </h3>
+          <button class="modal-card__close-btn" (click)="closeModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="modal-card__body">
+          @switch (selectedModule()) {
+            @case ('organizations') {
+              <div class="form-grid">
+                <div class="field-group col-12">
+                  <label class="field-group__label">Nombre comercial de Organización</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Código único</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="20" [disabled]="editingItemId() !== null" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Identificación Fiscal / RFC</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.taxId" maxlength="20">
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Giro / Tipo Organizacional</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.type">
+                    <option value="WAREHOUSE">Almacén (Warehouse)</option>
+                    <option value="DISTRIBUTION">Centro de Distribución (Distribution)</option>
+                    <option value="MANUFACTURING">Manufactura (Manufacturing)</option>
+                    <option value="RETAIL">Comercial / Retail</option>
+                    <option value="LOGISTICS">Logística Integral (Logistics)</option>
+                    <option value="THIRD_PARTY">Logística 3PL (Third Party)</option>
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Estatus</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.status">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="INACTIVE">Inactivo</option>
+                  </select>
+                </div>
+                <div class="field-group col-12">
+                  <label class="field-group__label">Configuración JSONB del Tenant</label>
+                  <textarea class="field-group__textarea" [(ngModel)]="formModel.settings" rows="4"></textarea>
+                </div>
+              </div>
+            }
+            @case ('branches') {
+              <div class="form-grid">
+                <div class="field-group col-12">
+                  <label class="field-group__label">Organización Corporativa</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.orgId">
+                    @for (org of orgService.organizations(); track org.id) {
+                      <option [value]="org.id">{{ org.name }} ({{ org.code }})</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-12">
+                  <label class="field-group__label">Nombre comercial de la Sucursal</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Código único por Org</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="20" [disabled]="editingItemId() !== null" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Zona Horaria</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.timezone" placeholder="America/Mexico_City">
+                </div>
+                <div class="field-group col-12">
+                  <label class="field-group__label">Dirección física completa</label>
+                  <textarea class="field-group__textarea" [(ngModel)]="formModel.addressLine1" rows="2"></textarea>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Estatus Sucursal</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.status">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="INACTIVE">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+            }
+            @case ('sections') {
+              <div class="form-grid">
+                <div class="field-group col-12">
+                  <label class="field-group__label">Sucursal / Centro Logístico</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.branchId">
+                    @for (b of branchService.branches(); track b.id) {
+                      <option [value]="b.id">{{ b.name }} ({{ b.code }})</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-4">
+                  <label class="field-group__label">Código Sección (máx 10)</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="10" required>
+                </div>
+                <div class="field-group col-8">
+                  <label class="field-group__label">Nombre Descriptivo</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="100" required>
+                </div>
+              </div>
+            }
+            @case ('locations') {
+              <div class="form-grid">
+                <div class="field-group col-6">
+                  <label class="field-group__label">Sucursal</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.branchId">
+                    @for (b of branchService.branches(); track b.id) {
+                      <option [value]="b.id">{{ b.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Sección interna</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.sectionId">
+                    @for (s of getSectionsForBranch(formModel.branchId); track s.id) {
+                      <option [value]="s.id">{{ s.name }} ({{ s.code }})</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Zona</label>
+                  <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.zone" maxlength="10" required>
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Pasillo (Aisle)</label>
+                  <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.aisle" maxlength="10">
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Rack</label>
+                  <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.rack" maxlength="10">
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Posición</label>
+                  <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.position" maxlength="10">
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Nivel (Altura)</label>
+                  <input type="number" class="field-group__input font-mono text-center" [(ngModel)]="formModel.level">
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Coord X (3D)</label>
+                  <input type="number" class="field-group__input font-mono text-center" [(ngModel)]="formModel.coordX">
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Coord Y (3D)</label>
+                  <input type="number" class="field-group__input font-mono text-center" [(ngModel)]="formModel.coordY">
+                </div>
+                <div class="field-group col-3">
+                  <label class="field-group__label">Coord Z (3D)</label>
+                  <input type="number" class="field-group__input font-mono text-center" [(ngModel)]="formModel.coordZ">
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Tipo Ubicación</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.type">
+                    <option value="PALLET">Tarima / Pallet</option>
+                    <option value="BIN">Cajón / Bin</option>
+                    <option value="SHELF">Estantería / Shelf</option>
+                    <option value="RAMP">Andén / Rampa</option>
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Capacidad de Unidades</label>
+                  <input type="number" class="field-group__input font-mono text-center" [(ngModel)]="formModel.capacityUnits">
+                </div>
+                
+                <!-- BLOQUEOS -->
+                <div class="field-group col-12 checkbox-group">
+                  <label class="checkbox-container">
+                    <input type="checkbox" [(ngModel)]="formModel.isBlocked">
+                    <span class="checkmark"></span>
+                    ¿Bloquear esta ubicación para almacenamiento temporalmente?
+                  </label>
+                </div>
+                @if (formModel.isBlocked) {
+                  <div class="field-group col-12">
+                    <label class="field-group__label text-danger">Motivo de Bloqueo (Requerido si bloquea)</label>
+                    <textarea class="field-group__textarea border-danger" [(ngModel)]="formModel.blockReason" rows="2"></textarea>
+                  </div>
+                }
+              </div>
+            }
+            @case ('clients') {
+              <div class="form-grid">
+                <div class="field-group col-12">
+                  <label class="field-group__label">Organización / Tenancy</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.orgId">
+                    @for (org of orgService.organizations(); track org.id) {
+                      <option [value]="org.id">{{ org.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-12">
+                  <label class="field-group__label">Nombre comercial de Cliente (Owner)</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">ID de Integración Externa (ERP/SAP)</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.externalId" placeholder="Ej: SAP-CLI-901" maxlength="50">
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Estatus Cliente</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.status">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="INACTIVE">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+            }
+            @case ('skus') {
+              <div class="form-grid">
+                <div class="field-group col-12">
+                  <label class="field-group__label">Dueño / Cliente (Depositante)</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.clientId">
+                    @for (c of clientService.clients(); track c.id) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Código SKU único</label>
+                  <input type="text" class="field-group__input font-mono font-bold" [(ngModel)]="formModel.code" maxlength="50" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Nombre del Producto</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Peso en kilogramos (Ej: 1.250)</label>
+                  <input type="number" step="0.001" class="field-group__input text-right font-mono" [(ngModel)]="formModel.weight">
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Unidad de Medida (UoM)</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.unit">
+                    <option value="PZA">PZA - Pieza individual</option>
+                    <option value="CAJA">CAJA - Caja agrupada</option>
+                    <option value="TARIMA">TARIMA - Pallet completo</option>
+                    <option value="PAR">PAR - Par de unidades</option>
+                    <option value="KG">KG - Kilogramos</option>
+                  </select>
+                </div>
+                <div class="field-group col-12">
+                  <label class="field-group__label">Descripción detallada</label>
+                  <textarea class="field-group__textarea" [(ngModel)]="formModel.description" rows="3"></textarea>
+                </div>
+              </div>
+            }
+            @case ('users') {
+              <div class="form-grid">
+                <div class="field-group col-6">
+                  <label class="field-group__label">Nombre de Usuario (Login)</label>
+                  <input type="text" class="field-group__input font-mono" [(ngModel)]="formModel.username" required>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Correo electrónico</label>
+                  <input type="email" class="field-group__input" [(ngModel)]="formModel.email" required>
+                </div>
+                @if (editingItemId() === null) {
+                  <div class="field-group col-12">
+                    <label class="field-group__label">Contraseña Temporal</label>
+                    <input type="password" class="field-group__input" [(ngModel)]="formModel.password" required>
+                  </div>
+                }
+                <div class="field-group col-6">
+                  <label class="field-group__label">Nombre(s)</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.firstName" maxlength="100">
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Apellidos</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.lastName" maxlength="100">
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Organización</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.orgId">
+                    @for (org of orgService.organizations(); track org.id) {
+                      <option [value]="org.id">{{ org.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Sucursal asignada (Opcional)</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.branchId">
+                    <option [value]="null">Acceso Corporativo (Todos los centros)</option>
+                    @for (b of getBranchesForOrg(formModel.orgId); track b.id) {
+                      <option [value]="b.id">{{ b.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Rol del WMS</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.role">
+                    <option value="ADMIN">Administrador General (ADMIN)</option>
+                    <option value="DOCK_SUPERVISOR">Supervisor de Embarques (DOCK_SUPERVISOR)</option>
+                    <option value="QM_INSPECTOR">Inspector de Calidad (QM_INSPECTOR)</option>
+                    <option value="WAREHOUSE_OPERATOR">Operador General (WAREHOUSE_OPERATOR)</option>
+                  </select>
+                </div>
+                <div class="field-group col-6">
+                  <label class="field-group__label">Estatus Inicial</label>
+                  <select class="field-group__input select" [(ngModel)]="formModel.status">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="PENDING">Pendiente Confirmación</option>
+                    <option value="INACTIVE">Inactivo</option>
+                    <option value="SUSPENDED">Suspendido</option>
+                  </select>
+                </div>
+
+                <div class="field-group col-6 checkbox-group">
+                  <label class="checkbox-container">
+                    <input type="checkbox" [(ngModel)]="formModel.isEnabled">
+                    <span class="checkmark"></span>
+                    Cuenta Habilitada (isEnabled)
+                  </label>
+                </div>
+                <div class="field-group col-6 checkbox-group">
+                  <label class="checkbox-container">
+                    <input type="checkbox" [(ngModel)]="formModel.changePasswordRequired">
+                    <span class="checkmark"></span>
+                    Fuerza cambio clave en próximo login
+                  </label>
+                </div>
+              </div>
+            }
+            @case ('roles') {
+              <div class="form-grid">
+                <div class="field-group col-8">
+                  <label class="field-group__label">Nombre del Rol</label>
+                  <input type="text" class="field-group__input" [(ngModel)]="formModel.name" [disabled]="formModel.isSystem" required>
+                </div>
+                <div class="field-group col-4">
+                  <label class="field-group__label">Nivel de Jerarquía (Jerarquía numérica)</label>
+                  <input type="number" class="field-group__input text-center font-mono" [(ngModel)]="formModel.level">
+                </div>
+
+                <!-- CHECKBOXES PERMISOS -->
+                <div class="field-group col-12">
+                  <label class="field-group__label">Matriz de Permisos (Checklist)</label>
+                  <div class="permission-grid">
+                    @for (p of roleService.permissions(); track p.code) {
+                      <div class="permission-checkbox" [class.checked]="hasPermissionSelected(p.code)" (click)="togglePermissionInRole(p.code)">
+                        <div class="permission-checkbox__header">
+                          <span class="material-symbols-outlined check-icon">
+                            {{ hasPermissionSelected(p.code) ? 'check_box' : 'check_box_outline_blank' }}
+                          </span>
+                          <span class="permission-checkbox__code">{{ p.code }}</span>
+                        </div>
+                        <div class="permission-checkbox__name">{{ p.name }}</div>
+                        <div class="permission-checkbox__desc">{{ p.description }}</div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <footer class="modal-card__footer">
+          <button class="modal-btn modal-btn--secondary" (click)="closeModal()">Cancelar</button>
+          <button class="modal-btn modal-btn--primary" (click)="saveItem()">Guardar Cambios</button>
+        </footer>
       </div>
     </div>
+  }
 
-    <!-- CARD 3: Estado y Seguridad -->
-    <div class="admin-card">
-      <div class="admin-card__header">
-        <span class="material-symbols-outlined admin-card__icon admin-card__icon--gray">monitoring</span>
-        <span class="admin-card__title">ESTADO Y SEGURIDAD</span>
-      </div>
-      <p class="admin-card__desc">
-        Detalles del servidor API, base de datos de almacenamiento local y licencia de uso de alta gama.
-      </p>
+  <!-- ==================== MODAL DE DETALLES (AUDIT COMPARATOR / INCIDENCE RESOLUTION) ==================== -->
+  @if (isDetailModalOpen() && detailModel) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-card modal-card--large" (click)="$event.stopPropagation()">
+        <header class="modal-card__header">
+          <h3 class="modal-card__title">
+            @if (selectedModule() === 'audit') { Visualizador de Auditoría Forense y Comparador JSON }
+            @else if (selectedModule() === 'incidences') { Registro de Acciones Correctivas — Incidencias }
+            @else if (selectedModule() === 'notifications') { Metadatos Técnicos de Alerta }
+          </h3>
+          <button class="modal-card__close-btn" (click)="closeModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
 
-      <div class="admin-card__body status-list">
-        <div class="status-row">
-          <span class="status-row__label">API Server Status:</span>
-          <span class="status-row__value status-row__value--online">ONLINE</span>
-        </div>
-        <div class="status-row">
-          <span class="status-row__label">Base de Datos:</span>
-          <span class="status-row__value status-row__value--purple">Dexie.js v3.2.4 (Cifrada)</span>
-        </div>
-        <div class="status-row">
-          <span class="status-row__label">Licencia Comercial:</span>
-          <span class="status-row__value status-row__value--white">Valida &bull; 3PL Unlimited</span>
-        </div>
-      </div>
+        <div class="modal-card__body">
+          <!-- COMPARADOR AUDIT LOGS -->
+          @if (selectedModule() === 'audit') {
+            <div class="audit-details-grid">
+              <div class="audit-metadata-card">
+                <h4 class="metadata-title">INFORMACIÓN DEL LOG</h4>
+                <div class="metadata-row"><span>Fecha:</span><b>{{ detailModel.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</b></div>
+                <div class="metadata-row"><span>Operador:</span><b>{{ detailModel.username }}</b></div>
+                <div class="metadata-row"><span>Acción:</span><b [class]="getStatusBadgeClass(detailModel.action)">{{ detailModel.action }}</b></div>
+                <div class="metadata-row"><span>Entidad:</span><b>{{ detailModel.entityType }}</b></div>
+                <div class="metadata-row"><span>ID Registro:</span><b class="font-mono">{{ detailModel.entityId }}</b></div>
+                <div class="metadata-row"><span>Dirección IP:</span><b class="font-mono">{{ detailModel.ipAddress }}</b></div>
+                <div class="metadata-row"><span>User Agent:</span><span class="ua-text">{{ detailModel.userAgent }}</span></div>
+              </div>
 
-      <div class="admin-card__footer">
-        <button
-          id="run-diagnostics-btn"
-          class="action-btn action-btn--purple"
-          (click)="runDiagnostics()">
-          EJECUTAR DIAGNOSTICO
-        </button>
+              <!-- DIFF VIEWER -->
+              <div class="diff-viewer">
+                <div class="diff-pane">
+                  <span class="diff-pane-title diff-pane-title--del">ESTADO ANTERIOR (before_state)</span>
+                  <pre class="json-code json-code--del">{{ detailModel.beforeState }}</pre>
+                </div>
+                <div class="diff-pane">
+                  <span class="diff-pane-title diff-pane-title--add">ESTADO NUEVO (after_state)</span>
+                  <pre class="json-code json-code--add">{{ detailModel.afterState }}</pre>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- RESOLUCIÓN INCIDENCIAS -->
+          @if (selectedModule() === 'incidences') {
+            <div class="incidence-resolution-panel">
+              <div class="incidence-info-summary">
+                <div class="info-item"><span>Folio:</span><b>{{ detailModel.folio }}</b></div>
+                <div class="info-item"><span>SSCC (Contenedor):</span><b class="font-mono text-gold">{{ detailModel.sscc }}</b></div>
+                <div class="info-item"><span>Tipo:</span><b>{{ detailModel.type }}</b></div>
+                <div class="info-item"><span>Gravedad:</span><b [class]="getSeverityBadgeClass(detailModel.severity)">{{ detailModel.severity }}</b></div>
+                <div class="info-item"><span>Fecha de Reporte:</span><b>{{ detailModel.createdAt | date:'dd/MM/yyyy HH:mm' }}</b></div>
+                <div class="info-item col-12"><span>Descripción de Anomalía:</span><p class="desc-text">{{ detailModel.description }}</p></div>
+              </div>
+
+              <!-- RESOLUTION ACTIONS FORM -->
+              <div class="resolution-form">
+                <div class="field-group">
+                  <label class="field-group__label">Nuevo Estado de la Incidencia</label>
+                  <select class="field-group__input select" [(ngModel)]="detailModel.newStatus">
+                    <option value="OPEN">ABIERTO (OPEN)</option>
+                    <option value="IN_PROGRESS">EN PROCESO (IN_PROGRESS)</option>
+                    <option value="CLOSED">CERRADO / RESUELTO (CLOSED)</option>
+                  </select>
+                </div>
+
+                <div class="field-group mt-sm">
+                  <label class="field-group__label">Acción Correctiva Registrada (Notas de Resolución)</label>
+                  <textarea class="field-group__textarea" [(ngModel)]="detailModel.newNotes" rows="4" placeholder="Escriba las acciones tomadas para resolver esta anomalía..."></textarea>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- METADATOS ALERTA -->
+          @if (selectedModule() === 'notifications') {
+            <div class="notification-details-panel">
+              <div class="notif-text-block">
+                <h4 class="notif-title-detail">{{ detailModel.title }}</h4>
+                <p class="notif-msg-detail">{{ detailModel.message }}</p>
+                <div class="notif-date-detail">Generado: {{ detailModel.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</div>
+              </div>
+
+              <div class="metadata-code-block">
+                <span class="metadata-code-title">METADATOS TÉCNICOS EN BASE DE DATOS (JSON)</span>
+                <pre class="json-code">{{ detailModel.technicalMetadata }}</pre>
+              </div>
+            </div>
+          }
+        </div>
+
+        <footer class="modal-card__footer">
+          <button class="modal-btn modal-btn--secondary" (click)="closeModal()">Cerrar</button>
+          @if (selectedModule() === 'incidences') {
+            <button class="modal-btn modal-btn--primary" (click)="saveIncidenceResolution()">Aplicar Resolución</button>
+          }
+        </footer>
       </div>
     </div>
-
-  </div>
-
-  <!-- BOTTOM STATUS BAR -->
-  <div class="status-bar">
-    <div class="status-bar__left">
-      <span class="status-bar__dot"></span>
-      <span class="status-bar__node">NODO PRINCIPAL: SMS-02</span>
-      <span class="status-bar__sep">&bull;</span>
-      <span class="status-bar__license">LICENCIA CORP: OK</span>
-    </div>
-    <div class="status-bar__right">
-      <span class="status-bar__version">SYNEXIA WMS v4.2.1-GOLDEN &bull; PREMIUM EDITION</span>
-    </div>
-  </div>
-
+  }
 </div>
