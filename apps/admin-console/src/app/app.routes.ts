@@ -73,11 +73,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Despacho',
       },
 
-      // Administración (solo ADMIN)
+      // Administración
       {
         path: 'admin',
         canActivate: [rbacGuard],
-        data: { module: 'admin', roles: [UserRole.ADMIN] },
+        data: { module: 'admin' },
         loadChildren: () =>
           import('./features/admin/admin.routes').then((m) => m.adminRoutes),
         title: '4GUARD WMS — Administración',
