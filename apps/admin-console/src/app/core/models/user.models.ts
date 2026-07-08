@@ -66,3 +66,32 @@ export interface ChangePasswordRequest {
  */
 export type ChangePasswordResponse = ApiResponse<null>;
 
+/**
+ * Datos detallados de un perfil de usuario.
+ */
+export interface UserProfileDto {
+  id: string;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  organizationId: string;
+  organizationName: string;
+  branchId: string;
+  branchName: string;
+  roleId: string;
+  roleName: string;
+  status: string;
+  isEnabled: boolean;
+  lastLogin: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+/**
+ * Respuesta del endpoint GET /api/v1/users/{id}
+ */
+export type UserProfileResponse = ApiResponse<UserProfileDto>;
+
+
