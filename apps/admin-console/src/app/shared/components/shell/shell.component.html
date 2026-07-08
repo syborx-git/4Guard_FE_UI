@@ -54,14 +54,30 @@
 
     <!-- User profile -->
     <div class="sidebar__user">
-      <div class="sidebar__avatar" aria-hidden="true">
-        {{ authState.userInitials() }}
-      </div>
-      @if (!isSidebarCollapsed()) {
-        <div class="sidebar__user-info">
-          <span class="sidebar__user-name">{{ authState.userFullName() }}</span>
-          <span class="sidebar__user-role">{{ authState.roleLabel() }}</span>
+      <!-- Trigger clickable: avatar + info abre el menú de perfil -->
+      <button
+        id="profile-trigger-btn"
+        class="sidebar__user-trigger"
+        (click)="toggleProfileMenu($event)"
+        [attr.aria-expanded]="showProfileMenu()"
+        aria-label="Menú de perfil"
+        aria-haspopup="true">
+        <div class="sidebar__avatar" aria-hidden="true">
+          {{ authState.userInitials() }}
         </div>
+        @if (!isSidebarCollapsed()) {
+          <div class="sidebar__user-info">
+            <span class="sidebar__user-name">{{ authState.userFullName() }}</span>
+            <span class="sidebar__user-role">{{ authState.roleLabel() }}</span>
+          </div>
+          <span class="material-symbols-outlined sidebar__user-chevron">
+            {{ showProfileMenu() ? 'expand_less' : 'expand_more' }}
+          </span>
+        }
+      </button>
+
+      <!-- Logout separado (solo cuando sidebar expandido) -->
+      @if (!isSidebarCollapsed()) {
         <button
           id="logout-btn"
           class="sidebar__logout"
@@ -69,6 +85,28 @@
           aria-label="Cerrar sesion">
           <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
         </button>
+      }
+
+      <!-- Profile dropdown menu -->
+      @if (showProfileMenu() && !isSidebarCollapsed()) {
+        <div class="profile-menu" role="menu">
+          <div class="profile-menu__header">
+            <div class="profile-menu__avatar">{{ authState.userInitials() }}</div>
+            <div class="profile-menu__info">
+              <span class="profile-menu__name">{{ authState.userFullName() }}</span>
+              <span class="profile-menu__role">{{ authState.roleLabel() }}</span>
+            </div>
+          </div>
+          <div class="profile-menu__divider"></div>
+          <button
+            id="change-pwd-menu-btn"
+            class="profile-menu__item"
+            (click)="openChangePassword()"
+            role="menuitem">
+            <span class="material-symbols-outlined profile-menu__item-icon">lock_reset</span>
+            <span>Cambiar contraseña</span>
+          </button>
+        </div>
       }
     </div>
   </aside>
@@ -132,3 +170,175 @@
     </main>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODAL: Cambiar Contraseña desde perfil                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+@if (showChangePasswordModal()) {
+  <div
+    class="cp-modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cp-modal-title"
+    (click)="closeChangePassword()">
+
+    <div class="cp-modal" (click)="$event.stopPropagation()">
+
+      <!-- Header del modal -->
+      <div class="cp-modal__header">
+        <div class="cp-modal__header-icon">
+          <span class="material-symbols-outlined">lock_reset</span>
+        </div>
+        <div class="cp-modal__header-text">
+          <h2 id="cp-modal-title" class="cp-modal__title">Cambiar contraseña</h2>
+          <p class="cp-modal__subtitle">{{ authState.userFullName() }}</p>
+        </div>
+        <button
+          id="cp-modal-close-btn"
+          class="cp-modal__close"
+          (click)="closeChangePassword()"
+          [disabled]="isChangingPassword()"
+          aria-label="Cerrar modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Estado de éxito -->
+      @if (changePasswordSuccess()) {
+        <div class="cp-modal__success">
+          <span class="material-symbols-outlined cp-modal__success-icon">check_circle</span>
+          <div>
+            <p class="cp-modal__success-title">¡Contraseña actualizada!</p>
+            <p class="cp-modal__success-desc">Tu contraseña se cambió exitosamente.</p>
+          </div>
+        </div>
+      }
+
+      <!-- Formulario -->
+      @if (!changePasswordSuccess()) {
+        <form
+          [formGroup]="cpForm"
+          (ngSubmit)="submitChangePassword()"
+          class="cp-modal__form"
+          novalidate>
+
+          <!-- Error del servidor -->
+          @if (changePasswordError()) {
+            <div class="cp-modal__server-error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ changePasswordError() }}</span>
+            </div>
+          }
+
+          <!-- Nueva contraseña -->
+          <div class="cp-modal__field" [class.cp-modal__field--error]="newPwdCtrl.invalid && newPwdCtrl.touched">
+            <label for="cp-new-pwd" class="cp-modal__label">Nueva contraseña</label>
+            <div class="cp-modal__input-wrap">
+              <span class="material-symbols-outlined cp-modal__input-icon">lock</span>
+              <input
+                id="cp-new-pwd"
+                class="cp-modal__input"
+                [type]="showNewPwd() ? 'text' : 'password'"
+                formControlName="newPassword"
+                placeholder="Mínimo 8 caracteres"
+                autocomplete="new-password" />
+              <button
+                type="button"
+                class="cp-modal__eye-btn"
+                (click)="toggleNewPwd()"
+                [attr.aria-label]="showNewPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                <span class="material-symbols-outlined">{{ showNewPwd() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+            @if (newPwdCtrl.invalid && newPwdCtrl.touched) {
+              <span class="cp-modal__error-msg">
+                @if (newPwdCtrl.hasError('required')) { Requerido }
+                @else if (newPwdCtrl.hasError('minlength')) { Mínimo 8 caracteres }
+              </span>
+            }
+
+            <!-- Barra de fortaleza -->
+            @if (newPwdCtrl.value) {
+              <div class="cp-modal__strength-wrap">
+                <div class="cp-modal__strength-bar" [class]="strengthClass()">
+                  <div class="cp-modal__strength-fill"></div>
+                </div>
+                <span class="cp-modal__strength-label" [class]="strengthClass()">{{ strengthLabel() }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Confirmar contraseña -->
+          <div class="cp-modal__field"
+            [class.cp-modal__field--error]="(confirmPwdCtrl.invalid && confirmPwdCtrl.touched) || (cpForm.hasError('passwordsMismatch') && confirmPwdCtrl.touched)">
+            <label for="cp-confirm-pwd" class="cp-modal__label">Confirmar contraseña</label>
+            <div class="cp-modal__input-wrap">
+              <span class="material-symbols-outlined cp-modal__input-icon">lock_check</span>
+              <input
+                id="cp-confirm-pwd"
+                class="cp-modal__input"
+                [type]="showConfirmPwd() ? 'text' : 'password'"
+                formControlName="confirmPassword"
+                placeholder="Repite la nueva contraseña"
+                autocomplete="new-password" />
+              <button
+                type="button"
+                class="cp-modal__eye-btn"
+                (click)="toggleConfirmPwd()"
+                [attr.aria-label]="showConfirmPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                <span class="material-symbols-outlined">{{ showConfirmPwd() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+            @if (confirmPwdCtrl.touched) {
+              @if (confirmPwdCtrl.hasError('required')) {
+                <span class="cp-modal__error-msg">Requerido</span>
+              } @else if (cpForm.hasError('passwordsMismatch')) {
+                <span class="cp-modal__error-msg">Las contraseñas no coinciden</span>
+              }
+            }
+          </div>
+
+          <!-- Requisitos -->
+          <ul class="cp-modal__requirements">
+            <li [class.cp-modal__req--met]="reqMinLength()">
+              <span class="material-symbols-outlined">{{ reqMinLength() ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              Mínimo 8 caracteres
+            </li>
+            <li [class.cp-modal__req--met]="reqUpperCase()">
+              <span class="material-symbols-outlined">{{ reqUpperCase() ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              Una letra mayúscula
+            </li>
+            <li [class.cp-modal__req--met]="reqNumberOrSymbol()">
+              <span class="material-symbols-outlined">{{ reqNumberOrSymbol() ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              Un número o símbolo
+            </li>
+          </ul>
+
+          <!-- Acciones -->
+          <div class="cp-modal__actions">
+            <button
+              type="button"
+              class="cp-modal__btn cp-modal__btn--cancel"
+              (click)="closeChangePassword()"
+              [disabled]="isChangingPassword()">
+              Cancelar
+            </button>
+            <button
+              id="cp-modal-submit-btn"
+              type="submit"
+              class="cp-modal__btn cp-modal__btn--save"
+              [disabled]="cpForm.invalid || isChangingPassword()">
+              @if (isChangingPassword()) {
+                <span class="cp-modal__spinner"></span>
+                Guardando…
+              } @else {
+                <span class="material-symbols-outlined">save</span>
+                Guardar contraseña
+              }
+            </button>
+          </div>
+        </form>
+      }
+    </div>
+  </div>
+}
