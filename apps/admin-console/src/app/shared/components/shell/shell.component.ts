@@ -5,10 +5,24 @@
  * Rediseno premium: sidebar oscuro, Material Symbols, branch selector.
  */
 
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, HostListener } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
+import { UsersService } from '../../../core/services/users.service';
+
+/** Valida que confirmPassword coincida con newPassword. */
+function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
+  const newPwd     = control.get('newPassword')?.value;
+  const confirmPwd = control.get('confirmPassword')?.value;
+  if (newPwd && confirmPwd && newPwd !== confirmPwd) {
+    return { passwordsMismatch: true };
+  }
+  return null;
+}
 
 interface NavItem {
   label:   string;
@@ -21,15 +35,135 @@ interface NavItem {
 @Component({
   selector: 'fg-admin-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, CommonModule],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
 export class ShellComponent {
-  protected readonly authState = inject(AuthState);
-  protected readonly syncState = inject(SyncState);
+  protected readonly authState     = inject(AuthState);
+  protected readonly syncState     = inject(SyncState);
+  private  readonly usersService   = inject(UsersService);
+  private  readonly fb             = inject(FormBuilder);
 
   protected isSidebarCollapsed = signal(false);
+
+  // ── Profile dropdown & Change Password modal ──────────────
+  protected readonly showProfileMenu        = signal(false);
+  protected readonly showChangePasswordModal = signal(false);
+  protected readonly isChangingPassword     = signal(false);
+  protected readonly changePasswordError    = signal<string | null>(null);
+  protected readonly changePasswordSuccess  = signal(false);
+  protected readonly showNewPwd             = signal(false);
+  protected readonly showConfirmPwd         = signal(false);
+
+  protected readonly cpForm = this.fb.group(
+    {
+      newPassword:     ['', [Validators.required, Validators.minLength(8)]],
+      confirmPassword: ['', [Validators.required]],
+    },
+    { validators: passwordsMatchValidator }
+  );
+
+  get newPwdCtrl()     { return this.cpForm.controls.newPassword; }
+  get confirmPwdCtrl() { return this.cpForm.controls.confirmPassword; }
+
+  /** Fortaleza de la contraseña: 0–3 */
+  protected readonly passwordStrength = computed(() => {
+    const pwd = this.newPwdCtrl.value ?? '';
+    let score = 0;
+    if (pwd.length >= 8)           score++;
+    if (/[A-Z]/.test(pwd))         score++;
+    if (/[0-9!@#$%^&*]/.test(pwd)) score++;
+    return score;
+  });
+
+  protected readonly strengthLabel = computed(() => {
+    const s = this.passwordStrength();
+    if (s === 0) return '';
+    if (s === 1) return 'Débil';
+    if (s === 2) return 'Moderada';
+    return 'Fuerte';
+  });
+
+  protected readonly strengthClass = computed(() => {
+    const s = this.passwordStrength();
+    if (s === 1) return 'cp-modal__strength--weak';
+    if (s === 2) return 'cp-modal__strength--medium';
+    if (s === 3) return 'cp-modal__strength--strong';
+    return '';
+  });
+
+  // ── Requisitos individuales (para la checklist en el template) ────────────
+  protected readonly reqMinLength     = computed(() => (this.newPwdCtrl.value?.length ?? 0) >= 8);
+  protected readonly reqUpperCase     = computed(() => /[A-Z]/.test(this.newPwdCtrl.value ?? ''));
+  protected readonly reqNumberOrSymbol = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdCtrl.value ?? ''));
+
+
+  /** Cierra el menú de perfil al hacer click fuera del sidebar */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.sidebar__user-trigger') && !target.closest('.profile-menu')) {
+      this.showProfileMenu.set(false);
+    }
+  }
+
+  protected toggleProfileMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showProfileMenu.update(v => !v);
+  }
+
+  protected openChangePassword(): void {
+    this.showProfileMenu.set(false);
+    this.cpForm.reset();
+    this.changePasswordError.set(null);
+    this.changePasswordSuccess.set(false);
+    this.showNewPwd.set(false);
+    this.showConfirmPwd.set(false);
+    this.showChangePasswordModal.set(true);
+  }
+
+  protected closeChangePassword(): void {
+    if (this.isChangingPassword()) return;
+    this.showChangePasswordModal.set(false);
+  }
+
+  protected toggleNewPwd(): void     { this.showNewPwd.update(v => !v); }
+  protected toggleConfirmPwd(): void { this.showConfirmPwd.update(v => !v); }
+
+  protected submitChangePassword(): void {
+    if (this.cpForm.invalid || this.isChangingPassword()) return;
+
+    this.changePasswordError.set(null);
+    this.isChangingPassword.set(true);
+
+    const newPassword = this.newPwdCtrl.value!;
+
+    this.usersService.changePassword(newPassword).subscribe({
+      next: (response) => {
+        this.isChangingPassword.set(false);
+        if (response.success) {
+          this.changePasswordSuccess.set(true);
+          setTimeout(() => this.closeChangePassword(), 2000);
+        } else {
+          this.changePasswordError.set(response.message || 'No se pudo actualizar la contraseña.');
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isChangingPassword.set(false);
+        const msg = err.error?.message;
+        if (err.status === 400) {
+          this.changePasswordError.set(msg || 'La contraseña no cumple los requisitos mínimos.');
+        } else if (err.status === 0) {
+          this.changePasswordError.set('Sin conexión al servidor. Verifica la red.');
+        } else {
+          this.changePasswordError.set(msg || 'Ocurrió un error. Inténtalo nuevamente.');
+        }
+      },
+    });
+  }
+
+
 
   /** Conteo de alertas criticas (demo: 2) */
   protected readonly criticalCount = signal(2);
