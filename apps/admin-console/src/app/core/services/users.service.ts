@@ -16,6 +16,7 @@ import {
   ResetPasswordTempResponse,
   ChangePasswordRequest,
   ChangePasswordResponse,
+  UserProfileResponse,
 } from '../models/user.models';
 
 @Injectable({
@@ -103,6 +104,23 @@ export class UsersService {
         `${this.API_URL}/${userId}/reset-password-temp`,
         null
       )
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
+   * Obtiene la información detallada de perfil para el usuario especificado.
+   *
+   * Endpoint: GET /api/v1/users/{userId}
+   * Autorización: Bearer Token (inyectado automáticamente por jwtInterceptor)
+   *
+   * @param userId UUID del usuario autenticado.
+   * @returns Observable<UserProfileResponse>
+   */
+  getUserProfile(userId: string): Observable<UserProfileResponse> {
+    return this.http
+      .get<UserProfileResponse>(`${this.API_URL}/${userId}`)
       .pipe(
         catchError((error: HttpErrorResponse) => this.handleError(error))
       );

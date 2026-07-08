@@ -13,6 +13,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
 import { UsersService } from '../../../core/services/users.service';
+import { UserProfileDto } from '../../../core/models/user.models';
 
 /** Valida que confirmPassword coincida con newPassword. */
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -55,6 +56,12 @@ export class ShellComponent {
   protected readonly changePasswordSuccess  = signal(false);
   protected readonly showNewPwd             = signal(false);
   protected readonly showConfirmPwd         = signal(false);
+
+  // ── User profile modal ────────────────────────────────────
+  protected readonly showProfileModal       = signal(false);
+  protected readonly userProfileData        = signal<UserProfileDto | null>(null);
+  protected readonly isLoadingProfile       = signal(false);
+  protected readonly profileError           = signal<string | null>(null);
 
   protected readonly cpForm = this.fb.group(
     {
@@ -187,6 +194,45 @@ export class ShellComponent {
 
   protected toggleSidebar(): void {
     this.isSidebarCollapsed.update((v) => !v);
+  }
+
+  protected openProfileModal(): void {
+    this.showProfileMenu.set(false);
+    this.profileError.set(null);
+    this.userProfileData.set(null);
+    this.isLoadingProfile.set(true);
+    this.showProfileModal.set(true);
+
+    const currentUser = this.authState.currentUser();
+    if (!currentUser || !currentUser.id) {
+      this.isLoadingProfile.set(false);
+      this.profileError.set('No se pudo determinar el usuario actual.');
+      return;
+    }
+
+    this.usersService.getUserProfile(currentUser.id).subscribe({
+      next: (response) => {
+        this.isLoadingProfile.set(false);
+        if (response.success && response.data) {
+          this.userProfileData.set(response.data);
+        } else {
+          this.profileError.set(response.message || 'No se pudo obtener el perfil del usuario.');
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isLoadingProfile.set(false);
+        const msg = err.error?.message;
+        if (err.status === 0) {
+          this.profileError.set('Sin conexión al servidor. Verifica la red.');
+        } else {
+          this.profileError.set(msg || 'Ocurrió un error al cargar el perfil.');
+        }
+      }
+    });
+  }
+
+  protected closeProfileModal(): void {
+    this.showProfileModal.set(false);
   }
 
   protected logout(): void {

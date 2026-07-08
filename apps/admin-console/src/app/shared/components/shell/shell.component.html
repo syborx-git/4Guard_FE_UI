@@ -99,6 +99,14 @@
           </div>
           <div class="profile-menu__divider"></div>
           <button
+            id="view-profile-menu-btn"
+            class="profile-menu__item"
+            (click)="openProfileModal()"
+            role="menuitem">
+            <span class="material-symbols-outlined profile-menu__item-icon">person</span>
+            <span>Ver mi perfil</span>
+          </button>
+          <button
             id="change-pwd-menu-btn"
             class="profile-menu__item"
             (click)="openChangePassword()"
@@ -342,3 +350,116 @@
     </div>
   </div>
 }
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODAL: Ver Perfil de Usuario                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+@if (showProfileModal()) {
+  <div
+    class="profile-modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="profile-modal-title"
+    (click)="closeProfileModal()">
+
+    <div class="profile-modal" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="profile-modal__header">
+        <h2 id="profile-modal-title" class="profile-modal__title">Ficha de Perfil</h2>
+        <button
+          id="profile-modal-close-btn"
+          class="profile-modal__close"
+          (click)="closeProfileModal()"
+          aria-label="Cerrar modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Contenido en carga -->
+      @if (isLoadingProfile()) {
+        <div class="profile-modal__loading">
+          <span class="profile-modal__spinner"></span>
+          <p>Cargando perfil...</p>
+        </div>
+      }
+
+      <!-- Contenido en error -->
+      @if (profileError() && !isLoadingProfile()) {
+        <div class="profile-modal__error">
+          <span class="material-symbols-outlined profile-modal__error-icon">error</span>
+          <p>{{ profileError() }}</p>
+          <button class="profile-modal__btn-retry" (click)="openProfileModal()">Reintentar</button>
+        </div>
+      }
+
+      <!-- Ficha de Perfil -->
+      @if (userProfileData(); as profile) {
+        <div class="profile-modal__content">
+          <!-- Banner / Avatar -->
+          <div class="profile-card__avatar-section">
+            <div class="profile-card__avatar">{{ authState.userInitials() }}</div>
+            <div class="profile-card__name-wrap">
+              <h3 class="profile-card__fullName">{{ profile.firstName }} {{ profile.lastName }}</h3>
+              <span class="profile-card__username">&#64;{{ profile.username }}</span>
+            </div>
+          </div>
+
+          <!-- Campos de Información detallada -->
+          <div class="profile-card__details">
+            <div class="profile-card__group">
+              <span class="profile-card__label">Correo electrónico</span>
+              <span class="profile-card__value">{{ profile.email }}</span>
+            </div>
+            
+            <div class="profile-card__group">
+              <span class="profile-card__label">Organización</span>
+              <span class="profile-card__value">{{ profile.organizationName }}</span>
+            </div>
+
+            <div class="profile-card__group">
+              <span class="profile-card__label">Sucursal asignada</span>
+              <span class="profile-card__value">{{ profile.branchName }}</span>
+            </div>
+
+            <div class="profile-card__group">
+              <span class="profile-card__label">Rol en el sistema</span>
+              <span class="profile-card__value">
+                <span class="profile-card__badge-role">{{ authState.roleLabel() }}</span>
+              </span>
+            </div>
+
+            <div class="profile-card__group">
+              <span class="profile-card__label">Estado de cuenta</span>
+              <span class="profile-card__value">
+                <span class="profile-card__badge-status" [class]="'profile-card__badge-status--' + profile.status.toLowerCase()">
+                  {{ profile.status === 'ACTIVE' ? 'Activo' : profile.status }}
+                </span>
+              </span>
+            </div>
+
+            <div class="profile-card__group">
+              <span class="profile-card__label">Última conexión</span>
+              <span class="profile-card__value">{{ profile.lastLogin | date:'dd/MM/yyyy, hh:mm a' }}</span>
+            </div>
+
+            <div class="profile-card__group">
+              <span class="profile-card__label">Miembro desde</span>
+              <span class="profile-card__value">{{ profile.createdAt | date:'dd/MM/yyyy' }}</span>
+            </div>
+
+            <div class="profile-card__group">
+              <span class="profile-card__label">Última actualización</span>
+              <span class="profile-card__value">{{ profile.updatedAt | date:'dd/MM/yyyy, hh:mm a' }} por &#64;{{ profile.updatedBy }}</span>
+            </div>
+          </div>
+
+          <!-- Footer/Acción -->
+          <div class="profile-modal__footer">
+            <button class="profile-modal__btn-close" (click)="closeProfileModal()">Cerrar</button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
