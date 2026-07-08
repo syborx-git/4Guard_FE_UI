@@ -9,7 +9,7 @@
  */
 
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { fromEvent, merge, Subscription, timer } from 'rxjs';
 import { switchMap, throttleTime } from 'rxjs/operators';
@@ -136,13 +136,18 @@ export class InactivityService implements OnDestroy {
 
   /**
    * Cierre de sesión automático consumiendo POST /auth/logout.
+   * Envía el refreshToken en el body y el accessToken como Authorization Bearer header.
    */
   autoLogout(): void {
     if (this.isProcessing()) return;
     this.isProcessing.set(true);
     this.stopCountdown();
 
-    this.http.post<any>(`${this.BASE_URL}/logout`, {}).subscribe({
+    const refreshToken = this.authService.getRefreshToken();
+    const accessToken  = this.authService.getAccessToken();
+    const headers      = new HttpHeaders(accessToken ? { Authorization: `Bearer ${accessToken}` } : {});
+
+    this.http.post<any>(`${this.BASE_URL}/logout`, { refreshToken }, { headers }).subscribe({
       next: () => {
         this.finalizeLogout();
       },
@@ -158,9 +163,10 @@ export class InactivityService implements OnDestroy {
     this.showWarning.set(false);
     this.authState.clearSession();
 
-    // Limpieza de tokens del LocalStorage solicitados
+    // Limpieza completa de todos los tokens del LocalStorage
     localStorage.removeItem('4g_token');
     localStorage.removeItem('4g_refresh');
+    localStorage.removeItem('4g_expires_at');
 
     this.router.navigate(['/login'], { queryParams: { reason: 'inactivity' } });
   }

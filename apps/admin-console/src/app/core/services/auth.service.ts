@@ -10,7 +10,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, timer, Subscription, of, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { catchError, switchMap, finalize } from 'rxjs/operators';
 import { LoginRequest, LoginResponse, AuthenticatedUser } from '../models/auth.models';
 import { SessionStorageService } from './session-storage.service';
 
@@ -135,10 +135,31 @@ export class AuthService {
   }
 
   /**
-   * Cierra la sesión activa en el cliente y cancela la suscripción activa.
+   * Cierra la sesión activa llamando al endpoint POST /auth/logout del backend,
+   * enviando el refreshToken en el body y el accessToken como Authorization header.
+   * La sesión local se limpia siempre (error o éxito) para garantizar la seguridad.
    */
   logout(): void {
-    this.clearSessionAndRedirect();
+    const refreshToken = this.getRefreshToken();
+    const accessToken  = this.getAccessToken();
+
+    if (!refreshToken || !accessToken) {
+      // No hay sesión activa — solo limpiar localmente
+      this.clearSessionAndRedirect();
+      return;
+    }
+
+    const headers = { Authorization: `Bearer ${accessToken}` };
+
+    this.http
+      .post<any>(`${this.API_URL}/logout`, { refreshToken }, { headers })
+      .pipe(
+        finalize(() => {
+          // Limpieza local garantizada independientemente de la respuesta del BE
+          this.clearSessionAndRedirect();
+        })
+      )
+      .subscribe();
   }
 
   /**
