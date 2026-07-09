@@ -154,6 +154,8 @@ export class AuthState {
     switch (module) {
       case 'dashboard':
         return true;
+      case 'sessions':
+        return true; // Visible para todos; el backend filtra por rol
       case 'inventory':
         return permissions.includes('INVENTORY_READ') || permissions.includes('INVENTORY_CREATE');
       case 'admin':

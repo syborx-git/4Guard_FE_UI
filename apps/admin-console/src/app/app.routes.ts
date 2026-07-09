@@ -37,6 +37,14 @@ export const adminRoutes: Routes = [
       import('./shared/components/shell/shell.component').then((m) => m.ShellComponent),
     canActivate: [authGuard],
     children: [
+      // Perfil de Usuario (Vista Bento Box)
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/user-profile-bento.component').then((m) => m.UserProfileBentoComponent),
+        title: '4GUARD WMS — Mi Perfil',
+      },
+
       // Dashboard: Acceso a todos los roles autenticados
       {
         path: 'dashboard',
@@ -93,6 +101,14 @@ export const adminRoutes: Routes = [
         loadChildren: () =>
           import('./features/admin/admin.routes').then((m) => m.adminRoutes),
         title: '4GUARD WMS — Administración',
+      },
+
+      // Sesiones Activas (HU-011)
+      {
+        path: 'sessions',
+        loadComponent: () =>
+          import('./features/sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
+        title: '4GUARD WMS — Sesiones Activas',
       },
 
       // Redirección por defecto

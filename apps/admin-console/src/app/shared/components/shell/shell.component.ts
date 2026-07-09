@@ -26,12 +26,14 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
 }
 
 interface NavItem {
-  label:   string;
-  route:   string;
-  icon:    string;   // Material Symbols name
-  module:  string;
-  badge?:  () => number;
+  label: string;
+  route: string;
+  icon: string;   // Material Symbols name
+  module: string;
+  badge?: () => number;
 }
+
+import { PasswordCollapseComponent } from '../password-collapse/password-collapse.component';
 
 @Component({
   selector: 'fg-admin-shell',
@@ -179,12 +181,13 @@ export class ShellComponent {
   protected readonly lastUpdated = signal('ahora');
 
   protected readonly navItems: NavItem[] = [
-    { label: 'Dashboard',   route: '/dashboard',  icon: 'dashboard',        module: 'dashboard' },
-    { label: 'Inventario',  route: '/inventory',  icon: 'inventory_2',      module: 'inventory' },
-    { label: 'Recepcion',   route: '/receiving',  icon: 'move_to_inbox',    module: 'receiving' },
-    { label: 'Calidad',     route: '/quality',    icon: 'fact_check',       module: 'quality'   },
-    { label: 'Despacho',    route: '/shipping',   icon: 'local_shipping',   module: 'shipping'  },
-    { label: 'Administrar', route: '/admin',      icon: 'manage_accounts',  module: 'admin'     },
+    { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
+    { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
+    { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
+    { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
+    { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
+    { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
+    { label: 'Sesiones', route: '/sessions', icon: 'group', module: 'sessions' },
   ];
 
   /** Filtra los nav items segun el rol del usuario */
