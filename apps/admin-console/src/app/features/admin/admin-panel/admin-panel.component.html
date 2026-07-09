@@ -1059,7 +1059,7 @@
                   <label class="field-group__label">Sucursal asignada (Opcional)</label>
                   <select class="field-group__input select" [(ngModel)]="formModel.branchId">
                     <option [value]="null">Acceso Corporativo (Todos los centros)</option>
-                    @for (b of getBranchesForOrg(formModel.orgId); track b.id) {
+                    @for (b of availableBranches(); track b.id) {
                       <option [value]="b.id">{{ b.name }}</option>
                     }
                   </select>
@@ -1068,6 +1068,8 @@
                   <label class="field-group__label">Rol del WMS</label>
                   <select class="field-group__input select" [(ngModel)]="formModel.role">
                     <option value="ADMIN">Administrador General (ADMIN)</option>
+                    <option value="OPERATIONS_MANAGER">Gerente de Operaciones (OPERATIONS_MANAGER)</option>
+                    <option value="WAREHOUSE_MANAGER">Gerente de Almacén (WAREHOUSE_MANAGER)</option>
                     <option value="DOCK_SUPERVISOR">Supervisor de Embarques (DOCK_SUPERVISOR)</option>
                     <option value="QM_INSPECTOR">Inspector de Calidad (QM_INSPECTOR)</option>
                     <option value="WAREHOUSE_OPERATOR">Operador General (WAREHOUSE_OPERATOR)</option>

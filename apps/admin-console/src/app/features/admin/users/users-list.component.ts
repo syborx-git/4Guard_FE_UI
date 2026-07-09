@@ -1,14 +1,4 @@
-/**
- * @file users-list.component.ts
- * @description Gestión de Usuarios del sistema 4GUARD WMS.
- *
- * HU-003: Integración del endpoint PUT /api/v1/users/{id}/reset-password-temp
- *   - Flujo: Botón "Generar Clave Temporal" → Diálogo confirmación → Loading → Modal éxito
- *   - Errores: Toast discreto por código HTTP (403, 404, 500)
- *   - 401: Manejado por jwtInterceptor → redirige al Login automáticamente
- */
-
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -16,6 +6,8 @@ import { UserRole, ROLE_LABELS } from '@4guard/shared-core';
 
 import { UsersService } from '../../../core/services/users.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { UserAdminService, UserAdminItem, UserStatus } from '../services/user-admin.service';
+import { BranchService } from '../services/branch.service';
 import { TempPasswordModalComponent } from './temp-password-modal/temp-password-modal.component';
 import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
 
@@ -41,19 +33,25 @@ interface UserItem {
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
 })
-export class UsersListComponent {
+export class UsersListComponent implements OnInit {
   // ── Servicios ────────────────────────────────────────────
   private readonly usersService = inject(UsersService);
   private readonly toastService = inject(ToastService);
+  private readonly userAdminService = inject(UserAdminService);
+  private readonly branchService = inject(BranchService);
 
   // ── Estado: Lista de usuarios ────────────────────────────
-  protected readonly users = signal<UserItem[]>([
-    { id: 'afe4de7c-d10e-44b9-8970-46a0fda50626', name: 'Carlos Mendoza',  email: 'carlos.mendoza@4guard.com',  role: UserRole.ADMIN,               branchId: '1', branchName: 'Centro de Distribución Norte',  active: true  },
-    { id: 'b3f1e2a0-c20f-55c0-9081-57b1geb61737', name: 'Ana Gómez',       email: 'ana.gomez@4guard.com',       role: UserRole.DOCK_SUPERVISOR,      branchId: '1', branchName: 'Centro de Distribución Norte',  active: true  },
-    { id: 'c4g2f3b1-d31g-66d1-0192-68c2hfc72848', name: 'Luis Pérez',      email: 'luis.perez@4guard.com',      role: UserRole.QM_INSPECTOR,         branchId: '3', branchName: 'La Bóveda Principal',           active: true  },
-    { id: 'd5h3g4c2-e42h-77e2-1203-79d3igd83959', name: 'Sofía Castro',    email: 'sofia.castro@4guard.com',    role: UserRole.WAREHOUSE_OPERATOR,   branchId: '2', branchName: 'Sucursal Metropolitana Sur',    active: true  },
-    { id: 'e6i4h5d3-f53i-88f3-2314-80e4jhe94060', name: 'Jorge Rojas',     email: 'jorge.rojas@4guard.com',     role: UserRole.WAREHOUSE_OPERATOR,   branchId: '1', branchName: 'Centro de Distribución Norte',  active: false },
-  ]);
+  protected readonly users = computed<UserItem[]>(() => {
+    return this.userAdminService.users().map(u => ({
+      id: u.id,
+      name: `${u.firstName} ${u.lastName}`.trim() || u.username,
+      email: u.email,
+      role: u.role,
+      branchId: u.branchId || '1',
+      branchName: u.branchName || 'Acceso Corporativo',
+      active: u.status === 'ACTIVE'
+    }));
+  });
 
   // ── Estado: Búsqueda ─────────────────────────────────────
   protected readonly searchTerm = signal('');
@@ -72,13 +70,23 @@ export class UsersListComponent {
   /** Usuario destinatario de la contraseña — para mostrar en el modal de éxito */
   protected readonly tempPasswordUser = signal<UserItem | null>(null);
 
+  // ── Estado: Eliminación de Usuario ───────────────────────
+  /** Usuario seleccionado para eliminar — controla visibilidad del ConfirmDialog */
+  protected readonly deletingUser = signal<UserItem | null>(null);
+  /** true mientras el DELETE está en vuelo — deshabilita botones, muestra spinner */
+  protected readonly isDeleting = signal(false);
+
   // ── Formulario ───────────────────────────────────────────
   protected userForm = {
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     role: UserRole.WAREHOUSE_OPERATOR,
     branchId: '1'
   };
+
+  // ── Sucursales Disponibles ──────────────────────────────
+  protected readonly availableBranches = computed(() => this.branchService.branches());
 
   // ── Computed ─────────────────────────────────────────────
   protected readonly filteredUsers = computed(() => {
@@ -89,6 +97,14 @@ export class UsersListComponent {
       u.email.toLowerCase().includes(term)
     );
   });
+
+  ngOnInit(): void {
+    this.userAdminService.loadUsers().subscribe({
+      error: () => {
+        this.toastService.error('Error al cargar los usuarios del backend.');
+      }
+    });
+  }
 
   // ── Helpers de roles ─────────────────────────────────────
   protected getRoleLabel(role: UserRole): string {
@@ -112,21 +128,33 @@ export class UsersListComponent {
 
   // ── Toggle Estado Usuario ────────────────────────────────
   protected toggleUserStatus(user: UserItem): void {
-    this.users.update(list =>
-      list.map(u => u.id === user.id ? { ...u, active: !u.active } : u)
-    );
+    const newStatus: UserStatus = user.active ? 'INACTIVE' : 'ACTIVE';
+    this.userAdminService.update(user.id, {
+      status: newStatus,
+      isEnabled: newStatus === 'ACTIVE'
+    }).subscribe({
+      next: () => {
+        this.toastService.success('Estado del usuario actualizado correctamente.');
+      },
+      error: () => {
+        this.toastService.error('Error al actualizar el estado del usuario.');
+      }
+    });
   }
 
   // ── Modal Editar/Crear ───────────────────────────────────
   protected openAddModal(): void {
     this.editingUserId.set(null);
-    this.userForm = { name: '', email: '', role: UserRole.WAREHOUSE_OPERATOR, branchId: '1' };
+    this.userForm = { firstName: '', lastName: '', email: '', role: UserRole.WAREHOUSE_OPERATOR, branchId: '1' };
     this.isModalOpen.set(true);
   }
 
   protected editUser(user: UserItem): void {
     this.editingUserId.set(user.id);
-    this.userForm = { name: user.name, email: user.email, role: user.role, branchId: user.branchId };
+    const parts = user.name.split(' ');
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+    this.userForm = { firstName, lastName, email: user.email, role: user.role, branchId: user.branchId };
     this.isModalOpen.set(true);
   }
 
@@ -135,37 +163,59 @@ export class UsersListComponent {
   }
 
   protected saveUser(): void {
-    if (!this.userForm.name || !this.userForm.email) {
+    if (!this.userForm.firstName || !this.userForm.email) {
       this.toastService.warning('Por favor complete todos los campos requeridos.');
       return;
     }
 
-    const branchName =
-      this.userForm.branchId === '1' ? 'Centro de Distribución Norte' :
-      this.userForm.branchId === '2' ? 'Sucursal Metropolitana Sur' : 'La Bóveda Principal';
+    const branch = this.availableBranches().find(b => b.id === this.userForm.branchId);
+    const branchName = branch ? branch.name : 'Centro de Distribución CDMX';
 
     const userId = this.editingUserId();
     if (userId) {
-      this.users.update(list => list.map(u =>
-        u.id === userId
-          ? { ...u, name: this.userForm.name, email: this.userForm.email, role: this.userForm.role, branchId: this.userForm.branchId, branchName }
-          : u
-      ));
-      this.toastService.success('Usuario actualizado correctamente.');
-    } else {
-      const newUser: UserItem = {
-        id: crypto.randomUUID(),
-        name: this.userForm.name,
+      this.userAdminService.update(userId, {
+        firstName: this.userForm.firstName,
+        lastName: this.userForm.lastName,
         email: this.userForm.email,
         role: this.userForm.role,
         branchId: this.userForm.branchId,
+        branchName: branchName
+      }).subscribe({
+        next: () => {
+          this.toastService.success('Usuario actualizado correctamente.');
+          this.closeModal();
+        },
+        error: (err) => {
+          this.toastService.error(err.message || 'Error al actualizar el usuario.');
+        }
+      });
+    } else {
+      this.userAdminService.create({
+        username: this.userForm.email.split('@')[0],
+        email: this.userForm.email,
+        firstName: this.userForm.firstName,
+        lastName: this.userForm.lastName,
+        orgId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+        orgName: '4GUARD LOGISTICS CORP',
+        branchId: this.userForm.branchId,
         branchName,
-        active: true
-      };
-      this.users.update(list => [...list, newUser]);
-      this.toastService.success('Usuario creado correctamente.');
+        role: this.userForm.role,
+        status: 'ACTIVE',
+        isEnabled: true,
+        changePasswordRequired: false,
+        failedAttempts: 0,
+        lockedUntil: null,
+        permanentlyLocked: false
+      }).subscribe({
+        next: () => {
+          this.toastService.success('Usuario creado correctamente.');
+          this.closeModal();
+        },
+        error: (err) => {
+          this.toastService.error(err.message || 'Error al crear el usuario.');
+        }
+      });
     }
-    this.closeModal();
   }
 
   // ── HU-003: Generar Contraseña Temporal ──────────────────
@@ -188,12 +238,6 @@ export class UsersListComponent {
   /**
    * Paso 2b: El administrador confirma.
    * Llama al servicio — PUT /api/v1/users/{id}/reset-password-temp
-   *
-   * Errores:
-   *  401 → jwtInterceptor redirige al Login automáticamente
-   *  403 → Toast: "No tienes permisos para generar contraseñas temporales."
-   *  404 → Toast: "El usuario ya no existe."
-   *  500 → Toast: "Error interno del servidor."
    */
   protected onGenerateConfirmed(): void {
     const user = this.confirmingUser();
@@ -230,9 +274,38 @@ export class UsersListComponent {
     this.tempPasswordUser.set(null);
   }
 
+  // ── Eliminación de Usuario ───────────────────────────────
+
+  protected openDeleteConfirm(user: UserItem): void {
+    this.deletingUser.set(user);
+  }
+
+  protected onDeleteCancelled(): void {
+    this.deletingUser.set(null);
+  }
+
+  protected onDeleteConfirmed(): void {
+    const user = this.deletingUser();
+    if (!user || this.isDeleting()) return;
+
+    this.isDeleting.set(true);
+
+    this.userAdminService.delete(user.id).subscribe({
+      next: () => {
+        this.isDeleting.set(false);
+        this.deletingUser.set(null);
+        this.toastService.success('Usuario eliminado correctamente.');
+      },
+      error: (err) => {
+        this.isDeleting.set(false);
+        this.deletingUser.set(null);
+        this.toastService.error(err.message || 'Error al eliminar el usuario.');
+      }
+    });
+  }
+
   /**
    * Maneja los errores HTTP del endpoint de generación de contraseña.
-   * El 401 es capturado por el interceptor antes de llegar aquí.
    */
   private handleGenerateError(err: HttpErrorResponse): void {
     switch (err.status) {

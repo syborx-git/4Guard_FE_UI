@@ -94,4 +94,21 @@ export interface UserProfileDto {
  */
 export type UserProfileResponse = ApiResponse<UserProfileDto>;
 
+/**
+ * Payload requerido para crear un nuevo usuario mediante POST /api/v1/users.
+ */
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  password?: string;
+  firstName: string;
+  lastName: string;
+  organizationId: string;
+  branchId: string;
+  roleId: string;
+  status: string;
+  isEnabled: boolean;
+}
+
+
 
