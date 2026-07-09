@@ -21,6 +21,7 @@ import {
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -77,9 +78,11 @@ export class ChangePasswordComponent {
   get newPasswordCtrl()     { return this.form.controls.newPassword; }
   get confirmPasswordCtrl() { return this.form.controls.confirmPassword; }
 
+  protected readonly newPwdValue = toSignal(this.form.controls.newPassword.valueChanges, { initialValue: '' });
+
   /** Fuerza de la contraseña: 0–3 */
   protected readonly passwordStrength = computed(() => {
-    const pwd = this.newPasswordCtrl.value ?? '';
+    const pwd = this.newPwdValue() ?? '';
     let score = 0;
     if (pwd.length >= 8)          score++;
     if (/[A-Z]/.test(pwd))        score++;

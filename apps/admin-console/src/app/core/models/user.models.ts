@@ -87,6 +87,15 @@ export interface UserProfileDto {
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
+  // Campos empresariales (opcionales)
+  employeeId?: string;
+  department?: string;
+  position?: string;
+  supervisorName?: string;
+  phoneNumber?: string;
+  timeZone?: string;
+  language?: string;
+  securityClearance?: string;
 }
 
 /**

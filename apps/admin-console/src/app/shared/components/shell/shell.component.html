@@ -281,7 +281,7 @@
             [class.cp-modal__field--error]="(confirmPwdCtrl.invalid && confirmPwdCtrl.touched) || (cpForm.hasError('passwordsMismatch') && confirmPwdCtrl.touched)">
             <label for="cp-confirm-pwd" class="cp-modal__label">Confirmar contraseña</label>
             <div class="cp-modal__input-wrap">
-              <span class="material-symbols-outlined cp-modal__input-icon">lock_check</span>
+              <span class="material-symbols-outlined cp-modal__input-icon">lock</span>
               <input
                 id="cp-confirm-pwd"
                 class="cp-modal__input"
@@ -406,51 +406,105 @@
 
           <!-- Campos de Información detallada -->
           <div class="profile-card__details">
-            <div class="profile-card__group">
-              <span class="profile-card__label">Correo electrónico</span>
-              <span class="profile-card__value">{{ profile.email }}</span>
-            </div>
-            
-            <div class="profile-card__group">
-              <span class="profile-card__label">Organización</span>
-              <span class="profile-card__value">{{ profile.organizationName }}</span>
-            </div>
+             <!-- Seccion 1: Identidad y Contacto -->
+             <div class="profile-card__section">
+               <h4 class="profile-card__section-title"><span class="material-symbols-outlined">badge</span> Identidad y Contacto</h4>
+               <div class="profile-card__fields">
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">ID de Empleado</span>
+                   <span class="profile-card__value">{{ profile.employeeId || 'No asignado' }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Correo electrónico</span>
+                   <span class="profile-card__value">{{ profile.email }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Teléfono</span>
+                   <span class="profile-card__value">{{ profile.phoneNumber || 'No asignado' }}</span>
+                 </div>
+               </div>
+             </div>
 
-            <div class="profile-card__group">
-              <span class="profile-card__label">Sucursal asignada</span>
-              <span class="profile-card__value">{{ profile.branchName }}</span>
-            </div>
+             <!-- Seccion 2: Posición en la Empresa -->
+             <div class="profile-card__section">
+               <h4 class="profile-card__section-title"><span class="material-symbols-outlined">work</span> Posición en la Empresa</h4>
+               <div class="profile-card__fields">
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Organización</span>
+                   <span class="profile-card__value">{{ profile.organizationName }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Sucursal asignada</span>
+                   <span class="profile-card__value">{{ profile.branchName }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Departamento</span>
+                   <span class="profile-card__value">{{ profile.department || 'No asignado' }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Cargo / Puesto</span>
+                   <span class="profile-card__value">{{ profile.position || 'No asignado' }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Reporta a</span>
+                   <span class="profile-card__value">{{ profile.supervisorName || 'No asignado' }}</span>
+                 </div>
+               </div>
+             </div>
 
-            <div class="profile-card__group">
-              <span class="profile-card__label">Rol en el sistema</span>
-              <span class="profile-card__value">
-                <span class="profile-card__badge-role">{{ authState.roleLabel() }}</span>
-              </span>
-            </div>
+             <!-- Seccion 3: Seguridad y Accesos -->
+             <div class="profile-card__section">
+               <h4 class="profile-card__section-title"><span class="material-symbols-outlined">security</span> Seguridad y Accesos</h4>
+               <div class="profile-card__fields">
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Rol en el sistema</span>
+                   <span class="profile-card__value">
+                     <span class="profile-card__badge-role">{{ authState.roleLabel() }}</span>
+                   </span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Nivel de seguridad</span>
+                   <span class="profile-card__value">
+                     <span class="profile-card__badge-clearance">{{ profile.securityClearance || 'Estándar' }}</span>
+                   </span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Estado de cuenta</span>
+                   <span class="profile-card__value">
+                     <span class="profile-card__badge-status" [class]="'profile-card__badge-status--' + profile.status.toLowerCase()">
+                       {{ profile.status === 'ACTIVE' ? 'Activo' : profile.status }}
+                     </span>
+                   </span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Última conexión</span>
+                   <span class="profile-card__value">{{ profile.lastLogin | date:'dd/MM/yyyy, hh:mm a' }}</span>
+                 </div>
+               </div>
+             </div>
 
-            <div class="profile-card__group">
-              <span class="profile-card__label">Estado de cuenta</span>
-              <span class="profile-card__value">
-                <span class="profile-card__badge-status" [class]="'profile-card__badge-status--' + profile.status.toLowerCase()">
-                  {{ profile.status === 'ACTIVE' ? 'Activo' : profile.status }}
-                </span>
-              </span>
-            </div>
-
-            <div class="profile-card__group">
-              <span class="profile-card__label">Última conexión</span>
-              <span class="profile-card__value">{{ profile.lastLogin | date:'dd/MM/yyyy, hh:mm a' }}</span>
-            </div>
-
-            <div class="profile-card__group">
-              <span class="profile-card__label">Miembro desde</span>
-              <span class="profile-card__value">{{ profile.createdAt | date:'dd/MM/yyyy' }}</span>
-            </div>
-
-            <div class="profile-card__group">
-              <span class="profile-card__label">Última actualización</span>
-              <span class="profile-card__value">{{ profile.updatedAt | date:'dd/MM/yyyy, hh:mm a' }} por &#64;{{ profile.updatedBy }}</span>
-            </div>
+             <!-- Seccion 4: Preferencias y Sistema -->
+             <div class="profile-card__section">
+               <h4 class="profile-card__section-title"><span class="material-symbols-outlined">settings</span> Preferencias y Sistema</h4>
+               <div class="profile-card__fields">
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Zona horaria</span>
+                   <span class="profile-card__value">{{ profile.timeZone || 'America/Mexico_City' }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Idioma</span>
+                   <span class="profile-card__value">{{ profile.language || 'Español (México)' }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Miembro desde</span>
+                   <span class="profile-card__value">{{ profile.createdAt | date:'dd/MM/yyyy' }}</span>
+                 </div>
+                 <div class="profile-card__group">
+                   <span class="profile-card__label">Última actualización</span>
+                   <span class="profile-card__value">{{ profile.updatedAt | date:'dd/MM/yyyy, hh:mm a' }} por &#64;{{ profile.updatedBy }}</span>
+                 </div>
+               </div>
+             </div>
           </div>
 
           <!-- Footer/Acción -->
