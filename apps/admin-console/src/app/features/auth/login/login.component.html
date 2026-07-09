@@ -107,7 +107,8 @@
                 <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
                 <input id="email" type="text" class="field__input" formControlName="email"
                   placeholder="enrique o enrique@4guard.com" autocomplete="email" aria-required="true"
-                  [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error">
+                  [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error"
+                  (keydown.space)="$event.preventDefault()">
               </div>
               @if (emailCtrl.touched && emailCtrl.invalid) {
                 <span id="email-error" class="field__error-msg">

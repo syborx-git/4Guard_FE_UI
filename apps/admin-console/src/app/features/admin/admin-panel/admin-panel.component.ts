@@ -7,6 +7,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { UserRole } from '@4guard/shared-core';
 
 // Inyección de servicios mock de administración
@@ -55,6 +56,7 @@ export class AdminPanelComponent {
   protected readonly incidenceService = inject(IncidenceService);
   protected readonly auditService = inject(AuditLogService);
   protected readonly notifService = inject(NotificationAdminService);
+  private readonly router = inject(Router);
 
   // Estados de navegación e interfaz
   protected readonly selectedModule = signal<string | null>(null);
@@ -107,6 +109,7 @@ export class AdminPanelComponent {
     // Seguridad
     { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
+    { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
     
     // Soporte y Auditoría
     { id: 'inventory', title: 'Monitor de Inventario', icon: 'shelves', description: 'Saldos activos por SSCC, cuarentenas preventivas y lotes.', category: 'SUPPORT' },
@@ -222,6 +225,10 @@ export class AdminPanelComponent {
 
   // Selector de módulo principal
   protected selectModule(moduleId: string | null): void {
+    if (moduleId === 'sessions') {
+      this.router.navigate(['/sessions']);
+      return;
+    }
     this.selectedModule.set(moduleId);
     this.searchTerm.set('');
     this.currentPage.set(1);
