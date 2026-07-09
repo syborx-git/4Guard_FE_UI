@@ -1,0 +1,126 @@
+<!-- apps/rf-terminal/.../features/auth/rf-login/rf-login.component.html -->
+<!-- P6 — Login RF Acceso Rápido [HU-002] -->
+<div class="rf-login" role="main" aria-label="Login Terminal RF">
+
+  <!-- Logo -->
+  <div class="rf-login__logo">
+    <div class="rf-logo-mark">4G</div>
+    <div class="rf-logo-text">
+      <span class="rf-logo-name">4GUARD</span>
+      <span class="rf-logo-sub">RF Terminal</span>
+    </div>
+  </div>
+
+  <!-- Offline banner -->
+  @if (isOffline()) {
+    <div class="offline-banner" role="alert" aria-live="assertive">
+      <span aria-hidden="true">📵</span>
+      <span>Sin conexión — Autenticando con caché local</span>
+    </div>
+  }
+
+  <!-- Mode tabs -->
+  <div class="rf-login__tabs" role="tablist">
+    <button
+      id="tab-scan"
+      role="tab"
+      class="rf-tab"
+      [class.rf-tab--active]="mode() === 'scan'"
+      (click)="switchMode('scan')"
+      [attr.aria-selected]="mode() === 'scan'">
+      📷 Escaneo QR / RFID
+    </button>
+    <button
+      id="tab-pin"
+      role="tab"
+      class="rf-tab"
+      [class.rf-tab--active]="mode() === 'pin'"
+      (click)="switchMode('pin')"
+      [attr.aria-selected]="mode() === 'pin'">
+      🔢 PIN
+    </button>
+  </div>
+
+  <!-- ═══ MODO ESCANEO ═══════════════════════════════════════ -->
+  @if (mode() === 'scan') {
+    <div class="rf-scan-panel" role="tabpanel" aria-labelledby="tab-scan">
+      <p class="rf-scan-hint">Coloca tu credencial frente al lector o escanea tu código QR</p>
+
+      <button
+        id="scan-trigger-btn"
+        class="rf-scan-btn"
+        [class.rf-scan-btn--scanning]="isScanning()"
+        (click)="simulateScan()"
+        [disabled]="isScanning()"
+        aria-label="Activar cámara para escanear QR o RFID">
+        @if (!isScanning()) {
+          <span class="rf-scan-btn__icon" aria-hidden="true">📷</span>
+          <span class="rf-scan-btn__label">ESCANEAR</span>
+          <span class="rf-scan-btn__sub">QR · RFID · Código de barras</span>
+        } @else {
+          <span class="rf-scan-btn__icon rf-scan-btn__icon--spin" aria-hidden="true">⟳</span>
+          <span class="rf-scan-btn__label">Leyendo…</span>
+          <span class="rf-scan-btn__sub">Mantén tu credencial frente al lector</span>
+        }
+      </button>
+
+      <p class="rf-scan-demo">
+        <span aria-hidden="true">ℹ</span> Demo: haz clic para simular lectura exitosa
+      </p>
+    </div>
+  }
+
+  <!-- ═══ MODO PIN ════════════════════════════════════════════ -->
+  @if (mode() === 'pin') {
+    <div class="rf-pin-panel" role="tabpanel" aria-labelledby="tab-pin">
+      <!-- Display del PIN -->
+      <div class="pin-display" aria-label="PIN ingresado" aria-live="polite">
+        <span class="pin-dots">{{ pinDisplay }}</span>
+      </div>
+
+      @if (error()) {
+        <div class="pin-error" role="alert" aria-live="assertive">
+          <span aria-hidden="true">⚠</span> {{ error() }}
+        </div>
+      }
+
+      <!-- Teclado numérico -->
+      <div class="numpad" role="group" aria-label="Teclado numérico">
+        @for (digit of ['1','2','3','4','5','6','7','8','9','C','0','⌫']; track digit) {
+          @if (digit === 'C') {
+            <button class="numpad-key numpad-key--clear" (click)="clearPin()" aria-label="Limpiar">C</button>
+          } @else if (digit === '⌫') {
+            <button class="numpad-key numpad-key--del" (click)="deletePin()" aria-label="Borrar último dígito">⌫</button>
+          } @else {
+            <button
+              class="numpad-key"
+              (click)="appendPin(digit)"
+              [attr.aria-label]="'Dígito ' + digit">
+              {{ digit }}
+            </button>
+          }
+        }
+      </div>
+
+      <!-- Botón Confirmar -->
+      <button
+        id="pin-confirm-btn"
+        class="rf-confirm-btn"
+        [disabled]="!canSubmitPin || isLoading()"
+        (click)="submitPin()"
+        aria-label="Confirmar PIN e ingresar">
+        @if (isLoading()) {
+          <span class="btn-spin" aria-hidden="true">⟳</span>
+          Autenticando…
+        } @else {
+          ✓ Ingresar
+        }
+      </button>
+
+      <p class="rf-pin-hint">
+        Demo: 1234 (Operario) · 5678 (Supervisor) · 0000 (QM)
+      </p>
+    </div>
+  }
+
+</div>

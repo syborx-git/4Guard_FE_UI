@@ -1,0 +1,24 @@
+<!-- apps/rf-terminal/.../shared/components/rf-shell/rf-shell.component.html -->
+<!-- RF Shell — Layout contenedor con router-outlet y barra de navegación -->
+<div class="rf-shell">
+
+  <!-- ── Contenido principal (router-outlet) ────────────────────── -->
+  <main class="rf-shell__main">
+    <router-outlet />
+  </main>
+
+  <!-- ── Bottom Navigation Bar ─────────────────────────────────── -->
+  <nav class="rf-shell__nav" role="navigation" aria-label="Navegación principal RF">
+    @for (item of navItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="rf-shell__nav-item--active"
+        class="rf-shell__nav-item"
+        [attr.aria-label]="item.label">
+        <span class="rf-shell__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+        <span class="rf-shell__nav-label">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+</div>

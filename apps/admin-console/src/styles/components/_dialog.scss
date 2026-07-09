@@ -1,0 +1,131 @@
+// ============================================================
+// 4GUARD WMS — components/_dialog.scss
+// Modal, Confirm Dialog, Overlay
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// ── Overlay ───────────────────────────────────────────────────
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: $z-overlay;
+  animation: fadeIn $duration-fast $ease-standard both;
+  @include flex-center;
+}
+
+// ── Dialog panel ─────────────────────────────────────────────
+.dialog {
+  background: $surface;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-lg;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: $z-modal;
+  @include animate-modal;
+
+  // Línea decorativa top
+  &::before {
+    content: '';
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $gold-primary 50%, transparent);
+    opacity: 0.5;
+  }
+
+  &--wide { max-width: 720px; }
+  &--full { max-width: 90vw; }
+}
+
+// ── Dialog header ─────────────────────────────────────────────
+.dialog__header {
+  @include flex-between;
+  padding: $space-3;
+  border-bottom: 1px solid $border-subtle;
+  flex-shrink: 0;
+}
+
+.dialog__title {
+  font-family: $font-display;
+  font-size: $text-xl;
+  font-weight: $fw-bold;
+  color: $text-primary;
+  letter-spacing: $ls-tight;
+}
+
+.dialog__close {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: $radius-sm;
+  color: $text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255,255,255,0.06);
+    color: $text-primary;
+  }
+
+  .material-symbols-outlined { font-size: 20px; }
+}
+
+// ── Dialog body ───────────────────────────────────────────────
+.dialog__body {
+  padding: $space-3;
+  overflow-y: auto;
+  flex: 1;
+  @include custom-scrollbar;
+  @include body-text;
+}
+
+// ── Dialog footer ─────────────────────────────────────────────
+.dialog__footer {
+  padding: $space-2 $space-3;
+  border-top: 1px solid $border-subtle;
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-1 + 4px;
+  flex-shrink: 0;
+}
+
+// ── Confirm Dialog ────────────────────────────────────────────
+.confirm-dialog {
+  @extend .dialog;
+  max-width: 400px;
+  text-align: center;
+
+  .dialog__body {
+    padding: $space-4 $space-3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-2;
+  }
+}
+
+.confirm-dialog__icon {
+  font-size: 48px;
+  line-height: 1;
+
+  &--danger   { color: $danger; }
+  &--warning  { color: $warning; }
+  &--info     { color: $info; }
+}
+
+.confirm-dialog__message {
+  @include body-text($text-md);
+  color: $text-secondary;
+}

@@ -1,0 +1,98 @@
+// ============================================================
+// 4GUARD WMS — abstracts/_typography.scss
+// Bodoni Moda (Títulos) + DM Sans (UI)
+// ============================================================
+
+@use 'variables' as *;
+
+// ── Font stacks ──────────────────────────────────────────────
+$font-display: 'Bodoni Moda', 'Didot', 'Playfair Display', Georgia, serif;
+$font-ui:      'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-mono:    'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+// ── Escala tipográfica ────────────────────────────────────────
+$text-xs:   0.625rem;  // 10px  — Labels muy pequeños
+$text-sm:   0.75rem;   // 12px  — Captions, badges
+$text-base: 0.875rem;  // 14px  — Body por defecto
+$text-md:   1rem;      // 16px  — Body prominente
+$text-lg:   1.125rem;  // 18px  — Subtítulos
+$text-xl:   1.25rem;   // 20px  — H4
+$text-2xl:  1.5rem;    // 24px  — H3
+$text-3xl:  1.875rem;  // 30px  — H2
+$text-4xl:  2.25rem;   // 36px  — H1
+$text-5xl:  3rem;      // 48px  — Hero / Dashboard principal
+
+// ── Pesos ────────────────────────────────────────────────────
+$fw-regular:  400;
+$fw-medium:   500;
+$fw-semibold: 600;
+$fw-bold:     700;
+
+// ── Line heights ─────────────────────────────────────────────
+$lh-tight:   1.2;
+$lh-snug:    1.35;
+$lh-normal:  1.5;
+$lh-relaxed: 1.75;
+
+// ── Letter spacing ───────────────────────────────────────────
+$ls-tight:   -0.02em;
+$ls-normal:  0;
+$ls-wide:    0.04em;
+$ls-wider:   0.08em;
+$ls-widest:  0.15em;
+
+// ── Mixins tipográficos ──────────────────────────────────────
+
+/// Título de pantalla principal — usa Bodoni Moda
+@mixin display-heading($size: $text-4xl) {
+  font-family: $font-display;
+  font-size: $size;
+  font-weight: $fw-bold;
+  line-height: $lh-tight;
+  letter-spacing: $ls-tight;
+  color: $text-primary;
+}
+
+/// Encabezado de sección — DM Sans semibold
+@mixin section-heading($size: $text-xl) {
+  font-family: $font-ui;
+  font-size: $size;
+  font-weight: $fw-semibold;
+  line-height: $lh-snug;
+  color: $text-primary;
+}
+
+/// Label de table header — mayúsculas espaciadas en dorado
+@mixin table-header {
+  font-family: $font-ui;
+  font-size: $text-xs;
+  font-weight: $fw-semibold;
+  letter-spacing: $ls-widest;
+  text-transform: uppercase;
+  color: $gold-primary;
+}
+
+/// Texto de cuerpo estándar
+@mixin body-text($size: $text-base) {
+  font-family: $font-ui;
+  font-size: $size;
+  font-weight: $fw-regular;
+  line-height: $lh-normal;
+  color: $text-secondary;
+}
+
+/// Código / ID técnico
+@mixin mono-text($size: $text-sm) {
+  font-family: $font-mono;
+  font-size: $size;
+  font-weight: $fw-medium;
+  letter-spacing: $ls-wide;
+}
+
+/// Texto dorado con gradiente (efecto premium)
+@mixin gold-gradient-text {
+  background: linear-gradient(135deg, $gold-primary 0%, $gold-light 60%, $gold-primary 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

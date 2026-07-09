@@ -1,0 +1,240 @@
+<!-- apps/admin-console/.../receiving/receiving-wizard/receiving-wizard.component.html -->
+<!-- P4 — Consola de Recepción "La Bóveda" [HU-016] -->
+<section class="wizard-page page-enter" aria-label="Consola de Recepción La Bóveda">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <div class="wizard-header">
+    <div class="wizard-header__title-block">
+      <h2 class="wizard-header__title">🏛️ La Bóveda — Consola de Recepción</h2>
+      <p class="wizard-header__sub">Recepción: <strong>ASN-NESPRESSO-240616</strong> · Andén 01</p>
+    </div>
+    <!-- Stepper -->
+    <div class="stepper" role="navigation" aria-label="Progreso del wizard">
+      <div class="stepper__step" [class.stepper__step--active]="currentStep() === 1" [class.stepper__step--done]="currentStep() > 1">
+        <div class="stepper__circle">{{ currentStep() > 1 ? '✓' : '1' }}</div>
+        <span class="stepper__label">Datos Vehículo</span>
+      </div>
+      <div class="stepper__line" [class.stepper__line--done]="currentStep() > 1"></div>
+      <div class="stepper__step" [class.stepper__step--active]="currentStep() === 2">
+        <div class="stepper__circle">2</div>
+        <span class="stepper__label">Cuadratura</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PASO 1 — Datos del Vehículo ════════════════════════ -->
+  @if (currentStep() === 1 && !isClosed()) {
+    <div class="wizard-step wizard-step--enter">
+      <div class="wizard-card">
+        <h3 class="wizard-card__title">Paso 1: Identificación del Vehículo</h3>
+        <p class="wizard-card__desc">Registra los datos obligatorios antes de iniciar la descarga.</p>
+
+        <form id="receiving-step1-form" class="step1-form" [formGroup]="step1Form" novalidate>
+          <div class="form-row">
+            <!-- Placas -->
+            <div class="field" [class.field--error]="step1Form.controls.truckPlates.touched && step1Form.controls.truckPlates.invalid">
+              <label class="field__label" for="truck-plates">🚛 Placas del vehículo <span class="required">*</span></label>
+              <input id="truck-plates" type="text" class="field__input" formControlName="truckPlates"
+                placeholder="ABC-1234-B" autocomplete="off" aria-required="true">
+              @if (step1Form.controls.truckPlates.touched && step1Form.controls.truckPlates.hasError('required')) {
+                <span class="field__error">Las placas son obligatorias</span>
+              } @else if (step1Form.controls.truckPlates.touched && step1Form.controls.truckPlates.hasError('pattern')) {
+                <span class="field__error">Formato inválido (ej: ABC-1234-B)</span>
+              }
+            </div>
+
+            <!-- Chofer -->
+            <div class="field" [class.field--error]="step1Form.controls.driverName.touched && step1Form.controls.driverName.invalid">
+              <label class="field__label" for="driver-name">👤 Nombre del chofer <span class="required">*</span></label>
+              <input id="driver-name" type="text" class="field__input" formControlName="driverName"
+                placeholder="Juan Pérez García" aria-required="true">
+              @if (step1Form.controls.driverName.touched && step1Form.controls.driverName.hasError('required')) {
+                <span class="field__error">El nombre del chofer es obligatorio</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-row">
+            <!-- Sello primario -->
+            <div class="field" [class.field--error]="step1Form.controls.sealPrimary.touched && step1Form.controls.sealPrimary.invalid">
+              <label class="field__label" for="seal-primary">🔒 Sello primario <span class="required">*</span></label>
+              <input id="seal-primary" type="text" class="field__input" formControlName="sealPrimary"
+                placeholder="SELLO-001" aria-required="true">
+              @if (step1Form.controls.sealPrimary.touched && step1Form.controls.sealPrimary.hasError('required')) {
+                <span class="field__error">El sello primario es obligatorio</span>
+              }
+            </div>
+
+            <!-- Sello secundario -->
+            <div class="field">
+              <label class="field__label" for="seal-secondary">🔒 Sello secundario (opcional)</label>
+              <input id="seal-secondary" type="text" class="field__input" formControlName="sealSecondary"
+                placeholder="SELLO-002">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <!-- ASN -->
+            <div class="field" [class.field--error]="step1Form.controls.asnReference.touched && step1Form.controls.asnReference.invalid">
+              <label class="field__label" for="asn-reference">📄 Referencia ASN <span class="required">*</span></label>
+              <input id="asn-reference" type="text" class="field__input" formControlName="asnReference"
+                placeholder="ASN-CLIENTE-YYMMDD" aria-required="true">
+              @if (step1Form.controls.asnReference.touched && step1Form.controls.asnReference.hasError('required')) {
+                <span class="field__error">La referencia ASN es obligatoria</span>
+              }
+            </div>
+
+            <!-- Andén -->
+            <div class="field">
+              <label class="field__label" for="dock-number">🅿️ Andén asignado</label>
+              <select id="dock-number" class="field__input field__select" formControlName="dockNumber">
+                <option value="AND-01">Andén 01</option>
+                <option value="AND-02">Andén 02</option>
+                <option value="AND-03">Andén 03</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            id="wizard-next-btn"
+            type="button"
+            class="wizard-btn wizard-btn--primary"
+            (click)="goToStep2()">
+            Siguiente: Cuadratura →
+          </button>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ══ PASO 2 — Cuadratura ════════════════════════════════ -->
+  @if (currentStep() === 2 && !isClosed()) {
+    <div class="wizard-step wizard-step--enter">
+      <div class="wizard-step2-grid">
+
+        <!-- Panel de cuadratura radial -->
+        <div class="wizard-card wizard-card--quadrature">
+          <h3 class="wizard-card__title">Indicador de Cuadratura</h3>
+
+          <div class="quadrature-gauge" role="img"
+            [attr.aria-label]="'Cuadratura: ' + quadraturePercent() + '%'">
+            <svg viewBox="0 0 100 100" class="quad-svg" aria-hidden="true">
+              <circle cx="50" cy="50" r="44" fill="none"
+                stroke="rgba(27,43,75,0.1)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="44" fill="none"
+                [attr.stroke]="gaugeColor()"
+                stroke-width="8"
+                stroke-linecap="round"
+                [attr.stroke-dasharray]="gaugeCircumference"
+                [attr.stroke-dashoffset]="gaugeDashOffset()"
+                transform="rotate(-90 50 50)"
+                style="transition: stroke-dashoffset 600ms ease, stroke 300ms"/>
+            </svg>
+            <div class="quad-center">
+              <span class="quad-pct">{{ quadraturePercent() }}%</span>
+              <span class="quad-label">Cuadratura</span>
+            </div>
+          </div>
+
+          <div class="quad-summary">
+            <div class="quad-stat">
+              <span class="quad-stat__val">{{ totalReceived() }}</span>
+              <span class="quad-stat__lbl">Escaneados</span>
+            </div>
+            <span class="quad-stat__sep">/</span>
+            <div class="quad-stat">
+              <span class="quad-stat__val">{{ totalExpected() }}</span>
+              <span class="quad-stat__lbl">Esperados</span>
+            </div>
+          </div>
+
+          <!-- Alerta si no completo -->
+          @if (!canClose()) {
+            <div class="quad-warning" role="alert">
+              <span aria-hidden="true">⚠️</span>
+              <span>Cuadratura incompleta. Escanea los ítems faltantes para cerrar la recepción.</span>
+            </div>
+          }
+
+          <!-- Botones de acción -->
+          <div class="wizard-actions">
+            <button
+              type="button"
+              class="wizard-btn wizard-btn--ghost"
+              (click)="goBack()">
+              ← Volver
+            </button>
+            <button
+              id="close-receipt-btn"
+              type="button"
+              class="wizard-btn wizard-btn--primary"
+              [disabled]="!canClose() || isClosing()"
+              [class.wizard-btn--loading]="isClosing()"
+              [attr.aria-disabled]="!canClose()"
+              [attr.title]="!canClose() ? 'Cuadratura incompleta' : 'Cerrar recepción'"
+              (click)="closeReceipt()">
+              @if (isClosing()) {
+                <span class="btn-spinner" aria-hidden="true"></span>
+                Cerrando...
+              } @else {
+                🔐 Cerrar Recepción
+              }
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de líneas -->
+        <div class="wizard-card wizard-card--lines">
+          <h3 class="wizard-card__title">Líneas de Recepción</h3>
+          <div class="lines-table" role="table" aria-label="Líneas de la recepción">
+            <div class="lines-table__head" role="row">
+              <span role="columnheader">SKU</span>
+              <span role="columnheader">Descripción</span>
+              <span role="columnheader">Esperado</span>
+              <span role="columnheader">Recibido</span>
+              <span role="columnheader">Estado</span>
+              <span role="columnheader">Acción</span>
+            </div>
+            @for (line of receiptLines(); track line.id) {
+              <div class="lines-table__row" [class]="getLineStatusClass(line.status)" role="row">
+                <span class="line-sku" role="cell">{{ line.sku }}</span>
+                <span class="line-desc" role="cell">{{ line.description }}</span>
+                <span class="line-qty" role="cell">{{ line.expectedQty }}</span>
+                <span class="line-qty" [class.line-qty--ok]="line.receivedQty === line.expectedQty"
+                  [class.line-qty--warn]="line.receivedQty > 0 && line.receivedQty < line.expectedQty"
+                  role="cell">{{ line.receivedQty }}</span>
+                <span class="line-status-badge" role="cell">{{ getLineStatusLabel(line) }}</span>
+                <button
+                  class="line-scan-btn"
+                  [disabled]="line.receivedQty >= line.expectedQty"
+                  (click)="scanLine(line.id)"
+                  [attr.aria-label]="'Simular escaneo de ' + line.description"
+                  role="cell">
+                  📷 Scan
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ══ ESTADO CERRADO ════════════════════════════════════ -->
+  @if (isClosed()) {
+    <div class="wizard-success">
+      <div class="wizard-success__check" aria-hidden="true">✓</div>
+      <h3 class="wizard-success__title">¡Recepción Cerrada!</h3>
+      <p class="wizard-success__desc">La recepción ASN-NESPRESSO-240616 ha sido cerrada exitosamente con cuadratura del 100%. Los lotes quedarán disponibles tras inspección.</p>
+      <button
+        id="wizard-back-dashboard"
+        type="button"
+        class="wizard-btn wizard-btn--primary"
+        (click)="navigateToDashboard()">
+        → Volver al Dashboard
+      </button>
+    </div>
+  }
+
+</section>

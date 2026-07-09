@@ -1,0 +1,161 @@
+<!-- users-list.component.html -->
+<!-- HU-003: Gestión de Usuarios con Generar Clave Temporal -->
+<div class="users-container">
+  <div class="users-header">
+    <div>
+      <h1>Gestión de Usuarios</h1>
+      <p>Administra los roles, permisos y accesos de los operarios y supervisores al WMS.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAddModal()">+ Nuevo Usuario</button>
+  </div>
+
+  <div class="users-table-card">
+    <div class="table-controls">
+      <input
+        type="text"
+        class="form-control search-input"
+        placeholder="Buscar por nombre o correo..."
+        [value]="searchTerm()"
+        (input)="onSearch($event)">
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Correo Electrónico</th>
+          <th>Rol</th>
+          <th>Sucursal Asignada</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of filteredUsers(); track user.id) {
+          <tr>
+            <td style="font-weight: var(--font-weight-semibold);">{{ user.name }}</td>
+            <td>{{ user.email }}</td>
+            <td>
+              <span class="role-badge" [ngClass]="getRoleClass(user.role)">
+                {{ getRoleLabel(user.role) }}
+              </span>
+            </td>
+            <td>{{ user.branchName || 'N/A' }}</td>
+            <td>
+              <button
+                class="status-toggle"
+                [class.status-active]="user.active"
+                [class.status-inactive]="!user.active"
+                (click)="toggleUserStatus(user)">
+                {{ user.active ? 'Activo' : 'Inactivo' }}
+              </button>
+            </td>
+            <td>
+              <!-- Acciones de la fila: Editar + Generar Clave Temporal -->
+              <div class="row-actions">
+                <button
+                  class="btn btn-secondary"
+                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
+                  (click)="editUser(user)">
+                  Editar
+                </button>
+
+                <!-- HU-003: Botón Generar Clave Temporal -->
+                <button
+                  class="btn btn-key"
+                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
+                  [disabled]="isGenerating()"
+                  (click)="openGenerateConfirm(user)"
+                  [attr.aria-label]="'Generar clave temporal para ' + user.name"
+                  title="Generar Clave Temporal">
+                  🔑 Clave Temporal
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--color-text-secondary); padding: var(--space-8);">
+              No se encontraron usuarios matching el criterio.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     Modal: Crear / Editar Usuario
+     ══════════════════════════════════════════════════════════ -->
+@if (isModalOpen()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editingUserId() ? 'Editar Usuario' : 'Nuevo Usuario' }}</h2>
+        <button class="modal-close" (click)="closeModal()">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label for="user-name">Nombre Completo</label>
+        <input id="user-name" type="text" class="form-control" [(ngModel)]="userForm.name">
+      </div>
+
+      <div class="form-group">
+        <label for="user-email">Correo Electrónico</label>
+        <input id="user-email" type="email" class="form-control" [(ngModel)]="userForm.email">
+      </div>
+
+      <div class="form-group">
+        <label for="user-role">Rol del Sistema</label>
+        <select id="user-role" class="form-control" [(ngModel)]="userForm.role">
+          <option value="ROLE_ADMIN">Administrador</option>
+          <option value="ROLE_DOCK_SUPERVISOR">Supervisor de Andén</option>
+          <option value="ROLE_QM_INSPECTOR">Inspector de Calidad</option>
+          <option value="ROLE_WAREHOUSE_OPERATOR">Operario de Almacén</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="user-branch">Sucursal</label>
+        <select id="user-branch" class="form-control" [(ngModel)]="userForm.branchId">
+          <option value="1">Centro de Distribución Norte</option>
+          <option value="2">Sucursal Metropolitana Sur</option>
+          <option value="3">La Bóveda Principal</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" (click)="saveUser()">Guardar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     HU-003: Diálogo de Confirmación — Generar Contraseña Temporal
+     Se muestra al hacer click en "Clave Temporal"
+     ══════════════════════════════════════════════════════════ -->
+@if (confirmingUser()) {
+  <fg-confirm-dialog
+    title="Generar contraseña temporal"
+    [message]="'¿Deseas generar una contraseña temporal para ' + confirmingUser()!.name + '?'"
+    confirmLabel="Generar"
+    [isLoading]="isGenerating()"
+    (confirmed)="onGenerateConfirmed()"
+    (cancelled)="onGenerateCancelled()">
+  </fg-confirm-dialog>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     HU-003: Modal Premium — Contraseña Temporal Generada
+     Se muestra cuando el backend responde 200
+     ══════════════════════════════════════════════════════════ -->
+@if (tempPassword() && tempPasswordUser()) {
+  <fg-temp-password-modal
+    [password]="tempPassword()!"
+    [userName]="tempPasswordUser()!.name"
+    (closed)="onTempPasswordModalClosed()">
+  </fg-temp-password-modal>
+}

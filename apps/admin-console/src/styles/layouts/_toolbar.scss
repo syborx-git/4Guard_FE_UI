@@ -1,0 +1,242 @@
+// ============================================================
+// 4GUARD WMS — layouts/_toolbar.scss
+// Header/Toolbar transparente con blur y borde dorado fino
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+
+// ── Main area ─────────────────────────────────────────────────
+.shell__main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $bg-primary;
+}
+
+// ── Toolbar/Header ────────────────────────────────────────────
+.toolbar {
+  height: $header-height;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $space-3;
+  position: sticky;
+  top: 0;
+  z-index: $z-sticky;
+
+  // Transparente con blur (glass effect sutil)
+  background: rgba($bg-primary, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  // Borde inferior muy fino dorado
+  border-bottom: 1px solid rgba(234, 195, 73, 0.15);
+}
+
+// ── Shell Header (main area top bar) ─────────────────────────
+.shell__header {
+  height: $header-height;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: $z-sticky;
+  background: rgba($bg-primary, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shell__header-left {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.shell__header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+// ── Page Title (4GUARD WMS branding) ─────────────────────────
+.shell__page-title {
+  font-family: $font-display;
+  font-size: $text-xl;
+  font-weight: $fw-bold;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #EAC349 0%, #FFE088 55%, #EAC349 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// ── Branch Badge ──────────────────────────────────────────────
+.shell__branch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: $radius-full;
+  background: rgba(45, 27, 68, 0.6);
+  border: 1px solid rgba(234, 195, 73, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.shell__branch-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $text-tertiary;
+  font-family: $font-ui;
+}
+
+.shell__branch-id {
+  font-family: $font-mono;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: $gold-primary;
+}
+
+
+
+.toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: $space-1 + 4px;
+}
+
+// ── Page title ────────────────────────────────────────────────
+.toolbar__title {
+  font-family: $font-display;
+  font-size: $text-xl;
+  font-weight: $fw-bold;
+  color: $text-primary;
+  letter-spacing: $ls-tight;
+}
+
+.toolbar__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $text-sm;
+  color: $text-tertiary;
+
+  a {
+    color: $text-tertiary;
+    text-decoration: none;
+    transition: color $transition-fast;
+    &:hover { color: $gold-primary; }
+  }
+
+  .separator {
+    font-size: 12px;
+    color: $border-default;
+  }
+
+  .current {
+    color: $text-primary;
+    font-weight: $fw-medium;
+  }
+}
+
+// ── Sync indicator ────────────────────────────────────────────
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  padding: 6px $space-1 + 4px;
+  border-radius: $radius-full;
+  border: 1px solid $border-subtle;
+  background: rgba(255,255,255,0.03);
+  font-size: $text-xs;
+  font-family: $font-ui;
+  color: $text-tertiary;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: $radius-full;
+    background: $success;
+    flex-shrink: 0;
+  }
+
+  &--offline {
+    border-color: rgba($warning, 0.4);
+    .sync-indicator__dot {
+      background: $warning;
+      animation: pulse 1.2s infinite;
+    }
+  }
+
+  &--syncing .sync-indicator__dot {
+    background: $info;
+    animation: pulse 0.8s infinite;
+  }
+}
+
+// ── Branch badge ─────────────────────────────────────────────
+.branch-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $text-xs;
+  color: $text-tertiary;
+
+  &__code {
+    font-family: $font-mono;
+    font-size: $text-xs;
+    font-weight: $fw-medium;
+    color: $gold-primary;
+    background: $gold-subtle;
+    padding: 2px 8px;
+    border-radius: $radius-sm;
+    border: 1px solid $gold-border;
+    letter-spacing: $ls-wide;
+  }
+}
+
+// ── Content area ─────────────────────────────────────────────
+.shell__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-3 $space-4;
+  @include custom-scrollbar;
+}
+
+// ── Page header (dentro del contenido) ───────────────────────
+.page-header {
+  margin-bottom: $space-4;
+
+  &__title {
+    @include display-heading($text-3xl);
+  }
+
+  &__subtitle {
+    @include body-text($text-base);
+    margin-top: $space-1;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-1 + 4px;
+    margin-top: $space-2;
+  }
+}

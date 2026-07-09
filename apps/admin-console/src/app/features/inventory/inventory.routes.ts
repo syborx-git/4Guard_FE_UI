@@ -3,14 +3,15 @@ import { Routes } from '@angular/router';
 export const inventoryRoutes: Routes = [
   {
     path: '',
-    loadComponent: () =>
-      import('./inventory-list/inventory-list.component').then((m) => m.InventoryListComponent),
-    title: '4GUARD WMS — Lista de Inventario',
+    redirectTo: 'map',
+    pathMatch: 'full',
   },
   {
-    path: ':id',
+    path: 'map',
     loadComponent: () =>
-      import('./inventory-detail/inventory-detail.component').then((m) => m.InventoryDetailComponent),
-    title: '4GUARD WMS — Detalle de Ítem',
+      import('./warehouse-map/warehouse-map.component').then(
+        (m) => m.WarehouseMapComponent
+      ),
+    title: '4GUARD WMS — Mapa 2D del Almacén',
   },
 ];

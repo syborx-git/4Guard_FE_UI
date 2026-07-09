@@ -1,0 +1,185 @@
+// ============================================================
+// 4GUARD WMS — components/_table.scss
+// DataTable con header dorado, hover morado, paginación
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// ── Wrapper ───────────────────────────────────────────────────
+.table-container {
+  border: 1px solid $border-subtle;
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: $surface;
+}
+
+// ── Table ─────────────────────────────────────────────────────
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-ui;
+  font-size: $text-base;
+
+  // ── Header ──────────────────────────────────────────────────
+  thead {
+    background: $bg-primary;
+    border-bottom: 1px solid $border-subtle;
+
+    th {
+      @include table-header;
+      padding: $space-1 + 4px $space-2;
+      text-align: left;
+      white-space: nowrap;
+      user-select: none;
+
+      // Columna sorteable
+      &.sortable {
+        cursor: pointer;
+        transition: color $transition-fast;
+
+        &:hover { color: $gold-light; }
+
+        &.sort-asc,
+        &.sort-desc {
+          color: $gold-light;
+        }
+      }
+    }
+  }
+
+  // ── Body ────────────────────────────────────────────────────
+  tbody {
+    tr {
+      background: $surface-secondary;
+      border-bottom: 1px solid $border-subtle;
+      transition: background $transition-fast;
+
+      &:last-child { border-bottom: none; }
+
+      &:hover { background: $purple-corporate; }
+
+      &.is-selected {
+        background: rgba(234, 195, 73, 0.06);
+        border-left: 2px solid $gold-primary;
+      }
+
+      &.is-loading { pointer-events: none; }
+    }
+
+    td {
+      padding: $space-1 + 4px $space-2;
+      color: $text-secondary;
+      vertical-align: middle;
+      @include truncate;
+      max-width: 240px;
+
+      &.td-primary {
+        color: $text-primary;
+        font-weight: $fw-medium;
+      }
+
+      &.td-mono {
+        @include mono-text;
+        color: $text-primary;
+      }
+
+      &.td-actions {
+        @include flex-start;
+        max-width: unset;
+        gap: 4px;
+      }
+
+      &.td-center { text-align: center; }
+    }
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────
+.table-empty {
+  padding: $space-8 $space-4;
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 48px;
+    color: $text-tertiary;
+    display: block;
+    margin: 0 auto $space-2;
+  }
+
+  p {
+    color: $text-tertiary;
+    font-size: $text-base;
+  }
+}
+
+// ── Skeleton rows ─────────────────────────────────────────────
+.table-skeleton-row {
+  td { padding: $space-2; }
+
+  .skeleton-cell {
+    @include shimmer-bg;
+    height: 14px;
+    border-radius: $radius-xs;
+    width: 80%;
+
+    &--short { width: 40%; }
+    &--wide   { width: 100%; }
+  }
+}
+
+// ── Pagination ────────────────────────────────────────────────
+.table-pagination {
+  @include flex-between;
+  padding: $space-2 $space-3;
+  border-top: 1px solid $border-subtle;
+  background: $surface;
+}
+
+.pagination-info {
+  font-size: $text-sm;
+  color: $text-tertiary;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+}
+
+.pagination-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-secondary;
+  cursor: pointer;
+  font-size: $text-sm;
+  font-family: $font-ui;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: $gold-hover-bg;
+    border-color: $gold-border;
+    color: $gold-primary;
+  }
+
+  &.is-active {
+    background: $gold-subtle;
+    border-color: $gold-primary;
+    color: $gold-primary;
+    font-weight: $fw-semibold;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}

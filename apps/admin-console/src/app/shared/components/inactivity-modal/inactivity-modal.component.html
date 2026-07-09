@@ -1,0 +1,69 @@
+<!-- inactivity-modal.component.html -->
+<!-- HU-004: Modal de Inactividad — Desenfoque fuerte y Soft UI Premium -->
+<div class="ia-backdrop" role="dialog" aria-modal="true" aria-labelledby="ia-title">
+  
+  <div class="ia-card" tabindex="-1">
+    
+    <!-- Icono de advertencia de seguridad -->
+    <div class="ia-icon-wrap">
+      <span class="material-symbols-outlined ia-icon">lock_clock</span>
+    </div>
+
+    <!-- Contenido explicativo -->
+    <div class="ia-header">
+      <h2 id="ia-title" class="ia-title">Inactividad Detectada</h2>
+      <p class="ia-subtitle">
+        Tu sesión de terminal en el WMS está a punto de cerrarse por motivos de seguridad. 
+        Por favor confirma si deseas mantener tu acceso activo.
+      </p>
+    </div>
+
+    <!-- Caja de cuenta regresiva circular o destacada -->
+    <div class="ia-countdown-box">
+      <span class="ia-countdown-label">TIEMPO RESTANTE</span>
+      <span class="ia-countdown-value" aria-live="polite">
+        {{ inactivityService.countdown() }}s
+      </span>
+    </div>
+
+    <!-- Botones de Acción de alta fidelidad -->
+    <div class="ia-actions">
+      
+      <!-- Mantener Sesión — ejecuta POST /auth/refresh -->
+      <button 
+        id="ia-keep-btn"
+        type="button" 
+        class="ia-btn ia-btn--primary"
+        [disabled]="inactivityService.isProcessing()"
+        (click)="keepAlive()">
+        @if (inactivityService.isProcessing() && inactivityService.showWarning()) {
+          <span class="ia-spinner"></span>
+          <span>Actualizando...</span>
+        } @else {
+          <span class="material-symbols-outlined ia-btn-icon">verified_user</span>
+          <span>Mantener sesión activa</span>
+        }
+      </button>
+
+      <!-- Salir Ahora — ejecuta POST /auth/logout -->
+      <button 
+        id="ia-logout-btn"
+        type="button" 
+        class="ia-btn ia-btn--secondary"
+        [disabled]="inactivityService.isProcessing()"
+        (click)="logoutNow()">
+        Cerrar sesión ahora
+      </button>
+      
+    </div>
+
+    <!-- Nota de seguridad -->
+    <div class="ia-note">
+      <span class="material-symbols-outlined ia-note-icon">shield</span>
+      <span class="ia-note-text">
+        Al finalizar el tiempo, se ocultarán todos los datos sensibles del inventario.
+      </span>
+    </div>
+
+  </div>
+</div>

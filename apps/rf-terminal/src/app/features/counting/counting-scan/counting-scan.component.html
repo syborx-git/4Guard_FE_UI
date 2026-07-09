@@ -1,0 +1,92 @@
+<!-- apps/rf-terminal/src/app/features/counting/counting-scan/counting-scan.component.html -->
+<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de escaneo de conteo físico">
+
+  <!-- Input OCULTO — captura el láser industrial -->
+  <input
+    #scanInput
+    type="text"
+    class="scan-hidden-input"
+    [ngModel]="currentInput()"
+    (ngModelChange)="currentInput.set($event)"
+    (input)="onScanInput($event)"
+    (keydown)="onKeydown($event)"
+    autocomplete="off"
+    spellcheck="false"
+    aria-hidden="true"
+    tabindex="-1">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="rscan__header">
+    <div>
+      <h1 class="rscan__title">🔢 Conteo Físico</h1>
+      <p class="rscan__sub">Ciclo A-2026 · Zona General</p>
+    </div>
+    <div class="rscan__progress" role="status"
+      [attr.aria-label]="countedItems() + ' de ' + totalExpected() + ' ítems escaneados'">
+      <span class="rscan__progress-val">{{ countedItems() }}<span class="rscan__progress-sep">/</span>{{ totalExpected() }}</span>
+      <span class="rscan__progress-lbl">Contados</span>
+    </div>
+  </div>
+
+  <!-- ── Scan zone ──────────────────────────────────────── -->
+  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
+    [class.rscan__zone--processing]="isProcessing()"
+    aria-label="Zona de escaneo — apunta el lector aquí">
+    <span class="rscan__zone-icon" aria-hidden="true">
+      {{ isProcessing() ? '⟳' : '⬛' }}
+    </span>
+    <span class="rscan__zone-text">
+      {{ isProcessing() ? 'Procesando…' : 'Escanea SKU o SSCC' }}
+    </span>
+    <span class="rscan__zone-sub">o haz clic para enfocar</span>
+  </div>
+
+  <!-- Botón de simulación de scan -->
+  <button
+    id="rf-sim-count-btn"
+    class="rscan__sim-btn"
+    (click)="simulateScan(); $event.stopPropagation()">
+    📷 Simular Escaneo
+  </button>
+
+  <!-- Error message -->
+  @if (lastError()) {
+    <div class="rscan__error" role="alert" aria-live="assertive">
+      {{ lastError() }}
+    </div>
+  }
+
+  <!-- ── Buffer de Conteo ────────────────────────────────── -->
+  <div class="rscan__buffer">
+    <h2 class="rscan__buffer-title">
+      Registros Recientes
+      @if (countedItems() > 0) {
+        <span class="rscan__buffer-count" aria-hidden="true">{{ countedItems() }}</span>
+      }
+    </h2>
+
+    <div class="buffer-list" role="list" aria-label="Ítems contados">
+      @for (item of buffer(); track item.sscc) {
+        <div class="buffer-item" role="listitem">
+          <div class="buffer-item__code">{{ item.sscc }}</div>
+          <div class="buffer-item__info">
+            <span class="buffer-item__sku">{{ item.sku }} - Loc: {{ item.location }}</span>
+            <span class="buffer-item__desc">{{ item.description }}</span>
+          </div>
+          <div class="buffer-item__right">
+            <span class="status-badge status-badge--20">
+              Cant: {{ item.qty }}
+            </span>
+            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="buffer-empty">
+          <span aria-hidden="true">📭</span>
+          <span>Ningún conteo registrado en esta sesión.</span>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

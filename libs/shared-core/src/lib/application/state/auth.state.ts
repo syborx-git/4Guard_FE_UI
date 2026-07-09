@@ -20,7 +20,7 @@ import { hasModuleAccess } from '../../domain/enums/role.enum';
 @Injectable({ providedIn: 'root' })
 export class AuthState {
   private readonly authService = inject(AuthService);
-  private readonly router      = inject(Router);
+  private readonly router = inject(Router);
 
   // ─── Señales derivadas del AuthService ────────────────────────────────────
 
@@ -58,13 +58,13 @@ export class AuthState {
     const role = this.authService.currentRole();
     if (!role) return '';
     const labels: Record<UserRole, string> = {
-      [UserRole.ADMIN]:              'Administrador',
-      [UserRole.WAREHOUSE_MANAGER]:  'Gerente de Almacén',
-      [UserRole.DOCK_SUPERVISOR]:    'Supervisor de Andén',
+      [UserRole.ADMIN]: 'Administrador',
+      [UserRole.WAREHOUSE_MANAGER]: 'Gerente de Almacén',
+      [UserRole.DOCK_SUPERVISOR]: 'Supervisor de Andén',
       [UserRole.WAREHOUSE_OPERATOR]: 'Operario de Almacén',
-      [UserRole.QM_INSPECTOR]:       'Inspector de Calidad',
-      [UserRole.AUDITOR]:            'Auditor',
-      [UserRole.CLIENT]:             'Cliente 3PL',
+      [UserRole.QM_INSPECTOR]: 'Inspector de Calidad',
+      [UserRole.AUDITOR]: 'Auditor',
+      [UserRole.CLIENT]: 'Cliente 3PL',
     };
     return labels[role] ?? role;
   });
@@ -81,10 +81,25 @@ export class AuthState {
   }
 
   /**
-   * Cierra la sesión del usuario actual.
+   * Completa el proceso de inicio de sesión guardando la sesión activa con la sucursal
+   * seleccionada y redirigiendo al dashboard o módulo inicial correspondiente al rol.
    */
-  logout(): void {
-    this.authService.logout();
+  completeLogin(user: User, accessToken: string, refreshToken: string): void {
+    this.authService.saveSession({
+      accessToken,
+      refreshToken,
+      expiresIn: 3600,
+      user
+    });
+    this.redirectAfterLogin(user);
+  }
+
+  /**
+   * Cierra la sesión del usuario actual.
+   * @param reason Razón opcional del cierre de sesión.
+   */
+  logout(reason?: string): void {
+    this.authService.logout(reason);
   }
 
   /**
@@ -107,13 +122,13 @@ export class AuthState {
 
   private redirectAfterLogin(user: User): void {
     const roleRoutes: Partial<Record<UserRole, string>> = {
-      [UserRole.ADMIN]:              '/admin/dashboard',
-      [UserRole.WAREHOUSE_MANAGER]:  '/dashboard',
-      [UserRole.DOCK_SUPERVISOR]:    '/receiving',
+      [UserRole.ADMIN]: '/dashboard',
+      [UserRole.WAREHOUSE_MANAGER]: '/dashboard',
+      [UserRole.DOCK_SUPERVISOR]: '/receiving',
       [UserRole.WAREHOUSE_OPERATOR]: '/picking',
-      [UserRole.QM_INSPECTOR]:       '/quality',
-      [UserRole.AUDITOR]:            '/dashboard',
-      [UserRole.CLIENT]:             '/dashboard',
+      [UserRole.QM_INSPECTOR]: '/quality',
+      [UserRole.AUDITOR]: '/dashboard',
+      [UserRole.CLIENT]: '/dashboard',
     };
 
     const route = roleRoutes[user.role] ?? '/dashboard';

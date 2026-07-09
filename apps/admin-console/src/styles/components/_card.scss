@@ -1,0 +1,129 @@
+// ============================================================
+// 4GUARD WMS — components/_card.scss
+// Card base con borde dorado sutil y hover
+// ============================================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/typography' as *;
+@use '../abstracts/spacing' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// ── Card base ─────────────────────────────────────────────────
+.card {
+  background: $surface-secondary;
+  border: 1px solid $gold-border;
+  border-radius: $radius-md;
+  padding: $padding-lg;
+  transition:
+    background $transition-normal,
+    border-color $transition-normal,
+    transform $transition-normal;
+
+  &:where([role="button"], a, [tabindex]) {
+    cursor: pointer;
+
+    &:hover {
+      background: $purple-corporate;
+      border-color: $gold-primary;
+    }
+
+    &:active { transform: scale(0.995); }
+  }
+}
+
+// ── Card header ───────────────────────────────────────────────
+.card__header {
+  @include flex-between;
+  margin-bottom: $space-2;
+}
+
+.card__title {
+  font-family: $font-ui;
+  font-size: $text-md;
+  font-weight: $fw-semibold;
+  color: $text-primary;
+  letter-spacing: $ls-tight;
+}
+
+.card__subtitle {
+  font-size: $text-sm;
+  color: $text-tertiary;
+  margin-top: 4px;
+}
+
+// ── Card body ─────────────────────────────────────────────────
+.card__body { color: $text-secondary; }
+
+// ── Card footer ───────────────────────────────────────────────
+.card__footer {
+  margin-top: $space-2;
+  padding-top: $space-2;
+  border-top: 1px solid $border-subtle;
+  @include flex-between;
+}
+
+// ── KPI Card ─────────────────────────────────────────────────
+.kpi-card {
+  @extend .card;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+
+  // Línea decorativa dorada en el top
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $gold-primary, transparent);
+    opacity: 0.6;
+  }
+}
+
+.kpi-card__icon {
+  font-size: 24px;
+  color: $gold-primary;
+  line-height: 1;
+}
+
+.kpi-card__value {
+  font-family: $font-display;
+  font-size: $text-4xl;
+  font-weight: $fw-bold;
+  color: $text-primary;
+  line-height: 1;
+  letter-spacing: $ls-tight;
+}
+
+.kpi-card__label {
+  font-size: $text-sm;
+  font-weight: $fw-medium;
+  color: $text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: $ls-wider;
+}
+
+.kpi-card__trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: $text-sm;
+  font-weight: $fw-medium;
+  margin-top: auto;
+
+  &--up    { color: $success; }
+  &--down  { color: $danger; }
+  &--flat  { color: $text-tertiary; }
+}
+
+// ── Skeleton card ─────────────────────────────────────────────
+.card--skeleton {
+  @include shimmer-bg;
+  border-color: $border-subtle;
+  pointer-events: none;
+  min-height: 140px;
+}

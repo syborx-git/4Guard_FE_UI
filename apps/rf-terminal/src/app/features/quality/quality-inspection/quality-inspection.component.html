@@ -1,0 +1,95 @@
+<!-- apps/rf-terminal/src/app/features/quality/quality-inspection/quality-inspection.component.html -->
+<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de inspección de calidad QM">
+
+  <!-- Input OCULTO — captura el láser industrial -->
+  <input
+    #scanInput
+    type="text"
+    class="scan-hidden-input"
+    [ngModel]="currentInput()"
+    (ngModelChange)="currentInput.set($event)"
+    (input)="onScanInput($event)"
+    (keydown)="onKeydown($event)"
+    autocomplete="off"
+    spellcheck="false"
+    aria-hidden="true"
+    tabindex="-1">
+
+  <!-- ── Header ──────────────────────────────────────────── -->
+  <div class="rscan__header">
+    <div>
+      <h1 class="rscan__title">🔍 Inspección de Calidad (QM)</h1>
+      <p class="rscan__sub">Auditoría Lote · Muestreo RF</p>
+    </div>
+    <div class="rscan__progress" role="status"
+      [attr.aria-label]="inspectedCount() + ' de ' + expectedTotal() + ' inspeccionados'">
+      <span class="rscan__progress-val">{{ inspectedCount() }}<span class="rscan__progress-sep">/</span>{{ expectedTotal() }}</span>
+      <span class="rscan__progress-lbl">Inspeccionados</span>
+    </div>
+  </div>
+
+  <!-- ── Scan zone ──────────────────────────────────────── -->
+  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
+    [class.rscan__zone--processing]="isProcessing()"
+    aria-label="Zona de escaneo — apunta el lector al código del lote o pallet">
+    <span class="rscan__zone-icon" aria-hidden="true">
+      {{ isProcessing() ? '⟳' : '⬛' }}
+    </span>
+    <span class="rscan__zone-text">
+      {{ isProcessing() ? 'Procesando…' : 'Escanea Pallet para Control QM' }}
+    </span>
+    <span class="rscan__zone-sub">o haz clic para enfocar</span>
+  </div>
+
+  <!-- Botón de simulación de scan -->
+  <button
+    id="rf-sim-quality-btn"
+    class="rscan__sim-btn"
+    (click)="simulateScan(); $event.stopPropagation()">
+    📷 Simular Escaneo
+  </button>
+
+  <!-- Error message -->
+  @if (lastError()) {
+    <div class="rscan__error" role="alert" aria-live="assertive">
+      {{ lastError() }}
+    </div>
+  }
+
+  <!-- ── Buffer de Inspección ────────────────────────────── -->
+  <div class="rscan__buffer">
+    <h2 class="rscan__buffer-title">
+      Pallets Evaluados
+      @if (inspectedCount() > 0) {
+        <span class="rscan__buffer-count" aria-hidden="true">{{ inspectedCount() }}</span>
+      }
+    </h2>
+
+    <div class="buffer-list" role="list" aria-label="Pallets inspeccionados">
+      @for (item of buffer(); track item.sscc) {
+        <div class="buffer-item" role="listitem">
+          <div class="buffer-item__code">{{ item.sscc }}</div>
+          <div class="buffer-item__info">
+            <span class="buffer-item__sku">{{ item.sku }}</span>
+            <span class="buffer-item__desc">{{ item.description }}</span>
+          </div>
+          <div class="buffer-item__right">
+            <span
+              class="status-badge"
+              [class.status-badge--approved]="item.decision === 'APPROVED'"
+              [class.status-badge--rejected]="item.decision === 'REJECTED'">
+              {{ getDecisionLabel(item.decision) }}
+            </span>
+            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="buffer-empty">
+          <span aria-hidden="true">📭</span>
+          <span>Sin pallets evaluados en esta sesión.</span>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

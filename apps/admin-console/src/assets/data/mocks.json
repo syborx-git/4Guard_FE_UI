@@ -1,0 +1,153 @@
+{
+  "users": [
+    { "id": "u-001", "fullName": "Carlos Herrera", "email": "admin@4guard.mx", "role": "ROLE_ADMIN", "branchId": "BR-MTY-01", "isActive": true },
+    { "id": "u-002", "fullName": "Sofía Ramírez", "email": "manager@4guard.mx", "role": "ROLE_WAREHOUSE_MANAGER", "branchId": "BR-MTY-01", "isActive": true },
+    { "id": "u-003", "fullName": "Miguel Torres", "email": "dock@4guard.mx", "role": "ROLE_DOCK_SUPERVISOR", "branchId": "BR-MTY-01", "isActive": true },
+    { "id": "u-004", "fullName": "Ana López", "email": "qm@4guard.mx", "role": "ROLE_QM_INSPECTOR", "branchId": "BR-MTY-01", "isActive": true },
+    { "id": "u-005", "fullName": "Roberto Sánchez", "email": "op1@4guard.mx", "role": "ROLE_WAREHOUSE_OPERATOR", "branchId": "BR-MTY-01", "isActive": true }
+  ],
+  "items": [
+    { "id": "SSCC-0001", "sku": "SKU-CAFE-001", "description": "Café Molido Premium 500g", "lot": "L2024-001", "status": 30, "locationId": "LOC-A1-01", "clientId": "CLI-NESPRESSO", "quantity": 48, "unit": "CAJA", "receivedAt": "2024-06-10T08:00:00Z", "expiresAt": "2025-06-10T00:00:00Z" },
+    { "id": "SSCC-0002", "sku": "SKU-CAFE-001", "description": "Café Molido Premium 500g", "lot": "L2024-002", "status": 30, "locationId": "LOC-A1-02", "clientId": "CLI-NESPRESSO", "quantity": 36, "unit": "CAJA", "receivedAt": "2024-06-12T10:30:00Z", "expiresAt": "2025-06-12T00:00:00Z" },
+    { "id": "SSCC-0003", "sku": "SKU-AGUA-002", "description": "Agua Purificada 19L", "lot": "L2024-003", "status": 20, "locationId": "LOC-Q-01", "clientId": "CLI-BONAFONT", "quantity": 24, "unit": "GARAFON", "receivedAt": "2024-06-14T09:00:00Z", "expiresAt": "2024-12-14T00:00:00Z" },
+    { "id": "SSCC-0004", "sku": "SKU-LECHE-003", "description": "Leche Entera UHT 1L", "lot": "L2024-004", "status": 70, "locationId": "LOC-B2-03", "clientId": "CLI-LALA", "quantity": 120, "unit": "PIEZA", "receivedAt": "2024-06-08T07:00:00Z", "expiresAt": "2024-09-08T00:00:00Z", "blockedSince": "2024-06-15T14:00:00Z" },
+    { "id": "SSCC-0005", "sku": "SKU-LECHE-003", "description": "Leche Entera UHT 1L", "lot": "L2024-005", "status": 70, "locationId": "LOC-B2-04", "clientId": "CLI-LALA", "quantity": 96, "unit": "PIEZA", "receivedAt": "2024-06-09T11:00:00Z", "expiresAt": "2024-09-09T00:00:00Z", "blockedSince": "2024-06-15T11:45:00Z" },
+    { "id": "SSCC-0006", "sku": "SKU-JUGO-004", "description": "Jugo de Naranja 1L", "lot": "L2024-006", "status": 40, "locationId": "LOC-C3-01", "clientId": "CLI-DEL-VALLE", "quantity": 72, "unit": "CAJA", "receivedAt": "2024-06-13T14:00:00Z", "expiresAt": "2024-11-13T00:00:00Z" },
+    { "id": "SSCC-0007", "sku": "SKU-GALLETA-005", "description": "Galleta Surtida 400g", "lot": "L2024-007", "status": 50, "locationId": "LOC-D1-02", "clientId": "CLI-GAMESA", "quantity": 60, "unit": "CAJA", "receivedAt": "2024-06-11T13:00:00Z", "expiresAt": "2024-12-11T00:00:00Z" },
+    { "id": "SSCC-0008", "sku": "SKU-CEREAL-006", "description": "Cereal Integral 750g", "lot": "L2024-008", "status": 30, "locationId": "LOC-A2-01", "clientId": "CLI-KELLOGGS", "quantity": 48, "unit": "CAJA", "receivedAt": "2024-06-15T09:30:00Z", "expiresAt": "2025-03-15T00:00:00Z" },
+    { "id": "SSCC-0009", "sku": "SKU-ATUN-007", "description": "Atún en Agua 180g", "lot": "L2024-009", "status": 10, "locationId": "LOC-ANDEN-01", "clientId": "CLI-DOLORES", "quantity": 144, "unit": "LATA", "receivedAt": "2024-06-16T07:45:00Z", "expiresAt": "2026-06-16T00:00:00Z" },
+    { "id": "SSCC-0010", "sku": "SKU-FRIJOL-008", "description": "Frijol Negro 1kg", "lot": "L2024-010", "status": 30, "locationId": "LOC-E1-01", "clientId": "CLI-LA-SIERRA", "quantity": 80, "unit": "BOLSA", "receivedAt": "2024-06-10T10:00:00Z", "expiresAt": "2025-06-10T00:00:00Z" },
+    { "id": "SSCC-0011", "sku": "SKU-ARROZ-009", "description": "Arroz Extra-Largo 2kg", "lot": "L2024-011", "status": 30, "locationId": "LOC-E2-01", "clientId": "CLI-LA-SIERRA", "quantity": 60, "unit": "BOLSA", "receivedAt": "2024-06-12T11:00:00Z", "expiresAt": "2025-12-12T00:00:00Z" },
+    { "id": "SSCC-0012", "sku": "SKU-ACEITE-010", "description": "Aceite Vegetal 1L", "lot": "L2024-012", "status": 60, "locationId": null, "clientId": "CLI-OLEOFINOS", "quantity": 96, "unit": "BOTELLA", "receivedAt": "2024-06-05T08:00:00Z", "expiresAt": "2025-06-05T00:00:00Z", "dispatchedAt": "2024-06-14T15:00:00Z" },
+    { "id": "SSCC-0013", "sku": "SKU-SHAMPOO-011", "description": "Shampoo Hidratante 400ml", "lot": "L2024-013", "status": 20, "locationId": "LOC-Q-02", "clientId": "CLI-UNILEVER", "quantity": 48, "unit": "BOTELLA", "receivedAt": "2024-06-16T09:00:00Z", "expiresAt": "2026-06-16T00:00:00Z" },
+    { "id": "SSCC-0014", "sku": "SKU-PAPEL-012", "description": "Papel Higiénico 4 Rollos", "lot": "L2024-014", "status": 30, "locationId": "LOC-F1-01", "clientId": "CLI-KIMBERLY", "quantity": 200, "unit": "PAQUETE", "receivedAt": "2024-06-13T08:30:00Z", "expiresAt": null },
+    { "id": "SSCC-0015", "sku": "SKU-DETERGENTE-013", "description": "Detergente Líquido 3L", "lot": "L2024-015", "status": 80, "locationId": null, "clientId": "CLI-HENKEL", "quantity": 36, "unit": "BOTELLA", "receivedAt": "2024-05-01T08:00:00Z", "expiresAt": "2024-05-01T00:00:00Z", "writtenOffAt": "2024-06-10T10:00:00Z" }
+  ],
+  "locations": [
+    { "id": "LOC-A1-01", "code": "A-1-01", "type": "RACK", "row": 0, "col": 0, "capacity": 60, "occupied": 48, "isBlocked": false },
+    { "id": "LOC-A1-02", "code": "A-1-02", "type": "RACK", "row": 0, "col": 1, "capacity": 60, "occupied": 36, "isBlocked": false },
+    { "id": "LOC-A1-03", "code": "A-1-03", "type": "RACK", "row": 0, "col": 2, "capacity": 60, "occupied": 55, "isBlocked": false },
+    { "id": "LOC-A2-01", "code": "A-2-01", "type": "RACK", "row": 0, "col": 3, "capacity": 60, "occupied": 48, "isBlocked": false },
+    { "id": "LOC-A2-02", "code": "A-2-02", "type": "RACK", "row": 0, "col": 4, "capacity": 60, "occupied": 10, "isBlocked": false },
+    { "id": "LOC-A2-03", "code": "A-2-03", "type": "RACK", "row": 0, "col": 5, "capacity": 60, "occupied": 0, "isBlocked": false },
+    { "id": "LOC-A3-01", "code": "A-3-01", "type": "RACK", "row": 0, "col": 6, "capacity": 60, "occupied": 52, "isBlocked": false },
+    { "id": "LOC-A3-02", "code": "A-3-02", "type": "RACK", "row": 0, "col": 7, "capacity": 60, "occupied": 60, "isBlocked": false },
+    { "id": "LOC-B1-01", "code": "B-1-01", "type": "RACK", "row": 1, "col": 0, "capacity": 80, "occupied": 72, "isBlocked": false },
+    { "id": "LOC-B1-02", "code": "B-1-02", "type": "RACK", "row": 1, "col": 1, "capacity": 80, "occupied": 80, "isBlocked": false },
+    { "id": "LOC-B1-03", "code": "B-1-03", "type": "RACK", "row": 1, "col": 2, "capacity": 80, "occupied": 30, "isBlocked": false },
+    { "id": "LOC-B2-01", "code": "B-2-01", "type": "RACK", "row": 1, "col": 3, "capacity": 80, "occupied": 25, "isBlocked": false },
+    { "id": "LOC-B2-02", "code": "B-2-02", "type": "RACK", "row": 1, "col": 4, "capacity": 80, "occupied": 0, "isBlocked": false },
+    { "id": "LOC-B2-03", "code": "B-2-03", "type": "RACK", "row": 1, "col": 5, "capacity": 80, "occupied": 120, "isBlocked": true },
+    { "id": "LOC-B2-04", "code": "B-2-04", "type": "RACK", "row": 1, "col": 6, "capacity": 80, "occupied": 96, "isBlocked": true },
+    { "id": "LOC-B3-01", "code": "B-3-01", "type": "RACK", "row": 1, "col": 7, "capacity": 80, "occupied": 70, "isBlocked": false },
+    { "id": "LOC-C1-01", "code": "C-1-01", "type": "RACK", "row": 2, "col": 0, "capacity": 100, "occupied": 95, "isBlocked": false },
+    { "id": "LOC-C1-02", "code": "C-1-02", "type": "RACK", "row": 2, "col": 1, "capacity": 100, "occupied": 88, "isBlocked": false },
+    { "id": "LOC-C2-01", "code": "C-2-01", "type": "RACK", "row": 2, "col": 2, "capacity": 100, "occupied": 45, "isBlocked": false },
+    { "id": "LOC-C2-02", "code": "C-2-02", "type": "RACK", "row": 2, "col": 3, "capacity": 100, "occupied": 20, "isBlocked": false },
+    { "id": "LOC-C3-01", "code": "C-3-01", "type": "RACK", "row": 2, "col": 4, "capacity": 100, "occupied": 72, "isBlocked": false },
+    { "id": "LOC-C3-02", "code": "C-3-02", "type": "RACK", "row": 2, "col": 5, "capacity": 100, "occupied": 0, "isBlocked": false },
+    { "id": "LOC-C4-01", "code": "C-4-01", "type": "RACK", "row": 2, "col": 6, "capacity": 100, "occupied": 60, "isBlocked": false },
+    { "id": "LOC-C4-02", "code": "C-4-02", "type": "RACK", "row": 2, "col": 7, "capacity": 100, "occupied": 100, "isBlocked": false },
+    { "id": "LOC-D1-01", "code": "D-1-01", "type": "RACK", "row": 3, "col": 0, "capacity": 120, "occupied": 110, "isBlocked": false },
+    { "id": "LOC-D1-02", "code": "D-1-02", "type": "RACK", "row": 3, "col": 1, "capacity": 120, "occupied": 60, "isBlocked": false },
+    { "id": "LOC-D2-01", "code": "D-2-01", "type": "RACK", "row": 3, "col": 2, "capacity": 120, "occupied": 30, "isBlocked": false },
+    { "id": "LOC-D2-02", "code": "D-2-02", "type": "RACK", "row": 3, "col": 3, "capacity": 120, "occupied": 5, "isBlocked": false },
+    { "id": "LOC-D3-01", "code": "D-3-01", "type": "RACK", "row": 3, "col": 4, "capacity": 120, "occupied": 90, "isBlocked": false },
+    { "id": "LOC-D3-02", "code": "D-3-02", "type": "RACK", "row": 3, "col": 5, "capacity": 120, "occupied": 120, "isBlocked": false },
+    { "id": "LOC-D4-01", "code": "D-4-01", "type": "RACK", "row": 3, "col": 6, "capacity": 120, "occupied": 0, "isBlocked": false },
+    { "id": "LOC-D4-02", "code": "D-4-02", "type": "RACK", "row": 3, "col": 7, "capacity": 120, "occupied": 42, "isBlocked": false },
+    { "id": "LOC-E1-01", "code": "E-1-01", "type": "RACK", "row": 4, "col": 0, "capacity": 80, "occupied": 80, "isBlocked": false },
+    { "id": "LOC-E2-01", "code": "E-2-01", "type": "RACK", "row": 4, "col": 1, "capacity": 80, "occupied": 60, "isBlocked": false },
+    { "id": "LOC-E3-01", "code": "E-3-01", "type": "RACK", "row": 4, "col": 2, "capacity": 80, "occupied": 35, "isBlocked": false },
+    { "id": "LOC-E4-01", "code": "E-4-01", "type": "RACK", "row": 4, "col": 3, "capacity": 80, "occupied": 0, "isBlocked": false },
+    { "id": "LOC-F1-01", "code": "F-1-01", "type": "RACK", "row": 5, "col": 0, "capacity": 200, "occupied": 200, "isBlocked": false },
+    { "id": "LOC-F2-01", "code": "F-2-01", "type": "RACK", "row": 5, "col": 1, "capacity": 200, "occupied": 150, "isBlocked": false },
+    { "id": "LOC-F3-01", "code": "F-3-01", "type": "RACK", "row": 5, "col": 2, "capacity": 200, "occupied": 80, "isBlocked": false },
+    { "id": "LOC-F4-01", "code": "F-4-01", "type": "RACK", "row": 5, "col": 3, "capacity": 200, "occupied": 20, "isBlocked": false },
+    { "id": "LOC-Q-01", "code": "Q-01", "type": "QUARANTINE_ZONE", "row": 6, "col": 0, "capacity": 50, "occupied": 24, "isBlocked": false },
+    { "id": "LOC-Q-02", "code": "Q-02", "type": "QUARANTINE_ZONE", "row": 6, "col": 1, "capacity": 50, "occupied": 48, "isBlocked": false },
+    { "id": "LOC-ANDEN-01", "code": "AND-01", "type": "DOCK", "row": 7, "col": 0, "capacity": 200, "occupied": 144, "isBlocked": false },
+    { "id": "LOC-ANDEN-02", "code": "AND-02", "type": "DOCK", "row": 7, "col": 1, "capacity": 200, "occupied": 0, "isBlocked": false },
+    { "id": "LOC-STAGING-01", "code": "STG-01", "type": "STAGING", "row": 7, "col": 2, "capacity": 300, "occupied": 120, "isBlocked": false },
+    { "id": "LOC-STAGING-02", "code": "STG-02", "type": "STAGING", "row": 7, "col": 3, "capacity": 300, "occupied": 0, "isBlocked": false }
+  ],
+  "receipts": [
+    {
+      "id": "REC-2024-001",
+      "asnReference": "ASN-NESPRESSO-240616",
+      "status": "IN_PROGRESS",
+      "clientId": "CLI-NESPRESSO",
+      "dockId": "AND-01",
+      "truckPlates": "ABC-1234-B",
+      "driverName": "Juan Pérez García",
+      "seals": ["SELLO-001", "SELLO-002"],
+      "expectedLines": 5,
+      "receivedLines": 3,
+      "scheduledAt": "2024-06-16T08:00:00Z",
+      "arrivedAt": "2024-06-16T07:45:00Z",
+      "lines": [
+        { "id": "L001", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "expectedQty": 48, "receivedQty": 48, "status": 30 },
+        { "id": "L002", "sku": "SKU-CAFE-002", "description": "Café Soluble 200g", "expectedQty": 36, "receivedQty": 36, "status": 30 },
+        { "id": "L003", "sku": "SKU-CAPSULA-001", "description": "Cápsulas Espresso x10", "expectedQty": 120, "receivedQty": 100, "status": 20 },
+        { "id": "L004", "sku": "SKU-CAPSULA-002", "description": "Cápsulas Lungo x10", "expectedQty": 60, "receivedQty": 0, "status": 10 },
+        { "id": "L005", "sku": "SKU-CAPSULA-003", "description": "Cápsulas Decaf x10", "expectedQty": 60, "receivedQty": 0, "status": 10 }
+      ]
+    },
+    {
+      "id": "REC-2024-002",
+      "asnReference": "ASN-LALA-240615",
+      "status": "BLOCKED",
+      "clientId": "CLI-LALA",
+      "dockId": "AND-02",
+      "truckPlates": "XYZ-5678-C",
+      "driverName": "Pedro Martínez",
+      "seals": ["SELLO-010"],
+      "expectedLines": 3,
+      "receivedLines": 2,
+      "scheduledAt": "2024-06-15T10:00:00Z",
+      "arrivedAt": "2024-06-15T10:30:00Z",
+      "lines": [
+        { "id": "L010", "sku": "SKU-LECHE-003", "description": "Leche Entera 1L", "expectedQty": 120, "receivedQty": 120, "status": 70 },
+        { "id": "L011", "sku": "SKU-LECHE-004", "description": "Leche Deslactosada 1L", "expectedQty": 96, "receivedQty": 96, "status": 70 },
+        { "id": "L012", "sku": "SKU-CREMA-001", "description": "Crema Ácida 500g", "expectedQty": 48, "receivedQty": 0, "status": 10 }
+      ]
+    }
+  ],
+  "transfer_orders": [
+    { "id": "TO-2024-001", "orderNumber": "ORD-001", "type": "OUTBOUND", "status": "PENDING", "priority": 1, "clientId": "CLI-NESPRESSO", "assignedOperatorId": "u-005", "dueDate": "2024-06-16T18:00:00Z", "lines": 3, "completedLines": 1 },
+    { "id": "TO-2024-002", "orderNumber": "ORD-002", "type": "OUTBOUND", "status": "IN_PICKING", "priority": 2, "clientId": "CLI-DEL-VALLE", "assignedOperatorId": "u-005", "dueDate": "2024-06-17T09:00:00Z", "lines": 2, "completedLines": 0 },
+    { "id": "TO-2024-003", "orderNumber": "ORD-003", "type": "INTERNAL", "status": "COMPLETED", "priority": 3, "clientId": "CLI-GAMESA", "assignedOperatorId": "u-003", "dueDate": "2024-06-15T12:00:00Z", "lines": 1, "completedLines": 1 }
+  ],
+  "kpis": {
+    "riskScore": 34,
+    "totalLocations": 48,
+    "occupiedLocations": 38,
+    "occupancyPercent": 79,
+    "itemsTotal": 1250,
+    "itemsAvailable": 820,
+    "itemsQuarantine": 3,
+    "itemsQmBlocked": 2,
+    "itemsInPicking": 1,
+    "itemsDispatched": 1,
+    "receiptsPending": 2,
+    "ordersOverdue": 0,
+    "syncPending": 0
+  },
+  "alerts": [
+    { "id": "ALT-001", "type": "BLOCKED_LOT", "severity": "CRITICAL", "message": "Lotes SSCC-0004, SSCC-0005 (Leche Lala) bloqueados por QM hace más de 2h", "since": "2024-06-15T11:45:00Z", "module": "quality" },
+    { "id": "ALT-002", "type": "RECEIPT_DISCREPANCY", "severity": "WARNING", "message": "Recepción REC-2024-001 tiene 20 piezas faltantes en cápsulas Espresso", "since": "2024-06-16T09:30:00Z", "module": "receiving" },
+    { "id": "ALT-003", "type": "EXPIRY_RISK", "severity": "WARNING", "message": "3 lotes de Leche próximos a vencer en < 90 días", "since": "2024-06-16T00:00:00Z", "module": "inventory" }
+  ],
+  "picking_tasks": [
+    {
+      "id": "PICK-001",
+      "orderId": "TO-2024-001",
+      "operatorId": "u-005",
+      "lines": [
+        { "lineId": "PL-001", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "qty": 12, "location": "A-1-01", "sscc": "SSCC-0001", "lot": "L2024-001", "expiresAt": "2025-06-10T00:00:00Z", "status": "PENDING" },
+        { "lineId": "PL-002", "sku": "SKU-CAFE-001", "description": "Café Molido 500g", "qty": 6, "location": "A-1-02", "sscc": "SSCC-0002", "lot": "L2024-002", "expiresAt": "2025-06-12T00:00:00Z", "status": "PENDING" },
+        { "lineId": "PL-003", "sku": "SKU-CEREAL-006", "description": "Cereal Integral 750g", "qty": 24, "location": "A-2-01", "sscc": "SSCC-0008", "lot": "L2024-008", "expiresAt": "2025-03-15T00:00:00Z", "status": "PENDING" }
+      ]
+    }
+  ]
+}

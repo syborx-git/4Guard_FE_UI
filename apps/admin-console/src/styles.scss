@@ -1,0 +1,175 @@
+// ============================================================
+// 4GUARD WMS — Admin Console — styles.scss
+// Punto de entrada principal del design system
+// ============================================================
+
+// ── 1. Abstracts (sin output CSS — solo vars/mixins/funciones) 
+@use 'abstracts/variables'  as *;
+@use 'abstracts/typography' as *;
+@use 'abstracts/spacing'    as *;
+@use 'abstracts/mixins'     as *;
+@use 'abstracts/animations' as *;
+@use 'abstracts/colors'     as *;
+
+// ── 2. Tema oscuro — custom properties CSS globales ──────────
+@use 'themes/dark';
+
+// ── 3. Componentes globales ───────────────────────────────────
+@use 'components/button';
+@use 'components/card';
+@use 'components/input';
+@use 'components/table';
+@use 'components/badge';
+@use 'components/dialog';
+@use 'components/toast';
+@use 'components/skeleton';
+
+// ── 4. Layouts ───────────────────────────────────────────────
+@use 'layouts/sidebar';
+@use 'layouts/toolbar';
+@use 'layouts/dashboard';
+
+// ── 5. Reset / Base ───────────────────────────────────────────
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: $font-ui;
+  font-size: $text-base;
+  font-weight: $fw-regular;
+  line-height: $lh-normal;
+  color: $text-primary;
+  background-color: $bg-primary;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+// ── 6. Tipografía base ───────────────────────────────────────
+
+h1, h2, h3 {
+  font-family: $font-display;
+  font-weight: $fw-bold;
+  line-height: $lh-tight;
+  color: $text-primary;
+}
+
+h4, h5, h6 {
+  font-family: $font-ui;
+  font-weight: $fw-semibold;
+  line-height: $lh-snug;
+  color: $text-primary;
+}
+
+h1 { font-size: $text-4xl; letter-spacing: $ls-tight; }
+h2 { font-size: $text-3xl; letter-spacing: $ls-tight; }
+h3 { font-size: $text-2xl; }
+h4 { font-size: $text-xl; }
+h5 { font-size: $text-lg; }
+h6 { font-size: $text-md; }
+
+p {
+  color: $text-secondary;
+  line-height: $lh-relaxed;
+  max-width: 72ch;
+}
+
+a {
+  color: $gold-primary;
+  text-decoration: none;
+  transition: color $transition-fast;
+
+  &:hover { color: $gold-light; }
+}
+
+strong, b { font-weight: $fw-semibold; color: $text-primary; }
+
+code, kbd, samp, pre {
+  @include mono-text;
+  background: $surface-elevated;
+  padding: 2px 6px;
+  border-radius: $radius-xs;
+}
+
+// ── 7. Focus global ──────────────────────────────────────────
+:focus-visible {
+  outline: 2px solid $gold-primary;
+  outline-offset: 2px;
+  border-radius: $radius-xs;
+}
+
+// ── 8. Scrollbar global ───────────────────────────────────────
+html {
+  @include custom-scrollbar(6px);
+}
+
+// ── 9. Utilidades rápidas ────────────────────────────────────
+
+.gold-text       { color: $gold-primary !important; }
+.gold-gradient   { @include gold-gradient-text; }
+.text-primary    { color: $text-primary !important; }
+.text-secondary  { color: $text-secondary !important; }
+.text-muted      { color: $text-tertiary !important; }
+.text-danger     { color: $danger !important; }
+.text-success    { color: $success !important; }
+.text-warning    { color: $warning !important; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.divider {
+  height: 1px;
+  background: $border-subtle;
+  margin: $space-3 0;
+}
+
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, $gold-border, transparent);
+  margin: $space-3 0;
+}
+
+// ── 10. Material Symbols config ───────────────────────────────
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: inherit;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 300,
+    'GRAD' -25,
+    'opsz' 24;
+  vertical-align: middle;
+}
+
+// ── 11. Animaciones de entrada de página ─────────────────────
+.page-enter {
+  @include animate-enter;
+}

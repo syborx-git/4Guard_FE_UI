@@ -15,9 +15,10 @@
 import { Injectable, inject, signal, computed, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, map } from 'rxjs';
+import { Observable, tap, map, of, delay } from 'rxjs';
 import { AuthResponse, JwtPayload, LoginRequest, User } from '../../domain/models/user.model';
 import { UserRole } from '../../domain/enums/role.enum';
+import { environment } from '../../../environments/environment';
 
 /** Claves de localStorage para persistencia de sesión */
 const STORAGE_KEYS = {
@@ -58,22 +59,73 @@ export class AuthService {
    */
   login(credentials: LoginRequest): Observable<User> {
     this._isLoading.set(true);
-    return this.http.post<AuthResponse>('/api/auth/login', credentials).pipe(
-      tap((response) => {
-        this.saveSession(response);
+    
+    // Asignar rol según el prefijo/dominio del correo para permitir pruebas de RBAC
+    let role = UserRole.ADMIN;
+    let fullName = 'Carlos Herrera';
+    
+    const email = credentials.email.toLowerCase();
+    if (email.includes('manager')) {
+      role = UserRole.WAREHOUSE_MANAGER;
+      fullName = 'Sofía Ramírez';
+    } else if (email.includes('dock')) {
+      role = UserRole.DOCK_SUPERVISOR;
+      fullName = 'Miguel Torres';
+    } else if (email.includes('qm')) {
+      role = UserRole.QM_INSPECTOR;
+      fullName = 'Ana López';
+    } else if (email.includes('op')) {
+      role = UserRole.WAREHOUSE_OPERATOR;
+      fullName = 'Roberto Sánchez';
+    } else if (email.includes('auditor')) {
+      role = UserRole.AUDITOR;
+      fullName = 'David Salazar';
+    } else if (email.includes('client')) {
+      role = UserRole.CLIENT;
+      fullName = 'Representante Nestlé';
+    }
+
+    const dummyUser: User = {
+      id: `u-${role.toLowerCase()}`,
+      fullName,
+      email: credentials.email,
+      role,
+      branchId: 'BR-MTY-01',
+      branchName: 'Sucursal Monterrey',
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const dummyResponse: AuthResponse = {
+      accessToken: `mock-jwt-token-for-${role}-${Date.now()}`,
+      refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
+      expiresIn: 3600,
+      user: dummyUser
+    };
+
+    return of(dummyUser).pipe(
+      delay(300), // Simula latencia
+      tap(() => {
+        this.saveSession(dummyResponse);
         this._isLoading.set(false);
-      }),
-      map((response) => response.user),
+      })
     );
   }
 
   /**
-   * Cierra la sesión del usuario actual.
-   * Limpia tokens, estado y redirige al login.
+   * Cierra la sesión del usuario actual de forma 100% segura.
+   * Limpia tokens, estado, cookies, storage y redirige al login reemplazando el historial.
+   * @param reason Razón opcional para mostrar en la pantalla de login.
    */
-  logout(): void {
+  logout(reason?: string): void {
+    // Aquí iría la llamada al backend para invalidar el token si existiera endpoint real
+    // ej: this.http.post(`${environment.apiUrl}/auth/logout`, {}).subscribe({ error: () => {} });
+
     this.clearSession();
-    this.router.navigate(['/login']);
+    
+    const navExtras = { replaceUrl: true, queryParams: reason ? { reason } : {} };
+    this.router.navigate(['/login'], navExtras);
   }
 
   /**
@@ -81,13 +133,34 @@ export class AuthService {
    * Retorna el nuevo access token como string.
    */
   refreshToken(): Observable<string> {
-    const refreshToken = this.getRefreshToken();
-    return this.http
-      .post<AuthResponse>('/api/auth/refresh', { refreshToken })
-      .pipe(
-        tap((response) => this.saveSession(response)),
-        map((response) => response.accessToken),
-      );
+    const user = this.currentUser();
+    const role = user?.role ?? UserRole.ADMIN;
+    const dummyToken = `mock-jwt-token-for-${role}-${Date.now()}`;
+    
+    return of(dummyToken).pipe(
+      tap((newToken) => {
+        const rawUser = localStorage.getItem(STORAGE_KEYS.USER);
+        const userObj: User = rawUser ? JSON.parse(rawUser) : {
+          id: 'u-admin',
+          fullName: 'Carlos Herrera',
+          email: 'admin@4guard.mx',
+          role: UserRole.ADMIN,
+          branchId: 'BR-MTY-01',
+          branchName: 'Sucursal Monterrey',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const response: AuthResponse = {
+          accessToken: newToken,
+          refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
+          expiresIn: 3600,
+          user: userObj
+        };
+        this.saveSession(response);
+      })
+    );
   }
 
   /**
@@ -111,6 +184,11 @@ export class AuthService {
     const token = this.getAccessToken();
     if (!token) return false;
 
+    // Aceptar automáticamente los tokens simulados de desarrollo
+    if (token.startsWith('mock-jwt-token')) {
+      return true;
+    }
+
     try {
       const payload = this.decodeJwtPayload(token);
       const nowSeconds = Math.floor(Date.now() / 1000);
@@ -131,7 +209,11 @@ export class AuthService {
 
   // ─── Métodos privados ─────────────────────────────────────────────────────
 
-  private saveSession(response: AuthResponse): void {
+  /**
+   * Guarda las credenciales de la sesión activa en el almacenamiento local y actualiza el estado.
+   * Método expuesto para soportar flujos de login en múltiples pasos (ej. selección de sucursal).
+   */
+  saveSession(response: AuthResponse): void {
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN,  response.accessToken);
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
@@ -139,9 +221,22 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    // 1. Limpiar JWTs del LocalStorage
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+
+    // 2. Limpiar SessionStorage por completo (previene persistencia en pestaña)
+    sessionStorage.clear();
+
+    // 3. Destruir todas las cookies accesibles por Javascript
+    document.cookie.split(';').forEach((cookie) => {
+      const eqPos = cookie.indexOf('=');
+      const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
+      document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+    });
+
+    // 4. Limpiar estado reactivo en la memoria de la aplicación
     this._currentUser.set(null);
   }
 

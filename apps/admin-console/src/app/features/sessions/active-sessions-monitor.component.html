@@ -1,0 +1,161 @@
+<!-- active-sessions-monitor.component.html -->
+<div class="sessions-view">
+  
+  <!-- ═══════════════════════════════════════════════ -->
+  <!--  HEADER                                         -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="sessions-header">
+    <div class="sessions-title-area">
+      <div class="sessions-header-icon-wrap">
+        <span class="material-symbols-outlined">wifi_tethering</span>
+      </div>
+      <div class="sessions-title-text">
+        <h1>Sesiones Activas</h1>
+        <p>Monitoreo en tiempo real de las conexiones autenticadas al sistema 4GUARD WMS.</p>
+      </div>
+    </div>
+    
+    <div class="sessions-actions-area">
+      <!-- Contador de Sesiones -->
+      @if (!isLoading() && !errorState()) {
+        <div class="sessions-counter">
+          <div class="pulse-dot"></div>
+          <strong>{{ sessions().length }}</strong>
+          <span>Conexiones activas</span>
+        </div>
+      }
+      
+      <!-- Botón de Actualizar -->
+      <button type="button" class="btn-refresh" (click)="loadSessions()" [disabled]="isLoading()">
+        <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">sync</span>
+        <span>Actualizar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!--  ESTADO: CARGANDO                               -->
+  <!-- ═══════════════════════════════════════════════ -->
+  @if (isLoading()) {
+    <div class="state-panel">
+      <div class="w-10 h-10 border-2 border-[#d4af37]/20 border-t-[#d4af37] rounded-full animate-spin mb-4" style="border-radius: 50%; width: 40px; height: 40px; border: 3px solid rgba(234, 195, 73, 0.15); border-top-color: #eac349; animation: spin 1s linear infinite;"></div>
+      <p style="text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; font-size: 11px; color: #958e98;">Consultando sesiones activas...</p>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!--  ESTADO: ERROR 403 — ACCESO RESTRINGIDO         -->
+  <!-- ═══════════════════════════════════════════════ -->
+  @if (errorState() === 'forbidden') {
+    <div class="state-panel">
+      <div class="state-panel-icon state-panel-icon--forbidden">
+        <span class="material-symbols-outlined">shield_lock</span>
+      </div>
+      <h2>Acceso Restringido</h2>
+      <p>{{ errorMessage() }}</p>
+      <div class="state-panel-http">
+        <span>HTTP 403 — FORBIDDEN</span>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!--  ESTADO: SIN SESIONES (ARRAY VACÍO)             -->
+  <!-- ═══════════════════════════════════════════════ -->
+  @if (!isLoading() && !errorState() && sessions().length === 0) {
+    <div class="state-panel">
+      <div class="state-panel-icon state-panel-icon--empty">
+        <span class="material-symbols-outlined">wifi_off</span>
+      </div>
+      <h2>Sin sesiones activas</h2>
+      <p>No se encontraron conexiones activas en este momento. Las sesiones aparecerán aquí cuando los usuarios inicien sesión.</p>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!--  ESTADO: LISTA DE SESIONES                      -->
+  <!-- ═══════════════════════════════════════════════ -->
+  @if (!isLoading() && !errorState() && sessions().length > 0) {
+
+    <!-- Banner informativo si estamos en modo demo -->
+    @if (errorMessage()) {
+      <div class="demo-info-banner">
+        <span class="material-symbols-outlined">info</span>
+        <p>{{ errorMessage() }}</p>
+      </div>
+    }
+
+    <!-- Bento Grid List -->
+    <div class="sessions-list-container">
+      @for (session of sessions(); track session.userId) {
+        
+        <!-- Tarjeta Bento Horizontal -->
+        <div class="session-bento-card">
+          
+          <!-- Columna 1: Identidad -->
+          <div class="col-identity">
+            <div class="avatar-circle">
+              {{ getInitials(session.fullName) }}
+            </div>
+            
+            <div class="identity-details">
+              <div class="identity-name-row">
+                <span class="user-fullname" [title]="session.fullName">{{ session.fullName }}</span>
+                <div class="badge-online">
+                  <div class="online-dot"></div>
+                  <span>ONLINE</span>
+                </div>
+              </div>
+              <span class="user-username-email">{{ getRoleLabel(session.role) }} &bull; {{ session.email }}</span>
+            </div>
+          </div>
+
+          <!-- Columna 2: Ubicación -->
+          <div class="col-location">
+            <span class="material-symbols-outlined">location_on</span>
+            <div class="location-details">
+              <span class="location-title">Ubicación</span>
+              <span class="location-branch" [title]="session.branchName">{{ session.branchName }}</span>
+              <span class="location-org" [title]="session.organizationName">{{ session.organizationName }}</span>
+            </div>
+          </div>
+
+          <!-- Columna 3: Red y Dispositivo -->
+          <div class="col-network">
+            <div class="network-ip-wrap">
+              <span class="material-symbols-outlined">lan</span>
+              <span class="network-ip">{{ session.ipAddress }}</span>
+            </div>
+            <div class="network-device-wrap">
+              <span class="material-symbols-outlined">devices</span>
+              <span class="network-device" [title]="parseUserAgent(session.userAgent)">{{ parseUserAgent(session.userAgent) }}</span>
+            </div>
+          </div>
+
+          <!-- Columna 4: Acciones -->
+          <div class="col-actions">
+            <div class="login-timestamp">
+              <span class="material-symbols-outlined">schedule</span>
+              <span>{{ formatDate(session.lastLoginAt) }}</span>
+            </div>
+            
+            <button type="button" class="btn-revoke" (click)="revokeSession(session)" title="Revocar sesión del usuario">
+              <span class="material-symbols-outlined">block</span>
+              <span>Revocar</span>
+            </button>
+          </div>
+
+        </div>
+
+      }
+    </div>
+  }
+
+</div>
+
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>

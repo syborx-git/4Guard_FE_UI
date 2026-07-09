@@ -1,0 +1,108 @@
+<!-- anomaly-report.component.html — P10 -->
+<div class="anomaly" role="main" aria-label="Reporte de Anomalía">
+
+  @if (!isSubmitted) {
+    <!-- Header -->
+    <div class="anomaly__header">
+      <h1 class="anomaly__title">🚨 Reporte de Anomalía</h1>
+      <p class="anomaly__sub">Documenta el siniestro o incidente detectado</p>
+    </div>
+
+    <form id="anomaly-form" [formGroup]="form" (ngSubmit)="onSubmit()" class="anomaly__form" novalidate>
+
+      <!-- SSCC del pallet -->
+      <div class="afield" [class.afield--error]="form.controls.sscc.touched && form.controls.sscc.invalid">
+        <label class="afield__label" for="ano-sscc">SSCC del Pallet afectado *</label>
+        <input id="ano-sscc" type="text" class="afield__input" formControlName="sscc"
+          placeholder="SSCC-XXXX-XXXX" autocomplete="off">
+        @if (form.controls.sscc.touched && form.controls.sscc.hasError('required')) {
+          <span class="afield__error">El SSCC es requerido</span>
+        }
+      </div>
+
+      <!-- Ubicación -->
+      <div class="afield" [class.afield--error]="form.controls.location.touched && form.controls.location.invalid">
+        <label class="afield__label" for="ano-location">Ubicación del incidente *</label>
+        <input id="ano-location" type="text" class="afield__input" formControlName="location"
+          placeholder="Ej: A-1-03, AND-01">
+        @if (form.controls.location.touched && form.controls.location.hasError('required')) {
+          <span class="afield__error">La ubicación es requerida</span>
+        }
+      </div>
+
+      <!-- Causa -->
+      <div class="afield" [class.afield--error]="form.controls.cause.touched && form.controls.cause.invalid">
+        <label class="afield__label" for="ano-cause">Causa del incidente *</label>
+        <select id="ano-cause" class="afield__input afield__select" formControlName="cause">
+          <option value="">Selecciona la causa…</option>
+          @for (cause of CAUSES; track cause) {
+            <option [value]="cause">{{ cause }}</option>
+          }
+        </select>
+        @if (form.controls.cause.touched && form.controls.cause.hasError('required')) {
+          <span class="afield__error">Selecciona una causa</span>
+        }
+      </div>
+
+      <!-- Descripción -->
+      <div class="afield" [class.afield--error]="form.controls.description.touched && form.controls.description.invalid">
+        <label class="afield__label" for="ano-desc">Descripción detallada *</label>
+        <textarea id="ano-desc" class="afield__input afield__textarea" formControlName="description"
+          placeholder="Describe el incidente con el mayor detalle posible…" rows="3"></textarea>
+        @if (form.controls.description.touched && form.controls.description.hasError('required')) {
+          <span class="afield__error">La descripción es requerida</span>
+        } @else if (form.controls.description.touched && form.controls.description.hasError('minlength')) {
+          <span class="afield__error">Mínimo 10 caracteres</span>
+        }
+      </div>
+
+      <!-- Captura de foto simulada -->
+      <div class="photo-section">
+        @if (!photoTaken()) {
+          <button type="button" id="ano-photo-btn" class="photo-btn" (click)="simulatePhoto()">
+            <span aria-hidden="true">📷</span>
+            <span>Capturar foto del siniestro</span>
+          </button>
+        } @else {
+          <div class="photo-preview" role="img" aria-label="Foto capturada simulada">
+            <span class="photo-preview__icon" aria-hidden="true">🖼️</span>
+            <div>
+              <span class="photo-preview__name">IMG_ANOMALY_{{ 'DEMO' }}.jpg</span>
+              <span class="photo-preview__size">Simulado · 1.2 MB</span>
+            </div>
+            <span class="photo-preview__check" aria-hidden="true">✓</span>
+          </div>
+        }
+      </div>
+
+      <!-- Submit -->
+      <button
+        id="ano-submit-btn"
+        type="submit"
+        class="anomaly__submit"
+        [disabled]="!isValid || isSubmitting">
+        @if (isSubmitting) {
+          <span class="submit-spin" aria-hidden="true">⟳</span> Registrando…
+        } @else {
+          🚨 Registrar Anomalía
+        }
+      </button>
+    </form>
+  }
+
+  @if (isSubmitted) {
+    <div class="anomaly__success" role="status" aria-live="polite">
+      <span class="success-icon" aria-hidden="true">✓</span>
+      <h2 class="success-title">Anomalía Registrada</h2>
+      <p class="success-desc">El incidente ha sido documentado exitosamente.</p>
+      <div class="success-ticket">
+        <span class="success-ticket__label">Ticket de seguimiento:</span>
+        <span class="success-ticket__val">{{ ticketId() }}</span>
+      </div>
+      <button id="ano-reset-btn" class="anomaly__reset" (click)="reset()">
+        + Nuevo Reporte
+      </button>
+    </div>
+  }
+
+</div>

@@ -1,0 +1,175 @@
+<!-- quality-list.component.html — Control de Calidad QM — Replica exacta del screenshot -->
+<div class="qm-page">
+
+  <!-- PAGE HEADER -->
+  <div class="page-top">
+    <div class="page-top__left">
+      <div class="page-top__title-row">
+        <span class="material-symbols-outlined page-top__icon">shield</span>
+        <h1 class="page-top__title">Control de Calidad (QM)</h1>
+      </div>
+      <p class="page-top__subtitle">Gestione el estado de cuarentena y los bloqueos de calidad de los lotes de inventario.</p>
+    </div>
+    <div class="page-top__right">
+      <!-- Search -->
+      <div class="search-wrap">
+        <span class="material-symbols-outlined search-wrap__icon">search</span>
+        <input
+          id="qm-search"
+          type="text"
+          class="search-wrap__input"
+          placeholder="Buscar por SKU o Lote..."
+          [value]="filterText()"
+          (input)="onFilterChange($event)"
+          autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="qm-tabs" role="tablist" aria-label="Filtros de estado QM">
+    <button
+      class="qm-tab"
+      role="tab"
+      [class.qm-tab--active]="activeTab() === 'quarantine'"
+      [attr.aria-selected]="activeTab() === 'quarantine'"
+      (click)="setTab('quarantine')">
+      CUARENTENA ({{ quarantineCount() }})
+    </button>
+    <button
+      class="qm-tab"
+      role="tab"
+      [class.qm-tab--active]="activeTab() === 'blocked'"
+      [attr.aria-selected]="activeTab() === 'blocked'"
+      (click)="setTab('blocked')">
+      BLOQUEADOS QM ({{ blockedCount() }})
+    </button>
+    <button
+      class="qm-tab"
+      role="tab"
+      [class.qm-tab--active]="activeTab() === 'approved'"
+      [attr.aria-selected]="activeTab() === 'approved'"
+      (click)="setTab('approved')">
+      APROBADOS ({{ approvedCount() }})
+    </button>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="table-card">
+    <table class="qm-table" aria-label="Lotes de inventario en control de calidad">
+      <thead>
+        <tr class="qm-table__head-row">
+          <th class="qm-table__th">SKU</th>
+          <th class="qm-table__th">DESCRIPCION</th>
+          <th class="qm-table__th">LOTE</th>
+          <th class="qm-table__th">CLIENTE</th>
+          <th class="qm-table__th">UBICACION</th>
+          <th class="qm-table__th">FECHA INGRESO</th>
+          <th class="qm-table__th qm-table__th--actions">ACCIONES</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of filteredItems(); track item.id) {
+        <tr class="qm-table__row">
+
+          <!-- SKU -->
+          <td class="qm-table__td">
+            <span class="sku-code">{{ item.sku }}</span>
+          </td>
+
+          <!-- Descripcion -->
+          <td class="qm-table__td">
+            <span class="item-desc">{{ item.description }}</span>
+          </td>
+
+          <!-- Lote -->
+          <td class="qm-table__td">
+            <span class="lot-badge">{{ item.batchNumber }}</span>
+          </td>
+
+          <!-- Cliente -->
+          <td class="qm-table__td">
+            <span class="client-label">{{ item.clientName }}</span>
+          </td>
+
+          <!-- Ubicacion -->
+          <td class="qm-table__td">
+            <span class="location-code">{{ item.locationId || '&mdash;' }}</span>
+          </td>
+
+          <!-- Fecha Ingreso -->
+          <td class="qm-table__td">
+            <span class="date-label">{{ item.receivedAt | date:'MMM d, yyyy, h:mm:ss a' }}</span>
+          </td>
+
+          <!-- Acciones -->
+          <td class="qm-table__td qm-table__td--actions">
+            <div class="action-group">
+              <!-- INSPECCIONAR -->
+              <button
+                class="action-btn action-btn--inspect"
+                (click)="goToInspection(item.id)"
+                [attr.aria-label]="'Inspeccionar lote ' + item.batchNumber">
+                INSPECCIONAR
+              </button>
+
+              @if (activeTab() === 'quarantine') {
+                <!-- APROBAR -->
+                <button
+                  class="action-btn action-btn--approve"
+                  (click)="quickApprove(item)"
+                  [attr.aria-label]="'Aprobar lote ' + item.batchNumber">
+                  APROBAR
+                </button>
+                <!-- BLOQUEAR -->
+                <button
+                  class="action-btn action-btn--block"
+                  (click)="quickBlock(item)"
+                  [attr.aria-label]="'Bloquear lote ' + item.batchNumber">
+                  BLOQUEAR
+                </button>
+              } @else if (activeTab() === 'blocked') {
+                <!-- LIBERAR -->
+                <button
+                  class="action-btn action-btn--approve"
+                  (click)="releaseItem(item)"
+                  [attr.aria-label]="'Liberar lote ' + item.batchNumber">
+                  LIBERAR
+                </button>
+                <!-- DAR DE BAJA -->
+                <button
+                  class="action-btn action-btn--block"
+                  (click)="scrapItem(item)"
+                  [attr.aria-label]="'Dar de baja lote ' + item.batchNumber">
+                  DAR DE BAJA
+                </button>
+              }
+            </div>
+          </td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="7" class="qm-table__empty">
+            <span class="material-symbols-outlined qm-table__empty-icon">inventory_2</span>
+            <span>No se encontraron lotes en esta categoria.</span>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BOTTOM STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-bar__left">
+      <span class="status-bar__dot"></span>
+      <span class="status-bar__node">NODO PRINCIPAL: SMS-02</span>
+      <span class="status-bar__sep">&bull;</span>
+      <span class="status-bar__license">LICENCIA CORP: OK</span>
+    </div>
+    <div class="status-bar__right">
+      <span class="status-bar__version">SYNEXIA WMS v4.2.1-GOLDEN &bull; PREMIUM EDITION</span>
+    </div>
+  </div>
+
+</div>

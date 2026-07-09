@@ -1,0 +1,93 @@
+<div class="inspection-container">
+  @if (item()) {
+    <div class="inspection-header">
+      <div>
+        <h1 class="luxury-serif" style="font-size: 1.875rem;">Inspección de Calidad: Lote {{ item()?.batchNumber }}</h1>
+        <p class="luxury-desc">Lleve a cabo el checklist de inspección y decida la liberación o bloqueo del lote.</p>
+      </div>
+      <button class="btn btn-secondary" (click)="goBack()">Volver al listado</button>
+    </div>
+
+    <div class="inspection-grid">
+      <!-- Columna 1: Información del Ítem -->
+      <div class="info-card">
+        <h2 class="card-title">Detalles del Lote</h2>
+        
+        <div class="data-row">
+          <span class="data-label">SKU:</span>
+          <span class="data-value">{{ item()?.sku }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Descripción:</span>
+          <span class="data-value">{{ item()?.description }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Cliente Propietario:</span>
+          <span class="data-value">{{ item()?.clientName }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Lote:</span>
+          <span class="data-value" style="font-family: var(--font-mono);">{{ item()?.batchNumber }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">SSCC:</span>
+          <span class="data-value" style="font-family: var(--font-mono);">{{ item()?.sscc || 'N/A' }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Cantidad Recibida:</span>
+          <span class="data-value">{{ item()?.quantity }} {{ item()?.unitOfMeasure }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Fecha de Caducidad:</span>
+          <span class="data-value">{{ (item()?.expiryDate | date:'mediumDate') || 'No aplica' }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Estado Actual FSM:</span>
+          <span class="data-value" style="color: var(--color-warning-dark);">{{ getStatusLabel(item()!.status) }}</span>
+        </div>
+      </div>
+
+      <!-- Columna 2: Checklist Operativo -->
+      <div class="checklist-card">
+        <h2 class="card-title">Criterios de Inspección</h2>
+        
+        @for (crit of checklist(); track crit.id) {
+          <div class="check-item">
+            <input type="checkbox" [id]="crit.id" [(ngModel)]="crit.checked">
+            <label [for]="crit.id" class="check-label">{{ crit.label }}</label>
+          </div>
+        }
+      </div>
+
+      <!-- Fila de Decisión final -->
+      <div class="decision-card">
+        <h2 class="card-title">Dictamen del Inspector</h2>
+        
+        <div class="form-group">
+          <label for="inspection-notes">Notas de Inspección * (Obligatorio para Rechazo / Bloqueo)</label>
+          <textarea id="inspection-notes" rows="4" class="form-control" placeholder="Describa el estado físico, discrepancias observadas o justificación del dictamen..." [(ngModel)]="notes"></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-secondary" (click)="goBack()">Cancelar</button>
+          
+          <!-- Botón Bloquear QM (Transición a QM_BLOCKED) -->
+          <button class="btn btn-danger" [disabled]="!isNotesValidForRejection()" (click)="decideStatus(70)">
+            Bloquear por Calidad (QM_BLOCKED)
+          </button>
+          
+          <!-- Botón Liberar / Aprobar (Transición a AVAILABLE) -->
+          <button class="btn btn-success" [disabled]="!isChecklistComplete()" (click)="decideStatus(30)">
+            Aprobar Lote (AVAILABLE)
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div style="text-align: center; padding: var(--space-12);">
+      <h2>Lote no encontrado</h2>
+      <p style="margin-bottom: var(--space-4);">El identificador del lote especificado no existe o ha sido movido.</p>
+      <button class="btn btn-primary" (click)="goBack()">Volver al listado</button>
+    </div>
+  }
+</div>
