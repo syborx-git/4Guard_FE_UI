@@ -7,6 +7,7 @@
 
 import { Component, inject, signal, computed, HostListener } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -74,9 +75,11 @@ export class ShellComponent {
   get newPwdCtrl()     { return this.cpForm.controls.newPassword; }
   get confirmPwdCtrl() { return this.cpForm.controls.confirmPassword; }
 
+  protected readonly newPwdValue = toSignal(this.cpForm.controls.newPassword.valueChanges, { initialValue: '' });
+
   /** Fortaleza de la contraseña: 0–3 */
   protected readonly passwordStrength = computed(() => {
-    const pwd = this.newPwdCtrl.value ?? '';
+    const pwd = this.newPwdValue() ?? '';
     let score = 0;
     if (pwd.length >= 8)           score++;
     if (/[A-Z]/.test(pwd))         score++;
@@ -101,9 +104,9 @@ export class ShellComponent {
   });
 
   // ── Requisitos individuales (para la checklist en el template) ────────────
-  protected readonly reqMinLength     = computed(() => (this.newPwdCtrl.value?.length ?? 0) >= 8);
-  protected readonly reqUpperCase     = computed(() => /[A-Z]/.test(this.newPwdCtrl.value ?? ''));
-  protected readonly reqNumberOrSymbol = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdCtrl.value ?? ''));
+  protected readonly reqMinLength     = computed(() => (this.newPwdValue()?.length ?? 0) >= 8);
+  protected readonly reqUpperCase     = computed(() => /[A-Z]/.test(this.newPwdValue() ?? ''));
+  protected readonly reqNumberOrSymbol = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdValue() ?? ''));
 
 
   /** Cierra el menú de perfil al hacer click fuera del sidebar */
