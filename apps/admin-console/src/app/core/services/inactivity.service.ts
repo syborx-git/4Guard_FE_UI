@@ -9,12 +9,13 @@
  */
 
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { fromEvent, merge, Subscription, timer } from 'rxjs';
 import { switchMap, throttleTime } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -25,15 +26,15 @@ export class InactivityService implements OnDestroy {
   private readonly authState = inject(AuthState);
   private readonly authService = inject(AuthService);
 
-  private readonly BASE_URL = 'http://localhost:8080/api/v1/auth';
+  private readonly BASE_URL = `${environment.apiBaseUrl}/api/v1/auth`;
 
   // Configuración de tiempos (15 minutos de inactividad, 60 segundos de aviso)
-  private readonly INACTIVITY_TIME = 20 * 1000; // 20 segundos para pruebas
-  private readonly WARNING_TIME = 15; // 15 segundos para pruebas
+  private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutos de inactividad
+  private readonly WARNING_TIME = 60; // 60 segundos de aviso
 
   // Estado reactivo expuesto con signals
   readonly showWarning = signal<boolean>(false);
-  readonly countdown = signal<number>(15);
+  readonly countdown = signal<number>(60);
   readonly isProcessing = signal<boolean>(false);
 
   private activitySub?: Subscription;
@@ -136,13 +137,18 @@ export class InactivityService implements OnDestroy {
 
   /**
    * Cierre de sesión automático consumiendo POST /auth/logout.
+   * Envía el refreshToken en el body y el accessToken como Authorization Bearer header.
    */
   autoLogout(): void {
     if (this.isProcessing()) return;
     this.isProcessing.set(true);
     this.stopCountdown();
 
-    this.http.post<any>(`${this.BASE_URL}/logout`, {}).subscribe({
+    const refreshToken = this.authService.getRefreshToken();
+    const accessToken  = this.authService.getAccessToken();
+    const headers      = new HttpHeaders(accessToken ? { Authorization: `Bearer ${accessToken}` } : {});
+
+    this.http.post<any>(`${this.BASE_URL}/logout`, { refreshToken }, { headers }).subscribe({
       next: () => {
         this.finalizeLogout();
       },
@@ -158,9 +164,10 @@ export class InactivityService implements OnDestroy {
     this.showWarning.set(false);
     this.authState.clearSession();
 
-    // Limpieza de tokens del LocalStorage solicitados
+    // Limpieza completa de todos los tokens del LocalStorage
     localStorage.removeItem('4g_token');
     localStorage.removeItem('4g_refresh');
+    localStorage.removeItem('4g_expires_at');
 
     this.router.navigate(['/login'], { queryParams: { reason: 'inactivity' } });
   }

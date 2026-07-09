@@ -76,6 +76,10 @@ export class AdminPanelComponent {
     this.notifService.notifications().filter(n => !n.read).length
   );
 
+  protected readonly availableBranches = computed(() => {
+    return this.branchService.branches();
+  });
+
   // Métodos helper de filtrado para selectores en cascada
   protected getSectionsForBranch(branchId: string): WarehouseSection[] {
     return this.sectionService.sections().filter(s => s.branchId === branchId);
@@ -233,6 +237,14 @@ export class AdminPanelComponent {
     this.searchTerm.set('');
     this.currentPage.set(1);
     this.closeModal();
+
+    if (moduleId === 'users') {
+      this.userAdminService.loadUsers().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de usuarios del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    }
   }
 
   // Lógica de Paginación
@@ -474,11 +486,27 @@ export class AdminPanelComponent {
         }
 
         if (id) {
-          this.userAdminService.update(id, this.formModel);
-          this.auditLog('users', id, 'UPDATE', null, this.formModel);
+          this.userAdminService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('users', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al actualizar el usuario: ' + (err.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.userAdminService.create(this.formModel);
-          this.auditLog('users', 'new', 'CREATE', null, this.formModel);
+          this.userAdminService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('users', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al crear el usuario: ' + (err.message || 'Error inesperado'));
+            }
+          });
+          return; // No cerrar modal sincrónicamente
         }
       } else if (module === 'roles') {
         if (!this.formModel.name) throw new Error('Nombre del Rol es requerido.');
@@ -520,8 +548,14 @@ export class AdminPanelComponent {
       this.skuService.delete(id);
       this.auditLog('skus', id, 'DELETE', null, null);
     } else if (module === 'users') {
-      this.userAdminService.delete(id);
-      this.auditLog('users', id, 'DELETE', null, null);
+      this.userAdminService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('users', id, 'DELETE', null, null);
+        },
+        error: (err) => {
+          alert('Error al eliminar el usuario: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'roles') {
       const deleted = this.roleService.deleteRole(id);
       if (!deleted) {
@@ -580,30 +614,55 @@ export class AdminPanelComponent {
     this.userAdminService.update(id, { 
       status: newStatus,
       isEnabled: newStatus === 'ACTIVE'
+    }).subscribe({
+      next: () => {
+        this.auditLog('users', id, 'UPDATE', { status: user.status }, { status: newStatus });
+      },
+      error: (err) => {
+        alert('Error al actualizar el estado del usuario: ' + (err.message || 'Error inesperado'));
+      }
     });
-    this.auditLog('users', id, 'UPDATE', { status: user.status }, { status: newStatus });
   }
 
   protected resetAttempts(user: UserAdminItem): void {
-    this.userAdminService.resetFailedAttempts(user.id);
-    alert(`Intentos fallidos de acceso restablecidos para: ${user.username}`);
-    this.auditLog('users', user.id, 'UPDATE', { failedAttempts: user.failedAttempts }, { failedAttempts: 0 });
+    this.userAdminService.resetFailedAttempts(user.id).subscribe({
+      next: () => {
+        alert(`Intentos fallidos de acceso restablecidos para: ${user.username}`);
+        this.auditLog('users', user.id, 'UPDATE', { failedAttempts: user.failedAttempts }, { failedAttempts: 0 });
+      },
+      error: (err) => {
+        alert('Error al restablecer intentos: ' + (err.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected unlockUserAccount(user: UserAdminItem): void {
-    this.userAdminService.unlockAccount(user.id);
-    alert(`Cuenta de usuario desbloqueada con éxito: ${user.username}`);
-    this.auditLog('users', user.id, 'UPDATE', { status: 'SUSPENDED' }, { status: 'ACTIVE' });
+    this.userAdminService.unlockAccount(user.id).subscribe({
+      next: () => {
+        alert(`Cuenta de usuario desbloqueada con éxito: ${user.username}`);
+        this.auditLog('users', user.id, 'UPDATE', { status: 'SUSPENDED' }, { status: 'ACTIVE' });
+      },
+      error: (err) => {
+        alert('Error al desbloquear usuario: ' + (err.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected toggleUserPermanentLock(user: UserAdminItem): void {
     const val = !user.permanentlyLocked;
+    const newStatus: UserStatus = val ? 'SUSPENDED' : 'ACTIVE';
     this.userAdminService.update(user.id, { 
       permanentlyLocked: val, 
-      status: val ? 'SUSPENDED' : 'ACTIVE',
+      status: newStatus,
       isEnabled: !val
+    }).subscribe({
+      next: () => {
+        this.auditLog('users', user.id, 'UPDATE', { locked: user.permanentlyLocked }, { locked: val });
+      },
+      error: (err) => {
+        alert('Error al cambiar el bloqueo permanente: ' + (err.message || 'Error inesperado'));
+      }
     });
-    this.auditLog('users', user.id, 'UPDATE', { locked: user.permanentlyLocked }, { locked: val });
   }
 
   // Control de Matriz de Permisos en Formularios
