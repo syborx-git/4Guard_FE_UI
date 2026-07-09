@@ -17,6 +17,9 @@ import {
   ChangePasswordRequest,
   ChangePasswordResponse,
   UserProfileResponse,
+  ApiResponse,
+  UserProfileDto,
+  CreateUserRequest,
 } from '../models/user.models';
 
 @Injectable({
@@ -121,6 +124,73 @@ export class UsersService {
   getUserProfile(userId: string): Observable<UserProfileResponse> {
     return this.http
       .get<UserProfileResponse>(`${this.API_URL}/${userId}`)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
+   * Obtiene la lista completa de usuarios de la base de datos del backend.
+   *
+   * Endpoint: GET /api/v1/users
+   * Autorización: Bearer Token (inyectado automáticamente por jwtInterceptor)
+   *
+   * @returns Observable<ApiResponse<UserProfileDto[]>>
+   */
+  getUsers(): Observable<ApiResponse<UserProfileDto[]>> {
+    return this.http
+      .get<ApiResponse<UserProfileDto[]>>(this.API_URL)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
+   * Modifica los datos de un usuario existente en la base de datos del backend.
+   *
+   * Endpoint: PUT /api/v1/users
+   * Autorización: Bearer Token (inyectado automáticamente por jwtInterceptor)
+   *
+   * @param user El DTO del usuario con los campos actualizados.
+   * @returns Observable<ApiResponse<UserProfileDto>>
+   */
+  updateUser(user: UserProfileDto): Observable<ApiResponse<UserProfileDto>> {
+    return this.http
+      .put<ApiResponse<UserProfileDto>>(this.API_URL, user)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
+   * Crea un nuevo usuario en la base de datos del backend.
+   *
+   * Endpoint: POST /api/v1/users
+   * Autorización: Bearer Token (inyectado automáticamente por jwtInterceptor)
+   *
+   * @param user Datos de creación del usuario.
+   * @returns Observable<ApiResponse<UserProfileDto>>
+   */
+  createUser(user: CreateUserRequest): Observable<ApiResponse<UserProfileDto>> {
+    return this.http
+      .post<ApiResponse<UserProfileDto>>(this.API_URL, user)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
+   * Elimina un usuario por su ID en la base de datos del backend.
+   *
+   * Endpoint: DELETE /api/v1/users/{id}
+   * Autorización: Bearer Token (inyectado automáticamente por jwtInterceptor)
+   *
+   * @param userId UUID del usuario a eliminar.
+   * @returns Observable<ApiResponse<void>>
+   */
+  deleteUser(userId: string): Observable<ApiResponse<void>> {
+    return this.http
+      .delete<ApiResponse<void>>(`${this.API_URL}/${userId}`)
       .pipe(
         catchError((error: HttpErrorResponse) => this.handleError(error))
       );

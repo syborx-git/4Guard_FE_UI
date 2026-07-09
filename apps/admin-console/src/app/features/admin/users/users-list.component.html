@@ -51,7 +51,7 @@
               </button>
             </td>
             <td>
-              <!-- Acciones de la fila: Editar + Generar Clave Temporal -->
+              <!-- Acciones de la fila: Editar + Generar Clave Temporal + Eliminar -->
               <div class="row-actions">
                 <button
                   class="btn btn-secondary"
@@ -69,6 +69,17 @@
                   [attr.aria-label]="'Generar clave temporal para ' + user.name"
                   title="Generar Clave Temporal">
                   🔑 Clave Temporal
+                </button>
+
+                <!-- Botón Eliminar Usuario -->
+                <button
+                  class="btn btn-danger"
+                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
+                  [disabled]="isDeleting()"
+                  (click)="openDeleteConfirm(user)"
+                  [attr.aria-label]="'Eliminar usuario ' + user.name"
+                  title="Eliminar Usuario">
+                  Eliminar
                 </button>
               </div>
             </td>
@@ -97,8 +108,13 @@
       </div>
 
       <div class="form-group">
-        <label for="user-name">Nombre Completo</label>
-        <input id="user-name" type="text" class="form-control" [(ngModel)]="userForm.name">
+        <label for="user-firstname">Nombre(s)</label>
+        <input id="user-firstname" type="text" class="form-control" [(ngModel)]="userForm.firstName">
+      </div>
+
+      <div class="form-group">
+        <label for="user-lastname">Apellidos</label>
+        <input id="user-lastname" type="text" class="form-control" [(ngModel)]="userForm.lastName">
       </div>
 
       <div class="form-group">
@@ -109,19 +125,22 @@
       <div class="form-group">
         <label for="user-role">Rol del Sistema</label>
         <select id="user-role" class="form-control" [(ngModel)]="userForm.role">
-          <option value="ROLE_ADMIN">Administrador</option>
-          <option value="ROLE_DOCK_SUPERVISOR">Supervisor de Andén</option>
-          <option value="ROLE_QM_INSPECTOR">Inspector de Calidad</option>
-          <option value="ROLE_WAREHOUSE_OPERATOR">Operario de Almacén</option>
+          <option value="ROLE_ADMIN">Administrador General (ADMIN)</option>
+          <option value="ROLE_OPERATIONS_MANAGER">Gerente de Operaciones (OPERATIONS_MANAGER)</option>
+          <option value="ROLE_WAREHOUSE_MANAGER">Gerente de Almacén (WAREHOUSE_MANAGER)</option>
+          <option value="ROLE_DOCK_SUPERVISOR">Supervisor de Embarques (DOCK_SUPERVISOR)</option>
+          <option value="ROLE_QM_INSPECTOR">Inspector de Calidad (QM_INSPECTOR)</option>
+          <option value="ROLE_WAREHOUSE_OPERATOR">Operario de Almacén (WAREHOUSE_OPERATOR)</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="user-branch">Sucursal</label>
         <select id="user-branch" class="form-control" [(ngModel)]="userForm.branchId">
-          <option value="1">Centro de Distribución Norte</option>
-          <option value="2">Sucursal Metropolitana Sur</option>
-          <option value="3">La Bóveda Principal</option>
+          <option [value]="null">Acceso Corporativo</option>
+          @for (b of availableBranches(); track b.id) {
+            <option [value]="b.id">{{ b.name }}</option>
+          }
         </select>
       </div>
 
@@ -158,4 +177,16 @@
     [userName]="tempPasswordUser()!.name"
     (closed)="onTempPasswordModalClosed()">
   </fg-temp-password-modal>
+}
+
+<!-- Diálogo de Confirmación — Eliminar Usuario -->
+@if (deletingUser()) {
+  <fg-confirm-dialog
+    title="Eliminar usuario"
+    [message]="'¿Deseas eliminar permanentemente al usuario ' + deletingUser()!.name + '?'"
+    confirmLabel="Eliminar"
+    [isLoading]="isDeleting()"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="onDeleteCancelled()">
+  </fg-confirm-dialog>
 }
