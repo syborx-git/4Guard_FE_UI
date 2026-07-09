@@ -200,28 +200,64 @@ readonly items = this.inventoryState.items; // Signal<Item[]>
 
 ## 🚀 Comandos de Desarrollo
 
+### Instalación
 ```bash
-# Instalar dependencias
 npm install
+```
 
-# Iniciar Consola Administrativa (Puerto 4200)
+### 🖥️ Admin Console (Puerto 4200)
+
+```bash
+# LOCAL — apunta a http://localhost:8080
 npm run start:admin
 
-# Iniciar RF Terminal PWA (Puerto 4201)
+# DEVELOP — apunta a https://fourguard-be.onrender.com
+npm run start:admin:dev
+```
+
+### 📟 RF Terminal PWA (Puerto 4201)
+
+```bash
+# LOCAL — apunta a http://localhost:8080
 npm run start:rf
 
-# Build de producción — Admin Console
-npm run build:admin
+# DEVELOP — apunta a https://fourguard-be.onrender.com
+npm run start:rf:dev
+```
 
-# Build de producción — RF Terminal
+### 📦 Builds
+
+```bash
+# Build de producción
+npm run build:admin
 npm run build:rf
 
+# Build apuntando al backend de develop (Render)
+npm run build:admin:dev
+npm run build:rf:dev
+```
+
+### 🔧 Utilidades
+
+```bash
 # Linting
 npm run lint
 
 # Formateo
 npm run format
 ```
+
+> **¿Cómo funciona el cambio de entorno?**
+> Angular reemplaza automáticamente `environment.ts` por `environment.develop.ts` en tiempo de compilación
+> dependiendo del flag `--configuration`. No se requiere ningún cambio manual en el código.
+>
+> | Configuración | Archivo activo | Backend |
+> |---|---|---|
+> | `development` (default) | `environment.ts` | `http://localhost:8080` |
+> | `develop` | `environment.develop.ts` | `https://fourguard-be.onrender.com` |
+> | `production` | `environment.ts` | `http://localhost:8080` *(actualizar para prod)* |
+
+
 
 ---
 

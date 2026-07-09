@@ -15,6 +15,7 @@ import { fromEvent, merge, Subscription, timer } from 'rxjs';
 import { switchMap, throttleTime } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -25,7 +26,7 @@ export class InactivityService implements OnDestroy {
   private readonly authState = inject(AuthState);
   private readonly authService = inject(AuthService);
 
-  private readonly BASE_URL = 'http://localhost:8080/api/v1/auth';
+  private readonly BASE_URL = `${environment.apiBaseUrl}/api/v1/auth`;
 
   // Configuración de tiempos (15 minutos de inactividad, 60 segundos de aviso)
   private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutos de inactividad

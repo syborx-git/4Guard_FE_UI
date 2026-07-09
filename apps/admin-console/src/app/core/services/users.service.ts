@@ -21,6 +21,7 @@ import {
   UserProfileDto,
   CreateUserRequest,
 } from '../models/user.models';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +30,7 @@ export class UsersService {
   private readonly http = inject(HttpClient);
 
   /** Base URL del recurso users en el backend */
-  private readonly API_URL = 'http://localhost:8080/api/v1/users';
+  private readonly API_URL = `${environment.apiBaseUrl}/api/v1/users`;
 
   /**
    * Solicita una contraseña temporal para el usuario indicado.

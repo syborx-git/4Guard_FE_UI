@@ -13,6 +13,7 @@ import { Observable, tap, timer, Subscription, of, throwError } from 'rxjs';
 import { catchError, switchMap, finalize } from 'rxjs/operators';
 import { LoginRequest, LoginResponse, AuthenticatedUser } from '../models/auth.models';
 import { SessionStorageService } from './session-storage.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,7 @@ export class AuthService {
   private readonly sessionStorageService = inject(SessionStorageService);
   private readonly router = inject(Router);
 
-  private readonly API_URL = 'http://localhost:8080/api/v1/auth';
+  private readonly API_URL = `${environment.apiBaseUrl}/api/v1/auth`;
   private refreshSubscription?: Subscription;
 
   /**
