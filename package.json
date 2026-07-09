@@ -5,9 +5,13 @@
   "private": true,
   "scripts": {
     "start:admin": "ng serve admin-console --configuration development",
+    "start:admin:dev": "ng serve admin-console --configuration develop",
     "start:rf": "ng serve rf-terminal --configuration development",
+    "start:rf:dev": "ng serve rf-terminal --configuration develop",
     "build:admin": "ng build admin-console --configuration production",
+    "build:admin:dev": "ng build admin-console --configuration develop",
     "build:rf": "ng build rf-terminal --configuration production",
+    "build:rf:dev": "ng build rf-terminal --configuration develop",
     "build:lib": "ng build shared-core",
     "test": "ng test",
     "lint": "ng lint",

@@ -198,30 +198,103 @@ readonly items = this.inventoryState.items; // Signal<Item[]>
 
 ---
 
+## ☁️ Despliegue en Netlify
+
+El proyecto incluye [`netlify.toml`](./netlify.toml) con toda la configuración necesaria.
+Al hacer push a `main`, Netlify ejecuta automáticamente el build apuntando al backend de develop.
+
+### Archivos clave
+
+| Archivo | Propósito |
+|---|---|
+| [`netlify.toml`](./netlify.toml) | Comando de build, directorio de salida, versión de Node y regla SPA redirect |
+| [`.npmrc`](./.npmrc) | Resuelve conflicto de peer deps entre `ng2-charts` y Angular 17 en npm 11+ |
+
+### ¿Qué hace netlify.toml?
+
+```toml
+[build]
+  command = "npm run build:admin:dev"   # Build apuntando a Render
+  publish = "dist/admin-console/browser"
+
+[build.environment]
+  NODE_VERSION = "20"   # Angular 17 es incompatible con Node 24
+
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200          # Necesario para que el router de Angular funcione
+```
+
+### ¿Por qué el `.npmrc`?
+
+`ng2-charts@5.0.4` introduce transitivamente `@angular/cdk@22.x` como peer dependency,
+que requiere `@angular/common@^22`. Como el proyecto usa Angular 17, npm 11+ (usado por Netlify)
+lanza un error `ERESOLVE`. El flag `legacy-peer-deps=true` en `.npmrc` le dice a npm que
+resuelva igual que npm 6/7, ignorando el conflicto de versiones transitivas.
+
+---
+
 ## 🚀 Comandos de Desarrollo
 
+### Instalación
 ```bash
-# Instalar dependencias
 npm install
+```
 
-# Iniciar Consola Administrativa (Puerto 4200)
+### 🖥️ Admin Console (Puerto 4200)
+
+```bash
+# LOCAL — apunta a http://localhost:8080
 npm run start:admin
 
-# Iniciar RF Terminal PWA (Puerto 4201)
+# DEVELOP — apunta a https://fourguard-be.onrender.com
+npm run start:admin:dev
+```
+
+### 📟 RF Terminal PWA (Puerto 4201)
+
+```bash
+# LOCAL — apunta a http://localhost:8080
 npm run start:rf
 
-# Build de producción — Admin Console
-npm run build:admin
+# DEVELOP — apunta a https://fourguard-be.onrender.com
+npm run start:rf:dev
+```
 
-# Build de producción — RF Terminal
+### 📦 Builds
+
+```bash
+# Build de producción
+npm run build:admin
 npm run build:rf
 
+# Build apuntando al backend de develop (Render)
+npm run build:admin:dev
+npm run build:rf:dev
+```
+
+### 🔧 Utilidades
+
+```bash
 # Linting
 npm run lint
 
 # Formateo
 npm run format
 ```
+
+> **¿Cómo funciona el cambio de entorno?**
+> Angular reemplaza automáticamente `environment.ts` por `environment.develop.ts` en tiempo de compilación
+> dependiendo del flag `--configuration`. No se requiere ningún cambio manual en el código.
+>
+> | Configuración | Archivo activo | Backend |
+> |---|---|---|
+> | `development` (default) | `environment.ts` | `http://localhost:8080` |
+> | `develop` | `environment.develop.ts` | `https://fourguard-be.onrender.com` |
+> | `production` | `environment.ts` | `http://localhost:8080` *(actualizar para prod)* |
+
+
 
 ---
 

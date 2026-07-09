@@ -57,7 +57,25 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "namedChunks": true
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "apps/admin-console/src/environments/environment.ts",
+                  "with": "apps/admin-console/src/environments/environment.ts"
+                }
+              ]
+            },
+            "develop": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "apps/admin-console/src/environments/environment.ts",
+                  "with": "apps/admin-console/src/environments/environment.develop.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -66,7 +84,8 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": { "buildTarget": "admin-console:build:production" },
-            "development": { "buildTarget": "admin-console:build:development" }
+            "development": { "buildTarget": "admin-console:build:development" },
+            "develop": { "buildTarget": "admin-console:build:develop" }
           },
           "defaultConfiguration": "development",
           "options": {
@@ -147,7 +166,25 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "namedChunks": true
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "apps/rf-terminal/src/environments/environment.ts",
+                  "with": "apps/rf-terminal/src/environments/environment.ts"
+                }
+              ]
+            },
+            "develop": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "apps/rf-terminal/src/environments/environment.ts",
+                  "with": "apps/rf-terminal/src/environments/environment.develop.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -156,7 +193,8 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": { "buildTarget": "rf-terminal:build:production" },
-            "development": { "buildTarget": "rf-terminal:build:development" }
+            "development": { "buildTarget": "rf-terminal:build:development" },
+            "develop": { "buildTarget": "rf-terminal:build:develop" }
           },
           "defaultConfiguration": "development",
           "options": {

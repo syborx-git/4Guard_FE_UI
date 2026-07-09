@@ -101,21 +101,35 @@ export class AuthState {
   }
 
   /**
-   * Realiza el login exitoso, actualiza el estado y navega al dashboard.
+   * Realiza el login exitoso, actualiza el estado y navega según el estado de la cuenta.
+   *
+   * Si el usuario debe cambiar su contraseña (changePasswordRequired === true),
+   * navega a /change-password en lugar del dashboard.
    */
   login(session: JwtSession): void {
     this.setSession(session);
-    this.router.navigate(['/dashboard']);
+    if (session.user.changePasswordRequired) {
+      this.router.navigate(['/change-password']);
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
   }
 
   /**
-   * Cierra sesión y redirige al login.
+   * Cierra sesión llamando al BE (POST /auth/logout) y luego redirige al login.
+   * La limpieza de la sesión local la realiza AuthService.clearSessionAndRedirect().
    * @param reason Razón opcional (ej: 'inactivity')
    */
   logout(reason?: string): void {
-    this.clearSession();
-    const navExtras = reason ? { queryParams: { reason } } : {};
-    this.router.navigate(['/login'], navExtras);
+    // Si hay una razón especial (ej: inactividad), la sesion ya fue limpiada
+    // por InactivityService. Solo limpiamos localmente y redirigimos.
+    if (reason) {
+      this.clearSession();
+      this.router.navigate(['/login'], { queryParams: { reason } });
+      return;
+    }
+    // Logout normal: llamada al BE + limpieza local
+    this.authService.logout();
   }
 
   /**
