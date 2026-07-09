@@ -164,6 +164,27 @@ export class UsersService {
   }
 
   /**
+   * Actualiza campos de perfil del usuario autenticado (email, teléfono, etc.)
+   * Envuelve `updateUser` aceptando un subconjunto de campos para uso desde
+   * componentes de perfil que no manejan el DTO completo.
+   *
+   * Endpoint: PUT /api/v1/users
+   * Autorización: Bearer Token (inyectado automáticamente por jwtInterceptor)
+   *
+   * @param fields Campos de perfil a actualizar (ej. { email, phone }).
+   * @returns Observable<ApiResponse<UserProfileDto>>
+   */
+  updateUserProfile(fields: { email?: string; phone?: string; [key: string]: unknown }): Observable<ApiResponse<UserProfileDto>> {
+    const partial: UserProfileDto = fields as unknown as UserProfileDto;
+    return this.http
+      .put<ApiResponse<UserProfileDto>>(this.API_URL, partial)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+
+  /**
    * Crea un nuevo usuario en la base de datos del backend.
    *
    * Endpoint: POST /api/v1/users

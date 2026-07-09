@@ -198,6 +198,43 @@ readonly items = this.inventoryState.items; // Signal<Item[]>
 
 ---
 
+## ☁️ Despliegue en Netlify
+
+El proyecto incluye [`netlify.toml`](./netlify.toml) con toda la configuración necesaria.
+Al hacer push a `main`, Netlify ejecuta automáticamente el build apuntando al backend de develop.
+
+### Archivos clave
+
+| Archivo | Propósito |
+|---|---|
+| [`netlify.toml`](./netlify.toml) | Comando de build, directorio de salida, versión de Node y regla SPA redirect |
+| [`.npmrc`](./.npmrc) | Resuelve conflicto de peer deps entre `ng2-charts` y Angular 17 en npm 11+ |
+
+### ¿Qué hace netlify.toml?
+
+```toml
+[build]
+  command = "npm run build:admin:dev"   # Build apuntando a Render
+  publish = "dist/admin-console/browser"
+
+[build.environment]
+  NODE_VERSION = "20"   # Angular 17 es incompatible con Node 24
+
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200          # Necesario para que el router de Angular funcione
+```
+
+### ¿Por qué el `.npmrc`?
+
+`ng2-charts@5.0.4` introduce transitivamente `@angular/cdk@22.x` como peer dependency,
+que requiere `@angular/common@^22`. Como el proyecto usa Angular 17, npm 11+ (usado por Netlify)
+lanza un error `ERESOLVE`. El flag `legacy-peer-deps=true` en `.npmrc` le dice a npm que
+resuelva igual que npm 6/7, ignorando el conflicto de versiones transitivas.
+
+---
+
 ## 🚀 Comandos de Desarrollo
 
 ### Instalación

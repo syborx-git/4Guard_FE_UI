@@ -1,0 +1,19 @@
+# netlify.toml
+# Configuración de despliegue automático para 4GUARD WMS — Admin Console
+# Rama: main  →  https://fourguard-be.onrender.com (entorno develop)
+
+[build]
+  # Comando de instalación explícito: hereda legacy-peer-deps del .npmrc
+  command = "npm run build:admin:dev"
+  # Directorio de salida del build de Angular
+  publish = "dist/admin-console/browser"
+
+[build.environment]
+  # Fijar versión de Node.js compatible con Angular 17
+  NODE_VERSION = "20"
+
+# Redirigir todas las rutas al index.html para que funcione el routing de Angular (SPA)
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
