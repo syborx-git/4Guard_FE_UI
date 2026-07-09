@@ -1,0 +1,166 @@
+<div class="h-full w-full overflow-y-auto p-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold text-white tracking-wide">Mi Perfil</h1>
+      <p class="text-gray-400 mt-2">Gestiona tu identidad, información de contacto y seguridad de cuenta.</p>
+    </div>
+
+    <!-- Bento Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Tarjeta 1: Identidad (Card Principal) -->
+      <div class="lg:col-span-1 bg-[#15151b] rounded-[32px] p-8 border border-white/5 flex flex-col items-center text-center shadow-xl hover:border-white/10 transition-colors">
+        <div class="relative mb-6">
+          <div class="w-32 h-32 rounded-full bg-gradient-to-br from-[#d4af37]/20 to-[#f3e5ab]/5 flex items-center justify-center border border-[#d4af37]/20 shadow-[0_0_20px_rgba(212,175,55,0.15)]">
+            <span class="text-[#d4af37] text-4xl font-bold tracking-widest">{{ authState.userInitials() }}</span>
+          </div>
+          <button class="absolute bottom-0 right-0 w-10 h-10 bg-[#0d0d12] rounded-full flex items-center justify-center border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all shadow-lg" aria-label="Cambiar foto">
+            <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span>
+          </button>
+        </div>
+        
+        <h2 class="text-2xl font-bold text-white tracking-wide">{{ authState.userFullName() }}</h2>
+        <p class="text-gray-400 text-sm mt-1 mb-4">{{ authState.currentUser()?.username || 'Usuario' }}</p>
+        
+        <div class="px-5 py-2 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/20 mb-8">
+          <span class="text-[11px] font-bold tracking-[0.2em] text-[#d4af37]">{{ authState.roleLabel() }}</span>
+        </div>
+        
+        <div class="mt-auto w-full">
+          <div class="h-px w-full bg-white/5 mb-6"></div>
+          <p class="text-xs font-bold tracking-[0.1em] text-gray-500 mb-2 uppercase">Miembro desde</p>
+          <p class="text-sm text-gray-300 font-medium tracking-wide">12 Oct 2023</p>
+        </div>
+      </div>
+
+      <!-- Grid para las Tarjetas 2 y 3 -->
+      <div class="lg:col-span-2 flex flex-col gap-8">
+        
+        <!-- Tarjeta 2: Información de Contacto -->
+        <div class="bg-[#15151b] rounded-[32px] p-8 border border-white/5 shadow-xl hover:border-white/10 transition-colors flex flex-col">
+          <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shadow-inner">
+                <span class="material-symbols-outlined" style="font-size: 24px;">contact_mail</span>
+              </div>
+              <h3 class="text-xl font-medium text-white tracking-wide">Contacto</h3>
+            </div>
+            
+            @if (!isEditingContact()) {
+              <button 
+                type="button" 
+                (click)="toggleEdit()"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-colors border border-white/5">
+                <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
+                <span>Editar</span>
+              </button>
+            }
+          </div>
+
+          <form [formGroup]="contactForm" (ngSubmit)="saveContactInfo()" class="flex flex-col gap-6 flex-1 justify-center">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- Correo Institucional -->
+              <div class="flex flex-col gap-3">
+                <label class="text-[10px] font-bold tracking-[0.15em] text-gray-400 ml-1">CORREO INSTITUCIONAL</label>
+                
+                @if (!isEditingContact()) {
+                  <div class="px-2 py-2 text-white text-base tracking-wide flex items-center gap-3">
+                    <span class="material-symbols-outlined text-gray-500" style="font-size: 20px;">mail</span>
+                    {{ contactForm.get('email')?.value || 'No especificado' }}
+                  </div>
+                } @else {
+                  <div class="relative flex items-center group">
+                    <span class="absolute left-4 material-symbols-outlined text-gray-500 group-focus-within:text-[#d4af37] transition-colors" style="font-size: 20px;">mail</span>
+                    <input 
+                      type="email" 
+                      formControlName="email"
+                      class="w-full bg-[#0d0d12] border border-white/10 focus:border-[#d4af37]/50 focus:ring-1 focus:ring-[#d4af37]/20 text-white text-sm rounded-xl py-4 pl-12 pr-4 outline-none transition-all placeholder:text-gray-600"
+                      [class.!border-red-500]="contactForm.get('email')?.touched && contactForm.get('email')?.invalid">
+                  </div>
+                }
+              </div>
+
+              <!-- Teléfono -->
+              <div class="flex flex-col gap-3">
+                <label class="text-[10px] font-bold tracking-[0.15em] text-gray-400 ml-1">TELÉFONO</label>
+                
+                @if (!isEditingContact()) {
+                  <div class="px-2 py-2 text-white text-base tracking-wide flex items-center gap-3">
+                    <span class="material-symbols-outlined text-gray-500" style="font-size: 20px;">phone</span>
+                    {{ contactForm.get('phone')?.value || 'No especificado' }}
+                  </div>
+                } @else {
+                  <div class="relative flex items-center group">
+                    <span class="absolute left-4 material-symbols-outlined text-gray-500 group-focus-within:text-[#d4af37] transition-colors" style="font-size: 20px;">phone</span>
+                    <input 
+                      type="tel" 
+                      formControlName="phone"
+                      class="w-full bg-[#0d0d12] border border-white/10 focus:border-[#d4af37]/50 focus:ring-1 focus:ring-[#d4af37]/20 text-white text-sm rounded-xl py-4 pl-12 pr-4 outline-none transition-all placeholder:text-gray-600"
+                      placeholder="+1 234 567 8900">
+                  </div>
+                }
+              </div>
+            </div>
+
+            @if (isEditingContact()) {
+              <div class="flex items-center justify-end gap-4 mt-6 pt-6 border-t border-white/5">
+                <button 
+                  type="button" 
+                  (click)="toggleEdit()"
+                  class="px-6 py-3 rounded-xl text-gray-400 hover:text-white text-xs font-bold tracking-[0.1em] transition-colors uppercase">
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  [disabled]="contactForm.invalid || isLoading()"
+                  class="flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-xs tracking-[0.1em] text-black bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] hover:from-[#f3e5ab] hover:to-[#d4af37] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(212,175,55,0.15)] uppercase">
+                  @if (isLoading()) {
+                    <span class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>
+                    <span>Guardando...</span>
+                  } @else {
+                    <span>Guardar Cambios</span>
+                  }
+                </button>
+              </div>
+            }
+          </form>
+        </div>
+
+        <!-- Tarjeta 3: Auditoría y Seguridad -->
+        <div class="bg-[#15151b] rounded-[32px] p-8 border border-white/5 shadow-xl hover:border-white/10 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
+          
+          <div class="flex items-start gap-5">
+            <div class="w-14 h-14 rounded-2xl bg-green-500/10 text-green-400 flex items-center justify-center shrink-0 shadow-inner">
+              <span class="material-symbols-outlined" style="font-size: 28px;">shield_lock</span>
+            </div>
+            <div class="flex flex-col justify-center pt-1">
+              <h3 class="text-lg font-medium text-white tracking-wide">Seguridad de la Cuenta</h3>
+              <div class="mt-2 flex flex-col gap-1.5">
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[16px]">schedule</span>
+                  Última sesión activa: <span class="text-white font-medium">Hace 2 horas</span>
+                </p>
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[16px]">lan</span>
+                  IP de red: <span class="text-white font-mono text-xs bg-white/5 px-2 py-0.5 rounded">192.168.1.15</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <button 
+            type="button" 
+            (click)="logout()"
+            class="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all font-bold text-xs tracking-wide uppercase shrink-0">
+            <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+            <span>Cerrar Sesión</span>
+          </button>
+          
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

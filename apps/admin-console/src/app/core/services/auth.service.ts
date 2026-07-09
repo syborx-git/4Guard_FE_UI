@@ -39,6 +39,15 @@ export class AuthService {
   }
 
   /**
+   * Cambia la contraseña del usuario actual.
+   * Endpoint: PUT /api/v1/users/change-password
+   */
+  changePassword(data: any): Observable<any> {
+    const usersApiUrl = 'http://localhost:8080/api/v1/users';
+    return this.http.put(`${usersApiUrl}/change-password`, data);
+  }
+
+  /**
    * Refresca el token JWT de la sesión activa enviando el refresh token guardado.
    */
   refreshToken(): Observable<any> {

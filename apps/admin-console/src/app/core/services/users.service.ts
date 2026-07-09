@@ -60,6 +60,18 @@ export class UsersService {
   }
 
   /**
+   * Actualiza el perfil de contacto del usuario.
+   * Endpoint: PUT /api/v1/users
+   */
+  updateUserProfile(payload: { email: string; phone?: string }): Observable<any> {
+    return this.http
+      .put<any>(this.API_URL, payload)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
    * Manejador centralizado de errores HTTP del recurso /users.
    * El interceptor JWT ya maneja el 401 (redirige al Login).
    * Este método propaga el error tipado para que el componente lo presente.

@@ -55,7 +55,7 @@ export class LoginComponent implements OnDestroy {
 
   // ── Formulario reactivo ──────────────────────────────────
   protected readonly form = this.fb.group({
-    email:    ['', [Validators.required]],
+    email:    ['', [Validators.required, Validators.pattern(/^\S*$/)]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
@@ -97,8 +97,12 @@ export class LoginComponent implements OnDestroy {
       next: (res: LoginResponse) => {
         this.isLoading.set(false);
         if (res.success && res.data) {
+          // Login exitoso: resetear intentos
+          this.attemptsRemaining.set(null);
           this.authState.login(res.data);
         } else {
+          // Respuesta no exitosa cuenta como intento fallido
+          this.decrementAttempts();
           this.loginError.set(res.message || 'Credenciales incorrectas.');
         }
       },
@@ -110,24 +114,42 @@ export class LoginComponent implements OnDestroy {
   }
 
   /**
+   * Decrementa los intentos restantes de forma local (HU-010).
+   * Cuando llega a 0, bloquea el formulario.
+   */
+  private decrementAttempts(): void {
+    let current = this.attemptsRemaining();
+    if (current === null) {
+      current = 2; // Primera falla: de 3 baja a 2
+    } else {
+      current--;
+    }
+
+    if (current <= 0) {
+      this.attemptsRemaining.set(0);
+      this.loginError.set('Has agotado tus intentos. Por seguridad, tu acceso ha sido bloqueado temporalmente.');
+      this.animateShake.set(true);
+      setTimeout(() => this.animateShake.set(false), 500);
+      this.startLockCountdown(900);
+      this.viewState.set('locked-temporary');
+    } else {
+      this.attemptsRemaining.set(current);
+      this.animateShake.set(true);
+      setTimeout(() => this.animateShake.set(false), 500);
+    }
+  }
+
+  /**
    * Centraliza e intercepta los escenarios de error devueltos por Spring Boot (HU-010).
+   * Siempre decrementa los intentos localmente para que la cuenta regresiva funcione
+   * sin depender de lo que el backend devuelva.
    */
   private handleLoginError(err: HttpErrorResponse): void {
     const errorData = err.error || {};
     
     switch (err.status) {
-      case 401: // Intento Fallido Normal
-        const remaining = errorData.attemptsRemaining ?? 3;
-        this.attemptsRemaining.set(remaining);
-        this.loginError.set(errorData.message || 'Contraseña incorrecta. Acceso denegado.');
-        
-        // Detona la vibración horizontal temporal en el input de contraseña
-        this.animateShake.set(true);
-        setTimeout(() => this.animateShake.set(false), 500);
-        break;
-
-      case 423: // Bloqueo Temporal Activo
-        const secondsLeft = errorData.lockTimeRemaining ?? 900; // Por defecto 15 minutos
+      case 423: // Bloqueo Temporal Activo (el backend ya bloqueó)
+        const secondsLeft = errorData.lockTimeRemaining ?? 900;
         this.startLockCountdown(secondsLeft);
         this.viewState.set('locked-temporary');
         break;
@@ -137,7 +159,9 @@ export class LoginComponent implements OnDestroy {
         break;
 
       default:
-        this.loginError.set(errorData.message || 'Error de conexión con el servidor 4GUARD.');
+        // Cualquier error (401, 0/network, 500, etc.) = intento fallido
+        this.decrementAttempts();
+        this.loginError.set(errorData.message || 'Credenciales incorrectas. Acceso denegado.');
         break;
     }
   }
