@@ -244,6 +244,12 @@ export class AdminPanelComponent {
           alert('Error al cargar la lista de usuarios del backend: ' + (err.message || 'Error inesperado'));
         }
       });
+    } else if (moduleId === 'roles') {
+      this.roleService.loadRolesAndPermissions().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de roles y permisos del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
     }
   }
 
@@ -511,12 +517,28 @@ export class AdminPanelComponent {
       } else if (module === 'roles') {
         if (!this.formModel.name) throw new Error('Nombre del Rol es requerido.');
         if (id) {
-          this.roleService.updateRole(id, this.formModel);
-          this.auditLog('roles', id, 'UPDATE', null, this.formModel);
+          this.roleService.updateRole(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('roles', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al actualizar el rol: ' + (err.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.roleService.createRole(this.formModel);
-          this.auditLog('roles', 'new', 'CREATE', null, this.formModel);
+          this.roleService.createRole(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('roles', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al crear el rol: ' + (err.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       }
 
       this.closeModal();
@@ -557,12 +579,14 @@ export class AdminPanelComponent {
         }
       });
     } else if (module === 'roles') {
-      const deleted = this.roleService.deleteRole(id);
-      if (!deleted) {
-        alert('No se pueden eliminar roles definidos del sistema.');
-      } else {
-        this.auditLog('roles', id, 'DELETE', null, null);
-      }
+      this.roleService.deleteRole(id).subscribe({
+        next: () => {
+          this.auditLog('roles', id, 'DELETE', null, null);
+        },
+        error: (err) => {
+          alert('Error al eliminar el rol: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'incidences') {
       this.incidenceService.delete(id);
     } else if (module === 'notifications') {
