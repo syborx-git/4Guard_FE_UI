@@ -1,253 +1,176 @@
 <!-- apps/admin-console/src/app/features/auth/login/login.component.html -->
 <div class="login-page" role="main" aria-label="Inicio de sesion">
 
-  <!-- PANEL IZQUIERDO - Branding -->
-  <aside class="login-brand" aria-hidden="true">
-    <div class="login-brand__overlay"></div>
-    <div class="login-brand__grid"></div>
-    <div class="login-brand__content">
+  <div class="login-form-container">
 
-      <!-- Logo -->
-      <div class="login-brand__logo">
-        <div class="login-brand__logo-mark">4G</div>
-        <div class="login-brand__logo-text">
-          <span class="login-brand__name">4GUARD</span>
-          <span class="login-brand__tagline">WMS 3PL &bull; PREMIUM SUITE</span>
-        </div>
-      </div>
+    
+    <!-- Branding Header -->
+    <div class="login-brand-header">
+      <h1 class="login-brand__headline">4GUARD</h1>
+      <p class="login-brand__tagline">WMS 3PL</p>
+    </div>
 
-      <!-- Copy principal -->
-      <div class="login-brand__copy">
-        <h1 class="login-brand__headline">
-          Torre de Control<br>
-          <em class="login-brand__headline-em">Logístico</em>
-        </h1>
-        <p class="login-brand__desc">
-          Visibilidad total. <strong>Control</strong> absoluto. Trazabilidad en tiempo real
-          para operaciones de <strong>clase</strong> mundial de alta gama.
+    <div class="login-form__card">
+      <div class="login-form__card-glow"></div>
+
+      <!-- VISTA 1: FORMULARIO TRADICIONAL -->
+      @if (viewState() === 'login') {
+        <h2 class="login-form__title">Autenticación</h2>
+        <p class="login-form__subtitle">
+          Ingresa tus credenciales para acceder a la torre de control.
         </p>
-        <div class="login-brand__divider"></div>
-      </div>
 
-      <!-- Stats -->
-      <div class="login-brand__stats">
-        <div class="stat">
-          <span class="stat__value">8</span>
-          <span class="stat__label">Estados FSM</span>
-        </div>
-        <div class="stat">
-          <span class="stat__value">7</span>
-          <span class="stat__label">Niveles RBAC</span>
-        </div>
-        <div class="stat">
-          <span class="stat__value">100%</span>
-          <span class="stat__label">Trazabilidad</span>
-        </div>
-      </div>
+        <!-- Error global -->
+        @if (loginError()) {
+          <div class="login-error" role="alert" aria-live="assertive">
+            <span class="material-symbols-outlined login-error__icon">warning</span>
+            <span class="login-error__msg">{{ loginError() }}</span>
 
-      <!-- Footer branding -->
-      <div class="login-brand__bottom">
-        <span class="login-brand__system-label">
-          Sistema Logístico Compatible con Escalabilidad Empresarial Global
-        </span>
-      </div>
-    </div>
-  </aside>
-
-  <!-- PANEL DERECHO - Formulario -->
-  <main class="login-form-panel">
-
-    <!-- Status bar top -->
-    <div class="login-status-bar">
-      <div class="login-status-bar__left">
-        <div class="login-status-bar__logo-mark">4G</div>
-        <span class="login-status-bar__label">Golden Boy &mdash; Admin Console</span>
-      </div>
-      <div class="login-status-bar__right">
-        <span class="login-status-bar__dot"></span>
-        <span class="login-status-bar__online">SYNEXIA SERVER: ONLINE</span>
-      </div>
-    </div>
-
-    <div class="login-form-container">
-
-      <div class="login-form__card">
-
-        <!-- ════════════════════════════════════════════════════
-             VISTA 1: FORMULARIO TRADICIONAL
-             ════════════════════════════════════════════════════ -->
-        @if (viewState() === 'login') {
-          <h2 class="login-form__title">Iniciar Sesión</h2>
-          <p class="login-form__subtitle">
-            Ingresa tus credenciales de acceso de alta gama para ingresar al sistema.
-          </p>
-
-          <!-- Error global -->
-          @if (loginError()) {
-            <div class="login-error" role="alert" aria-live="assertive">
-              <span class="login-error__icon">&#9888;</span>
-              <span class="login-error__msg">{{ loginError() }}</span>
-
-              <!-- Badge de intentos fallidos restantes (HU-010) -->
-              @if (attemptsRemaining() !== null) {
-                <span class="login-error__badge">
-                  Intentos restantes: {{ attemptsRemaining() }}
-                </span>
-              }
-            </div>
-          }
-
-          <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate
-            autocomplete="off">
-
-            <!-- Email / Usuario -->
-            <div class="field-group">
-              <label class="field__label" for="email">CORREO ELECTRÓNICO O USUARIO</label>
-              <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
-                <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
-                <input id="email" type="text" class="field__input" formControlName="email"
-                  placeholder="enrique o enrique@4guard.com" autocomplete="email" aria-required="true"
-                  [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error"
-                  (keydown.space)="$event.preventDefault()">
-              </div>
-              @if (emailCtrl.touched && emailCtrl.invalid) {
-                <span id="email-error" class="field__error-msg">
-                  Por favor, ingresa un correo o usuario válido
-                </span>
-              }
-            </div>
-
-            <!-- Contraseña -->
-            <div class="field-group">
-              <div class="field__label-row">
-                <label class="field__label" for="password">CONTRASEÑA DE SEGURIDAD</label>
-                <!-- HU-003: Abre el modal de recuperacion — NO cambia ruta -->
-                <button
-                  type="button"
-                  id="forgot-password-trigger"
-                  class="field__forgot-link"
-                  (click)="openForgotModal()"
-                  aria-label="Abrir recuperacion de acceso">
-                  ¿olvidó su contraseña?
-                </button>
-              </div>
-
-              <!-- HU-010: Bind [class.animate-shake] para vibración horizontal -->
-              <div class="field__input-wrap"
-                   [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid"
-                   [class.animate-shake]="animateShake()">
-                <span class="field__icon field__icon--key" aria-hidden="true">&#128273;</span>
-                <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
-                  formControlName="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password" aria-required="true"
-                  [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
-                <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
-                  [attr.aria-label]="showPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                  {{ showPwd() ? '&#128584;' : '&#128065;' }}
-                </button>
-              </div>
-              @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
-                <span class="field__error-msg">La contraseña es requerida</span>
-              }
-            </div>
-
-            <!-- Botón Principal -->
-            <button id="login-submit-btn" type="submit" class="login-btn"
-              [disabled]="!isFormValid || isLoading()"
-              [class.login-btn--loading]="isLoading()"
-              aria-label="Entrar al Consola">
-              @if (isLoading()) {
-                <span class="login-btn__spinner" aria-hidden="true"></span>
-                <span>AUTENTICANDO...</span>
-              } @else {
-                <span>ENTRAR AL CONSOLA</span>
-              }
-            </button>
-
-            <!-- Hint de demo -->
-            <p class="login-form__hint">
-              Acceso Autorizado Backend: <strong>enrique</strong> / admin123
-            </p>
-          </form>
-        } @else if (viewState() === 'locked-temporary') {
-          <!-- VISTA 2: BLOQUEO TEMPORAL (HU-010) -->
-          <div class="locked-view">
-            <div class="locked-view__icon-wrap">
-              <span class="material-symbols-outlined locked-view__icon">lock</span>
-            </div>
-
-            <h2 class="locked-view__title">Acceso pausado por seguridad</h2>
-            <p class="locked-view__desc">
-              Has superado el número máximo de intentos fallidos. Tu cuenta ha sido bloqueada temporalmente por seguridad.
-            </p>
-
-            <div class="locked-view__timer-box">
-              <span class="locked-view__timer-label">TIEMPO PARA REINTENTAR</span>
-              <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
-            </div>
-
-            <div class="locked-view__actions">
-              <button
-                type="button"
-                class="locked-view__btn locked-view__btn--outline"
-                (click)="contactSupport()">
-                Contactar a Soporte
-              </button>
-            </div>
-          </div>
-        } @else if (viewState() === 'locked-permanent') {
-          <!-- ════════════════════════════════════════════════════
-               VISTA 3: BLOQUEO DEFINITIVO (HU-010)
-               ════════════════════════════════════════════════════ -->
-          <div class="locked-view">
-            <div class="locked-view__icon-wrap locked-view__icon-wrap--forbidden">
-              <span class="material-symbols-outlined locked-view__icon locked-view__icon--red">gavel</span>
-            </div>
-
-            <h2 class="locked-view__title">Acceso Restringido Definitivamente</h2>
-            <p class="locked-view__desc">
-              Esta cuenta ha sido inhabilitada permanentemente en el WMS. Se han enviado correos automáticos de auditoría y seguridad al Administrador del Sistema.
-            </p>
-
-            <div class="locked-view__info-alert">
-              <span class="material-symbols-outlined locked-view__info-icon">mail</span>
-              <span class="locked-view__info-text">
-                Notificación de seguridad enviada al correo registrado del operador.
+            @if (attemptsRemaining() !== null) {
+              <span class="login-error__badge">
+                Intentos: {{ attemptsRemaining() }}
               </span>
-            </div>
-
-            <div class="locked-view__actions">
-              <button
-                type="button"
-                class="locked-view__btn locked-view__btn--outline"
-                (click)="contactSupport()">
-                Contactar a Soporte
-              </button>
-            </div>
+            }
           </div>
         }
 
-      </div>
+        <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off">
+          <!-- Email / Usuario -->
+          <div class="field-group">
+            <label class="field__label" for="email">USUARIO O CORREO</label>
+            <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
+              <span class="material-symbols-outlined field__icon">person</span>
+              <input id="email" type="text" class="field__input" formControlName="email"
+                placeholder="ID de operador" autocomplete="email" aria-required="true"
+                [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error"
+                (keydown.space)="$event.preventDefault()">
+            </div>
+            @if (emailCtrl.touched && emailCtrl.invalid) {
+              <span id="email-error" class="field__error-msg">Ingresa un usuario válido</span>
+            }
+          </div>
 
-      <!-- Footer -->
-      <footer class="login-form__footer">
-        <div class="login-form__footer-links">
-          <a href="#" class="login-form__footer-link">Términos y<br>Condiciones</a>
-          <span class="separator" aria-hidden="true">&bull;</span>
-          <a href="#" class="login-form__footer-link">Política de<br>Privacidad</a>
-          <span class="separator" aria-hidden="true">&bull;</span>
-          <a href="#" class="login-form__footer-link">Soporte<br>Premium</a>
+          <!-- Contraseña -->
+          <div class="field-group">
+            <div class="field__label-row">
+              <label class="field__label" for="password">CONTRASEÑA DE SEGURIDAD</label>
+              <button
+                type="button"
+                id="forgot-password-trigger"
+                class="field__forgot-link"
+                (click)="openForgotModal()"
+                aria-label="Abrir recuperacion de acceso">
+                ¿Olvidó su clave?
+              </button>
+            </div>
+
+            <div class="field__input-wrap"
+                 [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid"
+                 [class.animate-shake]="animateShake()">
+              <span class="material-symbols-outlined field__icon">lock</span>
+              <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
+                formControlName="password" placeholder="••••••••" autocomplete="current-password" aria-required="true"
+                [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
+              <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
+                [attr.aria-label]="showPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                <span class="material-symbols-outlined">{{ showPwd() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+            @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
+              <span class="field__error-msg">La contraseña es requerida</span>
+            }
+          </div>
+
+          <!-- Botón Principal -->
+          <button id="login-submit-btn" type="submit" class="login-btn"
+            [disabled]="!isFormValid || isLoading()"
+            [class.login-btn--loading]="isLoading()"
+            aria-label="Entrar al Consola">
+            @if (isLoading()) {
+              <span class="login-btn__spinner" aria-hidden="true"></span>
+              <span>INICIANDO SESIÓN...</span>
+            } @else {
+              <span>ACCEDER AL SISTEMA</span>
+              <span class="material-symbols-outlined">arrow_forward</span>
+            }
+          </button>
+
+          <!-- Hint de demo -->
+          <p class="login-form__hint">
+            Acceso Autorizado: <strong>enrique</strong> / admin123
+          </p>
+        </form>
+      } @else if (viewState() === 'locked-temporary') {
+        <!-- VISTA 2: BLOQUEO TEMPORAL -->
+        <div class="locked-view">
+          <div class="locked-view__icon-wrap">
+            <span class="material-symbols-outlined locked-view__icon">lock_clock</span>
+          </div>
+          <h2 class="locked-view__title">Acceso Pausado</h2>
+          <p class="locked-view__desc">
+            Has superado el número máximo de intentos fallidos. Tu cuenta ha sido bloqueada por seguridad.
+          </p>
+          <div class="locked-view__timer-box">
+            <span class="locked-view__timer-label">TIEMPO RESTANTE</span>
+            <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
+          </div>
+          <div class="locked-view__actions">
+            <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
+              Contactar Soporte
+            </button>
+          </div>
         </div>
-        <span class="login-form__footer-copy">4GUARD WMS &copy; 2026 IRONSHARK &bull; REDISEÑO<br>LUXURY SYNEXIA</span>
-      </footer>
+      } @else if (viewState() === 'locked-permanent') {
+        <!-- VISTA 3: BLOQUEO DEFINITIVO -->
+        <div class="locked-view">
+          <div class="locked-view__icon-wrap locked-view__icon-wrap--forbidden">
+            <span class="material-symbols-outlined locked-view__icon locked-view__icon--red">gavel</span>
+          </div>
+          <h2 class="locked-view__title">Acceso Restringido</h2>
+          <p class="locked-view__desc">
+            Cuenta inhabilitada permanentemente. Se han enviado reportes de auditoría al administrador.
+          </p>
+          <div class="locked-view__info-alert">
+            <span class="material-symbols-outlined locked-view__info-icon">mail</span>
+            <span class="locked-view__info-text">Notificación enviada al correo del operador.</span>
+          </div>
+          <div class="locked-view__actions">
+            <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
+              Contactar Soporte
+            </button>
+          </div>
+        </div>
+      }
     </div>
-  </main>
+
+    <!-- Footer -->
+    <footer class="login-form__footer">
+      <div class="login-form__footer-links">
+        <a href="#" class="login-form__footer-link">Términos</a>
+        <span class="separator" aria-hidden="true">&bull;</span>
+        <a href="#" class="login-form__footer-link">Privacidad</a>
+        <span class="separator" aria-hidden="true">&bull;</span>
+        <a href="#" class="login-form__footer-link">Soporte</a>
+      </div>
+      <span class="login-form__footer-copy">4GUARD WMS &copy; 2026 &bull; LUXURY SYNEXIA</span>
+    </footer>
+  </div>
+
+  <!-- Status bar bottom -->
+  <div class="login-status-bar">
+    <div class="login-status-bar__left">
+      <div class="login-status-bar__logo-mark">4G</div>
+      <span class="login-status-bar__label">4GUARD WMS &mdash; Admin Console</span>
+    </div>
+    <div class="login-status-bar__right">
+      <span class="login-status-bar__dot"></span>
+      <span class="login-status-bar__online">SYNEXIA SERVER: ONLINE</span>
+    </div>
+  </div>
 
 </div>
 
-<!-- HU-003: Modal de Recuperacion de Acceso -->
-<!-- Se renderiza sobre todo el layout sin cambiar rutas -->
+<!-- Modal de Recuperacion de Acceso -->
 @if (showForgotModal()) {
-  <fg-forgot-password-modal
-    (closed)="closeForgotModal()">
-  </fg-forgot-password-modal>
+  <fg-forgot-password-modal (closed)="closeForgotModal()"></fg-forgot-password-modal>
 }
