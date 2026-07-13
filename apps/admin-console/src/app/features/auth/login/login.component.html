@@ -20,7 +20,7 @@
       <div class="login-brand__copy">
         <h1 class="login-brand__headline">
           Torre de Control<br>
-          <em class="login-brand__headline-em">Logistico</em>
+          <em class="login-brand__headline-em">Logístico</em>
         </h1>
         <p class="login-brand__desc">
           Visibilidad total. <strong>Control</strong> absoluto. Trazabilidad en tiempo real
@@ -48,7 +48,7 @@
       <!-- Footer branding -->
       <div class="login-brand__bottom">
         <span class="login-brand__system-label">
-          SISTEMA LOGISTICO COMPATIBLE CON ESCALABILIDAD EMPRESARIAL GLOBAL
+          Sistema Logístico Compatible con Escalabilidad Empresarial Global
         </span>
       </div>
     </div>
@@ -77,9 +77,9 @@
              VISTA 1: FORMULARIO TRADICIONAL
              ════════════════════════════════════════════════════ -->
         @if (viewState() === 'login') {
-          <h2 class="login-form__title">Iniciar Sesion</h2>
+          <h2 class="login-form__title">Iniciar Sesión</h2>
           <p class="login-form__subtitle">
-            Ingresa tus credenciales de acceso de alta gama para ingresar al sistema
+            Ingresa tus credenciales de acceso de alta gama para ingresar al sistema.
           </p>
 
           <!-- Error global -->
@@ -87,7 +87,7 @@
             <div class="login-error" role="alert" aria-live="assertive">
               <span class="login-error__icon">&#9888;</span>
               <span class="login-error__msg">{{ loginError() }}</span>
-              
+
               <!-- Badge de intentos fallidos restantes (HU-010) -->
               @if (attemptsRemaining() !== null) {
                 <span class="login-error__badge">
@@ -102,7 +102,7 @@
 
             <!-- Email / Usuario -->
             <div class="field-group">
-              <label class="field__label" for="email">CORREO ELECTRONICO O USUARIO</label>
+              <label class="field__label" for="email">CORREO ELECTRÓNICO O USUARIO</label>
               <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
                 <span class="field__icon field__icon--at" aria-hidden="true">&#64;</span>
                 <input id="email" type="text" class="field__input" formControlName="email"
@@ -112,15 +112,15 @@
               </div>
               @if (emailCtrl.touched && emailCtrl.invalid) {
                 <span id="email-error" class="field__error-msg">
-                  Por favor, ingresa un correo o usuario valido
+                  Por favor, ingresa un correo o usuario válido
                 </span>
               }
             </div>
 
-            <!-- Contrasena -->
+            <!-- Contraseña -->
             <div class="field-group">
               <div class="field__label-row">
-                <label class="field__label" for="password">CONTRASENA DE SEGURIDAD</label>
+                <label class="field__label" for="password">CONTRASEÑA DE SEGURIDAD</label>
                 <!-- HU-003: Abre el modal de recuperacion — NO cambia ruta -->
                 <button
                   type="button"
@@ -128,12 +128,12 @@
                   class="field__forgot-link"
                   (click)="openForgotModal()"
                   aria-label="Abrir recuperacion de acceso">
-                  olvido su contrasena?
+                  ¿olvidó su contraseña?
                 </button>
               </div>
-              
+
               <!-- HU-010: Bind [class.animate-shake] para vibración horizontal -->
-              <div class="field__input-wrap" 
+              <div class="field__input-wrap"
                    [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid"
                    [class.animate-shake]="animateShake()">
                 <span class="field__icon field__icon--key" aria-hidden="true">&#128273;</span>
@@ -141,16 +141,16 @@
                   formControlName="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password" aria-required="true"
                   [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
                 <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
-                  [attr.aria-label]="showPwd() ? 'Ocultar contrasena' : 'Mostrar contrasena'">
+                  [attr.aria-label]="showPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                   {{ showPwd() ? '&#128584;' : '&#128065;' }}
                 </button>
               </div>
               @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
-                <span class="field__error-msg">La contrasena es requerida</span>
+                <span class="field__error-msg">La contraseña es requerida</span>
               }
             </div>
 
-            <!-- Boton Principal -->
+            <!-- Botón Principal -->
             <button id="login-submit-btn" type="submit" class="login-btn"
               [disabled]="!isFormValid || isLoading()"
               [class.login-btn--loading]="isLoading()"
@@ -165,7 +165,7 @@
 
             <!-- Hint de demo -->
             <p class="login-form__hint">
-              Acceso Autorizado Backend: enrique / admin123
+              Acceso Autorizado Backend: <strong>enrique</strong> / admin123
             </p>
           </form>
         } @else if (viewState() === 'locked-temporary') {
@@ -174,20 +174,20 @@
             <div class="locked-view__icon-wrap">
               <span class="material-symbols-outlined locked-view__icon">lock</span>
             </div>
-            
+
             <h2 class="locked-view__title">Acceso pausado por seguridad</h2>
             <p class="locked-view__desc">
               Has superado el número máximo de intentos fallidos. Tu cuenta ha sido bloqueada temporalmente por seguridad.
             </p>
-            
+
             <div class="locked-view__timer-box">
               <span class="locked-view__timer-label">TIEMPO PARA REINTENTAR</span>
               <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
             </div>
 
             <div class="locked-view__actions">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 class="locked-view__btn locked-view__btn--outline"
                 (click)="contactSupport()">
                 Contactar a Soporte
@@ -202,7 +202,7 @@
             <div class="locked-view__icon-wrap locked-view__icon-wrap--forbidden">
               <span class="material-symbols-outlined locked-view__icon locked-view__icon--red">gavel</span>
             </div>
-            
+
             <h2 class="locked-view__title">Acceso Restringido Definitivamente</h2>
             <p class="locked-view__desc">
               Esta cuenta ha sido inhabilitada permanentemente en el WMS. Se han enviado correos automáticos de auditoría y seguridad al Administrador del Sistema.
@@ -216,8 +216,8 @@
             </div>
 
             <div class="locked-view__actions">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 class="locked-view__btn locked-view__btn--outline"
                 (click)="contactSupport()">
                 Contactar a Soporte
@@ -231,13 +231,13 @@
       <!-- Footer -->
       <footer class="login-form__footer">
         <div class="login-form__footer-links">
-          <a href="#" class="login-form__footer-link">Terminos y Condiciones</a>
+          <a href="#" class="login-form__footer-link">Términos y<br>Condiciones</a>
           <span class="separator" aria-hidden="true">&bull;</span>
-          <a href="#" class="login-form__footer-link">Politica de Privacidad</a>
+          <a href="#" class="login-form__footer-link">Política de<br>Privacidad</a>
           <span class="separator" aria-hidden="true">&bull;</span>
-          <a href="#" class="login-form__footer-link">Soporte Premium</a>
+          <a href="#" class="login-form__footer-link">Soporte<br>Premium</a>
         </div>
-        <span class="login-form__footer-copy">4GUARD WMS &copy; 2026 IRONSHARK &bull; REDISENO LUXURY SYNEXIA</span>
+        <span class="login-form__footer-copy">4GUARD WMS &copy; 2026 IRONSHARK &bull; REDISEÑO<br>LUXURY SYNEXIA</span>
       </footer>
     </div>
   </main>

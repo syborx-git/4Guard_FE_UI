@@ -1,174 +1,264 @@
-<!-- apps/admin-console/.../inventory/warehouse-map/warehouse-map.component.html -->
-<!-- P5 — Inventario 2D Topología Cromática [HU-048] -->
+<!-- Inventario 2D — Topología Cromática -->
 <section class="wmap page-enter" aria-label="Mapa 2D del Almacén">
 
-  <!-- ── Header ───────────────────────────────────────────── -->
+  <!-- ENCABEZADO -->
   <div class="wmap__header">
     <div>
-      <h2 class="wmap__title luxury-serif">🗺️ Topología Cromática</h2>
-      <p class="wmap__subtitle luxury-desc">Mapa interactivo de saturación por bahía y distribución de inventario en tiempo real.</p>
+      <h2 class="wmap__title">Topología Cromática</h2>
+      <p class="wmap__subtitle">
+        Mapa interactivo de saturación por bahía logística
+      </p>
     </div>
 
-    <!-- Controles -->
     <div class="wmap__controls">
-      <input
-        id="bay-search"
-        type="text"
-        class="wmap__search"
-        placeholder="Buscar bahía…"
-        [value]="searchCode()"
-        (input)="searchCode.set($any($event.target).value)"
-        aria-label="Buscar bahía por código">
 
+      <!-- Buscador -->
+      <div class="wmap__search-wrap">
+        <span class="material-symbols-outlined wmap__search-icon" aria-hidden="true">
+          search
+        </span>
+
+        <input id="bay-search" type="text" class="wmap__search" placeholder="Buscar bahía..." [value]="searchCode()"
+          (input)="searchCode.set($any($event.target).value)" aria-label="Buscar bahía por código">
+      </div>
+
+      <!-- Filtros -->
       <div class="wmap__filter-group" role="group" aria-label="Filtrar por tipo">
+
         @for (opt of filterOptions; track opt.value) {
-          <button
-            class="wmap__filter-btn"
-            [class.wmap__filter-btn--active]="filterType() === opt.value"
-            (click)="filterType.set(opt.value)"
-            [attr.aria-pressed]="filterType() === opt.value">
-            {{ opt.label }}
-          </button>
+        <button type="button" class="wmap__filter-btn" [class.wmap__filter-btn--active]="filterType() === opt.value"
+          (click)="filterType.set(opt.value)" [attr.aria-pressed]="filterType() === opt.value">
+          {{ opt.label }}
+        </button>
         }
       </div>
     </div>
   </div>
 
-  <!-- ── Leyenda ───────────────────────────────────────────── -->
+  <!-- CLAVE CROMÁTICA -->
   <div class="wmap__legend" role="list" aria-label="Leyenda de colores">
-    <div class="legend-item" role="listitem">
-      <div class="legend-swatch legend-swatch--high" aria-hidden="true"></div>
-      <span>Alta saturación (&gt;85%)</span>
-    </div>
-    <div class="legend-item" role="listitem">
-      <div class="legend-swatch legend-swatch--mid" aria-hidden="true"></div>
-      <span>Media (40–85%)</span>
-    </div>
-    <div class="legend-item" role="listitem">
-      <div class="legend-swatch legend-swatch--low" aria-hidden="true"></div>
-      <span>Baja (&lt;40%)</span>
-    </div>
-    <div class="legend-item" role="listitem">
-      <div class="legend-swatch legend-swatch--blocked" aria-hidden="true"></div>
-      <span>Bloqueado QM 🔒</span>
+
+    <span class="wmap__legend-title">Clave cromática:</span>
+
+    <div class="wmap__legend-items">
+      <div class="legend-item" role="listitem">
+        <div class="legend-swatch legend-swatch--high" aria-hidden="true">
+        </div>
+        <span>Alta saturación (&gt;85%)</span>
+      </div>
+
+      <div class="legend-item" role="listitem">
+        <div class="legend-swatch legend-swatch--mid" aria-hidden="true">
+        </div>
+        <span>Media (40–85%)</span>
+      </div>
+
+      <div class="legend-item" role="listitem">
+        <div class="legend-swatch legend-swatch--low" aria-hidden="true">
+        </div>
+        <span>Baja (&lt;40%)</span>
+      </div>
+
+      <div class="legend-item" role="listitem">
+        <div class="legend-swatch legend-swatch--blocked" aria-hidden="true">
+          <span class="material-symbols-outlined">lock</span>
+        </div>
+        <span>Bloqueado QM</span>
+      </div>
     </div>
   </div>
 
-  <!-- ── Stats Bar ─────────────────────────────────────────── -->
+  <!-- CONTADORES -->
   <div class="wmap__stats">
+
     <div class="map-stat">
       <span class="map-stat__val">{{ stats().total }}</span>
       <span class="map-stat__lbl">Bahías total</span>
     </div>
+
     <div class="map-stat map-stat--high">
       <span class="map-stat__val">{{ stats().highOcc }}</span>
       <span class="map-stat__lbl">Alta saturación</span>
     </div>
+
     <div class="map-stat map-stat--mid">
       <span class="map-stat__val">{{ stats().medOcc }}</span>
       <span class="map-stat__lbl">Saturación media</span>
     </div>
+
     <div class="map-stat map-stat--low">
       <span class="map-stat__val">{{ stats().lowOcc }}</span>
       <span class="map-stat__lbl">Baja saturación</span>
     </div>
+
     <div class="map-stat map-stat--blocked">
       <span class="map-stat__val">{{ stats().blocked }}</span>
       <span class="map-stat__lbl">Bloqueadas</span>
     </div>
   </div>
 
-  <!-- ── Contenedor del mapa + panel ─────────────────────── -->
+  <!-- MAPA + DETALLE -->
   <div class="wmap__body">
 
-    <!-- Grid de bahías -->
+    <!-- GRID DE BAHÍAS -->
     <div class="bay-grid" role="grid" aria-label="Mapa de bahías del almacén">
+
       @for (bay of displayBays(); track bay.id) {
-        <button
-          class="bay"
-          [class]="bayColorClass(bay)"
-          [class.bay--selected]="selectedBay()?.id === bay.id"
-          (click)="selectBay(bay)"
-          [attr.aria-label]="'Bahía ' + bay.code + ': ' + occupancyPct(bay) + '% de capacidad' + (bay.isBlocked ? ', bloqueada' : '')"
-          [attr.aria-pressed]="selectedBay()?.id === bay.id"
-          role="gridcell">
-          <!-- Código de bahía -->
-          <span class="bay__code">{{ bay.code }}</span>
-          <!-- % de ocupación -->
-          <span class="bay__pct">{{ occupancyPct(bay) }}%</span>
-          <!-- Candado si bloqueada -->
+      <button type="button" class="bay" [class]="bayColorClass(bay)"
+        [class.bay--selected]="selectedBay()?.id === bay.id" (click)="selectBay(bay)" [attr.aria-label]="'Bahía ' + bay.code + ': ' +
+            occupancyPct(bay) + '% de capacidad' +
+            (bay.isBlocked ? ', bloqueada' : '')" [attr.aria-pressed]="selectedBay()?.id === bay.id" role="gridcell">
+
+        <!-- Parte superior -->
+        <div class="bay__header">
+          <div class="bay__identity">
+            <span class="bay__type-badge">
+              {{ typeLabel(bay.type) }}
+            </span>
+
+            <span class="bay__code">
+              {{ bay.code }}
+            </span>
+          </div>
+
           @if (bay.isBlocked) {
-            <span class="bay__lock" aria-label="Bloqueada">🔒</span>
+          <span class="material-symbols-outlined bay__lock" aria-label="Bloqueada">
+            lock
+          </span>
           }
-          <!-- Tipo de zona -->
-          @if (bay.type !== 'RACK') {
-            <span class="bay__type-tag">{{ typeLabel(bay.type) }}</span>
-          }
-        </button>
+        </div>
+
+        <!-- Saturación -->
+        <div class="bay__saturation">
+          <div class="bay__saturation-row">
+            <span class="bay__saturation-label">Saturación</span>
+            <span class="bay__pct">{{ occupancyPct(bay) }}%</span>
+          </div>
+
+          <div class="bay__progress" aria-hidden="true">
+            <span class="bay__progress-fill" [style.width.%]="occupancyPct(bay)">
+            </span>
+          </div>
+        </div>
+      </button>
       }
 
       @if (displayBays().length === 0) {
-        <div class="bay-grid__empty" role="status">
-          <span aria-hidden="true">🔍</span>
-          <span>No se encontraron bahías con ese criterio</span>
-        </div>
+      <div class="bay-grid__empty" role="status">
+        <span class="material-symbols-outlined" aria-hidden="true">
+          search_off
+        </span>
+
+        <span>No se encontraron bahías con esos criterios.</span>
+      </div>
       }
     </div>
 
-    <!-- Panel de detalle de bahía seleccionada -->
+    <!-- PANEL DE DETALLE -->
     @if (selectedBay()) {
-      <aside class="bay-detail" role="complementary" aria-label="Detalle de bahía seleccionada">
-        <div class="bay-detail__header">
-          <h3 class="bay-detail__title">{{ selectedBay()!.code }}</h3>
-          <button
-            class="bay-detail__close"
-            (click)="closeBayPanel()"
-            aria-label="Cerrar panel de detalle">
-            ×
-          </button>
-        </div>
+    <aside class="bay-detail" role="complementary" aria-label="Detalle de bahía seleccionada">
 
-        <div class="bay-detail__badge" [class]="selectedBay()!.colorClass">
-          {{ selectedBay()!.isBlocked ? '🔒 Bloqueada QM' : typeLabel(selectedBay()!.type) }}
-        </div>
+      <div class="bay-detail__header">
+        <div class="bay-detail__heading">
+          <div class="bay-detail__icon">
+            <span class="material-symbols-outlined">grid_view</span>
+          </div>
 
-        <div class="bay-detail__stats">
-          <div class="det-stat">
-            <span class="det-stat__val">{{ selectedBay()!.occupancyPct }}%</span>
-            <span class="det-stat__lbl">Saturación</span>
-          </div>
-          <div class="det-stat">
-            <span class="det-stat__val">{{ selectedBay()!.occupied }}</span>
-            <span class="det-stat__lbl">Unidades</span>
-          </div>
-          <div class="det-stat">
-            <span class="det-stat__val">{{ selectedBay()!.capacity }}</span>
-            <span class="det-stat__lbl">Capacidad</span>
+          <div>
+            <span class="bay-detail__eyebrow">Configurar bahía</span>
+            <h3 class="bay-detail__title">
+              Terminal logística {{ selectedBay()!.code }}
+            </h3>
           </div>
         </div>
 
-        <!-- Barra de saturación -->
-        <div class="occ-bar" role="progressbar"
-          [attr.aria-valuenow]="selectedBay()!.occupancyPct"
-          aria-valuemin="0" aria-valuemax="100">
-          <div class="occ-bar__fill" [class]="selectedBay()!.colorClass"
-            [style.width.%]="selectedBay()!.occupancyPct">
-          </div>
-        </div>
+        <button type="button" class="bay-detail__close" (click)="closeBayPanel()" aria-label="Cerrar panel de detalle">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
 
-        <p class="bay-detail__info">
-          <strong>Tipo:</strong> {{ typeLabel(selectedBay()!.type) }}<br>
-          <strong>ID:</strong> {{ selectedBay()!.id }}<br>
-          <strong>Libre:</strong> {{ selectedBay()!.capacity - selectedBay()!.occupied }} unidades
-        </p>
+      <div class="bay-detail__classification">
+        <span>Clasificación:</span>
 
+        <strong>
+          {{ typeLabel(selectedBay()!.type) }}
+        </strong>
+      </div>
+
+      <div class="bay-detail__badge" [class]="selectedBay()!.colorClass">
         @if (selectedBay()!.isBlocked) {
-          <div class="bay-detail__block-warning" role="alert">
-            ⛔ Esta bahía está bloqueada por Control de Calidad (QM). Contacta al inspector antes de mover ítems.
-          </div>
+        <span class="material-symbols-outlined">lock</span>
+        Bloqueada QM
+        } @else {
+        {{ typeLabel(selectedBay()!.type) }}
         }
-      </aside>
+      </div>
+
+      <div class="bay-detail__stats">
+        <div class="det-stat">
+          <span class="det-stat__val">
+            {{ selectedBay()!.occupancyPct }}%
+          </span>
+          <span class="det-stat__lbl">Saturación</span>
+        </div>
+
+        <div class="det-stat">
+          <span class="det-stat__val">
+            {{ selectedBay()!.occupied }}
+          </span>
+          <span class="det-stat__lbl">Unidades</span>
+        </div>
+
+        <div class="det-stat">
+          <span class="det-stat__val">
+            {{ selectedBay()!.capacity }}
+          </span>
+          <span class="det-stat__lbl">Capacidad</span>
+        </div>
+      </div>
+
+      <div class="occ-bar" role="progressbar" [attr.aria-valuenow]="selectedBay()!.occupancyPct" aria-valuemin="0"
+        aria-valuemax="100">
+
+        <div class="occ-bar__fill" [class]="selectedBay()!.colorClass" [style.width.%]="selectedBay()!.occupancyPct">
+        </div>
+      </div>
+
+      <div class="bay-detail__info">
+        <div class="bay-detail__info-row">
+          <span>Tipo</span>
+          <strong>{{ typeLabel(selectedBay()!.type) }}</strong>
+        </div>
+
+        <div class="bay-detail__info-row">
+          <span>ID</span>
+          <strong>{{ selectedBay()!.id }}</strong>
+        </div>
+
+        <div class="bay-detail__info-row">
+          <span>Espacio libre</span>
+          <strong>
+            {{ selectedBay()!.capacity - selectedBay()!.occupied }}
+            unidades
+          </strong>
+        </div>
+      </div>
+
+      @if (selectedBay()!.isBlocked) {
+      <div class="bay-detail__block-warning" role="alert">
+        <span class="material-symbols-outlined">shield_lock</span>
+
+        <span>
+          Esta bahía está bloqueada por Control de Calidad.
+          Contacta al inspector antes de mover inventario.
+        </span>
+      </div>
+      }
+
+      <button type="button" class="bay-detail__action" (click)="closeBayPanel()">
+        Cerrar detalle
+      </button>
+    </aside>
     }
   </div>
-
 </section>

@@ -1,93 +1,355 @@
-<div class="inspection-container">
+<div class="inspection-page">
+
   @if (item()) {
-    <div class="inspection-header">
-      <div>
-        <h1 class="luxury-serif" style="font-size: 1.875rem;">Inspección de Calidad: Lote {{ item()?.batchNumber }}</h1>
-        <p class="luxury-desc">Lleve a cabo el checklist de inspección y decida la liberación o bloqueo del lote.</p>
-      </div>
-      <button class="btn btn-secondary" (click)="goBack()">Volver al listado</button>
-    </div>
+  <div class="inspection-overlay">
 
-    <div class="inspection-grid">
-      <!-- Columna 1: Información del Ítem -->
-      <div class="info-card">
-        <h2 class="card-title">Detalles del Lote</h2>
-        
-        <div class="data-row">
-          <span class="data-label">SKU:</span>
-          <span class="data-value">{{ item()?.sku }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">Descripción:</span>
-          <span class="data-value">{{ item()?.description }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">Cliente Propietario:</span>
-          <span class="data-value">{{ item()?.clientName }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">Lote:</span>
-          <span class="data-value" style="font-family: var(--font-mono);">{{ item()?.batchNumber }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">SSCC:</span>
-          <span class="data-value" style="font-family: var(--font-mono);">{{ item()?.sscc || 'N/A' }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">Cantidad Recibida:</span>
-          <span class="data-value">{{ item()?.quantity }} {{ item()?.unitOfMeasure }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">Fecha de Caducidad:</span>
-          <span class="data-value">{{ (item()?.expiryDate | date:'mediumDate') || 'No aplica' }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">Estado Actual FSM:</span>
-          <span class="data-value" style="color: var(--color-warning-dark);">{{ getStatusLabel(item()!.status) }}</span>
-        </div>
-      </div>
+    <section class="inspection-panel" role="dialog" aria-modal="true">
 
-      <!-- Columna 2: Checklist Operativo -->
-      <div class="checklist-card">
-        <h2 class="card-title">Criterios de Inspección</h2>
-        
-        @for (crit of checklist(); track crit.id) {
-          <div class="check-item">
-            <input type="checkbox" [id]="crit.id" [(ngModel)]="crit.checked">
-            <label [for]="crit.id" class="check-label">{{ crit.label }}</label>
+      <!-- BOTÓN CERRAR -->
+      <button type="button" class="inspection-close" (click)="goBack()" aria-label="Cerrar ficha de inspección">
+
+        <span class="material-symbols-outlined">
+          close
+        </span>
+      </button>
+
+      <!-- ENCABEZADO -->
+      <header class="inspection-panel__header">
+
+        <div class="inspection-panel__icon">
+          <span class="material-symbols-outlined">
+            fact_check
+          </span>
+        </div>
+
+        <div class="inspection-panel__heading">
+
+          <div class="inspection-panel__eyebrow">
+            <span>Ficha de Calidad QM</span>
+
+            <span class="status-badge status-badge--warning">
+              {{ getStatusLabel(item()!.status) }}
+            </span>
           </div>
-        }
-      </div>
 
-      <!-- Fila de Decisión final -->
-      <div class="decision-card">
-        <h2 class="card-title">Dictamen del Inspector</h2>
-        
-        <div class="form-group">
-          <label for="inspection-notes">Notas de Inspección * (Obligatorio para Rechazo / Bloqueo)</label>
-          <textarea id="inspection-notes" rows="4" class="form-control" placeholder="Describa el estado físico, discrepancias observadas o justificación del dictamen..." [(ngModel)]="notes"></textarea>
+          <h1 class="inspection-panel__title">
+            Inspección Técnica de Lote:
+            <span>{{ item()?.batchNumber }}</span>
+          </h1>
+
+          <p class="inspection-panel__subtitle">
+            Valide las condiciones físicas, documentales y operativas antes de liberar o bloquear el lote.
+          </p>
+
         </div>
 
-        <div class="actions">
-          <button class="btn btn-secondary" (click)="goBack()">Cancelar</button>
-          
-          <!-- Botón Bloquear QM (Transición a QM_BLOCKED) -->
-          <button class="btn btn-danger" [disabled]="!isNotesValidForRejection()" (click)="decideStatus(70)">
-            Bloquear por Calidad (QM_BLOCKED)
-          </button>
-          
-          <!-- Botón Liberar / Aprobar (Transición a AVAILABLE) -->
-          <button class="btn btn-success" [disabled]="!isChecklistComplete()" (click)="decideStatus(30)">
-            Aprobar Lote (AVAILABLE)
-          </button>
+      </header>
+
+      <!-- DATOS DEL LOTE -->
+      <section class="lot-summary">
+
+        <article class="summary-card">
+          <span class="summary-card__label">
+            SKU / Producto
+          </span>
+
+          <strong class="summary-card__value summary-card__value--mono">
+            {{ item()?.sku }}
+          </strong>
+
+          <span class="summary-card__meta">
+            {{ item()?.description }}
+          </span>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-card__label">
+            Cliente / Propietario
+          </span>
+
+          <strong class="summary-card__value">
+            {{ item()?.clientName }}
+          </strong>
+
+          <span class="summary-card__meta">
+            Cuenta logística 3PL
+          </span>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-card__label">
+            Ubicación física
+          </span>
+
+          <strong class="summary-card__value summary-card__value--mono">
+            {{ item()?.locationId || 'Sin ubicación' }}
+          </strong>
+
+          <span class="summary-card__meta">
+            Zona de control de calidad
+          </span>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-card__label">
+            Fecha / sello temporal
+          </span>
+
+          <strong class="summary-card__value summary-card__value--mono">
+            {{ item()?.receivedAt | date:'dd MMM yyyy, HH:mm' }}
+          </strong>
+
+          <span class="summary-card__meta">
+            Trazabilidad operativa
+          </span>
+        </article>
+
+      </section>
+
+      <!-- INFORMACIÓN TÉCNICA -->
+      <section class="inspection-details">
+
+        <div class="details-column">
+
+          <div class="section-heading">
+            <div>
+              <span class="section-heading__eyebrow">
+                Información del lote
+              </span>
+
+              <h2 class="section-heading__title">
+                Datos técnicos y trazabilidad
+              </h2>
+            </div>
+
+            <span class="material-symbols-outlined">
+              inventory_2
+            </span>
+          </div>
+
+          <div class="technical-list">
+
+            <div class="technical-row">
+              <span class="technical-row__label">
+                Número de lote
+              </span>
+
+              <strong class="technical-row__value technical-row__value--mono">
+                {{ item()?.batchNumber }}
+              </strong>
+            </div>
+
+            <div class="technical-row">
+              <span class="technical-row__label">
+                SSCC
+              </span>
+
+              <strong class="technical-row__value technical-row__value--mono">
+                {{ item()?.sscc || 'No disponible' }}
+              </strong>
+            </div>
+
+            <div class="technical-row">
+              <span class="technical-row__label">
+                Cantidad recibida
+              </span>
+
+              <strong class="technical-row__value">
+                {{ item()?.quantity }} {{ item()?.unitOfMeasure }}
+              </strong>
+            </div>
+
+            <div class="technical-row">
+              <span class="technical-row__label">
+                Fecha de caducidad
+              </span>
+
+              <strong class="technical-row__value">
+                {{ (item()?.expiryDate | date:'dd MMM yyyy') || 'No aplica' }}
+              </strong>
+            </div>
+
+            <div class="technical-row">
+              <span class="technical-row__label">
+                Peso registrado
+              </span>
+
+              <strong class="technical-row__value">
+                {{ item()?.weightKg || 0 }} kg
+              </strong>
+            </div>
+
+            <div class="technical-row">
+              <span class="technical-row__label">
+                Volumen registrado
+              </span>
+
+              <strong class="technical-row__value">
+                {{ item()?.volumeM3 || 0 }} m³
+              </strong>
+            </div>
+
+          </div>
+
         </div>
-      </div>
-    </div>
+
+        <!-- CHECKLIST -->
+        <div class="checklist-column">
+
+          <div class="section-heading">
+            <div>
+              <span class="section-heading__eyebrow">
+                Parámetros físicos analizados
+              </span>
+
+              <h2 class="section-heading__title">
+                Criterios de inspección
+              </h2>
+            </div>
+
+            <span class="material-symbols-outlined">
+              checklist
+            </span>
+          </div>
+
+          <div class="inspection-checklist">
+
+            @for (crit of checklist(); track crit.id) {
+            <label class="inspection-check" [class.inspection-check--completed]="crit.checked" [for]="crit.id">
+
+              <input type="checkbox" class="inspection-check__input" [id]="crit.id" [(ngModel)]="crit.checked">
+
+              <span class="inspection-check__box">
+                <span class="material-symbols-outlined">
+                  check
+                </span>
+              </span>
+
+              <span class="inspection-check__content">
+                <strong>{{ crit.label }}</strong>
+
+                <span>
+                  Validación requerida para liberación del lote.
+                </span>
+              </span>
+
+              <span class="inspection-check__status">
+                {{ crit.checked ? 'Validado' : 'Pendiente' }}
+              </span>
+
+            </label>
+            }
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- DICTAMEN -->
+      <section class="inspection-verdict">
+
+        <div class="section-heading section-heading--verdict">
+          <div>
+            <span class="section-heading__eyebrow">
+              Dictamen del inspector
+            </span>
+
+            <h2 class="section-heading__title">
+              Observaciones y decisión final
+            </h2>
+          </div>
+
+          <span class="material-symbols-outlined">
+            clinical_notes
+          </span>
+        </div>
+
+        <label class="notes-field" for="inspection-notes">
+
+          <span class="notes-field__label">
+            Notas de inspección
+
+            <span>
+              Obligatorio para rechazo o bloqueo
+            </span>
+          </span>
+
+          <textarea id="inspection-notes" rows="4" class="notes-field__control"
+            placeholder="Describa el estado físico, las discrepancias observadas o la justificación del dictamen..."
+            [(ngModel)]="notes">
+            </textarea>
+
+          <span class="notes-field__help">
+            Para bloquear el lote se requieren al menos 5 caracteres.
+          </span>
+
+        </label>
+
+      </section>
+
+      <!-- ACCIONES -->
+      <footer class="inspection-actions">
+
+        <button type="button" class="inspection-btn inspection-btn--secondary" (click)="goBack()">
+
+          <span class="material-symbols-outlined">
+            arrow_back
+          </span>
+
+          <span>Volver al listado</span>
+        </button>
+
+        <button type="button" class="inspection-btn inspection-btn--danger" [disabled]="!isNotesValidForRejection()"
+          (click)="decideStatus(70)">
+
+          <span class="material-symbols-outlined">
+            block
+          </span>
+
+          <span>Bloquear lote</span>
+        </button>
+
+        <button type="button" class="inspection-btn inspection-btn--primary" [disabled]="!isChecklistComplete()"
+          (click)="decideStatus(30)">
+
+          <span class="material-symbols-outlined">
+            verified
+          </span>
+
+          <span>Aprobar lote</span>
+        </button>
+
+      </footer>
+
+    </section>
+
+  </div>
   } @else {
-    <div style="text-align: center; padding: var(--space-12);">
-      <h2>Lote no encontrado</h2>
-      <p style="margin-bottom: var(--space-4);">El identificador del lote especificado no existe o ha sido movido.</p>
-      <button class="btn btn-primary" (click)="goBack()">Volver al listado</button>
+  <section class="not-found-card">
+
+    <div class="not-found-card__icon">
+      <span class="material-symbols-outlined">
+        inventory_2
+      </span>
     </div>
+
+    <h1>Lote no encontrado</h1>
+
+    <p>
+      El identificador solicitado no existe o ya no está disponible para inspección.
+    </p>
+
+    <button type="button" class="inspection-btn inspection-btn--primary" (click)="goBack()">
+
+      <span class="material-symbols-outlined">
+        arrow_back
+      </span>
+
+      <span>Volver al listado</span>
+    </button>
+
+  </section>
   }
+
 </div>
