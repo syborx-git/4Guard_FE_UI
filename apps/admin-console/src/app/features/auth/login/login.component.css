@@ -292,6 +292,15 @@
   width: 100%;
 }
 
+/* Fix for browser autofill background */
+.field__input:-webkit-autofill,
+.field__input:-webkit-autofill:hover, 
+.field__input:-webkit-autofill:focus, 
+.field__input:-webkit-autofill:active {
+  transition: background-color 5000s ease-in-out 0s;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
 .field__input::placeholder {
   color: rgba(255, 255, 255, 0.2);
 }
