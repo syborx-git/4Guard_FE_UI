@@ -4,14 +4,14 @@
  * Orquesta 13 módulos JPA simulados mediante servicios separados e inyecciones de Signals.
  */
 
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserRole } from '@4guard/shared-core';
 
 // Inyección de servicios mock de administración
-import { OrganizationService, Organization, OrganizationType } from '../services/organization.service';
+import { OrganizationService, Organization, OrganizationType, OrganizationStatus } from '../services/organization.service';
 import { BranchService, Branch } from '../services/branch.service';
 import { SectionService, WarehouseSection } from '../services/section.service';
 import { LocationService, Location, LocationType } from '../services/location.service';
@@ -41,7 +41,16 @@ interface AdminModuleCard {
   templateUrl: './admin-panel.component.html',
   styleUrl: './admin-panel.component.css'
 })
-export class AdminPanelComponent {
+export class AdminPanelComponent implements OnInit {
+  ngOnInit(): void {
+    // Carga inicial de organizaciones para poblar los selectores del formulario en otros módulos
+    this.orgService.loadOrganizations().subscribe({
+      error: (err) => {
+        console.error('Error al precargar organizaciones del backend:', err);
+      }
+    });
+  }
+
   // Inyección de servicios
   protected readonly orgService = inject(OrganizationService);
   protected readonly branchService = inject(BranchService);
@@ -238,10 +247,22 @@ export class AdminPanelComponent {
     this.currentPage.set(1);
     this.closeModal();
 
-    if (moduleId === 'users') {
+    if (moduleId === 'organizations') {
+      this.orgService.loadOrganizations().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de organizaciones del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'users') {
       this.userAdminService.loadUsers().subscribe({
         error: (err) => {
           alert('Error al cargar la lista de usuarios del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'roles') {
+      this.roleService.loadRolesAndPermissions().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de roles y permisos del backend: ' + (err.message || 'Error inesperado'));
         }
       });
     }
@@ -405,12 +426,28 @@ export class AdminPanelComponent {
       if (module === 'organizations') {
         if (!this.formModel.name || !this.formModel.code) throw new Error('Nombre y Código son requeridos.');
         if (id) {
-          this.orgService.update(id, this.formModel);
-          this.auditLog('organizations', id, 'UPDATE', null, this.formModel);
+          this.orgService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('organizations', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al actualizar la organización: ' + (err.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.orgService.create(this.formModel);
-          this.auditLog('organizations', 'new', 'CREATE', null, this.formModel);
+          this.orgService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('organizations', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al crear la organización: ' + (err.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'branches') {
         if (!this.formModel.name || !this.formModel.code) throw new Error('Nombre y Código son requeridos.');
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
@@ -511,12 +548,28 @@ export class AdminPanelComponent {
       } else if (module === 'roles') {
         if (!this.formModel.name) throw new Error('Nombre del Rol es requerido.');
         if (id) {
-          this.roleService.updateRole(id, this.formModel);
-          this.auditLog('roles', id, 'UPDATE', null, this.formModel);
+          this.roleService.updateRole(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('roles', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al actualizar el rol: ' + (err.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.roleService.createRole(this.formModel);
-          this.auditLog('roles', 'new', 'CREATE', null, this.formModel);
+          this.roleService.createRole(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('roles', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err) => {
+              alert('Error al crear el rol: ' + (err.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       }
 
       this.closeModal();
@@ -530,8 +583,14 @@ export class AdminPanelComponent {
     const module = this.selectedModule();
 
     if (module === 'organizations') {
-      this.orgService.delete(id);
-      this.auditLog('organizations', id, 'DELETE', null, null);
+      this.orgService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('organizations', id, 'DELETE', null, null);
+        },
+        error: (err) => {
+          alert('Error al eliminar la organización: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'branches') {
       this.branchService.delete(id);
       this.auditLog('branches', id, 'DELETE', null, null);
@@ -557,12 +616,14 @@ export class AdminPanelComponent {
         }
       });
     } else if (module === 'roles') {
-      const deleted = this.roleService.deleteRole(id);
-      if (!deleted) {
-        alert('No se pueden eliminar roles definidos del sistema.');
-      } else {
-        this.auditLog('roles', id, 'DELETE', null, null);
-      }
+      this.roleService.deleteRole(id).subscribe({
+        next: () => {
+          this.auditLog('roles', id, 'DELETE', null, null);
+        },
+        error: (err) => {
+          alert('Error al eliminar el rol: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'incidences') {
       this.incidenceService.delete(id);
     } else if (module === 'notifications') {
@@ -572,8 +633,17 @@ export class AdminPanelComponent {
 
   // Acciones específicas de negocios
   protected toggleOrgStatus(id: string): void {
-    this.orgService.toggleStatus(id);
-    this.auditLog('organizations', id, 'UPDATE', { desc: 'Toggle status' }, null);
+    const org = this.orgService.organizations().find(o => o.id === id);
+    const oldStatus = org?.status;
+    const newStatus = oldStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    this.orgService.toggleStatus(id).subscribe({
+      next: () => {
+        this.auditLog('organizations', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
+      },
+      error: (err) => {
+        alert('Error al cambiar el estado de la organización: ' + (err.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected toggleBranchStatus(id: string): void {

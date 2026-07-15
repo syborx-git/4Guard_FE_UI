@@ -5,17 +5,17 @@
   <!-- ── Header ─────────────────────────────────────────────── -->
   <div class="dashboard__header">
     <div>
-      <h2 class="dashboard__title luxury-serif">Torre de Control</h2>
-      <p class="dashboard__subtitle luxury-desc">Panel general de operaciones críticas y monitorización en tiempo real.</p>
+      <h2 class="dashboard__title">Torre de Control</h2>
+      <p class="dashboard__subtitle">Vista general de operaciones en tiempo real</p>
     </div>
     <div class="dashboard__header-actions">
       <!-- Badge de alertas críticas con animación parpadeante -->
       @if (criticalCount() > 0) {
-        <div class="alert-badge" role="status" aria-label="Alertas críticas">
-          <span class="alert-badge__dot" aria-hidden="true"></span>
-          <span class="alert-badge__count">{{ criticalCount() }}</span>
-          <span class="alert-badge__label">Crítica{{ criticalCount() > 1 ? 's' : '' }}</span>
-        </div>
+      <div class="alert-badge" role="status" aria-label="Alertas críticas">
+        <span class="alert-badge__dot" aria-hidden="true"></span>
+        <span class="alert-badge__count">{{ criticalCount() }}</span>
+        <span class="alert-badge__label">Crítica{{ criticalCount() > 1 ? 's' : '' }}</span>
+      </div>
       }
       <div class="dashboard__timestamp">
         Actualizado: {{ 'ahora' }}
@@ -29,32 +29,23 @@
     <!-- ─ 1. Risk Gauge ───────────────────────────── -->
     <div class="dash-card dash-card--gauge" id="risk-gauge-card">
       <div class="dash-card__header">
-        <span class="dash-card__icon" aria-hidden="true">🎯</span>
+        <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
+          crisis_alert
+        </span>
         <span class="dash-card__label">Riesgo Global</span>
       </div>
 
-      <div class="gauge-wrap" role="img" [attr.aria-label]="'Riesgo: ' + riskScore() + ' de 100, nivel ' + gaugeLabel()">
+      <div class="gauge-wrap" role="img"
+        [attr.aria-label]="'Riesgo: ' + riskScore() + ' de 100, nivel ' + gaugeLabel()">
         <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
           <!-- Track -->
-          <circle
-            class="gauge-track"
-            cx="60" cy="60" r="54"
-            fill="none"
-            stroke="rgba(255,255,255,0.07)"
-            stroke-width="10"
-            stroke-linecap="round"/>
+          <circle class="gauge-track" cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.07)"
+            stroke-width="10" stroke-linecap="round" />
           <!-- Indicador -->
-          <circle
-            class="gauge-indicator"
-            cx="60" cy="60" r="54"
-            fill="none"
-            [attr.stroke]="gaugeColor()"
-            stroke-width="10"
-            stroke-linecap="round"
-            [attr.stroke-dasharray]="gaugeCircumference"
-            [attr.stroke-dashoffset]="gaugeDashOffset()"
-            transform="rotate(-90 60 60)"
-            style="transition: stroke-dashoffset 800ms ease, stroke 400ms ease"/>
+          <circle class="gauge-indicator" cx="60" cy="60" r="54" fill="none" [attr.stroke]="gaugeColor()"
+            stroke-width="10" stroke-linecap="round" [attr.stroke-dasharray]="gaugeCircumference"
+            [attr.stroke-dashoffset]="gaugeDashOffset()" transform="rotate(-90 60 60)"
+            style="transition: stroke-dashoffset 800ms ease, stroke 400ms ease" />
         </svg>
         <div class="gauge-center">
           <span class="gauge-value">{{ riskScore() }}</span>
@@ -63,36 +54,33 @@
       </div>
 
       <p class="dash-card__footer-text">
-        {{ riskScore() < 30 ? 'Operaciones estables' : riskScore() < 60 ? 'Monitoreo recomendado' : 'Acción inmediata requerida' }}
-      </p>
+        {{ riskScore() < 30 ? 'Operaciones estables' : riskScore() < 60 ? 'Monitoreo recomendado'
+          : 'Acción inmediata requerida' }} </p>
     </div>
 
     <!-- ─ 2. Saturación del Almacén ──────────────── -->
-    <div
-      class="dash-card dash-card--saturation"
-      id="saturation-card"
-      (click)="navigateToMap()"
-      role="button"
-      tabindex="0"
-      (keydown.enter)="navigateToMap()"
-      aria-label="Ver mapa 2D de saturación del almacén">
+    <div class="dash-card dash-card--saturation" id="saturation-card" (click)="navigateToMap()" role="button"
+      tabindex="0" (keydown.enter)="navigateToMap()" aria-label="Ver mapa 2D de saturación del almacén">
       <div class="dash-card__header">
-        <span class="dash-card__icon" aria-hidden="true">🗺️</span>
+        <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
+          warehouse
+        </span>
         <span class="dash-card__label">Saturación del Almacén</span>
-        <span class="dash-card__link-hint">→ Ver mapa</span>
+        <span class="dash-card__link-hint">
+          Ver mapa
+          <span class="material-symbols-outlined dash-card__link-icon">
+            north_east
+          </span>
+        </span>
       </div>
 
       <div class="saturation-ring">
         <svg viewBox="0 0 120 120" class="saturation-svg" aria-hidden="true">
-          <circle cx="60" cy="60" r="48" fill="none"
-            stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
-          <circle cx="60" cy="60" r="48" fill="none"
-            stroke="var(--color-primary-light, #2E4A7A)" stroke-width="12"
-            stroke-linecap="round"
-            [attr.stroke-dasharray]="2 * 3.14159 * 48"
-            [attr.stroke-dashoffset]="(2 * 3.14159 * 48) * (1 - occupancy() / 100)"
-            transform="rotate(-90 60 60)"
-            style="transition: stroke-dashoffset 600ms ease"/>
+          <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12" />
+          <circle cx="60" cy="60" r="48" fill="none" stroke="var(--color-primary-light, #2E4A7A)" stroke-width="12"
+            stroke-linecap="round" [attr.stroke-dasharray]="2 * 3.14159 * 48"
+            [attr.stroke-dashoffset]="(2 * 3.14159 * 48) * (1 - occupancy() / 100)" transform="rotate(-90 60 60)"
+            style="transition: stroke-dashoffset 600ms ease" />
         </svg>
         <div class="saturation-center">
           <span class="saturation-value">{{ occupancy() }}%</span>
@@ -120,67 +108,85 @@
 
     <!-- ─ 3. KPI Cards ────────────────────────────── -->
     @for (card of kpiCards(); track card.id) {
-      <div class="dash-card dash-card--kpi" [id]="card.id">
-        <div class="dash-card__header">
-          <span class="dash-card__icon" aria-hidden="true">{{ card.icon }}</span>
-          <span class="dash-card__label">{{ card.label }}</span>
-        </div>
-
-        <div class="kpi-value-row">
-          <span class="kpi-value">{{ card.value }}</span>
-          <span class="kpi-badge status-{{ card.status }}">
-            {{ INVENTORY_STATUS_LABELS[card.status] }}
-          </span>
-        </div>
-
-        <div class="kpi-trend" [class.kpi-trend--up]="card.trendDir === 'up'" [class.kpi-trend--down]="card.trendDir === 'down'">
-          <span class="kpi-trend__arrow">
-            @if (card.trendDir === 'up') { ↑ }
-            @else if (card.trendDir === 'down') { ↓ }
-            @else { — }
-          </span>
-          @if (card.trendPct > 0) {
-            <span class="kpi-trend__pct">{{ card.trendPct }}% vs ayer</span>
-          } @else {
-            <span class="kpi-trend__pct">Sin cambio</span>
+    <div class="dash-card dash-card--kpi" [id]="card.id">
+      <div class="dash-card__header">
+        <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
+          @switch (card.id) {
+          @case ('kpi-available') {
+          layers
           }
-        </div>
+          @case ('kpi-quarantine') {
+          assignment_late
+          }
+          @case ('kpi-blocked') {
+          lock
+          }
+          @case ('kpi-picking') {
+          shopping_cart
+          }
+          @default {
+          monitoring
+          }
+          }
+        </span>
+        <span class="dash-card__label">{{ card.label }}</span>
       </div>
+
+      <div class="kpi-value-row">
+        <span class="kpi-value">{{ card.value }}</span>
+        <span class="kpi-badge status-{{ card.status }}">
+          {{ INVENTORY_STATUS_LABELS[card.status] }}
+        </span>
+      </div>
+
+      <div class="kpi-trend" [class.kpi-trend--up]="card.trendDir === 'up'"
+        [class.kpi-trend--down]="card.trendDir === 'down'">
+        <span class="kpi-trend__arrow">
+          @if (card.trendDir === 'up') { ↑ }
+          @else if (card.trendDir === 'down') { ↓ }
+          @else { — }
+        </span>
+        @if (card.trendPct > 0) {
+        <span class="kpi-trend__pct">{{ card.trendPct }}% vs ayer</span>
+        } @else {
+        <span class="kpi-trend__pct">Sin cambio</span>
+        }
+      </div>
+    </div>
     }
 
     <!-- ─ 4. Panel de Alertas Críticas ───────────── -->
     <div class="dash-card dash-card--alerts" id="alerts-panel">
       <div class="dash-card__header">
-        <span class="dash-card__icon" aria-hidden="true">🔔</span>
+        <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
+          notifications
+        </span>
         <span class="dash-card__label">Alertas del Sistema</span>
         @if (criticalCount() > 0) {
-          <span class="dash-card__badge-pulse" aria-hidden="true">{{ criticalCount() }}</span>
+        <span class="dash-card__badge-pulse" aria-hidden="true">{{ criticalCount() }}</span>
         }
       </div>
 
       <div class="alerts-list" role="list" aria-label="Lista de alertas">
         @for (alert of alerts(); track alert.id) {
-          <div class="alert-item alert-item--{{ alert.severity | lowercase }}" role="listitem">
-            <div class="alert-item__dot"
-              [class.alert-item__dot--pulse]="alert.severity === 'CRITICAL'"
-              aria-hidden="true">
-            </div>
-            <div class="alert-item__body">
-              <p class="alert-item__msg">{{ alert.message }}</p>
-              <span class="alert-item__meta">{{ alert.module }} · {{ formatSince(alert.since) }}</span>
-            </div>
-            <button
-              class="alert-item__dismiss"
-              (click)="dismissAlert(alert.id)"
-              [attr.aria-label]="'Descartar alerta: ' + alert.message">
-              ×
-            </button>
+        <div class="alert-item alert-item--{{ alert.severity | lowercase }}" role="listitem">
+          <div class="alert-item__dot" [class.alert-item__dot--pulse]="alert.severity === 'CRITICAL'"
+            aria-hidden="true">
           </div>
+          <div class="alert-item__body">
+            <p class="alert-item__msg">{{ alert.message }}</p>
+            <span class="alert-item__meta">{{ alert.module }} · {{ formatSince(alert.since) }}</span>
+          </div>
+          <button class="alert-item__dismiss" (click)="dismissAlert(alert.id)"
+            [attr.aria-label]="'Descartar alerta: ' + alert.message">
+            ×
+          </button>
+        </div>
         } @empty {
-          <div class="alerts-empty">
-            <span aria-hidden="true">✅</span>
-            <span>Sin alertas activas. Todo en orden.</span>
-          </div>
+        <div class="alerts-empty">
+          <span aria-hidden="true">✅</span>
+          <span>Sin alertas activas. Todo en orden.</span>
+        </div>
         }
       </div>
     </div>

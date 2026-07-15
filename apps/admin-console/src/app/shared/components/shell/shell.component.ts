@@ -18,7 +18,7 @@ import { UserProfileDto } from '../../../core/models/user.models';
 
 /** Valida que confirmPassword coincida con newPassword. */
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
-  const newPwd     = control.get('newPassword')?.value;
+  const newPwd = control.get('newPassword')?.value;
   const confirmPwd = control.get('confirmPassword')?.value;
   if (newPwd && confirmPwd && newPwd !== confirmPwd) {
     return { passwordsMismatch: true };
@@ -44,37 +44,37 @@ import { PasswordCollapseComponent } from '../password-collapse/password-collaps
   styleUrl: './shell.component.css',
 })
 export class ShellComponent {
-  protected readonly authState     = inject(AuthState);
-  protected readonly syncState     = inject(SyncState);
-  private  readonly usersService   = inject(UsersService);
-  private  readonly fb             = inject(FormBuilder);
+  protected readonly authState = inject(AuthState);
+  protected readonly syncState = inject(SyncState);
+  private readonly usersService = inject(UsersService);
+  private readonly fb = inject(FormBuilder);
 
   protected isSidebarCollapsed = signal(false);
 
   // ── Profile dropdown & Change Password modal ──────────────
-  protected readonly showProfileMenu        = signal(false);
+  protected readonly showProfileMenu = signal(false);
   protected readonly showChangePasswordModal = signal(false);
-  protected readonly isChangingPassword     = signal(false);
-  protected readonly changePasswordError    = signal<string | null>(null);
-  protected readonly changePasswordSuccess  = signal(false);
-  protected readonly showNewPwd             = signal(false);
-  protected readonly showConfirmPwd         = signal(false);
+  protected readonly isChangingPassword = signal(false);
+  protected readonly changePasswordError = signal<string | null>(null);
+  protected readonly changePasswordSuccess = signal(false);
+  protected readonly showNewPwd = signal(false);
+  protected readonly showConfirmPwd = signal(false);
 
   // ── User profile modal ────────────────────────────────────
-  protected readonly showProfileModal       = signal(false);
-  protected readonly userProfileData        = signal<UserProfileDto | null>(null);
-  protected readonly isLoadingProfile       = signal(false);
-  protected readonly profileError           = signal<string | null>(null);
+  protected readonly showProfileModal = signal(false);
+  protected readonly userProfileData = signal<UserProfileDto | null>(null);
+  protected readonly isLoadingProfile = signal(false);
+  protected readonly profileError = signal<string | null>(null);
 
   protected readonly cpForm = this.fb.group(
     {
-      newPassword:     ['', [Validators.required, Validators.minLength(8)]],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatchValidator }
   );
 
-  get newPwdCtrl()     { return this.cpForm.controls.newPassword; }
+  get newPwdCtrl() { return this.cpForm.controls.newPassword; }
   get confirmPwdCtrl() { return this.cpForm.controls.confirmPassword; }
 
   protected readonly newPwdValue = toSignal(this.cpForm.controls.newPassword.valueChanges, { initialValue: '' });
@@ -83,8 +83,8 @@ export class ShellComponent {
   protected readonly passwordStrength = computed(() => {
     const pwd = this.newPwdValue() ?? '';
     let score = 0;
-    if (pwd.length >= 8)           score++;
-    if (/[A-Z]/.test(pwd))         score++;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
     if (/[0-9!@#$%^&*]/.test(pwd)) score++;
     return score;
   });
@@ -106,8 +106,8 @@ export class ShellComponent {
   });
 
   // ── Requisitos individuales (para la checklist en el template) ────────────
-  protected readonly reqMinLength     = computed(() => (this.newPwdValue()?.length ?? 0) >= 8);
-  protected readonly reqUpperCase     = computed(() => /[A-Z]/.test(this.newPwdValue() ?? ''));
+  protected readonly reqMinLength = computed(() => (this.newPwdValue()?.length ?? 0) >= 8);
+  protected readonly reqUpperCase = computed(() => /[A-Z]/.test(this.newPwdValue() ?? ''));
   protected readonly reqNumberOrSymbol = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdValue() ?? ''));
 
 
@@ -140,7 +140,7 @@ export class ShellComponent {
     this.showChangePasswordModal.set(false);
   }
 
-  protected toggleNewPwd(): void     { this.showNewPwd.update(v => !v); }
+  protected toggleNewPwd(): void { this.showNewPwd.update(v => !v); }
   protected toggleConfirmPwd(): void { this.showConfirmPwd.update(v => !v); }
 
   protected submitChangePassword(): void {

@@ -165,9 +165,14 @@
           <span class="shell__update-text">Actualizado: {{ lastUpdated() }}</span>
         </div>
 
-        <!-- Export -->
-        <button class="shell__header-btn" aria-label="Exportar">
-          <span class="material-symbols-outlined">open_in_new</span>
+        <!-- Cerrar sesión -->
+        <button
+          id="header-logout-btn"
+          class="shell__header-btn shell__header-btn--logout"
+          (click)="logout()"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión">
+          <span class="material-symbols-outlined">logout</span>
         </button>
       </div>
     </header>
