@@ -296,6 +296,7 @@
               <th>Nombre de Organización</th>
               <th>Tax ID / RFC</th>
               <th>Tipo</th>
+              <th>Configuración</th>
               <th>Estatus</th>
               <th>Creación</th>
               <th class="text-right">Acciones</th>
@@ -443,6 +444,7 @@
               <td>{{ item.name }}</td>
               <td>{{ item.taxId || 'N/A' }}</td>
               <td><span class="tech-badge">{{ item.type }}</span></td>
+              <td class="font-mono text-xs text-muted max-w-xs truncate" [title]="item.settings">{{ item.settings }}</td>
               <td>
                 <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
                   {{ item.status }}

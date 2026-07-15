@@ -259,19 +259,19 @@ export class AdminPanelComponent implements OnInit {
     if (moduleId === 'organizations') {
       this.orgService.loadOrganizations().subscribe({
         error: (err) => {
-          alert('Error al cargar la lista de organizaciones del backend: ' + (err.message || 'Error inesperado'));
+          alert('Error al cargar la lista de organizaciones del backend: ' + (err?.error?.message || err?.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'branches') {
       this.branchService.loadBranches().subscribe({
         error: (err) => {
-          alert('Error al cargar la lista de sucursales del backend: ' + (err.message || 'Error inesperado'));
+          alert('Error al cargar la lista de sucursales del backend: ' + (err?.error?.message || err?.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'clients') {
       this.clientService.loadClients().subscribe({
         error: (err: any) => {
-          alert('Error al cargar la lista de clientes del backend: ' + (err.message || 'Error inesperado'));
+          alert('Error al cargar la lista de clientes del backend: ' + (err?.error?.message || err?.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'locations') {
@@ -475,7 +475,8 @@ export class AdminPanelComponent implements OnInit {
 
     try {
       if (module === 'organizations') {
-        if (!this.formModel.name || !this.formModel.code) throw new Error('Nombre y Código son requeridos.');
+        if (!this.formModel.name) throw new Error('El nombre de la organización es requerido.');
+        if (!this.formModel.code) throw new Error('El código de la organización es requerido.');
         if (id) {
           this.orgService.update(id, this.formModel).subscribe({
             next: () => {
@@ -483,7 +484,7 @@ export class AdminPanelComponent implements OnInit {
               this.closeModal();
             },
             error: (err) => {
-              alert('Error al actualizar la organización: ' + (err.message || 'Error inesperado'));
+              alert('Error al actualizar la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
             }
           });
         } else {
@@ -494,7 +495,7 @@ export class AdminPanelComponent implements OnInit {
               this.closeModal();
             },
             error: (err) => {
-              alert('Error al crear la organización: ' + (err.message || 'Error inesperado'));
+              alert('Error al crear la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
             }
           });
         }
@@ -719,7 +720,7 @@ export class AdminPanelComponent implements OnInit {
           this.auditLog('organizations', id, 'DELETE', null, null);
         },
         error: (err) => {
-          alert('Error al eliminar la organización: ' + (err.message || 'Error inesperado'));
+          alert('Error al eliminar la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
         }
       });
     } else if (module === 'branches') {
@@ -802,7 +803,7 @@ export class AdminPanelComponent implements OnInit {
         this.auditLog('organizations', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
       },
       error: (err) => {
-        alert('Error al cambiar el estado de la organización: ' + (err.message || 'Error inesperado'));
+        alert('Error al cambiar el estado de la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
       }
     });
   }
