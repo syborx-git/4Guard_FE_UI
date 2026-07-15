@@ -50,6 +50,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
  */
 export const MODULE_PERMISSIONS: Record<string, UserRole[]> = {
   'admin':      [UserRole.ADMIN],
+  'layout':     [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER],
   'dashboard':  [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.AUDITOR, UserRole.CLIENT],
   'inventory':  [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.AUDITOR, UserRole.CLIENT],
   'receiving':  [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.WAREHOUSE_OPERATOR],

@@ -31,28 +31,28 @@ export class ToastService {
   /**
    * Muestra un toast de éxito (verde).
    */
-  success(message: string, duration = 4000): void {
+  success(message: string, duration = 3000): void {
     this.show('success', message, duration);
   }
 
   /**
    * Muestra un toast de error (rojo).
    */
-  error(message: string, duration = 5000): void {
+  error(message: string, duration = 3000): void {
     this.show('error', message, duration);
   }
 
   /**
    * Muestra un toast de advertencia (amarillo).
    */
-  warning(message: string, duration = 4500): void {
+  warning(message: string, duration = 3000): void {
     this.show('warning', message, duration);
   }
 
   /**
    * Muestra un toast informativo (azul).
    */
-  info(message: string, duration = 4000): void {
+  info(message: string, duration = 3000): void {
     this.show('info', message, duration);
   }
 

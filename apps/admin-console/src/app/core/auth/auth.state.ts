@@ -158,6 +158,8 @@ export class AuthState {
         return true; // Visible para todos; el backend filtra por rol
       case 'inventory':
         return permissions.includes('INVENTORY_READ') || permissions.includes('INVENTORY_CREATE');
+      case 'layout':
+        return permissions.includes('LAYOUT_READ') || permissions.includes('LAYOUT_CREATE');
       case 'admin':
         return permissions.includes('USERS_READ') || permissions.includes('USERS_CREATE');
       case 'receiving':
