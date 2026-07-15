@@ -113,6 +113,7 @@ export class AdminPanelComponent implements OnInit {
 
   // Modelos de formulario y visualización de detalles
   protected formModel: any = {};
+  protected readonly activeFormSections = signal<WarehouseSection[]>([]);
   protected detailModel: any = null;
 
   // Catálogo de tarjetas de administración
@@ -279,6 +280,12 @@ export class AdminPanelComponent implements OnInit {
           alert('Error al cargar la lista de secciones del backend: ' + (err.message || 'Error inesperado'));
         }
       });
+    } else if (moduleId === 'locations') {
+      this.locationService.loadLocations().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de ubicaciones del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (moduleId === 'users') {
       this.userAdminService.loadUsers().subscribe({
         error: (err) => {
@@ -352,10 +359,9 @@ export class AdminPanelComponent implements OnInit {
       };
     } else if (module === 'locations') {
       const branches = this.branchService.branches();
-      const sections = this.sectionService.sections();
       this.formModel = {
         branchId: branches[0]?.id || '',
-        sectionId: sections[0]?.id || '',
+        sectionId: '',
         zone: 'A',
         aisle: '01',
         rack: '01',
@@ -369,6 +375,9 @@ export class AdminPanelComponent implements OnInit {
         isBlocked: false,
         blockReason: ''
       };
+      if (this.formModel.branchId) {
+        this.loadSectionsForActiveForm(this.formModel.branchId);
+      }
     } else if (module === 'clients') {
       const orgs = this.orgService.organizations();
       this.formModel = {
@@ -429,6 +438,9 @@ export class AdminPanelComponent implements OnInit {
       this.formModel = { ...item };
     } else if (module === 'locations') {
       this.formModel = { ...item };
+      if (this.formModel.branchId) {
+        this.loadSectionsForActiveForm(this.formModel.branchId);
+      }
     } else if (module === 'clients') {
       this.formModel = { ...item };
     } else if (module === 'skus') {
@@ -542,12 +554,28 @@ export class AdminPanelComponent implements OnInit {
         }
 
         if (id) {
-          this.locationService.update(id, this.formModel);
-          this.auditLog('locations', id, 'UPDATE', null, this.formModel);
+          this.locationService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('locations', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.locationService.create(this.formModel);
-          this.auditLog('locations', 'new', 'CREATE', null, this.formModel);
+          this.locationService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('locations', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'clients') {
         if (!this.formModel.name) throw new Error('Nombre del Cliente es requerido.');
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
@@ -685,8 +713,14 @@ export class AdminPanelComponent implements OnInit {
         }
       });
     } else if (module === 'locations') {
-      this.locationService.delete(id);
-      this.auditLog('locations', id, 'DELETE', null, null);
+      this.locationService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('locations', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'clients') {
       this.clientService.delete(id).subscribe({
         next: () => {
@@ -770,22 +804,61 @@ export class AdminPanelComponent implements OnInit {
   protected toggleLocationBlock(loc: Location): void {
     if (loc.isBlocked) {
       // Desbloquear directamente
-      this.locationService.toggleBlock(loc.id, false, '');
-      this.auditLog('locations', loc.id, 'UPDATE', { block: true }, { block: false });
+      this.locationService.toggleBlock(loc.id, false, '').subscribe({
+        next: () => {
+          this.auditLog('locations', loc.id, 'UPDATE', { block: true }, { block: false });
+        },
+        error: (err: any) => {
+          alert('Error al desbloquear la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else {
       const reason = prompt('Escriba el motivo de bloqueo para la ubicación:');
       if (!reason) return;
-      this.locationService.toggleBlock(loc.id, true, reason);
-      this.auditLog('locations', loc.id, 'UPDATE', { block: false }, { block: true, reason });
-      
-      // Lanzar notificación administrativa
-      this.notifService.create({
-        title: 'Ubicación Bloqueada por Calidad',
-        message: `La ubicación física ${loc.branchName} - ${loc.zone} ha sido bloqueada. Motivo: ${reason}`,
-        severity: 'WARNING',
-        technicalMetadata: JSON.stringify({ locationId: loc.id, zone: loc.zone, reason })
+      this.locationService.toggleBlock(loc.id, true, reason).subscribe({
+        next: () => {
+          this.auditLog('locations', loc.id, 'UPDATE', { block: false }, { block: true, reason });
+          
+          // Lanzar notificación administrativa
+          this.notifService.create({
+            title: 'Ubicación Bloqueada por Calidad',
+            message: `La ubicación física ${loc.branchName} - ${loc.zone} ha sido bloqueada. Motivo: ${reason}`,
+            severity: 'WARNING',
+            technicalMetadata: JSON.stringify({ locationId: loc.id, zone: loc.zone, reason })
+          });
+        },
+        error: (err: any) => {
+          alert('Error al bloquear la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
       });
     }
+  }
+
+  protected onBranchChange(branchId: string): void {
+    if (this.selectedModule() === 'locations') {
+      this.loadSectionsForActiveForm(branchId);
+    }
+  }
+
+  private loadSectionsForActiveForm(branchId: string): void {
+    this.sectionService.getSectionsByBranch(branchId).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.activeFormSections.set(response.data);
+          // Auto seleccionar primera sección si no hay una sección seleccionada o si la seleccionada ya no existe en el listado nuevo
+          const currentSecId = this.formModel.sectionId;
+          const exists = response.data.some(s => s.id === currentSecId);
+          if (!exists && response.data.length > 0) {
+            this.formModel.sectionId = response.data[0].id;
+          }
+        } else {
+          this.activeFormSections.set([]);
+        }
+      },
+      error: () => {
+        this.activeFormSections.set([]);
+      }
+    });
   }
 
   protected toggleUserStatus(id: string): void {

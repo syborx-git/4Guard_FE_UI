@@ -870,10 +870,10 @@
 }
 
 .modal-card {
-  background: rgba(20, 18, 30, 0.96);
-  border: 1px solid var(--color-border-hover);
+  background: #201E2B;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
   width: 100%;
   max-width: 580px;
   display: flex;
@@ -892,15 +892,17 @@
 }
 
 .modal-card__header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 1.25rem 1.5rem;
+  background: #292639;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-radius: 14px 14px 0 0;
 }
 
 .modal-card__title {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-gold);
   margin: 0;
@@ -911,7 +913,7 @@
 .modal-card__close-btn {
   background: transparent;
   border: none;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -928,19 +930,19 @@
 }
 
 .modal-card__body {
-  padding: 1.5rem;
+  padding: 1.75rem;
   overflow-y: auto;
   flex: 1;
 }
 
 .modal-card__footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--color-border);
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  background: rgba(14, 13, 22, 0.6);
+  background: #191724;
   border-radius: 0 0 14px 14px;
 }
 
@@ -1358,18 +1360,18 @@
 }
 
 .field-group__label {
-  font-size: 0.62rem;
-  font-weight: 850;
-  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: #C5C2D4; /* Much lighter lavender-gray for high contrast label */
 }
 
 .field-group__input {
   box-sizing: border-box;
   padding: 0.65rem 0.9rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
+  background: #14121F;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   color: #fff;
   font-size: 0.85rem;
@@ -1378,8 +1380,9 @@
   width: 100%;
 }
 .field-group__input:focus {
-  border-color: rgba(234, 195, 73, 0.35);
-  background: rgba(234, 195, 73, 0.03);
+  border-color: var(--color-gold);
+  background: #171524;
+  box-shadow: 0 0 0 3px rgba(234, 195, 73, 0.15);
 }
 
 .field-group__input.select {
@@ -1399,5 +1402,5 @@
 .field-group__input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
 }
