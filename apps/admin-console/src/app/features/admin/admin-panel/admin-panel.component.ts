@@ -270,13 +270,25 @@ export class AdminPanelComponent implements OnInit {
       });
     } else if (moduleId === 'clients') {
       this.clientService.loadClients().subscribe({
-        error: (err) => {
+        error: (err: any) => {
           alert('Error al cargar la lista de clientes del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'locations') {
+      this.locationService.loadLocations().subscribe({
+        error: (err: any) => {
+          alert('Error al cargar la lista de ubicaciones del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'skus') {
+      this.skuService.loadSkus().subscribe({
+        error: (err: any) => {
+          alert('Error al cargar la lista de SKUs del backend: ' + (err.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'sections') {
       this.sectionService.loadSections().subscribe({
-        error: (err) => {
+        error: (err: any) => {
           alert('Error al cargar la lista de secciones del backend: ' + (err.message || 'Error inesperado'));
         }
       });
@@ -288,13 +300,13 @@ export class AdminPanelComponent implements OnInit {
       });
     } else if (moduleId === 'users') {
       this.userAdminService.loadUsers().subscribe({
-        error: (err) => {
+        error: (err: any) => {
           alert('Error al cargar la lista de usuarios del backend: ' + (err.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'roles') {
       this.roleService.loadRolesAndPermissions().subscribe({
-        error: (err) => {
+        error: (err: any) => {
           alert('Error al cargar la lista de roles y permisos del backend: ' + (err.message || 'Error inesperado'));
         }
       });
@@ -608,12 +620,28 @@ export class AdminPanelComponent implements OnInit {
         const client = this.clientService.clients().find(c => c.id === this.formModel.clientId);
         this.formModel.clientName = client ? client.name : '';
         if (id) {
-          this.skuService.update(id, this.formModel);
-          this.auditLog('skus', id, 'UPDATE', null, this.formModel);
+          this.skuService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('skus', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar el SKU: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.skuService.create(this.formModel);
-          this.auditLog('skus', 'new', 'CREATE', null, this.formModel);
+          this.skuService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('skus', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear el SKU: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'users') {
         if (!this.formModel.username || !this.formModel.email) throw new Error('Usuario y Email son requeridos.');
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
@@ -731,8 +759,14 @@ export class AdminPanelComponent implements OnInit {
         }
       });
     } else if (module === 'skus') {
-      this.skuService.delete(id);
-      this.auditLog('skus', id, 'DELETE', null, null);
+      this.skuService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('skus', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar el SKU: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'users') {
       this.userAdminService.delete(id).subscribe({
         next: () => {

@@ -1,4 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError, forkJoin, of } from 'rxjs';
+import { catchError, tap, map } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
+import { ClientService } from './client.service';
 
 export interface ProductSku {
   id: string;
@@ -9,59 +14,58 @@ export interface ProductSku {
   description: string;
   weight: number; // decimal (e.g., 12.500 kg)
   unit: string; // Unit of measure (max 20 chars, e.g., PZA, CAJA, TARIMA)
-  createdAt: Date;
+  version?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProductSkuResponse {
+  id: string;
+  clientId: string;
+  clientName: string;
+  code: string;
+  name: string;
+  description: string;
+  weight: number;
+  unit: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductSkuRequest {
+  clientId: string;
+  code: string;
+  name: string;
+  description: string;
+  weight: number;
+  unit: string;
+}
+
+export interface UpdateProductSkuRequest {
+  id: string;
+  clientId: string;
+  code: string;
+  name: string;
+  description: string;
+  weight: number;
+  unit: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class SkuService {
-  private readonly items = signal<ProductSku[]>([
-    {
-      id: 'sku-1',
-      clientId: 'cli-1',
-      clientName: 'Samsung Electronics Latam',
-      code: 'SAM-S24-ULTRA',
-      name: 'Samsung Galaxy S24 Ultra 512GB',
-      description: 'Smartphone insignia con S-Pen, Titanio Gris. Embalaje premium.',
-      weight: 0.232,
-      unit: 'PZA',
-      createdAt: new Date('2025-02-15T10:00:00Z')
-    },
-    {
-      id: 'sku-2',
-      clientId: 'cli-2',
-      clientName: 'Nestlé Foods Mexico',
-      code: 'NES-CAF-200G',
-      name: 'Café Nescafé Clásico 200g',
-      description: 'Frasco de vidrio de café soluble clásico. 12 piezas por caja.',
-      weight: 4.560,
-      unit: 'CAJA',
-      createdAt: new Date('2025-03-01T11:30:00Z')
-    },
-    {
-      id: 'sku-3',
-      clientId: 'cli-3',
-      clientName: 'Nike Retail Mexico',
-      code: 'NKE-AF1-WHT-10',
-      name: 'Nike Air Force 1 White Size 10',
-      description: 'Tenis clásicos de cuero blanco. Talla 10 US.',
-      weight: 0.950,
-      unit: 'PAR',
-      createdAt: new Date('2025-04-10T14:45:00Z')
-    },
-    {
-      id: 'sku-4',
-      clientId: 'cli-4',
-      clientName: 'General Motors Autoparts',
-      code: 'GM-ALT-AVE-16',
-      name: 'Alternador Aveo 1.6L 12V',
-      description: 'Alternador de refacción original Chevrolet Aveo 1.6L. Empacado individualmente.',
-      weight: 5.120,
-      unit: 'PZA',
-      createdAt: new Date('2025-06-20T09:15:00Z')
-    }
-  ]);
+  private readonly http = inject(HttpClient);
+  private readonly clientService = inject(ClientService);
+  private readonly items = signal<ProductSku[]>([]);
 
   readonly skus = this.items.asReadonly();
 
@@ -69,22 +73,136 @@ export class SkuService {
     return this.items();
   }
 
-  create(sku: Omit<ProductSku, 'id' | 'createdAt'>): void {
-    const newSku: ProductSku = {
-      ...sku,
-      id: `sku-${Date.now()}`,
-      createdAt: new Date()
+  /**
+   * Carga los SKUs de los clientes pertenecientes a la organización del usuario firmado.
+   */
+  loadSkus(): Observable<ProductSku[]> {
+    const orgClients = this.clientService.clients();
+
+    if (orgClients.length === 0) {
+      // Fallback: cargar todos los SKUs del sistema si no hay clientes locales cargados
+      return this.http.get<ApiResponse<ProductSkuResponse[]>>(
+        `${environment.apiBaseUrl}/api/v1/product-skus`
+      ).pipe(
+        map(response => (response.success && response.data) ? response.data.map(dto => this.mapDtoToItem(dto)) : []),
+        tap(allSkus => this.items.set(allSkus)),
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+    }
+
+    // Cargar en paralelo los SKUs de cada cliente de la organización
+    const requests = orgClients.map(c => this.loadSkusForClient(c.id));
+    return forkJoin(requests).pipe(
+      map(results => results.reduce((acc, val) => acc.concat(val), [])),
+      tap(allSkus => {
+        this.items.set(allSkus);
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
+  private loadSkusForClient(clientId: string): Observable<ProductSku[]> {
+    return this.http.get<ApiResponse<ProductSkuResponse[]>>(
+      `${environment.apiBaseUrl}/api/v1/product-skus?clientId=${clientId}`
+    ).pipe(
+      map(response => (response.success && response.data) ? response.data.map(dto => this.mapDtoToItem(dto)) : []),
+      catchError(() => of([])) // Prevenir que falle todo si un cliente falla
+    );
+  }
+
+  /**
+   * Crea un SKU en el Backend.
+   */
+  create(sku: Omit<ProductSku, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'clientName'>): Observable<ApiResponse<ProductSkuResponse>> {
+    const payload: CreateProductSkuRequest = {
+      clientId: sku.clientId,
+      code: sku.code,
+      name: sku.name,
+      description: sku.description,
+      weight: sku.weight,
+      unit: sku.unit
     };
-    this.items.update(list => [...list, newSku]);
+
+    return this.http.post<ApiResponse<ProductSkuResponse>>(
+      `${environment.apiBaseUrl}/api/v1/product-skus`,
+      payload
+    ).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          const newSku = this.mapDtoToItem(response.data);
+          this.items.update(list => [...list, newSku]);
+        }
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
   }
 
-  update(id: string, updatedFields: Partial<ProductSku>): void {
-    this.items.update(list => list.map(item => 
-      item.id === id ? { ...item, ...updatedFields } : item
-    ));
+  /**
+   * Modifica un SKU en el Backend.
+   */
+  update(id: string, sku: Partial<ProductSku>): Observable<ApiResponse<ProductSkuResponse>> {
+    const existing = this.items().find(s => s.id === id);
+    if (!existing) {
+      return throwError(() => new Error('SKU no encontrado localmente.'));
+    }
+
+    const payload: UpdateProductSkuRequest = {
+      id: id,
+      clientId: sku.clientId || existing.clientId,
+      code: sku.code || existing.code,
+      name: sku.name || existing.name,
+      description: sku.description !== undefined ? sku.description : existing.description,
+      weight: sku.weight !== undefined ? sku.weight : existing.weight,
+      unit: sku.unit || existing.unit
+    };
+
+    return this.http.put<ApiResponse<ProductSkuResponse>>(
+      `${environment.apiBaseUrl}/api/v1/product-skus`,
+      payload
+    ).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          const updatedSku = this.mapDtoToItem(response.data);
+          this.items.update(list => list.map(item => item.id === id ? updatedSku : item));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
   }
 
-  delete(id: string): void {
-    this.items.update(list => list.filter(item => item.id !== id));
+  /**
+   * Elimina un SKU del Backend.
+   */
+  delete(id: string): Observable<ApiResponse<null>> {
+    return this.http.delete<ApiResponse<null>>(
+      `${environment.apiBaseUrl}/api/v1/product-skus/${id}`
+    ).pipe(
+      tap(response => {
+        if (response.success) {
+          this.items.update(list => list.filter(item => item.id !== id));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
+  private mapDtoToItem(dto: ProductSkuResponse): ProductSku {
+    return {
+      id: dto.id,
+      clientId: dto.clientId,
+      clientName: dto.clientName,
+      code: dto.code,
+      name: dto.name,
+      description: dto.description,
+      weight: dto.weight,
+      unit: dto.unit,
+      version: dto.version,
+      createdAt: dto.createdAt,
+      updatedAt: dto.updatedAt
+    };
+  }
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    return throwError(() => error);
   }
 }
