@@ -50,6 +50,13 @@ export class AdminPanelComponent implements OnInit {
         console.error('Error al precargar organizaciones del backend:', err);
       }
     });
+
+    // Carga inicial de sucursales del usuario logueado en sesión
+    this.branchService.loadBranches().subscribe({
+      error: (err) => {
+        console.error('Error al precargar sucursales del backend:', err);
+      }
+    });
   }
 
   // Inyección de servicios
@@ -254,10 +261,22 @@ export class AdminPanelComponent implements OnInit {
           alert('Error al cargar la lista de organizaciones del backend: ' + (err.message || 'Error inesperado'));
         }
       });
+    } else if (moduleId === 'branches') {
+      this.branchService.loadBranches().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de sucursales del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (moduleId === 'clients') {
       this.clientService.loadClients().subscribe({
         error: (err) => {
           alert('Error al cargar la lista de clientes del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'sections') {
+      this.sectionService.loadSections().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de secciones del backend: ' + (err.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'users') {
@@ -461,23 +480,55 @@ export class AdminPanelComponent implements OnInit {
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
         this.formModel.orgName = org ? org.name : '';
         if (id) {
-          this.branchService.update(id, this.formModel);
-          this.auditLog('branches', id, 'UPDATE', null, this.formModel);
+          this.branchService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('branches', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.branchService.create(this.formModel);
-          this.auditLog('branches', 'new', 'CREATE', null, this.formModel);
+          this.branchService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('branches', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'sections') {
         if (!this.formModel.code || !this.formModel.name) throw new Error('Código y Nombre son requeridos.');
         const branch = this.branchService.branches().find(b => b.id === this.formModel.branchId);
         this.formModel.branchName = branch ? branch.name : '';
         if (id) {
-          this.sectionService.update(id, this.formModel);
-          this.auditLog('sections', id, 'UPDATE', null, this.formModel);
+          this.sectionService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('sections', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar la sección: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.sectionService.create(this.formModel);
-          this.auditLog('sections', 'new', 'CREATE', null, this.formModel);
+          this.sectionService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('sections', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear la sección: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'locations') {
         if (!this.formModel.zone) throw new Error('Zona es requerida.');
         const branch = this.branchService.branches().find(b => b.id === this.formModel.branchId);
@@ -616,11 +667,23 @@ export class AdminPanelComponent implements OnInit {
         }
       });
     } else if (module === 'branches') {
-      this.branchService.delete(id);
-      this.auditLog('branches', id, 'DELETE', null, null);
+      this.branchService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('branches', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'sections') {
-      this.sectionService.delete(id);
-      this.auditLog('sections', id, 'DELETE', null, null);
+      this.sectionService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('sections', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar la sección: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'locations') {
       this.locationService.delete(id);
       this.auditLog('locations', id, 'DELETE', null, null);
@@ -677,8 +740,17 @@ export class AdminPanelComponent implements OnInit {
   }
 
   protected toggleBranchStatus(id: string): void {
-    this.branchService.toggleStatus(id);
-    this.auditLog('branches', id, 'UPDATE', { desc: 'Toggle status' }, null);
+    const branch = this.branchService.branches().find(b => b.id === id);
+    const oldStatus = branch?.status;
+    const newStatus = oldStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    this.branchService.toggleStatus(id).subscribe({
+      next: () => {
+        this.auditLog('branches', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
+      },
+      error: (err: any) => {
+        alert('Error al cambiar el estado de la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected toggleClientStatus(id: string): void {
