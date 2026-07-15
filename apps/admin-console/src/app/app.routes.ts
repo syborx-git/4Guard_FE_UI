@@ -63,6 +63,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Inventario',
       },
 
+      // Layout y Ubicaciones (HU-127)
+      {
+        path: 'layout',
+        canActivate: [rbacGuard],
+        data: { module: 'layout' },
+        loadChildren: () =>
+          import('./features/layout/layout.routes').then((m) => m.layoutRoutes),
+        title: '4GUARD WMS — Gestión de Layout',
+      },
+
       // Recepción
       {
         path: 'receiving',

@@ -5,11 +5,20 @@
  * Rediseno premium: sidebar oscuro, Material Symbols, branch selector.
  */
 
-import { Component, inject, signal, computed, HostListener } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  HostListener,
+  OnInit,
+  OnDestroy,
+  PLATFORM_ID
+} from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
@@ -43,13 +52,34 @@ import { PasswordCollapseComponent } from '../password-collapse/password-collaps
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
 
+  private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
+
+  private clockIntervalId: ReturnType<typeof setInterval> | null = null;
+  private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
+  private refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
   protected isSidebarCollapsed = signal(false);
+
+  // ── Premium Live UI ─────────────────────────────────────────
+  protected readonly currentTime = signal('');
+  protected readonly currentDate = signal('');
+  protected readonly isDarkMode = signal(false);
+  protected readonly isHeaderRefreshing = signal(false);
+
+  protected readonly themeIcon = computed(() =>
+    this.isDarkMode() ? 'light_mode' : 'dark_mode'
+  );
+
+  protected readonly themeLabel = computed(() =>
+    this.isDarkMode() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
+  );
 
   // ── Profile dropdown & Change Password modal ──────────────
   protected readonly showProfileMenu = signal(false);
@@ -186,6 +216,7 @@ export class ShellComponent {
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
     { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
+    { label: 'Layout', route: '/layout', icon: 'shelves', module: 'layout' },
     { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
@@ -197,6 +228,99 @@ export class ShellComponent {
   protected readonly visibleNavItems = computed(() =>
     this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
   );
+
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    this.restoreTheme();
+    this.updateClock();
+
+    this.clockIntervalId = setInterval(() => {
+      this.updateClock();
+    }, 1000);
+
+    this.refreshIntervalId = setInterval(() => {
+      this.runHeaderRefreshAnimation();
+    }, 30000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.clockIntervalId) {
+      clearInterval(this.clockIntervalId);
+    }
+
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+    }
+
+    if (this.refreshTimeoutId) {
+      clearTimeout(this.refreshTimeoutId);
+    }
+  }
+
+  private updateClock(): void {
+    const now = new Date();
+
+    this.currentTime.set(
+      now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+    );
+
+    this.currentDate.set(
+      now.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      })
+    );
+  }
+
+  private runHeaderRefreshAnimation(): void {
+    this.isHeaderRefreshing.set(true);
+    this.lastUpdated.set('actualizando...');
+
+    if (this.refreshTimeoutId) {
+      clearTimeout(this.refreshTimeoutId);
+    }
+
+    this.refreshTimeoutId = setTimeout(() => {
+      this.isHeaderRefreshing.set(false);
+      this.lastUpdated.set('ahora');
+    }, 1400);
+  }
+
+  private restoreTheme(): void {
+    const savedTheme = localStorage.getItem('synexia-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldUseDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+
+    this.isDarkMode.set(shouldUseDark);
+    this.applyTheme(shouldUseDark);
+  }
+
+  protected toggleTheme(): void {
+    const nextTheme = !this.isDarkMode();
+
+    this.isDarkMode.set(nextTheme);
+    this.applyTheme(nextTheme);
+
+    localStorage.setItem(
+      'synexia-theme',
+      nextTheme ? 'dark' : 'light'
+    );
+  }
+
+  private applyTheme(isDark: boolean): void {
+    const root = this.document.documentElement;
+
+    root.classList.toggle('theme-dark', isDark);
+    root.classList.toggle('theme-light', !isDark);
+  }
 
   protected toggleSidebar(): void {
     this.isSidebarCollapsed.update((v) => !v);
