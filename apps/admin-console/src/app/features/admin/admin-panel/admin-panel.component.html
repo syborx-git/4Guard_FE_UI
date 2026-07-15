@@ -937,7 +937,7 @@
         <div class="form-grid">
           <div class="field-group col-6">
             <label class="field-group__label">Sucursal</label>
-            <select class="field-group__input select" [(ngModel)]="formModel.branchId">
+            <select class="field-group__input select" [(ngModel)]="formModel.branchId" (change)="onBranchChange(formModel.branchId)">
               @for (b of branchService.branches(); track b.id) {
               <option [value]="b.id">{{ b.name }}</option>
               }
@@ -946,7 +946,7 @@
           <div class="field-group col-6">
             <label class="field-group__label">Sección interna</label>
             <select class="field-group__input select" [(ngModel)]="formModel.sectionId">
-              @for (s of getSectionsForBranch(formModel.branchId); track s.id) {
+              @for (s of activeFormSections(); track s.id) {
               <option [value]="s.id">{{ s.name }} ({{ s.code }})</option>
               }
             </select>

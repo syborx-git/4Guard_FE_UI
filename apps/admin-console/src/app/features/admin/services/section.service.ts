@@ -96,11 +96,18 @@ export class SectionService {
    * Obtiene las secciones de una sucursal en específico de forma individual.
    */
   private loadSectionsForBranch(branchId: string): Observable<WarehouseSection[]> {
-    return this.http.get<ApiResponse<WarehouseSection[]>>(
-      `${environment.apiBaseUrl}/api/v1/warehouse-sections?branchId=${branchId}`
-    ).pipe(
+    return this.getSectionsByBranch(branchId).pipe(
       map(response => (response.success && response.data) ? response.data : []),
       catchError(() => of([])) // Prevenir que falle todo el flujo si una sucursal no responde
+    );
+  }
+
+  /**
+   * Obtiene las secciones de una sucursal en específico de forma individual (Público).
+   */
+  getSectionsByBranch(branchId: string): Observable<ApiResponse<WarehouseSection[]>> {
+    return this.http.get<ApiResponse<WarehouseSection[]>>(
+      `${environment.apiBaseUrl}/api/v1/warehouse-sections?branchId=${branchId}`
     );
   }
 
