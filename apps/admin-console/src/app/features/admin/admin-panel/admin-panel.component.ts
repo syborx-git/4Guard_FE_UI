@@ -1,7 +1,8 @@
 /**
  * @file admin-panel.component.ts
  * @description Panel central de administración de 4GUARD WMS (Admin Hub).
- * Orquesta 13 módulos JPA simulados mediante servicios separados e inyecciones de Signals.
+ * Orquesta 13 módulos JPA mediante servicios separados e inyecciones de Signals.
+ * El módulo de Clientes está integrado con el Backend mediante HTTP.
  */
 
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
@@ -253,6 +254,12 @@ export class AdminPanelComponent implements OnInit {
           alert('Error al cargar la lista de organizaciones del backend: ' + (err.message || 'Error inesperado'));
         }
       });
+    } else if (moduleId === 'clients') {
+      this.clientService.loadClients().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de clientes del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
     } else if (moduleId === 'users') {
       this.userAdminService.loadUsers().subscribe({
         error: (err) => {
@@ -347,6 +354,7 @@ export class AdminPanelComponent implements OnInit {
       const orgs = this.orgService.organizations();
       this.formModel = {
         orgId: orgs[0]?.id || '',
+        orgName: orgs[0]?.name || '',
         name: '',
         externalId: '',
         status: 'ACTIVE'
@@ -492,14 +500,30 @@ export class AdminPanelComponent implements OnInit {
       } else if (module === 'clients') {
         if (!this.formModel.name) throw new Error('Nombre del Cliente es requerido.');
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
-        this.formModel.orgName = org ? org.name : '';
+        this.formModel.orgName = org ? org.name : this.formModel.orgName;
         if (id) {
-          this.clientService.update(id, this.formModel);
-          this.auditLog('clients', id, 'UPDATE', null, this.formModel);
+          this.clientService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('clients', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar el cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.clientService.create(this.formModel);
-          this.auditLog('clients', 'new', 'CREATE', null, this.formModel);
+          this.clientService.create(this.formModel).subscribe({
+            next: (response: any) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('clients', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear el cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'skus') {
         if (!this.formModel.code || !this.formModel.name) throw new Error('Código SKU y Nombre comercial son requeridos.');
         const client = this.clientService.clients().find(c => c.id === this.formModel.clientId);
@@ -601,8 +625,14 @@ export class AdminPanelComponent implements OnInit {
       this.locationService.delete(id);
       this.auditLog('locations', id, 'DELETE', null, null);
     } else if (module === 'clients') {
-      this.clientService.delete(id);
-      this.auditLog('clients', id, 'DELETE', null, null);
+      this.clientService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('clients', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar el cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'skus') {
       this.skuService.delete(id);
       this.auditLog('skus', id, 'DELETE', null, null);
@@ -652,8 +682,17 @@ export class AdminPanelComponent implements OnInit {
   }
 
   protected toggleClientStatus(id: string): void {
-    this.clientService.toggleStatus(id);
-    this.auditLog('clients', id, 'UPDATE', { desc: 'Toggle status' }, null);
+    const client = this.clientService.clients().find(c => c.id === id);
+    const oldStatus = client?.status;
+    const newStatus = oldStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    this.clientService.toggleStatus(id).subscribe({
+      next: () => {
+        this.auditLog('clients', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
+      },
+      error: (err: any) => {
+        alert('Error al cambiar el estado del cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected toggleLocationBlock(loc: Location): void {

@@ -996,17 +996,10 @@
             <label class="field-group__label">Nombre comercial de Cliente (Owner)</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
           </div>
-          <div class="field-group col-6">
+          <div class="field-group col-12">
             <label class="field-group__label">ID de Integración Externa (ERP/SAP)</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.externalId"
               placeholder="Ej: SAP-CLI-901" maxlength="50">
-          </div>
-          <div class="field-group col-6">
-            <label class="field-group__label">Estatus Cliente</label>
-            <select class="field-group__input select" [(ngModel)]="formModel.status">
-              <option value="ACTIVE">Activo</option>
-              <option value="INACTIVE">Inactivo</option>
-            </select>
           </div>
         </div>
         }
