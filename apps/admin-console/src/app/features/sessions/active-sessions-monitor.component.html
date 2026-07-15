@@ -1,161 +1,386 @@
-<!-- active-sessions-monitor.component.html -->
-<div class="sessions-view">
-  
-  <!-- ═══════════════════════════════════════════════ -->
-  <!--  HEADER                                         -->
-  <!-- ═══════════════════════════════════════════════ -->
-  <div class="sessions-header">
-    <div class="sessions-title-area">
-      <div class="sessions-header-icon-wrap">
-        <span class="material-symbols-outlined">wifi_tethering</span>
+<div class="sessions-page">
+
+  <!-- ENCABEZADO PRINCIPAL -->
+  <header class="sessions-header">
+
+    <div class="sessions-header__content">
+
+      <div class="sessions-header__eyebrow">
+        <span class="material-symbols-outlined">
+          admin_panel_settings
+        </span>
+
+        <span>Security & Active Connections</span>
       </div>
-      <div class="sessions-title-text">
-        <h1>Sesiones Activas</h1>
-        <p>Monitoreo en tiempo real de las conexiones autenticadas al sistema 4GUARD WMS.</p>
-      </div>
-    </div>
-    
-    <div class="sessions-actions-area">
-      <!-- Contador de Sesiones -->
-      @if (!isLoading() && !errorState()) {
-        <div class="sessions-counter">
-          <div class="pulse-dot"></div>
-          <strong>{{ sessions().length }}</strong>
-          <span>Conexiones activas</span>
+
+      <div class="sessions-title-area">
+
+        <div class="sessions-header-icon-wrap">
+          <span class="material-symbols-outlined">
+            wifi_tethering
+          </span>
         </div>
+
+        <div class="sessions-title-text">
+          <h1>Sesiones Activas</h1>
+
+          <p>
+            Monitoreo en tiempo real de las conexiones autenticadas al sistema
+            4GUARD WMS.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="sessions-actions-area">
+
+      @if (!isLoading() && !errorState()) {
+      <div class="sessions-counter">
+
+        <span class="sessions-counter__dot"></span>
+
+        <strong>{{ sessions().length }}</strong>
+
+        <span>
+          {{ sessions().length === 1 ? 'conexión activa' : 'conexiones activas' }}
+        </span>
+
+      </div>
       }
-      
-      <!-- Botón de Actualizar -->
+
       <button type="button" class="btn-refresh" (click)="loadSessions()" [disabled]="isLoading()">
-        <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">sync</span>
-        <span>Actualizar</span>
+
+        <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">
+
+          sync
+        </span>
+
+        <span>
+          {{ isLoading() ? 'Actualizando...' : 'Actualizar' }}
+        </span>
+
       </button>
-    </div>
-  </div>
 
-  <!-- ═══════════════════════════════════════════════ -->
-  <!--  ESTADO: CARGANDO                               -->
-  <!-- ═══════════════════════════════════════════════ -->
-  @if (isLoading()) {
-    <div class="state-panel">
-      <div class="w-10 h-10 border-2 border-[#d4af37]/20 border-t-[#d4af37] rounded-full animate-spin mb-4" style="border-radius: 50%; width: 40px; height: 40px; border: 3px solid rgba(234, 195, 73, 0.15); border-top-color: #eac349; animation: spin 1s linear infinite;"></div>
-      <p style="text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; font-size: 11px; color: #958e98;">Consultando sesiones activas...</p>
     </div>
-  }
 
-  <!-- ═══════════════════════════════════════════════ -->
-  <!--  ESTADO: ERROR 403 — ACCESO RESTRINGIDO         -->
-  <!-- ═══════════════════════════════════════════════ -->
-  @if (errorState() === 'forbidden') {
-    <div class="state-panel">
-      <div class="state-panel-icon state-panel-icon--forbidden">
-        <span class="material-symbols-outlined">shield_lock</span>
-      </div>
-      <h2>Acceso Restringido</h2>
+  </header>
+
+  <!-- INFORMACIÓN DEMO -->
+  @if (!isLoading() && !errorState() && errorMessage()) {
+  <section class="demo-info-banner">
+
+    <div class="demo-info-banner__icon">
+      <span class="material-symbols-outlined">
+        info
+      </span>
+    </div>
+
+    <div class="demo-info-banner__content">
+      <strong>Modo de demostración activo</strong>
       <p>{{ errorMessage() }}</p>
-      <div class="state-panel-http">
-        <span>HTTP 403 — FORBIDDEN</span>
-      </div>
     </div>
+
+  </section>
   }
 
-  <!-- ═══════════════════════════════════════════════ -->
-  <!--  ESTADO: SIN SESIONES (ARRAY VACÍO)             -->
-  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ESTADO DE CARGA -->
+  @if (isLoading()) {
+  <section class="state-panel">
+
+    <div class="loading-spinner">
+      <span class="material-symbols-outlined">
+        sync
+      </span>
+    </div>
+
+    <span class="state-panel__eyebrow">
+      Consultando servidor de seguridad
+    </span>
+
+    <h2>Cargando sesiones activas</h2>
+
+    <p>
+      Estamos verificando las conexiones autenticadas y su información de
+      seguridad.
+    </p>
+
+  </section>
+  }
+
+  <!-- ERROR 403 -->
+  @if (errorState() === 'forbidden') {
+  <section class="state-panel">
+
+    <div class="state-panel-icon state-panel-icon--forbidden">
+      <span class="material-symbols-outlined">
+        shield_lock
+      </span>
+    </div>
+
+    <span class="state-panel__eyebrow state-panel__eyebrow--danger">
+      Seguridad y permisos
+    </span>
+
+    <h2>Acceso restringido</h2>
+
+    <p>
+      {{ errorMessage() }}
+    </p>
+
+    <div class="state-panel-http">
+      HTTP 403 · FORBIDDEN
+    </div>
+
+  </section>
+  }
+
+  <!-- ESTADO VACÍO -->
   @if (!isLoading() && !errorState() && sessions().length === 0) {
-    <div class="state-panel">
-      <div class="state-panel-icon state-panel-icon--empty">
-        <span class="material-symbols-outlined">wifi_off</span>
-      </div>
-      <h2>Sin sesiones activas</h2>
-      <p>No se encontraron conexiones activas en este momento. Las sesiones aparecerán aquí cuando los usuarios inicien sesión.</p>
+  <section class="state-panel">
+
+    <div class="state-panel-icon state-panel-icon--empty">
+      <span class="material-symbols-outlined">
+        wifi_off
+      </span>
     </div>
+
+    <span class="state-panel__eyebrow">
+      Nodo sin conexiones
+    </span>
+
+    <h2>Sin sesiones activas</h2>
+
+    <p>
+      No se encontraron conexiones activas en este momento. Las sesiones
+      aparecerán aquí cuando los usuarios inicien sesión.
+    </p>
+
+    <button type="button" class="state-panel__action" (click)="loadSessions()">
+
+      <span class="material-symbols-outlined">
+        refresh
+      </span>
+
+      <span>Volver a consultar</span>
+
+    </button>
+
+  </section>
   }
 
-  <!-- ═══════════════════════════════════════════════ -->
-  <!--  ESTADO: LISTA DE SESIONES                      -->
-  <!-- ═══════════════════════════════════════════════ -->
+  <!-- LISTA DE SESIONES -->
   @if (!isLoading() && !errorState() && sessions().length > 0) {
 
-    <!-- Banner informativo si estamos en modo demo -->
-    @if (errorMessage()) {
-      <div class="demo-info-banner">
-        <span class="material-symbols-outlined">info</span>
-        <p>{{ errorMessage() }}</p>
+  <section class="sessions-content">
+
+    <div class="sessions-content__header">
+
+      <div>
+        <span class="sessions-content__eyebrow">
+          Conexiones autenticadas
+        </span>
+
+        <h2>Monitor de actividad en tiempo real</h2>
       </div>
-    }
 
-    <!-- Bento Grid List -->
+      <div class="sessions-content__result">
+        <span class="material-symbols-outlined">
+          group
+        </span>
+
+        <span>
+          {{ sessions().length }}
+          {{ sessions().length === 1 ? 'usuario conectado' : 'usuarios conectados' }}
+        </span>
+      </div>
+
+    </div>
+
     <div class="sessions-list-container">
+
       @for (session of sessions(); track session.userId) {
-        
-        <!-- Tarjeta Bento Horizontal -->
-        <div class="session-bento-card">
-          
-          <!-- Columna 1: Identidad -->
-          <div class="col-identity">
-            <div class="avatar-circle">
-              {{ getInitials(session.fullName) }}
-            </div>
-            
-            <div class="identity-details">
-              <div class="identity-name-row">
-                <span class="user-fullname" [title]="session.fullName">{{ session.fullName }}</span>
-                <div class="badge-online">
-                  <div class="online-dot"></div>
-                  <span>ONLINE</span>
-                </div>
-              </div>
-              <span class="user-username-email">{{ getRoleLabel(session.role) }} &bull; {{ session.email }}</span>
-            </div>
+
+      <article class="session-card">
+
+        <!-- IDENTIDAD -->
+        <div class="session-card__identity">
+
+          <div class="avatar-circle">
+            {{ getInitials(session.fullName) }}
           </div>
 
-          <!-- Columna 2: Ubicación -->
-          <div class="col-location">
-            <span class="material-symbols-outlined">location_on</span>
-            <div class="location-details">
-              <span class="location-title">Ubicación</span>
-              <span class="location-branch" [title]="session.branchName">{{ session.branchName }}</span>
-              <span class="location-org" [title]="session.organizationName">{{ session.organizationName }}</span>
-            </div>
-          </div>
+          <div class="identity-details">
 
-          <!-- Columna 3: Red y Dispositivo -->
-          <div class="col-network">
-            <div class="network-ip-wrap">
-              <span class="material-symbols-outlined">lan</span>
-              <span class="network-ip">{{ session.ipAddress }}</span>
-            </div>
-            <div class="network-device-wrap">
-              <span class="material-symbols-outlined">devices</span>
-              <span class="network-device" [title]="parseUserAgent(session.userAgent)">{{ parseUserAgent(session.userAgent) }}</span>
-            </div>
-          </div>
+            <div class="identity-name-row">
 
-          <!-- Columna 4: Acciones -->
-          <div class="col-actions">
-            <div class="login-timestamp">
-              <span class="material-symbols-outlined">schedule</span>
-              <span>{{ formatDate(session.lastLoginAt) }}</span>
+              <h3 class="user-fullname" [title]="session.fullName">
+
+                {{ session.fullName }}
+              </h3>
+
+              <span class="badge-online">
+                <span class="online-dot"></span>
+                Online
+              </span>
+
             </div>
-            
-            <button type="button" class="btn-revoke" (click)="revokeSession(session)" title="Revocar sesión del usuario">
-              <span class="material-symbols-outlined">block</span>
-              <span>Revocar</span>
-            </button>
+
+            <span class="user-role">
+              {{ getRoleLabel(session.role) }}
+            </span>
+
+            <span class="user-email">
+              {{ session.email }}
+            </span>
+
           </div>
 
         </div>
 
+        <!-- UBICACIÓN -->
+        <div class="session-detail session-detail--location">
+
+          <div class="session-detail__icon">
+            <span class="material-symbols-outlined">
+              location_on
+            </span>
+          </div>
+
+          <div class="session-detail__content">
+
+            <span class="session-detail__label">
+              Ubicación
+            </span>
+
+            <strong [title]="session.branchName">
+              {{ session.branchName }}
+            </strong>
+
+            <span [title]="session.organizationName">
+              {{ session.organizationName }}
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- IP / NODO -->
+        <div class="session-detail">
+
+          <div class="session-detail__icon">
+            <span class="material-symbols-outlined">
+              lan
+            </span>
+          </div>
+
+          <div class="session-detail__content">
+
+            <span class="session-detail__label">
+              IP / Nodo
+            </span>
+
+            <strong class="session-detail__mono">
+              {{ session.ipAddress }}
+            </strong>
+
+            <span>
+              Conexión autenticada
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- DISPOSITIVO -->
+        <div class="session-detail">
+
+          <div class="session-detail__icon">
+            <span class="material-symbols-outlined">
+              devices
+            </span>
+          </div>
+
+          <div class="session-detail__content">
+
+            <span class="session-detail__label">
+              Dispositivo
+            </span>
+
+            <strong [title]="parseUserAgent(session.userAgent)">
+              {{ parseUserAgent(session.userAgent) }}
+            </strong>
+
+            <span>
+              Sesión segura JWT
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- FECHA Y ACCIÓN -->
+        <div class="session-card__actions">
+
+          <div class="login-timestamp">
+
+            <span class="material-symbols-outlined">
+              schedule
+            </span>
+
+            <div>
+              <span>Última conexión</span>
+
+              <strong>
+                {{ formatDate(session.lastLoginAt) }}
+              </strong>
+            </div>
+
+          </div>
+
+          <button type="button" class="btn-revoke" (click)="revokeSession(session)"
+            [attr.aria-label]="'Revocar sesión de ' + session.fullName">
+
+            <span class="material-symbols-outlined">
+              logout
+            </span>
+
+            <span>Revocar</span>
+
+          </button>
+
+        </div>
+
+      </article>
+
       }
+
     </div>
+
+    <!-- FOOTER TÉCNICO -->
+    <footer class="sessions-footer">
+
+      <div class="sessions-footer__status">
+
+        <span class="sessions-footer__dot"></span>
+
+        <span>Monitoreo activo</span>
+
+        <span class="sessions-footer__separator">•</span>
+
+        <span>Validación JWT habilitada</span>
+
+      </div>
+
+      <span class="sessions-footer__version">
+        4GUARD WMS · ACTIVE SESSION MONITOR
+      </span>
+
+    </footer>
+
+  </section>
+
   }
 
 </div>
-
-<style>
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>

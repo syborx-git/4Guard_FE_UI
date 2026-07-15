@@ -4,12 +4,12 @@
 // ============================================================
 
 // ── 1. Abstracts (sin output CSS — solo vars/mixins/funciones) 
-@use 'abstracts/variables'  as *;
+@use 'abstracts/variables' as *;
 @use 'abstracts/typography' as *;
-@use 'abstracts/spacing'    as *;
-@use 'abstracts/mixins'     as *;
+@use 'abstracts/spacing' as *;
+@use 'abstracts/mixins' as *;
 @use 'abstracts/animations' as *;
-@use 'abstracts/colors'     as *;
+@use 'abstracts/colors' as *;
 
 // ── 2. Tema oscuro — custom properties CSS globales ──────────
 @use 'themes/dark';
@@ -59,26 +59,49 @@ body {
 
 // ── 6. Tipografía base ───────────────────────────────────────
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: $font-display;
   font-weight: $fw-bold;
   line-height: $lh-tight;
   color: $text-primary;
 }
 
-h4, h5, h6 {
+h4,
+h5,
+h6 {
   font-family: $font-ui;
   font-weight: $fw-semibold;
   line-height: $lh-snug;
   color: $text-primary;
 }
 
-h1 { font-size: $text-4xl; letter-spacing: $ls-tight; }
-h2 { font-size: $text-3xl; letter-spacing: $ls-tight; }
-h3 { font-size: $text-2xl; }
-h4 { font-size: $text-xl; }
-h5 { font-size: $text-lg; }
-h6 { font-size: $text-md; }
+h1 {
+  font-size: $text-4xl;
+  letter-spacing: $ls-tight;
+}
+
+h2 {
+  font-size: $text-3xl;
+  letter-spacing: $ls-tight;
+}
+
+h3 {
+  font-size: $text-2xl;
+}
+
+h4 {
+  font-size: $text-xl;
+}
+
+h5 {
+  font-size: $text-lg;
+}
+
+h6 {
+  font-size: $text-md;
+}
 
 p {
   color: $text-secondary;
@@ -91,12 +114,21 @@ a {
   text-decoration: none;
   transition: color $transition-fast;
 
-  &:hover { color: $gold-light; }
+  &:hover {
+    color: $gold-light;
+  }
 }
 
-strong, b { font-weight: $fw-semibold; color: $text-primary; }
+strong,
+b {
+  font-weight: $fw-semibold;
+  color: $text-primary;
+}
 
-code, kbd, samp, pre {
+code,
+kbd,
+samp,
+pre {
   @include mono-text;
   background: $surface-elevated;
   padding: 2px 6px;
@@ -117,21 +149,46 @@ html {
 
 // ── 9. Utilidades rápidas ────────────────────────────────────
 
-.gold-text       { color: $gold-primary !important; }
-.gold-gradient   { @include gold-gradient-text; }
-.text-primary    { color: $text-primary !important; }
-.text-secondary  { color: $text-secondary !important; }
-.text-muted      { color: $text-tertiary !important; }
-.text-danger     { color: $danger !important; }
-.text-success    { color: $success !important; }
-.text-warning    { color: $warning !important; }
+.gold-text {
+  color: $gold-primary !important;
+}
+
+.gold-gradient {
+  @include gold-gradient-text;
+}
+
+.text-primary {
+  color: $text-primary !important;
+}
+
+.text-secondary {
+  color: $text-secondary !important;
+}
+
+.text-muted {
+  color: $text-tertiary !important;
+}
+
+.text-danger {
+  color: $danger !important;
+}
+
+.text-success {
+  color: $success !important;
+}
+
+.text-warning {
+  color: $warning !important;
+}
 
 .sr-only {
   position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-  clip: rect(0,0,0,0);
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
 }
@@ -172,4 +229,385 @@ html {
 // ── 11. Animaciones de entrada de página ─────────────────────
 .page-enter {
   @include animate-enter;
+}
+
+// ============================================================
+// 12. SYNEXIA THEME ENGINE — GLOBAL RUNTIME STYLES
+// ============================================================
+
+html,
+body {
+  background: var(--app-bg);
+  color: var(--text-primary);
+  transition:
+    background-color var(--theme-transition),
+    background var(--theme-transition),
+    color var(--theme-transition);
+}
+
+body {
+  background:
+    radial-gradient(circle at top right,
+      color-mix(in srgb, var(--gold) 8%, transparent),
+      transparent 30rem),
+    linear-gradient(180deg,
+      var(--app-bg-start),
+      var(--app-bg-end));
+}
+
+/* Transiciones globales discretas */
+
+button,
+input,
+textarea,
+select,
+table,
+thead,
+tbody,
+tr,
+th,
+td,
+header,
+main,
+section,
+article,
+aside,
+nav,
+footer,
+[class*='card'],
+[class*='panel'],
+[class*='modal'],
+[class*='table'],
+[class*='header'] {
+  transition:
+    background-color var(--theme-transition),
+    background var(--theme-transition),
+    border-color var(--theme-transition),
+    color var(--theme-transition),
+    box-shadow var(--theme-transition);
+}
+
+/* Superficies reutilizables */
+
+.synexia-surface {
+  color: var(--text-primary);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+.synexia-glass,
+.liquid-glass {
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+}
+
+.synexia-glass--strong,
+.liquid-glass-strong {
+  background: var(--glass-bg-strong);
+}
+
+/* Hover reutilizable */
+
+.hover-lift {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: var(--gold-border);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* Inputs globales compatibles con tema */
+
+input,
+textarea,
+select {
+  color: var(--text-primary);
+  caret-color: var(--gold);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* Selección de texto */
+
+::selection {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--gold) 24%, transparent);
+}
+
+/* Scrollbar */
+
+html {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Animaciones globales reutilizables */
+
+.animate-fade-up {
+  animation: synexia-fade-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+  animation: synexia-fade-in 260ms ease both;
+}
+
+.animate-soft-pulse {
+  animation: synexia-soft-pulse 2.2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: synexia-float 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    background:
+      linear-gradient(110deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0.12) 46%,
+        transparent 72%);
+    transform: translateX(-120%);
+    animation: synexia-shimmer 3.8s ease-in-out infinite;
+  }
+}
+
+@keyframes synexia-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes synexia-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes synexia-soft-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes synexia-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes synexia-shimmer {
+
+  0%,
+  60% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Accesibilidad */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/*======================================================
+Glass Components
+======================================================*/
+
+.glass {
+
+  background: rgba(255, 255, 255, .65);
+
+  backdrop-filter: blur(24px) saturate(180%);
+
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+
+  border: 1px solid rgba(255, 255, 255, .45);
+
+}
+
+.glass-hover {
+
+  transition: .30s cubic-bezier(.2, .8, .2, 1);
+
+}
+
+.glass-hover:hover {
+
+  transform: translateY(-3px);
+
+  box-shadow:
+
+    0 24px 45px rgba(25, 35, 58, .10);
+
+}
+
+.live-dot {
+
+  width: 10px;
+
+  height: 10px;
+
+  border-radius: 50%;
+
+  background: #3dbb6c;
+
+  animation: pulseSoft 2s infinite;
+
+}
+
+.shimmer {
+
+  position: relative;
+
+  overflow: hidden;
+
+}
+
+.shimmer::after {
+
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+
+  left: -150%;
+
+  width: 80px;
+
+  height: 100%;
+
+  background:
+
+    linear-gradient(90deg,
+
+      transparent,
+
+      rgba(255, 255, 255, .65),
+
+      transparent);
+
+  animation:
+
+    glassSweep 6s infinite;
+
+}
+
+.premium-card {
+
+  animation: fadeSlide .45s ease;
+
+  transition: .28s;
+
+}
+
+.premium-card:hover {
+
+  transform:
+
+    translateY(-4px);
+
+}
+
+.premium-icon {
+
+  transition: .30s;
+
+}
+
+.premium-icon:hover {
+
+  transform:
+
+    rotate(10deg) scale(1.12);
+
+}
+
+::-webkit-scrollbar {
+
+  width: 10px;
+
+  height: 10px;
+
+}
+
+::-webkit-scrollbar-thumb {
+
+  background:
+
+    linear-gradient(180deg,
+
+      #c7a64a,
+
+      #d8b55a);
+
+  border-radius: 100px;
+
+}
+
+::-webkit-scrollbar-track {
+
+  background: transparent;
+
 }

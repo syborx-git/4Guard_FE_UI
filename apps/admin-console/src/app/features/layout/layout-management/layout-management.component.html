@@ -1,0 +1,844 @@
+<!-- apps/admin-console/.../layout/layout-management/layout-management.component.html -->
+<!-- HU-127 — Gestión de Layout y Ubicaciones -->
+
+<div class="lm-page" aria-label="Gestión de Layout y Ubicaciones">
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER                                                                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- HEADER PREMIUM — SYNEXIA BLUEPRINTS                            -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <header class="lm-header lm-header--premium">
+
+    <div class="lm-header__main">
+
+      <!-- Identidad del módulo -->
+      <div class="lm-header__info">
+
+        <div class="lm-header__eyebrow">
+          <span>Blueprints &amp; Physical Architecture</span>
+          <span class="lm-header__live-dot" aria-hidden="true"></span>
+        </div>
+
+        <div class="lm-header__title-row">
+
+          <div class="lm-header__icon-wrap">
+            <span class="material-symbols-outlined lm-header__icon" aria-hidden="true">
+              map
+            </span>
+          </div>
+
+          <div class="lm-header__text">
+            <h1 class="lm-header__title">
+              Gestión de Layout y Ubicaciones
+            </h1>
+
+            <p class="lm-header__subtitle">
+              Administra la estructura física del almacén y configura las
+              ubicaciones que utilizará toda la operación logística.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="lm-kpis" role="list" aria-label="Métricas del almacén">
+
+        <!-- Total -->
+        <div class="lm-kpi lm-kpi--total" role="listitem" id="kpi-total">
+          <span class="lm-kpi__value">
+            {{ kpiTotal() }}
+          </span>
+
+          <span class="lm-kpi__label">
+            Total
+          </span>
+        </div>
+
+        <!-- Activas -->
+        <div class="lm-kpi lm-kpi--active" role="listitem" id="kpi-active">
+          <span class="lm-kpi__dot" aria-hidden="true"></span>
+
+          <span class="lm-kpi__value">
+            {{ kpiActive() }}
+          </span>
+
+          <span class="lm-kpi__label">
+            Activas
+          </span>
+        </div>
+
+        <!-- Bloqueadas -->
+        <div class="lm-kpi lm-kpi--blocked" role="listitem" id="kpi-blocked">
+          <span class="lm-kpi__dot" aria-hidden="true"></span>
+
+          <span class="lm-kpi__value">
+            {{ kpiBlocked() }}
+          </span>
+
+          <span class="lm-kpi__label">
+            Bloqueadas
+          </span>
+        </div>
+
+        <!-- Mantenimiento -->
+        <div class="lm-kpi lm-kpi--maintenance" role="listitem" id="kpi-maintenance">
+
+          <span class="lm-kpi__dot" aria-hidden="true"></span>
+
+          <span class="lm-kpi__value">
+            {{ kpiMaintenance() }}
+          </span>
+
+          <span class="lm-kpi__label">
+            Mantenimiento
+          </span>
+        </div>
+
+        <!-- Capacidad -->
+        <div class="lm-kpi lm-kpi--occupancy" role="listitem" id="kpi-occupancy">
+
+          @if (kpiOccupancy() !== null) {
+          <span class="lm-kpi__value">
+            {{ kpiOccupancy() }}%
+          </span>
+          } @else {
+          <span class="lm-kpi__value lm-kpi__value--na">
+            N/D
+          </span>
+          }
+
+          <span class="lm-kpi__label">
+            Cap. utilizada
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Acción principal -->
+    <div class="lm-header__actions">
+      <button class="btn btn--primary lm-header__btn-new lm-header__btn-new--premium" id="btn-new-location"
+        type="button" (click)="onNewLocation()" [disabled]="isLoading()" aria-label="Crear nueva ubicación">
+
+        <span class="material-symbols-outlined" aria-hidden="true">
+          add
+        </span>
+
+        <span>Nueva Ubicación</span>
+      </button>
+    </div>
+
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- BODY: Explorador + Editor                                              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="lm-body">
+
+    <!-- ── PANEL IZQUIERDO: Explorador ────────────────────────────────────── -->
+    <aside class="lm-explorer" aria-label="Explorador de ubicaciones"
+      [attr.data-count]="locationTree().length + ' grupos'">
+
+      <!-- Buscador ──────────────────────────────────────────────────────── -->
+      <div class="lm-search">
+        <div class="search-box">
+          <span class="material-symbols-outlined search-box__icon" aria-hidden="true">search</span>
+          <input id="location-search" class="form-input" type="search" placeholder="Buscar por código, nombre o zona…"
+            [value]="searchTerm()" (input)="onSearch($event)" autocomplete="off" aria-label="Buscar ubicaciones" />
+          @if (searchTerm()) {
+          <button class="search-box__clear" type="button" (click)="onClearSearch()" aria-label="Limpiar búsqueda">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Filtros ───────────────────────────────────────────────────────── -->
+      <div class="lm-filters">
+        <select id="filter-zone" class="form-select lm-filters__select" (change)="onZoneFilterChange($event)"
+          aria-label="Filtrar por zona">
+          <option value="ALL">Todas las zonas</option>
+          @for (zone of zones(); track zone.id) {
+          <option [value]="zone.id">{{ zone.name }}</option>
+          }
+        </select>
+
+        <select id="filter-status" class="form-select lm-filters__select" (change)="onStatusFilterChange($event)"
+          aria-label="Filtrar por estado">
+          <option value="ALL">Todos los estados</option>
+          @for (st of allStatuses; track st) {
+          <option [value]="st">{{ LOCATION_STATUS_LABELS[st] }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Árbol jerárquico ─────────────────────────────────────────────── -->
+      @if (isLoading()) {
+      <!-- Skeleton del árbol -->
+      <div class="lm-tree-skeleton" aria-busy="true" aria-label="Cargando ubicaciones">
+        @for (i of [1,2,3,4,5,6]; track i) {
+        <div class="lm-skeleton-row" [style.margin-left.px]="i > 2 ? 16 : 0"></div>
+        }
+      </div>
+      } @else if (locationTree().length === 0) {
+      <div class="lm-explorer__empty">
+        <span class="material-symbols-outlined lm-explorer__empty-icon" aria-hidden="true">
+          search_off
+        </span>
+        <p>Sin resultados para la búsqueda.</p>
+        @if (searchTerm()) {
+        <button class="btn btn--ghost btn--sm" type="button" (click)="onClearSearch()">
+          Limpiar filtros
+        </button>
+        }
+      </div>
+      } @else {
+      <nav class="lm-tree" role="tree" aria-label="Árbol de ubicaciones">
+        @for (zoneNode of locationTree(); track trackByNodeId($index, zoneNode)) {
+
+        <!-- Nodo Zona ──────────────────────────────────────────────── -->
+        <div class="lm-tree-zone" role="treeitem" [attr.aria-expanded]="zoneNode.isExpanded">
+          <button class="lm-tree-node lm-tree-node--zone" type="button" (click)="onToggleNode(zoneNode.id)"
+            [attr.aria-label]="zoneNode.label + ', ' + zoneNode.count + ' ubicaciones'">
+            <span class="lm-tree-node__chevron material-symbols-outlined"
+              [class.lm-tree-node__chevron--open]="zoneNode.isExpanded" aria-hidden="true">chevron_right</span>
+            <span class="material-symbols-outlined lm-tree-node__zone-icon" aria-hidden="true">
+              warehouse
+            </span>
+            <span class="lm-tree-node__label">{{ zoneNode.label }}</span>
+            <span class="badge badge--subtle lm-tree-node__badge">{{ zoneNode.count }}</span>
+            <!-- Resumen de estados -->
+            <span class="lm-tree-node__status-dots">
+              @if (zoneNode.statusSummary.blocked > 0) {
+              <span class="lm-dot lm-dot--blocked" [attr.title]="zoneNode.statusSummary.blocked + ' bloqueadas'">
+              </span>
+              }
+              @if (zoneNode.statusSummary.maintenance > 0) {
+              <span class="lm-dot lm-dot--maintenance"
+                [attr.title]="zoneNode.statusSummary.maintenance + ' en mantenimiento'">
+              </span>
+              }
+            </span>
+          </button>
+
+          @if (zoneNode.isExpanded) {
+          <div class="lm-tree-children" role="group">
+            @for (child of zoneNode.children; track trackByNodeId($index, child)) {
+
+            @if (child.level === 'leaf') {
+            <!-- Hoja directa bajo zona (sin pasillo ni bahía) ── -->
+            <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: child, depth: 1 }">
+            </ng-container>
+            }
+
+            @if (child.level === 'aisle') {
+            <!-- Nodo Pasillo ──────────────────────────────────── -->
+            <div class="lm-tree-aisle" role="treeitem" [attr.aria-expanded]="child.isExpanded">
+              <button class="lm-tree-node lm-tree-node--aisle" type="button" (click)="onToggleNode(child.id)"
+                [attr.aria-label]="child.label + ', ' + child.count + ' ubicaciones'">
+                <span class="lm-tree-node__indent"></span>
+                <span class="lm-tree-node__chevron material-symbols-outlined"
+                  [class.lm-tree-node__chevron--open]="child.isExpanded" aria-hidden="true">chevron_right</span>
+                <span class="lm-tree-node__label">{{ child.label }}</span>
+                <span class="badge badge--subtle lm-tree-node__badge">{{ child.count }}</span>
+                <span class="lm-tree-node__status-dots">
+                  @if (child.statusSummary.blocked > 0) {
+                  <span class="lm-dot lm-dot--blocked"></span>
+                  }
+                  @if (child.statusSummary.maintenance > 0) {
+                  <span class="lm-dot lm-dot--maintenance"></span>
+                  }
+                </span>
+              </button>
+
+              @if (child.isExpanded) {
+              <div class="lm-tree-children" role="group">
+                @for (bayOrLeaf of child.children; track trackByNodeId($index, bayOrLeaf)) {
+
+                @if (bayOrLeaf.level === 'leaf') {
+                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: bayOrLeaf, depth: 2 }">
+                </ng-container>
+                }
+
+                @if (bayOrLeaf.level === 'bay') {
+                <!-- Nodo Bahía ──────────────────────── -->
+                <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="bayOrLeaf.isExpanded">
+                  <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(bayOrLeaf.id)"
+                    [attr.aria-label]="bayOrLeaf.label + ', ' + bayOrLeaf.count + ' ubicaciones'">
+                    <span class="lm-tree-node__indent"></span>
+                    <span class="lm-tree-node__indent"></span>
+                    <span class="lm-tree-node__chevron material-symbols-outlined"
+                      [class.lm-tree-node__chevron--open]="bayOrLeaf.isExpanded" aria-hidden="true">chevron_right</span>
+                    <span class="lm-tree-node__label">{{ bayOrLeaf.label }}</span>
+                    <span class="badge badge--subtle lm-tree-node__badge">{{ bayOrLeaf.count }}</span>
+                  </button>
+
+                  @if (bayOrLeaf.isExpanded) {
+                  <div class="lm-tree-children" role="group">
+                    @for (leaf of bayOrLeaf.children; track trackByNodeId($index, leaf)) {
+                    <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: leaf, depth: 3 }">
+                    </ng-container>
+                    }
+                  </div>
+                  }
+                </div>
+                }
+                }
+              </div>
+              }
+            </div>
+            }
+
+            @if (child.level === 'bay') {
+            <!-- Bahía directa bajo zona (sin pasillo) ────────── -->
+            <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="child.isExpanded">
+              <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(child.id)"
+                [attr.aria-label]="child.label">
+                <span class="lm-tree-node__indent"></span>
+                <span class="lm-tree-node__chevron material-symbols-outlined"
+                  [class.lm-tree-node__chevron--open]="child.isExpanded" aria-hidden="true">chevron_right</span>
+                <span class="lm-tree-node__label">{{ child.label }}</span>
+                <span class="badge badge--subtle lm-tree-node__badge">{{ child.count }}</span>
+              </button>
+              @if (child.isExpanded) {
+              <div class="lm-tree-children" role="group">
+                @for (leaf of child.children; track trackByNodeId($index, leaf)) {
+                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: leaf, depth: 2 }">
+                </ng-container>
+                }
+              </div>
+              }
+            </div>
+            }
+
+            }
+          </div>
+          }
+        </div>
+        }
+      </nav>
+      }
+
+      <!-- Botón Nueva Ubicación secundario (dentro del explorador) ─────── -->
+      <div class="lm-explorer__footer">
+        <button class="btn btn--secondary btn--sm" id="btn-new-location-explorer" type="button"
+          (click)="onNewLocation()" [disabled]="isLoading()">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          Nueva Ubicación
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── PANEL DERECHO: Editor ───────────────────────────────────────────── -->
+    <main class="lm-editor" aria-label="Editor de ubicación">
+
+      <!-- Estado vacío — sin selección ────────────────────────────────── -->
+      @if (!selectedLoc() && !isCreating()) {
+      <div class="lm-empty-state">
+        <div class="lm-empty-state__icon-wrap">
+          <span class="material-symbols-outlined lm-empty-state__icon" aria-hidden="true">
+            shelves
+          </span>
+        </div>
+        <h2 class="lm-empty-state__title">Selecciona una ubicación</h2>
+        <p class="lm-empty-state__desc">
+          Elige una ubicación del explorador para ver y editar sus detalles,<br>
+          o crea una nueva para comenzar a configurar el almacén.
+        </p>
+        <button class="btn btn--primary" id="btn-new-location-empty" type="button" (click)="onNewLocation()">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          Nueva Ubicación
+        </button>
+      </div>
+      }
+
+      <!-- Formulario de edición / creación ───────────────────────────── -->
+      @if (selectedLoc() || isCreating()) {
+      <div class="lm-form-container">
+
+        <!-- Encabezado del editor ─────────────────────────────────── -->
+        <div class="lm-form-header">
+          <div class="lm-form-header__info">
+            @if (isCreating()) {
+            <span class="lm-form-header__tag lm-form-header__tag--new">
+              <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+              Nueva ubicación
+            </span>
+            <h2 class="lm-form-header__title">Configurar nueva ubicación</h2>
+            } @else {
+            <span class="lm-form-header__code">{{ selectedLoc()?.code }}</span>
+            <h2 class="lm-form-header__title">{{ selectedLoc()?.name }}</h2>
+            <span class="lm-status-chip" [class]="getStatusClass(selectedLoc()!.status)">
+              <span class="material-symbols-outlined lm-status-chip__icon" aria-hidden="true">
+                {{ getStatusIcon(selectedLoc()!.status) }}
+              </span>
+              {{ LOCATION_STATUS_LABELS[selectedLoc()!.status] }}
+            </span>
+            }
+          </div>
+          @if (isDirty()) {
+          <span class="lm-form-header__dirty-badge">
+            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+            Sin guardar
+          </span>
+          }
+        </div>
+
+        <!-- Error de guardado ─────────────────────────────────────── -->
+        @if (saveError()) {
+        <div class="lm-save-error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <span>{{ saveError() }}</span>
+        </div>
+        }
+
+        <!-- Formulario ───────────────────────────────────────────── -->
+        <form [formGroup]="editForm" (change)="onFormChange()" (ngSubmit)="onSave()" class="lm-form" novalidate
+          id="location-edit-form">
+
+          <!-- ── Sección: Identificación ─────────────────────────── -->
+          <section class="lm-form-section">
+            <h3 class="lm-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+              Identificación
+            </h3>
+            <div class="lm-form-grid lm-form-grid--2">
+
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-code">Código</label>
+                <input id="f-code" class="form-input" [class.is-error]="hasError('code')" formControlName="code"
+                  placeholder="Ej. PA-B01-R1-N1" autocomplete="off" style="text-transform: uppercase;" />
+                @if (hasError('code')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('code') }}
+                </span>
+                } @else {
+                <span class="form-hint">Solo mayúsculas, números y guiones.</span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-name">Nombre</label>
+                <input id="f-name" class="form-input" [class.is-error]="hasError('name')" formControlName="name"
+                  placeholder="Ej. Pasillo A – Bahía 01 – Rack 1" />
+                @if (hasError('name')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('name') }}
+                </span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-warehouse">Almacén</label>
+                <input id="f-warehouse" class="form-input" formControlName="warehouseName" readonly
+                  aria-readonly="true" />
+                <span class="form-hint">Almacén asignado al contexto de sesión.</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-zone">Zona</label>
+                <select id="f-zone" class="form-select" [class.is-error]="hasError('zoneId')" formControlName="zoneId"
+                  (change)="onZoneChange($event)">
+                  <option value="" disabled>Selecciona una zona</option>
+                  @for (zone of zones(); track zone.id) {
+                  <option [value]="zone.id">{{ zone.name }}</option>
+                  }
+                </select>
+                @if (hasError('zoneId')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('zoneId') }}
+                </span>
+                }
+              </div>
+            </div>
+          </section>
+
+          <!-- ── Sección: Coordenadas Físicas ────────────────────── -->
+          <section class="lm-form-section">
+            <h3 class="lm-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
+              Coordenadas Físicas
+            </h3>
+            <p class="lm-form-section__hint">
+              Completa solo los campos que aplican según el tipo de ubicación.
+            </p>
+            <div class="lm-form-grid lm-form-grid--5">
+              <div class="form-group">
+                <label class="form-label" for="f-aisle">Pasillo</label>
+                <input id="f-aisle" class="form-input" formControlName="aisle" placeholder="A, B…"
+                  style="text-transform: uppercase;" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-bay">Bahía</label>
+                <input id="f-bay" class="form-input" formControlName="bay" placeholder="01, 02…" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-rack">Rack</label>
+                <input id="f-rack" class="form-input" formControlName="rack" placeholder="R1, R2…" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-level">Nivel</label>
+                <input id="f-level" class="form-input" formControlName="level" placeholder="N1, N2…" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-position">Posición</label>
+                <input id="f-position" class="form-input" formControlName="position" placeholder="P1, P2…" />
+              </div>
+            </div>
+          </section>
+
+          <!-- ── Sección: Clasificación Logística ────────────────── -->
+          <section class="lm-form-section">
+            <h3 class="lm-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">category</span>
+              Clasificación Logística
+            </h3>
+            <div class="lm-form-grid lm-form-grid--2">
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-type">Tipo de Ubicación</label>
+                <select id="f-type" class="form-select" [class.is-error]="hasError('locationType')"
+                  formControlName="locationType">
+                  <option value="" disabled>Selecciona un tipo</option>
+                  @for (t of locationTypes; track t) {
+                  <option [value]="t">{{ LOCATION_TYPE_LABELS[t] }}</option>
+                  }
+                </select>
+                @if (hasError('locationType')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('locationType') }}
+                </span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-function">Función Logística</label>
+                <select id="f-function" class="form-select" [class.is-error]="hasError('logisticFunction')"
+                  formControlName="logisticFunction">
+                  <option value="" disabled>Selecciona una función</option>
+                  @for (fn of logisticFunctions; track fn) {
+                  <option [value]="fn">{{ LOGISTIC_FUNCTION_LABELS[fn] }}</option>
+                  }
+                </select>
+                @if (hasError('logisticFunction')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('logisticFunction') }}
+                </span>
+                }
+              </div>
+            </div>
+          </section>
+
+          <!-- ── Sección: Capacidad ──────────────────────────────── -->
+          <section class="lm-form-section">
+            <h3 class="lm-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">straighten</span>
+              Capacidad
+            </h3>
+            <div class="lm-form-grid lm-form-grid--2">
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-capacity">
+                  Capacidad Máxima
+                </label>
+                <input id="f-capacity" class="form-input" type="number" min="1"
+                  [class.is-error]="hasError('maxCapacity')" formControlName="maxCapacity" placeholder="Ej. 4" />
+                @if (hasError('maxCapacity')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('maxCapacity') }}
+                </span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label--required" for="f-unit">Unidad de Capacidad</label>
+                <select id="f-unit" class="form-select" [class.is-error]="hasError('capacityUnit')"
+                  formControlName="capacityUnit">
+                  <option value="" disabled>Selecciona una unidad</option>
+                  @for (u of capacityUnits; track u) {
+                  <option [value]="u">{{ CAPACITY_UNIT_LABELS[u] }}</option>
+                  }
+                </select>
+                @if (hasError('capacityUnit')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('capacityUnit') }}
+                </span>
+                }
+              </div>
+            </div>
+
+            <!-- Ocupación — SOLO LECTURA ──────────────────────────── -->
+            @if (!isCreating() && selectedLoc()?.currentOccupancy !== undefined) {
+            <div class="lm-occupancy-panel" role="region" aria-label="Ocupación actual">
+              <div class="lm-occupancy-panel__label">
+                <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+                <span>Ocupación actual</span>
+                <span class="lm-readonly-badge">Solo lectura</span>
+              </div>
+              <div class="lm-occupancy-stats">
+                <div class="lm-occ-stat">
+                  <span class="lm-occ-stat__value">{{ selectedLoc()?.currentOccupancy }}</span>
+                  <span class="lm-occ-stat__label">Ocupadas</span>
+                </div>
+                <div class="lm-occ-stat">
+                  <span class="lm-occ-stat__value" [class]="getOccupancyClass(selectedLoc()?.occupancyPercentage)">
+                    {{ selectedLoc()?.occupancyPercentage }}%
+                  </span>
+                  <span class="lm-occ-stat__label">Uso</span>
+                </div>
+                <div class="lm-occ-stat">
+                  <span class="lm-occ-stat__value">{{ selectedLoc()?.availableCapacity }}</span>
+                  <span class="lm-occ-stat__label">Disponibles</span>
+                </div>
+              </div>
+              <!-- Barra de progreso de ocupación -->
+              <div class="lm-occ-bar" role="progressbar" [attr.aria-valuenow]="selectedLoc()?.occupancyPercentage"
+                aria-valuemin="0" aria-valuemax="100">
+                <div class="lm-occ-bar__fill" [class]="getOccupancyClass(selectedLoc()?.occupancyPercentage)"
+                  [style.width.%]="selectedLoc()?.occupancyPercentage ?? 0">
+                </div>
+              </div>
+            </div>
+            }
+          </section>
+
+          <!-- ── Sección: Configuración ──────────────────────────── -->
+          <section class="lm-form-section">
+            <h3 class="lm-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+              Configuración
+            </h3>
+            <div class="lm-form-grid lm-form-grid--1">
+              <div class="form-group">
+                <label class="lm-toggle-label" for="f-storage-allowed">
+                  <div class="lm-toggle" [class.lm-toggle--on]="editForm.value.isStorageAllowed">
+                    <input id="f-storage-allowed" type="checkbox" formControlName="isStorageAllowed"
+                      class="lm-toggle__input" (change)="onFormChange()" />
+                    <span class="lm-toggle__track" aria-hidden="true">
+                      <span class="lm-toggle__thumb"></span>
+                    </span>
+                  </div>
+                  <span class="lm-toggle-label__text">
+                    Permite almacenamiento de inventario
+                  </span>
+                  <span class="form-hint lm-toggle-label__hint">
+                    Desactiva si la ubicación es solo de tránsito o maniobra.
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="f-observations">Observaciones</label>
+                <textarea id="f-observations" class="form-textarea" formControlName="observations" rows="3"
+                  placeholder="Notas internas, restricciones especiales, instrucciones de operación…">
+                  </textarea>
+              </div>
+            </div>
+          </section>
+
+        </form><!-- /form -->
+
+        <!-- ── Sección: Acciones de Estado FSM ─────────────────────── -->
+        @if (!isCreating() && selectedLoc()) {
+        <section class="lm-form-section lm-form-section--actions">
+          <h3 class="lm-form-section__title">
+            <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
+            Cambiar Estado
+          </h3>
+          <div class="lm-status-actions">
+            @if (canTransitionTo('BLOCKED') && selectedLoc()?.canBlock) {
+            <button class="btn btn--sm lm-btn-status lm-btn-status--blocked" type="button" id="btn-block"
+              [disabled]="isChangingStatus()" (click)="onRequestStatusChange('BLOCKED')">
+              <span class="material-symbols-outlined" aria-hidden="true">block</span>
+              Bloquear
+            </button>
+            }
+            @if (canTransitionTo('MAINTENANCE')) {
+            <button class="btn btn--sm lm-btn-status lm-btn-status--maintenance" type="button" id="btn-maintenance"
+              [disabled]="isChangingStatus()" (click)="onRequestStatusChange('MAINTENANCE')">
+              <span class="material-symbols-outlined" aria-hidden="true">build</span>
+              Mantenimiento
+            </button>
+            }
+            @if (canTransitionTo('INACTIVE') && selectedLoc()?.canDeactivate) {
+            <button class="btn btn--sm lm-btn-status lm-btn-status--inactive" type="button" id="btn-deactivate"
+              [disabled]="isChangingStatus()" (click)="onRequestStatusChange('INACTIVE')">
+              <span class="material-symbols-outlined" aria-hidden="true">do_not_disturb</span>
+              Desactivar
+            </button>
+            }
+            @if (canTransitionTo('ACTIVE') && selectedLoc()?.canReactivate) {
+            <button class="btn btn--sm lm-btn-status lm-btn-status--active" type="button" id="btn-reactivate"
+              [disabled]="isChangingStatus()" (click)="onRequestStatusChange('ACTIVE')">
+              <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+              Reactivar
+            </button>
+            }
+            @if (isChangingStatus()) {
+            <span class="lm-status-spinner" aria-label="Cambiando estado…">
+              <span class="lm-spinner" aria-hidden="true"></span>
+              Aplicando cambio…
+            </span>
+            }
+
+            <!-- Eliminar — solo si canDelete -->
+            @if (selectedLoc()?.canDelete) {
+            <button class="btn btn--sm btn--danger lm-btn-delete" type="button" id="btn-delete" (click)="onDelete()">
+              <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+              Eliminar
+            </button>
+            }
+          </div>
+        </section>
+        }
+
+        <!-- ── Panel de Auditoría ─────────────────────────────────── -->
+        @if (!isCreating() && selectedLoc()) {
+        <section class="lm-audit-panel">
+          <div class="lm-audit-panel__header">
+            <div class="lm-audit-panel__info">
+              <span class="material-symbols-outlined lm-audit-panel__icon" aria-hidden="true">
+                history
+              </span>
+              <div>
+                <p class="lm-audit-panel__row">
+                  <span class="lm-audit-panel__key">Última modificación:</span>
+                  <span class="lm-audit-panel__val">{{ formatDate(selectedLoc()!.updatedAt) }}</span>
+                </p>
+                <p class="lm-audit-panel__row">
+                  <span class="lm-audit-panel__key">Usuario:</span>
+                  <span class="lm-audit-panel__val">{{ selectedLoc()?.updatedBy }}</span>
+                </p>
+                <p class="lm-audit-panel__row">
+                  <span class="lm-audit-panel__key">Acción:</span>
+                  <span class="lm-audit-panel__val">{{ selectedLoc()?.lastAction }}</span>
+                </p>
+              </div>
+            </div>
+            <button class="btn btn--ghost btn--sm" type="button" id="btn-view-history" (click)="onViewHistory()">
+              <span class="material-symbols-outlined" aria-hidden="true">
+                {{ showAuditHistory() ? 'expand_less' : 'expand_more' }}
+              </span>
+              Ver historial
+            </button>
+          </div>
+
+          <!-- Historial expandible ──────────────────────────────── -->
+          @if (showAuditHistory()) {
+          <div class="lm-audit-history" role="log" aria-label="Historial de cambios">
+            @if (isLoadingAudit()) {
+            <div class="lm-audit-loading">
+              <span class="lm-spinner" aria-label="Cargando historial…"></span>
+              <span>Cargando historial…</span>
+            </div>
+            } @else if (auditHistory().length === 0) {
+            <p class="lm-audit-empty">Sin registros de auditoría disponibles.</p>
+            } @else {
+            @for (entry of auditHistory(); track trackByAuditId($index, entry)) {
+            <div class="lm-audit-entry">
+              <span class="lm-audit-entry__action">{{ entry.action }}</span>
+              <span class="lm-audit-entry__user">{{ entry.performedBy }}</span>
+              <span class="lm-audit-entry__date">{{ formatDate(entry.performedAt) }}</span>
+              @if (entry.reason) {
+              <span class="lm-audit-entry__reason">{{ entry.reason }}</span>
+              }
+            </div>
+            }
+            }
+          </div>
+          }
+        </section>
+        }
+
+        <!-- ── Footer: Botones de guardado ──────────────────────── -->
+        <div class="lm-form-footer">
+          <button class="btn btn--ghost" type="button" id="btn-cancel" (click)="onCancelEdit()" [disabled]="isSaving()">
+            Cancelar
+          </button>
+          <button class="btn btn--primary" [class.btn--loading]="isSaving()" type="submit" id="btn-save"
+            form="location-edit-form" [disabled]="isSaving()">
+            @if (!isSaving()) {
+            <span class="material-symbols-outlined" aria-hidden="true">save</span>
+            @if (isCreating()) { Crear Ubicación } @else { Guardar Cambios }
+            }
+          </button>
+        </div>
+
+      </div><!-- /lm-form-container -->
+      }
+    </main>
+
+  </div><!-- /lm-body -->
+
+</div><!-- /lm-page -->
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: Motivo de cambio de estado                                         -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+@if (showStatusReasonModal()) {
+<div class="lm-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-reason-title"
+  (click)="onCancelStatusChange()">
+  <div class="lm-modal" (click)="$event.stopPropagation()">
+    <div class="lm-modal__header">
+      <h3 class="lm-modal__title" id="modal-reason-title">
+        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+        Motivo del cambio de estado
+      </h3>
+      <button class="btn btn--ghost btn--sm btn--icon-only" type="button" (click)="onCancelStatusChange()"
+        aria-label="Cerrar modal">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <div class="lm-modal__body">
+      <p class="lm-modal__desc">
+        Indica el motivo para cambiar el estado de esta ubicación a
+        <strong>{{ pendingStatus() ? LOCATION_STATUS_LABELS[pendingStatus()!] : '' }}</strong>.
+        Este campo es obligatorio y quedará registrado en la auditoría.
+      </p>
+      <div class="form-group">
+        <label class="form-label form-label--required" for="modal-reason">Motivo</label>
+        <textarea id="modal-reason" class="form-textarea" rows="3" [value]="statusReason()"
+          (input)="onReasonInput($event)" placeholder="Describe el motivo del cambio de estado…" autofocus>
+          </textarea>
+      </div>
+    </div>
+    <div class="lm-modal__footer">
+      <button class="btn btn--ghost" type="button" (click)="onCancelStatusChange()">
+        Cancelar
+      </button>
+      <button class="btn btn--primary" type="button" id="btn-confirm-status" (click)="onConfirmStatusChange()">
+        <span class="material-symbols-outlined" aria-hidden="true">check</span>
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TEMPLATE: Nodo hoja del árbol                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<ng-template #leafTpl let-node let-depth="depth">
+  <button class="lm-tree-node lm-tree-node--leaf" [class.lm-tree-node--selected]="selectedId() === node.location?.id"
+    type="button" role="treeitem" [attr.aria-selected]="selectedId() === node.location?.id"
+    [attr.aria-label]="node.location?.name + ', ' + LOCATION_STATUS_LABELS[node.location?.status]"
+    (click)="onSelectLocation(node.location)" [style.padding-left.px]="8 + (depth * 16)">
+    <!-- Indicador de estado -->
+    <span class="lm-leaf-dot" [class]="'lm-leaf-dot--' + node.location?.status?.toLowerCase()"
+      aria-hidden="true"></span>
+    <!-- Código mono -->
+    <span class="lm-leaf-code">{{ node.location?.code }}</span>
+    <!-- Estado badge compacto -->
+    <span class="lm-leaf-status" [class]="getStatusClass(node.location?.status)">
+      {{ LOCATION_STATUS_LABELS[node.location?.status] }}
+    </span>
+  </button>
+</ng-template>

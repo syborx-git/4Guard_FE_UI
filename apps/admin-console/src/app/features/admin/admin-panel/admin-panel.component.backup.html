@@ -4,48 +4,21 @@
   <!-- ==================== MAIN DASHBOARD (GRID OF CARDS) ==================== -->
   @if (selectedModule() === null) {
   <!-- PAGE HEADER -->
-  <header class="page-top">
-
-    <div class="page-top__eyebrow">
-      <span class="material-symbols-outlined">
-        admin_panel_settings
-      </span>
-
-      <span>Console & Catalog Management</span>
-    </div>
-
+  <div class="page-top">
     <div class="page-top__title-row">
-
-      <div class="page-top__icon-box">
-        <span class="material-symbols-outlined page-top__icon">
-          settings
-        </span>
-      </div>
-
-      <div>
-        <h1 class="page-top__title">
-          Consola de Administración WMS
-        </h1>
-
-        <p class="page-top__subtitle">
-          Configura la jerarquía física del almacén, gestiona la seguridad y
-          monitorea las operaciones en tiempo real.
-        </p>
-      </div>
-
+      <span class="material-symbols-outlined page-top__icon">settings</span>
+      <h1 class="page-top__title">Consola de Administración WMS</h1>
     </div>
-
-  </header>
+    <p class="page-top__subtitle">Configura la jerarquía física de tu almacén, gestiona la seguridad y monitorea las
+      operaciones en tiempo real.</p>
+  </div>
 
   <!-- MAIN DASHBOARD CONTENT -->
   <div class="dashboard-scroll">
 
     <!-- SECCIÓN: ESTRUCTURA DE ALMACÉN -->
     <div class="module-section">
-      <h2 class="module-section__title">
-        <span class="material-symbols-outlined">warehouse</span>
-        Estructura de Almacén (WMS Catalogs)
-      </h2>
+      <h2 class="module-section__title">🏢 Estructura de Almacén (WMS Catalogs)</h2>
       <div class="modules-grid">
         @for (m of modules; track m.id) {
         @if (m.category === 'STRUCTURE') {
@@ -64,10 +37,7 @@
 
     <!-- SECCIÓN: CATÁLOGOS DE MERCANCÍA -->
     <div class="module-section">
-      <h2 class="module-section__title">
-        <span class="material-symbols-outlined">inventory_2</span>
-        Catálogos de Mercancía
-      </h2>
+      <h2 class="module-section__title">📦 Catálogos de Mercancía</h2>
       <div class="modules-grid">
         @for (m of modules; track m.id) {
         @if (m.category === 'MERCHANDISE') {
@@ -86,10 +56,7 @@
 
     <!-- SECCIÓN: SEGURIDAD Y ACCESO -->
     <div class="module-section">
-      <h2 class="module-section__title">
-        <span class="material-symbols-outlined">shield_lock</span>
-        Seguridad y Control de Acceso
-      </h2>
+      <h2 class="module-section__title">🔐 Seguridad y Control de Acceso</h2>
       <div class="modules-grid">
         @for (m of modules; track m.id) {
         @if (m.category === 'SECURITY') {
@@ -108,10 +75,7 @@
 
     <!-- SECCIÓN: SOPORTE Y MONITOREO -->
     <div class="module-section">
-      <h2 class="module-section__title">
-        <span class="material-symbols-outlined">monitoring</span>
-        Monitoreo Técnico y Auditoría
-      </h2>
+      <h2 class="module-section__title">📊 Monitoreo Técnico y Auditoría</h2>
       <div class="modules-grid">
         @for (m of modules; track m.id) {
         @if (m.category === 'SUPPORT') {
@@ -937,7 +901,7 @@
         <div class="form-grid">
           <div class="field-group col-6">
             <label class="field-group__label">Sucursal</label>
-            <select class="field-group__input select" [(ngModel)]="formModel.branchId" (change)="onBranchChange(formModel.branchId)">
+            <select class="field-group__input select" [(ngModel)]="formModel.branchId">
               @for (b of branchService.branches(); track b.id) {
               <option [value]="b.id">{{ b.name }}</option>
               }
@@ -946,7 +910,7 @@
           <div class="field-group col-6">
             <label class="field-group__label">Sección interna</label>
             <select class="field-group__input select" [(ngModel)]="formModel.sectionId">
-              @for (s of activeFormSections(); track s.id) {
+              @for (s of getSectionsForBranch(formModel.branchId); track s.id) {
               <option [value]="s.id">{{ s.name }} ({{ s.code }})</option>
               }
             </select>
@@ -1032,10 +996,17 @@
             <label class="field-group__label">Nombre comercial de Cliente (Owner)</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
           </div>
-          <div class="field-group col-12">
+          <div class="field-group col-6">
             <label class="field-group__label">ID de Integración Externa (ERP/SAP)</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.externalId"
               placeholder="Ej: SAP-CLI-901" maxlength="50">
+          </div>
+          <div class="field-group col-6">
+            <label class="field-group__label">Estatus Cliente</label>
+            <select class="field-group__input select" [(ngModel)]="formModel.status">
+              <option value="ACTIVE">Activo</option>
+              <option value="INACTIVE">Inactivo</option>
+            </select>
           </div>
         </div>
         }
