@@ -57,6 +57,13 @@ export class AdminPanelComponent implements OnInit {
         console.error('Error al precargar sucursales del backend:', err);
       }
     });
+
+    // Carga inicial de clientes (Depositantes) correspondientes al organizationId en sesión
+    this.clientService.loadClients().subscribe({
+      error: (err) => {
+        console.error('Error al precargar clientes del backend:', err);
+      }
+    });
   }
 
   // Inyección de servicios
@@ -281,9 +288,23 @@ export class AdminPanelComponent implements OnInit {
         }
       });
     } else if (moduleId === 'skus') {
-      this.skuService.loadSkus().subscribe({
+      // Cargar clientes para asegurar que la lista de clientes se obtenga filtrada por organizationId del usuario en sesión
+      this.clientService.loadClients().subscribe({
+        next: () => {
+          this.skuService.loadSkus().subscribe({
+            error: (err: any) => {
+              alert('Error al cargar la lista de SKUs del backend: ' + (err.message || 'Error inesperado'));
+            }
+          });
+        },
         error: (err: any) => {
-          alert('Error al cargar la lista de SKUs del backend: ' + (err.message || 'Error inesperado'));
+          console.error('Error al precargar clientes para SKUs:', err);
+          // Fallback: cargar los SKUs de todas formas
+          this.skuService.loadSkus().subscribe({
+            error: (errSku: any) => {
+              alert('Error al cargar la lista de SKUs del backend: ' + (errSku.message || 'Error inesperado'));
+            }
+          });
         }
       });
     } else if (moduleId === 'sections') {
