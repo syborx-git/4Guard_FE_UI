@@ -139,9 +139,9 @@
 .modal-content {
   background-color: var(--color-card);
   border-radius: var(--radius-2xl);
-  padding: var(--space-6);
+  padding: var(--space-5) var(--space-6);
   width: 100%;
-  max-width: 500px;
+  max-width: 420px;
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--color-border-light);
   animation: fade-in var(--transition-fast);
@@ -151,9 +151,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-divider);
-  padding-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
 }
 
 .modal-header h2 {
@@ -173,7 +173,7 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-4);
 }
 
 .btn {
@@ -206,7 +206,7 @@
 }
 
 .form-group {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .form-group label {

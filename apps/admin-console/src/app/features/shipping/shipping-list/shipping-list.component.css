@@ -1064,3 +1064,473 @@
     display: none;
   }
 }
+
+/* ==========================================================
+   DARK MODE
+   ========================================================== */
+
+:host-context(.theme-dark) .shipping-page {
+  background:
+    radial-gradient(circle at top right,
+      rgba(208, 175, 103, .08),
+      transparent 35rem),
+    linear-gradient(180deg,
+      var(--app-bg-start),
+      var(--app-bg-end));
+
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------- */
+/* HEADER */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .shipping-header__title {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .shipping-header__subtitle {
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------- */
+/* BUSCADOR */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .shipping-search__input,
+:host-context(.theme-dark) .shipping-filter__select {
+
+  background: var(--glass-bg);
+
+  color: var(--text-primary);
+
+  border-color: var(--glass-border);
+
+  box-shadow: none;
+
+  backdrop-filter: blur(18px);
+}
+
+:host-context(.theme-dark) .shipping-search__input::placeholder {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .shipping-search__input:focus,
+:host-context(.theme-dark) .shipping-filter__select:focus {
+
+  background: var(--glass-bg-strong);
+
+  border-color: var(--gold-border);
+
+  box-shadow:
+    0 0 0 4px rgba(208, 175, 103, .08);
+}
+
+/* ---------------------------------------------------------- */
+/* ALERTA */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .shipping-alert {
+
+  background:
+
+    linear-gradient(135deg,
+      rgba(65, 54, 18, .45),
+      rgba(34, 28, 13, .55));
+
+  border-color: rgba(208, 175, 103, .18);
+
+  color: #f0d58d;
+
+  box-shadow: none;
+
+  backdrop-filter: blur(18px);
+}
+
+:host-context(.theme-dark) .shipping-alert__content h2 {
+
+  color: #f6d98c;
+}
+
+:host-context(.theme-dark) .shipping-alert__content p {
+
+  color: #d7be82;
+}
+
+:host-context(.theme-dark) .shipping-alert__badge {
+
+  background: rgba(255, 255, 255, .05);
+
+  color: #f2d689;
+
+  border-color: rgba(208, 175, 103, .18);
+}
+
+/* ---------------------------------------------------------- */
+/* SUMMARY */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .summary-card {
+
+  background: var(--glass-bg);
+
+  border-color: var(--glass-border);
+
+  backdrop-filter: blur(18px);
+
+  box-shadow: none;
+}
+
+:host-context(.theme-dark) .summary-card__value {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .summary-card__label {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .summary-card__meta {
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------- */
+/* CARD */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .shipping-card {
+
+  background: var(--glass-bg);
+
+  border-color: var(--glass-border);
+
+  box-shadow: none;
+
+  backdrop-filter: blur(22px);
+}
+
+:host-context(.theme-dark) .shipping-card__header {
+
+  background: transparent;
+
+  border-color: var(--divider);
+}
+
+:host-context(.theme-dark) .shipping-card__title {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .shipping-card__result {
+
+  background: rgba(255, 255, 255, .04);
+
+  color: var(--text-secondary);
+
+  border-color: var(--glass-border);
+}
+
+/* ---------------------------------------------------------- */
+/* TABLA */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .shipping-table thead {
+
+  background: rgba(255, 255, 255, .03);
+}
+
+:host-context(.theme-dark) .shipping-table th {
+
+  color: var(--text-tertiary);
+
+  border-color: var(--divider);
+}
+
+:host-context(.theme-dark) .shipping-table td {
+
+  color: var(--text-secondary);
+
+  border-color: var(--divider);
+}
+
+:host-context(.theme-dark) .shipping-table tbody tr:hover {
+
+  background: rgba(255, 255, 255, .025);
+}
+
+/* ---------------------------------------------------------- */
+/* Chips */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .order-type-chip {
+
+  background: rgba(255, 255, 255, .04);
+
+  color: var(--text-secondary);
+
+  border-color: var(--glass-border);
+}
+
+/* ---------------------------------------------------------- */
+/* FOOTER */
+/* ---------------------------------------------------------- */
+
+:host-context(.theme-dark) .shipping-card__footer {
+
+  background: rgba(255, 255, 255, .02);
+
+  border-color: var(--divider);
+
+  color: var(--text-tertiary);
+}
+
+/* ================================================================
+   DARK MODE POLISH — SHIPPING
+   Corrige filas vencidas, selects, textos, chips y botones
+   ================================================================ */
+
+/* ── Filas normales ─────────────────────────────────────────── */
+
+:host-context(.theme-dark) .shipping-table tbody tr {
+  background: transparent;
+}
+
+:host-context(.theme-dark) .shipping-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* ── Fila vencida: elimina el gris claro ───────────────────── */
+
+:host-context(.theme-dark) .shipping-table__row--overdue {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(239, 83, 80, 0.11),
+      rgba(239, 83, 80, 0.025)
+    ) !important;
+
+  box-shadow:
+    inset 3px 0 0
+    color-mix(in srgb, var(--danger) 72%, transparent);
+}
+
+:host-context(.theme-dark) .shipping-table__row--overdue:hover {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(239, 83, 80, 0.16),
+      rgba(239, 83, 80, 0.04)
+    ) !important;
+}
+
+/* ── Número de orden ────────────────────────────────────────── */
+
+:host-context(.theme-dark) .order-cell__icon {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .order-cell__content strong {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .order-cell__content span {
+  color: var(--text-tertiary);
+}
+
+/* ── Cliente ────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .client-cell {
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark)
+.client-cell
+.material-symbols-outlined {
+  color: var(--text-tertiary);
+}
+
+/* ── Tipo de orden ──────────────────────────────────────────── */
+
+:host-context(.theme-dark) .order-type-chip {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+/* ── Fecha límite ───────────────────────────────────────────── */
+
+:host-context(.theme-dark) .due-date-cell {
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark)
+.due-date-cell > .material-symbols-outlined {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .due-date-cell strong {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .due-date-cell span {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .due-date-cell small,
+:host-context(.theme-dark) .due-date-cell--overdue strong,
+:host-context(.theme-dark)
+.due-date-cell--overdue > .material-symbols-outlined {
+  color: var(--danger);
+}
+
+/* ── Selector de operario ───────────────────────────────────── */
+
+:host-context(.theme-dark) .operator-field__select {
+  color: var(--text-primary);
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-secondary) 92%,
+      transparent
+    );
+
+  border-color: var(--border);
+
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .operator-field__select:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .operator-field__select:focus {
+  color: var(--text-primary);
+  background: var(--input-bg-focus);
+  border-color: var(--gold-border);
+
+  box-shadow:
+    0 0 0 3px
+    color-mix(in srgb, var(--gold) 9%, transparent);
+}
+
+:host-context(.theme-dark) .operator-field__select option {
+  color: var(--text-primary);
+  background: var(--surface-card-solid);
+}
+
+:host-context(.theme-dark) .operator-field__icon,
+:host-context(.theme-dark) .operator-field__arrow {
+  color: var(--text-tertiary);
+}
+
+/* ── Operario asignado ──────────────────────────────────────── */
+
+:host-context(.theme-dark) .assigned-operator__avatar {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+:host-context(.theme-dark) .assigned-operator__content strong {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .assigned-operator__content span {
+  color: var(--text-tertiary);
+}
+
+/* ── Prioridades ────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .priority-chip--p1 {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color:
+    color-mix(in srgb, var(--danger) 24%, transparent);
+}
+
+:host-context(.theme-dark) .priority-chip--p2 {
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-color:
+    color-mix(in srgb, var(--warning) 24%, transparent);
+}
+
+:host-context(.theme-dark) .priority-chip--p3 {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color:
+    color-mix(in srgb, var(--info) 24%, transparent);
+}
+
+:host-context(.theme-dark) .priority-chip--p4,
+:host-context(.theme-dark) .priority-chip--p5 {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border-subtle);
+}
+
+/* ── Estados ────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .status-pending {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+:host-context(.theme-dark) .status-assigned {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color:
+    color-mix(in srgb, var(--info) 22%, transparent);
+}
+
+:host-context(.theme-dark) .status-picking {
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-color:
+    color-mix(in srgb, var(--warning) 22%, transparent);
+}
+
+:host-context(.theme-dark) .status-ready {
+  color: var(--purple-light);
+  background:
+    color-mix(in srgb, var(--purple) 13%, transparent);
+  border-color:
+    color-mix(in srgb, var(--purple-light) 24%, transparent);
+}
+
+:host-context(.theme-dark) .status-dispatched {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color:
+    color-mix(in srgb, var(--success) 22%, transparent);
+}
+
+/* ── Botón de despacho ──────────────────────────────────────── */
+
+:host-context(.theme-dark) .dispatch-action {
+  color: #101722;
+  background:
+    linear-gradient(
+      135deg,
+      var(--gold-light),
+      var(--gold)
+    );
+
+  border-color: var(--gold);
+}
+
+:host-context(.theme-dark) .dispatch-action:disabled {
+  color: var(--text-tertiary);
+  background: var(--surface-secondary);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+/* ── Estado completado ──────────────────────────────────────── */
+
+:host-context(.theme-dark) .completed-state {
+  color: var(--success);
+}

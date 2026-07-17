@@ -1020,3 +1020,503 @@
     border-radius: 18px;
   }
 }
+
+/* ================================================================
+   DARK MODE FIX — ACTIVE SESSIONS
+   Compatible con Angular View Encapsulation
+   ================================================================ */
+
+:host-context(.theme-dark) {
+  color: var(--text-primary);
+}
+
+/* ================================================================
+   PÁGINA
+   ================================================================ */
+
+:host-context(.theme-dark) .sessions-page {
+  color: var(--text-primary);
+
+  background:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--gold) 7%, transparent),
+      transparent 31rem
+    ),
+    linear-gradient(
+      180deg,
+      var(--app-bg-start),
+      var(--app-bg-end)
+    );
+}
+
+/* ================================================================
+   HEADER
+   ================================================================ */
+
+:host-context(.theme-dark) .sessions-header__eyebrow {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .sessions-header-icon-wrap {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+
+  box-shadow:
+    0 10px 25px
+      color-mix(in srgb, var(--gold) 8%, transparent),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark)
+.sessions-header-icon-wrap
+.material-symbols-outlined {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .sessions-title-text h1 {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .sessions-title-text p {
+  color: var(--text-secondary);
+}
+
+/* ================================================================
+   CONTADOR Y ACTUALIZAR
+   ================================================================ */
+
+:host-context(.theme-dark) .sessions-counter {
+  color: var(--success);
+  background: var(--success-bg);
+
+  border-color:
+    color-mix(in srgb, var(--success) 22%, transparent);
+
+  box-shadow:
+    0 8px 20px
+    color-mix(in srgb, var(--success) 7%, transparent);
+}
+
+:host-context(.theme-dark) .sessions-counter__dot {
+  background: var(--success);
+
+  box-shadow:
+    0 0 0 4px
+    color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+:host-context(.theme-dark) .btn-refresh {
+  color: var(--text-secondary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-secondary) 90%,
+      transparent
+    );
+
+  border-color: var(--border);
+
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .btn-refresh:hover:not(:disabled) {
+  color: var(--gold);
+  background: var(--surface-card-hover);
+  border-color: var(--gold-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ================================================================
+   BANNER DE DEMOSTRACIÓN
+   ================================================================ */
+
+:host-context(.theme-dark) .demo-info-banner {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--warning-bg) 88%, transparent),
+      color-mix(in srgb, var(--surface-card) 82%, transparent)
+    );
+
+  border-color:
+    color-mix(in srgb, var(--warning) 20%, transparent);
+
+  box-shadow:
+    0 10px 26px
+    color-mix(in srgb, var(--warning) 6%, transparent);
+}
+
+:host-context(.theme-dark) .demo-info-banner__icon {
+  color: var(--warning);
+  background: var(--warning-bg);
+
+  border-color:
+    color-mix(in srgb, var(--warning) 22%, transparent);
+}
+
+:host-context(.theme-dark)
+.demo-info-banner__content strong {
+  color: var(--warning);
+}
+
+:host-context(.theme-dark)
+.demo-info-banner__content p {
+  color: var(--text-secondary);
+}
+
+/* ================================================================
+   CONTENEDOR PRINCIPAL
+   ================================================================ */
+
+:host-context(.theme-dark) .sessions-content {
+  color: var(--text-primary);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--glass-bg-strong),
+      var(--glass-bg)
+    );
+
+  border-color: var(--glass-border);
+
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 var(--glass-highlight);
+
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+:host-context(.theme-dark) .sessions-content__header {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-elevated) 82%, transparent),
+      color-mix(in srgb, var(--surface-secondary) 76%, transparent)
+    );
+
+  border-bottom-color: var(--divider);
+}
+
+:host-context(.theme-dark) .sessions-content__eyebrow {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .sessions-content__header h2 {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .sessions-content__result {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+:host-context(.theme-dark)
+.sessions-content__result
+.material-symbols-outlined {
+  color: var(--gold);
+}
+
+/* ================================================================
+   TARJETAS DE SESIÓN
+   ================================================================ */
+
+:host-context(.theme-dark) .session-card {
+  color: var(--text-primary);
+
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--surface-elevated) 78%, transparent),
+      color-mix(in srgb, var(--surface-card) 90%, transparent)
+    );
+
+  border-color: var(--border-subtle);
+
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .session-card:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--gold-border);
+
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .session-card::before {
+  background:
+    linear-gradient(
+      180deg,
+      var(--gold),
+      transparent
+    );
+}
+
+/* ================================================================
+   IDENTIDAD
+   ================================================================ */
+
+:host-context(.theme-dark) .avatar-circle {
+  color: var(--gold);
+  background: #0b1320;
+  border-color: var(--gold-border);
+
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+:host-context(.theme-dark) .user-fullname {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .user-role {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .user-email {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .badge-online {
+  color: var(--success);
+  background: var(--success-bg);
+
+  border-color:
+    color-mix(in srgb, var(--success) 22%, transparent);
+}
+
+:host-context(.theme-dark) .online-dot {
+  background: var(--success);
+}
+
+/* ================================================================
+   DETALLES
+   ================================================================ */
+
+:host-context(.theme-dark) .session-detail,
+:host-context(.theme-dark) .session-card__actions {
+  border-color: var(--divider);
+}
+
+:host-context(.theme-dark) .session-detail__icon {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+:host-context(.theme-dark)
+.session-detail--location
+.session-detail__icon {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .session-detail__label {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark)
+.session-detail__content strong {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark)
+.session-detail__content > span:last-child {
+  color: var(--text-tertiary);
+}
+
+/* ================================================================
+   ÚLTIMA CONEXIÓN
+   ================================================================ */
+
+:host-context(.theme-dark)
+.login-timestamp > .material-symbols-outlined {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .login-timestamp span {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .login-timestamp strong {
+  color: var(--text-secondary);
+}
+
+/* ================================================================
+   BOTÓN REVOCAR
+   ================================================================ */
+
+:host-context(.theme-dark) .btn-revoke {
+  color: var(--danger);
+  background: var(--danger-bg);
+
+  border-color:
+    color-mix(in srgb, var(--danger) 24%, transparent);
+}
+
+:host-context(.theme-dark) .btn-revoke:hover {
+  color: var(--danger);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--danger-bg) 80%,
+      var(--surface-card)
+    );
+
+  border-color:
+    color-mix(in srgb, var(--danger) 40%, transparent);
+
+  box-shadow:
+    0 8px 18px
+    color-mix(in srgb, var(--danger) 9%, transparent);
+}
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+
+:host-context(.theme-dark) .sessions-footer {
+  color: var(--text-tertiary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-secondary) 82%,
+      transparent
+    );
+
+  border-top-color: var(--divider);
+}
+
+:host-context(.theme-dark) .sessions-footer__dot {
+  background: var(--success);
+
+  box-shadow:
+    0 0 0 4px
+    color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+:host-context(.theme-dark) .sessions-footer__separator {
+  color: var(--border);
+}
+
+:host-context(.theme-dark) .sessions-footer__version {
+  color: var(--text-tertiary);
+}
+
+/* ================================================================
+   ESTADOS DE CARGA, ERROR Y VACÍO
+   ================================================================ */
+
+:host-context(.theme-dark) .state-panel {
+  color: var(--text-primary);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--glass-bg-strong),
+      var(--glass-bg)
+    );
+
+  border-color: var(--glass-border);
+
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .loading-spinner,
+:host-context(.theme-dark) .state-panel-icon--empty {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .state-panel-icon--forbidden {
+  color: var(--danger);
+  background: var(--danger-bg);
+
+  border-color:
+    color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+:host-context(.theme-dark) .state-panel__eyebrow {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .state-panel__eyebrow--danger {
+  color: var(--danger);
+}
+
+:host-context(.theme-dark) .state-panel h2 {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .state-panel p {
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark) .state-panel-http {
+  color: var(--danger);
+  background: var(--danger-bg);
+
+  border-color:
+    color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+:host-context(.theme-dark) .state-panel__action {
+  color: #101722;
+  background:
+    linear-gradient(
+      135deg,
+      var(--gold-light),
+      var(--gold)
+    );
+
+  border-color: var(--gold);
+}
+
+:host-context(.theme-dark) .state-panel__action:hover {
+  background:
+    linear-gradient(
+      135deg,
+      var(--gold-light),
+      var(--gold)
+    );
+
+  box-shadow:
+    0 10px 22px
+    color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+/* ================================================================
+   RESPONSIVE: BORDES INTERNOS
+   ================================================================ */
+
+@media (max-width: 1180px) {
+  :host-context(.theme-dark)
+  .session-detail:nth-of-type(4),
+  :host-context(.theme-dark)
+  .session-card__actions {
+    border-top-color: var(--divider);
+  }
+}
+
+@media (max-width: 860px) {
+  :host-context(.theme-dark) .session-card__identity {
+    border-bottom-color: var(--divider);
+  }
+}
