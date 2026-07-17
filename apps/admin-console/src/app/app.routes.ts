@@ -103,6 +103,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Despacho',
       },
 
+      // Gestión de Transportistas (HU-128)
+      {
+        path: 'carriers',
+        canActivate: [rbacGuard],
+        data: { module: 'carriers' },
+        loadChildren: () =>
+          import('./features/carriers/carriers.routes').then((m) => m.carriersRoutes),
+        title: '4GUARD WMS — Gestión de Transportistas',
+      },
+
       // Administración
       {
         path: 'admin',

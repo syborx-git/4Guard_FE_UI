@@ -220,9 +220,11 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
+    { label: 'Transportistas', route: '/carriers', icon: 'local_shipping', module: 'carriers' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
     { label: 'Sesiones', route: '/sessions', icon: 'group', module: 'sessions' },
   ];
+
 
   /** Filtra los nav items segun el rol del usuario */
   protected readonly visibleNavItems = computed(() =>
