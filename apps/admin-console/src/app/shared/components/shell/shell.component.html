@@ -7,7 +7,17 @@
     <!-- Logo block -->
     <div class="sidebar__logo-block">
       <div class="sidebar__logo">
-        <div class="sidebar__logo-mark">4G</div>
+        <div class="sidebar__logo-mark">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="sidebar__logo-svg">
+            <!-- Fondo azul oscuro -->
+            <rect width="120" height="120" rx="26" fill="#1b1e5a"/>
+            <!-- G Roja -->
+            <path d="M 60 20 A 40 40 0 1 0 100 60 L 82 60 A 22 22 0 1 1 60 38 Z" fill="#e42326"/>
+            <polygon points="60,20 100,60 87,73 60,46" fill="#e42326"/>
+            <!-- 4 Blanco -->
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M 66 40 L 34 72 L 54 72 L 54 86 L 66 86 L 66 72 L 80 72 L 80 60 L 66 60 L 66 40 Z M 54 60 L 46 60 L 54 52 L 54 60 Z" fill="#ffffff"/>
+          </svg>
+        </div>
         @if (!isSidebarCollapsed()) {
           <div class="sidebar__logo-text">
             <span class="sidebar__brand">4GUARD WMS</span>
@@ -126,16 +136,11 @@
     <header class="shell__header" role="banner">
       <div class="shell__header-left">
 
-        <!-- Selector de sucursal -->
-        <div class="shell__branch-selector">
+        <!-- Sucursal estática -->
+        <div class="shell__branch-selector shell__branch-selector--static">
           <span class="material-symbols-outlined shell__branch-icon">location_on</span>
           <span class="shell__branch-prefix">SUCURSAL:</span>
-          <select class="shell__branch-select" aria-label="Seleccionar sucursal">
-            <option value="SMS-02">SMS-02 - Sucursal Metropolitana Sur</option>
-            <option value="SMS-01">SMS-01 - Sucursal Metropolitana Norte</option>
-            <option value="BR-TOL-01">BR-TOL-01 - Toluca</option>
-          </select>
-          <span class="material-symbols-outlined shell__branch-chevron">expand_more</span>
+          <span class="shell__branch-value">BR-TOL-01 - Toluca</span>
         </div>
       </div>
 
@@ -156,14 +161,55 @@
         <!-- Badge alertas criticas -->
         <div class="shell__alert-badge shell__alert-badge--critical">
           <span class="material-symbols-outlined shell__alert-icon">warning</span>
-          <span class="shell__alert-text">{{ criticalCount() }} CRITICA</span>
+          <span class="shell__alert-text">
+            {{ criticalCount() }}
+            {{ criticalCount() === 1 ? 'ALERTA CRÍTICA' : 'ALERTAS CRÍTICAS' }}
+          </span>
         </div>
 
-        <!-- Tiempo actualizacion -->
-        <div class="shell__update-info">
-          <span class="material-symbols-outlined shell__update-icon">schedule</span>
-          <span class="shell__update-text">Actualizado: {{ lastUpdated() }}</span>
+        <!-- Reloj y actualización en vivo -->
+        <div
+          class="shell__live-clock"
+          [class.shell__live-clock--refreshing]="isHeaderRefreshing()">
+
+          <div class="shell__live-clock-icon">
+            <span class="material-symbols-outlined">
+              {{ isHeaderRefreshing() ? 'sync' : 'schedule' }}
+            </span>
+          </div>
+
+          <div class="shell__live-clock-content">
+            <div class="shell__live-clock-row">
+              <strong>{{ currentTime() }}</strong>
+
+              <span class="shell__live-clock-status">
+                <span class="shell__live-clock-dot"></span>
+
+                {{ isHeaderRefreshing() ? 'Actualizando...' : 'En vivo' }}
+              </span>
+            </div>
+
+            <span class="shell__live-clock-date">
+              {{ currentDate() }}
+            </span>
+          </div>
+
         </div>
+
+        <!-- Botón claro / oscuro -->
+        <button
+          id="theme-toggle-btn"
+          type="button"
+          class="shell__header-btn shell__header-btn--theme"
+          (click)="toggleTheme()"
+          [attr.aria-label]="themeLabel()"
+          [attr.title]="themeLabel()">
+
+          <span class="material-symbols-outlined">
+            {{ themeIcon() }}
+          </span>
+
+        </button>
 
         <!-- Cerrar sesión -->
         <button

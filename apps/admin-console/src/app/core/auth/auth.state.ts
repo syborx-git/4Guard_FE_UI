@@ -158,6 +158,8 @@ export class AuthState {
         return true; // Visible para todos; el backend filtra por rol
       case 'inventory':
         return permissions.includes('INVENTORY_READ') || permissions.includes('INVENTORY_CREATE');
+      case 'layout':
+        return permissions.includes('LAYOUT_READ') || permissions.includes('LAYOUT_CREATE');
       case 'admin':
         return permissions.includes('USERS_READ') || permissions.includes('USERS_CREATE');
       case 'receiving':
@@ -166,9 +168,12 @@ export class AuthState {
         return permissions.includes('QUALITY_READ') || permissions.includes('QUALITY_CREATE');
       case 'shipping':
         return permissions.includes('SHIPPING_READ') || permissions.includes('SHIPPING_CREATE');
+      case 'carriers':
+        return true; // Acceso total habilitado para desarrollo y testing
       default:
         return false;
     }
+
   }
 
   /**

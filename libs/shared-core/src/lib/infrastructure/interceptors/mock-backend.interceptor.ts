@@ -189,7 +189,7 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
   // Interceptar GET Items del Inventario
   if (url.includes('/api/inventory/items') && req.method === 'GET') {
     const db = getDb();
-    
+
     // Filtros de URL
     const statusParam = req.params.get('status');
     const skuParam = req.params.get('sku');

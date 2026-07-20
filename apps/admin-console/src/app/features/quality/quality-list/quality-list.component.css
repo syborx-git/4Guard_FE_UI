@@ -769,3 +769,455 @@
     display: none;
   }
 }
+
+/* ================================================================
+   DARK MODE FIX — QUALITY LIST
+   Corrige únicamente el tema oscuro.
+   Mantiene intacto el diseño claro actual.
+   ================================================================ */
+
+:host-context(.theme-dark) {
+  color: var(--text-primary);
+}
+
+/* ── Página ─────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-page {
+  color: var(--text-primary);
+
+  background:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--gold) 7%, transparent),
+      transparent 28rem
+    ),
+    linear-gradient(
+      180deg,
+      var(--app-bg-start),
+      var(--app-bg-end)
+    );
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-header__eyebrow {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .quality-header__title {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .quality-header__subtitle {
+  color: var(--text-secondary);
+}
+
+/* ── Buscador ───────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .search-field__icon {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .search-field__input {
+  color: var(--text-primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-card) 90%,
+      transparent
+    );
+
+  border-color: var(--border);
+
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .search-field__input::placeholder {
+  color: var(--input-placeholder);
+}
+
+:host-context(.theme-dark) .search-field__input:hover {
+  background: var(--surface-card-hover);
+}
+
+:host-context(.theme-dark) .search-field__input:focus {
+  color: var(--text-primary);
+  background: var(--input-bg-focus);
+  border-color: var(--gold-border);
+
+  box-shadow:
+    0 0 0 4px
+      color-mix(in srgb, var(--gold) 9%, transparent),
+    var(--shadow-sm);
+}
+
+/* ── Filtro de cliente ─────────────────────────────────────── */
+
+:host-context(.theme-dark) .client-filter__icon,
+:host-context(.theme-dark) .client-filter__arrow {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .client-filter__select {
+  color: var(--text-primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-card) 90%,
+      transparent
+    );
+
+  border-color: var(--border);
+
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .client-filter__select:hover {
+  background: var(--surface-card-hover);
+}
+
+:host-context(.theme-dark) .client-filter__select:focus {
+  border-color: var(--gold-border);
+
+  box-shadow:
+    0 0 0 4px
+      color-mix(in srgb, var(--gold) 9%, transparent);
+}
+
+:host-context(.theme-dark) .client-filter__select option {
+  color: var(--text-primary);
+  background: var(--surface-card-solid);
+}
+
+/* ── Tabs ───────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-tabs {
+  background:
+    linear-gradient(
+      145deg,
+      var(--glass-bg-strong),
+      var(--glass-bg)
+    );
+
+  border-color: var(--glass-border);
+
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 1px 0 var(--glass-highlight);
+
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+:host-context(.theme-dark) .quality-tab {
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark) .quality-tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-card-hover);
+}
+
+:host-context(.theme-dark) .quality-tab--active {
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  border-color: var(--border);
+
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+:host-context(.theme-dark) .quality-tab__count--warning {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+
+:host-context(.theme-dark) .quality-tab__count--danger {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+:host-context(.theme-dark) .quality-tab__count--success {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+/* ── Tarjeta principal ─────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-card {
+  color: var(--text-primary);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--glass-bg-strong),
+      var(--glass-bg)
+    );
+
+  border-color: var(--glass-border);
+
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 var(--glass-highlight);
+
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+:host-context(.theme-dark) .quality-card__top {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(
+        in srgb,
+        var(--surface-elevated) 84%,
+        transparent
+      ),
+      color-mix(
+        in srgb,
+        var(--surface-secondary) 76%,
+        transparent
+      )
+    );
+
+  border-bottom-color: var(--divider);
+}
+
+:host-context(.theme-dark) .quality-card__eyebrow {
+  color: var(--gold);
+}
+
+:host-context(.theme-dark) .quality-card__title {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .quality-card__result {
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border-color: var(--border-subtle);
+}
+
+:host-context(.theme-dark)
+.quality-card__result
+.material-symbols-outlined {
+  color: var(--gold);
+}
+
+/* ── Tabla ─────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-table thead {
+  background: var(--table-header-bg);
+}
+
+:host-context(.theme-dark) .quality-table th {
+  color: var(--text-tertiary);
+  border-bottom-color: var(--divider);
+}
+
+:host-context(.theme-dark) .quality-table td {
+  color: var(--text-secondary);
+  border-bottom-color: var(--divider);
+}
+
+:host-context(.theme-dark) .quality-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+/* ── SKU y descripción ─────────────────────────────────────── */
+
+:host-context(.theme-dark) .sku-cell__icon {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .sku-cell__content strong {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .sku-cell__content span {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .description-cell strong {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .description-cell span {
+  color: var(--text-tertiary);
+}
+
+:host-context(.theme-dark) .lot-chip {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .client-cell,
+:host-context(.theme-dark) .location-cell,
+:host-context(.theme-dark) .date-cell {
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark)
+.client-cell
+.material-symbols-outlined,
+:host-context(.theme-dark)
+.location-cell
+.material-symbols-outlined,
+:host-context(.theme-dark)
+.date-cell
+.material-symbols-outlined {
+  color: var(--text-tertiary);
+}
+
+/* ── Botones ───────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .table-action--inspect {
+  color: var(--text-secondary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-secondary) 88%,
+      transparent
+    );
+
+  border-color: var(--border);
+}
+
+:host-context(.theme-dark) .table-action--inspect:hover {
+  color: var(--text-primary);
+  background: var(--surface-card-hover);
+  border-color: var(--gold-border);
+  box-shadow: var(--shadow-xs);
+}
+
+:host-context(.theme-dark) .table-action--approve {
+  color: var(--success);
+  background: var(--success-bg);
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--success) 24%,
+      transparent
+    );
+}
+
+:host-context(.theme-dark) .table-action--approve:hover {
+  color: var(--success);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--success-bg) 78%,
+      var(--surface-card)
+    );
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--success) 38%,
+      transparent
+    );
+}
+
+:host-context(.theme-dark) .table-action--block {
+  color: var(--danger);
+  background: var(--danger-bg);
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--danger) 24%,
+      transparent
+    );
+}
+
+:host-context(.theme-dark) .table-action--block:hover {
+  color: var(--danger);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--danger-bg) 78%,
+      var(--surface-card)
+    );
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--danger) 38%,
+      transparent
+    );
+}
+
+/* ── Empty state ───────────────────────────────────────────── */
+
+:host-context(.theme-dark) .empty-state__icon {
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+}
+
+:host-context(.theme-dark) .empty-state h3 {
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .empty-state p {
+  color: var(--text-secondary);
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-card__footer {
+  color: var(--text-tertiary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface-secondary) 82%,
+      transparent
+    );
+
+  border-top-color: var(--divider);
+}
+
+:host-context(.theme-dark) .node-status__dot {
+  background: var(--success);
+
+  box-shadow:
+    0 0 0 4px
+      color-mix(
+        in srgb,
+        var(--success) 10%,
+        transparent
+      );
+}
+
+:host-context(.theme-dark) .node-status__separator {
+  color: var(--border);
+}
+
+:host-context(.theme-dark) .system-version {
+  color: var(--text-tertiary);
+}
+
+/* ── Scroll horizontal ─────────────────────────────────────── */
+
+:host-context(.theme-dark) .quality-table-wrapper {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+:host-context(.theme-dark)
+.quality-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}

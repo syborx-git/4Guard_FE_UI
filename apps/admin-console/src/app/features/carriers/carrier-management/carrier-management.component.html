@@ -1,0 +1,969 @@
+<!--
+  carrier-management.component.html
+  HU-128 — Gestión de Transportistas — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Responsive: columnas apiladas en ≤1050px, formulario fullscreen en móvil
+-->
+
+<div class="carriers-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="carriers-header">
+
+    <div class="carriers-header__top">
+
+      <div class="carriers-header__left">
+        <div class="carriers-header__icon-wrap">
+          <span class="material-symbols-outlined carriers-header__icon">local_shipping</span>
+        </div>
+
+        <div class="carriers-header__copy">
+          <div class="carriers-header__eyebrow">
+            <span class="carriers-header__eyebrow-tag">HU-128</span>
+            <span class="carriers-header__eyebrow-sep">·</span>
+            <span>Catálogo Maestro</span>
+          </div>
+          <h1 class="carriers-header__title">Gestión de Transportistas</h1>
+          <p class="carriers-header__subtitle">
+            Administra las empresas responsables del traslado de mercancía
+          </p>
+        </div>
+      </div>
+
+      @if (canCreate()) {
+        <button
+          id="btn-new-carrier"
+          class="carriers-btn carriers-btn--primary"
+          type="button"
+          (click)="startNewCarrier()"
+          [disabled]="isSaving"
+          aria-label="Registrar nuevo transportista">
+          <span class="material-symbols-outlined">add</span>
+          Nuevo transportista
+        </button>
+      }
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="carriers-kpi-grid" aria-label="Indicadores de transportistas">
+
+      <!-- Total -->
+      <div class="carriers-kpi-card carriers-kpi-card--total">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">local_shipping</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          @if (isLoading) {
+            <div class="carriers-kpi-card__skeleton"></div>
+          } @else {
+            <span class="carriers-kpi-card__value">{{ totalCarriers() }}</span>
+          }
+          <span class="carriers-kpi-card__label">Total</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activos -->
+      <div class="carriers-kpi-card carriers-kpi-card--active">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          @if (isLoading) {
+            <div class="carriers-kpi-card__skeleton"></div>
+          } @else {
+            <span class="carriers-kpi-card__value">{{ kpiActive() }}</span>
+          }
+          <span class="carriers-kpi-card__label">Activos</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Suspendidos -->
+      <div class="carriers-kpi-card carriers-kpi-card--suspended">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">pause_circle</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          @if (isLoading) {
+            <div class="carriers-kpi-card__skeleton"></div>
+          } @else {
+            <span class="carriers-kpi-card__value">{{ kpiSuspended() }}</span>
+          }
+          <span class="carriers-kpi-card__label">Suspendidos</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+      </div>
+
+      <!-- Inactivos -->
+      <div class="carriers-kpi-card carriers-kpi-card--inactive">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          @if (isLoading) {
+            <div class="carriers-kpi-card__skeleton"></div>
+          } @else {
+            <span class="carriers-kpi-card__value">{{ kpiInactive() }}</span>
+          }
+          <span class="carriers-kpi-card__label">Inactivos</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--inactive"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="carriers-split" [class.carriers-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="carriers-directory" aria-label="Directorio de transportistas">
+
+      <!-- Buscador y filtros -->
+      <div class="carriers-directory__filters">
+
+        <div class="carriers-search">
+          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
+          <input
+            id="carrier-search"
+            class="carriers-search__input"
+            type="search"
+            placeholder="Razón social, RFC, contacto, teléfono…"
+            [(ngModel)]="filterText"
+            (ngModelChange)="onFilterChange()"
+            aria-label="Buscar transportista por nombre, RFC, contacto, teléfono o correo"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="carriers-filters-row">
+          <div class="carriers-filter-group">
+            <label class="sr-only" for="filter-status">Estado</label>
+            <select
+              id="filter-status"
+              class="carriers-filter-select"
+              [(ngModel)]="filterStatus"
+              (ngModelChange)="onFilterChange()"
+              aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="SUSPENDED">Suspendidos</option>
+              <option value="INACTIVE">Inactivos</option>
+            </select>
+          </div>
+
+          <div class="carriers-filter-group">
+            <label class="sr-only" for="filter-type">Tipo</label>
+            <select
+              id="filter-type"
+              class="carriers-filter-select"
+              [(ngModel)]="filterType"
+              (ngModelChange)="onFilterChange()"
+              aria-label="Filtrar por tipo de transportista">
+              <option value="">Todos los tipos</option>
+              <option value="EXTERNAL">Externo</option>
+              <option value="CLIENT_TRANSPORT">Del cliente</option>
+              <option value="OWN_TRANSPORT">Propio</option>
+              <option value="THIRD_PARTY_3PL">3PL</option>
+              <option value="PARCEL">Paquetería</option>
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="carriers-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+
+        <!-- Sugerencia de búsqueda extendida -->
+        <p class="carriers-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Busca por nombre, RFC, contacto, teléfono o correo
+        </p>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoading) {
+        <div class="carriers-directory__list" aria-busy="true" aria-label="Cargando transportistas">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="carrier-item carrier-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="carrier-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                <div class="skeleton skeleton--line skeleton--line-short"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError) {
+        <div class="carriers-state carriers-state--error" role="alert">
+          <span class="material-symbols-outlined carriers-state__icon">cloud_off</span>
+          <p class="carriers-state__title">Error al cargar</p>
+          <p class="carriers-state__desc">{{ loadErrorMessage }}</p>
+          <button class="carriers-btn carriers-btn--ghost" type="button" (click)="loadCarriers()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="carriers-state" role="status">
+          <span class="material-symbols-outlined carriers-state__icon">local_shipping</span>
+          <p class="carriers-state__title">Sin transportistas</p>
+          <p class="carriers-state__desc">No hay transportistas registrados aún.</p>
+          @if (canCreate()) {
+            <button class="carriers-btn carriers-btn--primary" type="button" (click)="startNewCarrier()">
+              <span class="material-symbols-outlined">add</span>
+              Registrar el primero
+            </button>
+          }
+        </div>
+      } @else if (hasNoResults) {
+        <div class="carriers-state" role="status">
+          <span class="material-symbols-outlined carriers-state__icon">search_off</span>
+          <p class="carriers-state__title">Sin coincidencias</p>
+          <p class="carriers-state__desc">
+            Ningún transportista coincide con los filtros aplicados.
+          </p>
+          <button class="carriers-btn carriers-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="carriers-directory__list" role="listbox" aria-label="Lista de transportistas">
+          @for (carrier of filteredCarriers(); track carrier.id) {
+            <li
+              class="carrier-item"
+              [class.carrier-item--selected]="isSelectedCarrier(carrier)"
+              [class.carrier-item--suspended]="carrier.status === 'SUSPENDED'"
+              [class.carrier-item--inactive]="carrier.status === 'INACTIVE'"
+              role="option"
+              [attr.aria-selected]="isSelectedCarrier(carrier)"
+              (click)="selectCarrier(carrier)"
+              (keydown.enter)="selectCarrier(carrier)"
+              (keydown.space)="selectCarrier(carrier)"
+              tabindex="0"
+              [id]="'carrier-item-' + carrier.id">
+
+              <!-- Avatar -->
+              <div class="carrier-avatar {{ getAvatarClass(carrier.carrierType) }}" aria-hidden="true">
+                {{ getInitials(carrier) }}
+              </div>
+
+              <!-- Info -->
+              <div class="carrier-item__body">
+                <div class="carrier-item__name">{{ carrier.tradeName }}</div>
+                <div class="carrier-item__business">{{ carrier.businessName }}</div>
+                <div class="carrier-item__meta">
+                  <span class="carrier-item__rfc">{{ carrier.rfc }}</span>
+                  <span class="carrier-item__type">{{ carrierTypeLabels[carrier.carrierType] }}</span>
+                </div>
+              </div>
+
+              <!-- Estado -->
+              <div class="carrier-item__status-col">
+                <span
+                  class="carrier-status-badge carrier-status-badge--{{ carrier.status.toLowerCase() }}"
+                  [attr.aria-label]="'Estado: ' + carrierStatusLabels[carrier.status]">
+                  {{ carrierStatusLabels[carrier.status] }}
+                </span>
+                <time class="carrier-item__date" [dateTime]="carrier.updatedAt" title="Última actualización">
+                  {{ carrier.updatedAt | date:'dd/MM/yy' }}
+                </time>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <!-- Contador -->
+        <div class="carriers-directory__footer">
+          <span class="carriers-count">
+            {{ filteredCarriers().length }}
+            @if (filteredCarriers().length !== totalCarriers()) {
+              de {{ totalCarriers() }}
+            }
+            transportista{{ filteredCarriers().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="carriers-detail" aria-label="Detalle del transportista">
+
+      @if (formMode() === 'idle') {
+        <div class="carriers-empty-state">
+          <div class="carriers-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined carriers-empty-state__icon">local_shipping</span>
+          </div>
+          <h2 class="carriers-empty-state__title">Sin selección</h2>
+          <p class="carriers-empty-state__desc">
+            Selecciona un transportista de la lista para consultar su información,
+            o registra uno nuevo.
+          </p>
+          @if (canCreate()) {
+            <button
+              class="carriers-btn carriers-btn--primary"
+              type="button"
+              (click)="startNewCarrier()"
+              aria-label="Registrar nuevo transportista">
+              <span class="material-symbols-outlined">add</span>
+              Nuevo transportista
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="carriers-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="carriers-form-header">
+            <div class="carriers-form-header__left">
+              <div class="carriers-form-header__breadcrumb">
+                <span class="material-symbols-outlined">local_shipping</span>
+                Transportistas
+                <span class="material-symbols-outlined carriers-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nuevo transportista }
+                  @else { {{ selectedCarrier()?.tradeName }} }
+                </strong>
+              </div>
+              @if (formMode() === 'edit' && selectedCarrier()) {
+                <span
+                  class="carrier-status-badge carrier-status-badge--{{ selectedCarrier()!.status.toLowerCase() }}"
+                  [attr.aria-label]="'Estado actual: ' + carrierStatusLabels[selectedCarrier()!.status]">
+                  {{ carrierStatusLabels[selectedCarrier()!.status] }}
+                </span>
+              }
+            </div>
+
+            <!-- Historial (botón preparado — timeline) -->
+            @if (formMode() === 'edit' && canViewAudit()) {
+              <button
+                id="btn-audit-history"
+                class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                type="button"
+                title="Ver historial de cambios como línea de tiempo (próximamente)"
+                aria-label="Ver historial de auditoría del transportista"
+                disabled>
+                <span class="material-symbols-outlined">timeline</span>
+                Ver historial
+              </button>
+            }
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="carriers-alert carriers-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Transportista guardado correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="carriers-alert carriers-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveCarrier()"
+            novalidate
+            autocomplete="off"
+            class="carriers-form">
+
+            <!-- SECCIÓN 1 — Información General ──────────────────── -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">apartment</span>
+                Información General
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label fg-label--required" for="businessName">Razón Social</label>
+                  <input
+                    id="businessName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('businessName')"
+                    type="text"
+                    formControlName="businessName"
+                    placeholder="Ej. Transportes del Noreste S.A. de C.V."
+                    maxlength="200"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('businessName')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('businessName') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="tradeName">Nombre Comercial</label>
+                  <input
+                    id="tradeName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('tradeName')"
+                    type="text"
+                    formControlName="tradeName"
+                    placeholder="Ej. TransNoreste"
+                    maxlength="150"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('tradeName')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('tradeName') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="rfc">RFC / Tax ID</label>
+                  <input
+                    id="rfc"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('rfc')"
+                    type="text"
+                    formControlName="rfc"
+                    placeholder="Ej. TNO890314AB2"
+                    maxlength="13"
+                    aria-required="true"
+                    aria-describedby="rfc-hint"
+                  />
+                  <span id="rfc-hint" class="fg-hint">12 caracteres (persona moral) o 13 (física).</span>
+                  @if (fieldHasError('rfc')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('rfc') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="carrierType">Tipo de Transportista</label>
+                  <select
+                    id="carrierType"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('carrierType')"
+                    formControlName="carrierType"
+                    aria-required="true">
+                    <option value="">Selecciona un tipo…</option>
+                    @for (t of carrierTypes; track t.value) {
+                      <option [value]="t.value">{{ t.label }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('carrierType')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('carrierType') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
+                  <select
+                    id="status"
+                    class="fg-select"
+                    formControlName="status"
+                    aria-required="true">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="SUSPENDED">Suspendido</option>
+                    <option value="INACTIVE">Inactivo</option>
+                  </select>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Contacto Principal ──────────────────── -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">contact_phone</span>
+                Contacto Principal
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--3">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="contactName">Nombre del Contacto</label>
+                  <input
+                    id="contactName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('contactName')"
+                    type="text"
+                    formControlName="contactName"
+                    placeholder="Ej. Roberto Garza"
+                    maxlength="100"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('contactName')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('contactName') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="phone">Teléfono</label>
+                  <input
+                    id="phone"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('phone')"
+                    type="tel"
+                    formControlName="phone"
+                    placeholder="Ej. 8181234567"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('phone')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('phone') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="email">Correo Electrónico</label>
+                  <input
+                    id="email"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('email')"
+                    type="email"
+                    formControlName="email"
+                    placeholder="Ej. contacto@transportista.mx"
+                    maxlength="150"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('email')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('email') }}</span>
+                  }
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Información Operativa ───────────────── -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">route</span>
+                Información Operativa
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="serviceType">Tipo de Servicio</label>
+                  <select
+                    id="serviceType"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('serviceType')"
+                    formControlName="serviceType"
+                    aria-required="true">
+                    <option value="">Selecciona un servicio…</option>
+                    @for (s of serviceTypes; track s.value) {
+                      <option [value]="s.value">{{ s.label }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('serviceType')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('serviceType') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="permitNumber">No. de Permiso / Registro</label>
+                  <input
+                    id="permitNumber"
+                    class="fg-input fg-input--mono"
+                    type="text"
+                    formControlName="permitNumber"
+                    placeholder="Ej. SCT-NL-00234-2022 (opcional)"
+                    maxlength="80"
+                  />
+                  <span class="fg-hint">Número de permiso SCT u otro registro oficial.</span>
+                </div>
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label fg-label--required" for="coverage">Cobertura Geográfica</label>
+                  <input
+                    id="coverage"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('coverage')"
+                    type="text"
+                    formControlName="coverage"
+                    placeholder="Ej. Noreste y Bajío (NL, CDMX, QRO, GTO)"
+                    maxlength="300"
+                    aria-required="true"
+                  />
+                  <span class="fg-hint">
+                    Describe las regiones o estados que cubre este transportista.
+                    La integración con el catálogo geográfico se implementará en una historia posterior.
+                  </span>
+                  @if (fieldHasError('coverage')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('coverage') }}</span>
+                  }
+                </div>
+
+                <!-- Capacidades de Unidades -->
+                <div class="fg-field fg-field--full">
+                  <span class="fg-label" id="vehicle-caps-label">
+                    Capacidades de Unidades Generales
+                  </span>
+                  <p class="fg-hint">
+                    Tipos de unidades que este transportista puede manejar en general.
+                    No representa unidades vehiculares individuales registradas
+                    (esas pertenecen al módulo de Control de Patio).
+                  </p>
+                  <div
+                    class="carriers-checkbox-grid"
+                    role="group"
+                    aria-labelledby="vehicle-caps-label">
+                    @for (cap of vehicleCapabilities; track cap.value) {
+                      <label
+                        class="carriers-checkbox-item"
+                        [class.carriers-checkbox-item--checked]="isVehicleTypeSelected(cap.value)"
+                        [for]="'cap-' + cap.value">
+                        <input
+                          [id]="'cap-' + cap.value"
+                          class="carriers-checkbox-input"
+                          type="checkbox"
+                          [checked]="isVehicleTypeSelected(cap.value)"
+                          (change)="toggleVehicleType(cap.value)"
+                          [attr.aria-label]="cap.label"
+                        />
+                        <span class="carriers-checkbox-label">{{ cap.label }}</span>
+                      </label>
+                    }
+                  </div>
+                </div>
+
+                <!-- Clientes Preferentes -->
+                @if (formMode() === 'edit' && selectedCarrier()?.preferredClients?.length) {
+                  <div class="fg-field fg-field--full">
+                    <span class="fg-label" id="preferred-clients-label">
+                      Clientes Preferentes
+                    </span>
+                    <p class="fg-hint">
+                      Consumido por el módulo de Programación de Ventanas para sugerir
+                      transportistas disponibles al programar citas de un cliente específico.
+                    </p>
+                    <div class="carriers-tags" role="list" aria-labelledby="preferred-clients-label">
+                      @for (client of selectedCarrier()!.preferredClients!; track client) {
+                        <span class="carriers-tag" role="listitem">
+                          <span class="material-symbols-outlined" aria-hidden="true">business</span>
+                          {{ client }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- Observaciones -->
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label" for="notes">Observaciones</label>
+                  <textarea
+                    id="notes"
+                    class="fg-textarea"
+                    formControlName="notes"
+                    placeholder="Información adicional relevante sobre el transportista…"
+                    rows="3"
+                    maxlength="1000">
+                  </textarea>
+                  <span class="fg-hint fg-hint--right">
+                    {{ form.get('notes')?.value?.length ?? 0 }} / 1000
+                  </span>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 4 — Control (solo lectura) ──────────────── -->
+            @if (formMode() === 'edit' && selectedCarrier()) {
+              <fieldset class="carriers-form-section carriers-form-section--readonly">
+                <legend class="carriers-form-section__legend">
+                  <span class="material-symbols-outlined">manage_history</span>
+                  Información de Control
+                </legend>
+
+                <div class="carriers-readonly-grid">
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Fecha de creación</span>
+                    <span class="carriers-readonly-field__value">
+                      {{ selectedCarrier()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Última actualización</span>
+                    <span class="carriers-readonly-field__value">
+                      {{ selectedCarrier()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Creado por</span>
+                    <span class="carriers-readonly-field__value carriers-readonly-field__value--user">
+                      <span class="material-symbols-outlined">person</span>
+                      {{ selectedCarrier()!.createdBy }}
+                    </span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Modificado por</span>
+                    <span class="carriers-readonly-field__value carriers-readonly-field__value--user">
+                      <span class="material-symbols-outlined">person</span>
+                      {{ selectedCarrier()!.updatedBy }}
+                    </span>
+                  </div>
+
+                  @if (selectedCarrier()!.statusChangeReason) {
+                    <div class="carriers-readonly-field carriers-readonly-field--full">
+                      <span class="carriers-readonly-field__label">Motivo del último cambio de estado</span>
+                      <span class="carriers-readonly-field__value">
+                        {{ selectedCarrier()!.statusChangeReason }}
+                      </span>
+                    </div>
+                  }
+                </div>
+
+                <!-- ── Placeholder línea de tiempo de auditoría ── -->
+                @if (canViewAudit()) {
+                  <div class="carriers-timeline-preview">
+                    <div class="carriers-timeline-preview__header">
+                      <span class="material-symbols-outlined">timeline</span>
+                      <span>Historial de cambios</span>
+                      <span class="carriers-timeline-preview__badge">Próximamente</span>
+                    </div>
+                    <p class="carriers-timeline-preview__desc">
+                      El historial de auditoría se visualizará como una línea de tiempo
+                      con iconos semánticos, colores por tipo de acción y resúmenes de
+                      qué campos cambiaron, generado transaccionalmente por el backend.
+                    </p>
+                    <div class="carriers-timeline-preview__nodes" aria-hidden="true">
+                      <div class="carriers-tl-node carriers-tl-node--create">
+                        <div class="carriers-tl-node__dot">
+                          <span class="material-symbols-outlined">add_circle</span>
+                        </div>
+                        <div class="carriers-tl-node__line"></div>
+                        <div class="carriers-tl-node__content">
+                          <span class="carriers-tl-node__action">Creación</span>
+                          <span class="carriers-tl-node__meta">Por admin · hace 8 meses</span>
+                        </div>
+                      </div>
+                      <div class="carriers-tl-node carriers-tl-node--update">
+                        <div class="carriers-tl-node__dot">
+                          <span class="material-symbols-outlined">edit</span>
+                        </div>
+                        <div class="carriers-tl-node__line"></div>
+                        <div class="carriers-tl-node__content">
+                          <span class="carriers-tl-node__action">Actualización</span>
+                          <span class="carriers-tl-node__meta">Por jperez · hace 2 meses</span>
+                        </div>
+                      </div>
+                      <div class="carriers-tl-node carriers-tl-node--status">
+                        <div class="carriers-tl-node__dot">
+                          <span class="material-symbols-outlined">swap_horiz</span>
+                        </div>
+                        <div class="carriers-tl-node__line carriers-tl-node__line--last"></div>
+                        <div class="carriers-tl-node__content">
+                          <span class="carriers-tl-node__action">Cambio de estado</span>
+                          <span class="carriers-tl-node__meta">Por supervisor01 · hace 5 días</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO ──────────────────────── -->
+            <div class="carriers-form-actions">
+
+              <!-- Acciones de estado (solo en edición) -->
+              @if (formMode() === 'edit' && selectedCarrier()) {
+                <div class="carriers-form-actions__status-group">
+
+                  @if (selectedCarrier()!.status !== 'ACTIVE' && canUpdate()) {
+                    <button
+                      id="btn-activate-carrier"
+                      class="carriers-btn carriers-btn--success"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="activateCarrier()"
+                      aria-label="Activar este transportista">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      Activar
+                    </button>
+                  }
+
+                  @if (selectedCarrier()!.status === 'ACTIVE' && canSuspend()) {
+                    <button
+                      id="btn-suspend-carrier"
+                      class="carriers-btn carriers-btn--warning"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('suspend')"
+                      aria-label="Suspender este transportista">
+                      <span class="material-symbols-outlined">pause_circle</span>
+                      Suspender
+                    </button>
+                  }
+
+                  @if (selectedCarrier()!.status !== 'INACTIVE' && canDisable()) {
+                    <button
+                      id="btn-deactivate-carrier"
+                      class="carriers-btn carriers-btn--danger"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('deactivate')"
+                      aria-label="Desactivar este transportista">
+                      <span class="material-symbols-outlined">block</span>
+                      Desactivar
+                    </button>
+                  }
+
+                </div>
+              }
+
+              <!-- Guardar / Cancelar -->
+              <div class="carriers-form-actions__main">
+                <button
+                  id="btn-cancel-carrier"
+                  class="carriers-btn carriers-btn--ghost"
+                  type="button"
+                  [disabled]="isSaving"
+                  (click)="cancelForm()"
+                  aria-label="Cancelar cambios">
+                  Cancelar
+                </button>
+
+                @if (canUpdate() || (formMode() === 'new' && canCreate())) {
+                  <button
+                    id="btn-save-carrier"
+                    class="carriers-btn carriers-btn--primary carriers-btn--save"
+                    type="submit"
+                    [disabled]="isSaving"
+                    [attr.aria-busy]="isSaving"
+                    aria-label="Guardar transportista">
+                    @if (isSaving) {
+                      <span class="carriers-spinner" aria-hidden="true"></span>
+                      Guardando…
+                    } @else {
+                      <span class="material-symbols-outlined">save</span>
+                      {{ formMode() === 'new' ? 'Registrar transportista' : 'Guardar cambios' }}
+                    }
+                  </button>
+                }
+              </div>
+
+            </div>
+
+          </form>
+        </div>
+      }
+
+    </main>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DIÁLOGO DE CONFIRMACIÓN DE CAMBIO DE ESTADO
+       ════════════════════════════════════════════════════════════════ -->
+  @if (statusDialogMode() !== 'none') {
+    <div
+      class="carriers-dialog-overlay"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="dialogTitle"
+      (click)="closeStatusDialog()">
+
+      <div class="carriers-dialog" (click)="$event.stopPropagation()">
+
+        <header class="carriers-dialog__header">
+          <div class="carriers-dialog__icon"
+            [class.carriers-dialog__icon--warning]="statusDialogMode() === 'suspend'"
+            [class.carriers-dialog__icon--danger]="statusDialogMode() === 'deactivate'">
+            <span class="material-symbols-outlined">
+              {{ statusDialogMode() === 'suspend' ? 'pause_circle' : 'block' }}
+            </span>
+          </div>
+          <div>
+            <h2 class="carriers-dialog__title">{{ dialogTitle }}</h2>
+            <p class="carriers-dialog__desc">{{ dialogDescription }}</p>
+          </div>
+        </header>
+
+        <form [formGroup]="statusDialogForm" (ngSubmit)="confirmStatusChange()" class="carriers-dialog__form">
+
+          <div class="fg-field">
+            <label class="fg-label fg-label--required" for="dialog-reason">Motivo</label>
+            <textarea
+              id="dialog-reason"
+              class="fg-textarea"
+              [class.fg-input--error]="statusDialogForm.get('reason')?.invalid && statusDialogForm.get('reason')?.touched"
+              formControlName="reason"
+              placeholder="Describe el motivo del cambio de estado…"
+              rows="3"
+              maxlength="500"
+              aria-required="true">
+            </textarea>
+            @if (statusDialogForm.get('reason')?.invalid && statusDialogForm.get('reason')?.touched) {
+              <span class="fg-error" role="alert">El motivo es obligatorio.</span>
+            }
+          </div>
+
+          <div class="fg-field">
+            <label class="fg-label" for="dialog-notes">Observaciones adicionales</label>
+            <textarea
+              id="dialog-notes"
+              class="fg-textarea"
+              formControlName="notes"
+              placeholder="Información adicional opcional…"
+              rows="2"
+              maxlength="500">
+            </textarea>
+          </div>
+
+          <p class="carriers-dialog__warning">
+            <span class="material-symbols-outlined">warning</span>
+            Esta acción quedará registrada en el log de auditoría del sistema.
+          </p>
+
+          <div class="carriers-dialog__actions">
+            <button
+              class="carriers-btn carriers-btn--ghost"
+              type="button"
+              (click)="closeStatusDialog()"
+              aria-label="Cancelar y cerrar el diálogo">
+              Cancelar
+            </button>
+            <button
+              id="btn-confirm-status-change"
+              class="carriers-btn"
+              [class.carriers-btn--warning]="statusDialogMode() === 'suspend'"
+              [class.carriers-btn--danger]="statusDialogMode() === 'deactivate'"
+              type="submit"
+              [disabled]="isSaving"
+              [attr.aria-busy]="isSaving">
+              @if (isSaving) {
+                <span class="carriers-spinner" aria-hidden="true"></span>
+                Procesando…
+              } @else {
+                Confirmar
+              }
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  }
+
+</div>

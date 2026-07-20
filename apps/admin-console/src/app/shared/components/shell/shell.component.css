@@ -37,7 +37,7 @@
   flex-direction: column;
   width: 100%;
   height: 100vh;
-  overflow: hidden;
+  overflow: visible;
   color: #e8edf3;
   background:
     linear-gradient(180deg,
@@ -71,20 +71,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
   border-radius: 10px;
-  color: #d5b76d;
-  background: #07101a;
-  border: 1px solid rgba(213, 183, 109, 0.18);
-  box-shadow:
-    0 8px 20px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  font-family: 'Bodoni Moda', serif;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  background: transparent;
+  overflow: hidden;
+}
+
+.sidebar__logo-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .sidebar__logo-text {
@@ -120,6 +118,10 @@
 
 /* ── Botón colapsar ───────────────────────────────────────── */
 .sidebar__toggle {
+  position: absolute;
+  right: -14px;
+  top: 38px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -128,20 +130,25 @@
   padding: 0;
   flex-shrink: 0;
   cursor: pointer;
-  color: #8190a0;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  transition:
-    color 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease;
+  color: #EAC349;
+  background: #142232;
+  border: 1px solid rgba(234, 195, 73, 0.4);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
 }
 
 .sidebar__toggle:hover {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.06);
+  color: #09131e;
+  background: #EAC349;
+  border-color: #EAC349;
+  box-shadow: 0 0 16px rgba(234, 195, 73, 0.5);
+  transform: translateY(-50%) scale(1.15);
+}
+
+.sidebar__toggle:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
 .sidebar__toggle-icon {
@@ -408,16 +415,7 @@
   justify-content: center;
 }
 
-.shell--collapsed .sidebar__toggle {
-  position: absolute;
-  top: 55px;
-  right: 7px;
-  z-index: 2;
-  width: 22px;
-  height: 22px;
-  background: #142232;
-  border-color: rgba(255, 255, 255, 0.08);
-}
+
 
 .shell--collapsed .sidebar__nav {
   padding-right: 10px;
@@ -586,6 +584,49 @@
   pointer-events: none;
   color: #718093;
   font-size: 16px !important;
+}
+
+.shell__branch-selector--static {
+  cursor: default !important;
+}
+
+.shell__branch-selector--static:hover {
+  background: #172332 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: none !important;
+}
+
+.shell__branch-selector--static:focus-within {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: none !important;
+}
+
+/* Glass theme override */
+.shell__branch-selector--static.shell__branch-selector {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.085) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 7px 18px rgba(0, 0, 0, 0.08) !important;
+}
+.shell__branch-selector--static.shell__branch-selector:hover {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.085) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 7px 18px rgba(0, 0, 0, 0.08) !important;
+}
+
+.shell__branch-value {
+  max-width: 280px;
+  min-width: 190px;
+  color: #f1f5f9;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* ── Zona derecha ─────────────────────────────────────────── */
@@ -1825,4 +1866,653 @@
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ================================================================
+   SYNEXIA PREMIUM POLISH
+   Live Header · Liquid Glass · Theme Engine · Microinteractions
+   ================================================================ */
+
+/* ────────────────────────────────────────────────────────────────
+   VARIABLES DE TEMA
+   ──────────────────────────────────────────────────────────────── */
+
+:host {
+  --shell-bg: #f4f6f8;
+  --content-bg-start: #f8f9fb;
+  --content-bg-end: #f2f4f7;
+
+  --glass-surface: rgba(255, 255, 255, 0.72);
+  --glass-surface-strong: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.54);
+  --glass-shadow: 0 18px 45px rgba(15, 23, 42, 0.09);
+
+  --header-bg: rgba(16, 26, 39, 0.84);
+  --header-border: rgba(255, 255, 255, 0.08);
+
+  --premium-text: #172033;
+  --premium-muted: #7f8a99;
+  --premium-gold: #c5a86b;
+  --premium-danger: #ef5350;
+
+  --theme-transition:
+    background-color 280ms ease,
+    background 280ms ease,
+    border-color 280ms ease,
+    color 280ms ease,
+    box-shadow 280ms ease;
+}
+
+/* Tema oscuro aplicado al documento por el TypeScript */
+
+:host-context(.theme-dark) {
+  --shell-bg: #0b1119;
+  --content-bg-start: #101722;
+  --content-bg-end: #0c121b;
+
+  --glass-surface: rgba(16, 24, 36, 0.67);
+  --glass-surface-strong: rgba(17, 25, 38, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.075);
+  --glass-shadow: 0 22px 52px rgba(0, 0, 0, 0.28);
+
+  --header-bg: rgba(8, 15, 24, 0.78);
+  --header-border: rgba(255, 255, 255, 0.075);
+
+  --premium-text: #edf1f5;
+  --premium-muted: #8e9aaa;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   TRANSICIÓN GLOBAL DE TEMA
+   ──────────────────────────────────────────────────────────────── */
+
+.shell,
+.shell__main,
+.shell__header,
+.shell__content,
+.shell__branch-selector,
+.profile-menu,
+.cp-modal,
+.profile-modal,
+.shell__live-clock,
+.shell__header-btn {
+  transition: var(--theme-transition);
+}
+
+.shell {
+  background: var(--shell-bg);
+}
+
+.shell__main {
+  background: var(--shell-bg);
+}
+
+.shell__content {
+  color: var(--premium-text);
+  background:
+    radial-gradient(circle at 82% 12%,
+      rgba(197, 168, 107, 0.055),
+      transparent 25rem),
+    linear-gradient(180deg,
+      var(--content-bg-start) 0%,
+      var(--content-bg-end) 100%);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   LIQUID GLASS DEL HEADER
+   ──────────────────────────────────────────────────────────────── */
+
+.shell__header {
+  min-height: 68px;
+  height: 68px;
+  background: var(--header-bg);
+  border-bottom-color: var(--header-border);
+  box-shadow:
+    0 8px 28px rgba(15, 23, 42, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.shell__header::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(110deg,
+      rgba(255, 255, 255, 0.025),
+      transparent 34%,
+      rgba(197, 168, 107, 0.035) 72%,
+      transparent);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   SELECTOR DE SUCURSAL GLASS
+   ──────────────────────────────────────────────────────────────── */
+
+.shell__branch-selector {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.085);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 7px 18px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.shell__branch-selector:hover {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: rgba(197, 168, 107, 0.3);
+  box-shadow:
+    0 0 0 3px rgba(197, 168, 107, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   RELOJ EN VIVO
+   ──────────────────────────────────────────────────────────────── */
+
+.shell__live-clock {
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  min-height: 40px;
+  padding: 0.35rem 0.7rem 0.35rem 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 8px 18px rgba(0, 0, 0, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.shell__live-clock-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  border: 1px solid rgba(197, 168, 107, 0.14);
+  border-radius: 9px;
+  background: rgba(197, 168, 107, 0.08);
+  color: #d2b671;
+}
+
+.shell__live-clock-icon .material-symbols-outlined {
+  font-size: 0.95rem !important;
+}
+
+.shell__live-clock-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.shell__live-clock-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.shell__live-clock-row strong {
+  color: #f4f6f8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.shell__live-clock-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: #91a0af;
+  font-size: 0.51rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.shell__live-clock-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4caf70;
+  box-shadow: 0 0 0 3px rgba(76, 175, 112, 0.09);
+  animation: live-dot-breathe 2s ease-in-out infinite;
+}
+
+.shell__live-clock-date {
+  max-width: 200px;
+  overflow: hidden;
+  color: #748292;
+  font-size: 0.52rem;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+/* Estado Actualizando */
+
+.shell__live-clock--refreshing {
+  border-color: rgba(96, 165, 250, 0.2);
+  background: rgba(59, 130, 246, 0.065);
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.shell__live-clock--refreshing .shell__live-clock-icon {
+  border-color: rgba(96, 165, 250, 0.18);
+  background: rgba(59, 130, 246, 0.1);
+  color: #93c5fd;
+}
+
+.shell__live-clock--refreshing .shell__live-clock-icon span {
+  animation: premium-spin 0.85s linear infinite;
+}
+
+.shell__live-clock--refreshing .shell__live-clock-dot {
+  background: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ALERTA CRÍTICA PREMIUM
+   ──────────────────────────────────────────────────────────────── */
+
+.shell__alert-badge--critical {
+  position: relative;
+  overflow: hidden;
+  animation: critical-premium-breathe 2.2s ease-in-out infinite;
+}
+
+.shell__alert-badge--critical::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -45%;
+  width: 38%;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.15),
+      transparent);
+  transform: skewX(-20deg);
+  animation: critical-shine 4.5s ease-in-out infinite;
+}
+
+.shell__alert-icon {
+  animation: critical-icon-pulse 1.8s ease-in-out infinite;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   BOTÓN DE TEMA
+   ──────────────────────────────────────────────────────────────── */
+
+.shell__header-btn--theme {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(197, 168, 107, 0.11);
+  background: rgba(197, 168, 107, 0.055);
+  color: #d2b671;
+}
+
+.shell__header-btn--theme::before {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(197, 168, 107, 0.08);
+  border-radius: 7px;
+  pointer-events: none;
+  content: "";
+}
+
+.shell__header-btn--theme:hover {
+  border-color: rgba(197, 168, 107, 0.3);
+  background: rgba(197, 168, 107, 0.12);
+  color: #f1d797;
+  box-shadow:
+    0 0 0 3px rgba(197, 168, 107, 0.05),
+    0 7px 18px rgba(0, 0, 0, 0.1);
+}
+
+.shell__header-btn--theme .material-symbols-outlined {
+  transition:
+    transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 220ms ease;
+}
+
+.shell__header-btn--theme:active .material-symbols-outlined {
+  transform: rotate(28deg) scale(0.86);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ENTRADA SUAVE DEL CONTENIDO
+   ──────────────────────────────────────────────────────────────── */
+
+.shell__content>* {
+  animation: shell-content-enter 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   PERFIL LIQUID GLASS
+   ──────────────────────────────────────────────────────────────── */
+
+.profile-menu {
+  background: var(--glass-surface-strong);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+:host-context(.theme-dark) .profile-menu {
+  color: #edf1f5;
+}
+
+:host-context(.theme-dark) .profile-menu__name {
+  color: #edf1f5;
+}
+
+:host-context(.theme-dark) .profile-menu__item {
+  color: #9aa6b4;
+}
+
+:host-context(.theme-dark) .profile-menu__item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+:host-context(.theme-dark) .profile-menu__divider {
+  background: rgba(255, 255, 255, 0.075);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   MODO OSCURO DE MODALES
+   ──────────────────────────────────────────────────────────────── */
+
+:host-context(.theme-light) .cp-modal,
+:host-context(.theme-light) .profile-modal {
+  background:
+    linear-gradient(150deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(247, 245, 239, 0.97));
+  border-color: rgba(197, 168, 107, 0.2);
+  color: #26344e;
+}
+
+:host-context(.theme-light) .cp-modal__title,
+:host-context(.theme-light) .profile-modal__title,
+:host-context(.theme-light) .profile-card__fullName,
+:host-context(.theme-light) .profile-card__value,
+:host-context(.theme-light) .cp-modal__success-title {
+  color: #26344e;
+}
+
+:host-context(.theme-light) .cp-modal__subtitle,
+:host-context(.theme-light) .cp-modal__label,
+:host-context(.theme-light) .profile-card__label,
+:host-context(.theme-light) .profile-modal__loading,
+:host-context(.theme-light) .cp-modal__success-desc {
+  color: #7d8797;
+}
+
+:host-context(.theme-light) .cp-modal__header,
+:host-context(.theme-light) .profile-modal__header,
+:host-context(.theme-light) .profile-modal__footer,
+:host-context(.theme-light) .profile-card__section {
+  border-color: rgba(23, 36, 61, 0.07);
+}
+
+:host-context(.theme-light) .cp-modal__input {
+  border-color: rgba(23, 36, 61, 0.12);
+  background: #fbfbfa;
+  color: #26344e;
+}
+
+:host-context(.theme-light) .cp-modal__input::placeholder {
+  color: #a1a8b3;
+}
+
+:host-context(.theme-light) .cp-modal__input-icon,
+:host-context(.theme-light) .cp-modal__eye-btn {
+  color: #8b95a4;
+}
+
+:host-context(.theme-light) .cp-modal__requirements,
+:host-context(.theme-light) .profile-card__avatar-section,
+:host-context(.theme-light) .profile-card__details {
+  border-color: rgba(23, 36, 61, 0.075);
+  background: rgba(247, 245, 239, 0.82);
+}
+
+:host-context(.theme-light) .cp-modal__requirements li {
+  color: #87919f;
+}
+
+:host-context(.theme-light) .profile-modal__btn-close,
+:host-context(.theme-light) .cp-modal__btn--cancel {
+  border-color: rgba(23, 36, 61, 0.11);
+  background: #ffffff;
+  color: #59667b;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   MODO OSCURO DEL SHELL
+   ──────────────────────────────────────────────────────────────── */
+
+:host-context(.theme-dark) .shell__content {
+  scrollbar-color: #3d4856 transparent;
+}
+
+:host-context(.theme-dark) .shell__content::-webkit-scrollbar-thumb {
+  border-color: #0d141e;
+  background: #35404e;
+}
+
+:host-context(.theme-dark) .shell__content::-webkit-scrollbar-thumb:hover {
+  background: #465362;
+}
+
+:host-context(.theme-dark) .shell__main::before {
+  background:
+    radial-gradient(circle at 12% 12%,
+      rgba(197, 168, 107, 0.04),
+      transparent 27%),
+    radial-gradient(circle at 88% 84%,
+      rgba(255, 255, 255, 0.025),
+      transparent 30%);
+}
+
+/* Esta regla ayuda a que componentes que usen fondos transparentes
+   hereden mejor el tema oscuro */
+
+:host-context(.theme-dark) .shell__content {
+  color-scheme: dark;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ANIMACIONES
+   ──────────────────────────────────────────────────────────────── */
+
+@keyframes live-dot-breathe {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.48;
+    transform: scale(0.78);
+  }
+}
+
+@keyframes premium-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes critical-premium-breathe {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 0 rgba(239, 68, 68, 0),
+      inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  }
+
+  50% {
+    opacity: 0.84;
+    box-shadow:
+      0 0 0 4px rgba(239, 68, 68, 0.045),
+      0 0 18px rgba(239, 68, 68, 0.08);
+  }
+}
+
+@keyframes critical-icon-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.09);
+  }
+}
+
+@keyframes critical-shine {
+
+  0%,
+  65% {
+    left: -45%;
+    opacity: 0;
+  }
+
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    left: 125%;
+    opacity: 0;
+  }
+}
+
+@keyframes shell-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ACCESIBILIDAD Y REDUCCIÓN DE MOVIMIENTO
+   ──────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .shell,
+  .shell__main,
+  .shell__header,
+  .shell__content,
+  .shell__branch-selector,
+  .profile-menu,
+  .cp-modal,
+  .profile-modal,
+  .shell__live-clock,
+  .shell__header-btn,
+  .shell__content>* {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   RESPONSIVE HEADER PREMIUM
+   ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1180px) {
+  .shell__live-clock-date {
+    display: none;
+  }
+
+  .shell__branch-prefix {
+    display: none;
+  }
+
+  .shell__branch-select,
+  .shell__branch-value {
+    min-width: 150px;
+    max-width: 210px;
+  }
+}
+
+@media (max-width: 960px) {
+  .shell__alert-text {
+    display: none;
+  }
+
+  .shell__alert-badge {
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .shell__live-clock-status {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell__header {
+    padding-right: 14px;
+    padding-left: 14px;
+    gap: 10px;
+  }
+
+  .shell__branch-selector {
+    max-width: 180px;
+  }
+
+  .shell__branch-select,
+  .shell__branch-value {
+    min-width: 110px;
+    max-width: 130px;
+  }
+
+  .shell__live-clock {
+    padding-right: 0.4rem;
+  }
+
+  .shell__live-clock-date,
+  .shell__live-clock-status,
+  .shell__live-clock-icon {
+    display: none;
+  }
+
+  .shell__live-clock-row strong {
+    font-size: 0.62rem;
+  }
 }

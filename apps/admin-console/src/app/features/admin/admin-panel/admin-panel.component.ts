@@ -1,11 +1,12 @@
 /**
  * @file admin-panel.component.ts
  * @description Panel central de administración de 4GUARD WMS (Admin Hub).
- * Orquesta 13 módulos JPA simulados mediante servicios separados e inyecciones de Signals.
+ * Orquesta 13 módulos JPA mediante servicios separados e inyecciones de Signals.
+ * El módulo de Clientes está integrado con el Backend mediante HTTP.
  */
 
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserRole } from '@4guard/shared-core';
@@ -24,6 +25,7 @@ import { MovementService, InventoryMovement } from '../services/movement.service
 import { IncidenceService, Incidence, IncidenceStatus, IncidenceType, IncidenceSeverity } from '../services/incidence.service';
 import { AuditLogService, AuditLog } from '../services/audit.service';
 import { NotificationAdminService, NotificationAdminItem, NotificationSeverity } from '../services/notification-admin.service';
+import { RestrictSpecialCharsDirective } from '../../../shared/directives/restrict-special-chars.directive';
 
 interface AdminModuleCard {
   id: string;
@@ -34,19 +36,59 @@ interface AdminModuleCard {
   badgeCount?: () => number;
 }
 
+
 @Component({
   selector: 'fg-admin-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RestrictSpecialCharsDirective],
   templateUrl: './admin-panel.component.html',
-  styleUrl: './admin-panel.component.css'
+  styleUrl: './admin-panel.component.css',
+  host: { '[class]': 'themeClass()' }
 })
-export class AdminPanelComponent implements OnInit {
+export class AdminPanelComponent implements OnInit, OnDestroy {
+  private readonly doc = inject(DOCUMENT);
+
+  /** Reactive signal that tracks the active theme class */
+  protected readonly themeClass = signal<string>(this.getThemeClass());
+
+  private themeObserver?: MutationObserver;
+
+  private getThemeClass(): string {
+    return this.doc.documentElement.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';
+  }
+
+  ngOnDestroy(): void {
+    this.themeObserver?.disconnect();
+  }
+
   ngOnInit(): void {
+    // Observar cambios de clase en <html> para mantener el tema sincronizado
+    this.themeObserver = new MutationObserver(() => {
+      this.themeClass.set(this.getThemeClass());
+    });
+    this.themeObserver.observe(this.doc.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
     // Carga inicial de organizaciones para poblar los selectores del formulario en otros módulos
     this.orgService.loadOrganizations().subscribe({
       error: (err) => {
         console.error('Error al precargar organizaciones del backend:', err);
+      }
+    });
+
+    // Carga inicial de sucursales del usuario logueado en sesión
+    this.branchService.loadBranches().subscribe({
+      error: (err) => {
+        console.error('Error al precargar sucursales del backend:', err);
+      }
+    });
+
+    // Carga inicial de clientes (Depositantes) correspondientes al organizationId en sesión
+    this.clientService.loadClients().subscribe({
+      error: (err) => {
+        console.error('Error al precargar clientes del backend:', err);
       }
     });
   }
@@ -105,6 +147,7 @@ export class AdminPanelComponent implements OnInit {
 
   // Modelos de formulario y visualización de detalles
   protected formModel: any = {};
+  protected readonly activeFormSections = signal<WarehouseSection[]>([]);
   protected detailModel: any = null;
 
   // Catálogo de tarjetas de administración
@@ -250,18 +293,68 @@ export class AdminPanelComponent implements OnInit {
     if (moduleId === 'organizations') {
       this.orgService.loadOrganizations().subscribe({
         error: (err) => {
-          alert('Error al cargar la lista de organizaciones del backend: ' + (err.message || 'Error inesperado'));
+          alert('Error al cargar la lista de organizaciones del backend: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'branches') {
+      this.branchService.loadBranches().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de sucursales del backend: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'clients') {
+      this.clientService.loadClients().subscribe({
+        error: (err: any) => {
+          alert('Error al cargar la lista de clientes del backend: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'locations') {
+      this.locationService.loadLocations().subscribe({
+        error: (err: any) => {
+          alert('Error al cargar la lista de ubicaciones del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'skus') {
+      // Cargar clientes para asegurar que la lista de clientes se obtenga filtrada por organizationId del usuario en sesión
+      this.clientService.loadClients().subscribe({
+        next: () => {
+          this.skuService.loadSkus().subscribe({
+            error: (err: any) => {
+              alert('Error al cargar la lista de SKUs del backend: ' + (err.message || 'Error inesperado'));
+            }
+          });
+        },
+        error: (err: any) => {
+          console.error('Error al precargar clientes para SKUs:', err);
+          // Fallback: cargar los SKUs de todas formas
+          this.skuService.loadSkus().subscribe({
+            error: (errSku: any) => {
+              alert('Error al cargar la lista de SKUs del backend: ' + (errSku.message || 'Error inesperado'));
+            }
+          });
+        }
+      });
+    } else if (moduleId === 'sections') {
+      this.sectionService.loadSections().subscribe({
+        error: (err: any) => {
+          alert('Error al cargar la lista de secciones del backend: ' + (err.message || 'Error inesperado'));
+        }
+      });
+    } else if (moduleId === 'locations') {
+      this.locationService.loadLocations().subscribe({
+        error: (err) => {
+          alert('Error al cargar la lista de ubicaciones del backend: ' + (err.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'users') {
       this.userAdminService.loadUsers().subscribe({
-        error: (err) => {
+        error: (err: any) => {
           alert('Error al cargar la lista de usuarios del backend: ' + (err.message || 'Error inesperado'));
         }
       });
     } else if (moduleId === 'roles') {
       this.roleService.loadRolesAndPermissions().subscribe({
-        error: (err) => {
+        error: (err: any) => {
           alert('Error al cargar la lista de roles y permisos del backend: ' + (err.message || 'Error inesperado'));
         }
       });
@@ -326,10 +419,9 @@ export class AdminPanelComponent implements OnInit {
       };
     } else if (module === 'locations') {
       const branches = this.branchService.branches();
-      const sections = this.sectionService.sections();
       this.formModel = {
         branchId: branches[0]?.id || '',
-        sectionId: sections[0]?.id || '',
+        sectionId: '',
         zone: 'A',
         aisle: '01',
         rack: '01',
@@ -343,10 +435,14 @@ export class AdminPanelComponent implements OnInit {
         isBlocked: false,
         blockReason: ''
       };
+      if (this.formModel.branchId) {
+        this.loadSectionsForActiveForm(this.formModel.branchId);
+      }
     } else if (module === 'clients') {
       const orgs = this.orgService.organizations();
       this.formModel = {
         orgId: orgs[0]?.id || '',
+        orgName: orgs[0]?.name || '',
         name: '',
         externalId: '',
         status: 'ACTIVE'
@@ -402,6 +498,9 @@ export class AdminPanelComponent implements OnInit {
       this.formModel = { ...item };
     } else if (module === 'locations') {
       this.formModel = { ...item };
+      if (this.formModel.branchId) {
+        this.loadSectionsForActiveForm(this.formModel.branchId);
+      }
     } else if (module === 'clients') {
       this.formModel = { ...item };
     } else if (module === 'skus') {
@@ -424,7 +523,8 @@ export class AdminPanelComponent implements OnInit {
 
     try {
       if (module === 'organizations') {
-        if (!this.formModel.name || !this.formModel.code) throw new Error('Nombre y Código son requeridos.');
+        if (!this.formModel.name) throw new Error('El nombre de la organización es requerido.');
+        if (!this.formModel.code) throw new Error('El código de la organización es requerido.');
         if (id) {
           this.orgService.update(id, this.formModel).subscribe({
             next: () => {
@@ -432,7 +532,7 @@ export class AdminPanelComponent implements OnInit {
               this.closeModal();
             },
             error: (err) => {
-              alert('Error al actualizar la organización: ' + (err.message || 'Error inesperado'));
+              alert('Error al actualizar la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
             }
           });
         } else {
@@ -443,7 +543,7 @@ export class AdminPanelComponent implements OnInit {
               this.closeModal();
             },
             error: (err) => {
-              alert('Error al crear la organización: ' + (err.message || 'Error inesperado'));
+              alert('Error al crear la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
             }
           });
         }
@@ -453,23 +553,55 @@ export class AdminPanelComponent implements OnInit {
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
         this.formModel.orgName = org ? org.name : '';
         if (id) {
-          this.branchService.update(id, this.formModel);
-          this.auditLog('branches', id, 'UPDATE', null, this.formModel);
+          this.branchService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('branches', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.branchService.create(this.formModel);
-          this.auditLog('branches', 'new', 'CREATE', null, this.formModel);
+          this.branchService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('branches', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'sections') {
         if (!this.formModel.code || !this.formModel.name) throw new Error('Código y Nombre son requeridos.');
         const branch = this.branchService.branches().find(b => b.id === this.formModel.branchId);
         this.formModel.branchName = branch ? branch.name : '';
         if (id) {
-          this.sectionService.update(id, this.formModel);
-          this.auditLog('sections', id, 'UPDATE', null, this.formModel);
+          this.sectionService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('sections', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar la sección: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.sectionService.create(this.formModel);
-          this.auditLog('sections', 'new', 'CREATE', null, this.formModel);
+          this.sectionService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('sections', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear la sección: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'locations') {
         if (!this.formModel.zone) throw new Error('Zona es requerida.');
         const branch = this.branchService.branches().find(b => b.id === this.formModel.branchId);
@@ -483,34 +615,82 @@ export class AdminPanelComponent implements OnInit {
         }
 
         if (id) {
-          this.locationService.update(id, this.formModel);
-          this.auditLog('locations', id, 'UPDATE', null, this.formModel);
+          this.locationService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('locations', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.locationService.create(this.formModel);
-          this.auditLog('locations', 'new', 'CREATE', null, this.formModel);
+          this.locationService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('locations', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'clients') {
         if (!this.formModel.name) throw new Error('Nombre del Cliente es requerido.');
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
-        this.formModel.orgName = org ? org.name : '';
+        this.formModel.orgName = org ? org.name : this.formModel.orgName;
         if (id) {
-          this.clientService.update(id, this.formModel);
-          this.auditLog('clients', id, 'UPDATE', null, this.formModel);
+          this.clientService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('clients', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar el cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.clientService.create(this.formModel);
-          this.auditLog('clients', 'new', 'CREATE', null, this.formModel);
+          this.clientService.create(this.formModel).subscribe({
+            next: (response: any) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('clients', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear el cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'skus') {
         if (!this.formModel.code || !this.formModel.name) throw new Error('Código SKU y Nombre comercial son requeridos.');
         const client = this.clientService.clients().find(c => c.id === this.formModel.clientId);
         this.formModel.clientName = client ? client.name : '';
         if (id) {
-          this.skuService.update(id, this.formModel);
-          this.auditLog('skus', id, 'UPDATE', null, this.formModel);
+          this.skuService.update(id, this.formModel).subscribe({
+            next: () => {
+              this.auditLog('skus', id, 'UPDATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al actualizar el SKU: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         } else {
-          this.skuService.create(this.formModel);
-          this.auditLog('skus', 'new', 'CREATE', null, this.formModel);
+          this.skuService.create(this.formModel).subscribe({
+            next: (response) => {
+              const newId = response.data?.id || 'new';
+              this.auditLog('skus', newId, 'CREATE', null, this.formModel);
+              this.closeModal();
+            },
+            error: (err: any) => {
+              alert('Error al crear el SKU: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+            }
+          });
         }
+        return; // No cerrar modal sincrónicamente
       } else if (module === 'users') {
         if (!this.formModel.username || !this.formModel.email) throw new Error('Usuario y Email son requeridos.');
         const org = this.orgService.organizations().find(o => o.id === this.formModel.orgId);
@@ -588,24 +768,54 @@ export class AdminPanelComponent implements OnInit {
           this.auditLog('organizations', id, 'DELETE', null, null);
         },
         error: (err) => {
-          alert('Error al eliminar la organización: ' + (err.message || 'Error inesperado'));
+          alert('Error al eliminar la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
         }
       });
     } else if (module === 'branches') {
-      this.branchService.delete(id);
-      this.auditLog('branches', id, 'DELETE', null, null);
+      this.branchService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('branches', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'sections') {
-      this.sectionService.delete(id);
-      this.auditLog('sections', id, 'DELETE', null, null);
+      this.sectionService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('sections', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar la sección: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'locations') {
-      this.locationService.delete(id);
-      this.auditLog('locations', id, 'DELETE', null, null);
+      this.locationService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('locations', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'clients') {
-      this.clientService.delete(id);
-      this.auditLog('clients', id, 'DELETE', null, null);
+      this.clientService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('clients', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar el cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'skus') {
-      this.skuService.delete(id);
-      this.auditLog('skus', id, 'DELETE', null, null);
+      this.skuService.delete(id).subscribe({
+        next: () => {
+          this.auditLog('skus', id, 'DELETE', null, null);
+        },
+        error: (err: any) => {
+          alert('Error al eliminar el SKU: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else if (module === 'users') {
       this.userAdminService.delete(id).subscribe({
         next: () => {
@@ -641,40 +851,97 @@ export class AdminPanelComponent implements OnInit {
         this.auditLog('organizations', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
       },
       error: (err) => {
-        alert('Error al cambiar el estado de la organización: ' + (err.message || 'Error inesperado'));
+        alert('Error al cambiar el estado de la organización: ' + (err?.error?.message || err?.message || 'Error inesperado'));
       }
     });
   }
 
   protected toggleBranchStatus(id: string): void {
-    this.branchService.toggleStatus(id);
-    this.auditLog('branches', id, 'UPDATE', { desc: 'Toggle status' }, null);
+    const branch = this.branchService.branches().find(b => b.id === id);
+    const oldStatus = branch?.status;
+    const newStatus = oldStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    this.branchService.toggleStatus(id).subscribe({
+      next: () => {
+        this.auditLog('branches', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
+      },
+      error: (err: any) => {
+        alert('Error al cambiar el estado de la sucursal: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected toggleClientStatus(id: string): void {
-    this.clientService.toggleStatus(id);
-    this.auditLog('clients', id, 'UPDATE', { desc: 'Toggle status' }, null);
+    const client = this.clientService.clients().find(c => c.id === id);
+    const oldStatus = client?.status;
+    const newStatus = oldStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    this.clientService.toggleStatus(id).subscribe({
+      next: () => {
+        this.auditLog('clients', id, 'UPDATE', { status: oldStatus }, { status: newStatus });
+      },
+      error: (err: any) => {
+        alert('Error al cambiar el estado del cliente: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+      }
+    });
   }
 
   protected toggleLocationBlock(loc: Location): void {
     if (loc.isBlocked) {
       // Desbloquear directamente
-      this.locationService.toggleBlock(loc.id, false, '');
-      this.auditLog('locations', loc.id, 'UPDATE', { block: true }, { block: false });
+      this.locationService.toggleBlock(loc.id, false, '').subscribe({
+        next: () => {
+          this.auditLog('locations', loc.id, 'UPDATE', { block: true }, { block: false });
+        },
+        error: (err: any) => {
+          alert('Error al desbloquear la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
+      });
     } else {
       const reason = prompt('Escriba el motivo de bloqueo para la ubicación:');
       if (!reason) return;
-      this.locationService.toggleBlock(loc.id, true, reason);
-      this.auditLog('locations', loc.id, 'UPDATE', { block: false }, { block: true, reason });
-      
-      // Lanzar notificación administrativa
-      this.notifService.create({
-        title: 'Ubicación Bloqueada por Calidad',
-        message: `La ubicación física ${loc.branchName} - ${loc.zone} ha sido bloqueada. Motivo: ${reason}`,
-        severity: 'WARNING',
-        technicalMetadata: JSON.stringify({ locationId: loc.id, zone: loc.zone, reason })
+      this.locationService.toggleBlock(loc.id, true, reason).subscribe({
+        next: () => {
+          this.auditLog('locations', loc.id, 'UPDATE', { block: false }, { block: true, reason });
+          
+          // Lanzar notificación administrativa
+          this.notifService.create({
+            title: 'Ubicación Bloqueada por Calidad',
+            message: `La ubicación física ${loc.branchName} - ${loc.zone} ha sido bloqueada. Motivo: ${reason}`,
+            severity: 'WARNING',
+            technicalMetadata: JSON.stringify({ locationId: loc.id, zone: loc.zone, reason })
+          });
+        },
+        error: (err: any) => {
+          alert('Error al bloquear la ubicación: ' + (err?.error?.message || err?.message || 'Error inesperado'));
+        }
       });
     }
+  }
+
+  protected onBranchChange(branchId: string): void {
+    if (this.selectedModule() === 'locations') {
+      this.loadSectionsForActiveForm(branchId);
+    }
+  }
+
+  private loadSectionsForActiveForm(branchId: string): void {
+    this.sectionService.getSectionsByBranch(branchId).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.activeFormSections.set(response.data);
+          // Auto seleccionar primera sección si no hay una sección seleccionada o si la seleccionada ya no existe en el listado nuevo
+          const currentSecId = this.formModel.sectionId;
+          const exists = response.data.some(s => s.id === currentSecId);
+          if (!exists && response.data.length > 0) {
+            this.formModel.sectionId = response.data[0].id;
+          }
+        } else {
+          this.activeFormSections.set([]);
+        }
+      },
+      error: () => {
+        this.activeFormSections.set([]);
+      }
+    });
   }
 
   protected toggleUserStatus(id: string): void {

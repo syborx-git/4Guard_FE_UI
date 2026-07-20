@@ -3,411 +3,111 @@
 
   <!-- ==================== MAIN DASHBOARD (GRID OF CARDS) ==================== -->
   @if (selectedModule() === null) {
+  <!-- PAGE HEADER -->
+  <div class="page-top">
+    <div class="page-top__title-row">
+      <span class="material-symbols-outlined page-top__icon">settings</span>
+      <h1 class="page-top__title">Consola de Administración WMS</h1>
+    </div>
+    <p class="page-top__subtitle">Configura la jerarquía física de tu almacén, gestiona la seguridad y monitorea las
+      operaciones en tiempo real.</p>
+  </div>
 
-  <!-- =========================================================
-       ADMIN HUB — DASHBOARD PRINCIPAL
-       Referencia visual adaptada desde Google AI
-       ========================================================= -->
+  <!-- MAIN DASHBOARD CONTENT -->
+  <div class="dashboard-scroll">
 
-  <section class="admin-dashboard">
-
-    <!-- HEADER -->
-    <header class="admin-hero">
-
-      <div class="admin-hero__eyebrow">
-        <span class="admin-hero__eyebrow-line"></span>
-
-        <span class="material-symbols-outlined">
-          admin_panel_settings
-        </span>
-
-        <span>Console & Catalog Management</span>
+    <!-- SECCIÓN: ESTRUCTURA DE ALMACÉN -->
+    <div class="module-section">
+      <h2 class="module-section__title">🏢 Estructura de Almacén (WMS Catalogs)</h2>
+      <div class="modules-grid">
+        @for (m of modules; track m.id) {
+        @if (m.category === 'STRUCTURE') {
+        <div class="module-card" (click)="selectModule(m.id)">
+          <div class="module-card__header">
+            <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+            <span class="module-card__title">{{ m.title }}</span>
+          </div>
+          <p class="module-card__desc">{{ m.description }}</p>
+          <div class="module-card__action">Configurar <span class="material-symbols-outlined">arrow_forward</span></div>
+        </div>
+        }
+        }
       </div>
-
-      <div class="admin-hero__content">
-
-        <div class="admin-hero__icon">
-          <span class="material-symbols-outlined">
-            settings
-          </span>
-        </div>
-
-        <div class="admin-hero__copy">
-          <h1 class="admin-hero__title">
-            Consola de Administración WMS
-          </h1>
-
-          <p class="admin-hero__subtitle">
-            Configura la jerarquía física de tu almacén, gestiona la seguridad
-            y monitorea las operaciones en tiempo real.
-          </p>
-        </div>
-
-      </div>
-
-    </header>
-
-    <!-- CONTENIDO -->
-    <div class="admin-dashboard__content">
-
-      <!-- ESTRUCTURA -->
-      <section class="admin-category">
-
-        <header class="admin-category__header">
-          <div class="admin-category__heading">
-            <span class="material-symbols-outlined">
-              warehouse
-            </span>
-
-            <h2>
-              Estructura de Almacén
-            </h2>
-          </div>
-
-          <span class="admin-category__caption">
-            WMS Catalogs
-          </span>
-        </header>
-
-        <div class="admin-modules-grid">
-
-          @for (m of modules; track m.id) {
-            @if (m.category === 'STRUCTURE') {
-
-              <article
-                class="admin-module-card"
-                tabindex="0"
-                role="button"
-                (click)="selectModule(m.id)"
-                (keydown.enter)="selectModule(m.id)"
-              >
-
-                <div class="admin-module-card__glow"></div>
-
-                <div class="admin-module-card__top">
-
-                  <div class="admin-module-card__icon">
-                    <span class="material-symbols-outlined">
-                      {{ m.icon }}
-                    </span>
-                  </div>
-
-                  <span class="admin-module-card__index">
-                    0{{ $index + 1 }}
-                  </span>
-
-                </div>
-
-                <div class="admin-module-card__body">
-
-                  <h3 class="admin-module-card__title">
-                    {{ m.title }}
-                  </h3>
-
-                  <p class="admin-module-card__description">
-                    {{ m.description }}
-                  </p>
-
-                </div>
-
-                <div class="admin-module-card__footer">
-                  <span>Configurar</span>
-
-                  <span class="material-symbols-outlined">
-                    arrow_forward
-                  </span>
-                </div>
-
-              </article>
-
-            }
-          }
-
-        </div>
-
-      </section>
-
-      <!-- MERCANCÍA -->
-      <section class="admin-category">
-
-        <header class="admin-category__header">
-          <div class="admin-category__heading">
-            <span class="material-symbols-outlined">
-              inventory_2
-            </span>
-
-            <h2>
-              Catálogos de Mercancía
-            </h2>
-          </div>
-
-          <span class="admin-category__caption">
-            Stock & Owners
-          </span>
-        </header>
-
-        <div class="admin-modules-grid">
-
-          @for (m of modules; track m.id) {
-            @if (m.category === 'MERCHANDISE') {
-
-              <article
-                class="admin-module-card"
-                tabindex="0"
-                role="button"
-                (click)="selectModule(m.id)"
-                (keydown.enter)="selectModule(m.id)"
-              >
-
-                <div class="admin-module-card__glow"></div>
-
-                <div class="admin-module-card__top">
-
-                  <div class="admin-module-card__icon">
-                    <span class="material-symbols-outlined">
-                      {{ m.icon }}
-                    </span>
-                  </div>
-
-                  <span class="admin-module-card__index">
-                    0{{ $index + 1 }}
-                  </span>
-
-                </div>
-
-                <div class="admin-module-card__body">
-
-                  <h3 class="admin-module-card__title">
-                    {{ m.title }}
-                  </h3>
-
-                  <p class="admin-module-card__description">
-                    {{ m.description }}
-                  </p>
-
-                </div>
-
-                <div class="admin-module-card__footer">
-                  <span>Configurar</span>
-
-                  <span class="material-symbols-outlined">
-                    arrow_forward
-                  </span>
-                </div>
-
-              </article>
-
-            }
-          }
-
-        </div>
-
-      </section>
-
-      <!-- SEGURIDAD -->
-      <section class="admin-category">
-
-        <header class="admin-category__header">
-          <div class="admin-category__heading">
-            <span class="material-symbols-outlined">
-              shield_lock
-            </span>
-
-            <h2>
-              Seguridad y Control de Acceso
-            </h2>
-          </div>
-
-          <span class="admin-category__caption">
-            Identity & Permissions
-          </span>
-        </header>
-
-        <div class="admin-modules-grid">
-
-          @for (m of modules; track m.id) {
-            @if (m.category === 'SECURITY') {
-
-              <article
-                class="admin-module-card"
-                tabindex="0"
-                role="button"
-                (click)="selectModule(m.id)"
-                (keydown.enter)="selectModule(m.id)"
-              >
-
-                <div class="admin-module-card__glow"></div>
-
-                @if (m.badgeCount && m.badgeCount() > 0) {
-                  <span class="admin-module-card__badge">
-                    {{ m.badgeCount() }}
-                  </span>
-                }
-
-                <div class="admin-module-card__top">
-
-                  <div class="admin-module-card__icon">
-                    <span class="material-symbols-outlined">
-                      {{ m.icon }}
-                    </span>
-                  </div>
-
-                  <span class="admin-module-card__index">
-                    0{{ $index + 1 }}
-                  </span>
-
-                </div>
-
-                <div class="admin-module-card__body">
-
-                  <h3 class="admin-module-card__title">
-                    {{ m.title }}
-                  </h3>
-
-                  <p class="admin-module-card__description">
-                    {{ m.description }}
-                  </p>
-
-                </div>
-
-                <div class="admin-module-card__footer">
-                  <span>Configurar</span>
-
-                  <span class="material-symbols-outlined">
-                    arrow_forward
-                  </span>
-                </div>
-
-              </article>
-
-            }
-          }
-
-        </div>
-
-      </section>
-
-      <!-- MONITOREO -->
-      <section class="admin-category">
-
-        <header class="admin-category__header">
-          <div class="admin-category__heading">
-            <span class="material-symbols-outlined">
-              monitoring
-            </span>
-
-            <h2>
-              Monitoreo Técnico y Auditoría
-            </h2>
-          </div>
-
-          <span class="admin-category__caption">
-            Operations & Support
-          </span>
-        </header>
-
-        <div class="admin-modules-grid">
-
-          @for (m of modules; track m.id) {
-            @if (m.category === 'SUPPORT') {
-
-              <article
-                class="admin-module-card"
-                tabindex="0"
-                role="button"
-                (click)="selectModule(m.id)"
-                (keydown.enter)="selectModule(m.id)"
-              >
-
-                <div class="admin-module-card__glow"></div>
-
-                @if (m.badgeCount && m.badgeCount() > 0) {
-                  <span class="admin-module-card__badge">
-                    {{ m.badgeCount() }}
-                  </span>
-                }
-
-                <div class="admin-module-card__top">
-
-                  <div class="admin-module-card__icon">
-                    <span class="material-symbols-outlined">
-                      {{ m.icon }}
-                    </span>
-                  </div>
-
-                  <span class="admin-module-card__index">
-                    0{{ $index + 1 }}
-                  </span>
-
-                </div>
-
-                <div class="admin-module-card__body">
-
-                  <h3 class="admin-module-card__title">
-                    {{ m.title }}
-                  </h3>
-
-                  <p class="admin-module-card__description">
-                    {{ m.description }}
-                  </p>
-
-                </div>
-
-                <div class="admin-module-card__footer">
-                  <span>Consultar</span>
-
-                  <span class="material-symbols-outlined">
-                    arrow_forward
-                  </span>
-                </div>
-
-              </article>
-
-            }
-          }
-
-        </div>
-
-      </section>
-
     </div>
 
-    <!-- FOOTER TÉCNICO -->
-    <footer class="admin-system-status">
-
-      <div class="admin-system-status__group">
-
-        <div class="admin-system-status__item admin-system-status__item--online">
-          <span class="admin-system-status__pulse"></span>
-
-          <span>
-            Conexión API: Estable
-          </span>
+    <!-- SECCIÓN: CATÁLOGOS DE MERCANCÍA -->
+    <div class="module-section">
+      <h2 class="module-section__title">📦 Catálogos de Mercancía</h2>
+      <div class="modules-grid">
+        @for (m of modules; track m.id) {
+        @if (m.category === 'MERCHANDISE') {
+        <div class="module-card" (click)="selectModule(m.id)">
+          <div class="module-card__header">
+            <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+            <span class="module-card__title">{{ m.title }}</span>
+          </div>
+          <p class="module-card__desc">{{ m.description }}</p>
+          <div class="module-card__action">Configurar <span class="material-symbols-outlined">arrow_forward</span></div>
         </div>
+        }
+        }
+      </div>
+    </div>
 
-        <span class="admin-system-status__separator"></span>
-
-        <div class="admin-system-status__item">
-          <span class="material-symbols-outlined">
-            verified
-          </span>
-
-          <span>
-            Licencia: Active 3PL Corp
-          </span>
+    <!-- SECCIÓN: SEGURIDAD Y ACCESO -->
+    <div class="module-section">
+      <h2 class="module-section__title">🔐 Seguridad y Control de Acceso</h2>
+      <div class="modules-grid">
+        @for (m of modules; track m.id) {
+        @if (m.category === 'SECURITY') {
+        <div class="module-card" (click)="selectModule(m.id)">
+          <div class="module-card__header">
+            <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+            <span class="module-card__title">{{ m.title }}</span>
+          </div>
+          <p class="module-card__desc">{{ m.description }}</p>
+          <div class="module-card__action">Configurar <span class="material-symbols-outlined">arrow_forward</span></div>
         </div>
-
+        }
+        }
       </div>
+    </div>
 
-      <div class="admin-system-status__version">
-        <span>4GUARD WMS v4.5.0-GOLDEN</span>
-        <span class="admin-system-status__dot">•</span>
-        <span>Premium Hub</span>
+    <!-- SECCIÓN: SOPORTE Y MONITOREO -->
+    <div class="module-section">
+      <h2 class="module-section__title">📊 Monitoreo Técnico y Auditoría</h2>
+      <div class="modules-grid">
+        @for (m of modules; track m.id) {
+        @if (m.category === 'SUPPORT') {
+        <div class="module-card" (click)="selectModule(m.id)">
+          @if (m.badgeCount && m.badgeCount() > 0) {
+          <span class="module-card__badge">{{ m.badgeCount() }}</span>
+          }
+          <div class="module-card__header">
+            <span class="material-symbols-outlined module-card__icon">{{ m.icon }}</span>
+            <span class="module-card__title">{{ m.title }}</span>
+          </div>
+          <p class="module-card__desc">{{ m.description }}</p>
+          <div class="module-card__action">Consultar <span class="material-symbols-outlined">arrow_forward</span></div>
+        </div>
+        }
+        }
       </div>
+    </div>
+  </div>
 
-    </footer>
-
-  </section>
+  <!-- BOTTOM STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-bar__left">
+      <span class="status-bar__dot"></span>
+      <span class="status-bar__node">CONEXIÓN API: ESTABLE</span>
+      <span class="status-bar__sep">&bull;</span>
+      <span class="status-bar__license">LICENCIA: ACTIVE 3PL CORP</span>
+    </div>
+    <div class="status-bar__right">
+      <span class="status-bar__version">4GUARD WMS v4.5.0-GOLDEN &bull; PREMIUM HUB</span>
+    </div>
+  </div>
 
   } @else {
 
@@ -560,7 +260,6 @@
               <th>Nombre de Organización</th>
               <th>Tax ID / RFC</th>
               <th>Tipo</th>
-              <th>Configuración</th>
               <th>Estatus</th>
               <th>Creación</th>
               <th class="text-right">Acciones</th>
@@ -708,7 +407,6 @@
               <td>{{ item.name }}</td>
               <td>{{ item.taxId || 'N/A' }}</td>
               <td><span class="tech-badge">{{ item.type }}</span></td>
-              <td class="font-mono text-xs text-muted max-w-xs truncate" [title]="item.settings">{{ item.settings }}</td>
               <td>
                 <span class="status-badge" [class]="getStatusBadgeClass(item.status)">
                   {{ item.status }}
@@ -1107,16 +805,16 @@
         <div class="form-grid">
           <div class="field-group col-12">
             <label class="field-group__label">Nombre comercial de Organización</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Código único</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="20"
-              [disabled]="editingItemId() !== null" fgRestrictChars="code" required>
+              [disabled]="editingItemId() !== null" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Identificación Fiscal / RFC</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.taxId" fgRestrictChars="code" maxlength="20">
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.taxId" maxlength="20">
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Giro / Tipo Organizacional</label>
@@ -1154,12 +852,12 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Nombre comercial de la Sucursal</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Código único por Org</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="20"
-              [disabled]="editingItemId() !== null" fgRestrictChars="code" required>
+              [disabled]="editingItemId() !== null" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Zona Horaria</label>
@@ -1168,7 +866,7 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Dirección física completa</label>
-            <textarea class="field-group__textarea" [(ngModel)]="formModel.addressLine1" rows="2" fgRestrictChars="description"></textarea>
+            <textarea class="field-group__textarea" [(ngModel)]="formModel.addressLine1" rows="2"></textarea>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Estatus Sucursal</label>
@@ -1191,11 +889,11 @@
           </div>
           <div class="field-group col-4">
             <label class="field-group__label">Código Sección (máx 10)</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="10" fgRestrictChars="code" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="10" required>
           </div>
           <div class="field-group col-8">
             <label class="field-group__label">Nombre Descriptivo</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="100" fgRestrictChars="standard" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="100" required>
           </div>
         </div>
         }
@@ -1203,7 +901,7 @@
         <div class="form-grid">
           <div class="field-group col-6">
             <label class="field-group__label">Sucursal</label>
-            <select class="field-group__input select" [(ngModel)]="formModel.branchId" (change)="onBranchChange(formModel.branchId)">
+            <select class="field-group__input select" [(ngModel)]="formModel.branchId">
               @for (b of branchService.branches(); track b.id) {
               <option [value]="b.id">{{ b.name }}</option>
               }
@@ -1212,7 +910,7 @@
           <div class="field-group col-6">
             <label class="field-group__label">Sección interna</label>
             <select class="field-group__input select" [(ngModel)]="formModel.sectionId">
-              @for (s of activeFormSections(); track s.id) {
+              @for (s of getSectionsForBranch(formModel.branchId); track s.id) {
               <option [value]="s.id">{{ s.name }} ({{ s.code }})</option>
               }
             </select>
@@ -1220,22 +918,22 @@
           <div class="field-group col-3">
             <label class="field-group__label">Zona</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.zone"
-              maxlength="10" fgRestrictChars="code" required>
+              maxlength="10" required>
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Pasillo (Aisle)</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.aisle"
-              maxlength="10" fgRestrictChars="code">
+              maxlength="10">
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Rack</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.rack"
-              maxlength="10" fgRestrictChars="code">
+              maxlength="10">
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Posición</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.position"
-              maxlength="10" fgRestrictChars="code">
+              maxlength="10">
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Nivel (Altura)</label>
@@ -1279,7 +977,7 @@
           <div class="field-group col-12">
             <label class="field-group__label text-danger">Motivo de Bloqueo (Requerido si bloquea)</label>
             <textarea class="field-group__textarea border-danger" [(ngModel)]="formModel.blockReason"
-              rows="2" fgRestrictChars="description"></textarea>
+              rows="2"></textarea>
           </div>
           }
         </div>
@@ -1296,12 +994,19 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Nombre comercial de Cliente (Owner)</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
           </div>
-          <div class="field-group col-12">
+          <div class="field-group col-6">
             <label class="field-group__label">ID de Integración Externa (ERP/SAP)</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.externalId"
-              placeholder="Ej: SAP-CLI-901" maxlength="50" fgRestrictChars="code">
+              placeholder="Ej: SAP-CLI-901" maxlength="50">
+          </div>
+          <div class="field-group col-6">
+            <label class="field-group__label">Estatus Cliente</label>
+            <select class="field-group__input select" [(ngModel)]="formModel.status">
+              <option value="ACTIVE">Activo</option>
+              <option value="INACTIVE">Inactivo</option>
+            </select>
           </div>
         </div>
         }
@@ -1318,11 +1023,11 @@
           <div class="field-group col-6">
             <label class="field-group__label">Código SKU único</label>
             <input type="text" class="field-group__input font-mono font-bold" [(ngModel)]="formModel.code"
-              maxlength="50" fgRestrictChars="code" required>
+              maxlength="50" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Nombre del Producto</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Peso en kilogramos (Ej: 1.250)</label>
@@ -1341,7 +1046,7 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Descripción detallada</label>
-            <textarea class="field-group__textarea" [(ngModel)]="formModel.description" rows="3" fgRestrictChars="description"></textarea>
+            <textarea class="field-group__textarea" [(ngModel)]="formModel.description" rows="3"></textarea>
           </div>
         </div>
         }
@@ -1349,11 +1054,11 @@
         <div class="form-grid">
           <div class="field-group col-6">
             <label class="field-group__label">Nombre de Usuario (Login)</label>
-            <input type="text" class="field-group__input font-mono" [(ngModel)]="formModel.username" fgRestrictChars="code" required>
+            <input type="text" class="field-group__input font-mono" [(ngModel)]="formModel.username" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Correo electrónico</label>
-            <input type="email" class="field-group__input" [(ngModel)]="formModel.email" fgRestrictChars="email" required>
+            <input type="email" class="field-group__input" [(ngModel)]="formModel.email" required>
           </div>
           @if (editingItemId() === null) {
           <div class="field-group col-12">
@@ -1363,11 +1068,11 @@
           }
           <div class="field-group col-6">
             <label class="field-group__label">Nombre(s)</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.firstName" maxlength="100" fgRestrictChars="standard">
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.firstName" maxlength="100">
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Apellidos</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.lastName" maxlength="100" fgRestrictChars="standard">
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.lastName" maxlength="100">
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Organización</label>
@@ -1427,7 +1132,7 @@
         <div class="form-grid">
           <div class="field-group col-8">
             <label class="field-group__label">Nombre del Rol</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" [disabled]="formModel.isSystem" fgRestrictChars="standard"
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" [disabled]="formModel.isSystem"
               required>
           </div>
           <div class="field-group col-4">

@@ -63,6 +63,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Inventario',
       },
 
+      // Layout y Ubicaciones (HU-127)
+      {
+        path: 'layout',
+        canActivate: [rbacGuard],
+        data: { module: 'layout' },
+        loadChildren: () =>
+          import('./features/layout/layout.routes').then((m) => m.layoutRoutes),
+        title: '4GUARD WMS — Gestión de Layout',
+      },
+
       // Recepción
       {
         path: 'receiving',
@@ -91,6 +101,16 @@ export const adminRoutes: Routes = [
         loadChildren: () =>
           import('./features/shipping/shipping.routes').then((m) => m.shippingRoutes),
         title: '4GUARD WMS — Despacho',
+      },
+
+      // Gestión de Transportistas (HU-128)
+      {
+        path: 'carriers',
+        canActivate: [rbacGuard],
+        data: { module: 'carriers' },
+        loadChildren: () =>
+          import('./features/carriers/carriers.routes').then((m) => m.carriersRoutes),
+        title: '4GUARD WMS — Gestión de Transportistas',
       },
 
       // Administración
