@@ -1,14 +1,9 @@
-/* ==========================================================================
-   4GUARD WMS — Consola de Administración (Admin Hub)
-   Estilos CSS Vanilla Premium con micro-animaciones y soporte glassmorphic
-   ========================================================================== */
-
+/* Variables locales del panel de admin — NO redefinir las del tema global */
 :root {
   --color-bg-main: #0B0A0E;
   --color-bg-card: rgba(18, 16, 26, 0.78);
   --color-bg-hover: rgba(255, 255, 255, 0.04);
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-hover: rgba(255, 255, 255, 0.15);
+  /* --color-border: redefinida en _dark.scss — NO sobreescribir aquí */
 
   --color-text-main: #E4E2DE;
   --color-text-muted: rgba(255, 255, 255, 0.38);
@@ -18,11 +13,6 @@
   --color-gold-hover: #F5D76E;
   --color-purple: #B39DDB;
   --color-purple-hover: #D1C4E9;
-
-  --color-success: #4CAF50;
-  --color-danger: #EF5350;
-  --color-warning: #FFB74D;
-  --color-info: #29B6F6;
 
   --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -913,10 +903,10 @@
 }
 
 .modal-card {
-  background: rgba(22, 20, 31, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-card, #FFFFFF);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-2xl);
   backdrop-filter: blur(24px);
   width: 100%;
   max-width: 580px;
@@ -2845,3 +2835,137 @@
     justify-content: center;
   }
 }
+
+/* ============================================================
+   OVERRIDES DE TEMA PARA MODALES
+   Usamos :host(.theme-X) porque el componente tiene la clase de tema
+   en su elemento host gracias al host binding en el .ts.
+   ============================================================ */
+
+/* — MODO CLARO — */
+:host(.theme-light) .modal-card {
+  background: #ffffff;
+  border-color: rgba(23, 36, 61, 0.12);
+  box-shadow: 0 28px 65px rgba(31, 42, 68, 0.12);
+}
+
+:host(.theme-light) .modal-card__header,
+:host(.theme-light) .modal-card__footer {
+  background: #f7f5ef;
+  border-color: rgba(23, 36, 61, 0.1);
+}
+
+:host(.theme-light) .modal-card__title {
+  color: #17243d;
+}
+
+:host(.theme-light) .modal-card__close-btn {
+  color: #748094;
+}
+
+:host(.theme-light) .modal-card__close-btn:hover {
+  background: rgba(23, 36, 61, 0.06);
+  color: #17243d;
+}
+
+:host(.theme-light) .field-group__label {
+  color: #748094;
+}
+
+:host(.theme-light) .field-group__input,
+:host(.theme-light) select.field-group__input,
+:host(.theme-light) .field-group__textarea {
+  background: #fbfbfa;
+  border-color: rgba(23, 36, 61, 0.12);
+  color: #17243d;
+}
+
+:host(.theme-light) .field-group__input:focus,
+:host(.theme-light) select.field-group__input:focus,
+:host(.theme-light) .field-group__textarea:focus {
+  border-color: #ad8129;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(174, 129, 37, 0.12);
+}
+
+:host(.theme-light) .field-group__input:disabled,
+:host(.theme-light) select.field-group__input:disabled {
+  background: #f7f5ef;
+  color: #969fac;
+}
+
+:host(.theme-light) .modal-btn--secondary {
+  background: #ffffff;
+  border-color: rgba(23, 36, 61, 0.12);
+  color: #748094;
+}
+
+:host(.theme-light) .modal-btn--secondary:hover {
+  background: #f7f5ef;
+  color: #17243d;
+}
+
+/* — MODO OSCURO — */
+:host(.theme-dark) .modal-card {
+  background: rgba(17, 26, 38, 0.96);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(24px);
+}
+
+:host(.theme-dark) .modal-card__header,
+:host(.theme-dark) .modal-card__footer {
+  background: rgba(16, 23, 34, 0.9);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+:host(.theme-dark) .modal-card__title {
+  color: #edf1f5;
+}
+
+:host(.theme-dark) .modal-card__close-btn {
+  color: #748292;
+}
+
+:host(.theme-dark) .modal-card__close-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #edf1f5;
+}
+
+:host(.theme-dark) .field-group__label {
+  color: #9aa6b4;
+}
+
+:host(.theme-dark) .field-group__input,
+:host(.theme-dark) select.field-group__input,
+:host(.theme-dark) .field-group__textarea {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #edf1f5;
+}
+
+:host(.theme-dark) .field-group__input:focus,
+:host(.theme-dark) select.field-group__input:focus,
+:host(.theme-dark) .field-group__textarea:focus {
+  border-color: rgba(208, 175, 103, 0.6);
+  background: rgba(208, 175, 103, 0.05);
+  box-shadow: 0 0 0 3px rgba(208, 175, 103, 0.1);
+}
+
+:host(.theme-dark) .field-group__input:disabled,
+:host(.theme-dark) select.field-group__input:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  color: #748292;
+}
+
+:host(.theme-dark) .modal-btn--secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #9aa6b4;
+}
+
+:host(.theme-dark) .modal-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #edf1f5;
+}
+
