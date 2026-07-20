@@ -5,8 +5,8 @@
  * El módulo de Clientes está integrado con el Backend mediante HTTP.
  */
 
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserRole } from '@4guard/shared-core';
@@ -25,6 +25,7 @@ import { MovementService, InventoryMovement } from '../services/movement.service
 import { IncidenceService, Incidence, IncidenceStatus, IncidenceType, IncidenceSeverity } from '../services/incidence.service';
 import { AuditLogService, AuditLog } from '../services/audit.service';
 import { NotificationAdminService, NotificationAdminItem, NotificationSeverity } from '../services/notification-admin.service';
+import { RestrictSpecialCharsDirective } from '../../../shared/directives/restrict-special-chars.directive';
 
 interface AdminModuleCard {
   id: string;
@@ -35,15 +36,41 @@ interface AdminModuleCard {
   badgeCount?: () => number;
 }
 
+
 @Component({
   selector: 'fg-admin-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RestrictSpecialCharsDirective],
   templateUrl: './admin-panel.component.html',
-  styleUrl: './admin-panel.component.css'
+  styleUrl: './admin-panel.component.css',
+  host: { '[class]': 'themeClass()' }
 })
-export class AdminPanelComponent implements OnInit {
+export class AdminPanelComponent implements OnInit, OnDestroy {
+  private readonly doc = inject(DOCUMENT);
+
+  /** Reactive signal that tracks the active theme class */
+  protected readonly themeClass = signal<string>(this.getThemeClass());
+
+  private themeObserver?: MutationObserver;
+
+  private getThemeClass(): string {
+    return this.doc.documentElement.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';
+  }
+
+  ngOnDestroy(): void {
+    this.themeObserver?.disconnect();
+  }
+
   ngOnInit(): void {
+    // Observar cambios de clase en <html> para mantener el tema sincronizado
+    this.themeObserver = new MutationObserver(() => {
+      this.themeClass.set(this.getThemeClass());
+    });
+    this.themeObserver.observe(this.doc.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
     // Carga inicial de organizaciones para poblar los selectores del formulario en otros módulos
     this.orgService.loadOrganizations().subscribe({
       error: (err) => {
