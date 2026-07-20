@@ -1,5 +1,11 @@
 <div class="sessions-page">
 
+  <!-- BOTÓN REGRESAR -->
+  <button type="button" class="btn-back-admin" (click)="goToAdmin()">
+    <span class="material-symbols-outlined">arrow_back</span>
+    <span>Administrar</span>
+  </button>
+
   <!-- ENCABEZADO PRINCIPAL -->
   <header class="sessions-header">
 
@@ -49,6 +55,7 @@
 
       </div>
       }
+
 
       <button type="button" class="btn-refresh" (click)="loadSessions()" [disabled]="isLoading()">
 

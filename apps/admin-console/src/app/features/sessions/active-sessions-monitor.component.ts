@@ -8,6 +8,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { ActiveSessionsService, ActiveSession } from '../../core/services/active-sessions.service';
 import { AuthState } from '../../core/auth/auth.state';
 
@@ -21,6 +22,7 @@ import { AuthState } from '../../core/auth/auth.state';
 export class ActiveSessionsMonitorComponent implements OnInit {
   private readonly sessionsService = inject(ActiveSessionsService);
   protected readonly authState = inject(AuthState);
+  private readonly router = inject(Router);
 
   // Estado reactivo
   sessions = signal<ActiveSession[]>([]);
@@ -32,6 +34,11 @@ export class ActiveSessionsMonitorComponent implements OnInit {
     // Log de auditoría local (HU-011)
     console.log(JSON.stringify({ event: 'active_sessions_view', status: 'initiated' }));
     this.loadSessions();
+  }
+
+  /** Navega de regreso al panel de administración */
+  goToAdmin(): void {
+    this.router.navigate(['/admin']);
   }
 
   loadSessions(): void {
