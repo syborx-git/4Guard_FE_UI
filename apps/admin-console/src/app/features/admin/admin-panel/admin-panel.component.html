@@ -1107,16 +1107,16 @@
         <div class="form-grid">
           <div class="field-group col-12">
             <label class="field-group__label">Nombre comercial de Organización</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Código único</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="20"
-              [disabled]="editingItemId() !== null" required>
+              [disabled]="editingItemId() !== null" fgRestrictChars="code" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Identificación Fiscal / RFC</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.taxId" maxlength="20">
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.taxId" fgRestrictChars="code" maxlength="20">
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Giro / Tipo Organizacional</label>
@@ -1154,12 +1154,12 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Nombre comercial de la Sucursal</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Código único por Org</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="20"
-              [disabled]="editingItemId() !== null" required>
+              [disabled]="editingItemId() !== null" fgRestrictChars="code" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Zona Horaria</label>
@@ -1168,7 +1168,7 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Dirección física completa</label>
-            <textarea class="field-group__textarea" [(ngModel)]="formModel.addressLine1" rows="2"></textarea>
+            <textarea class="field-group__textarea" [(ngModel)]="formModel.addressLine1" rows="2" fgRestrictChars="description"></textarea>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Estatus Sucursal</label>
@@ -1191,11 +1191,11 @@
           </div>
           <div class="field-group col-4">
             <label class="field-group__label">Código Sección (máx 10)</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="10" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.code" maxlength="10" fgRestrictChars="code" required>
           </div>
           <div class="field-group col-8">
             <label class="field-group__label">Nombre Descriptivo</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="100" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="100" fgRestrictChars="standard" required>
           </div>
         </div>
         }
@@ -1220,22 +1220,22 @@
           <div class="field-group col-3">
             <label class="field-group__label">Zona</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.zone"
-              maxlength="10" required>
+              maxlength="10" fgRestrictChars="code" required>
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Pasillo (Aisle)</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.aisle"
-              maxlength="10">
+              maxlength="10" fgRestrictChars="code">
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Rack</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.rack"
-              maxlength="10">
+              maxlength="10" fgRestrictChars="code">
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Posición</label>
             <input type="text" class="field-group__input font-mono text-center" [(ngModel)]="formModel.position"
-              maxlength="10">
+              maxlength="10" fgRestrictChars="code">
           </div>
           <div class="field-group col-3">
             <label class="field-group__label">Nivel (Altura)</label>
@@ -1279,7 +1279,7 @@
           <div class="field-group col-12">
             <label class="field-group__label text-danger">Motivo de Bloqueo (Requerido si bloquea)</label>
             <textarea class="field-group__textarea border-danger" [(ngModel)]="formModel.blockReason"
-              rows="2"></textarea>
+              rows="2" fgRestrictChars="description"></textarea>
           </div>
           }
         </div>
@@ -1296,12 +1296,12 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Nombre comercial de Cliente (Owner)</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">ID de Integración Externa (ERP/SAP)</label>
             <input type="text" class="field-group__input" [(ngModel)]="formModel.externalId"
-              placeholder="Ej: SAP-CLI-901" maxlength="50">
+              placeholder="Ej: SAP-CLI-901" maxlength="50" fgRestrictChars="code">
           </div>
         </div>
         }
@@ -1318,11 +1318,11 @@
           <div class="field-group col-6">
             <label class="field-group__label">Código SKU único</label>
             <input type="text" class="field-group__input font-mono font-bold" [(ngModel)]="formModel.code"
-              maxlength="50" required>
+              maxlength="50" fgRestrictChars="code" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Nombre del Producto</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" required>
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" maxlength="200" fgRestrictChars="standard" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Peso en kilogramos (Ej: 1.250)</label>
@@ -1341,7 +1341,7 @@
           </div>
           <div class="field-group col-12">
             <label class="field-group__label">Descripción detallada</label>
-            <textarea class="field-group__textarea" [(ngModel)]="formModel.description" rows="3"></textarea>
+            <textarea class="field-group__textarea" [(ngModel)]="formModel.description" rows="3" fgRestrictChars="description"></textarea>
           </div>
         </div>
         }
@@ -1349,11 +1349,11 @@
         <div class="form-grid">
           <div class="field-group col-6">
             <label class="field-group__label">Nombre de Usuario (Login)</label>
-            <input type="text" class="field-group__input font-mono" [(ngModel)]="formModel.username" required>
+            <input type="text" class="field-group__input font-mono" [(ngModel)]="formModel.username" fgRestrictChars="code" required>
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Correo electrónico</label>
-            <input type="email" class="field-group__input" [(ngModel)]="formModel.email" required>
+            <input type="email" class="field-group__input" [(ngModel)]="formModel.email" fgRestrictChars="email" required>
           </div>
           @if (editingItemId() === null) {
           <div class="field-group col-12">
@@ -1363,11 +1363,11 @@
           }
           <div class="field-group col-6">
             <label class="field-group__label">Nombre(s)</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.firstName" maxlength="100">
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.firstName" maxlength="100" fgRestrictChars="standard">
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Apellidos</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.lastName" maxlength="100">
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.lastName" maxlength="100" fgRestrictChars="standard">
           </div>
           <div class="field-group col-6">
             <label class="field-group__label">Organización</label>
@@ -1427,7 +1427,7 @@
         <div class="form-grid">
           <div class="field-group col-8">
             <label class="field-group__label">Nombre del Rol</label>
-            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" [disabled]="formModel.isSystem"
+            <input type="text" class="field-group__input" [(ngModel)]="formModel.name" [disabled]="formModel.isSystem" fgRestrictChars="standard"
               required>
           </div>
           <div class="field-group col-4">

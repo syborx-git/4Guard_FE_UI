@@ -35,10 +35,12 @@ interface AdminModuleCard {
   badgeCount?: () => number;
 }
 
+import { RestrictSpecialCharsDirective } from '../../shared/directives/restrict-special-chars.directive';
+
 @Component({
   selector: 'fg-admin-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RestrictSpecialCharsDirective],
   templateUrl: './admin-panel.component.html',
   styleUrl: './admin-panel.component.css'
 })
