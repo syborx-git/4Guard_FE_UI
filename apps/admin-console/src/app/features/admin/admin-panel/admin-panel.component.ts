@@ -158,9 +158,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'sections', title: 'Secciones de Almacén', icon: 'grid_view', description: 'Áreas lógicas del almacén (recibo, frío, pasillos).', category: 'STRUCTURE' },
     { id: 'locations', title: 'Ubicaciones físicas', icon: 'location_on', description: 'Coordenadas 3D, capacidades y bloqueos de posiciones.', category: 'STRUCTURE' },
     
-    // Mercancía
+    // Mercancía y Operatividad Logística
     { id: 'clients', title: 'Clientes / Owners', icon: 'partner_exchange', description: 'Dueños de mercancía y stock depositado (3PL).', category: 'MERCHANDISE' },
     { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
+    { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
     
     // Seguridad
     { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
@@ -283,6 +284,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
   protected selectModule(moduleId: string | null): void {
     if (moduleId === 'sessions') {
       this.router.navigate(['/sessions']);
+      return;
+    }
+    if (moduleId === 'carriers') {
+      this.router.navigate(['/carriers']);
       return;
     }
     this.selectedModule.set(moduleId);

@@ -60,6 +60,7 @@ import {
   CARRIER_STATUS_LABELS,
   CreateCarrierRequest,
   UpdateCarrierRequest,
+  CarrierAuditEntry,
 } from '../models/carrier.model';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
@@ -93,10 +94,12 @@ function noWhitespaceValidator(control: AbstractControl): ValidationErrors | nul
   return (control.value as string).trim().length === 0 ? { whitespaceOnly: true } : null;
 }
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'fg-carrier-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './carrier-management.component.html',
   styleUrl: './carrier-management.component.css',
 })
@@ -114,6 +117,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
+  protected readonly auditEntries = signal<CarrierAuditEntry[]>([]);
 
   // ─── Filtros del directorio ──────────────────────────────────────────────────
 
@@ -290,6 +294,21 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    
+    // Cargar historial de auditoría real
+    this.auditEntries.set([]);
+    if (carrier.id) {
+      this.carrierService.getCarrierAudit(carrier.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (res) => {
+            this.auditEntries.set(res.data || []);
+          },
+          error: (err) => {
+            console.error('Error al cargar historial de auditoría:', err);
+          }
+        });
+    }
   }
 
   protected startNewCarrier(): void {
@@ -300,6 +319,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    this.auditEntries.set([]);
     this.form.markAsPristine();
     this.form.markAsUntouched();
   }
@@ -392,6 +412,19 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   // ─── Guardar ──────────────────────────────────────────────────────────────────
 
+  private loadAuditLogs(id: string): void {
+    this.carrierService.getCarrierAudit(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.auditEntries.set(res.data || []);
+        },
+        error: (err) => {
+          console.error('Error al cargar historial de auditoría:', err);
+        }
+      });
+  }
+
   protected saveCarrier(): void {
     this.submitAttempted.set(true);
     this.backendError.set(null);
@@ -424,6 +457,9 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
           this.selectedCarrier.set(res.data);
           this.formMode.set('edit');
           this.submitAttempted.set(false);
+          if (res.data.id) {
+            this.loadAuditLogs(res.data.id);
+          }
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -438,6 +474,9 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
             this.selectedCarrier.set(res.data);
             this.submitAttempted.set(false);
             this.form.markAsPristine();
+            if (res.data.id) {
+              this.loadAuditLogs(res.data.id);
+            }
             setTimeout(() => this.saveSuccess.set(false), 3500);
           },
           error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -468,10 +507,12 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     if (!carrierId || mode === 'none') return;
 
     const newStatus: CarrierStatus = mode === 'suspend' ? 'SUSPENDED' : 'INACTIVE';
+    const notesValue = this.statusDialogForm.value.notes?.trim();
     const dto: CarrierStatusChangeRequest = {
       status: newStatus,
       reason: this.statusDialogForm.value.reason.trim(),
-      notes:  this.statusDialogForm.value.notes?.trim() || undefined,
+      notes:  notesValue || undefined,
+      observations: notesValue || undefined,
     };
 
     this.carrierService.changeCarrierStatus(carrierId, dto)
@@ -482,6 +523,9 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
           this.populateForm(res.data);
           this.closeStatusDialog();
           this.saveSuccess.set(true);
+          if (res.data.id) {
+            this.loadAuditLogs(res.data.id);
+          }
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => {
@@ -507,6 +551,9 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
           this.selectedCarrier.set(res.data);
           this.populateForm(res.data);
           this.saveSuccess.set(true);
+          if (res.data.id) {
+            this.loadAuditLogs(res.data.id);
+          }
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),

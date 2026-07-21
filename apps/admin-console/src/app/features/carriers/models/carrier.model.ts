@@ -142,6 +142,7 @@ export interface Carrier {
   updatedAt: string;            // ISO 8601
   createdBy: string;            // Username del creador
   updatedBy: string;            // Username del último modificador
+  version?: number;             // Control de concurrencia (optimistic lock)
 
   // Campos de auditoría de estado (cuando aplica)
   statusChangedAt?: string;     // ISO 8601 — fecha del último cambio de estado
@@ -196,6 +197,7 @@ export interface CarrierStatusChangeRequest {
   status: CarrierStatus;
   reason: string;               // Motivo obligatorio para suspensión/desactivación
   notes?: string;               // Observaciones adicionales opcionales
+  observations?: string;        // Observaciones (campo esperado en el JSON del backend)
 }
 
 // ─── Paginación y Ordenamiento ────────────────────────────────────────────────
@@ -272,12 +274,18 @@ export interface CarrierFilters {
  * El backend es el único responsable de crear estos registros dentro
  * de sus transacciones de escritura.
  */
+export interface CarrierAuditDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
 export interface CarrierAuditEntry {
   id: string;
   carrierId: string;
 
   /** Tipo de acción realizada sobre el transportista. */
-  action: 'CREATE' | 'UPDATE' | 'STATUS_CHANGE' | 'VIEW';
+  action: 'CREATE' | 'UPDATE' | 'STATUS_CHANGE' | 'VIEW' | 'CARRIER_CREATED' | 'CARRIER_UPDATED' | 'CARRIER_DELETED' | 'CARRIER_STATUS_UPDATED';
 
   /** Username de quien realizó la acción. */
   performedBy: string;
@@ -293,6 +301,9 @@ export interface CarrierAuditEntry {
 
   /** Valores después del cambio. */
   newValues?: Partial<Carrier>;
+
+  /** Detalle de cambios de atributos campo por campo. */
+  details?: CarrierAuditDetail[];
 
   /** Notas adicionales del registro de auditoría. */
   notes?: string;
@@ -316,7 +327,7 @@ export interface CarrierAuditEntry {
    * Color semántico del nodo en la línea de tiempo.
    * El frontend asigna el color según la acción si el backend no lo provee.
    */
-  timelineColor?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  timelineColor?: 'create' | 'update' | 'status';
 }
 
 // ─── Respuesta genérica del backend ──────────────────────────────────────────
@@ -376,20 +387,28 @@ export const CARRIER_STATUS_LABELS: Record<CarrierStatus, string> = {
  * Mapeo de acción de auditoría al ícono de Material Symbols para la línea de tiempo.
  * Usado por el frontend cuando el backend no envía `timelineIcon`.
  */
-export const AUDIT_ACTION_ICONS: Record<CarrierAuditEntry['action'], string> = {
-  CREATE:        'add_circle',
-  UPDATE:        'edit',
-  STATUS_CHANGE: 'swap_horiz',
-  VIEW:          'visibility',
+export const AUDIT_ACTION_ICONS: Record<string, string> = {
+  CREATE:                  'add_circle',
+  UPDATE:                  'edit',
+  STATUS_CHANGE:           'swap_horiz',
+  VIEW:                    'visibility',
+  CARRIER_CREATED:         'add_circle',
+  CARRIER_UPDATED:         'edit',
+  CARRIER_DELETED:         'delete_forever',
+  CARRIER_STATUS_UPDATED:  'swap_horiz',
 };
 
 /**
  * Mapeo de acción de auditoría al color semántico del nodo en la línea de tiempo.
  * Usado por el frontend cuando el backend no envía `timelineColor`.
  */
-export const AUDIT_ACTION_COLORS: Record<CarrierAuditEntry['action'], CarrierAuditEntry['timelineColor']> = {
-  CREATE:        'success',
-  UPDATE:        'info',
-  STATUS_CHANGE: 'warning',
-  VIEW:          'neutral',
+export const AUDIT_ACTION_COLORS: Record<string, 'create' | 'update' | 'status'> = {
+  CREATE:                  'create',
+  UPDATE:                  'update',
+  STATUS_CHANGE:           'status',
+  VIEW:                    'update',
+  CARRIER_CREATED:         'create',
+  CARRIER_UPDATED:         'update',
+  CARRIER_DELETED:         'status',
+  CARRIER_STATUS_UPDATED:  'status',
 };
