@@ -55,10 +55,10 @@ export class ForgotPasswordModalComponent implements OnDestroy {
   protected readonly temporaryPassword = signal('');
   protected readonly copied            = signal(false);
 
-  // ── Control del campo Usuario o Email ──────────────────────
+  // ── Control del campo Email ──────────────────────
   protected readonly identifierCtrl = new FormControl('', [
     Validators.required,
-    Validators.minLength(3),
+    Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/),
     Validators.maxLength(100),
   ]);
 
@@ -116,13 +116,13 @@ export class ForgotPasswordModalComponent implements OnDestroy {
     const rawValue = this.identifierCtrl.value?.trim() ?? '';
 
     if (!rawValue) {
-      this.fieldError.set('Ingresa tu usuario o correo electrónico.');
+      this.fieldError.set('Ingresa tu correo electrónico.');
       this.identifierCtrl.markAsTouched();
       return;
     }
 
-    if (rawValue.length < 3) {
-      this.fieldError.set('Debe tener al menos 3 caracteres.');
+    if (this.identifierCtrl.invalid) {
+      this.fieldError.set('Ingresa un correo electrónico válido.');
       this.identifierCtrl.markAsTouched();
       return;
     }
