@@ -170,6 +170,10 @@ export class AuthState {
         return permissions.includes('SHIPPING_READ') || permissions.includes('SHIPPING_CREATE');
       case 'carriers':
         return true; // Acceso total habilitado para desarrollo y testing
+      case 'suppliers':
+        return true; // Acceso total habilitado para desarrollo y testing
+      case 'performance':
+        return true; // Acceso total habilitado para desarrollo y testing
       default:
         return false;
     }
