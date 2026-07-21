@@ -94,10 +94,12 @@ function noWhitespaceValidator(control: AbstractControl): ValidationErrors | nul
   return (control.value as string).trim().length === 0 ? { whitespaceOnly: true } : null;
 }
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'fg-carrier-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './carrier-management.component.html',
   styleUrl: './carrier-management.component.css',
 })
