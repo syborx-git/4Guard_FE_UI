@@ -162,6 +162,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'clients', title: 'Clientes / Owners', icon: 'partner_exchange', description: 'Dueños de mercancía y stock depositado (3PL).', category: 'MERCHANDISE' },
     { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
+    { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
     
     // Seguridad
     { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
@@ -288,6 +289,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     }
     if (moduleId === 'carriers') {
       this.router.navigate(['/carriers']);
+      return;
+    }
+    if (moduleId === 'suppliers') {
+      this.router.navigate(['/suppliers']);
       return;
     }
     this.selectedModule.set(moduleId);

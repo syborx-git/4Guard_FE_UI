@@ -448,6 +448,12 @@
           <li [class.active]="selectedModule() === 'skus'" (click)="selectModule('skus')">
             <span class="material-symbols-outlined">inventory</span> Catálogo SKUs
           </li>
+          <li [class.active]="selectedModule() === 'carriers'" (click)="selectModule('carriers')">
+            <span class="material-symbols-outlined">local_shipping</span> Transportistas
+          </li>
+          <li [class.active]="selectedModule() === 'suppliers'" (click)="selectModule('suppliers')">
+            <span class="material-symbols-outlined">storefront</span> Proveedores
+          </li>
         </ul>
       </div>
 
