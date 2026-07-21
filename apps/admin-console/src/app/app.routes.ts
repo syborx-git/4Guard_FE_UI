@@ -113,6 +113,26 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Transportistas',
       },
 
+      // Gestión de Proveedores (HU-125)
+      {
+        path: 'suppliers',
+        canActivate: [rbacGuard],
+        data: { module: 'suppliers' },
+        loadChildren: () =>
+          import('./features/suppliers/supplier.routes').then((m) => m.supplierRoutes),
+        title: '4GUARD WMS — Catálogo de Proveedores',
+      },
+
+      // Monitoreo de Rendimiento (HU-138)
+      {
+        path: 'performance',
+        canActivate: [rbacGuard],
+        data: { module: 'performance' },
+        loadChildren: () =>
+          import('./features/performance/performance.routes').then((m) => m.performanceRoutes),
+        title: '4GUARD WMS — Monitoreo de Rendimiento',
+      },
+
       // Administración
       {
         path: 'admin',
