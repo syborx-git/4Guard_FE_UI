@@ -2,7 +2,7 @@
    4GUARD WMS — Login Premium Dark Centered
    ================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 .login-page {
   display: flex;
@@ -159,11 +159,16 @@
 }
 
 .login-form__title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   color: #FFFFFF;
   margin: 0 0 0.5rem;
   text-align: center;
+  background: linear-gradient(180deg, #FFFFFF 40%, rgba(255, 255, 255, 0.75) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .login-form__subtitle {
