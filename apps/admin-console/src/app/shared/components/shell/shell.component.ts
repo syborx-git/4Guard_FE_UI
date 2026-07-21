@@ -220,7 +220,6 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
-    { label: 'Transportistas', route: '/carriers', icon: 'local_shipping', module: 'carriers' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
   ];
 

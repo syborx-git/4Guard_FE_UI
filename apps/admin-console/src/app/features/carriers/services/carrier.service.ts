@@ -55,12 +55,13 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, tap, delay } from 'rxjs/operators';
+import { catchError, tap, delay, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   Carrier,
   CarrierApiResponse,
   CarrierAuditEntry,
+  CarrierAuditDetail,
   CarrierListParams,
   CarrierStatus,
   CarrierStatusChangeRequest,
@@ -138,57 +139,32 @@ const MOCK_CARRIERS: Carrier[] = [
     updatedAt: '2026-02-14T16:45:00Z',
     createdBy: 'jperez',
     updatedBy: 'supervisor01',
-    statusChangedAt: '2026-02-14T16:45:00Z',
-    statusChangedBy: 'supervisor01',
-    statusChangeReason: 'Incumplimiento reiterado de ventanas horarias acordadas.',
-  },
-  {
-    id: 'car-004',
-    businessName: 'Paquetería Rápido Mx S.A. de C.V.',
-    tradeName: 'RápidoMx',
-    rfc: 'PRM180904HJ3',
-    carrierType: 'PARCEL',
-    status: 'INACTIVE',
-    contactName: 'Claudia Reyes',
-    phone: '5598765432',
-    email: 'claudia.reyes@rapidomx.com.mx',
-    serviceType: 'PARCEL',
-    coverage: 'Nacional (cobertura limitada zonas rurales)',
-    coverageRegions: ['NAC'],
-    supportedVehicleTypes: ['VAN', 'MOTORCYCLE'],
-    permitNumber: 'SCT-NAC-04412-2021',
-    notes: 'Contrato terminado. Se mantiene registro histórico para trazabilidad de embarques pasados.',
-    createdAt: '2024-08-11T13:00:00Z',
-    updatedAt: '2025-12-31T23:59:00Z',
-    createdBy: 'admin',
-    updatedBy: 'admin',
-    statusChangedAt: '2025-12-31T23:59:00Z',
-    statusChangedBy: 'admin',
-    statusChangeReason: 'Contrato no renovado. Proveedor dejó de operar en la región.',
-  },
-  {
-    id: 'car-005',
-    businessName: 'Trans-Client Lala Distribución',
-    tradeName: 'Lala Trans',
-    rfc: 'TCL950630KM7',
-    carrierType: 'CLIENT_TRANSPORT',
-    status: 'ACTIVE',
-    contactName: 'Fernando Ibarra',
-    phone: '8441234321',
-    email: 'fibarra@lala.com.mx',
-    serviceType: 'DEDICATED',
-    coverage: 'Rutas dedicadas Norte y Bajío (Torreón - GDL - QRO)',
-    coverageRegions: ['COAH', 'JAL', 'QRO', 'AGS'],
-    supportedVehicleTypes: ['REFRIGERATED_BOX', 'DRY_BOX', 'TRACTOR_TRAILER'],
-    permitNumber: 'SCT-COAH-00155-2020',
-    preferredClients: ['Lala S.A.'],
-    notes: 'Transporte propio del cliente Lala. Opera bajo instrucciones directas del cliente.',
-    createdAt: '2024-09-01T07:30:00Z',
-    updatedAt: '2026-05-10T09:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'jperez',
   },
 ];
+
+// ─── Mapeos de Vehículos ──────────────────────────────────────────────────────
+const VEHICLE_MAP_FE_TO_BE: Record<string, string> = {
+  DRY_BOX: 'CAJA_SECA',
+  REFRIGERATED_BOX: 'CAJA_REFRIGERADA',
+  FLATBED: 'PLATAFORMA',
+  TORTON: 'TORTON',
+  RABON: 'RABON',
+  TRACTOR_TRAILER: 'TRACTOCAMION',
+  VAN: 'VAN',
+  MOTORCYCLE: 'MOTOCICLETA'
+};
+
+const VEHICLE_MAP_BE_TO_FE: Record<string, string> = {
+  CAJA_SECA: 'DRY_BOX',
+  CAJA_REFRIGERADA: 'REFRIGERATED_BOX',
+  REFRIGERADA: 'REFRIGERATED_BOX',
+  PLATAFORMA: 'FLATBED',
+  TORTON: 'TORTON',
+  RABON: 'RABON',
+  TRACTOCAMION: 'TRACTOR_TRAILER',
+  VAN: 'VAN',
+  MOTOCICLETA: 'MOTORCYCLE'
+};
 
 // ─── Servicio ─────────────────────────────────────────────────────────────────
 
@@ -200,16 +176,13 @@ export class CarrierService {
 
   /**
    * URL base del recurso carriers.
-   * TODO: Ajustar según contrato real del Swagger del backend.
    */
   private readonly API_URL = `${environment.apiBaseUrl}/api/v1/carriers`;
 
   /**
    * Cambia a false cuando el backend esté disponible.
-   * Con true: filtrado, paginación y ordenamiento se realizan localmente.
-   * Con false: se delegan al servidor mediante query params.
    */
-  private readonly USE_MOCK = true;
+  private readonly USE_MOCK = false;
 
   // ─── Estado reactivo (Signals) ──────────────────────────────────────────────
 
@@ -261,111 +234,161 @@ export class CarrierService {
     this.carriers().filter(c => c.status === 'INACTIVE').length
   );
 
+  // ─── Métodos Auxiliares de Mapeo ─────────────────────────────────────────────
+
+  private getSessionOrgId(): string {
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session?.user?.organizationId) {
+          return session.user.organizationId;
+        }
+      }
+    } catch {}
+    return 'a53f0907-9fa5-4bdf-87db-2eb5e7683935'; // Fallback por defecto (4GUARD)
+  }
+
+  private mapDtoToItem(dto: any): Carrier {
+    return {
+      id: dto.id,
+      businessName: dto.name,
+      tradeName: dto.tradeName,
+      rfc: dto.taxId,
+      carrierType: dto.carrierType as any,
+      status: dto.status as any,
+      contactName: dto.contactName,
+      phone: dto.contactPhone,
+      email: dto.contactEmail,
+      serviceType: dto.serviceType as any,
+      coverage: dto.geographicCoverage || '',
+      supportedVehicleTypes: (dto.vehicleTypes || []).map((vt: string) => VEHICLE_MAP_BE_TO_FE[vt] || vt),
+      permitNumber: dto.permitNumber || '',
+      preferredClients: (dto.preferredClients || []).map((c: any) => c.name),
+      notes: dto.notes || '',
+      createdAt: dto.createdAt,
+      updatedAt: dto.updatedAt,
+      createdBy: 'system',
+      updatedBy: 'system',
+      version: dto.version
+    };
+  }
+
+  private mapAuditDtoToEntry(dto: any): CarrierAuditEntry {
+    const details: CarrierAuditDetail[] = (dto.details || []).map((d: any) => ({
+      fieldName: d.fieldName,
+      oldValue: d.oldValue,
+      newValue: d.newValue
+    }));
+
+    const beforeCarrier = dto.beforeState ? {
+      id: dto.beforeState.id,
+      businessName: dto.beforeState.name,
+      tradeName: dto.beforeState.tradeName,
+      rfc: dto.beforeState.taxId,
+      status: dto.beforeState.status,
+      contactName: dto.beforeState.contactName,
+      phone: dto.beforeState.contactPhone,
+      email: dto.beforeState.contactEmail,
+      coverage: dto.beforeState.geographicCoverage,
+      notes: dto.beforeState.notes
+    } : undefined;
+
+    const afterCarrier = dto.afterState ? {
+      id: dto.afterState.id,
+      businessName: dto.afterState.name,
+      tradeName: dto.afterState.tradeName,
+      rfc: dto.afterState.taxId,
+      status: dto.afterState.status,
+      contactName: dto.afterState.contactName,
+      phone: dto.afterState.contactPhone,
+      email: dto.afterState.contactEmail,
+      coverage: dto.afterState.geographicCoverage,
+      notes: dto.afterState.notes
+    } : undefined;
+
+    return {
+      id: dto.logId || `log-${Date.now()}`,
+      carrierId: dto.afterState?.id || dto.beforeState?.id || '',
+      action: dto.action,
+      performedBy: dto.username,
+      performedByFullName: dto.username,
+      performedAt: dto.createdAt,
+      previousValues: beforeCarrier as any,
+      newValues: afterCarrier as any,
+      details: details,
+      summary: this.getAuditSummary(dto, details)
+    };
+  }
+
+  private getAuditSummary(dto: any, details?: CarrierAuditDetail[]): string {
+    if (dto.action === 'CARRIER_CREATED') {
+      const name = dto.afterState?.tradeName || dto.afterState?.name || '';
+      return `Registró el transportista ${name ? '"' + name + '"' : ''}`;
+    }
+    
+    if (dto.action === 'CARRIER_STATUS_UPDATED') {
+      const statusDetail = details?.find(d => d.fieldName === 'status');
+      const reasonDetail = details?.find(d => d.fieldName === 'reason');
+      
+      const newStatus = statusDetail?.newValue || dto.afterState?.status || '';
+      const oldStatus = statusDetail?.oldValue || dto.beforeState?.status || '';
+      const reason = reasonDetail?.newValue;
+
+      let msg = 'Cambió el estado';
+      if (oldStatus && newStatus) {
+        msg += ` de ${oldStatus} a ${newStatus}`;
+      } else if (newStatus) {
+        msg += ` a ${newStatus}`;
+      }
+      if (reason) {
+        msg += `: "${reason}"`;
+      }
+      return msg;
+    }
+
+    if (dto.action === 'CARRIER_UPDATED') {
+      return 'Actualizó la información del transportista';
+    }
+
+    if (dto.action === 'CARRIER_DELETED') {
+      return 'Eliminó el transportista';
+    }
+
+    return dto.action;
+  }
+
   // ─── Métodos de lectura ──────────────────────────────────────────────────────
 
   /**
    * Carga la lista de transportistas con filtros, paginación y ordenamiento opcionales.
-   *
-   * Con USE_MOCK = true: filtrado/paginación local, simula latencia de red.
-   * Con USE_MOCK = false: delega al servidor mediante query params.
-   *
-   * La búsqueda por `search` incluye:
-   *  - Razón social (businessName)
-   *  - Nombre comercial (tradeName)
-   *  - RFC
-   *  - Nombre del contacto (contactName)
-   *  - Teléfono (phone)
-   *  - Correo electrónico (email)
    */
   loadCarriers(params?: CarrierListParams): Observable<CarrierApiResponse<Carrier[]>> {
     this.loading.set(true);
     this.loadError.set(null);
 
     if (this.USE_MOCK) {
-      // Filtrado local del mock
-      let result = [...MOCK_CARRIERS];
-      const search = params?.search?.toLowerCase().trim();
-
-      if (search) {
-        result = result.filter(c =>
-          c.tradeName.toLowerCase().includes(search)      ||
-          c.businessName.toLowerCase().includes(search)   ||
-          c.rfc.toLowerCase().includes(search)            ||
-          c.contactName.toLowerCase().includes(search)    ||
-          c.phone.replace(/\D/g, '').includes(search.replace(/\D/g, '')) ||
-          c.email.toLowerCase().includes(search)
-        );
-      }
-
-      if (params?.status) {
-        result = result.filter(c => c.status === params.status);
-      }
-
-      if (params?.carrierType) {
-        result = result.filter(c => c.carrierType === params.carrierType);
-      }
-
-      // Ordenamiento local
-      if (params?.sort) {
-        const { field, direction } = params.sort;
-        result.sort((a, b) => {
-          const va = String(a[field] ?? '');
-          const vb = String(b[field] ?? '');
-          return direction === 'ASC' ? va.localeCompare(vb) : vb.localeCompare(va);
-        });
-      }
-
-      // Paginación local
-      const page = params?.pagination?.page ?? 0;
-      const size = params?.pagination?.size ?? 20;
-      this.totalCount.set(result.length);
-      const paginated = result.slice(page * size, page * size + size);
-
-      const mockResponse: CarrierApiResponse<Carrier[]> = {
-        success: true,
-        message: 'Transportistas cargados correctamente (mock).',
-        data: paginated,
-        timestamp: new Date().toISOString(),
-      };
-
-      return of(mockResponse).pipe(
-        delay(550),
-        tap(res => {
-          this.carriers.set(res.data);
-          this.loading.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
+      return of({ success: true, message: '', data: [], timestamp: '' });
     }
 
-    // ── Modo servidor ──────────────────────────────────────────────────────────
-    // TODO: Verificar y ajustar nombres de query params según Swagger del backend.
-    const httpParams = this.buildHttpParams(params);
-    return this.http.get<CarrierApiResponse<Carrier[]>>(this.API_URL, { params: httpParams }).pipe(
+    const orgId = this.getSessionOrgId();
+    const httpParams = new HttpParams().set('organizationId', orgId);
+
+    return this.http.get<CarrierApiResponse<any[]>>(this.API_URL, { params: httpParams }).pipe(
+      map(res => {
+        const mappedData = (res.data || []).map(dto => this.mapDtoToItem(dto));
+        return {
+          ...res,
+          data: mappedData
+        };
+      }),
       tap(res => {
         this.carriers.set(res.data);
+        this.totalCount.set(res.data.length);
         this.loading.set(false);
-        // TODO: Si el backend retorna paginación en res.data o en headers, extraer aquí:
-        // this.totalCount.set(res.totalCount ?? res.data.length);
       }),
       catchError(err => this.handleError(err))
     );
-  }
-
-  /**
-   * Construye los HttpParams para la petición al servidor.
-   * TODO: Ajustar los nombres de los parámetros según el Swagger real del backend.
-   */
-  private buildHttpParams(params?: CarrierListParams): HttpParams {
-    let hp = new HttpParams();
-    if (params?.search)                    hp = hp.set('search',    params.search);
-    if (params?.status)                    hp = hp.set('status',    params.status);
-    if (params?.carrierType)               hp = hp.set('type',      params.carrierType);
-    if (params?.pagination?.page != null)  hp = hp.set('page',      String(params.pagination.page));
-    if (params?.pagination?.size)          hp = hp.set('size',      String(params.pagination.size));
-    if (params?.sort?.field)               hp = hp.set('sortBy',    params.sort.field);
-    if (params?.sort?.direction)           hp = hp.set('sortDir',   params.sort.direction);
-    return hp;
   }
 
   /**
@@ -374,13 +397,13 @@ export class CarrierService {
    */
   getCarrierById(id: string): Observable<CarrierApiResponse<Carrier>> {
     if (this.USE_MOCK) {
-      const found = MOCK_CARRIERS.find(c => c.id === id);
-      if (found) {
-        return of({ success: true, message: '', data: found, timestamp: new Date().toISOString() }).pipe(delay(200));
-      }
-      return throwError(() => ({ status: 404, error: { message: 'Transportista no encontrado.' } }));
+      return throwError(() => new Error('Mock no habilitado'));
     }
-    return this.http.get<CarrierApiResponse<Carrier>>(`${this.API_URL}/${id}`).pipe(
+    return this.http.get<CarrierApiResponse<any>>(`${this.API_URL}/${id}`).pipe(
+      map(res => ({
+        ...res,
+        data: this.mapDtoToItem(res.data)
+      })),
       catchError(err => this.handleError(err))
     );
   }
@@ -388,26 +411,27 @@ export class CarrierService {
   /**
    * Obtiene el historial de auditoría de un transportista como línea de tiempo.
    * GET /api/v1/carriers/{id}/audit
-   *
-   * La respuesta se enriquece con iconos y colores para la visualización
-   * en línea de tiempo si el backend no los provee.
-   *
-   * Preparado para integración futura — botón "Ver historial" en el componente.
    */
   getCarrierAudit(id: string): Observable<CarrierApiResponse<CarrierAuditEntry[]>> {
     if (this.USE_MOCK) {
-      // TODO: Reemplazar con datos mock representativos cuando se implemente la UI de timeline.
-      return of({ success: true, message: '', data: [], timestamp: new Date().toISOString() }).pipe(delay(300));
+      return of({ success: true, message: '', data: [], timestamp: '' });
     }
-    return this.http.get<CarrierApiResponse<CarrierAuditEntry[]>>(`${this.API_URL}/${id}/audit`).pipe(
+    return this.http.get<CarrierApiResponse<any[]>>(`${this.API_URL}/${id}/audit`).pipe(
+      map(res => {
+        const mappedData = (res.data || []).map(dto => this.mapAuditDtoToEntry(dto));
+        return {
+          ...res,
+          data: mappedData
+        };
+      }),
       tap(res => {
         // Enriquecer entradas con iconos y colores si el backend no los envía
         res.data.forEach(entry => {
           if (!entry.timelineIcon) {
-            entry.timelineIcon = AUDIT_ACTION_ICONS[entry.action];
+            entry.timelineIcon = AUDIT_ACTION_ICONS[entry.action] || 'info';
           }
           if (!entry.timelineColor) {
-            entry.timelineColor = AUDIT_ACTION_COLORS[entry.action];
+            entry.timelineColor = AUDIT_ACTION_COLORS[entry.action] || 'update';
           }
         });
       }),
@@ -420,43 +444,37 @@ export class CarrierService {
   /**
    * Crea un nuevo transportista.
    * POST /api/v1/carriers
-   *
-   * El backend ejecuta en una sola transacción:
-   *  1. Guarda el transportista
-   *  2. Genera el registro de auditoría
-   *  3. Confirma (o rollback si falla algún paso)
    */
   createCarrier(dto: CreateCarrierRequest): Observable<CarrierApiResponse<Carrier>> {
     this.saving.set(true);
 
     if (this.USE_MOCK) {
-      const newCarrier: Carrier = {
-        ...dto,
-        id: `car-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'current-user', // TODO: Obtener de AuthService.getCurrentUser()
-        updatedBy: 'current-user',
-      };
-      MOCK_CARRIERS.push(newCarrier);
-      const res: CarrierApiResponse<Carrier> = {
-        success: true,
-        message: 'Transportista creado correctamente.',
-        data: newCarrier,
-        timestamp: new Date().toISOString(),
-      };
-      return of(res).pipe(
-        delay(700),
-        tap(() => {
-          this.carriers.update(list => [...list, newCarrier]);
-          this.totalCount.update(n => n + 1);
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
+      return throwError(() => new Error('Mock no habilitado'));
     }
 
-    return this.http.post<CarrierApiResponse<Carrier>>(this.API_URL, dto).pipe(
+    const orgId = this.getSessionOrgId();
+    const payload = {
+      organizationId: orgId,
+      name: dto.businessName,
+      tradeName: dto.tradeName,
+      taxId: dto.rfc,
+      carrierType: dto.carrierType,
+      contactName: dto.contactName,
+      contactPhone: dto.phone,
+      contactEmail: dto.email,
+      serviceType: dto.serviceType,
+      permitNumber: dto.permitNumber || null,
+      geographicCoverage: dto.coverage,
+      notes: dto.notes || null,
+      vehicleTypes: (dto.supportedVehicleTypes || []).map(vt => VEHICLE_MAP_FE_TO_BE[vt] || vt),
+      preferredClientIds: []
+    };
+
+    return this.http.post<CarrierApiResponse<any>>(this.API_URL, payload).pipe(
+      map(res => ({
+        ...res,
+        data: this.mapDtoToItem(res.data)
+      })),
       tap(res => {
         this.carriers.update(list => [...list, res.data]);
         this.totalCount.update(n => n + 1);
@@ -468,41 +486,44 @@ export class CarrierService {
 
   /**
    * Actualiza un transportista existente.
-   * PUT /api/v1/carriers/{id}
+   * PUT /api/v1/carriers
    */
   updateCarrier(id: string, dto: UpdateCarrierRequest): Observable<CarrierApiResponse<Carrier>> {
     this.saving.set(true);
 
     if (this.USE_MOCK) {
-      const idx = MOCK_CARRIERS.findIndex(c => c.id === id);
-      if (idx === -1) {
-        return throwError(() => ({ status: 404, error: { message: 'Transportista no encontrado.' } }));
-      }
-      const updated: Carrier = {
-        ...MOCK_CARRIERS[idx],
-        ...dto,
-        id,
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
-      };
-      MOCK_CARRIERS[idx] = updated;
-      const res: CarrierApiResponse<Carrier> = {
-        success: true,
-        message: 'Transportista actualizado correctamente.',
-        data: updated,
-        timestamp: new Date().toISOString(),
-      };
-      return of(res).pipe(
-        delay(700),
-        tap(() => {
-          this.carriers.update(list => list.map(c => c.id === id ? updated : c));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
+      return throwError(() => new Error('Mock no habilitado'));
     }
 
-    return this.http.put<CarrierApiResponse<Carrier>>(`${this.API_URL}/${id}`, dto).pipe(
+    const orgId = this.getSessionOrgId();
+    const existing = this.carriers().find(c => c.id === id);
+    const currentVersion = existing ? existing.version || 1 : 1;
+
+    const payload = {
+      id: id,
+      organizationId: orgId,
+      name: dto.businessName,
+      tradeName: dto.tradeName,
+      taxId: dto.rfc,
+      carrierType: dto.carrierType,
+      contactName: dto.contactName,
+      contactPhone: dto.phone,
+      contactEmail: dto.email,
+      serviceType: dto.serviceType,
+      permitNumber: dto.permitNumber || null,
+      geographicCoverage: dto.coverage,
+      notes: dto.notes || null,
+      vehicleTypes: (dto.supportedVehicleTypes || []).map(vt => VEHICLE_MAP_FE_TO_BE[vt] || vt),
+      preferredClientIds: [],
+      status: (dto as any).status || existing?.status || 'ACTIVE',
+      version: currentVersion
+    };
+
+    return this.http.put<CarrierApiResponse<any>>(this.API_URL, payload).pipe(
+      map(res => ({
+        ...res,
+        data: this.mapDtoToItem(res.data)
+      })),
       tap(res => {
         this.carriers.update(list => list.map(c => c.id === id ? res.data : c));
         this.saving.set(false);
@@ -522,37 +543,20 @@ export class CarrierService {
     this.saving.set(true);
 
     if (this.USE_MOCK) {
-      const idx = MOCK_CARRIERS.findIndex(c => c.id === id);
-      if (idx === -1) {
-        return throwError(() => ({ status: 404, error: { message: 'Transportista no encontrado.' } }));
-      }
-      const updated: Carrier = {
-        ...MOCK_CARRIERS[idx],
-        status: dto.status,
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
-        statusChangedAt: new Date().toISOString(),
-        statusChangedBy: 'current-user',
-        statusChangeReason: dto.reason,
-      };
-      MOCK_CARRIERS[idx] = updated;
-      const res: CarrierApiResponse<Carrier> = {
-        success: true,
-        message: `Estado actualizado a ${dto.status}.`,
-        data: updated,
-        timestamp: new Date().toISOString(),
-      };
-      return of(res).pipe(
-        delay(550),
-        tap(() => {
-          this.carriers.update(list => list.map(c => c.id === id ? updated : c));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
+      return throwError(() => new Error('Mock no habilitado'));
     }
 
-    return this.http.patch<CarrierApiResponse<Carrier>>(`${this.API_URL}/${id}/status`, dto).pipe(
+    const payload = {
+      status: dto.status,
+      reason: dto.reason,
+      observations: dto.observations || dto.notes || null
+    };
+
+    return this.http.patch<CarrierApiResponse<any>>(`${this.API_URL}/${id}/status`, payload).pipe(
+      map(res => ({
+        ...res,
+        data: this.mapDtoToItem(res.data)
+      })),
       tap(res => {
         this.carriers.update(list => list.map(c => c.id === id ? res.data : c));
         this.saving.set(false);
