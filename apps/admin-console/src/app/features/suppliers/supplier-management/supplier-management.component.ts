@@ -24,6 +24,7 @@ import {
   OnInit,
   OnDestroy,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -39,6 +40,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { SupplierService } from '../services/supplier.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { ClientService } from '../../admin/services/client.service';
+import { BranchService } from '../../admin/services/branch.service';
 import {
   Supplier,
   SupplierType,
@@ -55,6 +59,8 @@ import {
   isServiceSupplier,
   getLeadTimeLabel,
   normalizeCodeOrTaxId,
+  SupplierAuditEntry,
+  SupplierAuditDetail,
 } from '../models/supplier.model';
 
 // ─── Tipos Internos ───────────────────────────────────────────────────────────
@@ -91,6 +97,9 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   protected readonly supplierService = inject(SupplierService);
   private readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
+  protected readonly clientService = inject(ClientService);
+  protected readonly branchService = inject(BranchService);
   private readonly destroy$ = new Subject<void>();
 
   // ─── Estado del Componente (Signals) ────────────────────────────────────────
@@ -102,6 +111,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
   protected readonly showUnsavedDialog = signal<boolean>(false);
+  protected readonly auditEntries = signal<SupplierAuditEntry[]>([]);
 
   private pendingSupplier: Supplier | null = null;
   private pendingAction: 'select' | 'new' | 'cancel' | null = null;
@@ -111,22 +121,40 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   protected readonly filterSearchCtrl    = new FormControl<string>('');
   protected readonly filterStatusCtrl    = new FormControl<SupplierStatus | ''>('');
   protected readonly filterTypeCtrl      = new FormControl<SupplierType | ''>('');
-  protected readonly filterScopeCtrl     = new FormControl<SupplierScope | ''>('');
   protected readonly filterClientCtrl    = new FormControl<string>('');
   protected readonly filterWarehouseCtrl = new FormControl<string>('');
   protected readonly filterPreferredCtrl = new FormControl<boolean>(false);
+
+  // ─── Señales de Filtro (con toSignal para Reactividad) ─────────────────────────
+
+  protected readonly filterSearch    = toSignal(this.filterSearchCtrl.valueChanges, { initialValue: '' });
+  protected readonly filterStatus    = toSignal(this.filterStatusCtrl.valueChanges, { initialValue: '' as SupplierStatus | '' });
+  protected readonly filterType      = toSignal(this.filterTypeCtrl.valueChanges, { initialValue: '' as SupplierType | '' });
+  protected readonly filterClient    = toSignal(this.filterClientCtrl.valueChanges, { initialValue: '' });
+  protected readonly filterWarehouse = toSignal(this.filterWarehouseCtrl.valueChanges, { initialValue: '' });
+  protected readonly filterPreferred = toSignal(this.filterPreferredCtrl.valueChanges, { initialValue: false });
+
+  // ─── Estado Activo de Filtros (Computed) ────────────────────────────────────
+
+  protected readonly hasActiveFilters = computed(() => {
+    return !!this.filterSearch() ||
+           !!this.filterStatus() ||
+           !!this.filterType() ||
+           !!this.filterClient() ||
+           !!this.filterWarehouse() ||
+           this.filterPreferred();
+  });
 
   // ─── Lista Filtrada (Computed) ──────────────────────────────────────────────
 
   protected readonly filteredSuppliers = computed(() => {
     let list = this.supplierService.suppliers();
-    const search = (this.filterSearchCtrl.value || '').trim().toLowerCase();
-    const status = this.filterStatusCtrl.value;
-    const type   = this.filterTypeCtrl.value;
-    const scope  = this.filterScopeCtrl.value;
-    const client = this.filterClientCtrl.value;
-    const wh     = this.filterWarehouseCtrl.value;
-    const pref   = this.filterPreferredCtrl.value;
+    const search = (this.filterSearch() || '').trim().toLowerCase();
+    const status = this.filterStatus();
+    const type   = this.filterType();
+    const client = this.filterClient();
+    const wh     = this.filterWarehouse();
+    const pref   = this.filterPreferred();
 
     if (search) {
       const normSearch = normalizeCodeOrTaxId(search);
@@ -145,13 +173,21 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
 
     if (status) list = list.filter(s => s.status === status);
     if (type)   list = list.filter(s => s.type === type);
-    if (scope)  list = list.filter(s => s.scopeType === scope);
     if (client) list = list.filter(s => s.clientId === client || (s.clientName && s.clientName.toLowerCase().includes(client.toLowerCase())));
     if (wh)     list = list.filter(s => s.warehouseId === wh || (s.warehouseName && s.warehouseName.toLowerCase().includes(wh.toLowerCase())));
     if (pref)   list = list.filter(s => s.preferred);
 
     return list;
   });
+
+  protected clearFilters(): void {
+    this.filterSearchCtrl.setValue('');
+    this.filterStatusCtrl.setValue('');
+    this.filterTypeCtrl.setValue('');
+    this.filterClientCtrl.setValue('');
+    this.filterWarehouseCtrl.setValue('');
+    this.filterPreferredCtrl.setValue(false);
+  }
 
   // ─── Tarjetas KPI de Cabecera (Computed) ───────────────────────────────────
 
@@ -243,16 +279,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     { value: 'EUR', label: CURRENCY_LABELS['EUR'] },
   ];
 
-  protected readonly mockClients = [
-    { id: 'cli-01', name: 'Lala S.A.' },
-    { id: 'cli-02', name: 'Nestlé México' },
-    { id: 'cli-03', name: 'Bimbo de México' },
-  ];
 
-  protected readonly mockWarehouses = [
-    { id: 'WH-4GUARD-001', name: '4GUARD — Almacén Principal Toluca' },
-    { id: 'WH-4GUARD-002', name: '4GUARD — Almacén Apodaca NL' },
-  ];
 
   protected readonly supplierStatusLabels = SUPPLIER_STATUS_LABELS;
   protected readonly supplierTypeLabels   = SUPPLIER_TYPE_LABELS;
@@ -262,6 +289,11 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadSuppliers();
+    
+    // Cargar clientes y sucursales (almacenes) reales
+    this.clientService.loadClients().pipe(takeUntil(this.destroy$)).subscribe();
+    this.branchService.loadBranches().pipe(takeUntil(this.destroy$)).subscribe();
+
     this.setupScopeReactivity();
   }
 
@@ -308,29 +340,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Filtros Reactivos ───────────────────────────────────────────────────────
 
-  protected clearFilters(): void {
-    this.filterSearchCtrl.setValue('');
-    this.filterStatusCtrl.setValue('');
-    this.filterTypeCtrl.setValue('');
-    this.filterScopeCtrl.setValue('');
-    this.filterClientCtrl.setValue('');
-    this.filterWarehouseCtrl.setValue('');
-    this.filterPreferredCtrl.setValue(false);
-  }
-
-  protected get hasActiveFilters(): boolean {
-    return !!(
-      this.filterSearchCtrl.value ||
-      this.filterStatusCtrl.value ||
-      this.filterTypeCtrl.value ||
-      this.filterScopeCtrl.value ||
-      this.filterClientCtrl.value ||
-      this.filterWarehouseCtrl.value ||
-      this.filterPreferredCtrl.value
-    );
-  }
 
   // ─── Manejo de Cambios no Guardados ─────────────────────────────────────────
 
@@ -372,12 +382,35 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
 
   protected selectSupplier(supplier: Supplier): void {
     if (this.checkUnsavedChanges('select', supplier)) return;
-    this.selectedSupplier.set(supplier);
-    this.formMode.set('edit');
-    this.populateForm(supplier);
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+
+    // Obtener detalle completo del proveedor por ID
+    this.supplierService.getSupplierById(supplier.id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        const fullSupplier = res.data;
+        this.selectedSupplier.set(fullSupplier);
+        this.formMode.set('edit');
+        this.populateForm(fullSupplier);
+        
+        // Cargar historial de auditoría
+        this.loadAuditHistory(fullSupplier.id);
+      },
+      error: (err: HttpErrorResponse) => this.handleBackendError(err)
+    });
+  }
+
+  private loadAuditHistory(id: string): void {
+    if (!this.canViewAudit()) return;
+    this.supplierService.getSupplierAudit(id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        this.auditEntries.set(res.data || []);
+      },
+      error: () => {
+        this.auditEntries.set([]);
+      }
+    });
   }
 
   protected startNewSupplier(): void {
@@ -447,11 +480,11 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
       addressExteriorNumber: s.address?.exteriorNumber || '',
       addressInteriorNumber: s.address?.interiorNumber || '',
 
-      leadTimeDays:              s.commercialTerms.leadTimeDays,
-      minimumOrderAmount:        s.commercialTerms.minimumOrderAmount,
-      creditDays:                s.commercialTerms.creditDays,
-      currency:                  s.commercialTerms.currency,
-      qualityInspectionRequired: s.commercialTerms.qualityInspectionRequired,
+      leadTimeDays:              s.commercialTerms?.leadTimeDays ?? 1,
+      minimumOrderAmount:        s.commercialTerms?.minimumOrderAmount ?? 0,
+      creditDays:                s.commercialTerms?.creditDays ?? 0,
+      currency:                  s.commercialTerms?.currency ?? 'MXN',
+      qualityInspectionRequired: !!s.commercialTerms?.qualityInspectionRequired,
 
       scopeType:     s.scopeType,
       clientId:      s.clientId || '',
@@ -541,11 +574,11 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
 
     if (raw.scopeType === 'CLIENT') {
       scopeClientId = raw.clientId;
-      const foundClient = this.mockClients.find(c => c.id === raw.clientId);
+      const foundClient = this.clientService.clients().find(c => c.id === raw.clientId);
       scopeClientName = foundClient ? foundClient.name : raw.clientName;
     } else if (raw.scopeType === 'WAREHOUSE') {
       scopeWarehouseId = raw.warehouseId;
-      const foundWh = this.mockWarehouses.find(w => w.id === raw.warehouseId);
+      const foundWh = this.branchService.branches().find(w => w.id === raw.warehouseId);
       scopeWarehouseName = foundWh ? foundWh.name : raw.warehouseName;
     }
 
@@ -604,6 +637,8 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
           this.formMode.set('edit');
           this.submitAttempted.set(false);
           this.form.markAsPristine();
+          this.loadAuditHistory(res.data.id);
+          this.toastService.success('Proveedor creado con éxito');
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -618,6 +653,8 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
             this.selectedSupplier.set(res.data);
             this.submitAttempted.set(false);
             this.form.markAsPristine();
+            this.loadAuditHistory(res.data.id);
+            this.toastService.success('Proveedor actualizado con éxito');
             setTimeout(() => this.saveSuccess.set(false), 3500);
           },
           error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -660,6 +697,8 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
         this.populateForm(res.data);
         this.closeStatusDialog();
         this.saveSuccess.set(true);
+        this.loadAuditHistory(res.data.id);
+        this.toastService.success('Estado del proveedor actualizado con éxito');
         setTimeout(() => this.saveSuccess.set(false), 3500);
       },
       error: (err: HttpErrorResponse) => {
@@ -681,6 +720,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
         this.form.reset();
         this.form.markAsPristine();
         this.saveSuccess.set(true);
+        this.toastService.success('Proveedor archivado con éxito');
         setTimeout(() => this.saveSuccess.set(false), 3500);
       },
       error: (err: HttpErrorResponse) => {
@@ -713,6 +753,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   protected canUpdate():     boolean { /* return this.authService.hasPermission('SUPPLIER_UPDATE');     */ return true; }
   protected canDeactivate(): boolean { /* return this.authService.hasPermission('SUPPLIER_DEACTIVATE'); */ return true; }
   protected canDelete():     boolean { /* return this.authService.hasPermission('SUPPLIER_DELETE');     */ return true; }
+  protected canViewAudit():  boolean { return true; }
 
   // ─── Helpers de Estado Visual ───────────────────────────────────────────────
 

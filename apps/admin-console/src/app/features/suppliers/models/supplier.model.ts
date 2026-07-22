@@ -120,7 +120,7 @@ export interface Supplier {
 
   contact: SupplierContact;
   address?: SupplierAddress;
-  commercialTerms: SupplierCommercialTerms;
+  commercialTerms?: SupplierCommercialTerms;
 
   scopeType: SupplierScope;
   clientId?: string;            // Requerido si scopeType === 'CLIENT'
@@ -135,6 +135,7 @@ export interface Supplier {
   deleted: boolean;
 
   // Auditoría (solo lectura desde backend o mock, no modificables en el formulario)
+  version?: number;
   createdAt: string;            // ISO 8601
   updatedAt: string;            // ISO 8601
   createdBy?: string;
@@ -190,6 +191,33 @@ export interface SupplierApiResponse<T> {
   message: string;
   data: T;
   timestamp: string;
+}
+
+export interface SupplierPagedResponse {
+  content: Supplier[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
+export interface SupplierAuditDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface SupplierAuditEntry {
+  logId: string;
+  action: 'SUPPLIER_CREATED' | 'SUPPLIER_UPDATED' | 'SUPPLIER_STATUS_UPDATED' | 'SUPPLIER_ARCHIVED' | string;
+  username: string;
+  createdAt: string;
+  details: SupplierAuditDetail[];
+
+  // Campos opcionales para la línea de tiempo visual
+  summary?: string;
+  timelineIcon?: string;
+  timelineColor?: 'create' | 'update' | 'status';
 }
 
 // ─── Mapas de Etiquetas ───────────────────────────────────────────────────────

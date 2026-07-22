@@ -30,9 +30,9 @@
  */
 
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, tap, delay } from 'rxjs/operators';
+import { catchError, tap, delay, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   Supplier,
@@ -42,6 +42,9 @@ import {
   CreateSupplierRequest,
   UpdateSupplierRequest,
   normalizeCodeOrTaxId,
+  SupplierPagedResponse,
+  SupplierAuditEntry,
+  SupplierAuditDetail,
 } from '../models/supplier.model';
 
 // ─── Datos Mock (7 Proveedores Representativos 3PL) ─────────────────────────
@@ -353,8 +356,8 @@ const MOCK_SUPPLIERS: Supplier[] = [
 })
 export class SupplierService {
   private readonly http = inject(HttpClient);
-  private readonly API_URL = `${environment.apiBaseUrl}/api/suppliers`;
-  private readonly USE_MOCK = true;
+  private readonly API_URL = `${environment.apiBaseUrl}/api/v1/suppliers`;
+  private readonly USE_MOCK = false;
 
   // ─── Estado Reactivo (Signals) ──────────────────────────────────────────────
 
@@ -363,6 +366,8 @@ export class SupplierService {
   readonly loadError = signal<string | null>(null);
   readonly saving = signal<boolean>(false);
   readonly totalCount = signal<number>(0);
+  readonly currentPage = signal<number>(0);
+  readonly pageSize = signal<number>(20);
 
   // ─── Contadores Computed (Header KPI Cards) ───────────────────────────────
 
@@ -396,72 +401,36 @@ export class SupplierService {
     this.loading.set(true);
     this.loadError.set(null);
 
-    if (this.USE_MOCK) {
-      let result = MOCK_SUPPLIERS.filter(s => s.active && !s.deleted);
+    const orgId = this.getSessionOrgId();
+    let httpParams = new HttpParams()
+      .set('organizationId', orgId)
+      .set('page', '0')
+      .set('size', '1000') // Carga un volumen alto para soportar el filtrado reactivo local en el FE
+      .set('sortBy', 'updatedAt')
+      .set('sortDir', 'DESC');
 
-      const search = params?.search?.toLowerCase().trim();
-      if (search) {
-        const normalizedSearch = normalizeCodeOrTaxId(search);
-        result = result.filter(s => {
-          const matchCode = normalizeCodeOrTaxId(s.code).includes(normalizedSearch);
-          const matchTax  = normalizeCodeOrTaxId(s.taxId).includes(normalizedSearch);
-          const matchText =
-            s.legalName.toLowerCase().includes(search) ||
-            (s.commercialName && s.commercialName.toLowerCase().includes(search)) ||
-            s.contact.fullName.toLowerCase().includes(search) ||
-            s.contact.email.toLowerCase().includes(search) ||
-            (s.address && s.address.city.toLowerCase().includes(search));
-          return matchCode || matchTax || matchText;
-        });
-      }
-
-      if (params?.status) {
-        result = result.filter(s => s.status === params.status);
-      }
-
-      if (params?.type) {
-        result = result.filter(s => s.type === params.type);
-      }
-
-      if (params?.scopeType) {
-        result = result.filter(s => s.scopeType === params.scopeType);
-      }
-
-      if (params?.clientId) {
-        result = result.filter(s => s.clientId === params.clientId);
-      }
-
-      if (params?.warehouseId) {
-        result = result.filter(s => s.warehouseId === params.warehouseId);
-      }
-
-      if (params?.preferredOnly) {
-        result = result.filter(s => s.preferred);
-      }
-
-      const mockResponse: SupplierApiResponse<Supplier[]> = {
-        success: true,
-        message: 'Catálogo de proveedores cargado correctamente (mock).',
-        data: result,
-        timestamp: new Date().toISOString(),
-      };
-
-      return of(mockResponse).pipe(
-        delay(450),
-        tap(res => {
-          this.suppliers.set(res.data);
-          this.totalCount.set(res.data.length);
-          this.loading.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
+    if (params) {
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.type) httpParams = httpParams.set('type', params.type);
+      if (params.scopeType) httpParams = httpParams.set('scopeType', params.scopeType);
+      if (params.clientId) httpParams = httpParams.set('clientId', params.clientId);
+      if (params.warehouseId) httpParams = httpParams.set('warehouseId', params.warehouseId);
+      if (params.preferredOnly !== undefined) httpParams = httpParams.set('preferredOnly', params.preferredOnly.toString());
     }
 
-    // TODO: Integrar GET /api/suppliers
-    return this.http.get<SupplierApiResponse<Supplier[]>>(this.API_URL).pipe(
+    return this.http.get<SupplierApiResponse<SupplierPagedResponse>>(this.API_URL, { params: httpParams }).pipe(
+      tap(res => {
+        if (res.success && res.data) {
+          this.totalCount.set(res.data.totalElements);
+        }
+      }),
+      map(res => ({
+        ...res,
+        data: res.data ? res.data.content : []
+      })),
       tap(res => {
         this.suppliers.set(res.data);
-        this.totalCount.set(res.data.length);
         this.loading.set(false);
       }),
       catchError(err => this.handleError(err))
@@ -471,54 +440,99 @@ export class SupplierService {
   // ─── Métodos de Escritura ────────────────────────────────────────────────────
 
   /**
+  /**
+   * Obtiene el detalle completo de un proveedor.
+   * GET /api/v1/suppliers/{id}
+   */
+  getSupplierById(id: string): Observable<SupplierApiResponse<Supplier>> {
+    return this.http.get<SupplierApiResponse<Supplier>>(`${this.API_URL}/${id}`).pipe(
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  /**
+   * Obtiene el historial de auditoría de un proveedor como timeline.
+   * GET /api/v1/suppliers/{id}/audit
+   */
+  getSupplierAudit(id: string): Observable<SupplierApiResponse<SupplierAuditEntry[]>> {
+    return this.http.get<SupplierApiResponse<SupplierAuditEntry[]>>(`${this.API_URL}/${id}/audit`).pipe(
+      tap(res => {
+        // Enriquecer entradas con iconos y colores para el timeline
+        res.data?.forEach(entry => {
+          entry.timelineIcon = this.getAuditIcon(entry.action);
+          entry.timelineColor = this.getAuditColor(entry.action);
+          entry.summary = this.getAuditSummary(entry);
+        });
+      }),
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  private getAuditIcon(action: string): string {
+    const map: Record<string, string> = {
+      SUPPLIER_CREATED: 'add_circle',
+      SUPPLIER_UPDATED: 'edit',
+      SUPPLIER_STATUS_UPDATED: 'swap_horiz',
+      SUPPLIER_ARCHIVED: 'delete_forever',
+    };
+    return map[action] ?? 'info';
+  }
+
+  private getAuditColor(action: string): 'create' | 'update' | 'status' {
+    const map: Record<string, 'create' | 'update' | 'status'> = {
+      SUPPLIER_CREATED: 'create',
+      SUPPLIER_UPDATED: 'update',
+      SUPPLIER_STATUS_UPDATED: 'status',
+      SUPPLIER_ARCHIVED: 'status',
+    };
+    return map[action] ?? 'update';
+  }
+
+  private getAuditSummary(entry: SupplierAuditEntry): string {
+    if (entry.action === 'SUPPLIER_CREATED') {
+      return 'Registró el proveedor en el catálogo maestro';
+    }
+    if (entry.action === 'SUPPLIER_STATUS_UPDATED') {
+      const statusDet = entry.details?.find(d => d.fieldName === 'status');
+      const reasonDet = entry.details?.find(d => d.fieldName === 'statusReason');
+      
+      const newStatus = statusDet?.newValue || '';
+      const oldStatus = statusDet?.oldValue || '';
+      const reason = reasonDet?.newValue;
+
+      let msg = 'Cambió el estado';
+      if (oldStatus && newStatus) {
+        msg += ` de ${oldStatus} a ${newStatus}`;
+      } else if (newStatus) {
+        msg += ` a ${newStatus}`;
+      }
+      if (reason) {
+        msg += `: "${reason}"`;
+      }
+      return msg;
+    }
+    if (entry.action === 'SUPPLIER_UPDATED') {
+      return 'Actualizó la información del proveedor';
+    }
+    if (entry.action === 'SUPPLIER_ARCHIVED') {
+      return 'Archivó el proveedor (eliminación lógica)';
+    }
+    return entry.action;
+  }
+
+  /**
    * Crea un nuevo proveedor en el catálogo.
-   * TODO: Integrar POST /api/suppliers
-   * TODO: El backend ejecutará transacción: guardar entidad + contacto + dirección + términos + audit_logs.
+   * El backend ejecutará transacción: guardar entidad + contacto + dirección + términos + audit_logs.
    */
   createSupplier(dto: CreateSupplierRequest): Observable<SupplierApiResponse<Supplier>> {
     this.saving.set(true);
+    const orgId = this.getSessionOrgId();
+    const payload = {
+      ...dto,
+      organizationId: orgId
+    };
 
-    if (this.USE_MOCK) {
-      const generatedCode = dto.code && dto.code.trim()
-        ? normalizeCodeOrTaxId(dto.code)
-        : `PRV-${String(MOCK_SUPPLIERS.length + 1).padStart(4, '0')}`;
-
-      const newSupplier: Supplier = {
-        ...dto,
-        id: `prv-${Date.now()}`,
-        code: generatedCode,
-        taxId: normalizeCodeOrTaxId(dto.taxId),
-        active: true,
-        deleted: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'current-user', // TODO: Obtener usuario firmado de AuthService
-        updatedBy: 'current-user',
-        lastAction: 'Alta de proveedor en catálogo maestro',
-      };
-
-      MOCK_SUPPLIERS.push(newSupplier);
-
-      const res: SupplierApiResponse<Supplier> = {
-        success: true,
-        message: 'Proveedor registrado exitosamente.',
-        data: newSupplier,
-        timestamp: new Date().toISOString(),
-      };
-
-      return of(res).pipe(
-        delay(600),
-        tap(() => {
-          this.suppliers.update(list => [newSupplier, ...list]);
-          this.totalCount.update(n => n + 1);
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
-
-    // TODO: Integrar POST /api/suppliers
-    return this.http.post<SupplierApiResponse<Supplier>>(this.API_URL, dto).pipe(
+    return this.http.post<SupplierApiResponse<Supplier>>(this.API_URL, payload).pipe(
       tap(res => {
         this.suppliers.update(list => [res.data, ...list]);
         this.totalCount.update(n => n + 1);
@@ -530,49 +544,20 @@ export class SupplierService {
 
   /**
    * Actualiza los datos de un proveedor existente.
-   * TODO: Integrar PUT /api/suppliers/{id}
+   * GET /api/v1/suppliers/{id}
    */
   updateSupplier(id: string, dto: UpdateSupplierRequest): Observable<SupplierApiResponse<Supplier>> {
     this.saving.set(true);
+    const orgId = this.getSessionOrgId();
+    const existing = this.suppliers().find(s => s.id === id);
+    const currentVersion = existing ? existing.version || 1 : 1;
+    const payload = {
+      ...dto,
+      organizationId: orgId,
+      version: currentVersion
+    };
 
-    if (this.USE_MOCK) {
-      const idx = MOCK_SUPPLIERS.findIndex(s => s.id === id);
-      if (idx === -1) {
-        this.saving.set(false);
-        return throwError(() => ({ status: 404, error: { message: 'Proveedor no encontrado.' } }));
-      }
-
-      const updated: Supplier = {
-        ...MOCK_SUPPLIERS[idx],
-        ...dto,
-        id,
-        taxId: normalizeCodeOrTaxId(dto.taxId),
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
-        lastAction: 'Actualización de datos generales y condiciones',
-      };
-
-      MOCK_SUPPLIERS[idx] = updated;
-
-      const res: SupplierApiResponse<Supplier> = {
-        success: true,
-        message: 'Proveedor actualizado correctamente.',
-        data: updated,
-        timestamp: new Date().toISOString(),
-      };
-
-      return of(res).pipe(
-        delay(600),
-        tap(() => {
-          this.suppliers.update(list => list.map(s => s.id === id ? updated : s));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
-
-    // TODO: Integrar PUT /api/suppliers/{id}
-    return this.http.put<SupplierApiResponse<Supplier>>(`${this.API_URL}/${id}`, dto).pipe(
+    return this.http.put<SupplierApiResponse<Supplier>>(`${this.API_URL}/${id}`, payload).pipe(
       tap(res => {
         this.suppliers.update(list => list.map(s => s.id === id ? res.data : s));
         this.saving.set(false);
@@ -583,49 +568,9 @@ export class SupplierService {
 
   /**
    * Cambia el estado del proveedor (Activo / Inactivo / Bloqueado) registrando motivo.
-   * TODO: Integrar PATCH /api/suppliers/{id}/status
    */
   changeSupplierStatus(id: string, dto: SupplierStatusChangeRequest): Observable<SupplierApiResponse<Supplier>> {
     this.saving.set(true);
-
-    if (this.USE_MOCK) {
-      const idx = MOCK_SUPPLIERS.findIndex(s => s.id === id);
-      if (idx === -1) {
-        this.saving.set(false);
-        return throwError(() => ({ status: 404, error: { message: 'Proveedor no encontrado.' } }));
-      }
-
-      const updated: Supplier = {
-        ...MOCK_SUPPLIERS[idx],
-        status: dto.status,
-        statusReason: dto.reason,
-        statusChangedAt: new Date().toISOString(),
-        statusChangedBy: 'current-user',
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
-        lastAction: `Cambio de estado a ${dto.status} — Motivo: ${dto.reason}`,
-      };
-
-      MOCK_SUPPLIERS[idx] = updated;
-
-      const res: SupplierApiResponse<Supplier> = {
-        success: true,
-        message: `Estado de proveedor actualizado a ${dto.status}.`,
-        data: updated,
-        timestamp: new Date().toISOString(),
-      };
-
-      return of(res).pipe(
-        delay(500),
-        tap(() => {
-          this.suppliers.update(list => list.map(s => s.id === id ? updated : s));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
-
-    // TODO: Integrar PATCH /api/suppliers/{id}/status
     return this.http.patch<SupplierApiResponse<Supplier>>(`${this.API_URL}/${id}/status`, dto).pipe(
       tap(res => {
         this.suppliers.update(list => list.map(s => s.id === id ? res.data : s));
@@ -638,53 +583,11 @@ export class SupplierService {
   /**
    * Archiva un proveedor (eliminación lógica).
    * El backend NUNCA borra físicamente registros con historial comercial/operativo.
-   * TODO: Integrar DELETE /api/suppliers/{id}
-   * TODO: Backend debe validar si existen recepciones abiertas, órdenes pendientes, citas o contratos vigentes.
    */
-  archiveSupplier(id: string): Observable<SupplierApiResponse<Supplier>> {
+  archiveSupplier(id: string): Observable<SupplierApiResponse<void>> {
     this.saving.set(true);
-
-    if (this.USE_MOCK) {
-      const idx = MOCK_SUPPLIERS.findIndex(s => s.id === id);
-      if (idx === -1) {
-        this.saving.set(false);
-        return throwError(() => ({ status: 404, error: { message: 'Proveedor no encontrado.' } }));
-      }
-
-      const archived: Supplier = {
-        ...MOCK_SUPPLIERS[idx],
-        active: false,
-        deleted: true,
-        status: 'INACTIVE',
-        statusReason: 'Archivado / Eliminado lógicamente del catálogo',
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
-        lastAction: 'Proveedor archivado del catálogo maestro',
-      };
-
-      MOCK_SUPPLIERS[idx] = archived;
-
-      const res: SupplierApiResponse<Supplier> = {
-        success: true,
-        message: 'Proveedor archivado correctamente.',
-        data: archived,
-        timestamp: new Date().toISOString(),
-      };
-
-      return of(res).pipe(
-        delay(500),
-        tap(() => {
-          this.suppliers.update(list => list.filter(s => s.id !== id));
-          this.totalCount.update(n => Math.max(0, n - 1));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
-
-    // TODO: Integrar DELETE /api/suppliers/{id}
-    return this.http.delete<SupplierApiResponse<Supplier>>(`${this.API_URL}/${id}`).pipe(
-      tap(res => {
+    return this.http.delete<SupplierApiResponse<void>>(`${this.API_URL}/${id}`).pipe(
+      tap(() => {
         this.suppliers.update(list => list.filter(s => s.id !== id));
         this.totalCount.update(n => Math.max(0, n - 1));
         this.saving.set(false);
@@ -714,6 +617,19 @@ export class SupplierService {
     const norm = legalName.trim().toLowerCase();
     if (!norm) return false;
     return this.suppliers().some(s => s.id !== excludeId && s.active && s.legalName.trim().toLowerCase() === norm);
+  }
+
+  private getSessionOrgId(): string {
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session?.user?.organizationId) {
+          return session.user.organizationId;
+        }
+      }
+    } catch {}
+    return 'a53f0907-9fa5-4bdf-87db-2eb5e7683935'; // Fallback por defecto (4GUARD)
   }
 
   // ─── Manejo de Errores ──────────────────────────────────────────────────────
