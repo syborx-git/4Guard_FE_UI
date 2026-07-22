@@ -69,7 +69,11 @@ export class ChangePasswordComponent {
   // ── Formulario reactivo ───────────────────────────────────
   protected readonly form = this.fb.group(
     {
-      newPassword:     ['', [Validators.required, Validators.minLength(8)]],
+      newPassword:     ['', [
+        Validators.required,
+        Validators.minLength(8),
+        Validators.pattern(/^(?=.*[A-Z])(?=.*[0-9!@#$%^&*]).{8,}$/)
+      ]],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatchValidator }
@@ -89,6 +93,9 @@ export class ChangePasswordComponent {
     if (/[0-9!@#$%^&*]/.test(pwd)) score++;
     return score;
   });
+
+  /** Indica si la contraseña cumple al 100% con todos los requisitos de seguridad (3 de 3) */
+  protected readonly isPasswordFullyValid = computed(() => this.passwordStrength() === 3);
 
   protected readonly strengthLabel = computed(() => {
     const s = this.passwordStrength();
@@ -113,7 +120,7 @@ export class ChangePasswordComponent {
    * Envía la nueva contraseña al backend y navega al dashboard en caso de éxito.
    */
   protected onSubmit(): void {
-    if (this.form.invalid || this.isLoading()) return;
+    if (this.form.invalid || !this.isPasswordFullyValid() || this.isLoading()) return;
 
     this.serverError.set(null);
     this.isLoading.set(true);

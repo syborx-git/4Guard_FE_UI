@@ -98,7 +98,11 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly cpForm = this.fb.group(
     {
-      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      newPassword: ['', [
+        Validators.required,
+        Validators.minLength(8),
+        Validators.pattern(/^(?=.*[A-Z])(?=.*[0-9!@#$%^&*]).{8,}$/)
+      ]],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatchValidator }
@@ -118,6 +122,9 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (/[0-9!@#$%^&*]/.test(pwd)) score++;
     return score;
   });
+
+  /** Indica si la contraseña cumple al 100% con todos los requisitos de seguridad (3 de 3) */
+  protected readonly isPasswordFullyValid = computed(() => this.passwordStrength() === 3);
 
   protected readonly strengthLabel = computed(() => {
     const s = this.passwordStrength();
@@ -174,7 +181,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected toggleConfirmPwd(): void { this.showConfirmPwd.update(v => !v); }
 
   protected submitChangePassword(): void {
-    if (this.cpForm.invalid || this.isChangingPassword()) return;
+    if (this.cpForm.invalid || !this.isPasswordFullyValid() || this.isChangingPassword()) return;
 
     this.changePasswordError.set(null);
     this.isChangingPassword.set(true);

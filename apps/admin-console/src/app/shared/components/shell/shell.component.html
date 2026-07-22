@@ -386,7 +386,7 @@
               id="cp-modal-submit-btn"
               type="submit"
               class="cp-modal__btn cp-modal__btn--save"
-              [disabled]="cpForm.invalid || isChangingPassword()">
+              [disabled]="cpForm.invalid || !isPasswordFullyValid() || isChangingPassword()">
               @if (isChangingPassword()) {
                 <span class="cp-modal__spinner"></span>
                 Guardando…
@@ -554,17 +554,11 @@
                    <span class="profile-card__label">Última actualización</span>
                    <span class="profile-card__value">{{ profile.updatedAt | date:'dd/MM/yyyy, hh:mm a' }} por &#64;{{ profile.updatedBy }}</span>
                  </div>
-               </div>
-             </div>
-          </div>
-
-          <!-- Footer/Acción -->
-          <div class="profile-modal__footer">
-            <button class="profile-modal__btn-close" (click)="closeProfileModal()">Cerrar</button>
+                </div>
+              </div>
           </div>
         </div>
       }
     </div>
   </div>
 }
-
