@@ -495,32 +495,72 @@
     </aside>
 
     <!-- ACTIVE CRUD WORKSPACE -->
-    <main class="crud-main">
+    <main class="crud-main catalog-workspace">
       <!-- HEADER -->
-      <header class="crud-main-header">
-        <div>
-          <span class="module-breadcrumb">ADMINISTRACIÓN / {{ selectedModule() | uppercase }}</span>
-          <h2 class="module-active-title">
-            @switch (selectedModule()) {
-            @case ('organizations') { Gestión de Organizaciones }
-            @case ('branches') { Gestión de Sucursales (Branches) }
-            @case ('sections') { Secciones de Almacén }
-            @case ('locations') { Catálogo de Ubicaciones (Locations) }
-            @case ('clients') { Gestión de Clientes (Depositantes) }
-            @case ('skus') { Catálogo de Productos / SKUs }
-            @case ('users') { Control de Usuarios y Seguridad }
-            @case ('roles') { Roles y Matriz de Permisos }
-            @case ('inventory') { Monitor de Inventario Activo }
-            @case ('movements') { Bitácora Histórica de Movimientos }
-            @case ('incidences') { Control de Incidencias de Calidad }
-            @case ('audit') { Consola de Auditoría Forense }
-            @case ('notifications') { Notificaciones y Alertas del Sistema }
-            }
-          </h2>
-        </div>
+      <header class="catalog-header">
+        @if (activeModuleMeta(); as meta) {
+          <div class="catalog-header__top">
+            <span class="catalog-eyebrow">
+              <span class="material-symbols-outlined catalog-eyebrow-icon">{{ meta.icon }}</span>
+              <span class="catalog-eyebrow-category">{{ meta.categoryLabel }}</span>
+            </span>
+          </div>
 
-        <!-- ACTIONS BAR -->
-        <div class="crud-actions-row">
+          <div class="catalog-header__title-row">
+            <div class="catalog-title-group">
+              <span class="catalog-breadcrumb">ADMINISTRACIÓN / {{ selectedModule() | uppercase }}</span>
+              <h2 class="catalog-title">
+                {{ meta.title }}
+                <span class="catalog-title-sub">· Consola Administrativa</span>
+              </h2>
+            </div>
+          </div>
+
+          <p class="catalog-description">
+            {{ meta.description }}
+          </p>
+        }
+
+        <!-- METRICS GRID -->
+        @if (activeModuleMetrics().length > 0) {
+          <section
+            class="catalog-metrics"
+            [attr.data-count]="activeModuleMetrics().length"
+            aria-label="Resumen del catálogo"
+          >
+            @for (metric of activeModuleMetrics(); track metric.label) {
+              <article
+                class="catalog-metric-card"
+                [attr.data-tone]="metric.tone"
+              >
+                <div class="catalog-metric-card__icon">
+                  <span class="material-symbols-outlined">
+                    {{ metric.icon }}
+                  </span>
+                </div>
+
+                <div class="catalog-metric-card__content">
+                  <span class="catalog-metric-card__label">
+                    {{ metric.label }}
+                  </span>
+
+                  <strong class="catalog-metric-card__value">
+                    {{ metric.value | number }}
+                  </strong>
+
+                  @if (metric.description) {
+                    <span class="catalog-metric-card__description">
+                      {{ metric.description }}
+                    </span>
+                  }
+                </div>
+              </article>
+            }
+          </section>
+        }
+
+        <!-- TOOLBAR -->
+        <div class="catalog-toolbar">
           <!-- Search bar -->
           <div class="search-wrapper">
             <span class="material-symbols-outlined search-icon">search</span>
@@ -528,24 +568,26 @@
               [value]="searchTerm()" (input)="onSearch($event)">
           </div>
 
-          <!-- Page Size Dropdown -->
-          <div class="page-size-wrapper">
-            <span class="page-size-label">MOSTRAR</span>
-            <select class="page-size-select" [value]="pageSize()" (change)="updatePageSize($event)">
-              <option value="20">20</option>
-              <option value="30">30</option>
-              <option value="50">50</option>
-            </select>
-          </div>
+          <div class="catalog-toolbar__actions">
+            <!-- Page Size Dropdown -->
+            <div class="page-size-wrapper">
+              <span class="page-size-label">MOSTRAR</span>
+              <select class="page-size-select" [value]="pageSize()" (change)="updatePageSize($event)">
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+              </select>
+            </div>
 
-          <!-- Create Button (omit for read-only tables: movements, audit) -->
-          @if (selectedModule() !== 'movements' && selectedModule() !== 'audit' && selectedModule() !== 'notifications'
-          && selectedModule() !== 'inventory') {
-          <button class="add-record-btn" (click)="openAddModal()">
-            <span class="material-symbols-outlined">add</span>
-            <span>Añadir</span>
-          </button>
-          }
+            <!-- Create Button (omit for read-only tables: movements, audit) -->
+            @if (selectedModule() !== 'movements' && selectedModule() !== 'audit' && selectedModule() !== 'notifications'
+            && selectedModule() !== 'inventory') {
+            <button class="add-record-btn" (click)="openAddModal()">
+              <span class="material-symbols-outlined">add</span>
+              <span>Añadir Registro</span>
+            </button>
+            }
+          </div>
         </div>
       </header>
 
