@@ -68,7 +68,11 @@ export class LoginComponent implements OnDestroy {
 
   // ── Acciones de vista ────────────────────────────────────
 
-  protected togglePwd(): void {
+  protected togglePwd(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     this.showPwd.update((v) => !v);
   }
 
