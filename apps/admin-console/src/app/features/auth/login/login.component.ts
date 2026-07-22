@@ -19,7 +19,7 @@ import { AuthState } from '../../../core/auth/auth.state';
 import { AuthService } from '../../../core/services/auth.service';
 import { SessionStorageService } from '../../../core/services/session-storage.service';
 import { LoginResponse } from '../../../core/models/auth.models';
-import { AUTH_CONFIG } from '../../../core/auth/auth.config';
+import { AUTH_CONFIG } from '../../../core/config/auth.config';
 import { ForgotPasswordModalComponent } from './forgot-password-modal/forgot-password-modal.component';
 
 type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
@@ -311,3 +311,4 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.clearLockCountdown();
   }
 }
+

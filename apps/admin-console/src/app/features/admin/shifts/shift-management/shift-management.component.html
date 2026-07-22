@@ -1,0 +1,544 @@
+<div class="shift-page">
+  <!-- ==================== HEADER PRINCIPAL ==================== -->
+  <header class="shift-header">
+    <div class="shift-header__main">
+      <div class="shift-header__icon-wrap" aria-hidden="true">
+        <span class="material-symbols-outlined shift-header__icon">schedule</span>
+      </div>
+
+      <div class="shift-header__copy">
+        <div class="shift-header__eyebrow">
+          <span class="shift-header__eyebrow-tag">Administración WMS</span>
+          <span class="shift-header__eyebrow-sep">·</span>
+          <span class="shift-eyebrow-category">Configuración Operativa</span>
+        </div>
+
+        <h1 class="shift-header__title">Configuración de Turnos y Horarios</h1>
+        <p class="shift-header__subtitle">
+          Gestión operativa de jornadas, horarios de almacén y disponibilidad temporal.
+        </p>
+      </div>
+    </div>
+
+    <div class="shift-header__actions">
+      @if (canCreateOrEdit()) {
+      <button
+        type="button"
+        class="shift-btn shift-btn--primary"
+        (click)="onClickNewShift()"
+        [disabled]="formMode() === 'new' || isSubmitting()"
+      >
+        <span class="material-symbols-outlined">add</span>
+        <span>Nuevo Turno</span>
+      </button>
+      }
+    </div>
+  </header>
+
+  <!-- ==================== METRICAS SUPERIORES (KPIs) ==================== -->
+  <section class="shift-kpis" aria-label="Resumen de turnos">
+    <article class="shift-kpi-card" data-tone="neutral">
+      <div class="shift-kpi-card__icon">
+        <span class="material-symbols-outlined">schedule</span>
+      </div>
+      <div class="shift-kpi-card__content">
+        <span class="shift-kpi-card__label">Total Turnos</span>
+        <strong class="shift-kpi-card__value">{{ shiftService.totalShiftCount() }}</strong>
+      </div>
+    </article>
+
+    <article class="shift-kpi-card" data-tone="success">
+      <div class="shift-kpi-card__icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="shift-kpi-card__content">
+        <span class="shift-kpi-card__label">Turnos Activos</span>
+        <strong class="shift-kpi-card__value">{{ shiftService.activeShiftCount() }}</strong>
+      </div>
+    </article>
+
+    <article class="shift-kpi-card" data-tone="info">
+      <div class="shift-kpi-card__icon">
+        <span class="material-symbols-outlined">nightlight</span>
+      </div>
+      <div class="shift-kpi-card__content">
+        <span class="shift-kpi-card__label">Sucursal Activa</span>
+        <strong class="shift-kpi-card__value shift-kpi-card__value--text">CDMX-01</strong>
+      </div>
+    </article>
+    <article class="shift-kpi-card" data-tone="warning">
+      <div class="shift-kpi-card__icon">
+        <span class="material-symbols-outlined">warning</span>
+      </div>
+      <div class="shift-kpi-card__content">
+        <span class="shift-kpi-card__label">Conflictos de Horario</span>
+        <strong class="shift-kpi-card__value">{{ shiftService.conflictCount() }}</strong>
+      </div>
+    </article>
+  </section>
+
+  <!-- ==================== MASTER-DETAIL SPLIT VIEW (35/65) ==================== -->
+  <div class="shift-split-view">
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA: DIRECTORIO DE TURNOS (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="shift-directory">
+      <!-- Toolbar de Búsqueda y Filtros -->
+      <div class="shift-directory__toolbar">
+        <div class="shift-search-input-wrap">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            type="text"
+            class="shift-search-input"
+            placeholder="Buscar por nombre, código o hora..."
+            [value]="shiftService.filters().searchTerm"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+
+        <div class="shift-filters-row">
+          <select
+            class="shift-filter-select"
+            [value]="shiftService.filters().status"
+            (change)="onStatusFilterChange($event)"
+            title="Filtrar por Estatus"
+          >
+            <option value="ALL">Todos los estatus</option>
+            <option value="ACTIVE">Activos</option>
+            <option value="INACTIVE">Inactivos</option>
+          </select>
+
+          <select
+            class="shift-filter-select"
+            [value]="shiftService.filters().day"
+            (change)="onDayFilterChange($event)"
+            title="Filtrar por Día"
+          >
+            <option value="ALL">Todos los días</option>
+            @for (dayCfg of daysConfig; track dayCfg.value) {
+            <option [value]="dayCfg.value">{{ dayCfg.fullLabel }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Listado de Turnos -->
+      <div class="shift-directory__list-container">
+        @if (shiftService.loading()) {
+        <div class="shift-state-box">
+          <span class="material-symbols-outlined spinner-icon">sync</span>
+          <p>Cargando catálogo de turnos...</p>
+        </div>
+        } @else if (shiftService.filteredShifts().length === 0) {
+        <div class="shift-state-box">
+          <span class="material-symbols-outlined empty-icon">schedule_send</span>
+          <p class="empty-title">No se encontraron turnos</p>
+          <p class="empty-desc">Pruebe ajustando los términos de búsqueda o filtros.</p>
+        </div>
+        } @else {
+        <ul class="shift-list">
+          @for (shift of shiftService.filteredShifts(); track shift.id) {
+          <li
+            class="shift-item"
+            [class.shift-item--selected]="shiftService.selectedShiftId() === shift.id && formMode() !== 'new'"
+            (click)="onSelectShift(shift.id)"
+            tabindex="0"
+            (keydown.enter)="onSelectShift(shift.id)"
+            (keydown.space)="onSelectShift(shift.id); $event.preventDefault()"
+          >
+            <div class="shift-item__avatar" [class.shift-item__avatar--inactive]="shift.status === 'INACTIVE'">
+              <span class="material-symbols-outlined">schedule</span>
+            </div>
+
+            <div class="shift-item__info">
+              <div class="shift-item__header">
+                <span class="shift-item__code">{{ shift.code }}</span>
+                <span
+                  class="shift-badge"
+                  [class.shift-badge--active]="shift.status === 'ACTIVE'"
+                  [class.shift-badge--inactive]="shift.status === 'INACTIVE'"
+                >
+                  {{ statusLabels[shift.status] }}
+                </span>
+              </div>
+
+              <h3 class="shift-item__name">{{ shift.name }}</h3>
+
+              <div class="shift-item__meta">
+                <span class="shift-item__time">
+                  <span class="material-symbols-outlined meta-icon">schedule</span>
+                  {{ shift.startTime }} → {{ shift.endTime }}
+                </span>
+
+                <span class="shift-item__days">
+                  <span class="material-symbols-outlined meta-icon">calendar_today</span>
+                  {{ getDayShortLabels(shift.operatingDays) }}
+                </span>
+              </div>
+            </div>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+
+      <footer class="shift-directory__footer">
+        <span>Mostrando <b>{{ shiftService.filteredShifts().length }}</b> de <b>{{ shiftService.totalShiftCount() }}</b> turnos</span>
+      </footer>
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA: FORMULARIO REACTIVO DE TURNO (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="shift-editor">
+      <!-- Banner de Aviso para Rol de Solo Lectura (SHIFT_LEADER) -->
+      @if (isShiftLeaderReadOnly()) {
+      <div class="shift-banner shift-banner--info">
+        <span class="material-symbols-outlined">info</span>
+        <div>
+          <strong>Modo Solo Lectura (Líder de Turno)</strong>
+          <p>Su rol le permite consultar turnos y horarios operativos, pero no modificar parámetros del catálogo.</p>
+        </div>
+      </div>
+      }
+
+      <!-- Banner de Mensaje de Éxito -->
+      @if (successMessage()) {
+      <div class="shift-banner shift-banner--success">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>{{ successMessage() }}</span>
+      </div>
+      }
+
+      <!-- Banner de Mensaje de Error -->
+      @if (formError()) {
+      <div class="shift-banner shift-banner--danger">
+        <span class="material-symbols-outlined">error</span>
+        <span>{{ formError() }}</span>
+      </div>
+      }
+
+      <div class="shift-editor__card">
+        <header class="shift-editor__header">
+          <div class="shift-editor__title-group">
+            <span class="shift-editor__mode-tag">
+              @if (formMode() === 'new') { NUEVO REGISTRO }
+              @else if (formMode() === 'edit') { EDICIÓN DE TURNO }
+              @else { DETALLE DE TURNO }
+            </span>
+
+            <h2 class="shift-editor__title">
+              @if (formMode() === 'new') {
+                Crear Nuevo Turno Operativo
+              } @else if (shiftService.selectedShift()) {
+                {{ shiftService.selectedShift()?.name }}
+              } @else {
+                Seleccione un Turno
+              }
+            </h2>
+
+
+          </div>
+
+          @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
+          <div class="shift-editor__status-badge-wrap">
+            <span
+              class="shift-badge shift-badge--large"
+              [class.shift-badge--active]="current.status === 'ACTIVE'"
+              [class.shift-badge--inactive]="current.status === 'INACTIVE'"
+            >
+              {{ statusLabels[current.status] }}
+            </span>
+          </div>
+          }
+        </header>
+
+        <!-- Formulario -->
+        <form [formGroup]="shiftForm" (ngSubmit)="onSubmitForm()" class="shift-form">
+          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <legend class="shift-form__legend">Identificación del Turno</legend>
+
+            <div class="shift-form-grid">
+              <!-- Código -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-code">
+                  Código de Turno <span class="required-star">*</span>
+                </label>
+                <input
+                  id="shift-code"
+                  type="text"
+                  class="field-input"
+                  [class.field-input--error]="isFieldInvalid('code')"
+                  formControlName="code"
+                  placeholder="Ej: TRN-MAT-01"
+                  maxlength="20"
+                />
+                @if (isFieldInvalid('code')) {
+                <span class="field-error">{{ getFieldError('code') }}</span>
+                }
+              </div>
+
+              <!-- Nombre -->
+              <div class="field-group col-8">
+                <label class="field-label" for="shift-name">
+                  Nombre Oficial del Turno <span class="required-star">*</span>
+                </label>
+                <input
+                  id="shift-name"
+                  type="text"
+                  class="field-input"
+                  [class.field-input--error]="isFieldInvalid('name')"
+                  formControlName="name"
+                  placeholder="Ej: Turno Matutino Principal"
+                  maxlength="100"
+                />
+                @if (isFieldInvalid('name')) {
+                <span class="field-error">{{ getFieldError('name') }}</span>
+                }
+              </div>
+
+              <!-- Descripción -->
+              <div class="field-group col-12">
+                <label class="field-label" for="shift-desc">Descripción Operativa</label>
+                <textarea
+                  id="shift-desc"
+                  class="field-textarea"
+                  [class.field-input--error]="isFieldInvalid('description')"
+                  formControlName="description"
+                  rows="2"
+                  placeholder="Describa el objetivo operativo o tareas asociadas a este turno..."
+                  maxlength="250"
+                ></textarea>
+                @if (isFieldInvalid('description')) {
+                <span class="field-error">{{ getFieldError('description') }}</span>
+                }
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <legend class="shift-form__legend">Horario y Días de Operación</legend>
+
+            <div class="shift-form-grid">
+              <!-- Hora de Inicio -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-start-time">
+                  Hora de Inicio <span class="required-star">*</span>
+                </label>
+                <input
+                  id="shift-start-time"
+                  type="time"
+                  class="field-input"
+                  [class.field-input--error]="isFieldInvalid('startTime') || hasIdenticalTimeError()"
+                  formControlName="startTime"
+                />
+                @if (isFieldInvalid('startTime')) {
+                <span class="field-error">{{ getFieldError('startTime') }}</span>
+                }
+              </div>
+
+              <!-- Hora de Fin -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-end-time">
+                  Hora de Término <span class="required-star">*</span>
+                </label>
+                <input
+                  id="shift-end-time"
+                  type="time"
+                  class="field-input"
+                  [class.field-input--error]="isFieldInvalid('endTime') || hasIdenticalTimeError()"
+                  formControlName="endTime"
+                />
+                @if (isFieldInvalid('endTime')) {
+                <span class="field-error">{{ getFieldError('endTime') }}</span>
+                }
+              </div>
+
+              <!-- Cálculo de Duración Neta -->
+              <div class="field-group col-4 duration-display-group">
+                <span class="field-label">Duración Calculada</span>
+                <div class="duration-pill">
+                  <span class="material-symbols-outlined duration-icon">schedule</span>
+                  <strong class="duration-value">{{ calculatedDuration().formattedDuration }}</strong>
+
+                  @if (calculatedDuration().isOvernight) {
+                  <span class="overnight-badge" title="Este turno cruza la medianoche (ej: 22:00 a 06:00)">
+                    <span class="material-symbols-outlined">nightlight</span>
+                    Cruza medianoche
+                  </span>
+                  }
+                </div>
+              </div>
+
+              @if (hasIdenticalTimeError()) {
+              <div class="col-12">
+                <span class="field-error block-error">
+                  La hora de inicio y hora de fin no pueden ser idénticas.
+                </span>
+              </div>
+              }
+
+              <!-- Selector de Días Operativos (7 Días) -->
+              <div class="field-group col-12">
+                <label class="field-label">
+                  Días Operativos de la Semana <span class="required-star">*</span>
+                </label>
+
+                <div
+                  class="day-picker-grid"
+                  [class.day-picker-grid--error]="isFieldInvalid('operatingDays')"
+                >
+                  @for (dayCfg of daysConfig; track dayCfg.value) {
+                  <button
+                    type="button"
+                    class="day-pill-btn"
+                    [class.day-pill-btn--selected]="isDaySelected(dayCfg.value)"
+                    (click)="toggleDay(dayCfg.value)"
+                    [title]="dayCfg.fullLabel"
+                    tabindex="0"
+                  >
+                    <span class="day-pill-short">{{ dayCfg.shortLabel }}</span>
+                    <span class="day-pill-full">{{ dayCfg.fullLabel }}</span>
+                  </button>
+                  }
+                </div>
+
+                @if (isFieldInvalid('operatingDays')) {
+                <span class="field-error">{{ getFieldError('operatingDays') }}</span>
+                }
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <legend class="shift-form__legend">Parámetros Operativos y Tolerancia</legend>
+
+            <div class="shift-form-grid">
+              <!-- Minutos de Descanso -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-rest-break">Minutos de Descanso</label>
+                <input
+                  id="shift-rest-break"
+                  type="number"
+                  class="field-input"
+                  [class.field-input--error]="isFieldInvalid('restBreakMinutes')"
+                  formControlName="restBreakMinutes"
+                  min="0"
+                  max="300"
+                />
+                @if (isFieldInvalid('restBreakMinutes')) {
+                <span class="field-error">{{ getFieldError('restBreakMinutes') }}</span>
+                }
+              </div>
+
+              <!-- Tolerancia de Entrada -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-tolerance">Tolerancia de Entrada (min)</label>
+                <input
+                  id="shift-tolerance"
+                  type="number"
+                  class="field-input"
+                  [class.field-input--error]="isFieldInvalid('toleranceMinutes')"
+                  formControlName="toleranceMinutes"
+                  min="0"
+                  max="120"
+                />
+                @if (isFieldInvalid('toleranceMinutes')) {
+                <span class="field-error">{{ getFieldError('toleranceMinutes') }}</span>
+                }
+              </div>
+
+              <!-- Estatus -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-status">Estatus del Turno</label>
+                <select id="shift-status" class="field-select" formControlName="status">
+                  <option value="ACTIVE">Activo</option>
+                  <option value="INACTIVE">Inactivo</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Nota informativa de persistencia / auditoría -->
+          <p class="shift-info-note">
+            <span class="material-symbols-outlined">verified_user</span>
+            Los cambios guardados se aplican al catálogo operativo de 4GUARD WMS. La persistencia transaccional y los registros de auditoría detallados (audit_logs) son procesados automáticamente por el backend.
+          </p>
+
+          <!-- Footer con datos de auditoría si están disponibles -->
+          @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
+          @if (current.updatedAt || current.updatedBy) {
+          <div class="shift-audit-footer">
+            <span>Última modificación: <b>{{ current.updatedAt | date:'dd/MM/yyyy HH:mm' }}</b></span>
+            @if (current.updatedBy) {
+            <span>por <b>{{ current.updatedBy }}</b></span>
+            }
+          </div>
+          }
+          }
+
+          <!-- Botones de Acción -->
+          @if (canCreateOrEdit()) {
+          <div class="shift-editor__actions">
+            @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
+            <button
+              type="button"
+              class="shift-btn"
+              [class.shift-btn--danger]="current.status === 'ACTIVE'"
+              [class.shift-btn--success]="current.status === 'INACTIVE'"
+              (click)="onToggleStatus()"
+              [disabled]="isSubmitting()"
+            >
+              <span class="material-symbols-outlined">
+                {{ current.status === 'ACTIVE' ? 'power_settings_new' : 'check_circle' }}
+              </span>
+              <span>{{ current.status === 'ACTIVE' ? 'Desactivar Turno' : 'Activar Turno' }}</span>
+            </button>
+            }
+
+            <button
+              type="submit"
+              class="shift-btn shift-btn--primary"
+              [disabled]="isSubmitting() || shiftForm.invalid || !shiftForm.dirty"
+            >
+              <span class="material-symbols-outlined">save</span>
+              <span>
+                @if (isSubmitting()) { Guardando... }
+                @else if (formMode() === 'new') { Crear Turno }
+                @else { Guardar Cambios }
+              </span>
+            </button>
+          </div>
+          }
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== MODAL DE CONFIRMACIÓN DE CAMBIOS NO GUARDADOS ==================== -->
+  @if (showUnsavedChangesModal()) {
+  <div class="modal-overlay" (click)="cancelDiscardChanges()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-card__header">
+        <h3 class="modal-card__title">Cambios sin Guardar</h3>
+        <button type="button" class="modal-card__close-btn" (click)="cancelDiscardChanges()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="modal-card__body">
+        <p>Tiene modificaciones sin guardar en el formulario actual. ¿Desea descartar los cambios y continuar?</p>
+      </div>
+
+      <footer class="modal-card__footer">
+        <button type="button" class="shift-btn shift-btn--secondary" (click)="cancelDiscardChanges()">
+          Continuar Editando
+        </button>
+        <button type="button" class="shift-btn shift-btn--danger" (click)="confirmDiscardChanges()">
+          Descartar Cambios
+        </button>
+      </footer>
+    </div>
+  </div>
+  }
+</div>
