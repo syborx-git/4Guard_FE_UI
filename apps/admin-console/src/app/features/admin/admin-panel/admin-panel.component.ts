@@ -587,6 +587,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     // Seguridad
     { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
+    { id: 'shifts', title: 'Turnos y Horarios', icon: 'schedule', description: 'Configuración de jornadas operativas, horarios y disponibilidad de almacén.', category: 'SECURITY' },
     { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
     
     // Soporte y Auditoría
@@ -715,7 +716,12 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       this.router.navigate(['/suppliers']);
       return;
     }
+    if (moduleId === 'shifts') {
+      this.router.navigate(['/admin/shifts']);
+      return;
+    }
     this.selectedModule.set(moduleId);
+
     this.searchTerm.set('');
     this.currentPage.set(1);
     this.closeModal();

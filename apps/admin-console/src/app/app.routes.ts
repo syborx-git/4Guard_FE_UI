@@ -133,6 +133,18 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Monitoreo de Rendimiento',
       },
 
+      // Turnos y Horarios (HU-140)
+      {
+        path: 'shifts',
+        canActivate: [rbacGuard],
+        data: { module: 'shifts' },
+        loadComponent: () =>
+          import('./features/admin/shifts/shift-management/shift-management.component').then(
+            (m) => m.ShiftManagementComponent
+          ),
+        title: '4GUARD WMS — Turnos y Horarios',
+      },
+
       // Administración
       {
         path: 'admin',

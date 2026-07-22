@@ -466,11 +466,15 @@
           <li [class.active]="selectedModule() === 'roles'" (click)="selectModule('roles')">
             <span class="material-symbols-outlined">shield_person</span> Roles y Permisos
           </li>
+          <li (click)="selectModule('shifts')">
+            <span class="material-symbols-outlined">schedule</span> Turnos y Horarios
+          </li>
           <li (click)="selectModule('sessions')">
             <span class="material-symbols-outlined">group</span> Sesiones Activas
           </li>
         </ul>
       </div>
+
 
       <div class="sidebar-category">
         <span class="sidebar-category__title">Monitoreo y Soporte</span>
