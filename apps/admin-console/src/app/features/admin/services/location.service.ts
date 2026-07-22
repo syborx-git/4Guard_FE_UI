@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { BranchService } from './branch.service';
 
 export type LocationType = 'PALLET' | 'BIN' | 'SHELF' | 'RAMP';
+export type LocationStatus = 'ACTIVE' | 'BLOCKED' | 'MAINTENANCE' | 'INACTIVE';
 
 export interface Location {
   id: string;
@@ -23,6 +24,11 @@ export interface Location {
   coordZ: number;
   type: LocationType;
   capacityUnits: number;
+  currentOccupancy?: number;
+  code?: string | null;
+  name?: string | null;
+  status?: LocationStatus;
+  statusReason?: string | null;
   isBlocked: boolean;
   blockReason: string;
   version?: number;
@@ -47,6 +53,10 @@ export interface LocationResponse {
   type: string;
   capacityUnits: number;
   currentOccupancy: number;
+  code: string | null;
+  name: string | null;
+  status: LocationStatus;
+  statusReason: string | null;
   isBlocked: boolean;
   blockReason: string | null;
   version: number;
@@ -56,35 +66,44 @@ export interface LocationResponse {
 
 export interface CreateLocationRequest {
   branchId: string;
-  sectionId: string;
+  sectionId?: string;
   zone: string;
-  aisle: string;
-  rack: string;
-  level: number;
-  position: string;
-  coordX: number;
-  coordY: number;
-  coordZ: number;
+  aisle?: string;
+  rack?: string;
+  level?: number;
+  position?: string;
+  coordX?: number;
+  coordY?: number;
+  coordZ?: number;
   type: string;
-  capacityUnits: number;
+  capacityUnits?: number;
+  code?: string | null;
+  name?: string | null;
 }
 
 export interface UpdateLocationRequest {
   id: string;
   branchId: string;
-  sectionId: string;
+  sectionId?: string;
   zone: string;
-  aisle: string;
-  rack: string;
-  level: number;
-  position: string;
-  coordX: number;
-  coordY: number;
-  coordZ: number;
+  aisle?: string;
+  rack?: string;
+  level?: number;
+  position?: string;
+  coordX?: number;
+  coordY?: number;
+  coordZ?: number;
   type: string;
-  capacityUnits: number;
-  isBlocked: boolean;
-  blockReason: string | null;
+  capacityUnits?: number;
+  isBlocked?: boolean;
+  blockReason?: string | null;
+  code?: string | null;
+  name?: string | null;
+}
+
+export interface ChangeLocationStatusRequest {
+  status: LocationStatus;
+  reason?: string;
 }
 
 export interface ApiResponse<T> {
@@ -153,7 +172,7 @@ export class LocationService {
   /**
    * Obtiene las ubicaciones de una sucursal en específico.
    */
-  private loadLocationsForBranch(branchId: string): Observable<Location[]> {
+  loadLocationsForBranch(branchId: string): Observable<Location[]> {
     return this.http.get<ApiResponse<LocationResponse[]>>(
       `${environment.apiBaseUrl}/api/v1/locations?branchId=${branchId}`
     ).pipe(
@@ -165,20 +184,22 @@ export class LocationService {
   /**
    * Crea una ubicación en el Backend.
    */
-  create(loc: Omit<Location, 'id' | 'branchName' | 'sectionName'>): Observable<ApiResponse<LocationResponse>> {
+  create(loc: Partial<Location>): Observable<ApiResponse<LocationResponse>> {
     const payload: CreateLocationRequest = {
-      branchId: loc.branchId,
+      branchId: loc.branchId!,
       sectionId: loc.sectionId,
-      zone: loc.zone,
+      zone: loc.zone || 'ALMC',
       aisle: loc.aisle,
       rack: loc.rack,
       level: loc.level,
       position: loc.position,
-      coordX: loc.coordX,
-      coordY: loc.coordY,
-      coordZ: loc.coordZ,
-      type: loc.type,
-      capacityUnits: loc.capacityUnits
+      coordX: loc.coordX ?? 0,
+      coordY: loc.coordY ?? 0,
+      coordZ: loc.coordZ ?? 0,
+      type: loc.type || 'PALLET',
+      capacityUnits: loc.capacityUnits ?? 1,
+      code: loc.code,
+      name: loc.name
     };
 
     return this.http.post<ApiResponse<LocationResponse>>(
@@ -200,30 +221,51 @@ export class LocationService {
    */
   update(id: string, loc: Partial<Location>): Observable<ApiResponse<LocationResponse>> {
     const existing = this.items().find(l => l.id === id);
-    if (!existing) {
-      return throwError(() => new Error('Ubicación no encontrada localmente.'));
-    }
-
     const payload: UpdateLocationRequest = {
       id: id,
-      branchId: loc.branchId || existing.branchId,
-      sectionId: loc.sectionId || existing.sectionId,
-      zone: loc.zone || existing.zone,
-      aisle: loc.aisle || existing.aisle,
-      rack: loc.rack || existing.rack,
-      level: loc.level !== undefined ? loc.level : existing.level,
-      position: loc.position || existing.position,
-      coordX: loc.coordX !== undefined ? loc.coordX : existing.coordX,
-      coordY: loc.coordY !== undefined ? loc.coordY : existing.coordY,
-      coordZ: loc.coordZ !== undefined ? loc.coordZ : existing.coordZ,
-      type: loc.type || existing.type,
-      capacityUnits: loc.capacityUnits !== undefined ? loc.capacityUnits : existing.capacityUnits,
-      isBlocked: loc.isBlocked !== undefined ? loc.isBlocked : existing.isBlocked,
-      blockReason: loc.blockReason !== undefined ? loc.blockReason : existing.blockReason
+      branchId: loc.branchId || existing?.branchId || '',
+      sectionId: loc.sectionId !== undefined ? loc.sectionId : existing?.sectionId,
+      zone: loc.zone || existing?.zone || 'ALMC',
+      aisle: loc.aisle !== undefined ? loc.aisle : existing?.aisle,
+      rack: loc.rack !== undefined ? loc.rack : existing?.rack,
+      level: loc.level !== undefined ? loc.level : (existing?.level ?? 1),
+      position: loc.position !== undefined ? loc.position : existing?.position,
+      coordX: loc.coordX !== undefined ? loc.coordX : (existing?.coordX ?? 0),
+      coordY: loc.coordY !== undefined ? loc.coordY : (existing?.coordY ?? 0),
+      coordZ: loc.coordZ !== undefined ? loc.coordZ : (existing?.coordZ ?? 0),
+      type: loc.type || existing?.type || 'PALLET',
+      capacityUnits: loc.capacityUnits !== undefined ? loc.capacityUnits : (existing?.capacityUnits ?? 1),
+      isBlocked: loc.isBlocked !== undefined ? loc.isBlocked : existing?.isBlocked,
+      blockReason: loc.blockReason !== undefined ? loc.blockReason : (existing?.blockReason || null),
+      code: loc.code !== undefined ? loc.code : existing?.code,
+      name: loc.name !== undefined ? loc.name : existing?.name
     };
 
     return this.http.put<ApiResponse<LocationResponse>>(
       `${environment.apiBaseUrl}/api/v1/locations`,
+      payload
+    ).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          const updatedLoc = this.mapDtoToItem(response.data);
+          this.items.update(list => list.map(item => item.id === id ? updatedLoc : item));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
+  /**
+   * Cambia el estado FSM de una ubicación física en el Backend vía PATCH.
+   */
+  changeStatus(id: string, status: LocationStatus, reason?: string): Observable<ApiResponse<LocationResponse>> {
+    const payload: ChangeLocationStatusRequest = {
+      status,
+      reason: reason || undefined
+    };
+
+    return this.http.patch<ApiResponse<LocationResponse>>(
+      `${environment.apiBaseUrl}/api/v1/locations/${id}/status`,
       payload
     ).pipe(
       tap(response => {
@@ -256,11 +298,7 @@ export class LocationService {
    * Bloquea/Desbloquea una ubicación física en el Backend.
    */
   toggleBlock(id: string, isBlocked: boolean, reason: string): Observable<ApiResponse<LocationResponse>> {
-    const existing = this.items().find(l => l.id === id);
-    if (!existing) {
-      return throwError(() => new Error('Ubicación no encontrada localmente.'));
-    }
-    return this.update(id, { isBlocked, blockReason: isBlocked ? reason : '' });
+    return this.changeStatus(id, isBlocked ? 'BLOCKED' : 'ACTIVE', reason);
   }
 
   private mapDtoToItem(dto: LocationResponse): Location {
@@ -278,8 +316,13 @@ export class LocationService {
       coordX: dto.coordX,
       coordY: dto.coordY,
       coordZ: dto.coordZ,
-      type: dto.type as LocationType,
+      type: (dto.type || 'PALLET') as LocationType,
       capacityUnits: dto.capacityUnits,
+      currentOccupancy: dto.currentOccupancy,
+      code: dto.code || undefined,
+      name: dto.name || undefined,
+      status: dto.status || (dto.isBlocked ? 'BLOCKED' : 'ACTIVE'),
+      statusReason: dto.statusReason || dto.blockReason || null,
       isBlocked: dto.isBlocked,
       blockReason: dto.blockReason || '',
       version: dto.version,
