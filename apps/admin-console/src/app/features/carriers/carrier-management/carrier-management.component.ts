@@ -46,6 +46,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { CarrierService } from '../services/carrier.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   Carrier,
   CarrierType,
@@ -107,6 +108,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   protected readonly carrierService = inject(CarrierService);
   private readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
   private readonly destroy$ = new Subject<void>();
 
   // ─── Estado de la vista ──────────────────────────────────────────────────────
@@ -460,6 +462,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
           if (res.data.id) {
             this.loadAuditLogs(res.data.id);
           }
+          this.toastService.success('Transportista creado con éxito');
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -477,6 +480,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
             if (res.data.id) {
               this.loadAuditLogs(res.data.id);
             }
+            this.toastService.success('Transportista actualizado con éxito');
             setTimeout(() => this.saveSuccess.set(false), 3500);
           },
           error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -526,6 +530,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
           if (res.data.id) {
             this.loadAuditLogs(res.data.id);
           }
+          this.toastService.success('Estado del transportista actualizado con éxito');
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => {
@@ -554,6 +559,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
           if (res.data.id) {
             this.loadAuditLogs(res.data.id);
           }
+          this.toastService.success('Transportista activado con éxito');
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),

@@ -3,7 +3,7 @@
 
   <div class="login-form-container">
 
-    
+
     <!-- Branding Header -->
     <div class="login-brand-header">
       <h1 class="login-brand__headline">4GUARD</h1>
@@ -15,131 +15,123 @@
 
       <!-- VISTA 1: FORMULARIO TRADICIONAL -->
       @if (viewState() === 'login') {
-        <h2 class="login-form__title">Autenticación</h2>
-        <p class="login-form__subtitle">
-          Ingresa tus credenciales para acceder a la torre de control.
-        </p>
+      <h2 class="login-form__title">Autenticación</h2>
+      <p class="login-form__subtitle">
+        Ingresa tus credenciales para acceder a la torre de control.
+      </p>
 
-        <!-- Error global -->
-        @if (loginError()) {
-          <div class="login-error" role="alert" aria-live="assertive">
-            <span class="material-symbols-outlined login-error__icon">warning</span>
-            <span class="login-error__msg">{{ loginError() }}</span>
+      <!-- Error global -->
+      @if (loginError()) {
+      <div class="login-error" role="alert" aria-live="assertive">
+        <span class="material-symbols-outlined login-error__icon">warning</span>
+        <span class="login-error__msg">{{ loginError() }}</span>
 
-            @if (attemptsRemaining() !== null) {
-              <span class="login-error__badge">
-                Intentos: {{ attemptsRemaining() }}
-              </span>
-            }
-          </div>
+        @if (attemptsRemaining() !== null) {
+        <span class="login-error__badge">
+          Intentos: {{ attemptsRemaining() }}
+        </span>
         }
+      </div>
+      }
 
-        <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off">
-          <!-- Email / Usuario -->
-          <div class="field-group">
-            <label class="field__label" for="email">USUARIO O CORREO</label>
-            <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
-              <span class="material-symbols-outlined field__icon">person</span>
-              <input id="email" type="text" class="field__input" formControlName="email"
-                placeholder="ID de operador" autocomplete="email" aria-required="true"
-                [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid" aria-describedby="email-error"
-                (keydown.space)="$event.preventDefault()">
-            </div>
-            @if (emailCtrl.touched && emailCtrl.invalid) {
-              <span id="email-error" class="field__error-msg">Ingresa un usuario válido</span>
-            }
+      <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off">
+        <!-- Email -->
+        <div class="field-group">
+          <label class="field__label" for="email">CORREO ELECTRÓNICO</label>
+          <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
+            <span class="material-symbols-outlined field__icon">mail</span>
+            <input id="email" type="email" class="field__input" formControlName="email" placeholder="correo@4guard.com"
+              autocomplete="email" aria-required="true" [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid"
+              aria-describedby="email-error" (keydown.space)="$event.preventDefault()">
+          </div>
+          @if (emailCtrl.touched && emailCtrl.invalid) {
+          <span id="email-error" class="field__error-msg">Ingresa un correo electrónico válido</span>
+          }
+        </div>
+
+        <!-- Contraseña -->
+        <div class="field-group">
+          <div class="field__label-row">
+            <label class="field__label" for="password">CONTRASEÑA DE SEGURIDAD</label>
+            <button type="button" id="forgot-password-trigger" class="field__forgot-link" (click)="openForgotModal()"
+              aria-label="Abrir recuperacion de acceso">
+              ¿Olvidó su clave?
+            </button>
           </div>
 
-          <!-- Contraseña -->
-          <div class="field-group">
-            <div class="field__label-row">
-              <label class="field__label" for="password">CONTRASEÑA DE SEGURIDAD</label>
-              <button
-                type="button"
-                id="forgot-password-trigger"
-                class="field__forgot-link"
-                (click)="openForgotModal()"
-                aria-label="Abrir recuperacion de acceso">
-                ¿Olvidó su clave?
-              </button>
-            </div>
-
-            <div class="field__input-wrap"
-                 [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid"
-                 [class.animate-shake]="animateShake()">
-              <span class="material-symbols-outlined field__icon">lock</span>
-              <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
-                formControlName="password" placeholder="••••••••" autocomplete="current-password" aria-required="true"
-                [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
-              <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
-                [attr.aria-label]="showPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                <span class="material-symbols-outlined">{{ showPwd() ? 'visibility_off' : 'visibility' }}</span>
-              </button>
-            </div>
-            @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
-              <span class="field__error-msg">La contraseña es requerida</span>
-            }
+          <div class="field__input-wrap" [class.field--error]="passwordCtrl.touched && passwordCtrl.invalid"
+            [class.animate-shake]="animateShake()">
+            <span class="material-symbols-outlined field__icon">lock</span>
+            <input id="password" [type]="showPwd() ? 'text' : 'password'" class="field__input"
+              formControlName="password" placeholder="••••••••" autocomplete="current-password" aria-required="true"
+              [attr.aria-invalid]="passwordCtrl.touched && passwordCtrl.invalid">
+            <button type="button" class="field__toggle-pwd" (click)="togglePwd()"
+              [attr.aria-label]="showPwd() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              <span class="material-symbols-outlined">{{ showPwd() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
           </div>
+          @if (passwordCtrl.touched && passwordCtrl.hasError('required')) {
+          <span class="field__error-msg">La contraseña es requerida</span>
+          }
+        </div>
 
-          <!-- Botón Principal -->
-          <button id="login-submit-btn" type="submit" class="login-btn"
-            [disabled]="!isFormValid || isLoading()"
-            [class.login-btn--loading]="isLoading()"
-            aria-label="Entrar al Consola">
-            @if (isLoading()) {
-              <span class="login-btn__spinner" aria-hidden="true"></span>
-              <span>INICIANDO SESIÓN...</span>
-            } @else {
-              <span>ACCEDER AL SISTEMA</span>
-              <span class="material-symbols-outlined">arrow_forward</span>
-            }
-          </button>
+        <!-- Botón Principal -->
+        <button id="login-submit-btn" type="submit" class="login-btn" [disabled]="!isFormValid || isLoading()"
+          [class.login-btn--loading]="isLoading()" aria-label="Entrar al Consola">
+          @if (isLoading()) {
+          <span class="login-btn__spinner" aria-hidden="true"></span>
+          <span>INICIANDO SESIÓN...</span>
+          } @else {
+          <span>ACCEDER AL SISTEMA</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
+          }
+        </button>
 
-          <!-- Hint de demo -->
-          <p class="login-form__hint">
-            Acceso Autorizado: <strong>enrique</strong> / admin123
-          </p>
-        </form>
+        <!-- Hint de demo -->
+        <p class="login-form__hint">
+          Acceso Autorizado: <strong>enrique&#64;4guard.com</strong> / admin123
+        </p>
+      </form>
       } @else if (viewState() === 'locked-temporary') {
-        <!-- VISTA 2: BLOQUEO TEMPORAL -->
-        <div class="locked-view">
-          <div class="locked-view__icon-wrap">
-            <span class="material-symbols-outlined locked-view__icon">lock_clock</span>
-          </div>
-          <h2 class="locked-view__title">Acceso Pausado</h2>
-          <p class="locked-view__desc">
-            Has superado el número máximo de intentos fallidos. Tu cuenta ha sido bloqueada por seguridad.
-          </p>
-          <div class="locked-view__timer-box">
-            <span class="locked-view__timer-label">TIEMPO RESTANTE</span>
-            <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
-          </div>
-          <div class="locked-view__actions">
-            <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
-              Contactar Soporte
-            </button>
-          </div>
+      <!-- VISTA 2: BLOQUEO TEMPORAL -->
+      <div class="locked-view">
+        <div class="locked-view__icon-wrap">
+          <span class="material-symbols-outlined locked-view__icon">lock_clock</span>
         </div>
+        <h2 class="locked-view__title">Acceso Pausado</h2>
+        <p class="locked-view__desc">
+          Has superado el número máximo de intentos fallidos. Tu cuenta ha sido bloqueada por seguridad.
+        </p>
+        <div class="locked-view__timer-box">
+          <span class="locked-view__timer-label">TIEMPO RESTANTE</span>
+          <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
+        </div>
+        <div class="locked-view__actions">
+          <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
+            Contactar Soporte
+          </button>
+        </div>
+      </div>
       } @else if (viewState() === 'locked-permanent') {
-        <!-- VISTA 3: BLOQUEO DEFINITIVO -->
-        <div class="locked-view">
-          <div class="locked-view__icon-wrap locked-view__icon-wrap--forbidden">
-            <span class="material-symbols-outlined locked-view__icon locked-view__icon--red">gavel</span>
-          </div>
-          <h2 class="locked-view__title">Acceso Restringido</h2>
-          <p class="locked-view__desc">
-            Cuenta inhabilitada permanentemente. Se han enviado reportes de auditoría al administrador.
-          </p>
-          <div class="locked-view__info-alert">
-            <span class="material-symbols-outlined locked-view__info-icon">mail</span>
-            <span class="locked-view__info-text">Notificación enviada al correo del operador.</span>
-          </div>
-          <div class="locked-view__actions">
-            <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
-              Contactar Soporte
-            </button>
-          </div>
+      <!-- VISTA 3: BLOQUEO DEFINITIVO -->
+      <div class="locked-view">
+        <div class="locked-view__icon-wrap locked-view__icon-wrap--forbidden">
+          <span class="material-symbols-outlined locked-view__icon locked-view__icon--red">gavel</span>
         </div>
+        <h2 class="locked-view__title">Acceso Restringido</h2>
+        <p class="locked-view__desc">
+          Cuenta inhabilitada permanentemente. Se han enviado reportes de auditoría al administrador.
+        </p>
+        <div class="locked-view__info-alert">
+          <span class="material-symbols-outlined locked-view__info-icon">mail</span>
+          <span class="locked-view__info-text">Notificación enviada al correo del operador.</span>
+        </div>
+        <div class="locked-view__actions">
+          <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
+            Contactar Soporte
+          </button>
+        </div>
+      </div>
       }
     </div>
 
@@ -172,5 +164,5 @@
 
 <!-- Modal de Recuperacion de Acceso -->
 @if (showForgotModal()) {
-  <fg-forgot-password-modal (closed)="closeForgotModal()"></fg-forgot-password-modal>
+<fg-forgot-password-modal (closed)="closeForgotModal()"></fg-forgot-password-modal>
 }

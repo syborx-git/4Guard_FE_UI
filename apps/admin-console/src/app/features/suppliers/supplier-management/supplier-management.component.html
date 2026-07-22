@@ -1,0 +1,1165 @@
+<!--
+  supplier-management.component.html
+  HU-125 — Gestión de Proveedores — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Responsive: columnas apiladas en ≤1050px
+-->
+
+<div class="supplier-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="supplier-header">
+
+    <div class="supplier-header__top">
+
+      <div class="supplier-header__left">
+        <div class="supplier-header__icon-wrap">
+          <span class="material-symbols-outlined supplier-header__icon">storefront</span>
+        </div>
+
+        <div class="supplier-header__copy">
+          <div class="supplier-header__eyebrow">
+            <span class="supplier-header__eyebrow-tag">HU-125</span>
+            <span class="supplier-header__eyebrow-sep">·</span>
+            <span>Catálogo Maestro 3PL</span>
+            <span class="supplier-header__eyebrow-sep">·</span>
+            <span class="supplier-header__rls-badge">
+              <span class="material-symbols-outlined">shield</span>
+              RLS Habilitado
+            </span>
+          </div>
+          <h1 class="supplier-header__title">Catálogo de Proveedores</h1>
+          <p class="supplier-header__subtitle">
+            Administración de proveedores, condiciones operativas y alcance dentro del WMS
+          </p>
+        </div>
+      </div>
+
+      @if (canCreate()) {
+        <button
+          id="btn-new-supplier"
+          class="supplier-btn supplier-btn--primary"
+          type="button"
+          (click)="startNewSupplier()"
+          [disabled]="isSaving"
+          aria-label="Registrar nuevo proveedor">
+          <span class="material-symbols-outlined">add</span>
+          Nuevo proveedor
+        </button>
+      }
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="supplier-kpi-grid" aria-label="Resumen de proveedores">
+
+      <!-- Total -->
+      <div class="supplier-kpi-card supplier-kpi-card--total">
+        <div class="supplier-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">storefront</span>
+        </div>
+        <div class="supplier-kpi-card__body">
+          @if (isLoading) {
+            <div class="supplier-kpi-card__skeleton"></div>
+          } @else {
+            <span class="supplier-kpi-card__value">{{ totalCount() }}</span>
+          }
+          <span class="supplier-kpi-card__label">Total</span>
+        </div>
+        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activos -->
+      <div class="supplier-kpi-card supplier-kpi-card--active">
+        <div class="supplier-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="supplier-kpi-card__body">
+          @if (isLoading) {
+            <div class="supplier-kpi-card__skeleton"></div>
+          } @else {
+            <span class="supplier-kpi-card__value">{{ activeCount() }}</span>
+          }
+          <span class="supplier-kpi-card__label">Activos</span>
+        </div>
+        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- No disponibles -->
+      <div class="supplier-kpi-card supplier-kpi-card--unavailable">
+        <div class="supplier-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="supplier-kpi-card__body">
+          @if (isLoading) {
+            <div class="supplier-kpi-card__skeleton"></div>
+          } @else {
+            <span class="supplier-kpi-card__value">{{ unavailableCount() }}</span>
+          }
+          <span class="supplier-kpi-card__label">No disponibles</span>
+        </div>
+        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--unavailable"></div>
+      </div>
+
+      <!-- Preferentes -->
+      <div class="supplier-kpi-card supplier-kpi-card--preferred">
+        <div class="supplier-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">star</span>
+        </div>
+        <div class="supplier-kpi-card__body">
+          @if (isLoading) {
+            <div class="supplier-kpi-card__skeleton"></div>
+          } @else {
+            <span class="supplier-kpi-card__value">{{ preferredCount() }}</span>
+          }
+          <span class="supplier-kpi-card__label">Preferentes</span>
+        </div>
+        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--preferred"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="supplier-split" [class.supplier-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="supplier-directory" aria-label="Directorio de proveedores">
+
+      <!-- Buscador y filtros -->
+      <div class="supplier-directory__filters">
+
+        <div class="supplier-search">
+          <span class="material-symbols-outlined supplier-search__icon" aria-hidden="true">search</span>
+          <input
+            id="supplier-search"
+            class="supplier-search__input"
+            type="search"
+            placeholder="Buscar por código, RFC, nombre, contacto, ciudad…"
+            [formControl]="filterSearchCtrl"
+            aria-label="Buscar proveedor"
+            autocomplete="off"
+          />
+        </div>
+
+        <!-- Filtros secundarios en cuadrícula (2 columnas) -->
+        <div class="supplier-filters-grid">
+          
+          <!-- Filtro Estado -->
+          <div class="supplier-filter-group">
+            <label class="sr-only" for="filter-status">Estado</label>
+            <select
+              id="filter-status"
+              class="supplier-filter-select"
+              [formControl]="filterStatusCtrl"
+              aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+              <option value="BLOCKED">Bloqueados</option>
+            </select>
+          </div>
+
+          <!-- Filtro Categoría -->
+          <div class="supplier-filter-group">
+            <label class="sr-only" for="filter-type">Categoría</label>
+            <select
+              id="filter-type"
+              class="supplier-filter-select"
+              [formControl]="filterTypeCtrl"
+              aria-label="Filtrar por tipo">
+              <option value="">Categorías</option>
+              @for (t of supplierTypes; track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Filtro Cliente -->
+          <div class="supplier-filter-group">
+            <label class="sr-only" for="filter-client">Cliente 3PL</label>
+            <select
+              id="filter-client"
+              class="supplier-filter-select"
+              [formControl]="filterClientCtrl"
+              aria-label="Filtrar por cliente 3PL">
+              <option value="">Clientes</option>
+              @for (c of clientService.clients(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Filtro Almacén -->
+          <div class="supplier-filter-group">
+            <label class="sr-only" for="filter-warehouse">Almacén</label>
+            <select
+              id="filter-warehouse"
+              class="supplier-filter-select"
+              [formControl]="filterWarehouseCtrl"
+              aria-label="Filtrar por almacén">
+              <option value="">Almacenes</option>
+              @for (w of branchService.branches(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Botón Limpiar filtros secundario -->
+        @if (hasActiveFilters()) {
+          <div class="supplier-filters-actions">
+            <button
+              class="supplier-filter-clear-btn"
+              type="button"
+              (click)="clearFilters()"
+              aria-label="Limpiar todos los filtros activos">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        }
+
+      </div>
+
+      <!-- ── Estados de la Lista ──────────────────────────────────── -->
+      @if (isLoading) {
+        <div class="supplier-directory__list" aria-busy="true" aria-label="Cargando proveedores">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="supplier-item supplier-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="supplier-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                <div class="skeleton skeleton--line skeleton--line-short"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError) {
+        <div class="supplier-state supplier-state--error" role="alert">
+          <span class="material-symbols-outlined supplier-state__icon">cloud_off</span>
+          <p class="supplier-state__title">Error al cargar</p>
+          <p class="supplier-state__desc">{{ loadErrorMessage }}</p>
+          <button class="supplier-btn supplier-btn--ghost" type="button" (click)="loadSuppliers()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="supplier-state" role="status">
+          <span class="material-symbols-outlined supplier-state__icon">storefront</span>
+          <p class="supplier-state__title">Sin proveedores</p>
+          <p class="supplier-state__desc">No hay proveedores registrados en el catálogo aún.</p>
+          @if (canCreate()) {
+            <button class="supplier-btn supplier-btn--primary" type="button" (click)="startNewSupplier()">
+              <span class="material-symbols-outlined">add</span>
+              Registrar el primero
+            </button>
+          }
+        </div>
+      } @else if (hasNoResults) {
+        <div class="supplier-state" role="status">
+          <span class="material-symbols-outlined supplier-state__icon">search_off</span>
+          <p class="supplier-state__title">Sin coincidencias</p>
+          <p class="supplier-state__desc">
+            Ningún proveedor coincide con los filtros aplicados.
+          </p>
+          <button class="supplier-btn supplier-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="supplier-directory__list" role="listbox" aria-label="Lista de proveedores">
+          @for (supplier of filteredSuppliers(); track supplier.id) {
+            <li
+              class="supplier-item"
+              [class.supplier-item--selected]="isSelectedSupplier(supplier)"
+              role="option"
+              [attr.aria-selected]="isSelectedSupplier(supplier)"
+              (click)="selectSupplier(supplier)"
+              tabindex="0"
+              (keydown.enter)="selectSupplier(supplier)">
+
+              <div class="supplier-item__avatar">
+                {{ getInitials(supplier) }}
+              </div>
+
+              <div class="supplier-item__body">
+                <div class="supplier-item__header-line">
+                  <span class="supplier-item__title">
+                    {{ supplier.commercialName || supplier.legalName }}
+                  </span>
+                  @if (supplier.preferred) {
+                    <span class="material-symbols-outlined supplier-item__star" title="Proveedor preferente">star</span>
+                  }
+                </div>
+
+                @if (supplier.commercialName && supplier.commercialName !== supplier.legalName) {
+                  <span class="supplier-item__subtitle">{{ supplier.legalName }}</span>
+                }
+
+                <div class="supplier-item__meta">
+                  <span class="supplier-item__code">{{ supplier.code }}</span>
+                  <span class="supplier-badge" [ngClass]="getStatusBadgeClass(supplier.status)">
+                    {{ supplierStatusLabels[supplier.status] }}
+                  </span>
+                </div>
+
+                <div class="supplier-item__footer-line">
+                  <span class="supplier-item__type">{{ supplierTypeLabels[supplier.type] }}</span>
+                  @if (supplier.address?.city) {
+                    <span class="supplier-item__city">· {{ supplier.address?.city }}</span>
+                  }
+                </div>
+              </div>
+
+            </li>
+          }
+        </ul>
+      }
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <section class="supplier-detail" aria-label="Detalle del proveedor">
+
+      @if (formMode() === 'idle') {
+        <!-- Estado vacío / Sin selección -->
+        <div class="supplier-detail__empty">
+          <span class="material-symbols-outlined supplier-detail__empty-icon">storefront</span>
+          <h2 class="supplier-detail__empty-title">Selecciona un proveedor</h2>
+          <p class="supplier-detail__empty-desc">
+            Elige un proveedor del directorio para consultar o editar sus datos, o crea uno nuevo en el catálogo maestro.
+          </p>
+        </div>
+      } @else {
+
+        <form [formGroup]="form" (ngSubmit)="saveSupplier()" class="supplier-form" autocomplete="off">
+
+          <!-- Título del formulario -->
+          <div class="supplier-form__header">
+            <div class="supplier-form__title-wrap">
+              <h2 class="supplier-form__title">
+                <span class="material-symbols-outlined">storefront</span>
+                {{ formMode() === 'new' ? 'Nuevo Proveedor' : (selectedSupplier()?.commercialName || selectedSupplier()?.legalName) }}
+              </h2>
+              @if (formMode() === 'edit' && selectedSupplier(); as s) {
+                <span class="supplier-form__code-pill">{{ s.code }}</span>
+              }
+            </div>
+
+            @if (formMode() === 'edit' && selectedSupplier(); as s) {
+              <span class="supplier-badge supplier-badge--lg" [ngClass]="getStatusBadgeClass(s.status)">
+                {{ supplierStatusLabels[s.status] }}
+              </span>
+            }
+          </div>
+
+          <!-- ── Mensajes de Estado ──────────────────────────────── -->
+          @if (saveSuccess()) {
+            <div class="supplier-alert supplier-alert--success" role="status">
+              <span class="material-symbols-outlined">check_circle</span>
+              Proveedor guardado exitosamente en el catálogo maestro.
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="supplier-alert supplier-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              {{ backendError() }}
+            </div>
+          }
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 1 — Información General
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="supplier-fieldset">
+            <legend class="supplier-fieldset__legend">
+              <span class="material-symbols-outlined">badge</span>
+              Sección 1 — Información General
+            </legend>
+
+            <div class="supplier-form-grid">
+
+              <!-- Código (auto-generado / editable en new) -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="supplier-code">Código de Proveedor *</label>
+                <input
+                  id="supplier-code"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('code')"
+                  type="text"
+                  formControlName="code"
+                  placeholder="PRV-0001"
+                />
+                @if (fieldHasError('code')) {
+                  <span class="supplier-field__error">{{ getFieldError('code') }}</span>
+                }
+              </div>
+
+              <!-- RFC / Tax ID -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="supplier-taxid">RFC / Tax ID Fiscal *</label>
+                <input
+                  id="supplier-taxid"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('taxId')"
+                  type="text"
+                  formControlName="taxId"
+                  placeholder="ENN980415HG8"
+                />
+                @if (fieldHasError('taxId')) {
+                  <span class="supplier-field__error">{{ getFieldError('taxId') }}</span>
+                }
+              </div>
+
+              <!-- Razón Social -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__label" for="supplier-legalname">Razón Social (Fiscal) *</label>
+                <input
+                  id="supplier-legalname"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('legalName')"
+                  type="text"
+                  formControlName="legalName"
+                  placeholder="Empaques Nacionales del Norte S.A. de C.V."
+                />
+                @if (fieldHasError('legalName')) {
+                  <span class="supplier-field__error">{{ getFieldError('legalName') }}</span>
+                }
+              </div>
+
+              <!-- Nombre Comercial -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="supplier-commercialname">Nombre Comercial / Marca</label>
+                <input
+                  id="supplier-commercialname"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="commercialName"
+                  placeholder="EmpaquesNorte"
+                />
+              </div>
+
+              <!-- Estado -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="supplier-status">Estado Operativo *</label>
+                <select
+                  id="supplier-status"
+                  class="supplier-field__input"
+                  formControlName="status">
+                  <option value="ACTIVE">Activo</option>
+                  <option value="INACTIVE">Inactivo</option>
+                  <option value="BLOCKED">Bloqueado (Temporal)</option>
+                </select>
+              </div>
+
+              <!-- Motivo de Bloqueo / Inactividad (si aplica) -->
+              @if (form.get('status')?.value === 'BLOCKED' || form.get('status')?.value === 'INACTIVE') {
+                <div class="supplier-field supplier-field--full">
+                  <label class="supplier-field__label" for="supplier-status-reason">
+                    Motivo de {{ form.get('status')?.value === 'BLOCKED' ? 'Bloqueo *' : 'Inactividad *' }}
+                  </label>
+                  <input
+                    id="supplier-status-reason"
+                    class="supplier-field__input"
+                    type="text"
+                    formControlName="statusReason"
+                    [placeholder]="form.get('status')?.value === 'BLOCKED' ? 'Describe las razones del bloqueo temporal' : 'Describe las razones de la inactividad'"
+                  />
+                </div>
+              }
+
+              <!-- Proveedor Preferente -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__toggle">
+                  <input
+                    type="checkbox"
+                    class="supplier-field__checkbox"
+                    formControlName="preferred"
+                  />
+                  <span class="supplier-field__toggle-slider"></span>
+                  <span class="supplier-field__toggle-label">
+                    <strong>Proveedor Preferente</strong> — Priorizar en sugerencias de compras y asignación de citas
+                  </span>
+                </label>
+              </div>
+
+              <!-- Observaciones -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__label" for="supplier-notes">Observaciones Generales</label>
+                <textarea
+                  id="supplier-notes"
+                  class="supplier-field__input supplier-field__textarea"
+                  formControlName="notes"
+                  placeholder="Comentarios adicionales sobre convenios, certificaciones o vigencias"
+                  rows="2">
+                </textarea>
+              </div>
+
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 2 — Clasificación del Proveedor
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="supplier-fieldset">
+            <legend class="supplier-fieldset__legend">
+              <span class="material-symbols-outlined">category</span>
+              Sección 2 — Clasificación y Tipo de Suministro
+            </legend>
+
+            <div class="supplier-form-grid">
+
+              <!-- Tipo / Categoría -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__label" for="supplier-type">Categoría de Suministro / Servicio *</label>
+                <select
+                  id="supplier-type"
+                  class="supplier-field__input"
+                  formControlName="type">
+                  @for (t of supplierTypes; track t.value) {
+                    <option [value]="t.value">{{ t.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Banner de Tipo (Bienes vs Servicios) -->
+              <div class="supplier-type-banner supplier-field--full"
+                [class.supplier-type-banner--service]="isServiceType"
+                [class.supplier-type-banner--goods]="!isServiceType">
+                <span class="material-symbols-outlined">
+                  {{ isServiceType ? 'handshake' : 'inventory_2' }}
+                </span>
+                <div class="supplier-type-banner__text">
+                  <strong>{{ isServiceType ? 'Proveedor de Servicios' : 'Proveedor de Bienes y Materiales' }}</strong>
+                  <p>
+                    {{ isServiceType
+                      ? 'Las mediciones operativas utilizarán el parámetro "Tiempo de respuesta" para la atención de folios e incidencias.'
+                      : 'Las mediciones operativas utilizarán el parámetro "Tiempo de entrega" para la recepción de mercancía y tarimas.'
+                    }}
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 3 — Contacto Principal
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="supplier-fieldset">
+            <legend class="supplier-fieldset__legend">
+              <span class="material-symbols-outlined">person_search</span>
+              Sección 3 — Contacto Principal
+            </legend>
+
+            <div class="supplier-form-grid">
+
+              <!-- Nombre completo -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="contact-fullname">Nombre Completo del Contacto *</label>
+                <input
+                  id="contact-fullname"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('contactFullName')"
+                  type="text"
+                  formControlName="contactFullName"
+                  placeholder="Carlos Eduardo Mendoza"
+                />
+                @if (fieldHasError('contactFullName')) {
+                  <span class="supplier-field__error">{{ getFieldError('contactFullName') }}</span>
+                }
+              </div>
+
+              <!-- Puesto -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="contact-jobtitle">Puesto / Cargo</label>
+                <input
+                  id="contact-jobtitle"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="contactJobTitle"
+                  placeholder="Gerente de Cuentas Clave"
+                />
+              </div>
+
+              <!-- Email -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="contact-email">Correo Electrónico *</label>
+                <input
+                  id="contact-email"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('contactEmail')"
+                  type="email"
+                  formControlName="contactEmail"
+                  placeholder="cmendoza@empaquesnorte.com.mx"
+                />
+                @if (fieldHasError('contactEmail')) {
+                  <span class="supplier-field__error">{{ getFieldError('contactEmail') }}</span>
+                }
+              </div>
+
+              <!-- Teléfono principal -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="contact-phone">Teléfono Principal *</label>
+                <input
+                  id="contact-phone"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('contactPhone')"
+                  type="tel"
+                  formControlName="contactPhone"
+                  placeholder="8183456789"
+                />
+                @if (fieldHasError('contactPhone')) {
+                  <span class="supplier-field__error">{{ getFieldError('contactPhone') }}</span>
+                }
+              </div>
+
+              <!-- Teléfono alternativo -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__label" for="contact-altphone">Teléfono Alternativo / Móvil</label>
+                <input
+                  id="contact-altphone"
+                  class="supplier-field__input"
+                  type="tel"
+                  formControlName="contactAltPhone"
+                  placeholder="8181239900"
+                />
+              </div>
+
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 4 — Dirección
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="supplier-fieldset">
+            <legend class="supplier-fieldset__legend">
+              <span class="material-symbols-outlined">location_on</span>
+              Sección 4 — Dirección y Ubicación
+            </legend>
+
+            <div class="supplier-form-grid">
+
+              <!-- País -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="address-country">País *</label>
+                <input
+                  id="address-country"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="addressCountry"
+                  placeholder="México"
+                />
+              </div>
+
+              <!-- Estado -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="address-state">Estado / Entidad *</label>
+                <input
+                  id="address-state"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('addressState')"
+                  type="text"
+                  formControlName="addressState"
+                  placeholder="Nuevo León"
+                />
+                @if (fieldHasError('addressState')) {
+                  <span class="supplier-field__error">{{ getFieldError('addressState') }}</span>
+                }
+              </div>
+
+              <!-- Ciudad -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="address-city">Ciudad *</label>
+                <input
+                  id="address-city"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('addressCity')"
+                  type="text"
+                  formControlName="addressCity"
+                  placeholder="Monterrey"
+                />
+                @if (fieldHasError('addressCity')) {
+                  <span class="supplier-field__error">{{ getFieldError('addressCity') }}</span>
+                }
+              </div>
+
+              <!-- Código Postal -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="address-postalcode">Código Postal</label>
+                <input
+                  id="address-postalcode"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="addressPostalCode"
+                  placeholder="66600"
+                />
+              </div>
+
+              <!-- Calle -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__label" for="address-street">Calle y Colonia</label>
+                <input
+                  id="address-street"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="addressStreet"
+                  placeholder="Av. Industrias Alimentarias Col. Parque Industrial"
+                />
+              </div>
+
+              <!-- Números -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="address-extnum">Número Exterior</label>
+                <input
+                  id="address-extnum"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="addressExteriorNumber"
+                  placeholder="450"
+                />
+              </div>
+
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="address-intnum">Número Interior</label>
+                <input
+                  id="address-intnum"
+                  class="supplier-field__input"
+                  type="text"
+                  formControlName="addressInteriorNumber"
+                  placeholder="Bodega 3"
+                />
+              </div>
+
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 5 — Condiciones Operativas
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="supplier-fieldset">
+            <legend class="supplier-fieldset__legend">
+              <span class="material-symbols-outlined">payments</span>
+              Sección 5 — Condiciones Operativas y Comerciales
+            </legend>
+
+            <div class="supplier-form-grid">
+
+              <!-- Lead Time (Tiempo de entrega / respuesta) -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="terms-leadtime">
+                  {{ leadTimeFieldLabel }} *
+                </label>
+                <input
+                  id="terms-leadtime"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('leadTimeDays')"
+                  type="number"
+                  formControlName="leadTimeDays"
+                  placeholder="3"
+                />
+                @if (fieldHasError('leadTimeDays')) {
+                  <span class="supplier-field__error">{{ getFieldError('leadTimeDays') }}</span>
+                }
+              </div>
+
+              <!-- Monto Mínimo de Pedido -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="terms-minorder">Monto Mínimo de Pedido *</label>
+                <input
+                  id="terms-minorder"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('minimumOrderAmount')"
+                  type="number"
+                  formControlName="minimumOrderAmount"
+                  placeholder="15000"
+                />
+                @if (fieldHasError('minimumOrderAmount')) {
+                  <span class="supplier-field__error">{{ getFieldError('minimumOrderAmount') }}</span>
+                }
+              </div>
+
+              <!-- Días de Crédito -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="terms-credit">Días de Crédito *</label>
+                <input
+                  id="terms-credit"
+                  class="supplier-field__input"
+                  [class.supplier-field__input--error]="fieldHasError('creditDays')"
+                  type="number"
+                  formControlName="creditDays"
+                  placeholder="30"
+                />
+                @if (fieldHasError('creditDays')) {
+                  <span class="supplier-field__error">{{ getFieldError('creditDays') }}</span>
+                }
+              </div>
+
+              <!-- Moneda -->
+              <div class="supplier-field">
+                <label class="supplier-field__label" for="terms-currency">Moneda Comercial *</label>
+                <select
+                  id="terms-currency"
+                  class="supplier-field__input"
+                  formControlName="currency">
+                  @for (c of currencies; track c.value) {
+                    <option [value]="c.value">{{ c.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Requiere Inspección / Validación de Calidad -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__toggle">
+                  <input
+                    type="checkbox"
+                    class="supplier-field__checkbox"
+                    formControlName="qualityInspectionRequired"
+                  />
+                  <span class="supplier-field__toggle-slider"></span>
+                  <span class="supplier-field__toggle-label">
+                    @if (isServiceType) {
+                      <strong>Requiere Validación y Cierre Operativo de Servicio</strong> — Al concluir folios, contratos o atenciones técnicas
+                    } @else {
+                      <strong>Requiere Inspección de Calidad Obligatoria (QM)</strong> — Al ingresar mercancía o tarimas de este proveedor
+                    }
+                  </span>
+                </label>
+              </div>
+
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 6 — Alcance 3PL y RLS
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="supplier-fieldset">
+            <legend class="supplier-fieldset__legend">
+              <span class="material-symbols-outlined">hub</span>
+              Sección 6 — Alcance 3PL (Row-Level Security)
+            </legend>
+
+            <div class="supplier-form-grid">
+
+              <!-- Tipo de Alcance -->
+              <div class="supplier-field supplier-field--full">
+                <label class="supplier-field__label" for="scope-type">Nivel de Alcance 3PL *</label>
+                <select
+                  id="scope-type"
+                  class="supplier-field__input"
+                  formControlName="scopeType">
+                  @for (s of supplierScopes; track s.value) {
+                    <option [value]="s.value">{{ s.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Selector de Cliente (si scope === CLIENT) -->
+              @if (currentScope === 'CLIENT') {
+                <div class="supplier-field supplier-field--full">
+                  <label class="supplier-field__label" for="scope-client">Cliente Propietario Asignado *</label>
+                  <select
+                    id="scope-client"
+                    class="supplier-field__input"
+                    [class.supplier-field__input--error]="fieldHasError('clientId')"
+                    formControlName="clientId">
+                    <option value="">Seleccionar cliente de la organización</option>
+                    @for (c of clientService.clients(); track c.id) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('clientId')) {
+                    <span class="supplier-field__error">{{ getFieldError('clientId') }}</span>
+                  }
+                </div>
+              }
+
+              <!-- Selector de Almacén (si scope === WAREHOUSE) -->
+              @if (currentScope === 'WAREHOUSE') {
+                <div class="supplier-field supplier-field--full">
+                  <label class="supplier-field__label" for="scope-warehouse">Almacén / Sede Físico Asignado *</label>
+                  <select
+                    id="scope-warehouse"
+                    class="supplier-field__input"
+                    [class.supplier-field__input--error]="fieldHasError('warehouseId')"
+                    formControlName="warehouseId">
+                    <option value="">Seleccionar almacén principal</option>
+                    @for (w of branchService.branches(); track w.id) {
+                      <option [value]="w.id">{{ w.name }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('warehouseId')) {
+                    <span class="supplier-field__error">{{ getFieldError('warehouseId') }}</span>
+                  }
+                </div>
+              }
+
+            </div>
+          </fieldset>
+
+          <!-- ── Tarjeta de Auditoría (Solo Lectura) ────────────── -->
+          @if (formMode() === 'edit' && selectedSupplier(); as s) {
+            <div class="supplier-audit-card">
+              <div class="supplier-audit-card__header">
+                <span class="material-symbols-outlined supplier-audit-card__icon">history</span>
+                <strong>Registro de Auditoría (Audit Log)</strong>
+              </div>
+              <div class="supplier-audit-card__grid">
+                <div>
+                  <span class="supplier-audit-card__label">Creado por:</span>
+                  <span class="supplier-audit-card__val">{{ s.createdBy || 'Sistema' }}</span>
+                </div>
+                <div>
+                  <span class="supplier-audit-card__label">Fecha creación:</span>
+                  <span class="supplier-audit-card__val">{{ s.createdAt | date:'dd/MM/yyyy · HH:mm' }}</span>
+                </div>
+                <div>
+                  <span class="supplier-audit-card__label">Modificado por:</span>
+                  <span class="supplier-audit-card__val">{{ s.updatedBy || 'Sistema' }}</span>
+                </div>
+                <div>
+                  <span class="supplier-audit-card__label">Última actualización:</span>
+                  <span class="supplier-audit-card__val">{{ s.updatedAt | date:'dd/MM/yyyy · HH:mm' }}</span>
+                </div>
+                <div class="supplier-audit-card__full">
+                  <span class="supplier-audit-card__label">Última acción:</span>
+                  <span class="supplier-audit-card__val">{{ s.lastAction || 'Sin registro reciente' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Historial real de auditoría (Timeline) ── -->
+            @if (canViewAudit()) {
+              <div class="supplier-timeline-preview" style="border-style: solid; margin-top: 1.25rem;">
+                <div class="supplier-timeline-preview__header" style="border-bottom-style: solid; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">timeline</span>
+                  <span>Historial de cambios (Audit Timeline)</span>
+                </div>
+
+                @if (auditEntries().length === 0) {
+                  <p class="supplier-timeline-preview__desc" style="padding: 0.9rem 1rem; margin: 0; font-size: 0.76rem; color: var(--text-secondary);">
+                    No hay registros de cambios disponibles para este proveedor.
+                  </p>
+                } @else {
+                  <div class="supplier-timeline-preview__nodes" style="display: flex; flex-direction: column; padding: 1rem 1rem 1rem 1.25rem; gap: 0.75rem;">
+                    @for (entry of auditEntries(); track entry.logId; let last = $last) {
+                      <div class="supplier-tl-node" [ngClass]="'supplier-tl-node--' + (entry.timelineColor || 'update')" style="display: flex; align-items: flex-start; gap: 0.75rem; position: relative;">
+                        
+                        <div class="supplier-tl-node__dot" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; position: relative; z-index: 1;">
+                          <span class="material-symbols-outlined" style="font-size: 15px;">{{ entry.timelineIcon || 'info' }}</span>
+                        </div>
+                        
+                        <div class="supplier-tl-node__line" [class.supplier-tl-node__line--last]="last"></div>
+                        
+                        <div class="supplier-tl-node__content" style="display: flex; flex-direction: column; gap: 0.15rem; padding-top: 0.3rem;">
+                          <span class="supplier-tl-node__action" style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">
+                            {{ entry.summary }}
+                          </span>
+                          
+                          @if (entry.details && entry.details.length > 0) {
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); margin: 0.15rem 0; display: flex; flex-direction: column; gap: 0.1rem;">
+                              @for (det of entry.details; track det.fieldName) {
+                                @if (det.fieldName !== 'statusReason') {
+                                  <div>
+                                    <strong style="color: var(--text-muted);">{{ det.fieldName }}:</strong> 
+                                    <span style="text-decoration: line-through; opacity: 0.6; margin-right: 0.25rem;">{{ det.oldValue || 'nulo' }}</span>
+                                    <span>→ {{ det.newValue || 'nulo' }}</span>
+                                  </div>
+                                }
+                              }
+                            </div>
+                          }
+                          
+                          <span class="supplier-tl-node__meta" style="font-size: 0.68rem; color: var(--text-secondary);">
+                            Por {{ entry.username }} · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                          </span>
+                        </div>
+                        
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          <!-- ══════════════════════════════════════════════════════
+               ACCIONES STICKY
+               ══════════════════════════════════════════════════════ -->
+          <div class="supplier-form__actions">
+
+            <div class="supplier-form__actions-left">
+              @if (formMode() === 'edit' && canDeactivate()) {
+                <button
+                  id="btn-status-supplier"
+                  class="supplier-btn supplier-btn--warning-ghost"
+                  type="button"
+                  (click)="openStatusDialog('status_change')"
+                  [disabled]="isSaving">
+                  <span class="material-symbols-outlined">swap_horiz</span>
+                  Cambiar estado
+                </button>
+              }
+
+              @if (formMode() === 'edit' && canDelete()) {
+                <button
+                  id="btn-archive-supplier"
+                  class="supplier-btn supplier-btn--danger-ghost"
+                  type="button"
+                  (click)="openStatusDialog('archive')"
+                  [disabled]="isSaving">
+                  <span class="material-symbols-outlined">archive</span>
+                  Archivar proveedor
+                </button>
+              }
+            </div>
+
+            <div class="supplier-form__actions-right">
+              <button
+                id="btn-cancel-supplier"
+                class="supplier-btn supplier-btn--ghost"
+                type="button"
+                (click)="cancelForm()"
+                [disabled]="isSaving">
+                Cancelar
+              </button>
+
+              <button
+                id="btn-save-supplier"
+                class="supplier-btn supplier-btn--primary"
+                type="submit"
+                [disabled]="isSaving">
+                @if (isSaving) {
+                  <span class="supplier-btn__spinner"></span>
+                  Guardando…
+                } @else {
+                  <span class="material-symbols-outlined">save</span>
+                  Guardar proveedor
+                }
+              </button>
+            </div>
+
+          </div>
+
+        </form>
+      }
+    </section>
+
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     DIÁLOGO — Cambiar Estado / Bloquear Proveedor
+     ════════════════════════════════════════════════════════════════ -->
+@if (statusDialogMode() === 'status_change') {
+  <div class="supplier-overlay" (click)="closeStatusDialog()">
+    <div class="supplier-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="supplier-dialog__header">
+        <span class="material-symbols-outlined supplier-dialog__icon supplier-dialog__icon--warning">swap_horiz</span>
+        <h3 class="supplier-dialog__title">Cambiar estado del proveedor</h3>
+      </div>
+
+      <form [formGroup]="statusDialogForm" (ngSubmit)="confirmStatusChange()">
+        <div class="supplier-dialog__field">
+          <label class="supplier-field__label" for="dialog-target-status">Nuevo Estado Operativo</label>
+          <select
+            id="dialog-target-status"
+            class="supplier-field__input"
+            formControlName="targetStatus">
+            <option value="ACTIVE">Activo</option>
+            <option value="INACTIVE">Inactivo</option>
+            <option value="BLOCKED">Bloqueado (Temporal)</option>
+          </select>
+        </div>
+
+        <div class="supplier-dialog__field">
+          <label class="supplier-field__label" for="dialog-reason">Motivo del Cambio *</label>
+          <textarea
+            id="dialog-reason"
+            class="supplier-field__input"
+            formControlName="reason"
+            placeholder="Especifica las razones del cambio de estado o bloqueo"
+            rows="3">
+          </textarea>
+        </div>
+
+        <div class="supplier-dialog__actions">
+          <button class="supplier-btn supplier-btn--ghost" type="button" (click)="closeStatusDialog()">
+            Cancelar
+          </button>
+          <button class="supplier-btn supplier-btn--primary" type="submit" [disabled]="isSaving">
+            Confirmar cambio
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     DIÁLOGO — Archivar Proveedor (Eliminación Lógica)
+     ════════════════════════════════════════════════════════════════ -->
+@if (statusDialogMode() === 'archive') {
+  <div class="supplier-overlay" (click)="closeStatusDialog()">
+    <div class="supplier-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="supplier-dialog__header">
+        <span class="material-symbols-outlined supplier-dialog__icon supplier-dialog__icon--danger">archive</span>
+        <h3 class="supplier-dialog__title">Archivar proveedor del catálogo</h3>
+      </div>
+      <p class="supplier-dialog__desc">
+        "{{ selectedSupplier()?.legalName }}" quedará archivado lógicamente.
+        Se conservará todo su historial para trazabilidad y auditoría fiscal, pero dejará de estar disponible para nuevas recepciones, compras y órdenes.
+      </p>
+      <!-- TODO Backend: Impedir archivo si existen recepciones abiertas, órdenes pendientes, citas o contratos vigentes -->
+      <div class="supplier-dialog__actions">
+        <button class="supplier-btn supplier-btn--ghost" type="button" (click)="closeStatusDialog()">
+          Cancelar
+        </button>
+        <button class="supplier-btn supplier-btn--danger" type="button" (click)="confirmArchive()" [disabled]="isSaving">
+          Archivar proveedor
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     DIÁLOGO — Cambios no guardados
+     ════════════════════════════════════════════════════════════════ -->
+@if (showUnsavedDialog()) {
+  <div class="supplier-overlay" (click)="cancelDiscardChanges()">
+    <div class="supplier-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="supplier-dialog__header">
+        <span class="material-symbols-outlined supplier-dialog__icon supplier-dialog__icon--warning">warning</span>
+        <h3 class="supplier-dialog__title">Cambios sin guardar</h3>
+      </div>
+      <p class="supplier-dialog__desc">
+        Tienes modificaciones pendientes en el formulario. ¿Deseas descartar los cambios y continuar?
+      </p>
+      <div class="supplier-dialog__actions">
+        <button class="supplier-btn supplier-btn--ghost" type="button" (click)="cancelDiscardChanges()">
+          Volver al formulario
+        </button>
+        <button class="supplier-btn supplier-btn--danger" type="button" (click)="confirmDiscardChanges()">
+          Descartar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+}

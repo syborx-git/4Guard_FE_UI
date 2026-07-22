@@ -1,0 +1,2803 @@
+<!--
+  kpi-management.component.html
+  HU-138 — Gestión de KPIs de Rendimiento — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Responsive: columnas apiladas en ≤1050px
+-->
+
+<div class="kpi-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════════
+     HERO EJECUTIVO + RESUMEN GENERAL
+     ════════════════════════════════════════════════════════════════ -->
+<header class="kpi-header">
+
+  <div class="kpi-hero">
+
+    <div class="kpi-hero__glow kpi-hero__glow--gold"></div>
+    <div class="kpi-hero__glow kpi-hero__glow--green"></div>
+
+    <div class="kpi-hero__content">
+
+      <div class="kpi-hero__main">
+
+        <div class="kpi-hero__badges">
+
+          <span class="kpi-hero__hu-badge">
+            HU-138 · ADMINISTRADOR DE INDICADORES
+          </span>
+
+          @if (kpiCritical() > 0) {
+            <span class="kpi-engine-status kpi-engine-status--critical">
+              <span class="kpi-engine-status__dot"></span>
+              {{ kpiCritical() }}
+              {{ kpiCritical() === 1 ? 'alerta crítica activa' : 'alertas críticas activas' }}
+              · Requiere seguimiento
+            </span>
+          } @else {
+            <span class="kpi-engine-status kpi-engine-status--healthy">
+              <span class="kpi-engine-status__dot"></span>
+              Sistema operando con regularidad
+            </span>
+          }
+
+        </div>
+
+        <div class="kpi-hero__title-row">
+
+          <div class="kpi-hero__icon">
+            <span class="material-symbols-outlined">monitoring</span>
+          </div>
+
+          <div>
+            <h1 class="kpi-hero__title">
+              Monitoreo de Rendimiento
+              <span class="kpi-hero__title-separator">•</span>
+              <span class="kpi-hero__title-accent">Dashboard Ejecutivo</span>
+            </h1>
+
+            <p class="kpi-hero__description">
+              Consola unificada de control operativo para administrar los
+              indicadores de rendimiento más relevantes del centro de
+              distribución, configurar umbrales, detectar desviaciones y
+              supervisar el cumplimiento de los objetivos operativos.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="kpi-hero__metadata">
+
+          <div class="kpi-hero__metadata-item">
+            <span class="material-symbols-outlined">sync</span>
+            <span>
+              Sincronización:
+              @if (isLoading) {
+                cargando catálogo…
+              } @else {
+                catálogo actualizado
+              }
+            </span>
+          </div>
+
+          <span class="kpi-hero__metadata-separator">•</span>
+
+          <div class="kpi-hero__metadata-item">
+            <span class="material-symbols-outlined">memory</span>
+            <span>Motor de indicadores activo</span>
+          </div>
+
+          <span class="kpi-hero__metadata-separator">•</span>
+
+          <div class="kpi-hero__metadata-item">
+            <span class="material-symbols-outlined">database</span>
+            <span>{{ totalKpis() }} indicadores habilitados</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      @if (canCreate()) {
+        <div class="kpi-hero__actions">
+
+          <button
+            id="btn-new-kpi"
+            class="kpi-btn kpi-btn--hero"
+            type="button"
+            (click)="startNewKpi()"
+            [disabled]="isSaving"
+            aria-label="Crear nuevo indicador">
+
+            <span class="material-symbols-outlined">add</span>
+
+            <span>
+              Nuevo indicador
+              <small>Registrar KPI corporativo</small>
+            </span>
+
+          </button>
+
+        </div>
+      }
+
+    </div>
+
+  </div>
+
+  <!-- ── KPI Cards inteligentes ────────────────────────────────────── -->
+  <div class="kpi-kpi-grid" aria-label="Resumen ejecutivo de indicadores">
+
+    <!-- Total -->
+    <article class="kpi-kpi-card kpi-kpi-card--total">
+
+      <div class="kpi-kpi-card__top">
+
+        <div>
+          <span class="kpi-kpi-card__eyebrow">Total indicadores</span>
+
+          @if (isLoading) {
+            <div class="kpi-kpi-card__skeleton"></div>
+          } @else {
+            <div class="kpi-kpi-card__number-row">
+              <strong class="kpi-kpi-card__value">{{ totalKpis() }}</strong>
+              <span class="kpi-kpi-card__unit">KPIs</span>
+            </div>
+          }
+        </div>
+
+        <div class="kpi-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">activity_zone</span>
+        </div>
+
+      </div>
+
+      <div class="kpi-kpi-card__footer">
+        <span>Catálogo corporativo activo</span>
+        <strong>Control centralizado</strong>
+      </div>
+
+      <div class="kpi-kpi-card__bar"></div>
+
+    </article>
+
+    <!-- Óptimos -->
+    <article class="kpi-kpi-card kpi-kpi-card--optimal">
+
+      <div class="kpi-kpi-card__top">
+
+        <div>
+          <span class="kpi-kpi-card__eyebrow">Óptimos</span>
+
+          @if (isLoading) {
+            <div class="kpi-kpi-card__skeleton"></div>
+          } @else {
+            <div class="kpi-kpi-card__number-row">
+              <strong class="kpi-kpi-card__value">{{ kpiOptimal() }}</strong>
+
+              @if (totalKpis() > 0) {
+                <span class="kpi-kpi-card__percentage">
+                  {{ (kpiOptimal() * 100 / totalKpis()).toFixed(0) }}%
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="kpi-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+
+      </div>
+
+      <div class="kpi-kpi-card__footer">
+        <span>Operación dentro de meta</span>
+        <strong>Rendimiento estable</strong>
+      </div>
+
+      <div class="kpi-kpi-card__bar"></div>
+
+    </article>
+
+    <!-- Atención -->
+    <article class="kpi-kpi-card kpi-kpi-card--warning">
+
+      <div class="kpi-kpi-card__top">
+
+        <div>
+          <span class="kpi-kpi-card__eyebrow">Atención</span>
+
+          @if (isLoading) {
+            <div class="kpi-kpi-card__skeleton"></div>
+          } @else {
+            <div class="kpi-kpi-card__number-row">
+              <strong class="kpi-kpi-card__value">{{ kpiWarning() }}</strong>
+
+              @if (kpiWarning() > 0) {
+                <span class="kpi-kpi-card__percentage">
+                  Seguimiento
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="kpi-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">warning</span>
+        </div>
+
+      </div>
+
+      <div class="kpi-kpi-card__footer">
+        <span>Desviación moderada</span>
+        <strong>
+          {{ kpiWarning() > 0 ? 'Requiere revisión' : 'Sin desviaciones' }}
+        </strong>
+      </div>
+
+      <div class="kpi-kpi-card__bar"></div>
+
+    </article>
+
+    <!-- Críticos -->
+    <article class="kpi-kpi-card kpi-kpi-card--critical">
+
+      <div class="kpi-kpi-card__top">
+
+        <div>
+          <span class="kpi-kpi-card__eyebrow">Críticos</span>
+
+          @if (isLoading) {
+            <div class="kpi-kpi-card__skeleton"></div>
+          } @else {
+            <div class="kpi-kpi-card__number-row">
+              <strong class="kpi-kpi-card__value">{{ kpiCritical() }}</strong>
+
+              @if (kpiCritical() > 0) {
+                <span class="kpi-kpi-card__percentage">
+                  Acción inmediata
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="kpi-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">error</span>
+        </div>
+
+      </div>
+
+      <div class="kpi-kpi-card__footer">
+        <span>Riesgo operativo activo</span>
+        <strong>
+          {{ kpiCritical() > 0 ? 'Mitigación requerida' : 'Operación controlada' }}
+        </strong>
+      </div>
+
+      <div class="kpi-kpi-card__bar"></div>
+
+    </article>
+
+  </div>
+
+</header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="kpi-split" [class.kpi-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Catálogo (35%)
+         ───────────────────────────────────────────────────────────── -->
+<!-- ─────────────────────────────────────────────────────────────
+     COLUMNA IZQUIERDA — Catálogo operativo
+     ───────────────────────────────────────────────────────────── -->
+<aside class="kpi-directory" aria-label="Catálogo de indicadores">
+
+  <div class="kpi-directory__header">
+
+    <div class="kpi-directory__heading">
+      <div class="kpi-directory__title">
+        <span class="material-symbols-outlined">tune</span>
+
+        <div>
+          <h2>Catálogo de Control Operativo</h2>
+          <p>Indicadores configurados y activos</p>
+        </div>
+      </div>
+
+      <span class="kpi-directory__counter">
+        {{ filteredKpis().length }} de {{ kpiService.kpis().length }}
+      </span>
+    </div>
+
+    <!-- Buscador -->
+    <div class="kpi-search">
+      <span
+        class="material-symbols-outlined kpi-search__icon"
+        aria-hidden="true">
+        search
+      </span>
+
+      <input
+        id="kpi-search"
+        class="kpi-search__input"
+        type="search"
+        placeholder="Buscar indicador, módulo o proceso..."
+        [(ngModel)]="filterText"
+        (ngModelChange)="onFilterChange()"
+        aria-label="Buscar indicador"
+        autocomplete="off"
+      />
+
+      @if (filterText) {
+        <button
+          type="button"
+          class="kpi-search__clear"
+          (click)="filterText = ''; onFilterChange()"
+          aria-label="Limpiar búsqueda">
+
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </div>
+
+    <!-- Filtros -->
+    <div class="kpi-filters-row">
+
+      <div class="kpi-filter-group">
+        <label for="filter-module">Proceso / módulo</label>
+
+        <select
+          id="filter-module"
+          class="kpi-filter-select"
+          [(ngModel)]="filterModule"
+          (ngModelChange)="onFilterChange()">
+
+          <option value="">Todos los módulos</option>
+
+          @for (mod of modules; track mod.value) {
+            <option [value]="mod.value">
+              {{ mod.label }}
+            </option>
+          }
+
+        </select>
+      </div>
+
+      <div class="kpi-filter-group">
+        <label for="filter-status">Estado de control</label>
+
+        <select
+          id="filter-status"
+          class="kpi-filter-select"
+          [(ngModel)]="filterStatus"
+          (ngModelChange)="onFilterChange()">
+
+          <option value="">Todos los estados</option>
+          <option value="OPTIMAL">Óptimo</option>
+          <option value="WARNING">Atención</option>
+          <option value="CRITICAL">Crítico</option>
+          <option value="NO_DATA">Sin datos</option>
+
+        </select>
+      </div>
+
+      @if (hasActiveFilters) {
+        <button
+          class="kpi-filter-clear"
+          type="button"
+          (click)="clearFilters()"
+          aria-label="Limpiar filtros">
+
+          <span class="material-symbols-outlined">filter_alt_off</span>
+        </button>
+      }
+
+    </div>
+
+  </div>
+
+  <!-- Cargando -->
+  @if (isLoading) {
+
+    <div
+      class="kpi-directory__list"
+      aria-busy="true"
+      aria-label="Cargando indicadores">
+
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+
+        <div class="kpi-item kpi-item--skeleton">
+
+          <div class="skeleton skeleton--status"></div>
+
+          <div class="kpi-item__body">
+
+            <div class="kpi-item__top">
+              <div class="skeleton skeleton--line skeleton--line-short"></div>
+              <div class="skeleton skeleton--line skeleton--line-short"></div>
+            </div>
+
+            <div class="skeleton skeleton--line skeleton--line-wide"></div>
+            <div class="skeleton skeleton--line skeleton--line-medium"></div>
+
+          </div>
+
+        </div>
+
+      }
+
+    </div>
+
+  } @else if (hasLoadError) {
+
+    <div class="kpi-state kpi-state--error" role="alert">
+
+      <span class="material-symbols-outlined kpi-state__icon">
+        cloud_off
+      </span>
+
+      <p class="kpi-state__title">Error al cargar</p>
+      <p class="kpi-state__desc">{{ loadErrorMessage }}</p>
+
+      <button
+        class="kpi-btn kpi-btn--ghost"
+        type="button"
+        (click)="loadKpis()">
+
+        <span class="material-symbols-outlined">refresh</span>
+        Reintentar
+
+      </button>
+
+    </div>
+
+  } @else if (isListEmpty) {
+
+    <div class="kpi-state" role="status">
+
+      <span class="material-symbols-outlined kpi-state__icon">
+        monitoring
+      </span>
+
+      <p class="kpi-state__title">Sin indicadores</p>
+
+      <p class="kpi-state__desc">
+        Todavía no existen KPIs registrados.
+      </p>
+
+      @if (canCreate()) {
+        <button
+          class="kpi-btn kpi-btn--primary"
+          type="button"
+          (click)="startNewKpi()">
+
+          <span class="material-symbols-outlined">add</span>
+          Crear el primero
+
+        </button>
+      }
+
+    </div>
+
+  } @else if (hasNoResults) {
+
+    <div class="kpi-state" role="status">
+
+      <span class="material-symbols-outlined kpi-state__icon">
+        search_off
+      </span>
+
+      <p class="kpi-state__title">Sin coincidencias</p>
+
+      <p class="kpi-state__desc">
+        Ningún indicador coincide con los filtros aplicados.
+      </p>
+
+      <button
+        class="kpi-btn kpi-btn--ghost"
+        type="button"
+        (click)="clearFilters()">
+
+        <span class="material-symbols-outlined">filter_alt_off</span>
+        Limpiar filtros
+
+      </button>
+
+    </div>
+
+  } @else {
+
+    <ul
+      class="kpi-directory__list"
+      role="listbox"
+      aria-label="Lista de indicadores">
+
+      @for (kpi of filteredKpis(); track kpi.id) {
+
+        <li
+          class="kpi-item"
+          [class.kpi-item--selected]="isSelectedKpi(kpi)"
+          [class.kpi-item--optimal]="kpi.status === 'OPTIMAL'"
+          [class.kpi-item--warning]="kpi.status === 'WARNING'"
+          [class.kpi-item--critical]="kpi.status === 'CRITICAL'"
+          [class.kpi-item--nodata]="kpi.status === 'NO_DATA'"
+          role="option"
+          [attr.aria-selected]="isSelectedKpi(kpi)"
+          tabindex="0"
+          (click)="selectKpi(kpi)"
+          (keydown.enter)="selectKpi(kpi)">
+
+          <span class="kpi-item__status-bar"></span>
+
+          <div class="kpi-item__body">
+
+            <div class="kpi-item__top">
+
+              <div class="kpi-item__identifiers">
+
+                <span class="kpi-item__code">
+                  KPI-{{ kpi.id }}
+                </span>
+
+                <span class="kpi-item__frequency">
+                  {{ formatFrequency(kpi) }}
+                </span>
+
+              </div>
+
+              <span class="kpi-item__updated">
+                {{ formatRelativeDate(kpi.lastMeasuredAt) }}
+              </span>
+
+            </div>
+
+            <div class="kpi-item__middle">
+
+              <div class="kpi-item__copy">
+
+                <strong class="kpi-item__name">
+                  {{ kpi.name }}
+                </strong>
+
+                <span class="kpi-item__process">
+                  {{ kpi.sourceConfig.sourceProcess }}
+                </span>
+
+              </div>
+
+              <span class="material-symbols-outlined kpi-item__arrow">
+                chevron_right
+              </span>
+
+            </div>
+
+            <div class="kpi-item__footer">
+
+              <span
+                class="kpi-badge"
+                [ngClass]="getStatusBadgeClass(kpi.status)">
+
+                <span class="kpi-item__status-dot"></span>
+
+                {{ statusLabels[kpi.status] }}
+
+              </span>
+
+              <span class="kpi-item__module">
+                {{ moduleLabels[kpi.module] }}
+              </span>
+
+            </div>
+
+          </div>
+
+        </li>
+
+      }
+
+    </ul>
+
+  }
+
+</aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <section class="kpi-detail" aria-label="Detalle del indicador">
+
+      @if (formMode() === 'idle') {
+        <!-- Estado vacío -->
+        <div class="kpi-detail__empty">
+          <span class="material-symbols-outlined kpi-detail__empty-icon">monitoring</span>
+          <h2 class="kpi-detail__empty-title">Selecciona un indicador</h2>
+          <p class="kpi-detail__empty-desc">
+            Elige un KPI del catálogo o crea uno nuevo para configurar sus umbrales y parámetros.
+          </p>
+        </div>
+      } @else {
+
+        <form [formGroup]="form" (ngSubmit)="saveKpi()" class="kpi-form" autocomplete="off">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     RESUMEN EJECUTIVO — Solo para KPI existente
+     ════════════════════════════════════════════════════════════ -->
+@if (formMode() === 'edit' && selectedKpi(); as kpi) {
+
+  <section
+    class="kpi-executive"
+    [class.kpi-executive--optimal]="kpi.status === 'OPTIMAL'"
+    [class.kpi-executive--warning]="kpi.status === 'WARNING'"
+    [class.kpi-executive--critical]="kpi.status === 'CRITICAL'"
+    [class.kpi-executive--nodata]="kpi.status === 'NO_DATA'">
+
+    <span class="kpi-executive__status-line"></span>
+
+    <div class="kpi-executive__header">
+
+      <div class="kpi-executive__identity">
+
+        <div class="kpi-executive__badges">
+          <span class="kpi-executive__code">
+            KPI-{{ kpi.id }}
+          </span>
+
+          <span class="kpi-executive__module">
+            Módulo: {{ moduleLabels[kpi.module] }}
+          </span>
+
+          <span
+            class="kpi-badge kpi-badge--lg"
+            [ngClass]="getStatusBadgeClass(kpi.status)">
+
+            <span class="material-symbols-outlined kpi-badge__icon">
+              {{ getStatusIcon(kpi.status) }}
+            </span>
+
+            {{ statusLabels[kpi.status] }}
+          </span>
+        </div>
+
+        <h2 class="kpi-executive__title">
+          {{ kpi.name }}
+        </h2>
+
+        <p class="kpi-executive__description">
+          {{ kpi.description }}
+        </p>
+
+      </div>
+
+      <div class="kpi-executive__actions">
+
+        <span
+          class="kpi-executive__activity"
+          [class.kpi-executive__activity--active]="kpi.sourceConfig.active">
+
+          <span class="kpi-executive__activity-dot"></span>
+
+          {{
+            kpi.sourceConfig.active
+              ? 'Cálculo automático activo'
+              : 'Cálculo automático inactivo'
+          }}
+        </span>
+
+      </div>
+
+    </div>
+
+    <!-- Métricas principales reales -->
+    <div class="kpi-executive__metrics">
+
+      <!-- Objetivo -->
+      <article class="kpi-exec-card">
+
+        <div class="kpi-exec-card__header">
+          <span>Meta objetivo</span>
+
+          <span class="material-symbols-outlined">
+            flag
+          </span>
+        </div>
+
+        <div class="kpi-exec-card__value">
+          @if (kpi.evaluationType === 'RANGE') {
+            <strong>
+              {{ kpi.thresholds.rangeLow ?? '—' }}
+              –
+              {{ kpi.thresholds.rangeHigh ?? '—' }}
+            </strong>
+          } @else {
+            <strong>{{ kpi.thresholds.target }}</strong>
+          }
+
+          <small>{{ kpi.unit }}</small>
+        </div>
+
+        <p>
+          @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+            Mayor valor representa mejor desempeño
+          } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+            Menor valor representa mejor desempeño
+          } @else {
+            El rendimiento ideal se encuentra dentro del rango
+          }
+        </p>
+
+      </article>
+
+      <!-- Advertencia -->
+      <article class="kpi-exec-card kpi-exec-card--warning">
+
+        <div class="kpi-exec-card__header">
+          <span>Umbral de atención</span>
+
+          <span class="material-symbols-outlined">
+            warning
+          </span>
+        </div>
+
+        <div class="kpi-exec-card__value">
+          <strong>{{ kpi.thresholds.warning }}</strong>
+          <small>{{ kpi.unit }}</small>
+        </div>
+
+        <p>
+          Punto de advertencia para seguimiento operativo
+        </p>
+
+      </article>
+
+      <!-- Crítico -->
+      <article class="kpi-exec-card kpi-exec-card--critical">
+
+        <div class="kpi-exec-card__header">
+          <span>Umbral crítico</span>
+
+          <span class="material-symbols-outlined">
+            crisis_alert
+          </span>
+        </div>
+
+        <div class="kpi-exec-card__value">
+          <strong>{{ kpi.thresholds.critical }}</strong>
+          <small>{{ kpi.unit }}</small>
+        </div>
+
+        <p>
+          Límite que requiere intervención inmediata
+        </p>
+
+      </article>
+
+      <!-- Frecuencia -->
+      <article class="kpi-exec-card kpi-exec-card--frequency">
+
+        <div class="kpi-exec-card__header">
+          <span>Frecuencia</span>
+
+          <span class="material-symbols-outlined">
+            schedule
+          </span>
+        </div>
+
+        <div class="kpi-exec-card__frequency-value">
+          {{ formatFrequency(kpi) }}
+        </div>
+
+        <p>
+          Motor automático de evaluación
+        </p>
+
+      </article>
+
+    </div>
+
+  </section>
+
+  <!-- Panel de control operativo -->
+  <section class="kpi-control-summary">
+
+    <div class="kpi-section-heading">
+
+      <div>
+        <span class="kpi-section-heading__eyebrow">
+          Configuración operativa
+        </span>
+
+        <h3>Flujo de cálculo del indicador</h3>
+      </div>
+
+      <span class="material-symbols-outlined">
+        account_tree
+      </span>
+
+    </div>
+
+    <div class="kpi-control-flow">
+
+      <article class="kpi-flow-step">
+
+        <span class="kpi-flow-step__number">01</span>
+
+        <div class="kpi-flow-step__icon">
+          <span class="material-symbols-outlined">
+            play_circle
+          </span>
+        </div>
+
+        <div class="kpi-flow-step__copy">
+          <small>Evento inicial</small>
+          <strong>{{ kpi.sourceConfig.startEvent }}</strong>
+        </div>
+
+      </article>
+
+      <span class="material-symbols-outlined kpi-flow-arrow">
+        arrow_forward
+      </span>
+
+      <article class="kpi-flow-step">
+
+        <span class="kpi-flow-step__number">02</span>
+
+        <div class="kpi-flow-step__icon">
+          <span class="material-symbols-outlined">
+            settings_suggest
+          </span>
+        </div>
+
+        <div class="kpi-flow-step__copy">
+          <small>Proceso monitoreado</small>
+          <strong>{{ kpi.sourceConfig.sourceProcess }}</strong>
+        </div>
+
+      </article>
+
+      <span class="material-symbols-outlined kpi-flow-arrow">
+        arrow_forward
+      </span>
+
+      <article class="kpi-flow-step">
+
+        <span class="kpi-flow-step__number">03</span>
+
+        <div class="kpi-flow-step__icon">
+          <span class="material-symbols-outlined">
+            stop_circle
+          </span>
+        </div>
+
+        <div class="kpi-flow-step__copy">
+          <small>Evento final</small>
+          <strong>{{ kpi.sourceConfig.endEvent }}</strong>
+        </div>
+
+      </article>
+
+    </div>
+
+  </section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAPA DE UMBRALES + HISTORIAL
+     ════════════════════════════════════════════════════════════ -->
+<section class="kpi-performance-panel">
+
+  <div class="kpi-performance-panel__header">
+
+    <div>
+      <span class="kpi-section-heading__eyebrow">
+        Performance analytics
+      </span>
+
+      <h3>Mapa de control e historial</h3>
+
+      <p>
+        Representación ejecutiva de los límites configurados y disponibilidad
+        de mediciones históricas.
+      </p>
+    </div>
+
+    <div class="kpi-performance-panel__status">
+
+      <span
+        class="kpi-performance-panel__status-dot"
+        [class.kpi-performance-panel__status-dot--active]="kpi.sourceConfig.active">
+      </span>
+
+      {{
+        kpi.sourceConfig.active
+          ? 'Motor habilitado'
+          : 'Motor deshabilitado'
+      }}
+
+    </div>
+
+  </div>
+
+  <div class="kpi-performance-grid">
+
+    <!-- ───────────────────────────────────────────────────────
+         MAPA DE UMBRALES
+         ──────────────────────────────────────────────────── -->
+    <article class="kpi-threshold-map">
+
+      <div class="kpi-threshold-map__heading">
+
+        <div>
+          <span>Mapa de umbrales</span>
+          <h4>Configuración de evaluación</h4>
+        </div>
+
+        <span class="material-symbols-outlined">
+          linear_scale
+        </span>
+
+      </div>
+
+      <div class="kpi-threshold-map__type">
+
+        <span class="material-symbols-outlined">
+          rule
+        </span>
+
+        @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+          Mayor valor representa mejor rendimiento
+        } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+          Menor valor representa mejor rendimiento
+        } @else {
+          El valor debe permanecer dentro del rango configurado
+        }
+
+      </div>
+
+      @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+
+        <div
+          class="kpi-threshold-scale"
+          aria-label="Escala de umbrales para un indicador donde un valor mayor representa mejor desempeño">
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--critical">
+            <span>Crítico</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--warning">
+            <span>Atención</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--optimal">
+            <span>Óptimo</span>
+          </div>
+
+        </div>
+
+        <div class="kpi-threshold-scale__values">
+
+          <div>
+            <small>Crítico</small>
+            <strong>
+              &lt; {{ kpi.thresholds.critical }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+          <div>
+            <small>Advertencia</small>
+            <strong>
+              {{ kpi.thresholds.warning }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+          <div>
+            <small>Objetivo</small>
+            <strong>
+              ≥ {{ kpi.thresholds.target }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+        </div>
+
+      } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+
+        <div
+          class="kpi-threshold-scale"
+          aria-label="Escala de umbrales para un indicador donde un valor menor representa mejor desempeño">
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--optimal">
+            <span>Óptimo</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--warning">
+            <span>Atención</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--critical">
+            <span>Crítico</span>
+          </div>
+
+        </div>
+
+        <div class="kpi-threshold-scale__values">
+
+          <div>
+            <small>Objetivo</small>
+            <strong>
+              ≤ {{ kpi.thresholds.target }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+          <div>
+            <small>Advertencia</small>
+            <strong>
+              {{ kpi.thresholds.warning }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+          <div>
+            <small>Crítico</small>
+            <strong>
+              ≥ {{ kpi.thresholds.critical }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+        </div>
+
+      } @else {
+
+        <div
+          class="kpi-threshold-scale kpi-threshold-scale--range"
+          aria-label="Escala de umbrales para un indicador evaluado mediante rango">
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--critical">
+            <span>Fuera de rango</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--warning">
+            <span>Margen</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--optimal">
+            <span>Rango óptimo</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--warning">
+            <span>Margen</span>
+          </div>
+
+          <div class="kpi-threshold-scale__segment kpi-threshold-scale__segment--critical">
+            <span>Fuera de rango</span>
+          </div>
+
+        </div>
+
+        <div class="kpi-threshold-scale__values kpi-threshold-scale__values--range">
+
+          <div>
+            <small>Límite inferior</small>
+            <strong>
+              {{ kpi.thresholds.rangeLow ?? '—' }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+          <div>
+            <small>Objetivo</small>
+            <strong>
+              {{ kpi.thresholds.target }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+          <div>
+            <small>Límite superior</small>
+            <strong>
+              {{ kpi.thresholds.rangeHigh ?? '—' }} {{ kpi.unit }}
+            </strong>
+          </div>
+
+        </div>
+
+      }
+
+      <div class="kpi-threshold-map__footer">
+
+        <span class="material-symbols-outlined">
+          info
+        </span>
+
+        <p>
+          El estado operativo se determinará comparando cada medición contra
+          estos umbrales.
+        </p>
+
+      </div>
+
+    </article>
+
+    <!-- ───────────────────────────────────────────────────────
+         HISTORIAL PREPARADO PARA INTEGRACIÓN
+         ──────────────────────────────────────────────────── -->
+    <article class="kpi-history">
+
+      <div class="kpi-history__heading">
+
+        <div>
+          <span>Historial de rendimiento</span>
+          <h4>Tendencia de mediciones</h4>
+        </div>
+
+        <span class="kpi-history__period">
+          Últimos registros
+        </span>
+
+      </div>
+
+      <div class="kpi-history__chart">
+
+        <!-- Rejilla visual -->
+        <div class="kpi-history__grid-lines" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <!-- Línea objetivo -->
+        <div class="kpi-history__target-line" aria-hidden="true">
+          <span>
+            Objetivo: {{ kpi.thresholds.target }} {{ kpi.unit }}
+          </span>
+        </div>
+
+        <!-- Estado vacío -->
+        <div class="kpi-history__empty">
+
+          <div class="kpi-history__empty-icon">
+            <span class="material-symbols-outlined">
+              query_stats
+            </span>
+          </div>
+
+          <strong>Historial aún no disponible</strong>
+
+          <p>
+            Este indicador ya está configurado, pero el servicio de mediciones
+            históricas todavía no está conectado a esta consola.
+          </p>
+
+          <div class="kpi-history__integration">
+
+            <span class="material-symbols-outlined">
+              cable
+            </span>
+
+            <div>
+              <small>Integración pendiente</small>
+              <strong>Endpoint de rendimiento histórico</strong>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Etiquetas inferiores -->
+        <div class="kpi-history__axis" aria-hidden="true">
+          <span>Inicio</span>
+          <span>Periodo operativo</span>
+          <span>Actual</span>
+        </div>
+
+      </div>
+
+      <div class="kpi-history__footer">
+
+        <div>
+          <small>Última medición</small>
+          <strong>{{ formatRelativeDate(kpi.lastMeasuredAt) }}</strong>
+        </div>
+
+        <div>
+          <small>Frecuencia</small>
+          <strong>{{ formatFrequency(kpi) }}</strong>
+        </div>
+
+        <div>
+          <small>Fuente</small>
+          <strong>{{ kpi.sourceConfig.sourceProcess }}</strong>
+        </div>
+
+      </div>
+
+    </article>
+
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HEALTH SCORE — Evaluación cualitativa real
+     ════════════════════════════════════════════════════════════ -->
+<section
+  class="kpi-health"
+  [class.kpi-health--healthy]="
+    kpi.sourceConfig.active &&
+    kpi.lastMeasuredAt &&
+    kpi.status === 'OPTIMAL'
+  "
+  [class.kpi-health--attention]="
+    kpi.sourceConfig.active &&
+    kpi.lastMeasuredAt &&
+    kpi.status === 'WARNING'
+  "
+  [class.kpi-health--critical]="
+    kpi.sourceConfig.active &&
+    kpi.lastMeasuredAt &&
+    kpi.status === 'CRITICAL'
+  "
+  [class.kpi-health--pending]="
+    kpi.sourceConfig.active &&
+    (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA')
+  "
+  [class.kpi-health--disabled]="
+    !kpi.sourceConfig.active
+  "
+  aria-labelledby="kpi-health-title">
+
+  <!-- ───────────────────────────────────────────────────────
+       CABECERA
+       ──────────────────────────────────────────────────── -->
+  <div class="kpi-health__header">
+
+    <div class="kpi-health__heading">
+
+      <div class="kpi-health__icon">
+
+        @if (!kpi.sourceConfig.active) {
+          <span class="material-symbols-outlined">
+            pause_circle
+          </span>
+        } @else if (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA') {
+          <span class="material-symbols-outlined">
+            pending
+          </span>
+        } @else if (kpi.status === 'OPTIMAL') {
+          <span class="material-symbols-outlined">
+            verified
+          </span>
+        } @else if (kpi.status === 'WARNING') {
+          <span class="material-symbols-outlined">
+            health_and_safety
+          </span>
+        } @else {
+          <span class="material-symbols-outlined">
+            emergency_home
+          </span>
+        }
+
+      </div>
+
+      <div>
+        <span class="kpi-section-heading__eyebrow">
+          Health Score
+        </span>
+
+        <h3 id="kpi-health-title">
+          Salud operativa del indicador
+        </h3>
+
+        <p>
+          Evaluación cualitativa basada en la configuración y disponibilidad
+          real de este KPI.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Estado general -->
+    <div class="kpi-health__state">
+
+      <span class="kpi-health__state-dot"></span>
+
+      @if (!kpi.sourceConfig.active) {
+        <div>
+          <small>Estado general</small>
+          <strong>Monitoreo pausado</strong>
+        </div>
+      } @else if (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA') {
+        <div>
+          <small>Estado general</small>
+          <strong>Esperando mediciones</strong>
+        </div>
+      } @else if (kpi.status === 'OPTIMAL') {
+        <div>
+          <small>Estado general</small>
+          <strong>Configuración saludable</strong>
+        </div>
+      } @else if (kpi.status === 'WARNING') {
+        <div>
+          <small>Estado general</small>
+          <strong>Requiere seguimiento</strong>
+        </div>
+      } @else {
+        <div>
+          <small>Estado general</small>
+          <strong>Revisión prioritaria</strong>
+        </div>
+      }
+
+    </div>
+
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────
+       MATRIZ DE SALUD
+       ──────────────────────────────────────────────────── -->
+  <div class="kpi-health__body">
+
+    <div class="kpi-health__matrix">
+
+      <!-- Motor -->
+      <article
+        class="kpi-health-check"
+        [class.kpi-health-check--success]="kpi.sourceConfig.active"
+        [class.kpi-health-check--inactive]="!kpi.sourceConfig.active">
+
+        <div class="kpi-health-check__icon">
+          <span class="material-symbols-outlined">
+            {{ kpi.sourceConfig.active ? 'check_circle' : 'pause_circle' }}
+          </span>
+        </div>
+
+        <div class="kpi-health-check__copy">
+          <small>Motor de evaluación</small>
+
+          <strong>
+            {{
+              kpi.sourceConfig.active
+                ? 'Habilitado'
+                : 'Deshabilitado'
+            }}
+          </strong>
+
+          <p>
+            {{
+              kpi.sourceConfig.active
+                ? 'El indicador puede ser evaluado automáticamente.'
+                : 'No se procesarán nuevas evaluaciones mientras permanezca inactivo.'
+            }}
+          </p>
+        </div>
+
+      </article>
+
+      <!-- Umbrales -->
+      <article class="kpi-health-check kpi-health-check--success">
+
+        <div class="kpi-health-check__icon">
+          <span class="material-symbols-outlined">
+            tune
+          </span>
+        </div>
+
+        <div class="kpi-health-check__copy">
+          <small>Reglas de control</small>
+          <strong>Umbrales configurados</strong>
+
+          <p>
+            Objetivo, advertencia y condición crítica disponibles para la
+            evaluación operativa.
+          </p>
+        </div>
+
+      </article>
+
+      <!-- Frecuencia -->
+      <article
+        class="kpi-health-check"
+        [class.kpi-health-check--success]="kpi.sourceConfig.active"
+        [class.kpi-health-check--inactive]="!kpi.sourceConfig.active">
+
+        <div class="kpi-health-check__icon">
+          <span class="material-symbols-outlined">
+            schedule
+          </span>
+        </div>
+
+        <div class="kpi-health-check__copy">
+          <small>Cadencia de control</small>
+          <strong>{{ formatFrequency(kpi) }}</strong>
+
+          <p>
+            Frecuencia establecida para ejecutar la evaluación del indicador.
+          </p>
+        </div>
+
+      </article>
+
+      <!-- Telemetría -->
+      <article
+        class="kpi-health-check"
+        [class.kpi-health-check--success]="kpi.lastMeasuredAt"
+        [class.kpi-health-check--pending]="!kpi.lastMeasuredAt">
+
+        <div class="kpi-health-check__icon">
+          <span class="material-symbols-outlined">
+            {{ kpi.lastMeasuredAt ? 'sensors' : 'sensors_off' }}
+          </span>
+        </div>
+
+        <div class="kpi-health-check__copy">
+          <small>Disponibilidad de medición</small>
+
+          <strong>
+            {{
+              kpi.lastMeasuredAt
+                ? 'Medición registrada'
+                : 'Sin medición disponible'
+            }}
+          </strong>
+
+          <p>
+            @if (kpi.lastMeasuredAt) {
+              Último registro identificado:
+              {{ formatRelativeDate(kpi.lastMeasuredAt) }}.
+            } @else {
+              El KPI está configurado, pero todavía no existe una medición
+              registrada.
+            }
+          </p>
+        </div>
+
+      </article>
+
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         LECTURA EJECUTIVA
+         ────────────────────────────────────────────────── -->
+    <aside class="kpi-health__summary">
+
+      <div class="kpi-health__summary-top">
+
+        <span class="material-symbols-outlined">
+          clinical_notes
+        </span>
+
+        <div>
+          <small>Resultado del análisis</small>
+
+          @if (!kpi.sourceConfig.active) {
+            <strong>Indicador temporalmente detenido</strong>
+          } @else if (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA') {
+            <strong>Configuración lista para recibir datos</strong>
+          } @else if (kpi.status === 'OPTIMAL') {
+            <strong>Operación dentro de condición esperada</strong>
+          } @else if (kpi.status === 'WARNING') {
+            <strong>Desviación que requiere observación</strong>
+          } @else {
+            <strong>Condición operativa que requiere intervención</strong>
+          }
+
+        </div>
+
+      </div>
+
+      <div class="kpi-health__summary-message">
+
+        @if (!kpi.sourceConfig.active) {
+
+          <p>
+            El motor automático está deshabilitado. La configuración permanece
+            registrada, pero no se realizarán nuevas evaluaciones hasta que el
+            indicador sea activado nuevamente.
+          </p>
+
+        } @else if (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA') {
+
+          <p>
+            El indicador cuenta con proceso, frecuencia y umbrales definidos.
+            Su estructura está preparada, pero aún no existen datos suficientes
+            para determinar una condición de desempeño.
+          </p>
+
+        } @else if (kpi.status === 'OPTIMAL') {
+
+          <p>
+            La última evaluación disponible ubica al indicador dentro de la
+            condición operativa esperada según el modelo
+            <strong>
+              @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+                mayor es mejor
+              } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+                menor es mejor
+              } @else {
+                rango operativo
+              }
+            </strong>.
+          </p>
+
+        } @else if (kpi.status === 'WARNING') {
+
+          <p>
+            La última evaluación disponible presenta una desviación moderada.
+            Se recomienda conservar el seguimiento con la frecuencia
+            configurada y revisar el proceso
+            <strong>{{ kpi.sourceConfig.sourceProcess }}</strong>.
+          </p>
+
+        } @else {
+
+          <p>
+            El estado actual se encuentra en condición crítica conforme a los
+            umbrales registrados. El proceso
+            <strong>{{ kpi.sourceConfig.sourceProcess }}</strong>
+            requiere revisión operativa prioritaria.
+          </p>
+
+        }
+
+      </div>
+
+      <div class="kpi-health__summary-footer">
+
+        <div>
+          <small>Proceso evaluado</small>
+          <strong>{{ kpi.sourceConfig.sourceProcess }}</strong>
+        </div>
+
+        <div>
+          <small>Modelo</small>
+
+          <strong>
+            @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+              Mayor es mejor
+            } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+              Menor es mejor
+            } @else {
+              Rango operativo
+            }
+          </strong>
+        </div>
+
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- Nota de integridad -->
+  <div class="kpi-health__disclaimer">
+
+    <span class="material-symbols-outlined">
+      verified_user
+    </span>
+
+    <p>
+      Esta evaluación no representa un porcentaje estadístico ni utiliza
+      inteligencia artificial. Se genera exclusivamente con la configuración
+      y el estado real disponibles en el indicador.
+    </p>
+
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     EXECUTIVE INSIGHTS
+     Conclusiones determinísticas basadas en información real
+     ════════════════════════════════════════════════════════════ -->
+<section
+  class="kpi-executive-insights"
+  aria-labelledby="kpi-executive-insights-title">
+
+  <!-- ───────────────────────────────────────────────────────
+       CABECERA
+       ──────────────────────────────────────────────────── -->
+  <div class="kpi-executive-insights__header">
+
+    <div class="kpi-executive-insights__heading">
+
+      <div class="kpi-executive-insights__icon">
+        <span class="material-symbols-outlined">
+          lightbulb
+        </span>
+      </div>
+
+      <div>
+        <span class="kpi-section-heading__eyebrow">
+          Executive insights
+        </span>
+
+        <h3 id="kpi-executive-insights-title">
+          Lectura ejecutiva del indicador
+        </h3>
+
+        <p>
+          Conclusiones operativas generadas a partir de la configuración,
+          estado y disponibilidad real del KPI.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="kpi-executive-insights__badge">
+
+      <span class="material-symbols-outlined">
+        data_check
+      </span>
+
+      <div>
+        <small>Fuente del análisis</small>
+        <strong>Datos configurados</strong>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────
+       GRID DE INSIGHTS
+       ──────────────────────────────────────────────────── -->
+  <div class="kpi-executive-insights__grid">
+
+    <!-- 1. Modelo de evaluación -->
+    <article class="kpi-executive-card kpi-executive-card--model">
+
+      <div class="kpi-executive-card__top">
+
+        <div class="kpi-executive-card__icon">
+          <span class="material-symbols-outlined">
+            rule
+          </span>
+        </div>
+
+        <span class="kpi-executive-card__index">
+          01
+        </span>
+
+      </div>
+
+      <div class="kpi-executive-card__content">
+
+        <small>Modelo de evaluación</small>
+
+        @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+
+          <strong>Mayor valor representa mejor desempeño</strong>
+
+          <p>
+            El KPI será evaluado favorablemente cuando sus mediciones alcancen
+            o superen el objetivo configurado.
+          </p>
+
+        } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+
+          <strong>Menor valor representa mejor desempeño</strong>
+
+          <p>
+            El KPI será evaluado favorablemente cuando sus mediciones se
+            mantengan iguales o por debajo del objetivo.
+          </p>
+
+        } @else {
+
+          <strong>Evaluación mediante rango operativo</strong>
+
+          <p>
+            El desempeño esperado requiere que cada medición permanezca entre
+            los límites inferior y superior configurados.
+          </p>
+
+        }
+
+      </div>
+
+      <div class="kpi-executive-card__footer">
+
+        <span class="material-symbols-outlined">
+          verified
+        </span>
+
+        Regla de evaluación definida
+
+      </div>
+
+    </article>
+
+    <!-- 2. Estado actual -->
+    <article
+      class="kpi-executive-card kpi-executive-card--status"
+      [class.kpi-executive-card--success]="kpi.status === 'OPTIMAL'"
+      [class.kpi-executive-card--warning]="kpi.status === 'WARNING'"
+      [class.kpi-executive-card--danger]="kpi.status === 'CRITICAL'"
+      [class.kpi-executive-card--pending]="kpi.status === 'NO_DATA'">
+
+      <div class="kpi-executive-card__top">
+
+        <div class="kpi-executive-card__icon">
+
+          @if (kpi.status === 'OPTIMAL') {
+            <span class="material-symbols-outlined">
+              check_circle
+            </span>
+          } @else if (kpi.status === 'WARNING') {
+            <span class="material-symbols-outlined">
+              warning
+            </span>
+          } @else if (kpi.status === 'CRITICAL') {
+            <span class="material-symbols-outlined">
+              error
+            </span>
+          } @else {
+            <span class="material-symbols-outlined">
+              hourglass_empty
+            </span>
+          }
+
+        </div>
+
+        <span class="kpi-executive-card__index">
+          02
+        </span>
+
+      </div>
+
+      <div class="kpi-executive-card__content">
+
+        <small>Condición operativa</small>
+
+        @if (kpi.status === 'OPTIMAL') {
+
+          <strong>Indicador dentro de condición esperada</strong>
+
+          <p>
+            El estado registrado se encuentra clasificado como óptimo conforme
+            a los umbrales definidos para este KPI.
+          </p>
+
+        } @else if (kpi.status === 'WARNING') {
+
+          <strong>Desviación moderada detectada</strong>
+
+          <p>
+            El indicador se encuentra en condición de atención y requiere
+            seguimiento dentro del proceso operativo.
+          </p>
+
+        } @else if (kpi.status === 'CRITICAL') {
+
+          <strong>Condición crítica activa</strong>
+
+          <p>
+            La clasificación actual indica una desviación relevante que
+            requiere revisión operativa prioritaria.
+          </p>
+
+        } @else {
+
+          <strong>Sin información suficiente para evaluar</strong>
+
+          <p>
+            El indicador está configurado, pero todavía no dispone de una
+            medición útil para determinar su desempeño.
+          </p>
+
+        }
+
+      </div>
+
+      <div class="kpi-executive-card__footer">
+
+        <span class="kpi-executive-card__status-dot"></span>
+
+        {{ statusLabels[kpi.status] }}
+
+      </div>
+
+    </article>
+
+    <!-- 3. Frecuencia -->
+    <article class="kpi-executive-card kpi-executive-card--frequency">
+
+      <div class="kpi-executive-card__top">
+
+        <div class="kpi-executive-card__icon">
+          <span class="material-symbols-outlined">
+            schedule
+          </span>
+        </div>
+
+        <span class="kpi-executive-card__index">
+          03
+        </span>
+
+      </div>
+
+      <div class="kpi-executive-card__content">
+
+        <small>Cadencia de supervisión</small>
+
+        <strong>{{ formatFrequency(kpi) }}</strong>
+
+        <p>
+          El motor utilizará esta frecuencia para revisar y clasificar las
+          mediciones asociadas al indicador.
+        </p>
+
+      </div>
+
+      <div class="kpi-executive-card__footer">
+
+        <span class="material-symbols-outlined">
+          update
+        </span>
+
+        Frecuencia operativa registrada
+
+      </div>
+
+    </article>
+
+    <!-- 4. Proceso origen -->
+    <article class="kpi-executive-card kpi-executive-card--process">
+
+      <div class="kpi-executive-card__top">
+
+        <div class="kpi-executive-card__icon">
+          <span class="material-symbols-outlined">
+            account_tree
+          </span>
+        </div>
+
+        <span class="kpi-executive-card__index">
+          04
+        </span>
+
+      </div>
+
+      <div class="kpi-executive-card__content">
+
+        <small>Proceso monitoreado</small>
+
+        <strong>
+          {{ kpi.sourceConfig.sourceProcess }}
+        </strong>
+
+        <p>
+          Este proceso constituye la fuente operativa desde la cual se
+          obtendrán los eventos necesarios para evaluar el KPI.
+        </p>
+
+      </div>
+
+      <div class="kpi-executive-card__footer">
+
+        <span class="material-symbols-outlined">
+          hub
+        </span>
+
+        Módulo: {{ moduleLabels[kpi.module] }}
+
+      </div>
+
+    </article>
+
+    <!-- 5. Disponibilidad de medición -->
+    <article
+      class="kpi-executive-card kpi-executive-card--measurement"
+      [class.kpi-executive-card--success]="kpi.lastMeasuredAt"
+      [class.kpi-executive-card--pending]="!kpi.lastMeasuredAt">
+
+      <div class="kpi-executive-card__top">
+
+        <div class="kpi-executive-card__icon">
+
+          <span class="material-symbols-outlined">
+            {{ kpi.lastMeasuredAt ? 'sensors' : 'sensors_off' }}
+          </span>
+
+        </div>
+
+        <span class="kpi-executive-card__index">
+          05
+        </span>
+
+      </div>
+
+      <div class="kpi-executive-card__content">
+
+        <small>Telemetría disponible</small>
+
+        @if (kpi.lastMeasuredAt) {
+
+          <strong>Existe una medición registrada</strong>
+
+          <p>
+            La última actividad conocida fue identificada
+            {{ formatRelativeDate(kpi.lastMeasuredAt) }}.
+          </p>
+
+        } @else {
+
+          <strong>Esperando primera medición</strong>
+
+          <p>
+            El catálogo contiene la configuración necesaria, pero aún no
+            existe una fecha de medición registrada.
+          </p>
+
+        }
+
+      </div>
+
+      <div class="kpi-executive-card__footer">
+
+        <span class="material-symbols-outlined">
+          history
+        </span>
+
+        @if (kpi.lastMeasuredAt) {
+          Último registro disponible
+        } @else {
+          Sin telemetría disponible
+        }
+
+      </div>
+
+    </article>
+
+    <!-- 6. Preparación para histórico -->
+    <article class="kpi-executive-card kpi-executive-card--integration">
+
+      <div class="kpi-executive-card__top">
+
+        <div class="kpi-executive-card__icon">
+          <span class="material-symbols-outlined">
+            query_stats
+          </span>
+        </div>
+
+        <span class="kpi-executive-card__index">
+          06
+        </span>
+
+      </div>
+
+      <div class="kpi-executive-card__content">
+
+        <small>Analítica histórica</small>
+
+        <strong>Integración de tendencias pendiente</strong>
+
+        <p>
+          La vista está preparada para representar series históricas cuando
+          el backend exponga las mediciones correspondientes.
+        </p>
+
+      </div>
+
+      <div class="kpi-executive-card__footer">
+
+        <span class="material-symbols-outlined">
+          cable
+        </span>
+
+        Endpoint histórico requerido
+
+      </div>
+
+    </article>
+
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────
+       CONCLUSIÓN EJECUTIVA
+       ──────────────────────────────────────────────────── -->
+  <div
+    class="kpi-executive-conclusion"
+    [class.kpi-executive-conclusion--success]="
+      kpi.sourceConfig.active &&
+      kpi.lastMeasuredAt &&
+      kpi.status === 'OPTIMAL'
+    "
+    [class.kpi-executive-conclusion--warning]="
+      kpi.sourceConfig.active &&
+      kpi.lastMeasuredAt &&
+      kpi.status === 'WARNING'
+    "
+    [class.kpi-executive-conclusion--danger]="
+      kpi.sourceConfig.active &&
+      kpi.lastMeasuredAt &&
+      kpi.status === 'CRITICAL'
+    "
+    [class.kpi-executive-conclusion--pending]="
+      !kpi.sourceConfig.active ||
+      !kpi.lastMeasuredAt ||
+      kpi.status === 'NO_DATA'
+    ">
+
+    <div class="kpi-executive-conclusion__icon">
+
+      @if (!kpi.sourceConfig.active) {
+        <span class="material-symbols-outlined">
+          pause_circle
+        </span>
+      } @else if (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA') {
+        <span class="material-symbols-outlined">
+          pending_actions
+        </span>
+      } @else if (kpi.status === 'OPTIMAL') {
+        <span class="material-symbols-outlined">
+          task_alt
+        </span>
+      } @else if (kpi.status === 'WARNING') {
+        <span class="material-symbols-outlined">
+          visibility
+        </span>
+      } @else {
+        <span class="material-symbols-outlined">
+          crisis_alert
+        </span>
+      }
+
+    </div>
+
+    <div class="kpi-executive-conclusion__copy">
+
+      <small>Conclusión ejecutiva</small>
+
+      @if (!kpi.sourceConfig.active) {
+
+        <strong>
+          El KPI está correctamente configurado, pero su motor se encuentra
+          deshabilitado.
+        </strong>
+
+        <p>
+          La evaluación automática permanecerá detenida hasta que el indicador
+          vuelva a activarse.
+        </p>
+
+      } @else if (!kpi.lastMeasuredAt || kpi.status === 'NO_DATA') {
+
+        <strong>
+          La configuración está preparada para iniciar el monitoreo.
+        </strong>
+
+        <p>
+          Se requieren mediciones operativas para determinar el estado real y
+          alimentar futuras visualizaciones históricas.
+        </p>
+
+      } @else if (kpi.status === 'OPTIMAL') {
+
+        <strong>
+          El indicador presenta una condición operativa saludable.
+        </strong>
+
+        <p>
+          El motor está habilitado, existe actividad registrada y la última
+          clasificación disponible se encuentra dentro de los límites
+          esperados.
+        </p>
+
+      } @else if (kpi.status === 'WARNING') {
+
+        <strong>
+          El KPI requiere observación y seguimiento operativo.
+        </strong>
+
+        <p>
+          La desviación todavía no se clasifica como crítica, pero debe
+          revisarse conforme a la frecuencia configurada.
+        </p>
+
+      } @else {
+
+        <strong>
+          El KPI requiere intervención operativa prioritaria.
+        </strong>
+
+        <p>
+          El estado crítico registrado indica que la medición evaluada excedió
+          los límites definidos para el proceso.
+        </p>
+
+      }
+
+    </div>
+
+    <div class="kpi-executive-conclusion__meta">
+
+      <div>
+        <small>Última medición</small>
+        <strong>
+          {{ formatRelativeDate(kpi.lastMeasuredAt) }}
+        </strong>
+      </div>
+
+      <div>
+        <small>Motor</small>
+        <strong>
+          {{ kpi.sourceConfig.active ? 'Habilitado' : 'Deshabilitado' }}
+        </strong>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Integridad del análisis -->
+  <div class="kpi-executive-insights__disclaimer">
+
+    <span class="material-symbols-outlined">
+      policy
+    </span>
+
+    <p>
+      Las conclusiones mostradas son reglas determinísticas basadas en los
+      datos existentes del indicador. No representan predicciones, inteligencia
+      artificial ni análisis estadístico histórico.
+    </p>
+
+  </div>
+
+</section>
+
+  <!-- Diagnóstico automático basado en configuración -->
+  <section
+    class="kpi-insight"
+    [class.kpi-insight--optimal]="kpi.status === 'OPTIMAL'"
+    [class.kpi-insight--warning]="kpi.status === 'WARNING'"
+    [class.kpi-insight--critical]="kpi.status === 'CRITICAL'">
+
+    <div class="kpi-insight__heading">
+
+      <div class="kpi-insight__icon">
+        <span class="material-symbols-outlined">
+          auto_awesome
+        </span>
+      </div>
+
+      <div>
+        <span>Diagnóstico del sistema</span>
+        <h3>Lectura ejecutiva del indicador</h3>
+      </div>
+
+    </div>
+
+    <div class="kpi-insight__grid">
+
+      <article class="kpi-insight__item">
+        <span class="material-symbols-outlined">
+          monitoring
+        </span>
+
+        <p>
+          @if (kpi.status === 'OPTIMAL') {
+            El indicador se encuentra configurado dentro de su condición
+            operativa esperada.
+          } @else if (kpi.status === 'WARNING') {
+            El indicador presenta una condición de atención y debe mantenerse
+            bajo seguimiento.
+          } @else if (kpi.status === 'CRITICAL') {
+            El indicador se encuentra en condición crítica y requiere revisión
+            operativa inmediata.
+          } @else {
+            El indicador todavía no cuenta con una medición reciente para
+            determinar su rendimiento.
+          }
+        </p>
+      </article>
+
+      <article class="kpi-insight__item">
+        <span class="material-symbols-outlined">
+          timer
+        </span>
+
+        <p>
+          El motor evaluará este KPI
+          <strong>{{ formatFrequency(kpi).toLowerCase() }}</strong>
+          mediante el proceso
+          <strong>{{ kpi.sourceConfig.sourceProcess }}</strong>.
+        </p>
+      </article>
+
+      <article class="kpi-insight__item">
+        <span class="material-symbols-outlined">
+          shield
+        </span>
+
+        <p>
+          La configuración utiliza un modelo
+          <strong>
+            @if (kpi.evaluationType === 'HIGHER_IS_BETTER') {
+              “mayor es mejor”
+            } @else if (kpi.evaluationType === 'LOWER_IS_BETTER') {
+              “menor es mejor”
+            } @else {
+              “rango operativo”
+            }
+          </strong>
+          para determinar el estado del KPI.
+        </p>
+      </article>
+
+      <article class="kpi-insight__item">
+        <span class="material-symbols-outlined">
+          update
+        </span>
+
+        <p>
+          Última medición registrada:
+          <strong>{{ formatRelativeDate(kpi.lastMeasuredAt) }}</strong>.
+        </p>
+      </article>
+
+    </div>
+
+  </section>
+
+}
+
+          <!-- Título del formulario -->
+          <div class="kpi-form__header kpi-form__header--configuration">
+
+  <div>
+
+    <span class="kpi-form__eyebrow">
+      {{ formMode() === 'new' ? 'Alta de indicador' : 'Parámetros administrativos' }}
+    </span>
+
+    <h2 class="kpi-form__title">
+      <span class="material-symbols-outlined">
+        {{ formMode() === 'new' ? 'add_chart' : 'tune' }}
+      </span>
+
+      {{
+        formMode() === 'new'
+          ? 'Registrar nuevo indicador'
+          : 'Configuración del indicador'
+      }}
+    </h2>
+
+    <p class="kpi-form__subtitle">
+      {{
+        formMode() === 'new'
+          ? 'Define la identidad, umbrales y origen operativo del nuevo KPI.'
+          : 'Modifica los parámetros que utiliza el motor para evaluar este KPI.'
+      }}
+    </p>
+
+  </div>
+
+  @if (formMode() === 'edit' && isFormDirty) {
+    <span class="kpi-form__unsaved">
+      <span class="kpi-form__unsaved-dot"></span>
+      Cambios sin guardar
+    </span>
+  }
+
+</div>
+
+          <!-- ── Mensajes de estado ──────────────────────────────── -->
+          @if (saveSuccess()) {
+            <div class="kpi-alert kpi-alert--success" role="status">
+              <span class="material-symbols-outlined">check_circle</span>
+              Indicador guardado exitosamente.
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="kpi-alert kpi-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              {{ backendError() }}
+            </div>
+          }
+
+          @if (duplicateError) {
+            <div class="kpi-alert kpi-alert--warning" role="alert">
+              <span class="material-symbols-outlined">warning</span>
+              {{ duplicateError }}
+            </div>
+          }
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 1 — Información General
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="kpi-fieldset">
+            <legend class="kpi-fieldset__legend">
+              <span class="material-symbols-outlined">info</span>
+              Información General
+            </legend>
+
+            <div class="kpi-form-grid">
+
+              <!-- Nombre -->
+              <div class="kpi-field kpi-field--full">
+                <label class="kpi-field__label" for="kpi-name">Nombre del KPI *</label>
+                <input
+                  id="kpi-name"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('name')"
+                  type="text"
+                  formControlName="name"
+                  placeholder="Ej: Tiempo de descarga"
+                />
+                @if (fieldHasError('name')) {
+                  <span class="kpi-field__error">{{ getFieldError('name') }}</span>
+                }
+              </div>
+
+              <!-- Descripción -->
+              <div class="kpi-field kpi-field--full">
+                <label class="kpi-field__label" for="kpi-description">Descripción *</label>
+                <textarea
+                  id="kpi-description"
+                  class="kpi-field__input kpi-field__textarea"
+                  [class.kpi-field__input--error]="fieldHasError('description')"
+                  formControlName="description"
+                  placeholder="Describe el propósito y cómo se calcula este indicador"
+                  rows="3">
+                </textarea>
+                @if (fieldHasError('description')) {
+                  <span class="kpi-field__error">{{ getFieldError('description') }}</span>
+                }
+              </div>
+
+              <!-- Módulo -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-module">Módulo *</label>
+                <select
+                  id="kpi-module"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('module')"
+                  formControlName="module">
+                  <option value="">Seleccionar módulo</option>
+                  @for (mod of modules; track mod.value) {
+                    <option [value]="mod.value">{{ mod.label }}</option>
+                  }
+                </select>
+                @if (fieldHasError('module')) {
+                  <span class="kpi-field__error">{{ getFieldError('module') }}</span>
+                }
+              </div>
+
+              <!-- Unidad de medida -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-unit">Unidad de medida *</label>
+                <select
+                  id="kpi-unit"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('unit')"
+                  formControlName="unit">
+                  <option value="">Seleccionar unidad</option>
+                  @for (u of units; track u.value) {
+                    <option [value]="u.value">{{ u.label }}</option>
+                  }
+                </select>
+                @if (fieldHasError('unit')) {
+                  <span class="kpi-field__error">{{ getFieldError('unit') }}</span>
+                }
+              </div>
+
+              <!-- Tipo de evaluación -->
+              <div class="kpi-field kpi-field--full">
+                <label class="kpi-field__label" for="kpi-evaltype">Tipo de evaluación *</label>
+                <select
+                  id="kpi-evaltype"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('evaluationType')"
+                  formControlName="evaluationType">
+                  <option value="">Seleccionar tipo</option>
+                  @for (et of evaluationTypes; track et.value) {
+                    <option [value]="et.value">{{ et.label }}</option>
+                  }
+                </select>
+                @if (fieldHasError('evaluationType')) {
+                  <span class="kpi-field__error">{{ getFieldError('evaluationType') }}</span>
+                }
+                @if (currentEvaluationType) {
+                  <span class="kpi-field__hint">
+                    @if (currentEvaluationType === 'HIGHER_IS_BETTER') {
+                      Ej: Exactitud de inventario — un valor mayor indica mejor rendimiento.
+                    } @else if (currentEvaluationType === 'LOWER_IS_BETTER') {
+                      Ej: Tiempo de descarga — un valor menor indica mejor rendimiento.
+                    } @else if (currentEvaluationType === 'RANGE') {
+                      Ej: Ocupación del almacén — el valor ideal está dentro de un rango definido.
+                    }
+                  </span>
+                }
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 2 — Configuración de Umbrales
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="kpi-fieldset">
+            <legend class="kpi-fieldset__legend">
+              <span class="material-symbols-outlined">tune</span>
+              Configuración de Umbrales
+            </legend>
+
+            <!-- Barra visual -->
+            @if (currentEvaluationType) {
+              <div class="kpi-threshold-bar" aria-label="Visualización de umbrales">
+                @if (currentEvaluationType === 'LOWER_IS_BETTER') {
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--optimal"
+                    [style.width.%]="thresholdBarSegments[0]">
+                    <span>🟢 Objetivo</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--warning"
+                    [style.width.%]="thresholdBarSegments[1]">
+                    <span>🟡 Riesgo</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--critical"
+                    [style.width.%]="thresholdBarSegments[2]">
+                    <span>🔴 Crítico</span>
+                  </div>
+                } @else if (currentEvaluationType === 'HIGHER_IS_BETTER') {
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--critical"
+                    [style.width.%]="thresholdBarSegments[2]">
+                    <span>🔴 Crítico</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--warning"
+                    [style.width.%]="thresholdBarSegments[1]">
+                    <span>🟡 Riesgo</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--optimal"
+                    [style.width.%]="thresholdBarSegments[0]">
+                    <span>🟢 Objetivo</span>
+                  </div>
+                } @else {
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--critical"
+                    [style.width.%]="thresholdBarSegments[2]">
+                    <span>🔴</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--warning"
+                    [style.width.%]="thresholdBarSegments[1]">
+                    <span>🟡</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--optimal"
+                    [style.width.%]="thresholdBarSegments[0]">
+                    <span>🟢 Rango ideal</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--warning"
+                    [style.width.%]="thresholdBarSegments[1]">
+                    <span>🟡</span>
+                  </div>
+                  <div class="kpi-threshold-bar__segment kpi-threshold-bar__segment--critical"
+                    [style.width.%]="thresholdBarSegments[2]">
+                    <span>🔴</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="kpi-form-grid">
+
+              @if (!isRangeMode) {
+                <!-- Objetivo -->
+                <div class="kpi-field">
+                  <label class="kpi-field__label" for="kpi-target">Objetivo *</label>
+                  <input
+                    id="kpi-target"
+                    class="kpi-field__input"
+                    [class.kpi-field__input--error]="fieldHasError('thresholdTarget')"
+                    type="number"
+                    formControlName="thresholdTarget"
+                    placeholder="45"
+                  />
+                  @if (fieldHasError('thresholdTarget')) {
+                    <span class="kpi-field__error">{{ getFieldError('thresholdTarget') }}</span>
+                  }
+                </div>
+              }
+
+              @if (isRangeMode) {
+                <!-- Rango inferior -->
+                <div class="kpi-field">
+                  <label class="kpi-field__label" for="kpi-range-low">Límite inferior del rango *</label>
+                  <input
+                    id="kpi-range-low"
+                    class="kpi-field__input"
+                    [class.kpi-field__input--error]="fieldHasError('rangeLow')"
+                    type="number"
+                    formControlName="rangeLow"
+                    placeholder="60"
+                  />
+                  @if (fieldHasError('rangeLow')) {
+                    <span class="kpi-field__error">{{ getFieldError('rangeLow') }}</span>
+                  }
+                </div>
+
+                <!-- Rango superior -->
+                <div class="kpi-field">
+                  <label class="kpi-field__label" for="kpi-range-high">Límite superior del rango *</label>
+                  <input
+                    id="kpi-range-high"
+                    class="kpi-field__input"
+                    [class.kpi-field__input--error]="fieldHasError('rangeHigh')"
+                    type="number"
+                    formControlName="rangeHigh"
+                    placeholder="85"
+                  />
+                  @if (fieldHasError('rangeHigh')) {
+                    <span class="kpi-field__error">{{ getFieldError('rangeHigh') }}</span>
+                  }
+                </div>
+              }
+
+              <!-- Advertencia -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-warning">
+                  {{ isRangeMode ? 'Margen de advertencia *' : 'Advertencia *' }}
+                </label>
+                <input
+                  id="kpi-warning"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('thresholdWarning')"
+                  type="number"
+                  formControlName="thresholdWarning"
+                  [placeholder]="isRangeMode ? '10' : '60'"
+                />
+                @if (fieldHasError('thresholdWarning')) {
+                  <span class="kpi-field__error">{{ getFieldError('thresholdWarning') }}</span>
+                }
+              </div>
+
+              <!-- Crítico -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-critical">
+                  {{ isRangeMode ? 'Margen crítico *' : 'Crítico *' }}
+                </label>
+                <input
+                  id="kpi-critical"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('thresholdCritical')"
+                  type="number"
+                  formControlName="thresholdCritical"
+                  [placeholder]="isRangeMode ? '20' : '90'"
+                />
+                @if (fieldHasError('thresholdCritical')) {
+                  <span class="kpi-field__error">{{ getFieldError('thresholdCritical') }}</span>
+                }
+              </div>
+
+            </div>
+
+            @if (thresholdError) {
+              <div class="kpi-alert kpi-alert--warning kpi-alert--inline">
+                <span class="material-symbols-outlined">warning</span>
+                {{ thresholdError }}
+              </div>
+            }
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               SECCIÓN 3 — Origen del Indicador
+               ══════════════════════════════════════════════════════ -->
+          <fieldset class="kpi-fieldset">
+            <legend class="kpi-fieldset__legend">
+              <span class="material-symbols-outlined">settings_input_component</span>
+              Origen del Indicador
+            </legend>
+
+            <div class="kpi-form-grid">
+
+              <!-- Proceso origen -->
+              <div class="kpi-field kpi-field--full">
+                <label class="kpi-field__label" for="kpi-source-process">Proceso origen *</label>
+                <input
+                  id="kpi-source-process"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('sourceProcess')"
+                  type="text"
+                  formControlName="sourceProcess"
+                  placeholder="Ej: Recepción"
+                />
+                @if (fieldHasError('sourceProcess')) {
+                  <span class="kpi-field__error">{{ getFieldError('sourceProcess') }}</span>
+                }
+              </div>
+
+              <!-- Evento inicio -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-start-event">Evento inicial *</label>
+                <input
+                  id="kpi-start-event"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('startEvent')"
+                  type="text"
+                  formControlName="startEvent"
+                  placeholder="Ej: Llegada del camión"
+                />
+                @if (fieldHasError('startEvent')) {
+                  <span class="kpi-field__error">{{ getFieldError('startEvent') }}</span>
+                }
+              </div>
+
+              <!-- Evento final -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-end-event">Evento final *</label>
+                <input
+                  id="kpi-end-event"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('endEvent')"
+                  type="text"
+                  formControlName="endEvent"
+                  placeholder="Ej: Fin de descarga"
+                />
+                @if (fieldHasError('endEvent')) {
+                  <span class="kpi-field__error">{{ getFieldError('endEvent') }}</span>
+                }
+              </div>
+
+              <!-- Frecuencia valor -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-freq-value">Frecuencia *</label>
+                <input
+                  id="kpi-freq-value"
+                  class="kpi-field__input"
+                  [class.kpi-field__input--error]="fieldHasError('frequencyValue')"
+                  type="number"
+                  formControlName="frequencyValue"
+                  placeholder="5"
+                />
+                @if (fieldHasError('frequencyValue')) {
+                  <span class="kpi-field__error">{{ getFieldError('frequencyValue') }}</span>
+                }
+              </div>
+
+              <!-- Frecuencia unidad -->
+              <div class="kpi-field">
+                <label class="kpi-field__label" for="kpi-freq-unit">Unidad de frecuencia *</label>
+                <select
+                  id="kpi-freq-unit"
+                  class="kpi-field__input"
+                  formControlName="frequencyUnit">
+                  @for (fu of frequencyUnits; track fu.value) {
+                    <option [value]="fu.value">{{ fu.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Activo -->
+              <div class="kpi-field kpi-field--full">
+                <label class="kpi-field__toggle">
+                  <input
+                    type="checkbox"
+                    class="kpi-field__checkbox"
+                    formControlName="active"
+                  />
+                  <span class="kpi-field__toggle-slider"></span>
+                  <span class="kpi-field__toggle-label">Cálculo automático activo</span>
+                </label>
+              </div>
+
+            </div>
+          </fieldset>
+
+          <!-- ══════════════════════════════════════════════════════
+               ACCIONES
+               ══════════════════════════════════════════════════════ -->
+          <div class="kpi-form__actions">
+
+            <div class="kpi-form__actions-left">
+              @if (formMode() === 'edit' && canDelete()) {
+                <button
+                  id="btn-disable-kpi"
+                  class="kpi-btn kpi-btn--danger-ghost"
+                  type="button"
+                  (click)="openDisableDialog()"
+                  [disabled]="isSaving">
+                  <span class="material-symbols-outlined">block</span>
+                  Desactivar indicador
+                </button>
+              }
+            </div>
+
+            <div class="kpi-form__actions-right">
+              <button
+                id="btn-cancel-kpi"
+                class="kpi-btn kpi-btn--ghost"
+                type="button"
+                (click)="cancelForm()"
+                [disabled]="isSaving">
+                Cancelar
+              </button>
+
+              <button
+                id="btn-save-kpi"
+                class="kpi-btn kpi-btn--primary"
+                type="submit"
+                [disabled]="isSaving">
+                @if (isSaving) {
+                  <span class="kpi-btn__spinner"></span>
+                  Guardando…
+                } @else {
+                  <span class="material-symbols-outlined">save</span>
+                  Guardar indicador
+                }
+              </button>
+            </div>
+
+          </div>
+
+          <!-- ── Tarjeta de auditoría ────────────────────────────── -->
+          <div class="kpi-audit-card">
+            <span class="material-symbols-outlined kpi-audit-card__icon">history</span>
+            <p class="kpi-audit-card__text">
+              Cada modificación de un KPI genera automáticamente un registro en el Log de Auditoría del sistema.
+            </p>
+          </div>
+
+        </form>
+      }
+    </section>
+
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     DIÁLOGO — Desactivar indicador
+     ════════════════════════════════════════════════════════════════ -->
+@if (showDisableDialog()) {
+  <div class="kpi-overlay" (click)="closeDisableDialog()">
+    <div class="kpi-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="kpi-dialog__header">
+        <span class="material-symbols-outlined kpi-dialog__icon kpi-dialog__icon--danger">block</span>
+        <h3 class="kpi-dialog__title">Desactivar indicador</h3>
+      </div>
+      <p class="kpi-dialog__desc">
+        "{{ selectedKpi()?.name }}" quedará desactivado. Se conservará el historial para trazabilidad,
+        pero no generará alertas ni alimentará los dashboards del sistema.
+      </p>
+      <div class="kpi-dialog__actions">
+        <button class="kpi-btn kpi-btn--ghost" type="button" (click)="closeDisableDialog()">
+          Cancelar
+        </button>
+        <button class="kpi-btn kpi-btn--danger" type="button" (click)="confirmDisable()" [disabled]="isSaving">
+          @if (isSaving) {
+            <span class="kpi-btn__spinner"></span>
+          }
+          Desactivar
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     DIÁLOGO — Cambios no guardados
+     ════════════════════════════════════════════════════════════════ -->
+@if (showUnsavedDialog()) {
+  <div class="kpi-overlay" (click)="cancelDiscardChanges()">
+    <div class="kpi-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="kpi-dialog__header">
+        <span class="material-symbols-outlined kpi-dialog__icon kpi-dialog__icon--warning">warning</span>
+        <h3 class="kpi-dialog__title">Cambios sin guardar</h3>
+      </div>
+      <p class="kpi-dialog__desc">
+        Tienes cambios sin guardar. ¿Deseas descartarlos y continuar?
+      </p>
+      <div class="kpi-dialog__actions">
+        <button class="kpi-btn kpi-btn--ghost" type="button" (click)="cancelDiscardChanges()">
+          Volver al formulario
+        </button>
+        <button class="kpi-btn kpi-btn--danger" type="button" (click)="confirmDiscardChanges()">
+          Descartar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+}

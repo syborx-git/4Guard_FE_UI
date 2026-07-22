@@ -36,6 +36,23 @@ interface AdminModuleCard {
   badgeCount?: () => number;
 }
 
+export interface AdminModuleMeta {
+  categoryLabel: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export interface AdminMetric {
+  label: string;
+  value: number;
+  icon: string;
+  description?: string;
+  tone: 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+}
+
+
+
 
 @Component({
   selector: 'fg-admin-panel',
@@ -131,6 +148,409 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     return this.branchService.branches();
   });
 
+  protected readonly activeModuleMeta = computed<AdminModuleMeta | null>(() => {
+    const module = this.selectedModule();
+    if (!module) return null;
+
+    const metaMap: Record<string, AdminModuleMeta> = {
+      organizations: {
+        categoryLabel: 'ESTRUCTURA DE ALMACÉN · MAESTROS',
+        title: 'Gestión de Organizaciones',
+        description: 'Jerarquía superior de la corporación. Administre las empresas matrices, holdings y subsidiarias en un entorno multi-tenancy aislado y totalmente seguro.',
+        icon: 'corporate_fare'
+      },
+      branches: {
+        categoryLabel: 'ESTRUCTURA DE ALMACÉN · MAESTROS',
+        title: 'Gestión de Sucursales (Branches)',
+        description: 'Gestión de centros de distribución, almacenes centrales y sucursales metropolitanas. Configure zonas horarias, direcciones físicas y control de andenes de carga.',
+        icon: 'domain'
+      },
+      sections: {
+        categoryLabel: 'ESTRUCTURA DE ALMACÉN · MAESTROS',
+        title: 'Secciones de Almacén',
+        description: 'Zonificación lógica y térmica de la red de almacenamiento. Defina pasillos, áreas de recibo, cámaras de congelado frío y zonas de cuarentena técnica.',
+        icon: 'grid_view'
+      },
+      locations: {
+        categoryLabel: 'ESTRUCTURA DE ALMACÉN · MAESTROS',
+        title: 'Catálogo de Ubicaciones (Locations)',
+        description: 'Catálogo completo de ubicaciones físicas y posiciones de rack en el almacén. Gestione coordenadas tridimensionales, capacidades y bloqueos.',
+        icon: 'location_on'
+      },
+      clients: {
+        categoryLabel: 'CATÁLOGOS DE MERCANCÍA · CONTROL',
+        title: 'Gestión de Clientes (Depositantes)',
+        description: 'Gestión de depositantes logísticos y dueños de mercancía (3PL). Administre perfiles comerciales, giros comerciales, códigos tributarios y SLAs de servicio.',
+        icon: 'partner_exchange'
+      },
+      skus: {
+        categoryLabel: 'CATÁLOGOS DE MERCANCÍA · CONTROL',
+        title: 'Catálogo de Productos / SKUs',
+        description: 'Catálogo maestro de unidades de mantenimiento de stock (SKUs). Defina pesos, dimensiones, unidades de medida y clasificaciones.',
+        icon: 'inventory'
+      },
+      users: {
+        categoryLabel: 'SEGURIDAD Y CONTROL DE ACCESO',
+        title: 'Control de Usuarios y Seguridad',
+        description: 'Administración de cuentas de usuario, operadores, credenciales y estados de conexión. Gestione bloqueos por intentos fallidos.',
+        icon: 'manage_accounts'
+      },
+      roles: {
+        categoryLabel: 'SEGURIDAD Y CONTROL DE ACCESO',
+        title: 'Roles y Matriz de Permisos',
+        description: 'Matriz de control de acceso basada en roles (RBAC). Configure perfiles de permisos y niveles jerárquicos de autorización.',
+        icon: 'shield_person'
+      },
+      inventory: {
+        categoryLabel: 'MONITOREO Y SOPORTE',
+        title: 'Monitor de Inventario Activo',
+        description: 'Consulta en tiempo real de existencias por contenedor (SSCC), SKU y lote. Gestione cuarentenas preventivas y estados de calidad.',
+        icon: 'shelves'
+      },
+      movements: {
+        categoryLabel: 'MONITOREO Y SOPORTE',
+        title: 'Bitácora Histórica de Movimientos',
+        description: 'Registro inmutable de transacciones físicas, traslados internos, recepciones y despachos dentro del centro de distribución.',
+        icon: 'history'
+      },
+      incidences: {
+        categoryLabel: 'MONITOREO Y SOPORTE',
+        title: 'Control de Incidencias de Calidad',
+        description: 'Bitácora de incidencias de calidad, mermas, daños y bloqueos preventivos registrados en la operación diaria.',
+        icon: 'report_problem'
+      },
+      audit: {
+        categoryLabel: 'MONITOREO Y SOPORTE',
+        title: 'Consola de Auditoría Forense',
+        description: 'Historial detallado de auditoría forense del sistema. Registro de llamadas a API, modificaciones JSON y direcciones IP.',
+        icon: 'find_in_page'
+      },
+      notifications: {
+        categoryLabel: 'MONITOREO Y SOPORTE',
+        title: 'Notificaciones y Alertas del Sistema',
+        description: 'Centro técnico de alertas, notificaciones críticas de integración y mensajería del sistema en tiempo real.',
+        icon: 'notifications_active'
+      }
+    };
+
+    return metaMap[module] || {
+      categoryLabel: 'MONITOREO Y SOPORTE',
+      title: 'Consola Administrativa',
+      description: 'Panel de control administrativo.',
+      icon: 'admin_panel_settings'
+    };
+  });
+
+  protected readonly activeModuleMetrics = computed<AdminMetric[]>(() => {
+    const module = this.selectedModule();
+    if (!module) return [];
+
+    switch (module) {
+      case 'organizations': {
+        const orgs = this.orgService.organizations();
+        return [
+          {
+            label: 'Total Organizaciones',
+            value: orgs.length,
+            icon: 'corporate_fare',
+            tone: 'neutral'
+          },
+          {
+            label: 'Organizaciones Activas',
+            value: orgs.filter(o => o.status === 'ACTIVE').length,
+            icon: 'check_circle',
+            tone: 'success'
+          },
+          {
+            label: 'Sucursales registradas',
+            value: this.branchService.branches().length,
+            icon: 'domain',
+            tone: 'info'
+          }
+        ];
+      }
+      case 'branches': {
+        const branches = this.branchService.branches();
+        return [
+          {
+            label: 'Total Sucursales',
+            value: branches.length,
+            icon: 'domain',
+            tone: 'neutral'
+          },
+          {
+            label: 'Sucursales Activas',
+            value: branches.filter(b => b.status === 'ACTIVE').length,
+            icon: 'check_circle',
+            tone: 'success'
+          }
+        ];
+      }
+      case 'sections': {
+        return [
+          {
+            label: 'Secciones Definidas',
+            value: this.sectionService.sections().length,
+            icon: 'grid_view',
+            tone: 'neutral'
+          }
+        ];
+      }
+      case 'locations': {
+        const locs = this.locationService.locations();
+        return [
+          {
+            label: 'Total Ubicaciones',
+            value: locs.length,
+            icon: 'location_on',
+            tone: 'neutral'
+          },
+          {
+            label: 'Ubicaciones Disponibles',
+            value: locs.filter(l => !l.isBlocked).length,
+            icon: 'check_circle',
+            tone: 'success'
+          },
+          {
+            label: 'Ubicaciones Bloqueadas',
+            value: locs.filter(l => l.isBlocked).length,
+            icon: 'block',
+            tone: 'danger'
+          }
+        ];
+      }
+      case 'clients': {
+        const clients = this.clientService.clients();
+        return [
+          {
+            label: 'Total Clientes',
+            value: clients.length,
+            icon: 'partner_exchange',
+            tone: 'neutral'
+          },
+          {
+            label: 'Clientes Activos',
+            value: clients.filter(c => c.status === 'ACTIVE').length,
+            icon: 'check_circle',
+            tone: 'success'
+          }
+        ];
+      }
+      case 'skus': {
+        const skus = this.skuService.skus();
+        return [
+          {
+            label: 'Total SKUs',
+            value: skus.length,
+            icon: 'inventory',
+            tone: 'neutral'
+          },
+          {
+            label: 'Clientes Únicos',
+            value: new Set(skus.map(s => s.clientId)).size,
+            icon: 'partner_exchange',
+            tone: 'info'
+          },
+          {
+            label: 'Unidades de Medida Únicas',
+            value: new Set(skus.map(s => s.unit)).size,
+            icon: 'square_foot',
+            tone: 'neutral'
+          }
+        ];
+      }
+      case 'users': {
+        const users = this.userAdminService.users();
+        return [
+          {
+            label: 'Total Usuarios',
+            value: users.length,
+            icon: 'manage_accounts',
+            tone: 'neutral'
+          },
+          {
+            label: 'Usuarios Activos',
+            value: users.filter(u => u.status === 'ACTIVE').length,
+            icon: 'check_circle',
+            tone: 'success'
+          },
+          {
+            label: 'Usuarios Bloqueados',
+            value: users.filter(u => u.permanentlyLocked || u.status === 'SUSPENDED').length,
+            icon: 'lock',
+            tone: 'danger'
+          }
+        ];
+      }
+      case 'roles': {
+        const roles = this.roleService.roles();
+        return [
+          {
+            label: 'Total Roles',
+            value: roles.length,
+            icon: 'shield_person',
+            tone: 'neutral'
+          },
+          {
+            label: 'Roles de Sistema',
+            value: roles.filter(r => r.isSystem).length,
+            icon: 'admin_panel_settings',
+            tone: 'info'
+          },
+          {
+            label: 'Roles Personalizados',
+            value: roles.filter(r => !r.isSystem).length,
+            icon: 'person_outline',
+            tone: 'neutral'
+          }
+        ];
+      }
+      case 'inventory': {
+        const items = this.inventoryService.inventoryItems();
+        return [
+          {
+            label: 'Total Registros',
+            value: items.length,
+            icon: 'shelves',
+            tone: 'neutral'
+          },
+          {
+            label: 'Disponibles',
+            value: items.filter(i => i.state === 'AVAILABLE').length,
+            icon: 'check_circle',
+            tone: 'success'
+          },
+          {
+            label: 'En Calidad',
+            value: items.filter(i => i.state === 'IN_QUALITY').length,
+            icon: 'verified_user',
+            tone: 'info'
+          },
+          {
+            label: 'Retenidos',
+            value: items.filter(i => i.state === 'QUARANTINE' || i.state === 'DAMAGED').length,
+            icon: 'report_problem',
+            tone: 'danger'
+          }
+        ];
+      }
+      case 'movements': {
+        const movs = this.movementService.movements();
+        return [
+          {
+            label: 'Total Movimientos',
+            value: movs.length,
+            icon: 'history',
+            tone: 'neutral'
+          },
+          {
+            label: 'Tipos Únicos',
+            value: new Set(movs.map(m => m.type)).size,
+            icon: 'category',
+            tone: 'info'
+          },
+          {
+            label: 'Operadores Únicos',
+            value: new Set(movs.map(m => m.username)).size,
+            icon: 'person',
+            tone: 'neutral'
+          }
+        ];
+      }
+      case 'incidences': {
+        const incs = this.incidenceService.incidences();
+        return [
+          {
+            label: 'Total Incidencias',
+            value: incs.length,
+            icon: 'report_problem',
+            tone: 'neutral'
+          },
+          {
+            label: 'Activas',
+            value: incs.filter(i => i.status !== 'CLOSED').length,
+            icon: 'pending',
+            tone: 'warning'
+          },
+          {
+            label: 'Cerradas',
+            value: incs.filter(i => i.status === 'CLOSED').length,
+            icon: 'check_circle',
+            tone: 'success'
+          },
+          {
+            label: 'Críticas',
+            value: incs.filter(i => i.severity === 'CRITICAL').length,
+            icon: 'gavel',
+            tone: 'danger'
+          }
+        ];
+      }
+      case 'audit': {
+        const logs = this.auditService.auditLogs();
+        return [
+          {
+            label: 'Total Logs',
+            value: logs.length,
+            icon: 'find_in_page',
+            tone: 'neutral'
+          },
+          {
+            label: 'Creaciones',
+            value: logs.filter(l => l.action === 'CREATE').length,
+            icon: 'add_circle',
+            tone: 'success'
+          },
+          {
+            label: 'Modificaciones',
+            value: logs.filter(l => l.action === 'UPDATE').length,
+            icon: 'edit',
+            tone: 'info'
+          },
+          {
+            label: 'Eliminaciones',
+            value: logs.filter(l => l.action === 'DELETE').length,
+            icon: 'delete',
+            tone: 'danger'
+          }
+        ];
+      }
+      case 'notifications': {
+        const notifs = this.notifService.notifications();
+        return [
+          {
+            label: 'Total Alertas',
+            value: notifs.length,
+            icon: 'notifications_active',
+            tone: 'neutral'
+          },
+          {
+            label: 'Sin Leer',
+            value: notifs.filter(n => !n.read).length,
+            icon: 'mark_email_unread',
+            tone: 'warning'
+          },
+          {
+            label: 'Críticas',
+            value: notifs.filter(n => n.severity === 'CRITICAL').length,
+            icon: 'warning',
+            tone: 'danger'
+          },
+          {
+            label: 'Leídas',
+            value: notifs.filter(n => n.read).length,
+            icon: 'mark_email_read',
+            tone: 'success'
+          }
+        ];
+      }
+      default:
+        return [];
+    }
+  });
+
+
+
   // Métodos helper de filtrado para selectores en cascada
   protected getSectionsForBranch(branchId: string): WarehouseSection[] {
     return this.sectionService.sections().filter(s => s.branchId === branchId);
@@ -162,6 +582,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'clients', title: 'Clientes / Owners', icon: 'partner_exchange', description: 'Dueños de mercancía y stock depositado (3PL).', category: 'MERCHANDISE' },
     { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
+    { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
     
     // Seguridad
     { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
@@ -288,6 +709,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     }
     if (moduleId === 'carriers') {
       this.router.navigate(['/carriers']);
+      return;
+    }
+    if (moduleId === 'suppliers') {
+      this.router.navigate(['/suppliers']);
       return;
     }
     this.selectedModule.set(moduleId);
