@@ -79,6 +79,17 @@ input, select, textarea, button {
   font-size: inherit;
 }
 
+/* Override para autofill de navegadores en tema oscuro */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #131b2e inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
 /* ── Imágenes ────────────────────────────────────────────────── */
 img, svg {
   display: block;
