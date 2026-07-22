@@ -93,4 +93,90 @@ export class SessionStorageService {
   isLogged(): boolean {
     return this.getSession() !== null;
   }
+
+  // ─── Gestión de Bloqueos e Intentos Fallidos (HU-010) ───────────────────
+  private readonly LOCKOUT_KEY = '4guard_auth_lockout';
+  private readonly FAILED_ATTEMPTS_KEY = '4guard_failed_attempts';
+
+  normalizeIdentifier(identifier: string): string {
+    return (identifier || '').trim().toLowerCase();
+  }
+
+  saveFailedAttempts(identifier: string, attempts: number): void {
+    const key = this.normalizeIdentifier(identifier);
+    if (!key) return;
+    try {
+      const currentMapStr = localStorage.getItem(this.FAILED_ATTEMPTS_KEY);
+      const map: Record<string, number> = currentMapStr ? JSON.parse(currentMapStr) : {};
+      map[key] = attempts;
+      localStorage.setItem(this.FAILED_ATTEMPTS_KEY, JSON.stringify(map));
+    } catch {
+      localStorage.removeItem(this.FAILED_ATTEMPTS_KEY);
+    }
+  }
+
+  getFailedAttempts(identifier: string): number {
+    const key = this.normalizeIdentifier(identifier);
+    if (!key) return 0;
+    try {
+      const currentMapStr = localStorage.getItem(this.FAILED_ATTEMPTS_KEY);
+      if (!currentMapStr) return 0;
+      const map: Record<string, number> = JSON.parse(currentMapStr);
+      return typeof map[key] === 'number' ? map[key] : 0;
+    } catch {
+      localStorage.removeItem(this.FAILED_ATTEMPTS_KEY);
+      return 0;
+    }
+  }
+
+  clearFailedAttempts(identifier: string): void {
+    const key = this.normalizeIdentifier(identifier);
+    if (!key) return;
+    try {
+      const currentMapStr = localStorage.getItem(this.FAILED_ATTEMPTS_KEY);
+      if (!currentMapStr) return;
+      const map: Record<string, number> = JSON.parse(currentMapStr);
+      delete map[key];
+      localStorage.setItem(this.FAILED_ATTEMPTS_KEY, JSON.stringify(map));
+    } catch {
+      localStorage.removeItem(this.FAILED_ATTEMPTS_KEY);
+    }
+  }
+
+  setAuthLockout(state: { identifier: string; failedAttempts: number; lockedUntil: number }): void {
+    try {
+      const normalizedState = {
+        ...state,
+        identifier: this.normalizeIdentifier(state.identifier),
+      };
+      localStorage.setItem(this.LOCKOUT_KEY, JSON.stringify(normalizedState));
+    } catch {
+      localStorage.removeItem(this.LOCKOUT_KEY);
+    }
+  }
+
+  getAuthLockout(): { identifier: string; failedAttempts: number; lockedUntil: number } | null {
+    const lockoutStr = localStorage.getItem(this.LOCKOUT_KEY);
+    if (!lockoutStr) return null;
+    try {
+      const state = JSON.parse(lockoutStr);
+      if (
+        state &&
+        typeof state.identifier === 'string' &&
+        typeof state.lockedUntil === 'number' &&
+        typeof state.failedAttempts === 'number'
+      ) {
+        return state;
+      }
+      this.clearAuthLockout();
+      return null;
+    } catch {
+      this.clearAuthLockout();
+      return null;
+    }
+  }
+
+  clearAuthLockout(): void {
+    localStorage.removeItem(this.LOCKOUT_KEY);
+  }
 }

@@ -9,16 +9,17 @@
  *   - Bloqueo Definitivo con advertencia de auditoría por email (403 Forbidden)
  */
 
-import { Component, inject, signal, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
-import { takeWhile } from 'rxjs/operators';
 import { AuthState } from '../../../core/auth/auth.state';
 import { AuthService } from '../../../core/services/auth.service';
+import { SessionStorageService } from '../../../core/services/session-storage.service';
 import { LoginResponse } from '../../../core/models/auth.models';
+import { AUTH_CONFIG } from '../../../core/auth/auth.config';
 import { ForgotPasswordModalComponent } from './forgot-password-modal/forgot-password-modal.component';
 
 type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
@@ -30,10 +31,11 @@ type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent implements OnDestroy {
-  private readonly fb          = inject(FormBuilder);
-  private readonly authState   = inject(AuthState);
-  private readonly authService = inject(AuthService);
+export class LoginComponent implements OnInit, OnDestroy {
+  private readonly fb                   = inject(FormBuilder);
+  private readonly authState            = inject(AuthState);
+  private readonly authService          = inject(AuthService);
+  private readonly sessionStorageService = inject(SessionStorageService);
 
   // ── Estado del layout / vistas (HU-010) ──────────────────
   protected readonly viewState = signal<LoginViewState>('login');
@@ -66,6 +68,50 @@ export class LoginComponent implements OnDestroy {
     return this.form.valid;
   }
 
+  ngOnInit(): void {
+    this.checkAndRestoreLockoutState();
+
+    // Sincronizar el conteo de intentos fallidos cuando el usuario cambia o escribe el email
+    this.emailCtrl.valueChanges.subscribe((rawEmail) => {
+      if (this.viewState() === 'login' && rawEmail) {
+        const email = this.sessionStorageService.normalizeIdentifier(rawEmail);
+        const failed = this.sessionStorageService.getFailedAttempts(email);
+        if (failed > 0 && failed < AUTH_CONFIG.maxFailedAttempts) {
+          this.attemptsRemaining.set(AUTH_CONFIG.maxFailedAttempts - failed);
+        }
+      }
+    });
+  }
+
+  /**
+   * Verifica al cargar la página si existe un bloqueo activo guardado en localStorage.
+   * Evita mostrar brevemente el formulario si la cuenta está pausada.
+   */
+  private checkAndRestoreLockoutState(): void {
+    const lockoutState = this.sessionStorageService.getAuthLockout();
+    if (!lockoutState) return;
+
+    const now = Date.now();
+    const remainingSeconds = Math.max(0, Math.ceil((lockoutState.lockedUntil - now) / 1000));
+
+    if (remainingSeconds > 0) {
+      // Restaurar inmediatamente el bloqueo sin mostrar el formulario
+      this.viewState.set('locked-temporary');
+      if (lockoutState.identifier) {
+        this.emailCtrl.setValue(lockoutState.identifier, { emitEvent: false });
+      }
+      this.startLockCountdown(lockoutState.lockedUntil);
+    } else {
+      // El bloqueo expiró mientras la página estaba cerrada o refrescada
+      this.sessionStorageService.clearAuthLockout();
+      if (lockoutState.identifier) {
+        this.sessionStorageService.clearFailedAttempts(lockoutState.identifier);
+      }
+      this.viewState.set('login');
+      this.attemptsRemaining.set(null);
+    }
+  }
+
   // ── Acciones de vista ────────────────────────────────────
 
   protected togglePwd(event?: Event): void {
@@ -87,115 +133,158 @@ export class LoginComponent implements OnDestroy {
 
   /**
    * Procesa el inicio de sesión y gestiona las respuestas de error del servidor (HU-010).
+   * Contiene validación defensiva contra ejecuciones durante estado bloqueado.
    */
   protected onSubmit(): void {
-    if (!this.form.valid || this.isLoading()) return;
-    
+    // Validación defensiva: No procesar si está bloqueado o en proceso de envío
+    if (this.viewState() === 'locked-temporary' || this.viewState() === 'locked-permanent' || this.isLoading()) {
+      return;
+    }
+
+    if (!this.form.valid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
     this.loginError.set(null);
     this.isLoading.set(true);
     this.animateShake.set(false);
 
     const { email, password } = this.form.getRawValue();
+    const normalizedEmail = this.sessionStorageService.normalizeIdentifier(email!);
 
-    this.authService.login({ identifier: email!, password: password! }).subscribe({
+    this.authService.login({ identifier: normalizedEmail, password: password! }).subscribe({
       next: (res: LoginResponse) => {
         this.isLoading.set(false);
         if (res.success && res.data) {
-          // Login exitoso: resetear intentos
+          // Login exitoso: limpiar por completo bloqueos e intentos fallidos
+          this.clearLockCountdown();
+          this.sessionStorageService.clearAuthLockout();
+          this.sessionStorageService.clearFailedAttempts(normalizedEmail);
           this.attemptsRemaining.set(null);
+
           this.authState.login(res.data);
         } else {
           // Respuesta no exitosa cuenta como intento fallido
-          this.decrementAttempts();
+          this.decrementAttempts(normalizedEmail);
           this.loginError.set(res.message || 'Credenciales incorrectas.');
         }
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);
-        this.handleLoginError(err);
+        this.handleLoginError(err, normalizedEmail);
       },
     });
   }
 
   /**
-   * Decrementa los intentos restantes de forma local (HU-010).
-   * Cuando llega a 0, bloquea el formulario.
+   * Decrementa los intentos restantes asociándolos al identificador normalizado (HU-010).
+   * Al alcanzar el límite (maxFailedAttempts), calcula el timestamp absoluto e inicia el bloqueo.
    */
-  private decrementAttempts(): void {
-    let current = this.attemptsRemaining();
-    if (current === null) {
-      current = 2; // Primera falla: de 3 baja a 2
-    } else {
-      current--;
-    }
+  private decrementAttempts(identifier?: string): void {
+    const email = identifier || this.sessionStorageService.normalizeIdentifier(this.emailCtrl.value || '');
+    const currentFailed = this.sessionStorageService.getFailedAttempts(email) + 1;
+    this.sessionStorageService.saveFailedAttempts(email, currentFailed);
 
-    if (current <= 0) {
+    const remaining = Math.max(0, AUTH_CONFIG.maxFailedAttempts - currentFailed);
+
+    if (currentFailed >= AUTH_CONFIG.maxFailedAttempts) {
+      const lockedUntil = Date.now() + AUTH_CONFIG.lockoutDurationSeconds * 1000;
+      
+      this.sessionStorageService.setAuthLockout({
+        identifier: email,
+        failedAttempts: currentFailed,
+        lockedUntil,
+      });
+
       this.attemptsRemaining.set(0);
       this.loginError.set('Has agotado tus intentos. Por seguridad, tu acceso ha sido bloqueado temporalmente.');
       this.animateShake.set(true);
       setTimeout(() => this.animateShake.set(false), 500);
-      this.startLockCountdown(900);
+
       this.viewState.set('locked-temporary');
+      this.startLockCountdown(lockedUntil);
     } else {
-      this.attemptsRemaining.set(current);
+      this.attemptsRemaining.set(remaining);
       this.animateShake.set(true);
       setTimeout(() => this.animateShake.set(false), 500);
     }
   }
 
   /**
-   * Centraliza e intercepta los escenarios de error devueltos por Spring Boot (HU-010).
-   * Siempre decrementa los intentos localmente para que la cuenta regresiva funcione
-   * sin depender de lo que el backend devuelva.
+   * Intercepta los escenarios de error devueltos por la API o el entorno mock (HU-010).
    */
-  private handleLoginError(err: HttpErrorResponse): void {
+  private handleLoginError(err: HttpErrorResponse, identifier: string): void {
     const errorData = err.error || {};
-    
+
     switch (err.status) {
-      case 423: // Bloqueo Temporal Activo (el backend ya bloqueó)
-        const secondsLeft = errorData.lockTimeRemaining ?? 900;
-        this.startLockCountdown(secondsLeft);
+      case 423: {
+        const secondsLeft = errorData.lockTimeRemaining ?? AUTH_CONFIG.lockoutDurationSeconds;
+        const lockedUntil = Date.now() + secondsLeft * 1000;
+        this.sessionStorageService.setAuthLockout({
+          identifier,
+          failedAttempts: AUTH_CONFIG.maxFailedAttempts,
+          lockedUntil,
+        });
+        this.startLockCountdown(lockedUntil);
         this.viewState.set('locked-temporary');
         break;
+      }
 
-      case 403: // Bloqueo Definitivo Activo
+      case 403:
         this.viewState.set('locked-permanent');
         break;
 
       default:
-        // Cualquier error (401, 0/network, 500, etc.) = intento fallido
-        this.decrementAttempts();
+        this.decrementAttempts(identifier);
         this.loginError.set(errorData.message || 'Credenciales incorrectas. Acceso denegado.');
         break;
     }
   }
 
   /**
-   * Inicia el temporizador dinámico en cuenta regresiva que actualiza la UI segundo a segundo.
+   * Inicia el temporizador dinámico basado en tiempo real (timestamp absoluto lockedUntil).
+   * Recalcula el tiempo restante en cada tick para mantener exactitud ante recargas, suspensión o pestañas inactivas.
    */
-  private startLockCountdown(initialSeconds: number): void {
-    this.lockTimerSubscription?.unsubscribe();
-    this.lockTimeRemaining.set(initialSeconds);
-    this.updateFormattedTime(initialSeconds);
+  private startLockCountdown(lockedUntilTimestamp: number): void {
+    this.clearLockCountdown();
 
-    this.lockTimerSubscription = interval(1000)
-      .pipe(
-        takeWhile(() => this.lockTimeRemaining() > 0)
-      )
-      .subscribe({
-        next: () => {
-          const current = this.lockTimeRemaining() - 1;
-          this.lockTimeRemaining.set(current);
-          this.updateFormattedTime(current);
+    const initialRemaining = Math.max(0, Math.ceil((lockedUntilTimestamp - Date.now()) / 1000));
+    this.lockTimeRemaining.set(initialRemaining);
+    this.updateFormattedTime(initialRemaining);
 
-          if (current === 0) {
-            // Desbloqueado: regresar al formulario de login
-            this.viewState.set('login');
-            this.loginError.set(null);
-            this.attemptsRemaining.set(null);
+    this.lockTimerSubscription = interval(1000).subscribe({
+      next: () => {
+        const nowRemaining = Math.max(0, Math.ceil((lockedUntilTimestamp - Date.now()) / 1000));
+        this.lockTimeRemaining.set(nowRemaining);
+        this.updateFormattedTime(nowRemaining);
+
+        if (nowRemaining <= 0) {
+          this.clearLockCountdown();
+          this.sessionStorageService.clearAuthLockout();
+
+          const email = this.sessionStorageService.normalizeIdentifier(this.emailCtrl.value || '');
+          if (email) {
+            this.sessionStorageService.clearFailedAttempts(email);
           }
+
+          this.viewState.set('login');
+          this.loginError.set(null);
+          this.attemptsRemaining.set(null);
+          this.passwordCtrl.setValue('');
         }
-      });
+      },
+    });
+  }
+
+  /**
+   * Detiene y limpia el temporizador de cuenta regresiva activo si existe.
+   */
+  private clearLockCountdown(): void {
+    if (this.lockTimerSubscription) {
+      this.lockTimerSubscription.unsubscribe();
+      this.lockTimerSubscription = undefined;
+    }
   }
 
   /**
@@ -204,10 +293,10 @@ export class LoginComponent implements OnDestroy {
   private updateFormattedTime(totalSeconds: number): void {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    
+
     const minutesStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
     const secondsStr = seconds < 10 ? `0${seconds}` : `${seconds}`;
-    
+
     this.formattedLockTime.set(`${minutesStr}:${secondsStr}`);
   }
 
@@ -219,6 +308,6 @@ export class LoginComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.lockTimerSubscription?.unsubscribe();
+    this.clearLockCountdown();
   }
 }
