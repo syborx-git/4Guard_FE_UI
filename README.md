@@ -239,7 +239,7 @@ resuelva igual que npm 6/7, ignorando el conflicto de versiones transitivas.
 
 ### Instalación
 ```bash
-npm install
+
 ```
 
 ### 🖥️ Admin Console (Puerto 4200)
