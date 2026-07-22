@@ -13,4 +13,13 @@ export const adminRoutes: Routes = [
       import('./users/users-list.component').then((m) => m.UsersListComponent),
     title: '4GUARD WMS — Gestión de Usuarios',
   },
+  {
+    path: 'shifts',
+    loadComponent: () =>
+      import('./shifts/shift-management/shift-management.component').then(
+        (m) => m.ShiftManagementComponent
+      ),
+    title: '4GUARD WMS — Turnos y Horarios',
+  },
 ];
+
