@@ -351,16 +351,14 @@
 
 /* ── Filtros ───────────────────────────────────────────────── */
 
-.supplier-filters-row {
-  display: flex;
-  gap: 0.45rem;
-  align-items: center;
-  flex-wrap: wrap;
+.supplier-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
 }
 
 .supplier-filter-group {
-  flex: 1;
-  min-width: 90px;
+  width: 100%;
 }
 
 .supplier-filter-select {
@@ -379,27 +377,37 @@
 
 .supplier-filter-select:focus { border-color: var(--gold); }
 
-.supplier-filter-clear {
+.supplier-filters-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-input);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  margin-top: 0.15rem;
 }
 
-.supplier-filter-clear:hover {
+.supplier-filter-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  border: 1px dashed var(--c-danger-bdr);
+  border-radius: var(--radius-input);
   background: var(--c-danger-bg);
   color: var(--c-danger);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
 }
 
-.supplier-filter-clear .material-symbols-outlined { font-size: 18px; }
+.supplier-filter-clear-btn:hover {
+  background: var(--c-danger);
+  color: #ffffff;
+  border-style: solid;
+}
+
+.supplier-filter-clear-btn .material-symbols-outlined {
+  font-size: 15px;
+}
 
 /* ── Lista de Items ────────────────────────────────────────── */
 
@@ -1319,4 +1327,111 @@
 :host-context(.theme-dark) .skeleton {
   background: linear-gradient(90deg, #1f2937 25%, #2d3748 50%, #1f2937 75%);
   background-size: 200% 100%;
+}
+
+/* ── Timeline de Auditoría ── */
+.supplier-timeline-preview {
+  margin-top: 1.1rem;
+  border: 1px dashed rgba(197, 168, 107, 0.30);
+  border-radius: 12px;
+  background: rgba(197, 168, 107, 0.025);
+  overflow: hidden;
+}
+
+.supplier-timeline-preview__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px dashed rgba(197, 168, 107, 0.20);
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: var(--text-gold);
+  letter-spacing: 0.04em;
+}
+
+.supplier-timeline-preview__header .material-symbols-outlined { font-size: 16px; }
+
+.supplier-timeline-preview__desc {
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem 0;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.supplier-timeline-preview__nodes {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem 0.9rem 1.25rem;
+  gap: 0;
+}
+
+.supplier-tl-node {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.supplier-tl-node__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.supplier-tl-node__dot .material-symbols-outlined { font-size: 15px; }
+
+.supplier-tl-node--create  .supplier-tl-node__dot { background: var(--c-success-bg); border-color: var(--c-success-bdr); color: var(--c-success); }
+.supplier-tl-node--update  .supplier-tl-node__dot { background: rgba(45,125,210,0.1);    border-color: rgba(45,125,210,0.25); color: #2d7dd2; }
+.supplier-tl-node--status  .supplier-tl-node__dot { background: var(--c-warning-bg); border-color: var(--c-warning-bdr); color: var(--c-warning); }
+
+.supplier-tl-node__line {
+  position: absolute;
+  left: 14px;
+  top: 30px;
+  bottom: -16px;
+  width: 2px;
+  background: rgba(88, 98, 116, 0.12);
+}
+
+.supplier-tl-node__line--last { display: none; }
+
+.supplier-tl-node__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0 1rem;
+}
+
+.supplier-tl-node__action {
+  font-size: 0.77rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.supplier-tl-node__meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+/* Modo oscuro */
+:host-context(.theme-dark) .supplier-timeline-preview {
+  border-color: rgba(214, 182, 103, 0.15);
+  background: rgba(214, 182, 103, 0.015);
+}
+
+:host-context(.theme-dark) .supplier-timeline-preview__header {
+  border-color: rgba(214, 182, 103, 0.10);
+}
+
+:host-context(.theme-dark) .supplier-tl-node__line {
+  background: rgba(255,255,255,0.06);
 }
