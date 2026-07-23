@@ -13,4 +13,28 @@ export const adminRoutes: Routes = [
       import('./users/users-list.component').then((m) => m.UsersListComponent),
     title: '4GUARD WMS — Gestión de Usuarios',
   },
+  {
+    path: 'carriers',
+    loadChildren: () =>
+      import('./carriers/carriers.routes').then((m) => m.carriersRoutes),
+    title: '4GUARD WMS — Gestión de Transportistas',
+  },
+  {
+    path: 'sections',
+    loadChildren: () =>
+      import('./sections/sections.routes').then((m) => m.sectionsRoutes),
+    title: '4GUARD WMS — Secciones de Almacén',
+  },
+  {
+    path: 'suppliers',
+    loadChildren: () =>
+      import('./suppliers/supplier.routes').then((m) => m.supplierRoutes),
+    title: '4GUARD WMS — Catálogo de Proveedores',
+  },
+  {
+    path: 'sessions',
+    loadComponent: () =>
+      import('./sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
+    title: '4GUARD WMS — Sesiones Activas',
+  },
 ];

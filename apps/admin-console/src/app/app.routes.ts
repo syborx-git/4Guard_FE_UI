@@ -109,8 +109,18 @@ export const adminRoutes: Routes = [
         canActivate: [rbacGuard],
         data: { module: 'carriers' },
         loadChildren: () =>
-          import('./features/carriers/carriers.routes').then((m) => m.carriersRoutes),
+          import('./features/admin/carriers/carriers.routes').then((m) => m.carriersRoutes),
         title: '4GUARD WMS — Gestión de Transportistas',
+      },
+
+      // Secciones de Almacén
+      {
+        path: 'sections',
+        canActivate: [rbacGuard],
+        data: { module: 'sections' },
+        loadChildren: () =>
+          import('./features/admin/sections/sections.routes').then((m) => m.sectionsRoutes),
+        title: '4GUARD WMS — Secciones de Almacén',
       },
 
       // Gestión de Proveedores (HU-125)
@@ -119,7 +129,7 @@ export const adminRoutes: Routes = [
         canActivate: [rbacGuard],
         data: { module: 'suppliers' },
         loadChildren: () =>
-          import('./features/suppliers/supplier.routes').then((m) => m.supplierRoutes),
+          import('./features/admin/suppliers/supplier.routes').then((m) => m.supplierRoutes),
         title: '4GUARD WMS — Catálogo de Proveedores',
       },
 
@@ -147,7 +157,7 @@ export const adminRoutes: Routes = [
       {
         path: 'sessions',
         loadComponent: () =>
-          import('./features/sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
+          import('./features/admin/sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
         title: '4GUARD WMS — Sesiones Activas',
       },
 
