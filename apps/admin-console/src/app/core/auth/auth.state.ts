@@ -174,6 +174,8 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing
       case 'performance':
         return true; // Acceso total habilitado para desarrollo y testing
+      case 'shifts':
+        return true; // Acceso total habilitado para desarrollo y testing (HU-140)
       default:
         return false;
     }

@@ -33,3 +33,14 @@ export interface LoginResponse {
   data: JwtSession;
   timestamp: string;
 }
+
+export interface FailedLoginState {
+  identifier: string;
+  failedAttempts: number;
+}
+
+export interface AuthLockoutState {
+  identifier: string;
+  failedAttempts: number;
+  lockedUntil: number;
+}

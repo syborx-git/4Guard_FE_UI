@@ -38,3 +38,4 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Sesiones Activas',
   },
 ];
+
