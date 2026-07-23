@@ -3,15 +3,7 @@
  * @description HU-127 — Gestión de Layout y Ubicaciones.
  *
  * Módulo administrativo maestro de configuración de ubicaciones físicas del
- * almacén 4GUARD WMS. Proporciona el catálogo de ubicaciones que consume el
- * resto del sistema: Recepción, Calidad, Inventario, Picking y Embarques.
- *
- * Arquitectura:
- * - Standalone Component con Angular Signals
- * - ReactiveForm con validaciones progresivas
- * - Árbol jerárquico construido dinámicamente desde computed()
- * - LayoutService desacoplado (intercambiable HTTP/mock)
- * - ToastService existente para notificaciones
+ * almacén 4GUARD WMS. Conectado 100% con la API real del backend.
  */
 
 import {
@@ -42,15 +34,11 @@ import {
   CreateLocationPayload,
   UpdateLocationPayload,
   ChangeStatusPayload,
-  CAPACITY_UNIT_LABELS,
   LOCATION_TYPE_LABELS,
-  LOGISTIC_FUNCTION_LABELS,
   LOCATION_STATUS_LABELS,
   LOCATION_FSM_TRANSITIONS,
   STATUS_REQUIRES_REASON,
-  CapacityUnit,
   LocationType,
-  LogisticFunction,
 } from '../models/warehouse-location.model';
 
 // ── Validator: código de ubicación ───────────────────────────────────────────
@@ -76,13 +64,9 @@ export class LayoutManagementComponent implements OnInit {
   private readonly fb        = inject(FormBuilder);
 
   // ── Exposición de enums al template ───────────────────────────────────────
-  readonly CAPACITY_UNIT_LABELS       = CAPACITY_UNIT_LABELS;
   readonly LOCATION_TYPE_LABELS       = LOCATION_TYPE_LABELS;
-  readonly LOGISTIC_FUNCTION_LABELS   = LOGISTIC_FUNCTION_LABELS;
   readonly LOCATION_STATUS_LABELS     = LOCATION_STATUS_LABELS;
-  readonly capacityUnits   = Object.keys(CAPACITY_UNIT_LABELS) as CapacityUnit[];
   readonly locationTypes   = Object.keys(LOCATION_TYPE_LABELS) as LocationType[];
-  readonly logisticFunctions = Object.keys(LOGISTIC_FUNCTION_LABELS) as LogisticFunction[];
   readonly allStatuses     = Object.keys(LOCATION_STATUS_LABELS) as LocationStatus[];
 
   // ── Estado de datos ────────────────────────────────────────────────────────
@@ -99,9 +83,9 @@ export class LayoutManagementComponent implements OnInit {
   readonly searchTerm    = signal('');
   readonly statusFilter  = signal<LocationStatus | 'ALL'>('ALL');
   readonly zoneFilter    = signal<string>('ALL');
-  readonly expandedNodes = signal<Set<string>>(new Set(['Z-001', 'Z-002', 'Z-003', 'Z-004']));
+  readonly expandedNodes = signal<Set<string>>(new Set());
 
-  /** Árbol jerárquico — construido 100% dinámicamente desde los datos */
+  /** Árbol jerárquico — construido dinámicamente: Zona → Pasillo → Rack → Leaf */
   readonly locationTree = computed<LocationTreeNode[]>(() => {
     const search = this.searchTerm().toLowerCase().trim();
     const sFilt  = this.statusFilter();
@@ -118,28 +102,28 @@ export class LayoutManagementComponent implements OnInit {
     }
     if (search) {
       filtered = filtered.filter(l =>
-        l.code.toLowerCase().includes(search) ||
-        l.name.toLowerCase().includes(search) ||
-        l.zoneName.toLowerCase().includes(search)
+        (l.code && l.code.toLowerCase().includes(search)) ||
+        (l.name && l.name.toLowerCase().includes(search)) ||
+        (l.zoneName && l.zoneName.toLowerCase().includes(search))
       );
     }
 
-    // 2. Agrupar por zona → pasillo → bahía → leaf
+    // 2. Agrupar por zona → pasillo → rack → leaf
     const zoneMap = new Map<string, Map<string, Map<string, WarehouseLocation[]>>>();
 
     for (const loc of filtered) {
-      const zoneKey  = `${loc.zoneId}::${loc.zoneName}`;
+      const zoneKey  = `${loc.zoneId}::${loc.zoneName || loc.zoneCode || 'Zona'}`;
       const aisleKey = loc.aisle ?? '__NONE__';
-      const bayKey   = loc.bay   ?? '__NONE__';
+      const rackKey  = loc.rack  ?? '__NONE__';
 
       if (!zoneMap.has(zoneKey)) zoneMap.set(zoneKey, new Map());
       const aisleMap = zoneMap.get(zoneKey)!;
 
       if (!aisleMap.has(aisleKey)) aisleMap.set(aisleKey, new Map());
-      const bayMap = aisleMap.get(aisleKey)!;
+      const rackMap = aisleMap.get(aisleKey)!;
 
-      if (!bayMap.has(bayKey)) bayMap.set(bayKey, []);
-      bayMap.get(bayKey)!.push(loc);
+      if (!rackMap.has(rackKey)) rackMap.set(rackKey, []);
+      rackMap.get(rackKey)!.push(loc);
     }
 
     // 3. Construir nodos
@@ -160,16 +144,12 @@ export class LayoutManagementComponent implements OnInit {
   readonly kpiBlocked     = computed(() => this.locations().filter(l => l.status === 'BLOCKED').length);
   readonly kpiMaintenance = computed(() => this.locations().filter(l => l.status === 'MAINTENANCE').length);
 
-  /**
-   * Capacidad utilizada global — depende de datos del módulo de Inventario.
-   * Si los registros no tienen currentOccupancy, se retorna null (no disponible).
-   */
+  /** Capacidad utilizada global */
   readonly kpiOccupancy = computed<number | null>(() => {
     const locs = this.locations();
     const total   = locs.reduce((s, l) => s + (l.maxCapacity ?? 0), 0);
     const current = locs.reduce((s, l) => s + (l.currentOccupancy ?? 0), 0);
     if (total === 0) return null;
-    // Solo calcular si al menos una ubicación tiene currentOccupancy definido
     const hasOccupancy = locs.some(l => l.currentOccupancy !== undefined);
     if (!hasOccupancy) return null;
     return Math.round((current / total) * 100);
@@ -195,35 +175,32 @@ export class LayoutManagementComponent implements OnInit {
 
   // ── ReactiveForm ───────────────────────────────────────────────────────────
   readonly editForm = this.fb.group({
-    code:             ['', [Validators.required, locationCodeValidator]],
-    name:             ['', [Validators.required, Validators.maxLength(100)]],
-    warehouseId:      ['', Validators.required],
-    warehouseName:    ['', Validators.required],
-    zoneId:           ['', Validators.required],
-    zoneCode:         [''],
-    zoneName:         [''],
-    aisle:            [''],
-    bay:              [''],
-    rack:             [''],
-    level:            [''],
-    position:         [''],
-    locationType:     ['', Validators.required],
-    logisticFunction: ['', Validators.required],
-    maxCapacity:      [null as number | null, [Validators.required, Validators.min(1)]],
-    capacityUnit:     ['', Validators.required],
-    isStorageAllowed: [true],
-    observations:     [''],
+    code:         ['', [Validators.required, locationCodeValidator]],
+    name:         ['', [Validators.required, Validators.maxLength(150)]],
+    warehouseId:  ['', Validators.required],
+    warehouseName:[''],
+    zoneId:       ['', Validators.required],
+    zoneCode:     [''],
+    zoneName:     [''],
+    aisle:        [''],
+    rack:         [''],
+    level:        [''],
+    position:     [''],
+    coordX:       [0],
+    coordY:       [0],
+    coordZ:       [0],
+    locationType: ['PALLET' as LocationType, Validators.required],
+    maxCapacity:  [1, [Validators.required, Validators.min(1)]],
+    observations: [''],
   });
 
   // Accesores rápidos de controles
-  get fCode()             { return this.editForm.controls['code']; }
-  get fName()             { return this.editForm.controls['name']; }
-  get fWarehouseId()      { return this.editForm.controls['warehouseId']; }
-  get fZoneId()           { return this.editForm.controls['zoneId']; }
-  get fLocationType()     { return this.editForm.controls['locationType']; }
-  get fLogisticFunction() { return this.editForm.controls['logisticFunction']; }
-  get fMaxCapacity()      { return this.editForm.controls['maxCapacity']; }
-  get fCapacityUnit()     { return this.editForm.controls['capacityUnit']; }
+  get fCode()         { return this.editForm.controls['code']; }
+  get fName()         { return this.editForm.controls['name']; }
+  get fWarehouseId()  { return this.editForm.controls['warehouseId']; }
+  get fZoneId()       { return this.editForm.controls['zoneId']; }
+  get fLocationType() { return this.editForm.controls['locationType']; }
+  get fMaxCapacity()  { return this.editForm.controls['maxCapacity']; }
 
   // ── Ciclo de vida ──────────────────────────────────────────────────────────
 
@@ -233,6 +210,22 @@ export class LayoutManagementComponent implements OnInit {
 
   private loadData(): void {
     this.isLoading.set(true);
+
+    this.layoutSvc.getZones().subscribe({
+      next: (zones) => {
+        this.zones.set(zones);
+        // Expandir zonas por defecto
+        if (zones.length > 0) {
+          this.expandedNodes.update(s => {
+            const next = new Set(s);
+            zones.forEach(z => next.add(z.id));
+            return next;
+          });
+        }
+      },
+      error: () => {},
+    });
+
     this.layoutSvc.getLocations().subscribe({
       next: (locs) => {
         this.locations.set(locs);
@@ -242,11 +235,6 @@ export class LayoutManagementComponent implements OnInit {
         this.toastSvc.error('Error al cargar las ubicaciones. Verifica la conexión.');
         this.isLoading.set(false);
       },
-    });
-
-    this.layoutSvc.getZones().subscribe({
-      next: (zones) => this.zones.set(zones),
-      error: () => { /* No bloquear la UI */ },
     });
   }
 
@@ -261,9 +249,7 @@ export class LayoutManagementComponent implements OnInit {
   }
 
   onSelectLocation(loc: WarehouseLocation): void {
-    // Advertir si hay cambios sin guardar
     if (this.isDirty() && this.selectedId() !== null) {
-      // En producción: confirmar con modal. Por ahora notificar.
       this.toastSvc.warning('Tienes cambios sin guardar en la ubicación anterior.');
     }
     this.selectedId.set(loc.id);
@@ -286,12 +272,23 @@ export class LayoutManagementComponent implements OnInit {
     this.saveError.set(null);
     this.formSubmitted.set(false);
     this.showAuditHistory.set(false);
+
+    const firstZone = this.zones().length > 0 ? this.zones()[0] : null;
+
     this.editForm.reset({
-      warehouseId:   'WH-4GUARD-001',
-      warehouseName: '4GUARD — Almacén Principal',
-      isStorageAllowed: true,
+      warehouseId:   'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+      warehouseName: 'Almacén Principal',
+      zoneId:        firstZone ? firstZone.id : '',
+      zoneCode:      firstZone ? firstZone.code : '',
+      zoneName:      firstZone ? firstZone.name : '',
+      locationType:  'PALLET',
+      maxCapacity:   1,
+      coordX:        0,
+      coordY:        0,
+      coordZ:        0,
     });
     this.editForm.markAsUntouched();
+    this.autoGenerateCodeAndName();
   }
 
   onCancelEdit(): void {
@@ -308,6 +305,7 @@ export class LayoutManagementComponent implements OnInit {
 
   onFormChange(): void {
     this.isDirty.set(true);
+    this.autoGenerateCodeAndName();
   }
 
   onZoneChange(event: Event): void {
@@ -317,12 +315,37 @@ export class LayoutManagementComponent implements OnInit {
       this.editForm.patchValue({ zoneCode: zone.code, zoneName: zone.name });
     }
     this.isDirty.set(true);
+    this.autoGenerateCodeAndName();
+  }
+
+  private autoGenerateCodeAndName(): void {
+    const raw = this.editForm.getRawValue();
+    const zoneCode = (raw.zoneCode || 'ZONA').trim().toUpperCase();
+    const aisle = (raw.aisle || '').trim().toUpperCase();
+    const rack = (raw.rack || '').trim().toUpperCase();
+    const level = (raw.level || '').trim().toUpperCase();
+
+    // Auto-generar código si el control no fue modificado manualmente por el usuario o si estamos creando
+    if (this.isCreating() && !this.editForm.controls['code'].dirty) {
+      const codeParts = [zoneCode, aisle, rack, level ? `N${level}` : ''].filter(Boolean);
+      const generatedCode = codeParts.join('-');
+      this.editForm.patchValue({ code: generatedCode }, { emitEvent: false });
+    }
+
+    if (this.isCreating() && !this.editForm.controls['name'].dirty) {
+      const nameParts = [];
+      if (raw.zoneName) nameParts.push(raw.zoneName);
+      if (aisle) nameParts.push(`Pasillo ${aisle}`);
+      if (rack) nameParts.push(`Rack ${rack}`);
+      if (level) nameParts.push(`Nivel ${level}`);
+      const generatedName = nameParts.join(' – ') || 'Nueva Ubicación';
+      this.editForm.patchValue({ name: generatedName }, { emitEvent: false });
+    }
   }
 
   // ── Guardado ───────────────────────────────────────────────────────────────
 
   onSave(): void {
-    // Anti-double-submit
     if (this.isSaving()) return;
 
     this.formSubmitted.set(true);
@@ -336,49 +359,29 @@ export class LayoutManagementComponent implements OnInit {
     this.isSaving.set(true);
     const raw = this.editForm.getRawValue();
 
+    const payload: CreateLocationPayload = {
+      code:          raw.code!,
+      name:          raw.name!,
+      warehouseId:   raw.warehouseId!,
+      warehouseName: raw.warehouseName ?? '',
+      zoneId:        raw.zoneId!,
+      zoneCode:      raw.zoneCode ?? '',
+      zoneName:      raw.zoneName ?? '',
+      aisle:         raw.aisle    || undefined,
+      rack:          raw.rack     || undefined,
+      level:         raw.level    || undefined,
+      position:      raw.position || undefined,
+      coordX:        raw.coordX   ?? 0,
+      coordY:        raw.coordY   ?? 0,
+      coordZ:        raw.coordZ   ?? 0,
+      locationType:  raw.locationType as LocationType,
+      maxCapacity:   raw.maxCapacity!,
+      observations:  raw.observations || undefined,
+    };
+
     if (this.isCreating()) {
-      const payload: CreateLocationPayload = {
-        code:             raw.code!,
-        name:             raw.name!,
-        warehouseId:      raw.warehouseId!,
-        warehouseName:    raw.warehouseName ?? '',
-        zoneId:           raw.zoneId!,
-        zoneCode:         raw.zoneCode ?? '',
-        zoneName:         raw.zoneName ?? '',
-        aisle:            raw.aisle    || undefined,
-        bay:              raw.bay      || undefined,
-        rack:             raw.rack     || undefined,
-        level:            raw.level    || undefined,
-        position:         raw.position || undefined,
-        locationType:     raw.locationType as LocationType,
-        logisticFunction: raw.logisticFunction as LogisticFunction,
-        maxCapacity:      raw.maxCapacity!,
-        capacityUnit:     raw.capacityUnit as CapacityUnit,
-        isStorageAllowed: raw.isStorageAllowed ?? true,
-        observations:     raw.observations || undefined,
-      };
       this._execCreate(payload);
     } else {
-      const payload: UpdateLocationPayload = {
-        code:             raw.code!,
-        name:             raw.name!,
-        warehouseId:      raw.warehouseId!,
-        warehouseName:    raw.warehouseName ?? '',
-        zoneId:           raw.zoneId!,
-        zoneCode:         raw.zoneCode ?? '',
-        zoneName:         raw.zoneName ?? '',
-        aisle:            raw.aisle    || undefined,
-        bay:              raw.bay      || undefined,
-        rack:             raw.rack     || undefined,
-        level:            raw.level    || undefined,
-        position:         raw.position || undefined,
-        locationType:     raw.locationType as LocationType,
-        logisticFunction: raw.logisticFunction as LogisticFunction,
-        maxCapacity:      raw.maxCapacity!,
-        capacityUnit:     raw.capacityUnit as CapacityUnit,
-        isStorageAllowed: raw.isStorageAllowed ?? true,
-        observations:     raw.observations || undefined,
-      };
       this._execUpdate(this.selectedId()!, payload);
     }
   }
@@ -393,7 +396,6 @@ export class LayoutManagementComponent implements OnInit {
         this.isSaving.set(false);
         this._patchForm(created);
         this.toastSvc.success(`Ubicación "${created.code}" creada correctamente.`);
-        // Expandir el nodo de la zona recién usada
         this.expandedNodes.update(s => {
           const next = new Set(s);
           next.add(created.zoneId);
@@ -402,7 +404,7 @@ export class LayoutManagementComponent implements OnInit {
       },
       error: (err) => {
         this.isSaving.set(false);
-        const msg = err?.message ?? 'Error al crear la ubicación.';
+        const msg = err?.message ?? err?.error?.message ?? 'Error al crear la ubicación.';
         this.saveError.set(msg);
         this.toastSvc.error(msg);
       },
@@ -422,10 +424,9 @@ export class LayoutManagementComponent implements OnInit {
       },
       error: (err) => {
         this.isSaving.set(false);
-        const msg = err?.message ?? 'Error al guardar la ubicación.';
+        const msg = err?.message ?? err?.error?.message ?? 'Error al guardar la ubicación.';
         this.saveError.set(msg);
         this.toastSvc.error(msg);
-        // El formulario permanece abierto con los datos del usuario
       },
     });
   }
@@ -484,7 +485,7 @@ export class LayoutManagementComponent implements OnInit {
       },
       error: (err) => {
         this.isChangingStatus.set(false);
-        const msg = err?.message ?? 'Error al cambiar el estado.';
+        const msg = err?.message ?? err?.error?.message ?? 'Error al cambiar el estado.';
         this.toastSvc.error(msg);
       },
     });
@@ -494,7 +495,7 @@ export class LayoutManagementComponent implements OnInit {
 
   onDelete(): void {
     const loc = this.selectedLoc();
-    if (!loc || !loc.canDelete) return;
+    if (!loc) return;
 
     if (!confirm(`¿Eliminar permanentemente la ubicación "${loc.code}"?\nEsta acción no se puede deshacer.`)) return;
 
@@ -507,7 +508,7 @@ export class LayoutManagementComponent implements OnInit {
         this.toastSvc.success(`Ubicación "${loc.code}" eliminada.`);
       },
       error: (err) => {
-        const msg = err?.message ?? 'Error al eliminar la ubicación.';
+        const msg = err?.message ?? err?.error?.message ?? 'Error al eliminar la ubicación.';
         this.toastSvc.error(msg);
       },
     });
@@ -620,7 +621,6 @@ export class LayoutManagementComponent implements OnInit {
     return entry.id;
   }
 
-  /** Determina si mostrar el error de un control */
   hasError(ctrlName: string): boolean {
     const ctrl = this.editForm.get(ctrlName);
     return !!(ctrl && ctrl.invalid && (ctrl.touched || this.formSubmitted()));
@@ -640,24 +640,23 @@ export class LayoutManagementComponent implements OnInit {
 
   private _patchForm(loc: WarehouseLocation): void {
     this.editForm.patchValue({
-      code:             loc.code,
-      name:             loc.name,
-      warehouseId:      loc.warehouseId,
-      warehouseName:    loc.warehouseName,
-      zoneId:           loc.zoneId,
-      zoneCode:         loc.zoneCode,
-      zoneName:         loc.zoneName,
-      aisle:            loc.aisle    ?? '',
-      bay:              loc.bay      ?? '',
-      rack:             loc.rack     ?? '',
-      level:            loc.level    ?? '',
-      position:         loc.position ?? '',
-      locationType:     loc.locationType,
-      logisticFunction: loc.logisticFunction,
-      maxCapacity:      loc.maxCapacity,
-      capacityUnit:     loc.capacityUnit,
-      isStorageAllowed: loc.isStorageAllowed,
-      observations:     loc.observations ?? '',
+      code:          loc.code,
+      name:          loc.name,
+      warehouseId:   loc.warehouseId,
+      warehouseName: loc.warehouseName,
+      zoneId:        loc.zoneId,
+      zoneCode:      loc.zoneCode,
+      zoneName:      loc.zoneName,
+      aisle:         loc.aisle    ?? '',
+      rack:          loc.rack     ?? '',
+      level:         loc.level    ?? '',
+      position:      loc.position ?? '',
+      coordX:        loc.coordX   ?? 0,
+      coordY:        loc.coordY   ?? 0,
+      coordZ:        loc.coordZ   ?? 0,
+      locationType:  loc.locationType,
+      maxCapacity:   loc.maxCapacity,
+      observations:  loc.observations ?? '',
     });
     this.editForm.markAsPristine();
     this.editForm.markAsUntouched();
@@ -671,21 +670,19 @@ export class LayoutManagementComponent implements OnInit {
   ): LocationTreeNode {
     const children: LocationTreeNode[] = [];
 
-    for (const [aisleKey, bayMap] of aisleMap) {
+    for (const [aisleKey, rackMap] of aisleMap) {
       if (aisleKey === '__NONE__') {
-        // Sin pasillo — los hijos directos son los nodos de bahía o leaf
-        for (const [bayKey, locs] of bayMap) {
-          if (bayKey === '__NONE__') {
-            // Sin bahía — las ubicaciones son hojas directas de la zona
+        for (const [rackKey, locs] of rackMap) {
+          if (rackKey === '__NONE__') {
             for (const loc of locs) {
               children.push(this._buildLeafNode(loc));
             }
           } else {
-            children.push(this._buildBayNode(`${zoneId}-${bayKey}`, bayKey, locs, expanded));
+            children.push(this._buildRackNode(`${zoneId}-${rackKey}`, rackKey, locs, expanded));
           }
         }
       } else {
-        children.push(this._buildAisleNode(zoneId, aisleKey, bayMap, expanded));
+        children.push(this._buildAisleNode(zoneId, aisleKey, rackMap, expanded));
       }
     }
 
@@ -702,17 +699,17 @@ export class LayoutManagementComponent implements OnInit {
   private _buildAisleNode(
     zoneId: string,
     aisle: string,
-    bayMap: Map<string, WarehouseLocation[]>,
+    rackMap: Map<string, WarehouseLocation[]>,
     expanded: Set<string>
   ): LocationTreeNode {
     const nodeId = `${zoneId}-AISLE-${aisle}`;
     const children: LocationTreeNode[] = [];
 
-    for (const [bayKey, locs] of bayMap) {
-      if (bayKey === '__NONE__') {
+    for (const [rackKey, locs] of rackMap) {
+      if (rackKey === '__NONE__') {
         for (const loc of locs) children.push(this._buildLeafNode(loc));
       } else {
-        children.push(this._buildBayNode(`${nodeId}-${bayKey}`, bayKey, locs, expanded));
+        children.push(this._buildRackNode(`${nodeId}-${rackKey}`, rackKey, locs, expanded));
       }
     }
 
@@ -726,15 +723,15 @@ export class LayoutManagementComponent implements OnInit {
     };
   }
 
-  private _buildBayNode(
+  private _buildRackNode(
     nodeId: string,
-    bay: string,
+    rack: string,
     locs: WarehouseLocation[],
     expanded: Set<string>
   ): LocationTreeNode {
     const children = locs.map(l => this._buildLeafNode(l));
     return {
-      id: nodeId, label: `Bahía ${bay}`, level: 'bay',
+      id: nodeId, label: `Rack ${rack}`, level: 'rack',
       isExpanded: expanded.has(nodeId),
       count: locs.length,
       statusSummary: this._sumStatus(children),
@@ -745,7 +742,7 @@ export class LayoutManagementComponent implements OnInit {
   private _buildLeafNode(loc: WarehouseLocation): LocationTreeNode {
     return {
       id:       `leaf-${loc.id}`,
-      label:    loc.name,
+      label:    loc.name || loc.code,
       level:    'leaf',
       isExpanded: false,
       count:    1,

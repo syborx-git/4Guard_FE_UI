@@ -1,0 +1,609 @@
+<!--
+  section-management.component.html
+  Secciones de Almacén — 4GUARD WMS
+
+  Layout: Split View 35/65 (Directorio + Detalle)
+  Homologado con carrier-management.component.html (HU-128)
+-->
+
+<div class="sections-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="sections-header">
+
+    <div class="sections-header__top">
+
+      <div class="sections-header__left">
+        <div class="sections-header__icon-wrap">
+          <span class="material-symbols-outlined sections-header__icon">grid_view</span>
+        </div>
+
+        <div class="sections-header__copy">
+          <div class="sections-header__eyebrow">
+            <a routerLink="/admin" class="sections-header__eyebrow-tag"
+              style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="sections-header__eyebrow-sep">·</span>
+            <span>Estructura de Almacén</span>
+          </div>
+          <h1 class="sections-header__title">Secciones de Almacén</h1>
+          <p class="sections-header__subtitle">
+            Zonificación lógica del almacén: áreas de recibo, pasillos, cámaras y zonas especiales
+          </p>
+        </div>
+      </div>
+
+      <button
+        id="btn-new-section"
+        class="sections-btn sections-btn--primary"
+        type="button"
+        (click)="startNewSection()"
+        [disabled]="isSaving()"
+        aria-label="Registrar nueva sección">
+        <span class="material-symbols-outlined">add</span>
+        Nueva sección
+      </button>
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="sections-kpi-grid" aria-label="Indicadores de secciones">
+
+      <!-- Total -->
+      <div class="sections-kpi-card sections-kpi-card--total">
+        <div class="sections-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">grid_view</span>
+        </div>
+        <div class="sections-kpi-card__body">
+          @if (isLoading()) {
+            <div class="sections-kpi-card__skeleton"></div>
+          } @else {
+            <span class="sections-kpi-card__value">{{ totalSections() }}</span>
+          }
+          <span class="sections-kpi-card__label">Total Secciones</span>
+        </div>
+        <div class="sections-kpi-card__bar sections-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activas -->
+      <div class="sections-kpi-card sections-kpi-card--active">
+        <div class="sections-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="sections-kpi-card__body">
+          @if (isLoading()) {
+            <div class="sections-kpi-card__skeleton"></div>
+          } @else {
+            <span class="sections-kpi-card__value">{{ activeSectionsCount() }}</span>
+          }
+          <span class="sections-kpi-card__label">Activas</span>
+        </div>
+        <div class="sections-kpi-card__bar sections-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Inactivas -->
+      <div class="sections-kpi-card sections-kpi-card--inactive">
+        <div class="sections-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="sections-kpi-card__body">
+          @if (isLoading()) {
+            <div class="sections-kpi-card__skeleton"></div>
+          } @else {
+            <span class="sections-kpi-card__value">{{ inactiveSectionsCount() }}</span>
+          }
+          <span class="sections-kpi-card__label">Inactivas</span>
+        </div>
+        <div class="sections-kpi-card__bar sections-kpi-card__bar--inactive"></div>
+      </div>
+
+      <!-- Sucursales / Almacenes -->
+      <div class="sections-kpi-card sections-kpi-card--branches">
+        <div class="sections-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">domain</span>
+        </div>
+        <div class="sections-kpi-card__body">
+          @if (isLoading()) {
+            <div class="sections-kpi-card__skeleton"></div>
+          } @else {
+            <span class="sections-kpi-card__value">{{ totalBranches() }}</span>
+          }
+          <span class="sections-kpi-card__label">Almacenes</span>
+        </div>
+        <div class="sections-kpi-card__bar sections-kpi-card__bar--branches"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="sections-split" [class.sections-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="sections-directory" aria-label="Directorio de secciones">
+
+      <!-- Buscador y filtros -->
+      <div class="sections-directory__filters">
+
+        <div class="sections-search">
+          <span class="material-symbols-outlined sections-search__icon" aria-hidden="true">search</span>
+          <input
+            id="section-search"
+            class="sections-search__input"
+            type="search"
+            placeholder="Nombre, código, almacén…"
+            [value]="filterText()"
+            (input)="filterText.set($any($event.target).value)"
+            aria-label="Buscar sección por nombre, código o almacén"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="sections-filters-row">
+          <div class="sections-filter-group">
+            <label class="sr-only" for="filter-branch">Almacén</label>
+            <select
+              id="filter-branch"
+              class="sections-filter-select"
+              [value]="filterBranchId()"
+              (change)="filterBranchId.set($any($event.target).value)"
+              aria-label="Filtrar por almacén">
+              <option value="">Almacenes (Todos)</option>
+              @for (b of branchService.branches(); track b.id) {
+                <option [value]="b.id">{{ b.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="sections-filter-group">
+            <label class="sr-only" for="filter-status">Estatus</label>
+            <select
+              id="filter-status"
+              class="sections-filter-select"
+              [value]="filterStatus()"
+              (change)="filterStatus.set($any($event.target).value)"
+              aria-label="Filtrar por estatus">
+              <option value="">Estatus (Todos)</option>
+              <option value="ACTIVE">Activas</option>
+              <option value="INACTIVE">Inactivas</option>
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="sections-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+
+        <p class="sections-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Busca por nombre, código, almacén o estatus
+        </p>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoading()) {
+        <div class="sections-directory__list" aria-busy="true" aria-label="Cargando secciones">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="section-item section-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="section-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                <div class="skeleton skeleton--line skeleton--line-short"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError()) {
+        <div class="sections-state sections-state--error" role="alert">
+          <span class="material-symbols-outlined sections-state__icon">cloud_off</span>
+          <p class="sections-state__title">Error al cargar</p>
+          <p class="sections-state__desc">{{ loadErrorMessage() }}</p>
+          <button class="sections-btn sections-btn--ghost" type="button" (click)="loadData()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="sections-state" role="status">
+          <span class="material-symbols-outlined sections-state__icon">grid_view</span>
+          <p class="sections-state__title">Sin secciones</p>
+          <p class="sections-state__desc">No hay secciones registradas aún.</p>
+          <button class="sections-btn sections-btn--primary" type="button" (click)="startNewSection()">
+            <span class="material-symbols-outlined">add</span>
+            Registrar la primera
+          </button>
+        </div>
+      } @else if (hasNoResults) {
+        <div class="sections-state" role="status">
+          <span class="material-symbols-outlined sections-state__icon">search_off</span>
+          <p class="sections-state__title">Sin coincidencias</p>
+          <p class="sections-state__desc">
+            Ninguna sección coincide con los filtros aplicados.
+          </p>
+          <button class="sections-btn sections-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="sections-directory__list" role="listbox" aria-label="Lista de secciones">
+          @for (section of filteredSections(); track section.id) {
+            <li
+              class="section-item"
+              [class.section-item--selected]="isSelectedSection(section)"
+              [class.section-item--inactive]="section.status === 'INACTIVE'"
+              role="option"
+              [attr.aria-selected]="isSelectedSection(section)"
+              (click)="selectSection(section)"
+              (keydown.enter)="selectSection(section)"
+              (keydown.space)="selectSection(section)"
+              tabindex="0"
+              [id]="'section-item-' + section.id">
+
+              <!-- Avatar -->
+              <div class="section-avatar {{ getAvatarClass(section) }}" aria-hidden="true">
+                {{ getInitials(section) }}
+              </div>
+
+              <!-- Info -->
+              <div class="section-item__body">
+                <div class="section-item__name">{{ section.name }}</div>
+                <div class="section-item__branch">{{ section.branchName }}</div>
+                <div class="section-item__meta">
+                  <span class="section-item__code">{{ section.code }}</span>
+                </div>
+              </div>
+
+              <!-- Estado -->
+              <div class="section-item__status-col">
+                <span class="section-status-badge section-status-badge--{{ (section.status || 'ACTIVE').toLowerCase() }}">
+                  {{ (section.status || 'ACTIVE') === 'ACTIVE' ? 'ACTIVA' : 'INACTIVA' }}
+                </span>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <!-- Contador -->
+        <div class="sections-directory__footer">
+          <span class="sections-count">
+            {{ filteredSections().length }}
+            @if (filteredSections().length !== totalSections()) {
+              de {{ totalSections() }}
+            }
+            sección{{ filteredSections().length !== 1 ? 'es' : '' }}
+          </span>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="sections-detail" aria-label="Detalle de la sección">
+
+      @if (formMode() === 'idle') {
+        <div class="sections-empty-state">
+          <div class="sections-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined sections-empty-state__icon">grid_view</span>
+          </div>
+          <h2 class="sections-empty-state__title">Sin selección</h2>
+          <p class="sections-empty-state__desc">
+            Selecciona una sección de la lista para consultar su información,
+            o registra una nueva.
+          </p>
+          <button
+            class="sections-btn sections-btn--primary"
+            type="button"
+            (click)="startNewSection()"
+            aria-label="Registrar nueva sección">
+            <span class="material-symbols-outlined">add</span>
+            Nueva sección
+          </button>
+        </div>
+      } @else {
+        <div class="sections-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="sections-form-header">
+            <div class="sections-form-header__left">
+              <div class="sections-form-header__breadcrumb">
+                <span class="material-symbols-outlined">grid_view</span>
+                Secciones
+                <span class="material-symbols-outlined sections-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nueva sección }
+                  @else { {{ selectedSection()?.name }} }
+                </strong>
+              </div>
+              @if (formMode() === 'edit' && selectedSection()) {
+                <span class="section-code-badge">{{ selectedSection()!.code }}</span>
+                <span class="section-status-badge section-status-badge--{{ (selectedSection()!.status || 'ACTIVE').toLowerCase() }}">
+                  {{ (selectedSection()!.status || 'ACTIVE') === 'ACTIVE' ? 'ACTIVA' : 'INACTIVA' }}
+                </span>
+              }
+            </div>
+
+            @if (isFormDirty) {
+              <span class="sections-form-header__dirty">
+                <span class="material-symbols-outlined">edit</span>
+                Sin guardar
+              </span>
+            }
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="sections-alert sections-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Sección guardada correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="sections-alert sections-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveSection()"
+            novalidate
+            autocomplete="off"
+            class="sections-form">
+
+            <!-- SECCIÓN 1 — Identificación ──────────────────────── -->
+            <fieldset class="sections-form-section">
+              <legend class="sections-form-section__legend">
+                <span class="material-symbols-outlined">badge</span>
+                Identificación de la Sección
+              </legend>
+
+              <div class="sections-form-grid sections-form-grid--2">
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label fg-label--required" for="branchId">Almacén / Sucursal</label>
+                  <select
+                    id="branchId"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('branchId')"
+                    formControlName="branchId"
+                    aria-required="true">
+                    <option value="">Selecciona un almacén…</option>
+                    @for (b of branchService.branches(); track b.id) {
+                      <option [value]="b.id">{{ b.name }} ({{ b.code }})</option>
+                    }
+                  </select>
+                  @if (fieldHasError('branchId')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('branchId') }}</span>
+                  }
+                  <span class="fg-hint">Almacén al que pertenece esta sección.</span>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="sectionCode">Código de Sección</label>
+                  <input
+                    id="sectionCode"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('code')"
+                    type="text"
+                    formControlName="code"
+                    placeholder="Ej. ALMC, ZONA-A, FRIO"
+                    maxlength="10"
+                    aria-required="true"
+                    aria-describedby="code-hint"
+                    style="text-transform: uppercase;"
+                  />
+                  <span id="code-hint" class="fg-hint">Máx. 10 caracteres. Solo letras, números y guiones.</span>
+                  @if (fieldHasError('code')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('code') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="sectionName">Nombre Descriptivo</label>
+                  <input
+                    id="sectionName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('name')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. Zona de Almacenamiento General"
+                    maxlength="100"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('name')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('name') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="sectionStatus">Estatus Operativo</label>
+                  <select
+                    id="sectionStatus"
+                    class="fg-select"
+                    formControlName="status"
+                    aria-required="true">
+                    <option value="ACTIVE">Activa</option>
+                    <option value="INACTIVE">Inactiva</option>
+                  </select>
+                  <span class="fg-hint">Estado de disponibilidad para ubicaciones.</span>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Control & Auditoría (solo lectura en edición) ──── -->
+            @if (formMode() === 'edit' && selectedSection()) {
+              <fieldset class="sections-form-section sections-form-section--readonly">
+                <legend class="sections-form-section__legend">
+                  <span class="material-symbols-outlined">manage_history</span>
+                  Información de Control & Auditoría
+                </legend>
+
+                <div class="sections-readonly-grid">
+                  <div class="sections-readonly-field">
+                    <span class="sections-readonly-field__label">Fecha de creación</span>
+                    <span class="sections-readonly-field__value">
+                      {{ selectedSection()!.createdAt | date:'dd/MM/yyyy HH:mm' : undefined : 'es-MX' }}
+                    </span>
+                  </div>
+                  <div class="sections-readonly-field">
+                    <span class="sections-readonly-field__label">Última actualización</span>
+                    <span class="sections-readonly-field__value">
+                      {{ selectedSection()!.updatedAt | date:'dd/MM/yyyy HH:mm' : undefined : 'es-MX' }}
+                    </span>
+                  </div>
+                  <div class="sections-readonly-field">
+                    <span class="sections-readonly-field__label">Versión</span>
+                    <span class="sections-readonly-field__value sections-readonly-field__value--mono">
+                      v{{ selectedSection()!.version ?? 1 }}
+                    </span>
+                  </div>
+                  <div class="sections-readonly-field">
+                    <span class="sections-readonly-field__label">ID Interno</span>
+                    <span class="sections-readonly-field__value sections-readonly-field__value--mono sections-readonly-field__value--muted">
+                      {{ selectedSection()!.id }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- ── Historial real de auditoría (Timeline) ── -->
+                <div class="sections-timeline-preview">
+                  <div class="sections-timeline-preview__header">
+                    <span class="material-symbols-outlined">timeline</span>
+                    <span>Historial de cambios (Audit Log)</span>
+                  </div>
+
+                  @if (isLoadingAudit()) {
+                    <p class="sections-timeline-preview__desc">
+                      Cargando historial de auditoría...
+                    </p>
+                  } @else if (auditEntries().length === 0) {
+                    <p class="sections-timeline-preview__desc">
+                      No hay registros de cambios disponibles para esta sección.
+                    </p>
+                  } @else {
+                    <div class="sections-timeline-preview__nodes">
+                      @for (entry of auditEntries(); track entry.id; let last = $last) {
+                        <div class="sections-tl-node" [ngClass]="'sections-tl-node--' + (entry.timelineColor || 'update')">
+                          <div class="sections-tl-node__dot">
+                            <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                          </div>
+                          <div class="sections-tl-node__line" [class.sections-tl-node__line--last]="last"></div>
+                          <div class="sections-tl-node__content">
+                            <span class="sections-tl-node__action">{{ entry.summary }}</span>
+                            @if (entry.details && entry.details.length > 0) {
+                              <div class="sections-tl-details">
+                                @for (det of entry.details; track det.fieldName) {
+                                  <div>
+                                    <strong class="text-muted">{{ det.fieldName }}:</strong>
+                                    {{ det.oldValue || 'null' }} ➔ {{ det.newValue || 'null' }}
+                                  </div>
+                                }
+                              </div>
+                            }
+                            <span class="sections-tl-node__meta">
+                              Por {{ entry.username }} · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm' : undefined : 'es-MX' }}
+                            </span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO ──────────────────────── -->
+            <div class="sections-form-actions">
+
+              <div class="sections-form-actions__left">
+                @if (formMode() === 'edit' && selectedSection()) {
+                  @if ((selectedSection()!.status || 'ACTIVE') === 'INACTIVE') {
+                    <button
+                      id="btn-activate-section"
+                      class="sections-btn sections-btn--success"
+                      type="button"
+                      [disabled]="isSaving()"
+                      (click)="changeStatus('ACTIVE')"
+                      aria-label="Activar esta sección">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      Activar Sección
+                    </button>
+                  } @else {
+                    <button
+                      id="btn-deactivate-section"
+                      class="sections-btn sections-btn--warning"
+                      type="button"
+                      [disabled]="isSaving()"
+                      (click)="changeStatus('INACTIVE')"
+                      aria-label="Desactivar esta sección">
+                      <span class="material-symbols-outlined">block</span>
+                      Desactivar Sección
+                    </button>
+                  }
+                }
+              </div>
+
+              <div class="sections-form-actions__right">
+                <button
+                  id="btn-cancel-section"
+                  class="sections-btn sections-btn--ghost"
+                  type="button"
+                  [disabled]="isSaving()"
+                  (click)="cancelForm()">
+                  Cancelar
+                </button>
+
+                <button
+                  id="btn-save-section"
+                  class="sections-btn sections-btn--primary"
+                  type="submit"
+                  [disabled]="isSaving() || (!isFormDirty && formMode() === 'edit')">
+                  @if (isSaving()) {
+                    <span class="sections-btn__spinner" aria-hidden="true"></span>
+                    Guardando…
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    {{ formMode() === 'new' ? 'Crear Sección' : 'Guardar Cambios' }}
+                  }
+                </button>
+              </div>
+
+            </div>
+
+          </form>
+
+        </div>
+      }
+
+    </main>
+
+  </div>
+
+</div>

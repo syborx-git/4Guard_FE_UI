@@ -229,7 +229,7 @@
             @for (child of zoneNode.children; track trackByNodeId($index, child)) {
 
             @if (child.level === 'leaf') {
-            <!-- Hoja directa bajo zona (sin pasillo ni bahía) ── -->
+            <!-- Hoja directa bajo zona ── -->
             <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: child, depth: 1 }">
             </ng-container>
             }
@@ -256,29 +256,29 @@
 
               @if (child.isExpanded) {
               <div class="lm-tree-children" role="group">
-                @for (bayOrLeaf of child.children; track trackByNodeId($index, bayOrLeaf)) {
+                @for (rackOrLeaf of child.children; track trackByNodeId($index, rackOrLeaf)) {
 
-                @if (bayOrLeaf.level === 'leaf') {
-                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: bayOrLeaf, depth: 2 }">
+                @if (rackOrLeaf.level === 'leaf') {
+                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: rackOrLeaf, depth: 2 }">
                 </ng-container>
                 }
 
-                @if (bayOrLeaf.level === 'bay') {
-                <!-- Nodo Bahía ──────────────────────── -->
-                <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="bayOrLeaf.isExpanded">
-                  <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(bayOrLeaf.id)"
-                    [attr.aria-label]="bayOrLeaf.label + ', ' + bayOrLeaf.count + ' ubicaciones'">
+                @if (rackOrLeaf.level === 'rack') {
+                <!-- Nodo Rack ──────────────────────── -->
+                <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="rackOrLeaf.isExpanded">
+                  <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(rackOrLeaf.id)"
+                    [attr.aria-label]="rackOrLeaf.label + ', ' + rackOrLeaf.count + ' ubicaciones'">
                     <span class="lm-tree-node__indent"></span>
                     <span class="lm-tree-node__indent"></span>
                     <span class="lm-tree-node__chevron material-symbols-outlined"
-                      [class.lm-tree-node__chevron--open]="bayOrLeaf.isExpanded" aria-hidden="true">chevron_right</span>
-                    <span class="lm-tree-node__label">{{ bayOrLeaf.label }}</span>
-                    <span class="badge badge--subtle lm-tree-node__badge">{{ bayOrLeaf.count }}</span>
+                      [class.lm-tree-node__chevron--open]="rackOrLeaf.isExpanded" aria-hidden="true">chevron_right</span>
+                    <span class="lm-tree-node__label">{{ rackOrLeaf.label }}</span>
+                    <span class="badge badge--subtle lm-tree-node__badge">{{ rackOrLeaf.count }}</span>
                   </button>
 
-                  @if (bayOrLeaf.isExpanded) {
+                  @if (rackOrLeaf.isExpanded) {
                   <div class="lm-tree-children" role="group">
-                    @for (leaf of bayOrLeaf.children; track trackByNodeId($index, leaf)) {
+                    @for (leaf of rackOrLeaf.children; track trackByNodeId($index, leaf)) {
                     <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: leaf, depth: 3 }">
                     </ng-container>
                     }
@@ -292,8 +292,8 @@
             </div>
             }
 
-            @if (child.level === 'bay') {
-            <!-- Bahía directa bajo zona (sin pasillo) ────────── -->
+            @if (child.level === 'rack') {
+            <!-- Rack directo bajo zona ────────── -->
             <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="child.isExpanded">
               <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(child.id)"
                 [attr.aria-label]="child.label">
@@ -396,7 +396,7 @@
         }
 
         <!-- Formulario ───────────────────────────────────────────── -->
-        <form [formGroup]="editForm" (change)="onFormChange()" (ngSubmit)="onSave()" class="lm-form" novalidate
+        <form [formGroup]="editForm" (input)="onFormChange()" (change)="onFormChange()" (ngSubmit)="onSave()" class="lm-form" novalidate
           id="location-edit-form">
 
           <!-- ── Sección: Identificación ─────────────────────────── -->
@@ -410,21 +410,21 @@
               <div class="form-group">
                 <label class="form-label form-label--required" for="f-code">Código</label>
                 <input id="f-code" class="form-input" [class.is-error]="hasError('code')" formControlName="code"
-                  placeholder="Ej. PA-B01-R1-N1" autocomplete="off" style="text-transform: uppercase;" />
+                  placeholder="Ej. ALMC-A-R1-N1" autocomplete="off" style="text-transform: uppercase;" />
                 @if (hasError('code')) {
                 <span class="form-error" role="alert">
                   <span class="material-symbols-outlined" aria-hidden="true">error</span>
                   {{ getErrorMessage('code') }}
                 </span>
                 } @else {
-                <span class="form-hint">Solo mayúsculas, números y guiones.</span>
+                <span class="form-hint">Código único. Se auto-genera al escribir las coordenadas.</span>
                 }
               </div>
 
               <div class="form-group">
                 <label class="form-label form-label--required" for="f-name">Nombre</label>
                 <input id="f-name" class="form-input" [class.is-error]="hasError('name')" formControlName="name"
-                  placeholder="Ej. Pasillo A – Bahía 01 – Rack 1" />
+                  placeholder="Ej. Pasillo A – Rack 1 – Nivel 1" />
                 @if (hasError('name')) {
                 <span class="form-error" role="alert">
                   <span class="material-symbols-outlined" aria-hidden="true">error</span>
@@ -441,7 +441,7 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label form-label--required" for="f-zone">Zona</label>
+                <label class="form-label form-label--required" for="f-zone">Zona / Sección</label>
                 <select id="f-zone" class="form-select" [class.is-error]="hasError('zoneId')" formControlName="zoneId"
                   (change)="onZoneChange($event)">
                   <option value="" disabled>Selecciona una zona</option>
@@ -466,17 +466,13 @@
               Coordenadas Físicas
             </h3>
             <p class="lm-form-section__hint">
-              Completa solo los campos que aplican según el tipo de ubicación.
+              Define la jerarquía física dentro de la zona (Pasillo, Rack, Nivel, Posición).
             </p>
-            <div class="lm-form-grid lm-form-grid--5">
+            <div class="lm-form-grid lm-form-grid--4">
               <div class="form-group">
                 <label class="form-label" for="f-aisle">Pasillo</label>
                 <input id="f-aisle" class="form-input" formControlName="aisle" placeholder="A, B…"
                   style="text-transform: uppercase;" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="f-bay">Bahía</label>
-                <input id="f-bay" class="form-input" formControlName="bay" placeholder="01, 02…" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-rack">Rack</label>
@@ -484,7 +480,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-level">Nivel</label>
-                <input id="f-level" class="form-input" formControlName="level" placeholder="N1, N2…" />
+                <input id="f-level" class="form-input" formControlName="level" placeholder="1, 2…" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-position">Posición</label>
@@ -493,11 +489,11 @@
             </div>
           </section>
 
-          <!-- ── Sección: Clasificación Logística ────────────────── -->
+          <!-- ── Sección: Clasificación Logística y Capacidad ────── -->
           <section class="lm-form-section">
             <h3 class="lm-form-section__title">
               <span class="material-symbols-outlined" aria-hidden="true">category</span>
-              Clasificación Logística
+              Clasificación y Capacidad
             </h3>
             <div class="lm-form-grid lm-form-grid--2">
               <div class="form-group">
@@ -518,34 +514,8 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label form-label--required" for="f-function">Función Logística</label>
-                <select id="f-function" class="form-select" [class.is-error]="hasError('logisticFunction')"
-                  formControlName="logisticFunction">
-                  <option value="" disabled>Selecciona una función</option>
-                  @for (fn of logisticFunctions; track fn) {
-                  <option [value]="fn">{{ LOGISTIC_FUNCTION_LABELS[fn] }}</option>
-                  }
-                </select>
-                @if (hasError('logisticFunction')) {
-                <span class="form-error" role="alert">
-                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                  {{ getErrorMessage('logisticFunction') }}
-                </span>
-                }
-              </div>
-            </div>
-          </section>
-
-          <!-- ── Sección: Capacidad ──────────────────────────────── -->
-          <section class="lm-form-section">
-            <h3 class="lm-form-section__title">
-              <span class="material-symbols-outlined" aria-hidden="true">straighten</span>
-              Capacidad
-            </h3>
-            <div class="lm-form-grid lm-form-grid--2">
-              <div class="form-group">
                 <label class="form-label form-label--required" for="f-capacity">
-                  Capacidad Máxima
+                  Capacidad Máxima (unidades)
                 </label>
                 <input id="f-capacity" class="form-input" type="number" min="1"
                   [class.is-error]="hasError('maxCapacity')" formControlName="maxCapacity" placeholder="Ej. 4" />
@@ -553,23 +523,6 @@
                 <span class="form-error" role="alert">
                   <span class="material-symbols-outlined" aria-hidden="true">error</span>
                   {{ getErrorMessage('maxCapacity') }}
-                </span>
-                }
-              </div>
-
-              <div class="form-group">
-                <label class="form-label form-label--required" for="f-unit">Unidad de Capacidad</label>
-                <select id="f-unit" class="form-select" [class.is-error]="hasError('capacityUnit')"
-                  formControlName="capacityUnit">
-                  <option value="" disabled>Selecciona una unidad</option>
-                  @for (u of capacityUnits; track u) {
-                  <option [value]="u">{{ CAPACITY_UNIT_LABELS[u] }}</option>
-                  }
-                </select>
-                @if (hasError('capacityUnit')) {
-                <span class="form-error" role="alert">
-                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                  {{ getErrorMessage('capacityUnit') }}
                 </span>
                 }
               </div>
@@ -610,36 +563,17 @@
             }
           </section>
 
-          <!-- ── Sección: Configuración ──────────────────────────── -->
+          <!-- ── Sección: Observaciones ──────────────────────────── -->
           <section class="lm-form-section">
             <h3 class="lm-form-section__title">
-              <span class="material-symbols-outlined" aria-hidden="true">settings</span>
-              Configuración
+              <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+              Observaciones
             </h3>
             <div class="lm-form-grid lm-form-grid--1">
               <div class="form-group">
-                <label class="lm-toggle-label" for="f-storage-allowed">
-                  <div class="lm-toggle" [class.lm-toggle--on]="editForm.value.isStorageAllowed">
-                    <input id="f-storage-allowed" type="checkbox" formControlName="isStorageAllowed"
-                      class="lm-toggle__input" (change)="onFormChange()" />
-                    <span class="lm-toggle__track" aria-hidden="true">
-                      <span class="lm-toggle__thumb"></span>
-                    </span>
-                  </div>
-                  <span class="lm-toggle-label__text">
-                    Permite almacenamiento de inventario
-                  </span>
-                  <span class="form-hint lm-toggle-label__hint">
-                    Desactiva si la ubicación es solo de tránsito o maniobra.
-                  </span>
-                </label>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="f-observations">Observaciones</label>
+                <label class="form-label" for="f-observations">Observaciones / Notas de Operación</label>
                 <textarea id="f-observations" class="form-textarea" formControlName="observations" rows="3"
-                  placeholder="Notas internas, restricciones especiales, instrucciones de operación…">
-                  </textarea>
+                  placeholder="Notas internas, restricciones especiales, instrucciones de operación…"></textarea>
               </div>
             </div>
           </section>
