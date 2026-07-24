@@ -11,6 +11,7 @@ export interface WarehouseSection {
   branchName: string;
   code: string; // short code (max 10 chars)
   name: string; // name (max 100 chars)
+  status: 'ACTIVE' | 'INACTIVE';
   version?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -20,6 +21,7 @@ export interface CreateWarehouseSectionRequest {
   branchId: string;
   code: string;
   name: string;
+  status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface UpdateWarehouseSectionRequest {
@@ -27,6 +29,29 @@ export interface UpdateWarehouseSectionRequest {
   branchId: string;
   code: string;
   name: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface SectionStatusPatchRequest {
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface SectionAuditDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface SectionAuditLogEntry {
+  id?: string;
+  logId?: string;
+  action: string;
+  username: string;
+  createdAt: string;
+  details?: SectionAuditDetail[];
+  summary?: string;
+  timelineIcon?: string;
+  timelineColor?: 'create' | 'update' | 'status';
 }
 
 export interface ApiResponse<T> {
@@ -35,6 +60,20 @@ export interface ApiResponse<T> {
   data: T;
   timestamp: string;
 }
+
+const AUDIT_SECTION_ICONS: Record<string, string> = {
+  SECTION_CREATED: 'add_circle',
+  SECTION_UPDATED: 'edit',
+  SECTION_STATUS_UPDATED: 'swap_horiz',
+  SECTION_DELETED: 'delete_forever',
+};
+
+const AUDIT_SECTION_COLORS: Record<string, 'create' | 'update' | 'status'> = {
+  SECTION_CREATED: 'create',
+  SECTION_UPDATED: 'update',
+  SECTION_STATUS_UPDATED: 'status',
+  SECTION_DELETED: 'status',
+};
 
 @Injectable({
   providedIn: 'root'
@@ -118,7 +157,8 @@ export class SectionService {
     const payload: CreateWarehouseSectionRequest = {
       branchId: section.branchId,
       code: section.code,
-      name: section.name
+      name: section.name,
+      status: section.status || 'ACTIVE'
     };
 
     return this.http.post<ApiResponse<WarehouseSection>>(
@@ -142,7 +182,8 @@ export class SectionService {
       id: id,
       branchId: section.branchId || '',
       code: section.code || '',
-      name: section.name || ''
+      name: section.name || '',
+      status: section.status || 'ACTIVE'
     };
 
     return this.http.put<ApiResponse<WarehouseSection>>(
@@ -156,6 +197,81 @@ export class SectionService {
       }),
       catchError((error: HttpErrorResponse) => this.handleError(error))
     );
+  }
+
+  /**
+   * Modifica el estatus (ACTIVE / INACTIVE) de una sección mediante el endpoint dedicado PATCH /api/v1/warehouse-sections/{id}/status.
+   */
+  updateStatus(id: string, status: 'ACTIVE' | 'INACTIVE'): Observable<ApiResponse<WarehouseSection>> {
+    const payload: SectionStatusPatchRequest = { status };
+    return this.http.patch<ApiResponse<WarehouseSection>>(
+      `${environment.apiBaseUrl}/api/v1/warehouse-sections/${id}/status`,
+      payload
+    ).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.items.update(list => list.map(item => item.id === id ? response.data : item));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
+  /**
+   * Consulta el historial de auditoría (Audit Log) de una sección por su ID.
+   * GET /api/v1/warehouse-sections/{id}/audit
+   */
+  getSectionAudit(id: string): Observable<ApiResponse<SectionAuditLogEntry[]>> {
+    return this.http.get<ApiResponse<any[]>>(
+      `${environment.apiBaseUrl}/api/v1/warehouse-sections/${id}/audit`
+    ).pipe(
+      map(res => ({
+        ...res,
+        data: (res.data || []).map(dto => this.mapAuditDtoToEntry(dto))
+      })),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
+  private mapAuditDtoToEntry(dto: any): SectionAuditLogEntry {
+    const details: SectionAuditDetail[] = (dto.details || []).map((d: any) => ({
+      fieldName: d.fieldName,
+      oldValue: d.oldValue,
+      newValue: d.newValue
+    }));
+
+    const action = dto.action || '';
+    let summary = '';
+    if (action === 'SECTION_CREATED') {
+      summary = 'Sección creada';
+    } else if (action === 'SECTION_STATUS_UPDATED') {
+      const statusDet = details.find(d => d.fieldName === 'status');
+      if (statusDet && statusDet.oldValue && statusDet.newValue) {
+        summary = `Cambio de estatus: ${statusDet.oldValue} ➔ ${statusDet.newValue}`;
+      } else if (statusDet && statusDet.newValue) {
+        summary = `Estatus cambiado a ${statusDet.newValue}`;
+      } else {
+        summary = 'Estatus de la sección actualizado';
+      }
+    } else if (action === 'SECTION_UPDATED') {
+      summary = 'Información de la sección actualizada';
+    } else if (action === 'SECTION_DELETED') {
+      summary = 'Sección eliminada';
+    } else {
+      summary = action;
+    }
+
+    return {
+      id: dto.logId || dto.id || `log-${Date.now()}`,
+      logId: dto.logId || dto.id,
+      action: action,
+      username: dto.username || 'sistema',
+      createdAt: dto.createdAt,
+      details: details,
+      summary: summary,
+      timelineIcon: AUDIT_SECTION_ICONS[action] || 'info',
+      timelineColor: AUDIT_SECTION_COLORS[action] || 'update'
+    };
   }
 
   /**

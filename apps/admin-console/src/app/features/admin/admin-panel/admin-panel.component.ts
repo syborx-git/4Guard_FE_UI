@@ -712,6 +712,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       this.router.navigate(['/carriers']);
       return;
     }
+    if (moduleId === 'sections') {
+      this.router.navigate(['/sections']);
+      return;
+    }
     if (moduleId === 'suppliers') {
       this.router.navigate(['/suppliers']);
       return;
