@@ -4,7 +4,7 @@
  *
  * Responsabilidades:
  *  - Inyectar el token '4g_token' (Bearer) a todas las peticiones salientes.
- *  - Excluir endpoints públicos y de autenticación base (/login y /refresh).
+ *  - Excluir endpoints públicos y de autenticación base (/login, /refresh, /logout).
  *  - Interceptar errores 401 Unauthorized de forma transparente.
  *  - Detener peticiones en vuelo ante un 401, ejecutar refresh token asíncronamente
  *    y reintentar de forma transparente la petición original con el nuevo token.
@@ -13,17 +13,20 @@
 
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
   const url = req.url.toLowerCase();
 
-  // Excluir endpoints públicos o de login/refresh
+  // Excluir endpoints públicos o de autenticación base (login, refresh, logout)
   const isAuthOrPublic =
     url.includes('/login') ||
     url.includes('/refresh') ||
+    url.includes('/logout') ||
     url.includes('/assets/') ||
     url.includes('/public');
 
@@ -40,7 +43,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(activeReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Interceptar 401 Unauthorized
+      // Interceptar 401 Unauthorized únicamente en peticiones protegidas que no estén excluidas
       if (error.status === 401 && !isAuthOrPublic) {
         
         // Detener flujo, llamar a refreshToken() y reintentar con el nuevo token obtenido
@@ -56,8 +59,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             return next(retriedReq);
           }),
           catchError((refreshError) => {
-            // Si el refresh falla con un 401 u otro error, forzar cierre de sesión inmediato
-            authService.clearSessionAndRedirect('session_expired');
+            // Si el refresh falla, forzar cierre de sesión sin duplicar navegaciones si ya estamos en /login
+            if (!router.url.includes('/login')) {
+              authService.clearSessionAndRedirect('session_expired');
+            }
             return throwError(() => refreshError);
           })
         );

@@ -216,6 +216,32 @@
   line-height: 1.5;
 }
 
+/* Alerta Informativa de Inactividad */
+.login-info-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(234, 195, 73, 0.12);
+  border: 1px solid rgba(234, 195, 73, 0.35);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #EAC349;
+  line-height: 1.45;
+  animation: slide-up 0.3s ease-out;
+}
+
+.login-info-alert__icon {
+  font-size: 1.25rem;
+  color: #EAC349;
+  flex-shrink: 0;
+}
+
+.login-info-alert__msg {
+  flex: 1;
+}
+
 /* Alerta de Error */
 .login-error {
   display: flex;
