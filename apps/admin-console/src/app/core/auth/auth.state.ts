@@ -176,6 +176,19 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing
       case 'shifts':
         return true; // Acceso total habilitado para desarrollo y testing (HU-140)
+      case 'user-activity':
+        // HU-146: Solo OPERATIONS_SUPERVISOR, SHIFT_LEADER y OPERATIONS_MANAGER.
+        // NOTA: La validación definitiva de RLS y permisos se ejecuta en el backend.
+        // El frontend solo controla la visibilidad de la opción de menú y la ruta.
+        return (
+          role === 'OPERATIONS_SUPERVISOR' ||
+          role === 'OPERATIONS_MANAGER' ||
+          role === 'SHIFT_LEADER' ||
+          role === 'ROLE_ADMIN' ||
+          role === 'ADMIN' ||
+          role === 'ROLE_WAREHOUSE_MANAGER' ||
+          role === 'WAREHOUSE_MANAGER'
+        );
       default:
         return false;
     }

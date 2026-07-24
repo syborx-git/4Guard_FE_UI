@@ -173,6 +173,19 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Sesiones Activas',
       },
 
+      // Actividad por Usuario (HU-146) — Temporal debajo de Administrar
+      // Ruta: /user-activity (primer nivel, sin anidar en /admin ni /monitoring)
+      // Decisión: ruta independiente para evaluación. Al definir el módulo definitivo,
+      // solo se cambia esta ruta y el navItem en shell.component.ts.
+      {
+        path: 'user-activity',
+        canActivate: [rbacGuard],
+        data: { module: 'user-activity' },
+        loadChildren: () =>
+          import('./features/user-activity/user-activity.routes').then((m) => m.userActivityRoutes),
+        title: '4GUARD WMS — Actividad por Usuario',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
