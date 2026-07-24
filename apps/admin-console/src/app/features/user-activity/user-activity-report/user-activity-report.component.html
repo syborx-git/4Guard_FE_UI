@@ -1,32 +1,31 @@
 <!-- user-activity-report.component.html -->
-<!-- HU-146 — Reporte de Actividad por Usuario — 4GUARD WMS -->
+<!-- HU-146 — Reporte de Actividad por Usuario — Polish Pass Enterprise -->
 
 <div class="ua-page">
 
   <!-- ═══════════════════════════════════════════════════════════
-       HEADER HERO
+       HERO (COMPACTO ~25% MENOS)
        ═══════════════════════════════════════════════════════════ -->
   <header class="ua-hero">
     <div class="ua-hero__glow ua-hero__glow--gold"></div>
     <div class="ua-hero__glow ua-hero__glow--blue"></div>
 
     <div class="ua-hero__content">
+      <!-- Left: breadcrumb + título + meta -->
       <div class="ua-hero__main">
 
-        <!-- Eyebrow -->
-        <div class="ua-hero__badges">
-          <span class="ua-hero__eyebrow">
-            MONITOREO WMS · TRAZABILIDAD · ACTIVIDAD DE USUARIOS
-          </span>
+        <!-- Breadcrumb / Eyebrow -->
+        <div class="ua-hero__breadcrumb">
+          <span class="ua-hero__eyebrow">MONITOREO · TRAZABILIDAD · ACTIVIDAD DE USUARIOS</span>
           <span class="ua-hero__hu-badge">HU-146</span>
         </div>
 
-        <!-- Título y descripción -->
+        <!-- Título -->
         <div class="ua-hero__title-row">
           <div class="ua-hero__icon-wrap">
             <span class="material-symbols-outlined">manage_search</span>
           </div>
-          <div>
+          <div class="ua-hero__title-block">
             <h1 class="ua-hero__title">Reporte de actividad por usuario</h1>
             <p class="ua-hero__description">
               Consulta, analiza y exporta las acciones realizadas por los usuarios dentro de la operación.
@@ -34,128 +33,133 @@
           </div>
         </div>
 
-        <!-- Metadata -->
+        <!-- Meta row -->
         <div class="ua-hero__metadata">
           <div class="ua-hero__meta-item">
             <span class="material-symbols-outlined">schedule</span>
             <span>Última consulta: {{ lastRefreshed() | date:'dd/MM/yyyy HH:mm:ss' }}</span>
           </div>
+          <div class="ua-hero__meta-sep">·</div>
           <div class="ua-hero__meta-item">
             <span class="ua-hero__dot"></span>
             <span>{{ filteredEvents().length }} eventos en vista</span>
           </div>
+          <div class="ua-hero__meta-sep ua-hero__rls-sep">|</div>
           <div class="ua-hero__rls-note">
             <span class="material-symbols-outlined">shield</span>
-            Los resultados se encuentran limitados por organización, almacén y permisos RLS.
+            Limitado por organización, almacén y permisos RLS
           </div>
         </div>
-
       </div>
 
-      <!-- Acciones del header -->
-      <div class="ua-hero__actions">
+      <!-- Right: acciones agrupadas (Actualizar · Exportar · Perfiles · Aplicar filtros) -->
+      <div class="ua-hero__actions" role="group" aria-label="Acciones principales">
+
         <button
           class="ua-btn ua-btn--ghost"
           (click)="refresh()"
           [disabled]="isLoading()"
+          id="ua-refresh-btn"
           aria-label="Actualizar datos">
           <span class="material-symbols-outlined" [class.ua-spin]="isLoading()">refresh</span>
           Actualizar
         </button>
 
-        <!-- Exportar dropdown -->
+        <!-- Exportar con submenu -->
         <div class="ua-export-group">
           <button
             class="ua-btn ua-btn--ghost"
-            (click)="export('XLSX')"
             [disabled]="isExporting()"
-            aria-label="Exportar como Excel">
+            aria-label="Exportar"
+            aria-haspopup="menu">
             <span class="material-symbols-outlined">
               {{ isExporting() ? 'hourglass_empty' : 'download' }}
             </span>
             Exportar
+            <span class="material-symbols-outlined ua-btn__chevron">expand_more</span>
           </button>
-          <div class="ua-export-submenu">
-            <button class="ua-export-option" (click)="export('XLSX')">
-              <span class="material-symbols-outlined">table_chart</span> Excel
+          <div class="ua-export-submenu" role="menu">
+            <button class="ua-export-option" role="menuitem" (click)="export('XLSX')">
+              <span class="material-symbols-outlined">table_chart</span> Excel (.xlsx)
             </button>
-            <button class="ua-export-option" (click)="export('CSV')">
-              <span class="material-symbols-outlined">description</span> CSV
-            </button>
-            <button class="ua-export-option" (click)="export('PDF')">
-              <span class="material-symbols-outlined">picture_as_pdf</span> PDF
+            <button class="ua-export-option" role="menuitem" (click)="export('PDF')">
+              <span class="material-symbols-outlined">picture_as_pdf</span> PDF (.pdf)
             </button>
           </div>
         </div>
 
         <button
-          class="ua-btn ua-btn--primary"
+          class="ua-btn ua-btn--ghost"
           (click)="openProfileManager()"
           id="ua-profiles-btn"
-          aria-label="Abrir administrador de perfiles guardados">
+          aria-label="Perfiles guardados">
           <span class="material-symbols-outlined">bookmarks</span>
-          Perfiles guardados
+          Perfiles
         </button>
+
+        <!-- Separador visual -->
+        <div class="ua-actions-sep" aria-hidden="true"></div>
+
+        <!-- Aplicar filtros — acción principal integrada -->
+        <button
+          class="ua-btn ua-btn--primary ua-btn--apply"
+          (click)="applyFilters()"
+          id="ua-apply-filters-btn"
+          aria-label="Aplicar filtros de búsqueda">
+          <span class="material-symbols-outlined">search</span>
+          Aplicar filtros
+        </button>
+
       </div>
     </div>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════
-       KPIs
+       KPIs (COMPACTAS)
        ═══════════════════════════════════════════════════════════ -->
   <section class="ua-kpis" aria-label="Indicadores clave de actividad">
 
     <div class="ua-kpi-card ua-kpi-card--users">
-      <div class="ua-kpi-card__icon">
-        <span class="material-symbols-outlined">group</span>
-      </div>
+      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">group</span></div>
       <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__label">Usuarios activos</span>
         <span class="ua-kpi-card__value">{{ kpis().activeUsers }}</span>
+        <span class="ua-kpi-card__label">Usuarios activos</span>
         <span class="ua-kpi-card__desc">Con al menos un evento</span>
       </div>
     </div>
 
     <div class="ua-kpi-card ua-kpi-card--events">
-      <div class="ua-kpi-card__icon">
-        <span class="material-symbols-outlined">receipt_long</span>
-      </div>
+      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">receipt_long</span></div>
       <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__label">Eventos registrados</span>
         <span class="ua-kpi-card__value">{{ kpis().totalEvents | number }}</span>
+        <span class="ua-kpi-card__label">Eventos totales</span>
         <span class="ua-kpi-card__desc">En el rango seleccionado</span>
       </div>
     </div>
 
     <div class="ua-kpi-card ua-kpi-card--critical">
-      <div class="ua-kpi-card__icon">
-        <span class="material-symbols-outlined">dangerous</span>
-      </div>
+      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">dangerous</span></div>
       <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__label">Operaciones críticas</span>
         <span class="ua-kpi-card__value">{{ kpis().criticalOperations }}</span>
+        <span class="ua-kpi-card__label">Op. críticas</span>
         <span class="ua-kpi-card__desc">Severidad HIGH o CRITICAL</span>
       </div>
     </div>
 
     <div class="ua-kpi-card ua-kpi-card--errors">
-      <div class="ua-kpi-card__icon">
-        <span class="material-symbols-outlined">error</span>
-      </div>
+      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">error</span></div>
       <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__label">Errores o rechazos</span>
         <span class="ua-kpi-card__value">{{ kpis().errorsOrRejections }}</span>
+        <span class="ua-kpi-card__label">Errores / rechazos</span>
         <span class="ua-kpi-card__desc">Resultado ERROR o REJECTED</span>
       </div>
     </div>
 
     <div class="ua-kpi-card ua-kpi-card--outside">
-      <div class="ua-kpi-card__icon">
-        <span class="material-symbols-outlined">dark_mode</span>
-      </div>
+      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">dark_mode</span></div>
       <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__label">Fuera de horario</span>
         <span class="ua-kpi-card__value">{{ kpis().outsideShiftCount }}</span>
+        <span class="ua-kpi-card__label">Fuera de horario</span>
         <span class="ua-kpi-card__desc">Antes 06:00 o después 22:00</span>
       </div>
     </div>
@@ -163,225 +167,217 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════
-       FILTROS
+       FILTROS — ACORDEÓN
        ═══════════════════════════════════════════════════════════ -->
   <section class="ua-filters-section">
-    <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" novalidate>
 
-      <div class="ua-filters-header">
-        <div class="ua-filters-header__left">
-          <span class="material-symbols-outlined ua-filters-header__icon">filter_list</span>
-          <h2 class="ua-filters-header__title">Filtros de consulta</h2>
+    <!-- Trigger del acordeón -->
+    <button
+      class="ua-filters-trigger"
+      (click)="toggleFilters()"
+      [attr.aria-expanded]="filtersOpen()"
+      aria-controls="ua-filters-body"
+      id="ua-filters-trigger">
+      <div class="ua-filters-trigger__left">
+        <span class="material-symbols-outlined ua-filters-trigger__icon">filter_list</span>
+        <span class="ua-filters-trigger__title">Filtros de consulta</span>
+        @if (!filtersOpen()) {
+          <span class="ua-filters-trigger__hint">Haz clic para expandir</span>
+        }
+      </div>
+      <div class="ua-filters-trigger__right">
+        <div class="ua-filters-trigger__actions">
+          <span class="ua-filter-chip" *ngIf="activityService.getActiveFilters()">Filtros activos</span>
         </div>
-        <div class="ua-filters-header__actions">
+        <span class="material-symbols-outlined ua-filters-trigger__chevron"
+          [class.ua-filters-trigger__chevron--open]="filtersOpen()">
+          expand_more
+        </span>
+      </div>
+    </button>
+
+    <!-- Body del acordeón -->
+    <div
+      id="ua-filters-body"
+      class="ua-filters-body"
+      [class.ua-filters-body--open]="filtersOpen()"
+      role="region"
+      aria-labelledby="ua-filters-trigger">
+
+      <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" novalidate>
+
+        <!-- Acciones secundarias (limpiar + avanzados) -->
+        <div class="ua-filters-sub-toolbar">
           <button
             type="button"
-            class="ua-btn ua-btn--ghost ua-btn--sm"
+            class="ua-link-btn"
             (click)="toggleAdvancedFilters()"
             [attr.aria-expanded]="showAdvancedFilters()">
             <span class="material-symbols-outlined">tune</span>
             {{ showAdvancedFilters() ? 'Ocultar avanzados' : 'Filtros avanzados' }}
           </button>
-          <button
-            type="button"
-            class="ua-btn ua-btn--ghost ua-btn--sm"
-            (click)="clearFilters()">
+          <button type="button" class="ua-link-btn ua-link-btn--clear" (click)="clearFilters()">
             <span class="material-symbols-outlined">clear_all</span>
-            Limpiar
-          </button>
-          <button
-            type="submit"
-            class="ua-btn ua-btn--primary ua-btn--sm"
-            id="ua-apply-filters-btn">
-            <span class="material-symbols-outlined">search</span>
-            Aplicar filtros
+            Limpiar filtros
           </button>
         </div>
-      </div>
 
-      <!-- Filtros básicos -->
-      <div class="ua-filters-grid">
+        <!-- Filtros básicos -->
+        <div class="ua-filters-grid">
 
-        <!-- Fecha desde -->
-        <div class="ua-filter-field"
-          [class.ua-filter-field--error]="dateFromCtrl.invalid && dateFromCtrl.touched">
-          <label for="ua-date-from" class="ua-filter-label">
-            Fecha inicial <span class="ua-required">*</span>
-          </label>
-          <input
-            id="ua-date-from"
-            type="date"
-            class="ua-filter-input"
-            formControlName="dateFrom"
-            [attr.aria-describedby]="dateFromCtrl.invalid && dateFromCtrl.touched ? 'ua-date-from-err' : null" />
-          @if (dateFromCtrl.invalid && dateFromCtrl.touched) {
-            <span id="ua-date-from-err" class="ua-filter-error" role="alert">
-              La fecha inicial es obligatoria.
-            </span>
-          }
-        </div>
-
-        <!-- Fecha hasta -->
-        <div class="ua-filter-field"
-          [class.ua-filter-field--error]="dateToCtrl.invalid && dateToCtrl.touched || isDateRangeInvalid()">
-          <label for="ua-date-to" class="ua-filter-label">
-            Fecha final <span class="ua-required">*</span>
-          </label>
-          <input
-            id="ua-date-to"
-            type="date"
-            class="ua-filter-input"
-            formControlName="dateTo"
-            [attr.aria-describedby]="isDateRangeInvalid() ? 'ua-date-range-err' : null" />
-          @if (dateToCtrl.invalid && dateToCtrl.touched && !isDateRangeInvalid()) {
-            <span class="ua-filter-error" role="alert">La fecha final es obligatoria.</span>
-          }
-          @if (isDateRangeInvalid()) {
-            <span id="ua-date-range-err" class="ua-filter-error" role="alert">
-              La fecha final no puede ser anterior a la inicial.
-            </span>
-          }
-        </div>
-
-        <!-- Usuario -->
-        <div class="ua-filter-field">
-          <label for="ua-user-name" class="ua-filter-label">Usuario</label>
-          <input
-            id="ua-user-name"
-            type="text"
-            class="ua-filter-input"
-            formControlName="userName"
-            placeholder="Buscar por nombre..." />
-        </div>
-
-        <!-- Rol -->
-        <div class="ua-filter-field">
-          <label for="ua-role" class="ua-filter-label">Rol</label>
-          <select id="ua-role" class="ua-filter-select" formControlName="userRole">
-            <option [ngValue]="null">Todos los roles</option>
-            @for (role of allRoles; track role) {
-              <option [value]="role">{{ role }}</option>
+          <div class="ua-filter-field"
+            [class.ua-filter-field--error]="dateFromCtrl.invalid && dateFromCtrl.touched">
+            <label for="ua-date-from" class="ua-filter-label">
+              Fecha inicial <span class="ua-required">*</span>
+            </label>
+            <input id="ua-date-from" type="date" class="ua-filter-input"
+              formControlName="dateFrom" />
+            @if (dateFromCtrl.invalid && dateFromCtrl.touched) {
+              <span class="ua-filter-error" role="alert">La fecha inicial es obligatoria.</span>
             }
-          </select>
-        </div>
-
-        <!-- Almacén -->
-        <div class="ua-filter-field">
-          <label for="ua-warehouse" class="ua-filter-label">Almacén</label>
-          <select id="ua-warehouse" class="ua-filter-select" formControlName="warehouse">
-            <option [ngValue]="null">Todos los almacenes</option>
-            @for (wh of allWarehouses; track wh.id) {
-              <option [value]="wh.id">{{ wh.name }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Módulo -->
-        <div class="ua-filter-field">
-          <label for="ua-module" class="ua-filter-label">Módulo</label>
-          <select id="ua-module" class="ua-filter-select" formControlName="module">
-            <option [ngValue]="null">Todos los módulos</option>
-            @for (mod of allModules; track mod) {
-              <option [value]="mod">{{ mod }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Resultado -->
-        <div class="ua-filter-field">
-          <label for="ua-result" class="ua-filter-label">Resultado</label>
-          <select id="ua-result" class="ua-filter-select" formControlName="result">
-            <option [ngValue]="null">Todos los resultados</option>
-            @for (res of allResults; track res) {
-              <option [value]="res">{{ res }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Criticidad -->
-        <div class="ua-filter-field">
-          <label for="ua-severity" class="ua-filter-label">Criticidad</label>
-          <select id="ua-severity" class="ua-filter-select" formControlName="severity">
-            <option [ngValue]="null">Todas las criticidades</option>
-            @for (sev of allSeverities; track sev) {
-              <option [value]="sev">{{ sev }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Búsqueda libre -->
-        <div class="ua-filter-field ua-filter-field--wide">
-          <label for="ua-search" class="ua-filter-label">Búsqueda libre</label>
-          <div class="ua-filter-search-wrap">
-            <span class="material-symbols-outlined ua-filter-search-icon">search</span>
-            <input
-              id="ua-search"
-              type="text"
-              class="ua-filter-input ua-filter-input--search"
-              formControlName="searchText"
-              placeholder="Buscar en usuario, módulo, acción, entidad..." />
           </div>
-        </div>
 
-        <!-- Solo fuera de horario -->
-        <div class="ua-filter-field ua-filter-field--checkbox">
-          <label class="ua-filter-check">
-            <input type="checkbox" formControlName="outsideShiftOnly" id="ua-outside-shift" />
-            <span>Solo actividad fuera de horario</span>
-          </label>
-        </div>
-
-      </div><!-- /ua-filters-grid -->
-
-      <!-- Filtros avanzados -->
-      @if (showAdvancedFilters()) {
-        <div class="ua-advanced-filters">
-          <div class="ua-advanced-filters__header">
-            <span class="material-symbols-outlined">tune</span>
-            Filtros avanzados
+          <div class="ua-filter-field"
+            [class.ua-filter-field--error]="dateToCtrl.invalid && dateToCtrl.touched || isDateRangeInvalid()">
+            <label for="ua-date-to" class="ua-filter-label">
+              Fecha final <span class="ua-required">*</span>
+            </label>
+            <input id="ua-date-to" type="date" class="ua-filter-input"
+              formControlName="dateTo" />
+            @if (dateToCtrl.invalid && dateToCtrl.touched && !isDateRangeInvalid()) {
+              <span class="ua-filter-error" role="alert">La fecha final es obligatoria.</span>
+            }
+            @if (isDateRangeInvalid()) {
+              <span class="ua-filter-error" role="alert">La fecha final no puede ser anterior a la inicial.</span>
+            }
           </div>
-          <div class="ua-filters-grid ua-filters-grid--advanced">
-            <div class="ua-filter-field">
-              <label for="ua-sku" class="ua-filter-label">SKU</label>
-              <input id="ua-sku" type="text" class="ua-filter-input" formControlName="sku" placeholder="Código de SKU" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-lot" class="ua-filter-label">Lote</label>
-              <input id="ua-lot" type="text" class="ua-filter-input" formControlName="lot" placeholder="ID de lote" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-location" class="ua-filter-label">Ubicación</label>
-              <input id="ua-location" type="text" class="ua-filter-input" formControlName="location" placeholder="Código de ubicación" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-order" class="ua-filter-label">Orden</label>
-              <input id="ua-order" type="text" class="ua-filter-input" formControlName="order" placeholder="ID de orden" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-shipment" class="ua-filter-label">Embarque</label>
-              <input id="ua-shipment" type="text" class="ua-filter-input" formControlName="shipment" placeholder="ID de embarque" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-ip" class="ua-filter-label">Dirección IP</label>
-              <input id="ua-ip" type="text" class="ua-filter-input" formControlName="ipAddress" placeholder="Ej: 192.168.1.45" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-device" class="ua-filter-label">Tipo de dispositivo</label>
-              <input id="ua-device" type="text" class="ua-filter-input" formControlName="deviceType" placeholder="Desktop / Mobile / Tablet" />
-            </div>
-            <div class="ua-filter-field">
-              <label for="ua-session" class="ua-filter-label">ID de sesión</label>
-              <input id="ua-session" type="text" class="ua-filter-input ua-filter-input--mono" formControlName="sessionId" placeholder="ses-abc001" />
+
+          <div class="ua-filter-field">
+            <label for="ua-user-name" class="ua-filter-label">Usuario</label>
+            <input id="ua-user-name" type="text" class="ua-filter-input"
+              formControlName="userName" placeholder="Buscar por nombre..." />
+          </div>
+
+          <div class="ua-filter-field">
+            <label for="ua-role" class="ua-filter-label">Rol</label>
+            <select id="ua-role" class="ua-filter-select" formControlName="userRole">
+              <option [ngValue]="null">Todos los roles</option>
+              @for (role of allRoles; track role) {
+                <option [value]="role">{{ role }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="ua-filter-field">
+            <label for="ua-warehouse" class="ua-filter-label">Almacén</label>
+            <select id="ua-warehouse" class="ua-filter-select" formControlName="warehouse">
+              <option [ngValue]="null">Todos los almacenes</option>
+              @for (wh of allWarehouses; track wh.id) {
+                <option [value]="wh.id">{{ wh.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="ua-filter-field">
+            <label for="ua-module" class="ua-filter-label">Módulo</label>
+            <select id="ua-module" class="ua-filter-select" formControlName="module">
+              <option [ngValue]="null">Todos los módulos</option>
+              @for (mod of allModules; track mod) {
+                <option [value]="mod">{{ mod }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="ua-filter-field">
+            <label for="ua-result" class="ua-filter-label">Resultado</label>
+            <select id="ua-result" class="ua-filter-select" formControlName="result">
+              <option [ngValue]="null">Todos los resultados</option>
+              @for (res of allResults; track res) {
+                <option [value]="res">{{ res }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="ua-filter-field">
+            <label for="ua-severity" class="ua-filter-label">Criticidad</label>
+            <select id="ua-severity" class="ua-filter-select" formControlName="severity">
+              <option [ngValue]="null">Todas las criticidades</option>
+              @for (sev of allSeverities; track sev) {
+                <option [value]="sev">{{ sev }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="ua-filter-field ua-filter-field--wide">
+            <label for="ua-search" class="ua-filter-label">Búsqueda libre</label>
+            <div class="ua-filter-search-wrap">
+              <span class="material-symbols-outlined ua-filter-search-icon">search</span>
+              <input id="ua-search" type="text"
+                class="ua-filter-input ua-filter-input--search"
+                formControlName="searchText"
+                placeholder="Buscar en usuario, módulo, acción, entidad..." />
             </div>
           </div>
-        </div>
-      }
 
-    </form>
+          <div class="ua-filter-field ua-filter-field--checkbox">
+            <label class="ua-filter-check" for="ua-outside-shift">
+              <input type="checkbox" formControlName="outsideShiftOnly" id="ua-outside-shift" />
+              <span>Solo actividad fuera de horario</span>
+            </label>
+          </div>
+
+        </div>
+
+        <!-- Filtros avanzados -->
+        @if (showAdvancedFilters()) {
+          <div class="ua-advanced-filters">
+            <div class="ua-advanced-filters__header">
+              <span class="material-symbols-outlined">tune</span>
+              Filtros avanzados
+            </div>
+            <div class="ua-filters-grid">
+              <div class="ua-filter-field">
+                <label for="ua-sku" class="ua-filter-label">SKU</label>
+                <input id="ua-sku" type="text" class="ua-filter-input" formControlName="sku" placeholder="Código de SKU" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-lot" class="ua-filter-label">Lote</label>
+                <input id="ua-lot" type="text" class="ua-filter-input" formControlName="lot" placeholder="ID de lote" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-location" class="ua-filter-label">Ubicación</label>
+                <input id="ua-location" type="text" class="ua-filter-input" formControlName="location" placeholder="Código de ubicación" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-order" class="ua-filter-label">Orden</label>
+                <input id="ua-order" type="text" class="ua-filter-input" formControlName="order" placeholder="ID de orden" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-shipment" class="ua-filter-label">Embarque</label>
+                <input id="ua-shipment" type="text" class="ua-filter-input" formControlName="shipment" placeholder="ID de embarque" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-ip" class="ua-filter-label">Dirección IP</label>
+                <input id="ua-ip" type="text" class="ua-filter-input" formControlName="ipAddress" placeholder="Ej: 192.168.1.45" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-device" class="ua-filter-label">Tipo de dispositivo</label>
+                <input id="ua-device" type="text" class="ua-filter-input" formControlName="deviceType" placeholder="Desktop / Mobile / Tablet" />
+              </div>
+              <div class="ua-filter-field">
+                <label for="ua-session" class="ua-filter-label">ID de sesión</label>
+                <input id="ua-session" type="text" class="ua-filter-input ua-filter-input--mono" formControlName="sessionId" placeholder="ses-abc001" />
+              </div>
+            </div>
+          </div>
+        }
+
+      </form>
+    </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════
-       BARRA DE ACCIONES (Vista + Exportar)
+       BARRA DE VISTA + CONTEO
        ═══════════════════════════════════════════════════════════ -->
   <div class="ua-view-bar">
     <div class="ua-view-toggle" role="group" aria-label="Seleccionar vista">
@@ -404,12 +400,9 @@
         Línea de tiempo
       </button>
     </div>
-
-    <div class="ua-view-bar__info">
-      <span class="ua-view-bar__count">
-        {{ filteredEvents().length }} evento{{ filteredEvents().length !== 1 ? 's' : '' }}
-      </span>
-    </div>
+    <span class="ua-view-bar__count" aria-live="polite" aria-atomic="true">
+      {{ filteredEvents().length }} evento{{ filteredEvents().length !== 1 ? 's' : '' }}
+    </span>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -418,73 +411,105 @@
   @if (activeView() === 'TABLE') {
     <div class="ua-table-section">
 
-      <!-- Estado de carga -->
       @if (isLoading()) {
-        <div class="ua-skeleton-container" aria-busy="true" aria-label="Cargando datos">
-          @for (i of [1,2,3,4,5]; track i) {
+        <!-- Skeleton Loader -->
+        <div class="ua-skeleton-card" aria-busy="true" aria-label="Cargando datos">
+          <div class="ua-skeleton-header">
+            <div class="ua-skel ua-skel--w120"></div>
+            <div class="ua-skel ua-skel--w80"></div>
+            <div class="ua-skel ua-skel--w100"></div>
+          </div>
+          @for (i of [1,2,3,4,5,6,7]; track i) {
             <div class="ua-skeleton-row">
-              <div class="ua-skeleton-cell ua-skeleton-cell--sm"></div>
-              <div class="ua-skeleton-cell ua-skeleton-cell--md"></div>
-              <div class="ua-skeleton-cell ua-skeleton-cell--sm"></div>
-              <div class="ua-skeleton-cell ua-skeleton-cell--lg"></div>
-              <div class="ua-skeleton-cell ua-skeleton-cell--sm"></div>
-              <div class="ua-skeleton-cell ua-skeleton-cell--sm"></div>
+              <div class="ua-skel ua-skel--avatar"></div>
+              <div class="ua-skel ua-skel--w140"></div>
+              <div class="ua-skel ua-skel--w80"></div>
+              <div class="ua-skel ua-skel--w60"></div>
+              <div class="ua-skel ua-skel--w100"></div>
+              <div class="ua-skel ua-skel--w80"></div>
+              <div class="ua-skel ua-skel--badge"></div>
+              <div class="ua-skel ua-skel--badge"></div>
             </div>
           }
         </div>
       } @else if (filteredEvents().length === 0) {
+        <!-- Empty State -->
         <div class="ua-empty" role="status">
-          <span class="material-symbols-outlined ua-empty__icon">manage_search</span>
-          <h3 class="ua-empty__title">Sin resultados</h3>
-          <p class="ua-empty__desc">No se encontraron eventos con los filtros actuales.</p>
+          <div class="ua-empty__visual">
+            <div class="ua-empty__icon-wrap">
+              <span class="material-symbols-outlined ua-empty__icon">manage_search</span>
+            </div>
+            <div class="ua-empty__rings">
+              <div class="ua-empty__ring ua-empty__ring--1"></div>
+              <div class="ua-empty__ring ua-empty__ring--2"></div>
+            </div>
+          </div>
+          <h3 class="ua-empty__title">No se encontraron eventos</h3>
+          <p class="ua-empty__desc">Prueba modificando los filtros de búsqueda.</p>
           <button class="ua-btn ua-btn--primary" (click)="clearFilters()">
             <span class="material-symbols-outlined">clear_all</span>
             Limpiar filtros
           </button>
         </div>
       } @else {
+        <!-- Tabla -->
         <div class="ua-table-container" role="region" aria-label="Tabla de eventos de actividad">
           <table class="ua-table" aria-label="Eventos de actividad por usuario">
             <thead class="ua-table__head">
               <tr>
-                <th scope="col">Fecha y hora</th>
-                <th scope="col">Usuario</th>
-                <th scope="col">Rol</th>
-                <th scope="col">Almacén</th>
-                <th scope="col">Módulo</th>
-                <th scope="col">Acción</th>
-                <th scope="col">Entidad</th>
-                <th scope="col">Resultado</th>
-                <th scope="col">Criticidad</th>
-                <th scope="col" class="ua-table__th-actions">Acciones</th>
+                <th scope="col" class="ua-th--time">Fecha / hora</th>
+                <th scope="col" class="ua-th--primary">Usuario</th>
+                <th scope="col" class="ua-th--secondary">Rol</th>
+                <th scope="col" class="ua-th--secondary">Almacén</th>
+                <th scope="col" class="ua-th--secondary">Módulo</th>
+                <th scope="col" class="ua-th--primary">Acción</th>
+                <th scope="col" class="ua-th--secondary">Entidad</th>
+                <th scope="col" class="ua-th--primary">Resultado</th>
+                <th scope="col" class="ua-th--secondary">Criticidad</th>
+                <th scope="col" class="ua-th--actions">Detalle</th>
               </tr>
             </thead>
             <tbody class="ua-table__body">
               @for (event of pagedEvents(); track event.id) {
-                <tr class="ua-table__row" [class.ua-table__row--outside]="event.outsideShift">
-                  <td class="ua-table__td ua-table__td--time">
-                    {{ event.occurredAt | date:'dd/MM HH:mm' }}
+                <tr class="ua-table__row"
+                  [class.ua-table__row--outside]="event.outsideShift"
+                  (click)="openDetail(event)"
+                  role="button"
+                  tabindex="0"
+                  (keydown.enter)="openDetail(event)"
+                  (keydown.space)="openDetail(event)"
+                  [attr.aria-label]="'Ver detalle de ' + event.action + ' por ' + event.userName">
+                  <td class="ua-td ua-td--time">
+                    <span class="ua-time__date">{{ event.occurredAt | date:'dd/MM/yy' }}</span>
+                    <span class="ua-time__hour">{{ event.occurredAt | date:'HH:mm' }}</span>
                     @if (event.outsideShift) {
-                      <span class="ua-outside-badge" title="Fuera de horario">
+                      <span class="ua-outside-pip" title="Fuera de horario" aria-label="Fuera de horario">
                         <span class="material-symbols-outlined">dark_mode</span>
                       </span>
                     }
                   </td>
-                  <td class="ua-table__td">
+                  <td class="ua-td ua-td--primary">
                     <div class="ua-user-cell">
-                      <div class="ua-user-cell__avatar">{{ initials(event.userName) }}</div>
-                      <span class="ua-user-cell__name">{{ event.userName }}</span>
+                      <div class="ua-user-cell__avatar" aria-hidden="true">{{ initials(event.userName) }}</div>
+                      <div class="ua-user-cell__info">
+                        <span class="ua-user-cell__name">{{ event.userName }}</span>
+                        <span class="ua-user-cell__email">{{ event.userEmail }}</span>
+                      </div>
                     </div>
                   </td>
-                  <td class="ua-table__td">
+                  <td class="ua-td ua-td--secondary">
                     <span class="ua-role-badge">{{ event.userRole }}</span>
                   </td>
-                  <td class="ua-table__td">{{ event.warehouseName }}</td>
-                  <td class="ua-table__td">{{ event.module }}</td>
-                  <td class="ua-table__td">
+                  <td class="ua-td ua-td--secondary">{{ event.warehouseName }}</td>
+                  <td class="ua-td ua-td--secondary">
+                    <span class="ua-module-pill" [class]="'ua-module-pill--' + moduleClass(event.module)">
+                      {{ event.module }}
+                    </span>
+                  </td>
+                  <td class="ua-td ua-td--primary ua-td--action">
                     <span class="ua-action-mono">{{ event.action }}</span>
                   </td>
-                  <td class="ua-table__td">
+                  <td class="ua-td ua-td--secondary">
                     <span class="ua-entity">
                       {{ event.entityType }}
                       @if (event.entityId) {
@@ -492,28 +517,23 @@
                       }
                     </span>
                   </td>
-                  <td class="ua-table__td">
-                    <span class="ua-result-badge"
-                      [class]="'ua-result-badge--' + event.result.toLowerCase()">
-                      <span class="material-symbols-outlined ua-result-badge__icon">
-                        {{ resultIcon(event.result) }}
-                      </span>
+                  <td class="ua-td ua-td--primary">
+                    <span class="ua-result-badge" [class]="'ua-result-badge--' + event.result.toLowerCase()">
+                      <span class="material-symbols-outlined ua-result-badge__icon">{{ resultIcon(event.result) }}</span>
                       {{ event.result }}
                     </span>
                   </td>
-                  <td class="ua-table__td">
-                    <span class="ua-severity-badge"
-                      [class]="'ua-severity-badge--' + event.severity.toLowerCase()">
+                  <td class="ua-td ua-td--secondary">
+                    <span class="ua-severity-badge" [class]="'ua-severity-badge--' + event.severity.toLowerCase()">
                       {{ event.severity }}
                     </span>
                   </td>
-                  <td class="ua-table__td ua-table__td-actions">
+                  <td class="ua-td ua-td--actions">
                     <button
                       class="ua-detail-btn"
-                      (click)="openDetail(event)"
-                      [attr.aria-label]="'Ver detalle del evento de ' + event.userName">
+                      (click)="$event.stopPropagation(); openDetail(event)"
+                      [attr.aria-label]="'Ver detalle de ' + event.userName">
                       <span class="material-symbols-outlined">open_in_new</span>
-                      Ver detalle
                     </button>
                   </td>
                 </tr>
@@ -526,14 +546,10 @@
         <div class="ua-pagination" role="navigation" aria-label="Paginación de eventos">
           <span class="ua-pagination__info">
             Página {{ pageIndex() + 1 }} de {{ totalPages() }}
-            · {{ filteredEvents().length }} eventos totales
+            &nbsp;·&nbsp; {{ filteredEvents().length }} eventos
           </span>
           <div class="ua-pagination__controls">
-            <button
-              class="ua-page-btn"
-              (click)="prevPage()"
-              [disabled]="pageIndex() === 0"
-              aria-label="Página anterior">
+            <button class="ua-page-btn" (click)="prevPage()" [disabled]="pageIndex() === 0" aria-label="Página anterior">
               <span class="material-symbols-outlined">chevron_left</span>
             </button>
             @for (page of pageNumbers(); track page) {
@@ -546,144 +562,271 @@
                 {{ page + 1 }}
               </button>
             }
-            <button
-              class="ua-page-btn"
-              (click)="nextPage()"
-              [disabled]="pageIndex() >= totalPages() - 1"
-              aria-label="Página siguiente">
+            <button class="ua-page-btn" (click)="nextPage()" [disabled]="pageIndex() >= totalPages() - 1" aria-label="Página siguiente">
               <span class="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
         </div>
       }
-
     </div>
   }
 
   <!-- ═══════════════════════════════════════════════════════════
-       VISTA: TIMELINE
+       VISTA: TIMELINE — GOOGLE AI REPLICA
        ═══════════════════════════════════════════════════════════ -->
   @if (activeView() === 'TIMELINE') {
-    <div class="ua-timeline-section">
+    <section class="ua-timeline-section">
 
-      <!-- Selección de usuario (requerida) -->
       @if (!timelineUserId()) {
-        <!-- Estado guía -->
+        <!-- Selector de usuario -->
         <div class="ua-timeline-guide">
-          <div class="ua-timeline-guide__icon">
+          <div class="ua-timeline-guide__glow"></div>
+
+          <div class="ua-timeline-guide__icon-wrap">
             <span class="material-symbols-outlined">person_search</span>
           </div>
-          <h3 class="ua-timeline-guide__title">Selecciona un usuario</h3>
-          <p class="ua-timeline-guide__desc">
-            La vista de línea de tiempo muestra la secuencia de eventos de un usuario específico.
-            Selecciona un usuario para ver su actividad.
-          </p>
+
+          <div class="ua-timeline-guide__copy">
+            <span class="ua-timeline-guide__eyebrow">
+              SECUENCIA CRONOLÓGICA
+            </span>
+
+            <h3 class="ua-timeline-guide__title">
+              Selecciona un usuario
+            </h3>
+
+            <p class="ua-timeline-guide__desc">
+              Consulta en orden cronológico todas las acciones realizadas por
+              un usuario dentro de la operación.
+            </p>
+          </div>
 
           @if (uniqueUsers().length === 0) {
-            <p class="ua-timeline-guide__empty">
-              No hay usuarios con eventos en el rango seleccionado.
-              Ajusta los filtros y aplícalos antes de cambiar a esta vista.
-            </p>
+            <div class="ua-empty ua-empty--inline">
+              <p class="ua-empty__desc">
+                No hay usuarios con eventos. Ajusta los filtros y vuelve a intentarlo.
+              </p>
+            </div>
           } @else {
-            <div class="ua-timeline-user-list">
+            <div class="ua-user-picker">
               @for (user of uniqueUsers(); track user.userId) {
                 <button
-                  class="ua-timeline-user-btn"
+                  type="button"
+                  class="ua-user-pick-btn"
                   (click)="selectTimelineUser(user.userId, user.userName)"
                   [attr.aria-label]="'Ver línea de tiempo de ' + user.userName">
-                  <div class="ua-timeline-user-btn__avatar">{{ initials(user.userName) }}</div>
-                  <span>{{ user.userName }}</span>
-                  <span class="material-symbols-outlined ua-timeline-user-btn__arrow">arrow_forward</span>
+
+                  <div class="ua-user-pick-btn__avatar">
+                    {{ initials(user.userName) }}
+                  </div>
+
+                  <div class="ua-user-pick-btn__info">
+                    <span class="ua-user-pick-btn__name">
+                      {{ user.userName }}
+                    </span>
+
+                    <span class="ua-user-pick-btn__count">
+                      {{ activityService.getEventsForUser(user.userId).length }}
+                      evento{{ activityService.getEventsForUser(user.userId).length !== 1 ? 's' : '' }}
+                    </span>
+                  </div>
+
+                  <span class="material-symbols-outlined ua-user-pick-btn__arrow">
+                    arrow_forward
+                  </span>
                 </button>
               }
             </div>
           }
         </div>
+
       } @else {
         <!-- Timeline del usuario seleccionado -->
         <div class="ua-timeline">
-          <div class="ua-timeline__header">
+
+          <!-- Cabecera -->
+          <header class="ua-timeline__header">
             <div class="ua-timeline__header-user">
-              <div class="ua-timeline__avatar">{{ initials(timelineUserName() ?? '') }}</div>
-              <div>
-                <span class="ua-timeline__user-name">{{ timelineUserName() }}</span>
-                <span class="ua-timeline__event-count">
-                  {{ timelineEvents().length }} evento{{ timelineEvents().length !== 1 ? 's' : '' }}
+              <div class="ua-timeline__avatar">
+                {{ initials(timelineUserName() ?? '') }}
+              </div>
+
+              <div class="ua-timeline__header-copy">
+                <span class="ua-timeline__eyebrow">
+                  ACTIVIDAD CRONOLÓGICA
+                </span>
+
+                <h3 class="ua-timeline__user-name">
+                  {{ timelineUserName() }}
+                </h3>
+
+                <span class="ua-timeline__meta">
+                  {{ timelineEvents().length }}
+                  evento{{ timelineEvents().length !== 1 ? 's' : '' }}
+                  en la secuencia actual
                 </span>
               </div>
             </div>
+
             <button
-              class="ua-btn ua-btn--ghost ua-btn--sm"
+              type="button"
+              class="ua-timeline__change-user"
               (click)="clearTimelineUser()"
-              aria-label="Cambiar usuario de la línea de tiempo">
+              aria-label="Cambiar usuario">
+
               <span class="material-symbols-outlined">person_search</span>
               Cambiar usuario
             </button>
-          </div>
+          </header>
 
           @if (timelineEvents().length === 0) {
-            <div class="ua-empty" role="status">
-              <span class="material-symbols-outlined ua-empty__icon">timeline</span>
-              <p class="ua-empty__desc">Este usuario no tiene eventos con los filtros actuales.</p>
+            <div class="ua-empty ua-empty--inline">
+              <span class="material-symbols-outlined ua-empty__icon">
+                timeline
+              </span>
+
+              <p class="ua-empty__desc">
+                Este usuario no tiene eventos con los filtros actuales.
+              </p>
             </div>
           } @else {
-            <div class="ua-timeline__events">
+            <!-- Carril -->
+            <div class="ua-tl-rail">
               @for (event of timelineEvents(); track event.id; let last = $last) {
-                <div class="ua-tl-event" [class.ua-tl-event--outside]="event.outsideShift">
-                  <div class="ua-tl-event__line-col">
-                    <div class="ua-tl-event__dot"
-                      [class]="'ua-tl-event__dot--' + event.result.toLowerCase()">
-                      <span class="material-symbols-outlined ua-tl-event__dot-icon">
-                        {{ timelineIcon(event.action) }}
-                      </span>
+                <article
+                  class="ua-tl-item"
+                  [class.ua-tl-item--outside]="event.outsideShift"
+                  [class]="'ua-tl-item ua-tl-item--severity-' + event.severity.toLowerCase()">
+
+                  <!-- Línea y nodo -->
+                  <div class="ua-tl-item__track" aria-hidden="true">
+                    <div class="ua-tl-item__dot">
+                      <span class="ua-tl-item__dot-core"></span>
                     </div>
+
                     @if (!last) {
-                      <div class="ua-tl-event__connector"></div>
+                      <div class="ua-tl-item__connector"></div>
                     }
                   </div>
-                  <div class="ua-tl-event__content">
-                    <div class="ua-tl-event__meta">
-                      <span class="ua-tl-event__time">
-                        {{ event.occurredAt | date:'HH:mm' }}
+
+                  <!-- Tarjeta -->
+                  <div
+                    class="ua-tl-item__card"
+                    role="button"
+                    tabindex="0"
+                    (click)="openDetail(event)"
+                    (keydown.enter)="openDetail(event)"
+                    [attr.aria-label]="'Ver detalle de ' + event.action">
+
+                    <!-- Fila superior -->
+                    <div class="ua-tl-item__top">
+
+                      <div class="ua-tl-item__identity">
+                        <time class="ua-tl-item__datetime">
+                          <span class="ua-tl-item__date">
+                            {{ event.occurredAt | date:'dd/MM/yy' }}
+                          </span>
+
+                          <span class="ua-tl-item__hour">
+                            {{ event.occurredAt | date:'HH:mm' }}
+                          </span>
+                        </time>
+
+                        @if (event.outsideShift) {
+                          <span class="ua-outside-badge--text">
+                            <span class="material-symbols-outlined">
+                              dark_mode
+                            </span>
+                            Fuera de horario
+                          </span>
+                        }
+
+                        <span class="ua-tl-item__user">
+                          {{ timelineUserName() }}
+                        </span>
+                      </div>
+
+                      <div class="ua-tl-item__badges">
+                        <span class="ua-tl-action-badge">
+                          {{ event.action }}
+                        </span>
+
+                        <span
+                          class="ua-result-badge ua-result-badge--sm"
+                          [class]="'ua-result-badge ua-result-badge--sm ua-result-badge--' + event.result.toLowerCase()">
+
+                          <span class="material-symbols-outlined ua-result-badge__icon">
+                            {{ resultIcon(event.result) }}
+                          </span>
+
+                          {{ event.result }}
+                        </span>
+
+                        <span
+                          class="ua-severity-badge ua-severity-badge--sm"
+                          [class]="'ua-severity-badge ua-severity-badge--sm ua-severity-badge--' + event.severity.toLowerCase()">
+                          {{ event.severity }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <p class="ua-tl-item__desc">
+                      {{ event.description }}
+                    </p>
+
+                    <!-- Metadata -->
+                    <div class="ua-tl-item__metadata">
+                      <span class="ua-tl-item__metadata-entry">
+                        <span class="ua-tl-item__metadata-label">Módulo:</span>
+
+                        <strong class="ua-tl-item__metadata-value">
+                          {{ event.module }}
+                        </strong>
                       </span>
-                      <span class="ua-result-badge ua-result-badge--sm"
-                        [class]="'ua-result-badge--' + event.result.toLowerCase()">
-                        {{ event.result }}
+
+                      <span class="ua-tl-item__metadata-separator">·</span>
+
+                      <span class="ua-tl-item__metadata-entry">
+                        <span class="ua-tl-item__metadata-label">Entidad:</span>
+
+                        <strong class="ua-tl-item__metadata-value">
+                          {{ event.entityType }}
+                        </strong>
                       </span>
-                      <span class="ua-severity-badge ua-severity-badge--sm"
-                        [class]="'ua-severity-badge--' + event.severity.toLowerCase()">
-                        {{ event.severity }}
-                      </span>
-                      @if (event.outsideShift) {
-                        <span class="ua-outside-badge ua-outside-badge--text">
-                          <span class="material-symbols-outlined">dark_mode</span>
-                          Fuera de horario
+
+                      @if (event.entityId) {
+                        <span class="ua-tl-item__metadata-separator">·</span>
+
+                        <span class="ua-tl-item__metadata-entry">
+                          <span class="ua-tl-item__metadata-label">ID:</span>
+
+                          <strong class="ua-tl-item__entity">
+                            {{ event.entityId }}
+                          </strong>
                         </span>
                       }
                     </div>
-                    <div class="ua-tl-event__action">
-                      <span class="ua-tl-event__module">{{ event.module }}</span>
-                      <span class="ua-action-mono">{{ event.action }}</span>
-                      @if (event.entityId) {
-                        <span class="ua-tl-event__entity">{{ event.entityId }}</span>
-                      }
-                    </div>
-                    <p class="ua-tl-event__desc">{{ event.description }}</p>
-                    <button
-                      class="ua-tl-event__detail-btn"
-                      (click)="openDetail(event)"
-                      [attr.aria-label]="'Ver detalle: ' + event.action">
-                      Ver detalle
-                    </button>
+
+                    @if (event.reason) {
+                      <div class="ua-tl-item__reason">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>{{ event.reason }}</span>
+                      </div>
+                    }
+
+                    <span class="material-symbols-outlined ua-tl-item__open-icon">
+                      arrow_outward
+                    </span>
                   </div>
-                </div>
+                </article>
               }
             </div>
           }
         </div>
       }
 
-    </div>
+    </section>
   }
 
 </div><!-- /ua-page -->

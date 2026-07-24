@@ -206,6 +206,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Actividad por Usuario',
       },
 
+      // Motor de Reglas de Negocio (HU-131)
+      {
+        path: 'business-rules',
+        canActivate: [rbacGuard],
+        data: { module: 'business-rules' },
+        loadChildren: () =>
+          import('./features/business-rules/business-rules.routes').then((m) => m.businessRulesRoutes),
+        title: '4GUARD WMS — Motor de Reglas de Negocio',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
