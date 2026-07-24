@@ -37,5 +37,11 @@ export const adminRoutes: Routes = [
       import('./sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
     title: '4GUARD WMS — Sesiones Activas',
   },
+  {
+    path: 'organizations',
+    loadChildren: () =>
+      import('./organizations/organization.routes').then((m) => m.organizationRoutes),
+    title: '4GUARD WMS — Gestión de Organizaciones',
+  },
 ];
 
