@@ -103,6 +103,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Despacho',
       },
 
+      // Control de Usuarios y Seguridad (Homologado)
+      {
+        path: 'users',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadComponent: () =>
+          import('./features/admin/users/users-list.component').then((m) => m.UsersListComponent),
+        title: '4GUARD WMS — Control de Usuarios y Seguridad',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',
