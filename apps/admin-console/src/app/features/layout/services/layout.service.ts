@@ -8,7 +8,7 @@
 
 import { Injectable, inject } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
 
 import { LocationService, Location, LocationResponse, LocationType } from '../../admin/services/location.service';
 import { SectionService } from '../../admin/services/section.service';
@@ -81,6 +81,7 @@ export class LayoutService {
       capacityUnits: payload.maxCapacity,
       code: payload.code,
       name: payload.name,
+      notes: payload.observations || undefined,
     };
 
     return this.locationSvc.create(request).pipe(
@@ -118,6 +119,7 @@ export class LayoutService {
       capacityUnits: payload.maxCapacity,
       code: payload.code,
       name: payload.name,
+      notes: payload.observations || undefined,
     };
 
     return this.locationSvc.update(id, request).pipe(
@@ -164,11 +166,84 @@ export class LayoutService {
     );
   }
 
-  // ── Auditoría ──────────────────────────────────────────────────────────────
+  /** Retorna el historial de auditoría de una ubicación desde el backend */
+  getLocationHistory(id: string): Observable<LocationAuditEntry[]> {
+    return this.locationSvc.getLocationAudit(id).pipe(
+      map(res => {
+        if (!res.success || !res.data) return [];
+        return res.data.map(entry => {
+          let summary = 'Acción registrada';
+          let icon = 'info';
+          let color: 'create' | 'update' | 'status' | 'delete' | 'info' = 'info';
 
-  /** Retorna el historial de auditoría de una ubicación (sin endpoint BE dedicado aún) */
-  getLocationHistory(_id: string): Observable<LocationAuditEntry[]> {
-    return of([]);
+          switch (entry.action) {
+            case 'LOCATION_CREATED':
+              summary = 'Ubicación registrada';
+              icon = 'add_circle';
+              color = 'create';
+              break;
+            case 'LOCATION_UPDATED':
+              summary = 'Información actualizada';
+              icon = 'edit';
+              color = 'update';
+              break;
+            case 'LOCATION_STATUS_UPDATED':
+              summary = 'Cambio de estatus operativo';
+              icon = 'swap_horiz';
+              color = 'status';
+              break;
+            case 'LOCATION_DELETED':
+              summary = 'Ubicación eliminada';
+              icon = 'delete';
+              color = 'delete';
+              break;
+            default:
+              summary = entry.action;
+          }
+
+          const friendlyDetails = (entry.details || []).map(det => ({
+            ...det,
+            fieldName: this.formatAuditFieldName(det.fieldName)
+          }));
+
+          return {
+            id: entry.logId,
+            locationId: id,
+            action: entry.action,
+            summary,
+            performedBy: entry.username || 'Sistema WMS',
+            performedAt: entry.createdAt,
+            username: entry.username || 'Sistema WMS',
+            createdAt: entry.createdAt,
+            details: friendlyDetails,
+            timelineIcon: icon,
+            timelineColor: color,
+          };
+        });
+      }),
+      catchError(() => of([]))
+    );
+  }
+
+  private formatAuditFieldName(fieldName: string): string {
+    const fieldMap: Record<string, string> = {
+      notes: 'Notas / Observaciones',
+      capacityUnits: 'Capacidad Máxima',
+      status: 'Estatus Operativo',
+      statusReason: 'Motivo de Estatus',
+      blockReason: 'Motivo de Bloqueo',
+      type: 'Tipo de Ubicación',
+      isBlocked: 'Estado de Bloqueo',
+      code: 'Código',
+      name: 'Nombre Descriptivo',
+      aisle: 'Pasillo',
+      rack: 'Rack',
+      level: 'Nivel',
+      position: 'Posición',
+      sectionId: 'Sección / Zona',
+      branchId: 'Sucursal'
+    };
+    return fieldMap[fieldName] || fieldName;
   }
 
   // ── Mappers Privados ───────────────────────────────────────────────────────
@@ -202,7 +277,7 @@ export class LayoutService {
       occupancyPercentage: occPct,
       availableCapacity: availCap,
       status: status,
-      observations: loc.statusReason || loc.blockReason || undefined,
+      observations: loc.notes || loc.statusReason || loc.blockReason || undefined,
       createdAt: loc.createdAt || new Date().toISOString(),
       updatedAt: loc.updatedAt || new Date().toISOString(),
       updatedBy: 'Sistema WMS',
