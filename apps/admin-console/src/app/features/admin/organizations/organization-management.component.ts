@@ -17,19 +17,14 @@ import { ConfirmDialogComponent } from '../users/confirm-dialog/confirm-dialog.c
 
 type FormMode = 'idle' | 'new' | 'edit';
 
+export interface SettingRow {
+  key: string;
+  value: string;
+}
+
 function noWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
   if (!control.value) return null;
   return (control.value as string).trim().length === 0 ? { whitespaceOnly: true } : null;
-}
-
-function jsonSyntaxValidator(control: AbstractControl): ValidationErrors | null {
-  if (!control.value) return null;
-  try {
-    JSON.parse(control.value);
-    return null;
-  } catch (e) {
-    return { invalidJson: true };
-  }
 }
 
 @Component({
@@ -74,14 +69,16 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
   protected readonly deletingOrg = signal<Organization | null>(null);
   protected readonly isDeleting = signal(false);
 
+  // ── Parámetros Relacionales (Clave / Valor) ───────────────
+  protected readonly settingRows = signal<SettingRow[]>([]);
+
   // ── Formulario Reactivo ─────────────────────────────────
   protected readonly form: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(100), noWhitespaceValidator]],
     code: ['', [Validators.required, Validators.maxLength(50), noWhitespaceValidator]],
     taxId: ['', [Validators.maxLength(30)]],
     type: ['LOGISTICS', Validators.required],
-    status: ['ACTIVE', Validators.required],
-    settings: ['{\n  "theme": "dark",\n  "notifications_email": "true",\n  "max_branches": "5"\n}', [Validators.required, jsonSyntaxValidator]]
+    status: ['ACTIVE', Validators.required]
   });
 
   // ── Tipos de Organización Disponibles ─────────────────────
@@ -206,9 +203,14 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
       code: '',
       taxId: '',
       type: 'LOGISTICS',
-      status: 'ACTIVE',
-      settings: '{\n  "theme": "dark",\n  "notifications_email": "true",\n  "max_branches": "5"\n}'
+      status: 'ACTIVE'
     });
+
+    this.settingRows.set([
+      { key: 'theme', value: 'dark' },
+      { key: 'notifications_email', value: 'true' },
+      { key: 'max_branches', value: '5' }
+    ]);
 
     this.form.get('code')?.enable();
   }
@@ -221,6 +223,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     } else {
       this.formMode.set('idle');
       this.form.reset();
+      this.settingRows.set([]);
     }
   }
 
@@ -234,25 +237,68 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
       code: org.code,
       taxId: org.taxId,
       type: org.type,
-      status: org.status,
-      settings: org.settings
+      status: org.status
     });
+
+    // Mapear configuraciones relacionales a la lista de filas
+    let rows: SettingRow[] = [];
+    if (org.settings) {
+      try {
+        const parsed = typeof org.settings === 'string' ? JSON.parse(org.settings) : org.settings;
+        rows = Object.entries(parsed).map(([key, value]) => ({
+          key,
+          value: value !== null && value !== undefined ? String(value) : ''
+        }));
+      } catch (e) {
+        console.warn('No se pudo parsear el objeto de configuraciones:', e);
+      }
+    }
+    this.settingRows.set(rows);
 
     // Código inmutable en edición
     this.form.get('code')?.disable();
   }
 
-  // ── Formateo Automático de JSONB ─────────────────────────
-  protected formatSettingsJson(): void {
-    const val = this.form.get('settings')?.value;
-    if (!val) return;
-    try {
-      const parsed = JSON.parse(val);
-      const formatted = JSON.stringify(parsed, null, 2);
-      this.form.patchValue({ settings: formatted });
-    } catch (e) {
-      this.toastService.warning('Sintaxis JSON no válida. Revisa la estructura.');
+  // ── Gestión Relacional Clave/Valor ─────────────────────────
+  protected addSettingRow(key = '', value = ''): void {
+    this.settingRows.update(rows => [...rows, { key, value }]);
+  }
+
+  protected addPresetSetting(key: string, defaultValue: string): void {
+    const exists = this.settingRows().some(r => r.key === key);
+    if (!exists) {
+      this.addSettingRow(key, defaultValue);
     }
+  }
+
+  protected updateSettingKey(index: number, newKey: string): void {
+    this.settingRows.update(rows => {
+      const updated = [...rows];
+      updated[index] = { ...updated[index], key: newKey };
+      return updated;
+    });
+  }
+
+  protected updateSettingValue(index: number, newValue: string): void {
+    this.settingRows.update(rows => {
+      const updated = [...rows];
+      updated[index] = { ...updated[index], value: newValue };
+      return updated;
+    });
+  }
+
+  protected removeSettingRow(index: number): void {
+    this.settingRows.update(rows => rows.filter((_, i) => i !== index));
+  }
+
+  private getSettingsAsJsonString(): string {
+    const map: Record<string, string> = {};
+    for (const row of this.settingRows()) {
+      if (row.key && row.key.trim()) {
+        map[row.key.trim()] = row.value !== undefined ? row.value.trim() : '';
+      }
+    }
+    return JSON.stringify(map);
   }
 
   // ── Guardar (Alta / Modificación) ───────────────────────
@@ -267,6 +313,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     }
 
     const formVal = this.form.getRawValue();
+    const settingsJson = this.getSettingsAsJsonString();
 
     if (this.formMode() === 'new') {
       const payload: Omit<Organization, 'id' | 'createdAt'> = {
@@ -275,7 +322,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
         taxId: formVal.taxId ? formVal.taxId.trim().toUpperCase() : '',
         type: formVal.type,
         status: formVal.status,
-        settings: formVal.settings
+        settings: settingsJson
       };
 
       this.orgService.create(payload).pipe(takeUntil(this.destroy$)).subscribe({
@@ -300,7 +347,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
         taxId: formVal.taxId ? formVal.taxId.trim().toUpperCase() : '',
         type: formVal.type,
         status: formVal.status,
-        settings: formVal.settings
+        settings: settingsJson
       };
 
       this.orgService.update(id, payload).pipe(takeUntil(this.destroy$)).subscribe({
@@ -365,6 +412,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
           this.selectedOrg.set(null);
           this.formMode.set('idle');
           this.form.reset();
+          this.settingRows.set([]);
         }
       },
       error: (err: HttpErrorResponse) => {
@@ -410,7 +458,6 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     if (ctrl.errors['required']) return 'Este campo es obligatorio.';
     if (ctrl.errors['maxlength']) return `Máximo ${ctrl.errors['maxlength'].requiredLength} caracteres.`;
     if (ctrl.errors['whitespaceOnly']) return 'No se permiten sólo espacios en blanco.';
-    if (ctrl.errors['invalidJson']) return 'Estructura JSON inválida. Verifique sintaxis.';
     return 'Campo inválido.';
   }
 

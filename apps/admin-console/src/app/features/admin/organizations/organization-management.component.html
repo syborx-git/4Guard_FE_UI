@@ -1,120 +1,135 @@
 <div class="orgs-page">
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       HEADER PRINCIPAL & BOTÓN VOLVER AL DASHBOARD
+       HEADER PRINCIPAL — HOMOLOGADO CON TRANSPORTISTAS
        ════════════════════════════════════════════════════════════════ -->
   <header class="orgs-header">
     <div class="orgs-header__top">
       <div class="orgs-header__left">
-        <!-- BOTÓN DE VOLVER AL DASHBOARD (SOLICITADO POR EL USUARIO) -->
-        <button class="back-dashboard-btn" (click)="goBack()" type="button" aria-label="Volver al Dashboard">
-          <span class="material-symbols-outlined">arrow_back</span>
-          <span>Volver al Dashboard</span>
-        </button>
-
         <div class="orgs-header__icon-wrap">
           <span class="material-symbols-outlined orgs-header__icon">corporate_fare</span>
         </div>
 
         <div class="orgs-header__copy">
           <div class="orgs-header__eyebrow">
-            <span class="orgs-header__eyebrow-cat">ADMINISTRACIÓN / ORGANIZATIONS</span>
-            <span class="orgs-header__eyebrow-sep">•</span>
-            <span class="orgs-header__eyebrow-tag">MULTI-TENANCY</span>
+            <button
+              type="button"
+              (click)="goBack()"
+              class="orgs-header__eyebrow-btn"
+              title="Volver a la consola de administración">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>ADMINISTRACIÓN WMS</span>
+            </button>
+            <span class="orgs-header__eyebrow-sep">·</span>
+            <span>CATÁLOGO MAESTRO</span>
           </div>
 
-          <h1 class="orgs-header__title">
-            Gestión de Organizaciones
-            <span class="orgs-header__title-sub">· Consola Administrativa 3PL</span>
-          </h1>
+          <h1 class="orgs-header__title">Gestión de Organizaciones</h1>
+          <p class="orgs-header__subtitle">
+            Administra las empresas responsables y holdings raíz del sistema Multi-Tenancy 3PL
+          </p>
         </div>
       </div>
 
-      <div class="orgs-header__actions">
-        <button class="orgs-btn orgs-btn--gold" (click)="openNewForm()" type="button">
-          <span class="material-symbols-outlined">add_business</span>
-          <span>Nueva Organización</span>
-        </button>
-      </div>
+      <button
+        id="btn-new-org"
+        class="orgs-btn orgs-btn--primary"
+        type="button"
+        (click)="openNewForm()">
+        <span class="material-symbols-outlined">add</span>
+        Nuevo tenant
+      </button>
     </div>
 
-    <!-- TARJETAS DE KPIs MÉTRICOS (4 TARJETAS) -->
-    <section class="orgs-kpi-grid" aria-label="Resumen de Organizaciones">
-      <article class="orgs-kpi-card orgs-kpi-card--gold">
+    <!-- ── KPI Cards Homologadas ───────────────────────────────────── -->
+    <div class="orgs-kpi-grid" aria-label="Indicadores de organizaciones">
+
+      <!-- Total -->
+      <div class="orgs-kpi-card orgs-kpi-card--total">
         <div class="orgs-kpi-card__icon-wrap">
           <span class="material-symbols-outlined">corporate_fare</span>
         </div>
-        <div class="orgs-kpi-card__content">
-          <span class="orgs-kpi-card__label">TOTAL ORGANIZACIONES</span>
-          <strong class="orgs-kpi-card__value">{{ totalOrgs() }}</strong>
-          <span class="orgs-kpi-card__sub">Tenants registrados</span>
+        <div class="orgs-kpi-card__body">
+          @if (isLoadingOrgs()) {
+            <div class="orgs-kpi-card__skeleton"></div>
+          } @else {
+            <span class="orgs-kpi-card__value">{{ totalOrgs() }}</span>
+          }
+          <span class="orgs-kpi-card__label">TOTAL</span>
         </div>
-      </article>
+        <div class="orgs-kpi-card__bar orgs-kpi-card__bar--total"></div>
+      </div>
 
-      <article class="orgs-kpi-card orgs-kpi-card--green">
+      <!-- Activos -->
+      <div class="orgs-kpi-card orgs-kpi-card--active">
         <div class="orgs-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">verified</span>
+          <span class="material-symbols-outlined">check_circle</span>
         </div>
-        <div class="orgs-kpi-card__content">
-          <span class="orgs-kpi-card__label">TENANTS ACTIVOS</span>
-          <strong class="orgs-kpi-card__value">{{ kpiActive() }}</strong>
-          <span class="orgs-kpi-card__sub">En operación normal</span>
+        <div class="orgs-kpi-card__body">
+          @if (isLoadingOrgs()) {
+            <div class="orgs-kpi-card__skeleton"></div>
+          } @else {
+            <span class="orgs-kpi-card__value">{{ kpiActive() }}</span>
+          }
+          <span class="orgs-kpi-card__label">ACTIVOS</span>
         </div>
-      </article>
+        <div class="orgs-kpi-card__bar orgs-kpi-card__bar--active"></div>
+      </div>
 
-      <article class="orgs-kpi-card orgs-kpi-card--red">
+      <!-- Suspendidos -->
+      <div class="orgs-kpi-card orgs-kpi-card--suspended">
         <div class="orgs-kpi-card__icon-wrap">
           <span class="material-symbols-outlined">pause_circle</span>
         </div>
-        <div class="orgs-kpi-card__content">
-          <span class="orgs-kpi-card__label">SUSPENDIDAS / INACTIVAS</span>
-          <strong class="orgs-kpi-card__value">{{ kpiSuspended() }}</strong>
-          <span class="orgs-kpi-card__sub">Restricción de acceso</span>
+        <div class="orgs-kpi-card__body">
+          @if (isLoadingOrgs()) {
+            <div class="orgs-kpi-card__skeleton"></div>
+          } @else {
+            <span class="orgs-kpi-card__value">{{ kpiSuspended() }}</span>
+          }
+          <span class="orgs-kpi-card__label">SUSPENDIDOS</span>
         </div>
-      </article>
+        <div class="orgs-kpi-card__bar orgs-kpi-card__bar--suspended"></div>
+      </div>
 
-      <article class="orgs-kpi-card orgs-kpi-card--blue">
+      <!-- Tipos -->
+      <div class="orgs-kpi-card orgs-kpi-card--inactive">
         <div class="orgs-kpi-card__icon-wrap">
           <span class="material-symbols-outlined">category</span>
         </div>
-        <div class="orgs-kpi-card__content">
+        <div class="orgs-kpi-card__body">
+          @if (isLoadingOrgs()) {
+            <div class="orgs-kpi-card__skeleton"></div>
+          } @else {
+            <span class="orgs-kpi-card__value">{{ kpiUniqueTypes() }}</span>
+          }
           <span class="orgs-kpi-card__label">TIPOS DE TENANT</span>
-          <strong class="orgs-kpi-card__value">{{ kpiUniqueTypes() }}</strong>
-          <span class="orgs-kpi-card__sub">Modalidades de negocio</span>
         </div>
-      </article>
-    </section>
+        <div class="orgs-kpi-card__bar orgs-kpi-card__bar--inactive"></div>
+      </div>
+
+    </div>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       CUERPO PRINCIPAL — SPLIT VIEW 35% / 65%
+       SPLIT VIEW 35% / 65% — HOMOLOGADO
        ════════════════════════════════════════════════════════════════ -->
-  <div class="orgs-split-view">
+  <div class="orgs-split">
 
-    <!-- ─────────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA (35%): Directorio & Filtros
-         ───────────────────────────────────────────────────────────────── -->
-    <aside class="orgs-directory">
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA: Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="orgs-directory" aria-label="Directorio de organizaciones">
       
-      <div class="orgs-directory__header">
-        <h2 class="orgs-directory__title">
-          <span class="material-symbols-outlined">domain</span>
-          Directorio de Tenants
-        </h2>
-        <span class="orgs-directory__count">
-          {{ filteredOrganizations().length }} / {{ totalOrgs() }}
-        </span>
-      </div>
-
       <!-- Buscador y Filtros -->
-      <div class="orgs-directory__filters">
+      <div class="orgs-directory__header">
         <div class="orgs-search">
           <span class="material-symbols-outlined orgs-search__icon">search</span>
           <input
             id="org-search"
             class="orgs-search__input"
             type="search"
-            placeholder="Buscar por nombre, código o RFC..."
+            placeholder="Razón social, RFC, código..."
             [ngModel]="filterText()"
             (ngModelChange)="filterText.set($event)"
             autocomplete="off"
@@ -128,10 +143,10 @@
               class="orgs-filter-select"
               [ngModel]="filterStatus()"
               (ngModelChange)="filterStatus.set($event)">
-              <option value="">Todos los Estados</option>
-              <option value="ACTIVE">Activas</option>
-              <option value="SUSPENDED">Suspendidas</option>
-              <option value="INACTIVE">Inactivas</option>
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="SUSPENDED">Suspendidos</option>
+              <option value="INACTIVE">Inactivos</option>
             </select>
           </div>
 
@@ -141,7 +156,7 @@
               class="orgs-filter-select"
               [ngModel]="filterType()"
               (ngModelChange)="filterType.set($event)">
-              <option value="">Todos los Tipos</option>
+              <option value="">Todos los tipos</option>
               @for (t of organizationTypes; track t.value) {
                 <option [value]="t.value">{{ t.label }}</option>
               }
@@ -153,29 +168,33 @@
               class="orgs-filter-clear"
               type="button"
               (click)="clearFilters()"
-              title="Limpiar Filtros">
+              title="Limpiar filtros">
               <span class="material-symbols-outlined">filter_alt_off</span>
             </button>
           }
         </div>
+
+        <div class="orgs-search-hint">
+          <span class="material-symbols-outlined">info</span>
+          <span>Busca por nombre, RFC o código identificador</span>
+        </div>
       </div>
 
       <!-- Lista del Directorio -->
-      <div class="orgs-directory__list-wrap">
+      <div class="orgs-directory__body">
         @if (isLoadingOrgs()) {
-          <div class="orgs-loading-skeleton">
+          <div class="orgs-skeleton-list">
             @for (i of [1,2,3,4]; track i) {
-              <div class="orgs-skeleton-card"></div>
+              <div class="orgs-skeleton-item"></div>
             }
           </div>
         } @else if (filteredOrganizations().length === 0) {
-          <div class="orgs-empty-state">
-            <span class="material-symbols-outlined orgs-empty-state__icon">domain_disabled</span>
-            <p class="orgs-empty-state__title">Sin organizaciones encontradas</p>
-            <p class="orgs-empty-state__sub">Intenta ajustar tus criterios de búsqueda o filtros.</p>
+          <div class="orgs-empty-directory">
+            <span class="material-symbols-outlined">domain_disabled</span>
+            <p>No hay coincidencias</p>
             @if (hasActiveFilters) {
               <button class="orgs-btn orgs-btn--ghost orgs-btn--sm" (click)="clearFilters()">
-                Limpiar Filtros
+                Limpiar filtros
               </button>
             }
           </div>
@@ -183,88 +202,98 @@
           <ul class="orgs-list" role="list">
             @for (org of filteredOrganizations(); track org.id) {
               <li
-                class="orgs-card"
-                [class.orgs-card--selected]="isSelectedOrg(org)"
+                class="org-item"
+                [class.org-item--selected]="isSelectedOrg(org)"
                 (click)="selectOrg(org)"
                 tabindex="0"
                 role="button">
                 
-                <div class="orgs-card__avatar">
-                  <span>{{ org.code.substring(0, 3) }}</span>
+                <div class="org-item__avatar">
+                  <span>{{ org.code.substring(0, 2).toUpperCase() }}</span>
                 </div>
 
-                <div class="orgs-card__content">
-                  <div class="orgs-card__top">
-                    <strong class="orgs-card__name">{{ org.name }}</strong>
-                    <span class="status-badge" [class]="getStatusBadgeClass(org.status)">
-                      {{ getStatusLabel(org.status) }}
-                    </span>
+                <div class="org-item__body">
+                  <div class="org-item__name">{{ org.name }}</div>
+                  <div class="org-item__code">{{ getTypeLabel(org.type) }}</div>
+                  <div class="org-item__meta">
+                    @if (org.taxId) {
+                      <span class="org-item__rfc">{{ org.taxId }}</span>
+                    }
+                    <span class="org-item__code-tag">{{ org.code }}</span>
                   </div>
-
-                  <div class="orgs-card__meta">
-                    <span class="orgs-card__code">{{ org.code }}</span>
-                    <span class="orgs-card__dot">•</span>
-                    <span class="orgs-card__type">{{ getTypeLabel(org.type) }}</span>
-                  </div>
-
-                  @if (org.taxId) {
-                    <span class="orgs-card__tax">RFC/TaxID: {{ org.taxId }}</span>
-                  }
                 </div>
 
-                <span class="material-symbols-outlined orgs-card__arrow">chevron_right</span>
+                <div class="org-item__status-col">
+                  <span class="org-status-badge org-status-badge--{{ org.status.toLowerCase() }}">
+                    {{ getStatusLabel(org.status) }}
+                  </span>
+                  <time class="org-item__date">{{ org.createdAt | date:'dd/MM/yy' }}</time>
+                </div>
+
               </li>
             }
           </ul>
         }
       </div>
 
+      <!-- Contador del Directorio -->
+      <div class="orgs-directory__footer">
+        <span class="orgs-count">
+          {{ filteredOrganizations().length }}
+          @if (filteredOrganizations().length !== totalOrgs()) {
+            de {{ totalOrgs() }}
+          }
+          organizaciones
+        </span>
+      </div>
+
     </aside>
 
-    <!-- ─────────────────────────────────────────────────────────────────
-         COLUMNA DERECHA (65%): Formulario & Auditoría en Vivo
-         ───────────────────────────────────────────────────────────────── -->
-    <main class="orgs-workspace">
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA: Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="orgs-detail" aria-label="Detalle de la organización">
 
       @if (formMode() === 'idle') {
-        <!-- Estado Inicial Vacio -->
-        <div class="orgs-workspace-idle">
-          <div class="orgs-idle-card">
-            <span class="material-symbols-outlined orgs-idle-icon">corporate_fare</span>
-            <h3>Selecciona una Organización</h3>
-            <p>Elige un Tenant del directorio de la izquierda para ver su configuración, editar sus datos o consultar la bitácora de auditoría en vivo.</p>
-            <button class="orgs-btn orgs-btn--gold" (click)="openNewForm()" type="button">
-              <span class="material-symbols-outlined">add_business</span>
-              <span>Registrar Nueva Organización</span>
-            </button>
+        <!-- Estado Inicial Vacío Homologado -->
+        <div class="orgs-empty-state">
+          <div class="orgs-empty-state__graphic">
+            <span class="material-symbols-outlined orgs-empty-state__icon">corporate_fare</span>
           </div>
+          <h2 class="orgs-empty-state__title">Sin selección</h2>
+          <p class="orgs-empty-state__subtitle">
+            Selecciona una organización de la lista para consultar su información, o registra una nueva.
+          </p>
+          <button class="orgs-btn orgs-btn--primary" (click)="openNewForm()" type="button">
+            <span class="material-symbols-outlined">add</span>
+            Nuevo tenant
+          </button>
         </div>
       } @else {
-        <!-- Panel Formulario y Auditoria Activo -->
-        <div class="orgs-workspace-active">
+        <!-- Formulario Activo Homologado -->
+        <div class="orgs-form-wrap">
 
-          <!-- ENCABEZADO DEL FORMULARIO Y BARRA DE ACCIONES -->
+          <!-- Header del Formulario -->
           <div class="orgs-form-header">
-            <div class="orgs-form-header__title-group">
-              <span class="orgs-form-header__badge">
-                {{ formMode() === 'new' ? 'NUEVO TENANT' : 'EDICIÓN TENANT' }}
+            <div class="orgs-form-header__info">
+              <span class="orgs-form-header__tag">
+                {{ formMode() === 'new' ? 'NUEVA ORGANIZACIÓN' : 'EDICIÓN DE TENANT' }}
               </span>
-              <h2>
-                {{ formMode() === 'new' ? 'Registrar Nueva Organización' : selectedOrg()?.name }}
+              <h2 class="orgs-form-header__title">
+                {{ formMode() === 'new' ? 'Registrar nueva organización' : selectedOrg()?.name }}
               </h2>
             </div>
 
-            <div class="orgs-form-header__actions">
+            <div class="orgs-form-actions__main">
               @if (formMode() === 'edit' && selectedOrg()) {
                 <button
                   class="orgs-btn orgs-btn--ghost"
                   type="button"
-                  (click)="toggleOrgStatus(selectedOrg()!)"
-                  [title]="selectedOrg()?.status === 'ACTIVE' ? 'Suspender Tenant' : 'Activar Tenant'">
+                  (click)="toggleOrgStatus(selectedOrg()!)">
                   <span class="material-symbols-outlined">
                     {{ selectedOrg()?.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}
                   </span>
-                  <span>{{ selectedOrg()?.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}</span>
+                  {{ selectedOrg()?.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}
                 </button>
 
                 <button
@@ -279,26 +308,26 @@
                 Cancelar
               </button>
 
-              <button class="orgs-btn orgs-btn--gold" type="button" (click)="saveOrg()">
+              <button class="orgs-btn orgs-btn--primary" type="button" (click)="saveOrg()">
                 <span class="material-symbols-outlined">save</span>
-                <span>{{ formMode() === 'new' ? 'Crear Tenant' : 'Guardar Cambios' }}</span>
+                {{ formMode() === 'new' ? 'Guardar tenant' : 'Guardar cambios' }}
               </button>
             </div>
           </div>
 
-          <!-- FORMULARIO REACTIVO -->
-          <form [formGroup]="form" (ngSubmit)="saveOrg()" novalidate class="orgs-form">
+          <!-- Formulario -->
+          <form [formGroup]="form" (ngSubmit)="saveOrg()" novalidate class="orgs-form-body">
 
-            <!-- SECCIÓN 1: Identificación y Datos Fiscales -->
-            <fieldset class="orgs-fieldset">
-              <legend class="orgs-legend">
+            <!-- Sección 1 -->
+            <section class="orgs-form-section">
+              <h3 class="orgs-form-section__title">
                 <span class="material-symbols-outlined">badge</span>
                 Identificación & Configuración Fiscal
-              </legend>
+              </h3>
 
               <div class="orgs-form-grid orgs-form-grid--2">
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="org-name">Nombre de la Organización</label>
+                  <label class="fg-label fg-label--required" for="org-name">Razón Social / Nombre</label>
                   <input
                     id="org-name"
                     class="fg-input"
@@ -335,7 +364,7 @@
                 </div>
               </div>
 
-              <div class="orgs-form-grid orgs-form-grid--2 margin-top">
+              <div class="orgs-form-grid orgs-form-grid--2">
                 <div class="fg-field">
                   <label class="fg-label" for="org-taxid">Tax ID / RFC Fiscal</label>
                   <input
@@ -350,22 +379,22 @@
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="org-status">Estatus Operativo</label>
+                  <label class="fg-label fg-label--required" for="org-status">Estado Operativo</label>
                   <select id="org-status" class="fg-select" formControlName="status">
-                    <option value="ACTIVE">ACTIVA — Operación Normal</option>
-                    <option value="SUSPENDED">SUSPENDIDA — Acceso Restringido</option>
-                    <option value="INACTIVE">INACTIVA — Deshabilitada</option>
+                    <option value="ACTIVE">Activo</option>
+                    <option value="SUSPENDED">Suspendido</option>
+                    <option value="INACTIVE">Inactivo</option>
                   </select>
                 </div>
               </div>
-            </fieldset>
+            </section>
 
-            <!-- SECCIÓN 2: Modalidad & Tipo de Tenant -->
-            <fieldset class="orgs-fieldset">
-              <legend class="orgs-legend">
+            <!-- Sección 2 -->
+            <section class="orgs-form-section">
+              <h3 class="orgs-form-section__title">
                 <span class="material-symbols-outlined">category</span>
                 Modalidad de Operación
-              </legend>
+              </h3>
 
               <div class="fg-field">
                 <label class="fg-label fg-label--required" for="org-type">Tipo de Organización</label>
@@ -375,86 +404,145 @@
                   }
                 </select>
               </div>
-            </fieldset>
+            </section>
 
-            <!-- SECCIÓN 3: Configuración Avanzada JSONB -->
-            <fieldset class="orgs-fieldset">
-              <legend class="orgs-legend">
-                <span class="material-symbols-outlined">settings_suggest</span>
-                Parámetros & Configuración (JSONB)
+            <!-- Sección 3: Configuración Relacional (Clave / Valor) -->
+            <section class="orgs-form-section">
+              <div class="orgs-section-header">
+                <div class="orgs-section-header__title-wrap">
+                  <h3 class="orgs-form-section__title">
+                    <span class="material-symbols-outlined">tune</span>
+                    Parámetros & Configuración Relacional
+                  </h3>
+                  <p class="orgs-form-section__subtitle">
+                    Administra las configuraciones de la organización como parámetros clave-valor relacionales.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  class="orgs-json-format-btn"
-                  (click)="formatSettingsJson()"
-                  title="Formatear JSON">
-                  <span class="material-symbols-outlined">code_blocks</span>
-                  <span>Formatear JSON</span>
+                  class="orgs-btn orgs-btn--ghost orgs-btn--sm"
+                  (click)="addSettingRow()"
+                  title="Agregar nuevo parámetro">
+                  <span class="material-symbols-outlined">add</span>
+                  Agregar Parámetro
                 </button>
-              </legend>
+              </div>
 
-              <div class="fg-field">
-                <textarea
-                  id="org-settings"
-                  class="fg-textarea font-mono"
-                  [class.fg-input--error]="fieldHasError('settings')"
-                  formControlName="settings"
-                  rows="6"
-                  placeholder='&#123;&#10;  "theme": "dark",&#10;  "notifications_email": "true"&#10;&#125;'
-                ></textarea>
-                @if (fieldHasError('settings')) {
-                  <span class="fg-error">{{ getFieldError('settings') }}</span>
+              <!-- Sugerencias de Parámetros Rápido (Presets) -->
+              <div class="orgs-presets-bar">
+                <span class="orgs-presets-label">Sugerencias rápidas:</span>
+                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('theme', 'dark')">+ theme</button>
+                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('notifications_email', 'true')">+ notifications_email</button>
+                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('max_branches', '5')">+ max_branches</button>
+                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('timezone', 'America/Mexico_City')">+ timezone</button>
+              </div>
+
+              <!-- Tabla Relacional Clave - Valor -->
+              <div class="orgs-settings-table">
+                @if (settingRows().length === 0) {
+                  <div class="orgs-settings-empty">
+                    <span class="material-symbols-outlined">settings_b_roll</span>
+                    <p>No hay parámetros configurados para esta organización.</p>
+                    <button type="button" class="orgs-btn orgs-btn--ghost orgs-btn--sm" (click)="addSettingRow()">
+                      + Añadir el primer parámetro
+                    </button>
+                  </div>
+                } @else {
+                  <div class="orgs-settings-header-row">
+                    <span class="orgs-settings-col-label">CLAVE / PARÁMETRO</span>
+                    <span class="orgs-settings-col-label">VALOR</span>
+                    <span class="orgs-settings-col-action"></span>
+                  </div>
+
+                  <div class="orgs-settings-list">
+                    @for (row of settingRows(); track $index) {
+                      <div class="orgs-setting-row">
+                        <div class="fg-field">
+                          <input
+                            type="text"
+                            class="fg-input"
+                            placeholder="Ej. theme, max_branches"
+                            [value]="row.key"
+                            (input)="updateSettingKey($index, $any($event.target).value)"
+                          />
+                        </div>
+
+                        <div class="fg-field">
+                          <input
+                            type="text"
+                            class="fg-input"
+                            placeholder="Ej. dark, 5, true"
+                            [value]="row.value"
+                            (input)="updateSettingValue($index, $any($event.target).value)"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          class="orgs-btn-icon-danger"
+                          (click)="removeSettingRow($index)"
+                          title="Eliminar parámetro">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </div>
+                    }
+                  </div>
                 }
               </div>
-            </fieldset>
+            </section>
+
           </form>
 
-          <!-- SECCIÓN 4: LÍNEA DE TIEMPO DE AUDITORÍA EN VIVO (GET /api/v1/organizations/{id}/audit) -->
+          <!-- Sección Auditoría en Vivo (GET /api/v1/organizations/{id}/audit) -->
           @if (formMode() === 'edit' && selectedOrg()) {
-            <section class="orgs-audit-section">
-              <header class="orgs-audit-header">
-                <div class="orgs-audit-title">
-                  <span class="material-symbols-outlined">history</span>
-                  <h3>Historial de Auditoría en Vivo</h3>
-                  <span class="orgs-audit-badge">GET /api/v1/organizations/{{ selectedOrg()?.id }}/audit</span>
+            <section class="carriers-timeline-preview">
+              <header class="carriers-timeline-preview__header">
+                <div class="carriers-timeline-preview__title-group">
+                  <span class="material-symbols-outlined carriers-timeline-preview__icon">history</span>
+                  <h3 class="carriers-timeline-preview__title">Historial de Auditoría en Vivo</h3>
+                  <span class="carriers-timeline-preview__badge">GET /api/v1/organizations/{{ selectedOrg()?.id }}/audit</span>
                 </div>
               </header>
 
-              <div class="orgs-audit-body">
+              <div class="carriers-timeline-preview__body">
                 @if (isLoadingAudit()) {
-                  <div class="orgs-audit-loading">
+                  <div class="carriers-timeline-skeleton">
                     <span class="material-symbols-outlined orgs-spin">sync</span>
                     <span>Cargando bitácora inmutable del Backend...</span>
                   </div>
                 } @else if (auditEntries().length === 0) {
-                  <div class="orgs-audit-empty">
-                    <span class="material-symbols-outlined">description</span>
-                    <p>Sin eventos de auditoría registrados para esta organización.</p>
-                  </div>
+                  <p class="carriers-timeline-preview__empty">
+                    Sin registros de auditoría aún para esta organización.
+                  </p>
                 } @else {
-                  <div class="orgs-timeline">
+                  <div class="carriers-timeline">
                     @for (log of auditEntries(); track log.logId) {
-                      <div class="orgs-tl-item">
-                        <div class="orgs-tl-node" [class]="getAuditNodeColor(log.action)"></div>
+                      <div class="carriers-tl-item">
+                        <div class="carriers-tl-node">
+                          <span class="carriers-tl-node__dot" [class]="getAuditNodeColor(log.action)"></span>
+                          <span class="carriers-tl-node__line"></span>
+                        </div>
 
-                        <div class="orgs-tl-content">
-                          <div class="orgs-tl-top">
-                            <span class="orgs-tl-action">{{ log.action }}</span>
-                            <span class="orgs-tl-user">por &#64;{{ log.username }}</span>
-                            <time class="orgs-tl-time">{{ log.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</time>
+                        <div class="carriers-tl-content">
+                          <div class="carriers-tl-header">
+                            <span class="carriers-tl-action">{{ log.action }}</span>
+                            <span class="carriers-tl-user">por &#64;{{ log.username }}</span>
+                            <time class="carriers-tl-time">{{ log.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</time>
                           </div>
 
-                          <p class="orgs-tl-summary">{{ getAuditSummary(log.action) }}</p>
+                          <div class="carriers-tl-summary">{{ getAuditSummary(log.action) }}</div>
 
                           @if (log.details && log.details.length > 0) {
-                            <div class="orgs-tl-details">
+                            <div class="carriers-tl-details">
                               @for (detail of log.details; track detail.fieldName) {
-                                <div class="orgs-tl-detail-row">
-                                  <span class="orgs-tl-field">{{ detail.fieldName }}:</span>
+                                <div class="carriers-tl-detail-row">
+                                  <span class="carriers-tl-field">{{ detail.fieldName }}:</span>
                                   @if (detail.oldValue !== null) {
-                                    <span class="orgs-tl-old">{{ detail.oldValue }}</span>
-                                    <span class="orgs-tl-arrow">→</span>
+                                    <span class="carriers-tl-old">{{ detail.oldValue }}</span>
+                                    <span class="carriers-tl-arrow">→</span>
                                   }
-                                  <span class="orgs-tl-new">{{ detail.newValue || '(vacío)' }}</span>
+                                  <span class="carriers-tl-new">{{ detail.newValue || '(vacío)' }}</span>
                                 </div>
                               }
                             </div>
@@ -475,12 +563,12 @@
 
   </div>
 
-  <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN -->
+  <!-- MODAL CONFIRMACIÓN ELIMINACIÓN -->
   @if (deletingOrg()) {
     <fg-confirm-dialog
       title="Eliminar Organización"
-      [message]="'¿Estás seguro de que deseas eliminar permanentemente la organización ' + deletingOrg()?.name + '? Esta acción removerá la estructura de tenant.'"
-      confirmText="Sí, Eliminar Tenant"
+      [message]="'¿Estás seguro de que deseas eliminar permanentemente la organización ' + deletingOrg()?.name + '?'"
+      confirmText="Sí, eliminar tenant"
       cancelText="Cancelar"
       type="danger"
       (confirm)="confirmDelete()"
