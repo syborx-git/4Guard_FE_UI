@@ -24,7 +24,7 @@
   --color-warning: #FFB74D;
   --color-info: #29B6F6;
   
-  --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'DM Sans', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .page-top__title {
-  font-family: 'Outfit', 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.8rem;
   font-weight: 700;
   color: var(--color-gold);
@@ -429,7 +429,7 @@
 }
 
 .module-active-title {
-  font-family: 'Outfit', 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
   color: #fff;
