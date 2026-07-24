@@ -283,36 +283,6 @@
                 {{ formMode() === 'new' ? 'Registrar nueva organización' : selectedOrg()?.name }}
               </h2>
             </div>
-
-            <div class="orgs-form-actions__main">
-              @if (formMode() === 'edit' && selectedOrg()) {
-                <button
-                  class="orgs-btn orgs-btn--ghost"
-                  type="button"
-                  (click)="toggleOrgStatus(selectedOrg()!)">
-                  <span class="material-symbols-outlined">
-                    {{ selectedOrg()?.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}
-                  </span>
-                  {{ selectedOrg()?.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}
-                </button>
-
-                <button
-                  class="orgs-btn orgs-btn--danger-ghost"
-                  type="button"
-                  (click)="promptDelete(selectedOrg()!)">
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              }
-
-              <button class="orgs-btn orgs-btn--ghost" type="button" (click)="cancelForm()">
-                Cancelar
-              </button>
-
-              <button class="orgs-btn orgs-btn--primary" type="button" (click)="saveOrg()">
-                <span class="material-symbols-outlined">save</span>
-                {{ formMode() === 'new' ? 'Guardar tenant' : 'Guardar cambios' }}
-              </button>
-            </div>
           </div>
 
           <!-- Formulario -->
@@ -492,6 +462,71 @@
               </div>
             </section>
 
+            <!-- ── ACCIONES DEL FORMULARIO HOMOLOGADAS ──────────────── -->
+            <div class="orgs-form-actions">
+
+              <!-- Acciones de estado (solo en edición) -->
+              @if (formMode() === 'edit' && selectedOrg()) {
+                <div class="orgs-form-actions__status-group">
+
+                  @if (selectedOrg()!.status !== 'ACTIVE') {
+                    <button
+                      id="btn-activate-org"
+                      class="orgs-btn orgs-btn--success"
+                      type="button"
+                      (click)="toggleOrgStatus(selectedOrg()!)"
+                      aria-label="Activar esta organización">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      Activar
+                    </button>
+                  }
+
+                  @if (selectedOrg()!.status === 'ACTIVE') {
+                    <button
+                      id="btn-suspend-org"
+                      class="orgs-btn orgs-btn--warning"
+                      type="button"
+                      (click)="toggleOrgStatus(selectedOrg()!)"
+                      aria-label="Suspender esta organización">
+                      <span class="material-symbols-outlined">pause_circle</span>
+                      Suspender
+                    </button>
+                  }
+
+                  <button
+                    id="btn-delete-org"
+                    class="orgs-btn orgs-btn--danger"
+                    type="button"
+                    (click)="promptDelete(selectedOrg()!)"
+                    aria-label="Desactivar o eliminar esta organización">
+                    <span class="material-symbols-outlined">block</span>
+                    Desactivar
+                  </button>
+
+                </div>
+              }
+
+              <!-- Acciones principales (Derecha) -->
+              <div class="orgs-form-actions__main">
+                <button
+                  id="btn-cancel-org"
+                  class="orgs-btn orgs-btn--ghost"
+                  type="button"
+                  (click)="cancelForm()">
+                  Cancelar
+                </button>
+
+                <button
+                  id="btn-save-org"
+                  class="orgs-btn orgs-btn--save"
+                  type="submit">
+                  <span class="material-symbols-outlined">save</span>
+                  {{ formMode() === 'new' ? 'Crear tenant' : 'Guardar cambios' }}
+                </button>
+              </div>
+
+            </div>
+
           </form>
 
           <!-- Sección Auditoría en Vivo (GET /api/v1/organizations/{id}/audit) -->
@@ -501,7 +536,6 @@
                 <div class="carriers-timeline-preview__title-group">
                   <span class="material-symbols-outlined carriers-timeline-preview__icon">history</span>
                   <h3 class="carriers-timeline-preview__title">Historial de Auditoría en Vivo</h3>
-                  <span class="carriers-timeline-preview__badge">GET /api/v1/organizations/{{ selectedOrg()?.id }}/audit</span>
                 </div>
               </header>
 
@@ -568,11 +602,10 @@
     <fg-confirm-dialog
       title="Eliminar Organización"
       [message]="'¿Estás seguro de que deseas eliminar permanentemente la organización ' + deletingOrg()?.name + '?'"
-      confirmText="Sí, eliminar tenant"
-      cancelText="Cancelar"
-      type="danger"
-      (confirm)="confirmDelete()"
-      (cancel)="cancelDelete()"
+      confirmLabel="Sí, eliminar tenant"
+      [isLoading]="isDeleting()"
+      (confirmed)="confirmDelete()"
+      (cancelled)="cancelDelete()"
     ></fg-confirm-dialog>
   }
 

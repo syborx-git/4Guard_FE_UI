@@ -771,54 +771,121 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
+   ACCIONES DEL FORMULARIO HOMOLOGADAS CON TRANSPORTISTAS
+   ───────────────────────────────────────────────────────────── */
+
+.orgs-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-card);
+  background: rgba(23, 32, 51, 0.022);
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.orgs-form-actions__status-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.orgs-form-actions__main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────
    BOTONES
    ───────────────────────────────────────────────────────────── */
 
 .orgs-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1rem;
-  border-radius: var(--radius-btn);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.1rem;
   border: 1px solid transparent;
+  border-radius: var(--radius-btn);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: nowrap;
+  text-decoration: none;
 }
 
-.orgs-btn .material-symbols-outlined { font-size: 18px; }
+.orgs-btn .material-symbols-outlined { font-size: 17px; }
+.orgs-btn--sm { padding: 0.4rem 0.8rem; font-size: 0.73rem; }
+
+.orgs-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
 
 .orgs-btn--primary {
-  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
   color: #fff;
-  box-shadow: 0 4px 12px rgba(23, 32, 51, 0.2);
+  background: var(--navy);
+  border-color: var(--navy);
+  box-shadow: 0 6px 16px rgba(23, 32, 51, 0.18);
 }
-
-.orgs-btn--primary:hover {
+.orgs-btn--primary:not(:disabled):hover {
   background: var(--navy-mid);
-  box-shadow: 0 6px 16px rgba(23, 32, 51, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 9px 20px rgba(23, 32, 51, 0.24);
 }
 
 .orgs-btn--ghost {
-  background: rgba(23, 32, 51, 0.04);
-  border-color: rgba(76, 86, 105, 0.14);
+  color: var(--text-secondary);
+  background: transparent;
+  border-color: rgba(88, 98, 116, 0.17);
+}
+.orgs-btn--ghost:not(:disabled):hover {
   color: var(--text-primary);
+  background: rgba(23, 32, 51, 0.04);
+  border-color: rgba(88, 98, 116, 0.28);
 }
 
-.orgs-btn--ghost:hover {
-  background: rgba(23, 32, 51, 0.08);
+.orgs-btn--save {
+  background: linear-gradient(135deg, #d6ae3d, #edc74e);
+  border-color: #c9a235;
+  color: var(--navy);
+  box-shadow: 0 6px 16px rgba(197, 147, 24, 0.20);
+}
+.orgs-btn--save:not(:disabled):hover {
+  background: linear-gradient(135deg, #e0b83f, #f2d166);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(197, 147, 24, 0.28);
 }
 
-.orgs-btn--danger-ghost {
-  background: var(--c-danger-bg);
-  border-color: var(--c-danger-bdr);
+.orgs-btn--success {
+  color: var(--c-success);
+  border-color: var(--c-success-bdr);
+  background: var(--c-success-bg);
+}
+.orgs-btn--success:not(:disabled):hover { background: rgba(32, 132, 87, 0.16); }
+
+.orgs-btn--warning {
+  color: var(--c-warning);
+  border-color: var(--c-warning-bdr);
+  background: var(--c-warning-bg);
+}
+.orgs-btn--warning:not(:disabled):hover { background: rgba(213, 145, 39, 0.18); }
+
+.orgs-btn--danger {
   color: var(--c-danger);
+  border-color: var(--c-danger-bdr);
+  background: var(--c-danger-bg);
 }
-
-.orgs-btn--danger-ghost:hover {
-  background: rgba(200, 73, 73, 0.18);
-}
+.orgs-btn--danger:not(:disabled):hover { background: rgba(200, 73, 73, 0.16); }
 
 /* ─────────────────────────────────────────────────────────────
    TIMELINE AUDITORÍA EN VIVO
