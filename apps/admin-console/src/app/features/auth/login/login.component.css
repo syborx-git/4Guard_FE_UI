@@ -11,7 +11,7 @@
   height: 100vh;
   min-height: 650px;
   background: #0D0B1A;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   overflow: hidden;
   position: relative;
 }
@@ -123,7 +123,7 @@
 }
 
 .login-brand__headline {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.85rem;
   font-weight: 700;
   color: #FFFFFF;
@@ -134,7 +134,7 @@
 
 .login-brand__headline-em {
   display: block;
-  font-family: 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-style: italic;
   font-weight: 700;
   color: #EAC349;
@@ -201,7 +201,7 @@
 }
 
 .login-form__title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.15rem;
   font-weight: 700;
   color: #FFFFFF;
@@ -430,7 +430,7 @@
   background: linear-gradient(135deg, #C8980A 0%, #EAC349 100%);
   border: none;
   border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   color: #080D14;
@@ -514,7 +514,7 @@
 }
 
 .locked-view__title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   color: #ffffff;
@@ -547,7 +547,7 @@
 }
 
 .locked-view__timer-value {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.2rem;
   font-weight: 800;
   color: #EAC349;

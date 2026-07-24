@@ -14,7 +14,7 @@
   --color-purple: #B39DDB;
   --color-purple-hover: #D1C4E9;
 
-  --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'DM Sans', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -65,7 +65,7 @@
 }
 
 .page-top__title {
-  font-family: 'Outfit', 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.8rem;
   font-weight: 700;
   color: var(--color-gold);
@@ -315,7 +315,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   color: var(--color-gold);
-  font-family: 'Outfit', 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -443,7 +443,7 @@
 }
 
 .module-active-title {
-  font-family: 'Outfit', 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
   color: #fff;
@@ -1664,7 +1664,7 @@ select.field-group__input:disabled {
 .admin-hero__title {
   margin: 0;
   color: var(--color-text-primary, #202633);
-  font-family: var(--font-display, "Outfit", "DM Sans", sans-serif);
+  font-family: 'DM Sans', sans-serif;
   font-size: clamp(1.75rem, 2.8vw, 2.55rem);
   font-weight: 400;
   line-height: 1.08;
@@ -1740,7 +1740,7 @@ select.field-group__input:disabled {
 .admin-category__heading h2 {
   margin: 0;
   color: var(--color-accent, #a98942);
-  font-family: var(--font-display, "Outfit", "DM Sans", sans-serif);
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
@@ -1941,7 +1941,7 @@ select.field-group__input:disabled {
 .admin-module-card__title {
   margin: 0 0 0.4rem;
   color: var(--color-text-primary, #202633);
-  font-family: var(--font-display, "Outfit", "DM Sans", sans-serif);
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.76rem;
   font-weight: 800;
   line-height: 1.35;
@@ -2430,7 +2430,7 @@ select.field-group__input:disabled {
 .module-active-title {
   margin-top: 0.3rem;
   color: #1c2940;
-  font-family: var(--font-display, "Outfit", sans-serif);
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.65rem;
   font-weight: 450;
   letter-spacing: -0.025em;

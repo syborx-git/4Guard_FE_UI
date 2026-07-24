@@ -268,8 +268,8 @@ export class CarrierService {
       notes: dto.notes || '',
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,
-      createdBy: 'system',
-      updatedBy: 'system',
+      createdBy: dto.createdBy || dto.created_by || 'system',
+      updatedBy: dto.updatedBy || dto.updated_by || 'system',
       version: dto.version
     };
   }
@@ -582,6 +582,23 @@ export class CarrierService {
   private handleError(error: HttpErrorResponse): Observable<never> {
     this.loading.set(false);
     this.saving.set(false);
+    
+    let errorMsg = 'Ocurrió un error inesperado. Por favor, intenta nuevamente.';
+    
+    if (error.status === 403) {
+      errorMsg = 'No tienes permisos para acceder a este recurso (403 Forbidden).';
+    } else if (error.status === 409) {
+      errorMsg = error.error?.message || 'Conflicto: El registro ya existe o fue modificado (409 Conflict).';
+    } else if (error.status === 404) {
+      errorMsg = 'Recurso no encontrado (404 Not Found).';
+    } else if (error.status === 400) {
+      errorMsg = error.error?.message || 'Error de validación (400 Bad Request).';
+    } else if (error.error && typeof error.error.message === 'string') {
+      errorMsg = error.error.message;
+    }
+    
+    this.loadError.set(errorMsg);
+    
     return throwError(() => error);
   }
 }

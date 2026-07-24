@@ -18,7 +18,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   animation: iaBackdropIn 200ms ease both;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   color: #FFFFFF;
 }
 
@@ -78,7 +78,7 @@
 }
 
 .ia-title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   color: #FFFFFF;
@@ -115,7 +115,7 @@
 }
 
 .ia-countdown-value {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.4rem;
   font-weight: 800;
   color: #EAC349;
@@ -137,7 +137,7 @@
   width: 100%;
   padding: 0.9rem 1.25rem;
   border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.08em;

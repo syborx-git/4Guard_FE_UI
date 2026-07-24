@@ -19,13 +19,7 @@
       transparent 30rem),
     linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
   color: #17243d;
-  font-family:
-    Inter,
-    "DM Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: 'DM Sans', sans-serif;
   animation: shippingEnter 320ms ease both;
 }
 
@@ -74,10 +68,7 @@
 .shipping-header__title {
   margin: 0;
   color: #17243d;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: clamp(2rem, 3vw, 2.65rem);
   font-weight: 600;
   letter-spacing: -0.035em;

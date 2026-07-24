@@ -15,13 +15,7 @@
     radial-gradient(circle at top right, rgba(197, 157, 67, 0.09), transparent 30rem),
     linear-gradient(180deg, #f8f6f1 0%, #f1eee7 100%);
   color: #18243c;
-  font-family:
-    Inter,
-    "DM Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .inspection-overlay {
@@ -170,10 +164,7 @@
 .inspection-panel__title {
   margin: 0;
   color: #17243d;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: clamp(1.45rem, 2.2vw, 2rem);
   font-weight: 600;
   letter-spacing: -0.025em;
@@ -634,10 +625,7 @@
 .not-found-card h1 {
   margin: 0;
   color: #1c2942;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.75rem;
 }
 

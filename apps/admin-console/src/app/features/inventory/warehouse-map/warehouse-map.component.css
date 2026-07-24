@@ -39,6 +39,7 @@
 .wmap__title {
   margin: 0;
   color: #172033;
+  font-family: 'DM Sans', sans-serif;
   font-size: clamp(2rem, 2.6vw, 2.55rem);
   font-weight: 350;
   line-height: 1.08;
