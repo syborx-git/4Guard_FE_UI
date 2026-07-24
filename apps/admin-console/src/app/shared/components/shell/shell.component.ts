@@ -230,6 +230,8 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Turnos y Horarios', route: '/shifts', icon: 'schedule', module: 'shifts' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
+    // HU-131: Motor de Reglas de Negocio Enterprise
+    { label: 'Reglas de negocio', route: '/business-rules', icon: 'gavel', module: 'business-rules' },
     // HU-146: Temporal debajo de Administrar para evaluación de UX.
     // Mover a Monitoreo o Auditoría cuando se defina el módulo definitivo.
     { label: 'Actividad por usuario', route: '/user-activity', icon: 'manage_search', module: 'user-activity' },

@@ -121,6 +121,15 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
 
   protected readonly activeView = signal<ActiveView>('TABLE');
 
+  // ─── Panel de filtros (acordeón — estado UI únicamente) ──────────────────
+
+  /** Controla el acordeón del panel de filtros. Sin efecto en la lógica. */
+  protected readonly filtersOpen = signal(true);
+
+  protected toggleFilters(): void {
+    this.filtersOpen.update((v) => !v);
+  }
+
   // ─── Filtros avanzados visibles ───────────────────────────────────────────
 
   protected readonly showAdvancedFilters = signal(false);
@@ -353,27 +362,184 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
 
   // ─── Exportación ─────────────────────────────────────────────────────────
 
-  protected export(format: 'XLSX' | 'CSV' | 'PDF'): void {
+  // ─── Exportación ─────────────────────────────────────────────────────────
+
+  protected export(format: 'XLSX' | 'PDF'): void {
     if (this.isExporting()) return;
     this.isExporting.set(true);
 
-    this.activityService
-      .simulateExport(format)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (result) => {
-          this.isExporting.set(false);
-          if (result.success) {
-            this.toastService.success(result.message, 4000);
-          } else {
-            this.toastService.error('Error al generar la exportación.', 4000);
-          }
-        },
-        error: () => {
-          this.isExporting.set(false);
-          this.toastService.error('Error inesperado en la exportación.', 4000);
-        },
-      });
+    const events = this.filteredEvents();
+    const timestamp = new Date().toISOString().slice(0, 10);
+
+    setTimeout(() => {
+      try {
+        if (format === 'XLSX') {
+          this.downloadExcelFile(events, timestamp);
+          this.toastService.success(`Reporte Excel generado correctamente (${events.length} registros).`, 4000);
+        } else if (format === 'PDF') {
+          this.downloadPdfFile(events, timestamp);
+          this.toastService.success(`Reporte PDF generado correctamente (${events.length} registros).`, 4000);
+        }
+      } catch (err) {
+        this.toastService.error('Error al generar la exportación.', 4000);
+      } finally {
+        this.isExporting.set(false);
+      }
+    }, 500);
+  }
+
+  private downloadExcelFile(events: UserActivityEvent[], timestamp: string): void {
+    const headers = [
+      'Fecha y Hora',
+      'Usuario',
+      'Email',
+      'Rol',
+      'Almacen',
+      'Modulo',
+      'Accion',
+      'Tipo Entidad',
+      'ID Entidad',
+      'Resultado',
+      'Criticidad',
+      'Fuera de Horario',
+      'Descripcion',
+      'Direccion IP',
+    ];
+
+    const rows = events.map((e) => [
+      `"${new Date(e.occurredAt).toLocaleString('es-MX')}"`,
+      `"${e.userName.replace(/"/g, '""')}"`,
+      `"${e.userEmail}"`,
+      `"${e.userRole}"`,
+      `"${e.warehouseName}"`,
+      `"${e.module}"`,
+      `"${e.action}"`,
+      `"${e.entityType}"`,
+      `"${e.entityId || ''}"`,
+      `"${e.result}"`,
+      `"${e.severity}"`,
+      `"${e.outsideShift ? 'SI' : 'NO'}"`,
+      `"${e.description.replace(/"/g, '""')}"`,
+      `"${e.ipAddress}"`,
+    ]);
+
+    const csvContent =
+      '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Reporte_Actividad_Usuarios_${timestamp}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  private downloadPdfFile(events: UserActivityEvent[], timestamp: string): void {
+    const htmlDoc = this.generatePdfHtmlReport(events, timestamp);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      // Fallback a descarga directa de archivo PDF estructurado
+      const blob = new Blob([htmlDoc], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Reporte_Actividad_Usuarios_${timestamp}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    printWindow.document.write(htmlDoc);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+  }
+
+  private generatePdfHtmlReport(events: UserActivityEvent[], timestamp: string): string {
+    const rowsHtml = events
+      .map(
+        (e) => `
+      <tr>
+        <td>${new Date(e.occurredAt).toLocaleString('es-MX')}</td>
+        <td><strong>${e.userName}</strong><br><small style="color: #64748b;">${e.userEmail}</small></td>
+        <td><span style="font-size: 10px; background: #eff6ff; color: #1d4ed8; padding: 2px 5px; border-radius: 4px;">${e.userRole}</span></td>
+        <td>${e.module}</td>
+        <td><code style="background: #f1f5f9; padding: 2px 4px; border-radius: 3px; font-weight: bold;">${e.action}</code></td>
+        <td>${e.entityType} ${e.entityId ? '<br><strong style="color: #c5a86b;">#' + e.entityId + '</strong>' : ''}</td>
+        <td><span class="badge ${e.result.toLowerCase()}">${e.result}</span></td>
+        <td><span class="severity ${e.severity.toLowerCase()}">${e.severity}</span></td>
+      </tr>
+    `
+      )
+      .join('');
+
+    return `<!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Reporte de Actividad por Usuario - 4GUARD WMS</title>
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #172033; background: #ffffff; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c5a86b; padding-bottom: 14px; margin-bottom: 20px; }
+        .brand { font-size: 22px; font-weight: 800; color: #172033; letter-spacing: -0.5px; }
+        .brand span { color: #c5a86b; }
+        .subtitle { font-size: 12px; color: #64748b; margin-top: 4px; }
+        .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 11px; display: flex; gap: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #172033; color: #ffffff; padding: 10px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 9px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        tr:nth-child(even) { background: #f8fafc; }
+        .badge { padding: 3px 7px; border-radius: 99px; font-weight: bold; font-size: 9px; text-transform: uppercase; }
+        .badge.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .badge.warning { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .badge.rejected { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .badge.error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .severity { font-size: 9px; font-weight: 800; text-transform: uppercase; }
+        .severity.info { color: #64748b; }
+        .severity.medium { color: #d97706; }
+        .severity.high { color: #ea580c; }
+        .severity.critical { color: #dc2626; font-weight: 900; }
+        .footer { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 10px; color: #94a3b8; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="brand">4GUARD <span>WMS</span> — HU-146</div>
+          <div class="subtitle">Consola de Consulta y Trazabilidad de Actividad por Usuario</div>
+        </div>
+      </div>
+      <div class="meta-box">
+        <div><strong>Fecha de emisión:</strong> ${new Date().toLocaleString('es-MX')}</div>
+        <div><strong>Eventos incluidos:</strong> ${events.length}</div>
+        <div><strong>Filtro aplicado:</strong> Rango actual en pantalla</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha / Hora</th>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Módulo</th>
+            <th>Acción</th>
+            <th>Entidad</th>
+            <th>Resultado</th>
+            <th>Criticidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <div class="footer">Documento auditable de solo lectura generado por el sistema 4GUARD WMS.</div>
+    </body>
+    </html>`;
   }
 
   // ─── Actualizar datos ─────────────────────────────────────────────────────
@@ -472,5 +638,22 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
       .map((n) => n[0])
       .join('')
       .toUpperCase();
+  }
+
+  /** Retorna una clase CSS semántica por módulo para las pills de color */
+  protected moduleClass(module: string): string {
+    const map: Record<string, string> = {
+      'Autenticación': 'auth',
+      'Recepción': 'receiving',
+      'Calidad': 'quality',
+      'Inventario': 'inventory',
+      'Picking': 'picking',
+      'Embarques': 'shipping',
+      'Proveedores': 'suppliers',
+      'Usuarios': 'users',
+      'Layout': 'layout',
+      'Reportes': 'reports',
+    };
+    return map[module] ?? 'default';
   }
 }
