@@ -113,6 +113,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Control de Usuarios y Seguridad',
       },
 
+      // Gestión de Organizaciones Multi-Tenancy (Homologado)
+      {
+        path: 'organizations',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/organizations/organization.routes').then((m) => m.organizationRoutes),
+        title: '4GUARD WMS — Gestión de Organizaciones',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',

@@ -1,0 +1,491 @@
+<div class="orgs-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL & BOTÓN VOLVER AL DASHBOARD
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="orgs-header">
+    <div class="orgs-header__top">
+      <div class="orgs-header__left">
+        <!-- BOTÓN DE VOLVER AL DASHBOARD (SOLICITADO POR EL USUARIO) -->
+        <button class="back-dashboard-btn" (click)="goBack()" type="button" aria-label="Volver al Dashboard">
+          <span class="material-symbols-outlined">arrow_back</span>
+          <span>Volver al Dashboard</span>
+        </button>
+
+        <div class="orgs-header__icon-wrap">
+          <span class="material-symbols-outlined orgs-header__icon">corporate_fare</span>
+        </div>
+
+        <div class="orgs-header__copy">
+          <div class="orgs-header__eyebrow">
+            <span class="orgs-header__eyebrow-cat">ADMINISTRACIÓN / ORGANIZATIONS</span>
+            <span class="orgs-header__eyebrow-sep">•</span>
+            <span class="orgs-header__eyebrow-tag">MULTI-TENANCY</span>
+          </div>
+
+          <h1 class="orgs-header__title">
+            Gestión de Organizaciones
+            <span class="orgs-header__title-sub">· Consola Administrativa 3PL</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="orgs-header__actions">
+        <button class="orgs-btn orgs-btn--gold" (click)="openNewForm()" type="button">
+          <span class="material-symbols-outlined">add_business</span>
+          <span>Nueva Organización</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE KPIs MÉTRICOS (4 TARJETAS) -->
+    <section class="orgs-kpi-grid" aria-label="Resumen de Organizaciones">
+      <article class="orgs-kpi-card orgs-kpi-card--gold">
+        <div class="orgs-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">corporate_fare</span>
+        </div>
+        <div class="orgs-kpi-card__content">
+          <span class="orgs-kpi-card__label">TOTAL ORGANIZACIONES</span>
+          <strong class="orgs-kpi-card__value">{{ totalOrgs() }}</strong>
+          <span class="orgs-kpi-card__sub">Tenants registrados</span>
+        </div>
+      </article>
+
+      <article class="orgs-kpi-card orgs-kpi-card--green">
+        <div class="orgs-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">verified</span>
+        </div>
+        <div class="orgs-kpi-card__content">
+          <span class="orgs-kpi-card__label">TENANTS ACTIVOS</span>
+          <strong class="orgs-kpi-card__value">{{ kpiActive() }}</strong>
+          <span class="orgs-kpi-card__sub">En operación normal</span>
+        </div>
+      </article>
+
+      <article class="orgs-kpi-card orgs-kpi-card--red">
+        <div class="orgs-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">pause_circle</span>
+        </div>
+        <div class="orgs-kpi-card__content">
+          <span class="orgs-kpi-card__label">SUSPENDIDAS / INACTIVAS</span>
+          <strong class="orgs-kpi-card__value">{{ kpiSuspended() }}</strong>
+          <span class="orgs-kpi-card__sub">Restricción de acceso</span>
+        </div>
+      </article>
+
+      <article class="orgs-kpi-card orgs-kpi-card--blue">
+        <div class="orgs-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">category</span>
+        </div>
+        <div class="orgs-kpi-card__content">
+          <span class="orgs-kpi-card__label">TIPOS DE TENANT</span>
+          <strong class="orgs-kpi-card__value">{{ kpiUniqueTypes() }}</strong>
+          <span class="orgs-kpi-card__sub">Modalidades de negocio</span>
+        </div>
+      </article>
+    </section>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       CUERPO PRINCIPAL — SPLIT VIEW 35% / 65%
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="orgs-split-view">
+
+    <!-- ─────────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA (35%): Directorio & Filtros
+         ───────────────────────────────────────────────────────────────── -->
+    <aside class="orgs-directory">
+      
+      <div class="orgs-directory__header">
+        <h2 class="orgs-directory__title">
+          <span class="material-symbols-outlined">domain</span>
+          Directorio de Tenants
+        </h2>
+        <span class="orgs-directory__count">
+          {{ filteredOrganizations().length }} / {{ totalOrgs() }}
+        </span>
+      </div>
+
+      <!-- Buscador y Filtros -->
+      <div class="orgs-directory__filters">
+        <div class="orgs-search">
+          <span class="material-symbols-outlined orgs-search__icon">search</span>
+          <input
+            id="org-search"
+            class="orgs-search__input"
+            type="search"
+            placeholder="Buscar por nombre, código o RFC..."
+            [ngModel]="filterText()"
+            (ngModelChange)="filterText.set($event)"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="orgs-filters-row">
+          <div class="orgs-filter-group">
+            <select
+              id="filter-status"
+              class="orgs-filter-select"
+              [ngModel]="filterStatus()"
+              (ngModelChange)="filterStatus.set($event)">
+              <option value="">Todos los Estados</option>
+              <option value="ACTIVE">Activas</option>
+              <option value="SUSPENDED">Suspendidas</option>
+              <option value="INACTIVE">Inactivas</option>
+            </select>
+          </div>
+
+          <div class="orgs-filter-group">
+            <select
+              id="filter-type"
+              class="orgs-filter-select"
+              [ngModel]="filterType()"
+              (ngModelChange)="filterType.set($event)">
+              <option value="">Todos los Tipos</option>
+              @for (t of organizationTypes; track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="orgs-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              title="Limpiar Filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Lista del Directorio -->
+      <div class="orgs-directory__list-wrap">
+        @if (isLoadingOrgs()) {
+          <div class="orgs-loading-skeleton">
+            @for (i of [1,2,3,4]; track i) {
+              <div class="orgs-skeleton-card"></div>
+            }
+          </div>
+        } @else if (filteredOrganizations().length === 0) {
+          <div class="orgs-empty-state">
+            <span class="material-symbols-outlined orgs-empty-state__icon">domain_disabled</span>
+            <p class="orgs-empty-state__title">Sin organizaciones encontradas</p>
+            <p class="orgs-empty-state__sub">Intenta ajustar tus criterios de búsqueda o filtros.</p>
+            @if (hasActiveFilters) {
+              <button class="orgs-btn orgs-btn--ghost orgs-btn--sm" (click)="clearFilters()">
+                Limpiar Filtros
+              </button>
+            }
+          </div>
+        } @else {
+          <ul class="orgs-list" role="list">
+            @for (org of filteredOrganizations(); track org.id) {
+              <li
+                class="orgs-card"
+                [class.orgs-card--selected]="isSelectedOrg(org)"
+                (click)="selectOrg(org)"
+                tabindex="0"
+                role="button">
+                
+                <div class="orgs-card__avatar">
+                  <span>{{ org.code.substring(0, 3) }}</span>
+                </div>
+
+                <div class="orgs-card__content">
+                  <div class="orgs-card__top">
+                    <strong class="orgs-card__name">{{ org.name }}</strong>
+                    <span class="status-badge" [class]="getStatusBadgeClass(org.status)">
+                      {{ getStatusLabel(org.status) }}
+                    </span>
+                  </div>
+
+                  <div class="orgs-card__meta">
+                    <span class="orgs-card__code">{{ org.code }}</span>
+                    <span class="orgs-card__dot">•</span>
+                    <span class="orgs-card__type">{{ getTypeLabel(org.type) }}</span>
+                  </div>
+
+                  @if (org.taxId) {
+                    <span class="orgs-card__tax">RFC/TaxID: {{ org.taxId }}</span>
+                  }
+                </div>
+
+                <span class="material-symbols-outlined orgs-card__arrow">chevron_right</span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────────
+         COLUMNA DERECHA (65%): Formulario & Auditoría en Vivo
+         ───────────────────────────────────────────────────────────────── -->
+    <main class="orgs-workspace">
+
+      @if (formMode() === 'idle') {
+        <!-- Estado Inicial Vacio -->
+        <div class="orgs-workspace-idle">
+          <div class="orgs-idle-card">
+            <span class="material-symbols-outlined orgs-idle-icon">corporate_fare</span>
+            <h3>Selecciona una Organización</h3>
+            <p>Elige un Tenant del directorio de la izquierda para ver su configuración, editar sus datos o consultar la bitácora de auditoría en vivo.</p>
+            <button class="orgs-btn orgs-btn--gold" (click)="openNewForm()" type="button">
+              <span class="material-symbols-outlined">add_business</span>
+              <span>Registrar Nueva Organización</span>
+            </button>
+          </div>
+        </div>
+      } @else {
+        <!-- Panel Formulario y Auditoria Activo -->
+        <div class="orgs-workspace-active">
+
+          <!-- ENCABEZADO DEL FORMULARIO Y BARRA DE ACCIONES -->
+          <div class="orgs-form-header">
+            <div class="orgs-form-header__title-group">
+              <span class="orgs-form-header__badge">
+                {{ formMode() === 'new' ? 'NUEVO TENANT' : 'EDICIÓN TENANT' }}
+              </span>
+              <h2>
+                {{ formMode() === 'new' ? 'Registrar Nueva Organización' : selectedOrg()?.name }}
+              </h2>
+            </div>
+
+            <div class="orgs-form-header__actions">
+              @if (formMode() === 'edit' && selectedOrg()) {
+                <button
+                  class="orgs-btn orgs-btn--ghost"
+                  type="button"
+                  (click)="toggleOrgStatus(selectedOrg()!)"
+                  [title]="selectedOrg()?.status === 'ACTIVE' ? 'Suspender Tenant' : 'Activar Tenant'">
+                  <span class="material-symbols-outlined">
+                    {{ selectedOrg()?.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}
+                  </span>
+                  <span>{{ selectedOrg()?.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}</span>
+                </button>
+
+                <button
+                  class="orgs-btn orgs-btn--danger-ghost"
+                  type="button"
+                  (click)="promptDelete(selectedOrg()!)">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              }
+
+              <button class="orgs-btn orgs-btn--ghost" type="button" (click)="cancelForm()">
+                Cancelar
+              </button>
+
+              <button class="orgs-btn orgs-btn--gold" type="button" (click)="saveOrg()">
+                <span class="material-symbols-outlined">save</span>
+                <span>{{ formMode() === 'new' ? 'Crear Tenant' : 'Guardar Cambios' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- FORMULARIO REACTIVO -->
+          <form [formGroup]="form" (ngSubmit)="saveOrg()" novalidate class="orgs-form">
+
+            <!-- SECCIÓN 1: Identificación y Datos Fiscales -->
+            <fieldset class="orgs-fieldset">
+              <legend class="orgs-legend">
+                <span class="material-symbols-outlined">badge</span>
+                Identificación & Configuración Fiscal
+              </legend>
+
+              <div class="orgs-form-grid orgs-form-grid--2">
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="org-name">Nombre de la Organización</label>
+                  <input
+                    id="org-name"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('name')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. 4GUARD LOGISTICS CORP"
+                    maxlength="100"
+                  />
+                  @if (fieldHasError('name')) {
+                    <span class="fg-error">{{ getFieldError('name') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="org-code">
+                    Código Identificador (Tenant ID)
+                    @if (formMode() === 'edit') {
+                      <span class="fg-lock-tag">(Inmutable)</span>
+                    }
+                  </label>
+                  <input
+                    id="org-code"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('code')"
+                    type="text"
+                    formControlName="code"
+                    placeholder="Ej. 4GUARD-HQ"
+                    maxlength="50"
+                  />
+                  @if (fieldHasError('code')) {
+                    <span class="fg-error">{{ getFieldError('code') }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="orgs-form-grid orgs-form-grid--2 margin-top">
+                <div class="fg-field">
+                  <label class="fg-label" for="org-taxid">Tax ID / RFC Fiscal</label>
+                  <input
+                    id="org-taxid"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('taxId')"
+                    type="text"
+                    formControlName="taxId"
+                    placeholder="Ej. MX-99887766-A"
+                    maxlength="30"
+                  />
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="org-status">Estatus Operativo</label>
+                  <select id="org-status" class="fg-select" formControlName="status">
+                    <option value="ACTIVE">ACTIVA — Operación Normal</option>
+                    <option value="SUSPENDED">SUSPENDIDA — Acceso Restringido</option>
+                    <option value="INACTIVE">INACTIVA — Deshabilitada</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2: Modalidad & Tipo de Tenant -->
+            <fieldset class="orgs-fieldset">
+              <legend class="orgs-legend">
+                <span class="material-symbols-outlined">category</span>
+                Modalidad de Operación
+              </legend>
+
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="org-type">Tipo de Organización</label>
+                <select id="org-type" class="fg-select" formControlName="type">
+                  @for (t of organizationTypes; track t.value) {
+                    <option [value]="t.value">{{ t.label }}</option>
+                  }
+                </select>
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3: Configuración Avanzada JSONB -->
+            <fieldset class="orgs-fieldset">
+              <legend class="orgs-legend">
+                <span class="material-symbols-outlined">settings_suggest</span>
+                Parámetros & Configuración (JSONB)
+                <button
+                  type="button"
+                  class="orgs-json-format-btn"
+                  (click)="formatSettingsJson()"
+                  title="Formatear JSON">
+                  <span class="material-symbols-outlined">code_blocks</span>
+                  <span>Formatear JSON</span>
+                </button>
+              </legend>
+
+              <div class="fg-field">
+                <textarea
+                  id="org-settings"
+                  class="fg-textarea font-mono"
+                  [class.fg-input--error]="fieldHasError('settings')"
+                  formControlName="settings"
+                  rows="6"
+                  placeholder='&#123;&#10;  "theme": "dark",&#10;  "notifications_email": "true"&#10;&#125;'
+                ></textarea>
+                @if (fieldHasError('settings')) {
+                  <span class="fg-error">{{ getFieldError('settings') }}</span>
+                }
+              </div>
+            </fieldset>
+          </form>
+
+          <!-- SECCIÓN 4: LÍNEA DE TIEMPO DE AUDITORÍA EN VIVO (GET /api/v1/organizations/{id}/audit) -->
+          @if (formMode() === 'edit' && selectedOrg()) {
+            <section class="orgs-audit-section">
+              <header class="orgs-audit-header">
+                <div class="orgs-audit-title">
+                  <span class="material-symbols-outlined">history</span>
+                  <h3>Historial de Auditoría en Vivo</h3>
+                  <span class="orgs-audit-badge">GET /api/v1/organizations/{{ selectedOrg()?.id }}/audit</span>
+                </div>
+              </header>
+
+              <div class="orgs-audit-body">
+                @if (isLoadingAudit()) {
+                  <div class="orgs-audit-loading">
+                    <span class="material-symbols-outlined orgs-spin">sync</span>
+                    <span>Cargando bitácora inmutable del Backend...</span>
+                  </div>
+                } @else if (auditEntries().length === 0) {
+                  <div class="orgs-audit-empty">
+                    <span class="material-symbols-outlined">description</span>
+                    <p>Sin eventos de auditoría registrados para esta organización.</p>
+                  </div>
+                } @else {
+                  <div class="orgs-timeline">
+                    @for (log of auditEntries(); track log.logId) {
+                      <div class="orgs-tl-item">
+                        <div class="orgs-tl-node" [class]="getAuditNodeColor(log.action)"></div>
+
+                        <div class="orgs-tl-content">
+                          <div class="orgs-tl-top">
+                            <span class="orgs-tl-action">{{ log.action }}</span>
+                            <span class="orgs-tl-user">por &#64;{{ log.username }}</span>
+                            <time class="orgs-tl-time">{{ log.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</time>
+                          </div>
+
+                          <p class="orgs-tl-summary">{{ getAuditSummary(log.action) }}</p>
+
+                          @if (log.details && log.details.length > 0) {
+                            <div class="orgs-tl-details">
+                              @for (detail of log.details; track detail.fieldName) {
+                                <div class="orgs-tl-detail-row">
+                                  <span class="orgs-tl-field">{{ detail.fieldName }}:</span>
+                                  @if (detail.oldValue !== null) {
+                                    <span class="orgs-tl-old">{{ detail.oldValue }}</span>
+                                    <span class="orgs-tl-arrow">→</span>
+                                  }
+                                  <span class="orgs-tl-new">{{ detail.newValue || '(vacío)' }}</span>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </section>
+          }
+
+        </div>
+      }
+
+    </main>
+
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN -->
+  @if (deletingOrg()) {
+    <fg-confirm-dialog
+      title="Eliminar Organización"
+      [message]="'¿Estás seguro de que deseas eliminar permanentemente la organización ' + deletingOrg()?.name + '? Esta acción removerá la estructura de tenant.'"
+      confirmText="Sí, Eliminar Tenant"
+      cancelText="Cancelar"
+      type="danger"
+      (confirm)="confirmDelete()"
+      (cancel)="cancelDelete()"
+    ></fg-confirm-dialog>
+  }
+
+</div>
