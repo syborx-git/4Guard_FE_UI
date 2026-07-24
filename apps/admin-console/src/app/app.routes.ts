@@ -19,6 +19,16 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Iniciar Sesión',
   },
 
+  // Ruta pública: Recuperar contraseña (OTP)
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent
+      ),
+    title: '4GUARD WMS — Recuperar Contraseña',
+  },
+
   // Cambio de contraseña obligatorio — fuera del shell (sin navbar)
   // Requiere sesión activa + changePasswordRequired === true
   {
