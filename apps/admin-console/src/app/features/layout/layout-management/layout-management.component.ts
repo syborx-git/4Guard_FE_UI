@@ -22,8 +22,12 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
+import { forkJoin, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 import { ToastService } from '../../../core/services/toast.service';
+import { BranchService } from '../../admin/services/branch.service';
+import { SectionService, WarehouseSection } from '../../admin/services/section.service';
 import { LayoutService } from '../services/layout.service';
 import {
   WarehouseLocation,
@@ -62,6 +66,10 @@ export class LayoutManagementComponent implements OnInit {
   private readonly layoutSvc = inject(LayoutService);
   private readonly toastSvc  = inject(ToastService);
   private readonly fb        = inject(FormBuilder);
+  protected readonly branchService = inject(BranchService);
+  protected readonly sectionService = inject(SectionService);
+
+  readonly locationToDelete = signal<WarehouseLocation | null>(null);
 
   // ── Exposición de enums al template ───────────────────────────────────────
   readonly LOCATION_TYPE_LABELS       = LOCATION_TYPE_LABELS;
@@ -211,30 +219,55 @@ export class LayoutManagementComponent implements OnInit {
   private loadData(): void {
     this.isLoading.set(true);
 
-    this.layoutSvc.getZones().subscribe({
-      next: (zones) => {
-        this.zones.set(zones);
-        // Expandir zonas por defecto
-        if (zones.length > 0) {
-          this.expandedNodes.update(s => {
-            const next = new Set(s);
-            zones.forEach(z => next.add(z.id));
-            return next;
-          });
-        }
-      },
-      error: () => {},
-    });
+    const loadBranches$ = this.branchService.branches().length > 0
+      ? of(this.branchService.branches())
+      : this.branchService.loadBranches().pipe(map(r => r?.data ?? []), catchError(() => of([])));
 
-    this.layoutSvc.getLocations().subscribe({
-      next: (locs) => {
-        this.locations.set(locs);
-        this.isLoading.set(false);
+    const loadSections$ = this.sectionService.sections().length > 0
+      ? of(this.sectionService.sections())
+      : this.sectionService.loadSections().pipe(catchError(() => of([])));
+
+    forkJoin([loadBranches$, loadSections$]).subscribe({
+      next: () => {
+        this.layoutSvc.getZones().subscribe({
+          next: (zones) => {
+            this.zones.set(zones);
+            if (zones.length > 0) {
+              this.expandedNodes.update(s => {
+                const next = new Set(s);
+                zones.forEach(z => next.add(z.id));
+                return next;
+              });
+            }
+          },
+        });
+
+        this.layoutSvc.getLocations().subscribe({
+          next: (locs) => {
+            this.locations.set(locs);
+            this.isLoading.set(false);
+          },
+          error: () => {
+            this.toastSvc.error('Error al cargar las ubicaciones. Verifica la conexión con el Backend.');
+            this.isLoading.set(false);
+          },
+        });
       },
       error: () => {
-        this.toastSvc.error('Error al cargar las ubicaciones. Verifica la conexión.');
         this.isLoading.set(false);
-      },
+      }
+    });
+  }
+
+  protected getSectionsForBranch(branchId: string): WarehouseSection[] {
+    const currentZoneId = this.editForm?.get('zoneId')?.value;
+    const allSections = this.sectionService.sections();
+
+    return allSections.filter(s => {
+      const isBranchMatch = !branchId || s.branchId === branchId;
+      // Solo mostrar secciones ACTIVAS, o la sección actualmente asignada a la ubicación en edición
+      const isActiveOrSelected = s.status === 'ACTIVE' || s.id === currentZoneId;
+      return isBranchMatch && isActiveOrSelected;
     });
   }
 
@@ -273,11 +306,12 @@ export class LayoutManagementComponent implements OnInit {
     this.formSubmitted.set(false);
     this.showAuditHistory.set(false);
 
+    const firstBranch = this.branchService.branches().length > 0 ? this.branchService.branches()[0] : null;
     const firstZone = this.zones().length > 0 ? this.zones()[0] : null;
 
     this.editForm.reset({
-      warehouseId:   'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
-      warehouseName: 'Almacén Principal',
+      warehouseId:   firstBranch ? firstBranch.id : '',
+      warehouseName: firstBranch ? firstBranch.name : 'Almacén Principal',
       zoneId:        firstZone ? firstZone.id : '',
       zoneCode:      firstZone ? firstZone.code : '',
       zoneName:      firstZone ? firstZone.name : '',
@@ -493,21 +527,34 @@ export class LayoutManagementComponent implements OnInit {
 
   // ── Eliminar ───────────────────────────────────────────────────────────────
 
-  onDelete(): void {
+  onDelete(event?: Event): void {
+    if (event) event.stopPropagation();
     const loc = this.selectedLoc();
     if (!loc) return;
+    this.locationToDelete.set(loc);
+  }
 
-    if (!confirm(`¿Eliminar permanentemente la ubicación "${loc.code}"?\nEsta acción no se puede deshacer.`)) return;
+  closeDeleteModal(): void {
+    this.locationToDelete.set(null);
+  }
 
+  confirmDeleteLocation(): void {
+    const loc = this.locationToDelete();
+    if (!loc) return;
+
+    this.isSaving.set(true);
     this.layoutSvc.deleteLocation(loc.id).subscribe({
       next: () => {
+        this.isSaving.set(false);
         this.locations.update(list => list.filter(l => l.id !== loc.id));
         this.selectedId.set(null);
         this.isCreating.set(false);
         this.isDirty.set(false);
         this.toastSvc.success(`Ubicación "${loc.code}" eliminada.`);
+        this.closeDeleteModal();
       },
       error: (err) => {
+        this.isSaving.set(false);
         const msg = err?.message ?? err?.error?.message ?? 'Error al eliminar la ubicación.';
         this.toastSvc.error(msg);
       },

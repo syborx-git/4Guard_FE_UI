@@ -90,17 +90,28 @@ export interface WarehouseLocation {
   canReactivate?: boolean;
 }
 
+export interface LocationAuditDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
 /**
  * Entrada del historial de auditoría de una ubicación.
  */
 export interface LocationAuditEntry {
   id: string;
-  locationId: string;
-  action: 'CREATE' | 'UPDATE' | 'STATUS_CHANGE' | 'DELETE';
+  locationId?: string;
+  action: string;
+  summary?: string;
   performedBy: string;
   performedAt: string;
-  changes?: Record<string, { from: unknown; to: unknown }>;
+  username?: string;
+  createdAt?: string;
+  details?: LocationAuditDetail[];
   reason?: string;
+  timelineIcon?: string;
+  timelineColor?: 'create' | 'update' | 'status' | 'delete' | 'info';
 }
 
 // ── Payloads de escritura ─────────────────────────────────────────────────────

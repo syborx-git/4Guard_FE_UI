@@ -223,7 +223,6 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
     { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
-    { label: 'Layout', route: '/layout', icon: 'shelves', module: 'layout' },
     { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },

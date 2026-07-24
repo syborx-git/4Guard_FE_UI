@@ -27,6 +27,7 @@ export interface Location {
   currentOccupancy?: number;
   code?: string | null;
   name?: string | null;
+  notes?: string | null;
   status?: LocationStatus;
   statusReason?: string | null;
   isBlocked: boolean;
@@ -55,6 +56,7 @@ export interface LocationResponse {
   currentOccupancy: number;
   code: string | null;
   name: string | null;
+  notes: string | null;
   status: LocationStatus;
   statusReason: string | null;
   isBlocked: boolean;
@@ -79,6 +81,7 @@ export interface CreateLocationRequest {
   capacityUnits?: number;
   code?: string | null;
   name?: string | null;
+  notes?: string | null;
 }
 
 export interface UpdateLocationRequest {
@@ -99,11 +102,26 @@ export interface UpdateLocationRequest {
   blockReason?: string | null;
   code?: string | null;
   name?: string | null;
+  notes?: string | null;
 }
 
 export interface ChangeLocationStatusRequest {
   status: LocationStatus;
   reason?: string;
+}
+
+export interface LocationAuditDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface LocationAuditLogEntry {
+  logId: string;
+  action: string;
+  username: string;
+  createdAt: string;
+  details: LocationAuditDetail[];
 }
 
 export interface ApiResponse<T> {
@@ -199,7 +217,8 @@ export class LocationService {
       type: loc.type || 'PALLET',
       capacityUnits: loc.capacityUnits ?? 1,
       code: loc.code,
-      name: loc.name
+      name: loc.name,
+      notes: loc.notes !== undefined ? loc.notes : null
     };
 
     return this.http.post<ApiResponse<LocationResponse>>(
@@ -238,7 +257,8 @@ export class LocationService {
       isBlocked: loc.isBlocked !== undefined ? loc.isBlocked : existing?.isBlocked,
       blockReason: loc.blockReason !== undefined ? loc.blockReason : (existing?.blockReason || null),
       code: loc.code !== undefined ? loc.code : existing?.code,
-      name: loc.name !== undefined ? loc.name : existing?.name
+      name: loc.name !== undefined ? loc.name : existing?.name,
+      notes: loc.notes !== undefined ? loc.notes : (existing?.notes || null)
     };
 
     return this.http.put<ApiResponse<LocationResponse>>(
@@ -301,6 +321,17 @@ export class LocationService {
     return this.changeStatus(id, isBlocked ? 'BLOCKED' : 'ACTIVE', reason);
   }
 
+  /**
+   * Obtiene el historial de auditoría de una ubicación por UUID.
+   */
+  getLocationAudit(id: string): Observable<ApiResponse<LocationAuditLogEntry[]>> {
+    return this.http.get<ApiResponse<LocationAuditLogEntry[]>>(
+      `${environment.apiBaseUrl}/api/v1/locations/${id}/audit`
+    ).pipe(
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
   private mapDtoToItem(dto: LocationResponse): Location {
     return {
       id: dto.id,
@@ -321,6 +352,7 @@ export class LocationService {
       currentOccupancy: dto.currentOccupancy,
       code: dto.code || undefined,
       name: dto.name || undefined,
+      notes: dto.notes || undefined,
       status: dto.status || (dto.isBlocked ? 'BLOCKED' : 'ACTIVE'),
       statusReason: dto.statusReason || dto.blockReason || null,
       isBlocked: dto.isBlocked,
