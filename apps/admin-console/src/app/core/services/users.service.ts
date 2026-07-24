@@ -20,6 +20,7 @@ import {
   ApiResponse,
   UserProfileDto,
   CreateUserRequest,
+  UserAuditLogDto,
 } from '../models/user.models';
 import { environment } from '../../../environments/environment';
 
@@ -213,6 +214,23 @@ export class UsersService {
   deleteUser(userId: string): Observable<ApiResponse<void>> {
     return this.http
       .delete<ApiResponse<void>>(`${this.API_URL}/${userId}`)
+      .pipe(
+        catchError((error: HttpErrorResponse) => this.handleError(error))
+      );
+  }
+
+  /**
+   * Obtiene el historial de auditoría de un usuario específico.
+   *
+   * Endpoint: GET /api/v1/users/{userId}/audit
+   * Autorización: Bearer Token
+   *
+   * @param userId UUID del usuario
+   * @returns Observable<ApiResponse<UserAuditLogDto[]>>
+   */
+  getUserAuditHistory(userId: string): Observable<ApiResponse<UserAuditLogDto[]>> {
+    return this.http
+      .get<ApiResponse<UserAuditLogDto[]>>(`${this.API_URL}/${userId}/audit`)
       .pipe(
         catchError((error: HttpErrorResponse) => this.handleError(error))
       );
