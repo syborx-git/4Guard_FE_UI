@@ -97,7 +97,7 @@
 }
 
 .sidebar__brand {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   overflow: hidden;
   color: #f8fafc;
   font-size: 0.76rem;
@@ -109,7 +109,7 @@
 }
 
 .sidebar__subtitle {
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   margin-top: 4px;
   overflow: hidden;
   color: #8e9baa;

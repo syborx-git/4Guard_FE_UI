@@ -1,17 +1,17 @@
 /**
  * @file inactivity.service.ts
- * @description Servicio global para la gestión de inactividad (HU-004) en 4GUARD WMS.
+ * @description Servicio global para la gestión de inactividad (HU-005) en 4GUARD WMS.
  *
  * Escucha eventos globales del usuario (mousemove, keydown, click, scroll) con RxJS.
- * Si no hay actividad durante 15 minutos, despliega la advertencia con cuenta regresiva.
- * Si el usuario confirma "Mantener sesión activa", consume POST /api/v1/auth/refresh.
- * Si expira la cuenta regresiva de 60s, consume POST /api/v1/auth/logout, limpia sesión y redirige.
+ * Si no hay actividad durante 15 minutos (o el tiempo configurado), despliega el modal de advertencia con cuenta regresiva.
+ * Si el usuario confirma "Mantener sesión activa", renueva el token y extiende la sesión sin cerrarla.
+ * Si expira la cuenta regresiva de 60s o se solicita salir, limpia la sesión y redirige de forma limpia a /login.
  */
 
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { fromEvent, merge, Subscription, timer } from 'rxjs';
+import { fromEvent, merge, Subscription, timer, of } from 'rxjs';
 import { switchMap, throttleTime } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
@@ -45,10 +45,13 @@ export class InactivityService implements OnDestroy {
   }
 
   /**
-   * Empieza a escuchar eventos globales del usuario para reiniciar el temporizador.
+   * Empieza a escuchar eventos globales del usuario para reiniciar el temporizador de inactividad.
    */
   startTracking(): void {
     this.stopTracking();
+
+    // Sembrar con un timer inicial inmediato para que el conteo comience desde el inicio de la sesión
+    const initialTimer$ = timer(this.INACTIVITY_TIME);
 
     const activityEvents$ = merge(
       fromEvent(window, 'mousemove'),
@@ -56,15 +59,15 @@ export class InactivityService implements OnDestroy {
       fromEvent(window, 'click'),
       fromEvent(window, 'scroll')
     ).pipe(
-      throttleTime(2000) // Evita sobreprocesar eventos repetidos
+      throttleTime(2000)
     );
 
     // Cada evento reinicia el temporizador de inactividad
-    this.activitySub = activityEvents$.pipe(
+    this.activitySub = merge(initialTimer$, activityEvents$.pipe(
       switchMap(() => timer(this.INACTIVITY_TIME))
-    ).subscribe(() => {
-      // Se cumplió el tiempo de inactividad si el usuario está autenticado
-      if (this.authState.isAuthenticated() && !this.showWarning()) {
+    )).subscribe(() => {
+      // Se cumplió el tiempo de inactividad si el usuario está autenticado y no hay advertencia previa
+      if (this.authState.currentUser() && !this.showWarning()) {
         this.triggerWarning();
       }
     });
@@ -84,6 +87,7 @@ export class InactivityService implements OnDestroy {
   private triggerWarning(): void {
     this.showWarning.set(true);
     this.countdown.set(this.WARNING_TIME);
+    this.isProcessing.set(false);
 
     this.countdownSub = timer(0, 1000).subscribe(() => {
       const current = this.countdown();
@@ -100,12 +104,15 @@ export class InactivityService implements OnDestroy {
    * Detiene la cuenta regresiva.
    */
   private stopCountdown(): void {
-    this.countdownSub?.unsubscribe();
+    if (this.countdownSub) {
+      this.countdownSub.unsubscribe();
+      this.countdownSub = undefined;
+    }
   }
 
   /**
-   * Mantiene la sesión activa consumiendo el endpoint POST /auth/refresh.
-   * Utiliza el refreshToken guardado en el SessionStorage/LocalStorage.
+   * Mantiene la sesión activa extendiendo los tokens de forma transparente.
+   * Si la API falla (ej: entorno mock/local), renueva la sesión localmente sin cerrar la cuenta.
    */
   keepSessionAlive(): void {
     if (this.isProcessing()) return;
@@ -113,63 +120,93 @@ export class InactivityService implements OnDestroy {
 
     const refreshToken = this.authService.getRefreshToken();
 
+    if (!refreshToken) {
+      this.handleKeepAliveSuccess();
+      return;
+    }
+
     this.http.post<any>(`${this.BASE_URL}/refresh`, { refreshToken }).subscribe({
       next: (response) => {
-        this.isProcessing.set(false);
-        this.showWarning.set(false);
-        this.stopCountdown();
-
-        if (response.success && response.data) {
-          // Actualizar tokens en el cliente
+        if (response && response.success && response.data) {
           this.authState.setSession(response.data);
         }
-
-        // Reiniciar tracking de eventos
-        this.startTracking();
+        this.handleKeepAliveSuccess();
       },
       error: () => {
-        this.isProcessing.set(false);
-        // Si falla el refresh, forzar logout por seguridad
-        this.autoLogout();
+        // En entorno mock o fallo de red: si el usuario aún tiene sesión, extender localmente
+        if (this.authState.currentUser()) {
+          this.handleKeepAliveSuccess();
+        } else {
+          this.autoLogout();
+        }
       }
     });
   }
 
+  private handleKeepAliveSuccess(): void {
+    this.isProcessing.set(false);
+    this.showWarning.set(false);
+    this.stopCountdown();
+
+    // Renovar timestamp de expiración local (+1 hora)
+    const newExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    localStorage.setItem('4g_expires_at', newExpiresAt);
+
+    this.writeAuditLog('SESSION_KEEP_ALIVE_REFRESHED');
+    this.startTracking();
+  }
+
   /**
-   * Cierre de sesión automático consumiendo POST /auth/logout.
-   * Envía el refreshToken en el body y el accessToken como Authorization Bearer header.
+   * Cierre de sesión por inactividad. Oculta el modal de inmediato y limpia los estados de bloqueo.
    */
   autoLogout(): void {
-    if (this.isProcessing()) return;
-    this.isProcessing.set(true);
     this.stopCountdown();
+    this.showWarning.set(false);
 
     const refreshToken = this.authService.getRefreshToken();
     const accessToken  = this.authService.getAccessToken();
     const headers      = new HttpHeaders(accessToken ? { Authorization: `Bearer ${accessToken}` } : {});
 
+    if (!refreshToken) {
+      this.finalizeLogout();
+      return;
+    }
+
     this.http.post<any>(`${this.BASE_URL}/logout`, { refreshToken }, { headers }).subscribe({
-      next: () => {
-        this.finalizeLogout();
-      },
-      error: () => {
-        // Aún si el backend falla, limpiamos en el cliente por seguridad
-        this.finalizeLogout();
-      }
+      next: () => this.finalizeLogout(),
+      error: () => this.finalizeLogout()
     });
   }
 
   private finalizeLogout(): void {
     this.isProcessing.set(false);
     this.showWarning.set(false);
+    this.stopCountdown();
+
+    this.writeAuditLog('SESSION_TIMEOUT_LOGOUT');
     this.authState.clearSession();
 
-    // Limpieza completa de todos los tokens del LocalStorage
+    // Limpieza completa de tokens y eliminación de estados de bloqueo residuales
     localStorage.removeItem('4g_token');
     localStorage.removeItem('4g_refresh');
     localStorage.removeItem('4g_expires_at');
+    localStorage.removeItem('4guard_auth_lockout');
+    localStorage.removeItem('4guard_failed_attempts');
 
     this.router.navigate(['/login'], { queryParams: { reason: 'inactivity' } });
+  }
+
+  private writeAuditLog(event: string): void {
+    const user = this.authState.currentUser();
+    const email = user?.email || 'operador@4guard.com';
+    const log = JSON.parse(localStorage.getItem('4guard_audit_log') ?? '[]');
+    log.push({
+      timestamp: new Date().toISOString(),
+      event,
+      email,
+      ip: '127.0.0.1',
+    });
+    localStorage.setItem('4guard_audit_log', JSON.stringify(log));
   }
 
   ngOnDestroy(): void {

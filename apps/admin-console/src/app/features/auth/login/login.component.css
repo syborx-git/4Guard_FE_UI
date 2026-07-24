@@ -11,7 +11,7 @@
   height: 100vh;
   min-height: 650px;
   background: #0D0B1A;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   overflow: hidden;
   position: relative;
 }
@@ -123,7 +123,7 @@
 }
 
 .login-brand__headline {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.85rem;
   font-weight: 700;
   color: #FFFFFF;
@@ -134,7 +134,7 @@
 
 .login-brand__headline-em {
   display: block;
-  font-family: 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
   font-style: italic;
   font-weight: 700;
   color: #EAC349;
@@ -201,7 +201,7 @@
 }
 
 .login-form__title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.15rem;
   font-weight: 700;
   color: #FFFFFF;
@@ -214,6 +214,32 @@
   color: rgba(255, 255, 255, 0.52);
   margin: 0 0 2rem;
   line-height: 1.5;
+}
+
+/* Alerta Informativa de Inactividad */
+.login-info-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(234, 195, 73, 0.12);
+  border: 1px solid rgba(234, 195, 73, 0.35);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #EAC349;
+  line-height: 1.45;
+  animation: slide-up 0.3s ease-out;
+}
+
+.login-info-alert__icon {
+  font-size: 1.25rem;
+  color: #EAC349;
+  flex-shrink: 0;
+}
+
+.login-info-alert__msg {
+  flex: 1;
 }
 
 /* Alerta de Error */
@@ -404,7 +430,7 @@
   background: linear-gradient(135deg, #C8980A 0%, #EAC349 100%);
   border: none;
   border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   color: #080D14;
@@ -488,7 +514,7 @@
 }
 
 .locked-view__title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   color: #ffffff;
@@ -521,7 +547,7 @@
 }
 
 .locked-view__timer-value {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.2rem;
   font-weight: 800;
   color: #EAC349;

@@ -2,29 +2,16 @@
  * @file warehouse-location.model.ts
  * @description Modelos de dominio para el módulo de Gestión de Layout y Ubicaciones.
  * HU-127 — 4GUARD WMS
- *
- * IMPORTANTE: Este módulo es el maestro de configuración de ubicaciones.
- * Los datos de ocupación (currentOccupancy, occupancyPercentage, availableCapacity)
- * son de SOLO LECTURA y provienen del módulo de Inventario.
  */
 
 // ── Enums de tipo ─────────────────────────────────────────────────────────────
 
-/** Tipo de estructura física de la ubicación */
+/** Tipo de estructura física de la ubicación (según BE spec) */
 export type LocationType =
-  | 'RACK'      // Rack de almacenamiento vertical
-  | 'FLOOR'     // Almacenamiento en piso (floor storage)
-  | 'STAGING'   // Zona de preparación/staging
-  | 'RAMP'      // Rampa de recepción/despacho
-  | 'DOCK';     // Andén (dock)
-
-/** Función logística principal de la ubicación */
-export type LogisticFunction =
-  | 'STORAGE'   // Almacenamiento regular
-  | 'RECEIVING' // Recepción de mercancía
-  | 'DISPATCH'  // Despacho / Embarque
-  | 'QUALITY'   // Control de calidad / Cuarentena
-  | 'OVERFLOW'; // Desbordamiento temporal
+  | 'PALLET' // Rack de tarimas / pallets
+  | 'BIN'    // Gaveta / bin de almacenamiento pequeño
+  | 'SHELF'  // Estantería / repisa
+  | 'RAMP';  // Rampa de recepción/despacho
 
 /** Estado FSM de la ubicación */
 export type LocationStatus =
@@ -33,38 +20,13 @@ export type LocationStatus =
   | 'MAINTENANCE'  // En mantenimiento (requiere motivo)
   | 'INACTIVE';    // Desactivada
 
-/** Unidad de capacidad — tipo controlado, NO string libre */
-export type CapacityUnit =
-  | 'PALLET'       // Tarimas
-  | 'BOX'          // Cajas
-  | 'KILOGRAM'     // Kilogramos
-  | 'POSITION'     // Posiciones
-  | 'CUBIC_METER'; // Metros cúbicos
-
 // ── Etiquetas UI ──────────────────────────────────────────────────────────────
 
-export const CAPACITY_UNIT_LABELS: Record<CapacityUnit, string> = {
-  PALLET:      'Tarimas',
-  BOX:         'Cajas',
-  KILOGRAM:    'Kilogramos',
-  POSITION:    'Posiciones',
-  CUBIC_METER: 'Metros cúbicos',
-};
-
 export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
-  RACK:    'Rack',
-  FLOOR:   'Piso',
-  STAGING: 'Staging',
-  RAMP:    'Rampa',
-  DOCK:    'Andén',
-};
-
-export const LOGISTIC_FUNCTION_LABELS: Record<LogisticFunction, string> = {
-  STORAGE:   'Almacenamiento',
-  RECEIVING: 'Recepción',
-  DISPATCH:  'Despacho',
-  QUALITY:   'Control de Calidad',
-  OVERFLOW:  'Desbordamiento',
+  PALLET: 'Pallet / Tarima',
+  BIN:    'Bin / Gaveta',
+  SHELF:  'Shelf / Estantería',
+  RAMP:   'Rampa',
 };
 
 export const LOCATION_STATUS_LABELS: Record<LocationStatus, string> = {
@@ -78,59 +40,60 @@ export const LOCATION_STATUS_LABELS: Record<LocationStatus, string> = {
 
 /**
  * Ubicación física del almacén.
- * Los campos de auditoría y ocupación son SOLO LECTURA desde el frontend.
- * El backend los calcula y los entrega en la respuesta.
  */
 export interface WarehouseLocation {
   id: string;
-  code: string;        // Obligatorio, único. Ej: "PA-01-R1-N2"
-  name: string;        // Nombre descriptivo. Ej: "Pasillo A – Bahía 01"
+  code: string;        // Único. Ej: "ALMC-A-R1-N2"
+  name: string;        // Nombre descriptivo. Ej: "Pasillo A – Rack 1 – Nivel 2"
 
-  // Relaciones con entidades externas (preparadas para backend real)
+  // Relaciones
   warehouseId: string;
   warehouseName: string;
   zoneId: string;
   zoneCode: string;
   zoneName: string;
 
-  // Jerarquía física (opcionales según el tipo)
+  // Jerarquía física
   aisle?: string;      // Pasillo (A, B, C...)
-  bay?: string;        // Bahía (01, 02...)
   rack?: string;       // Rack (R1, R2...)
   level?: string;      // Nivel (N1, N2...)
   position?: string;   // Posición (P1, P2...)
+  coordX?: number;
+  coordY?: number;
+  coordZ?: number;
 
   // Clasificación
   locationType: LocationType;
-  logisticFunction: LogisticFunction;
 
   // Capacidad
-  maxCapacity: number;       // Editable por el Gerente
-  capacityUnit: CapacityUnit;
+  maxCapacity: number;
 
-  // Ocupación — SOLO LECTURA (proviene del módulo de Inventario)
+  // Ocupación — SOLO LECTURA
   currentOccupancy?: number;
   occupancyPercentage?: number;  // Calculado: currentOccupancy / maxCapacity * 100
   availableCapacity?: number;    // Calculado: maxCapacity - currentOccupancy
-
-  // Configuración
-  isStorageAllowed: boolean;   // false = solo tránsito, no almacenamiento
 
   // Estado FSM
   status: LocationStatus;
   observations?: string;
 
-  // Auditoría — SOLO LECTURA, generada por el backend transaccionalmente
+  // Auditoría — SOLO LECTURA
   createdAt: string;
   updatedAt: string;
-  updatedBy: string;   // Backend lo resuelve desde JWT, el frontend NO lo envía
+  updatedBy: string;
   lastAction: string;
 
-  // Permisos condicionales — el backend determina qué acciones están disponibles
+  // Permisos condicionales
   canDelete?: boolean;
   canDeactivate?: boolean;
   canBlock?: boolean;
   canReactivate?: boolean;
+}
+
+export interface LocationAuditDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
 }
 
 /**
@@ -138,40 +101,42 @@ export interface WarehouseLocation {
  */
 export interface LocationAuditEntry {
   id: string;
-  locationId: string;
-  action: 'CREATE' | 'UPDATE' | 'STATUS_CHANGE' | 'DELETE';
+  locationId?: string;
+  action: string;
+  summary?: string;
   performedBy: string;
   performedAt: string;
-  changes?: Record<string, { from: unknown; to: unknown }>;
+  username?: string;
+  createdAt?: string;
+  details?: LocationAuditDetail[];
   reason?: string;
+  timelineIcon?: string;
+  timelineColor?: 'create' | 'update' | 'status' | 'delete' | 'info';
 }
 
 // ── Payloads de escritura ─────────────────────────────────────────────────────
-// El frontend NO envía campos de auditoría. El backend los genera.
 
-/** Payload para crear una nueva ubicación */
+/** Payload para crear/editar una ubicación en Layout Management */
 export interface CreateLocationPayload {
   code: string;
   name: string;
   warehouseId: string;
-  warehouseName: string;
+  warehouseName?: string;
   zoneId: string;
-  zoneCode: string;
-  zoneName: string;
+  zoneCode?: string;
+  zoneName?: string;
   aisle?: string;
-  bay?: string;
   rack?: string;
   level?: string;
   position?: string;
+  coordX?: number;
+  coordY?: number;
+  coordZ?: number;
   locationType: LocationType;
-  logisticFunction: LogisticFunction;
   maxCapacity: number;
-  capacityUnit: CapacityUnit;
-  isStorageAllowed: boolean;
   observations?: string;
 }
 
-/** Payload para editar una ubicación existente */
 export type UpdateLocationPayload = CreateLocationPayload;
 
 /** Payload para cambiar el estado FSM de una ubicación */
@@ -182,14 +147,14 @@ export interface ChangeStatusPayload {
 
 // ── Árbol jerárquico ──────────────────────────────────────────────────────────
 
-/** Nodo del árbol jerárquico — construido dinámicamente desde los datos */
+/** Nodo del árbol jerárquico */
 export interface LocationTreeNode {
-  id: string;                  // ID único del nodo agrupador o de la ubicación
+  id: string;                  // ID único del nodo
   label: string;
-  level: 'zone' | 'aisle' | 'bay' | 'leaf';
+  level: 'zone' | 'aisle' | 'rack' | 'leaf';
   isExpanded: boolean;
   count: number;               // Total de ubicaciones hijas (recursivo)
-  statusSummary: {             // Resumen de estados de ubicaciones hijas
+  statusSummary: {
     active: number;
     blocked: number;
     maintenance: number;
@@ -198,8 +163,6 @@ export interface LocationTreeNode {
   children: LocationTreeNode[];
   location?: WarehouseLocation; // Solo en nodos hoja (leaf)
 }
-
-// ── Zonas mock (DATOS DEMO — pendientes de validación con 4GUARD) ─────────────
 
 /** Zona del almacén para el selector del formulario */
 export interface WarehouseZone {
@@ -210,7 +173,6 @@ export interface WarehouseZone {
 
 // ── FSM: transiciones permitidas ─────────────────────────────────────────────
 
-/** Mapa de transiciones válidas de estado */
 export const LOCATION_FSM_TRANSITIONS: Record<LocationStatus, LocationStatus[]> = {
   ACTIVE:      ['BLOCKED', 'MAINTENANCE', 'INACTIVE'],
   BLOCKED:     ['ACTIVE'],
@@ -218,8 +180,8 @@ export const LOCATION_FSM_TRANSITIONS: Record<LocationStatus, LocationStatus[]> 
   INACTIVE:    ['ACTIVE'],
 };
 
-/** Transiciones que requieren un motivo obligatorio */
 export const STATUS_REQUIRES_REASON: Partial<Record<LocationStatus, boolean>> = {
   BLOCKED:     true,
   MAINTENANCE: true,
 };
+

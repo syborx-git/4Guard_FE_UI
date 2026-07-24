@@ -149,11 +149,11 @@ img, svg {
 
 /* Luxury Custom Typographies */
 .luxury-script {
-  font-family: 'Lobster', 'Playfair Display', cursive !important;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .luxury-serif {
-  font-family: 'Playfair Display', 'Bodoni Moda', Georgia, serif !important;
+  font-family: 'DM Sans', sans-serif;
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
 }
@@ -220,11 +220,11 @@ img, svg {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #EAC349;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .page-header__title {
-  font-family: 'Playfair Display', 'Bodoni Moda', Georgia, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.2;
@@ -237,7 +237,7 @@ img, svg {
   color: #958E98;
   letter-spacing: 0.02em;
   margin-top: 2px;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
 }
 
 /* ── Toolbar Row ─────────────────────────────────────────────── */
@@ -274,7 +274,7 @@ img, svg {
   border-radius: 8px;
   color: #E4E2DE;
   font-size: 13px;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
               background 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -294,7 +294,7 @@ img, svg {
   border-radius: 8px;
   color: #E4E2DE;
   font-size: 13px;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   min-width: 180px;
   cursor: pointer;
   transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -322,7 +322,7 @@ img, svg {
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
   cursor: pointer;
@@ -371,7 +371,7 @@ img, svg {
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   letter-spacing: 0.02em;
   line-height: 1;
   white-space: nowrap;
@@ -417,7 +417,7 @@ img, svg {
   border-radius: 7px;
   font-size: 12px;
   font-weight: 600;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   letter-spacing: 0.01em;
   border: 1px solid transparent;
   cursor: pointer;
@@ -512,7 +512,7 @@ img, svg {
   font-size: 13.5px;
   font-weight: 600;
   color: #E4E2DE;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -530,7 +530,7 @@ img, svg {
 .item-row__meta-value {
   font-size: 12px;
   color: #CCC4CE;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .item-row__meta-value--mono {
@@ -543,7 +543,7 @@ img, svg {
 .item-row__date {
   font-size: 11px;
   color: #958E98;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   white-space: nowrap;
 }
 
@@ -559,5 +559,5 @@ img, svg {
 }
 
 .empty-state__icon { font-size: 32px; opacity: 0.5; }
-.empty-state__text { font-size: 13px; font-family: 'DM Sans', -apple-system, sans-serif; }
+.empty-state__text { font-size: 13px; font-family: 'DM Sans', sans-serif; }
 

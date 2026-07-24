@@ -119,5 +119,31 @@ export interface CreateUserRequest {
   isEnabled: boolean;
 }
 
+/**
+ * Detalle de campo modificado en un registro de auditoría de usuario.
+ */
+export interface UserAuditDetailDto {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+/**
+ * Registro de auditoría devuelto por el endpoint GET /api/v1/users/{id}/audit
+ */
+export interface UserAuditLogDto {
+  logId: string;
+  action: string;
+  username: string;
+  createdAt: string;
+  details: UserAuditDetailDto[];
+}
+
+/**
+ * Respuesta del endpoint GET /api/v1/users/{id}/audit
+ */
+export type UserAuditResponse = ApiResponse<UserAuditLogDto[]>;
+
+
 
 

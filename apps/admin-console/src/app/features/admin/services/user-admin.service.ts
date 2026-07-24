@@ -1,7 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { UserRole } from '@4guard/shared-core';
 import { UsersService } from '../../../core/services/users.service';
-import { ApiResponse, UserProfileDto, CreateUserRequest } from '../../../core/models/user.models';
+import { RolePermissionService } from './role-permission.service';
+import { ApiResponse, UserProfileDto, CreateUserRequest, UserAuditLogDto } from '../../../core/models/user.models';
 import { Observable, throwError } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -32,6 +33,7 @@ export interface UserAdminItem {
 })
 export class UserAdminService {
   private readonly usersService = inject(UsersService);
+  private readonly roleService = inject(RolePermissionService);
   
   // Caching de DTOs originales para mantener campos no editables al hacer PUT
   private readonly originalDtos = new Map<string, UserProfileDto>();
@@ -62,12 +64,18 @@ export class UserAdminService {
   }
 
   create(user: Omit<UserAdminItem, 'id' | 'lastLoginAt'> & { password?: string }): Observable<ApiResponse<UserProfileDto>> {
-    // 1. Resolver roleId buscando en los usuarios cargados
+    // 1. Resolver roleId buscando en roles cargados de la BD o en usuarios existentes
     const roleName = user.role.replace('ROLE_', '');
-    let roleId = '88888888-8888-8888-8888-888888888888'; // fallback
-    const matchingRoleUser = Array.from(this.originalDtos.values()).find(dto => dto.roleName === roleName);
-    if (matchingRoleUser) {
-      roleId = matchingRoleUser.roleId;
+    const foundDbRole = this.roleService.roles().find(r => r.name === roleName || r.name === user.role);
+    let roleId = foundDbRole ? foundDbRole.id : '';
+
+    if (!roleId) {
+      const matchingRoleUser = Array.from(this.originalDtos.values()).find(dto => dto.roleName === roleName || dto.roleName === user.role);
+      if (matchingRoleUser) {
+        roleId = matchingRoleUser.roleId;
+      } else {
+        roleId = '88888888-8888-8888-8888-888888888888'; // fallback
+      }
     }
 
     // 2. Resolver organizationId buscando en usuarios existentes
@@ -146,10 +154,14 @@ export class UserAdminService {
     if (updatedFields.role !== undefined) {
       updatedDto.roleName = updatedFields.role.replace('ROLE_', '');
       
-      // Buscar si existe otra cuenta con este mismo rol para reutilizar el roleId
-      const matchingDto = Array.from(this.originalDtos.values()).find(dto => dto.roleName === updatedDto.roleName);
-      if (matchingDto) {
-        updatedDto.roleId = matchingDto.roleId;
+      const foundDbRole = this.roleService.roles().find(r => r.name === updatedDto.roleName || r.name === updatedFields.role);
+      if (foundDbRole) {
+        updatedDto.roleId = foundDbRole.id;
+      } else {
+        const matchingDto = Array.from(this.originalDtos.values()).find(dto => dto.roleName === updatedDto.roleName);
+        if (matchingDto) {
+          updatedDto.roleId = matchingDto.roleId;
+        }
       }
     }
 
@@ -194,6 +206,10 @@ export class UserAdminService {
       status: 'ACTIVE',
       isEnabled: true
     });
+  }
+
+  getAuditLogs(userId: string): Observable<ApiResponse<UserAuditLogDto[]>> {
+    return this.usersService.getUserAuditHistory(userId);
   }
 
   private mapDtoToItem(dto: UserProfileDto): UserAdminItem {

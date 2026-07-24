@@ -1,141 +1,122 @@
 <!-- apps/admin-console/.../layout/layout-management/layout-management.component.html -->
 <!-- HU-127 — Gestión de Layout y Ubicaciones -->
 
-<div class="lm-page" aria-label="Gestión de Layout y Ubicaciones">
+<div class="locations-page" aria-label="Gestión de Ubicaciones Físicas">
 
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <!-- HEADER                                                                 -->
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- HEADER PREMIUM — SYNEXIA BLUEPRINTS                            -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <header class="lm-header lm-header--premium">
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL HOMOLOGADO CON TRANSPORTISTAS / SECCIONES
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="locations-header">
 
-    <div class="lm-header__main">
+    <div class="locations-header__top">
 
-      <!-- Identidad del módulo -->
-      <div class="lm-header__info">
-
-        <div class="lm-header__eyebrow">
-          <span>Blueprints &amp; Physical Architecture</span>
-          <span class="lm-header__live-dot" aria-hidden="true"></span>
+      <div class="locations-header__left">
+        <div class="locations-header__icon-wrap">
+          <span class="material-symbols-outlined locations-header__icon">location_on</span>
         </div>
 
-        <div class="lm-header__title-row">
-
-          <div class="lm-header__icon-wrap">
-            <span class="material-symbols-outlined lm-header__icon" aria-hidden="true">
-              map
-            </span>
+        <div class="locations-header__copy">
+          <div class="locations-header__eyebrow">
+            <a routerLink="/admin" class="locations-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="locations-header__eyebrow-sep">·</span>
+            <span>Estructura de Almacén</span>
           </div>
-
-          <div class="lm-header__text">
-            <h1 class="lm-header__title">
-              Gestión de Layout y Ubicaciones
-            </h1>
-
-            <p class="lm-header__subtitle">
-              Administra la estructura física del almacén y configura las
-              ubicaciones que utilizará toda la operación logística.
-            </p>
-          </div>
-
+          <h1 class="locations-header__title">Gestión de Ubicaciones Físicas</h1>
+          <p class="locations-header__subtitle">
+            Administra la estructura física del almacén y configura las ubicaciones que utilizará toda la operación logística
+          </p>
         </div>
       </div>
 
-      <!-- KPIs -->
-      <div class="lm-kpis" role="list" aria-label="Métricas del almacén">
-
-        <!-- Total -->
-        <div class="lm-kpi lm-kpi--total" role="listitem" id="kpi-total">
-          <span class="lm-kpi__value">
-            {{ kpiTotal() }}
-          </span>
-
-          <span class="lm-kpi__label">
-            Total
-          </span>
-        </div>
-
-        <!-- Activas -->
-        <div class="lm-kpi lm-kpi--active" role="listitem" id="kpi-active">
-          <span class="lm-kpi__dot" aria-hidden="true"></span>
-
-          <span class="lm-kpi__value">
-            {{ kpiActive() }}
-          </span>
-
-          <span class="lm-kpi__label">
-            Activas
-          </span>
-        </div>
-
-        <!-- Bloqueadas -->
-        <div class="lm-kpi lm-kpi--blocked" role="listitem" id="kpi-blocked">
-          <span class="lm-kpi__dot" aria-hidden="true"></span>
-
-          <span class="lm-kpi__value">
-            {{ kpiBlocked() }}
-          </span>
-
-          <span class="lm-kpi__label">
-            Bloqueadas
-          </span>
-        </div>
-
-        <!-- Mantenimiento -->
-        <div class="lm-kpi lm-kpi--maintenance" role="listitem" id="kpi-maintenance">
-
-          <span class="lm-kpi__dot" aria-hidden="true"></span>
-
-          <span class="lm-kpi__value">
-            {{ kpiMaintenance() }}
-          </span>
-
-          <span class="lm-kpi__label">
-            Mantenimiento
-          </span>
-        </div>
-
-        <!-- Capacidad -->
-        <div class="lm-kpi lm-kpi--occupancy" role="listitem" id="kpi-occupancy">
-
-          @if (kpiOccupancy() !== null) {
-          <span class="lm-kpi__value">
-            {{ kpiOccupancy() }}%
-          </span>
-          } @else {
-          <span class="lm-kpi__value lm-kpi__value--na">
-            N/D
-          </span>
-          }
-
-          <span class="lm-kpi__label">
-            Cap. utilizada
-          </span>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Acción principal -->
-    <div class="lm-header__actions">
-      <button class="btn btn--primary lm-header__btn-new lm-header__btn-new--premium" id="btn-new-location"
-        type="button" (click)="onNewLocation()" [disabled]="isLoading()" aria-label="Crear nueva ubicación">
-
-        <span class="material-symbols-outlined" aria-hidden="true">
-          add
-        </span>
-
-        <span>Nueva Ubicación</span>
+      <button
+        id="btn-new-location"
+        class="locations-btn locations-btn--primary"
+        type="button"
+        (click)="onNewLocation()"
+        [disabled]="isLoading() || isSaving()"
+        aria-label="Registrar nueva ubicación">
+        <span class="material-symbols-outlined">add</span>
+        Nueva ubicación
       </button>
+
     </div>
 
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="locations-kpi-grid" aria-label="Indicadores de ubicaciones">
+
+      <!-- Total -->
+      <div class="locations-kpi-card locations-kpi-card--total">
+        <div class="locations-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">location_on</span>
+        </div>
+        <div class="locations-kpi-card__body">
+          @if (isLoading()) {
+            <div class="locations-kpi-card__skeleton"></div>
+          } @else {
+            <span class="locations-kpi-card__value">{{ kpiTotal() }}</span>
+          }
+          <span class="locations-kpi-card__label">Total</span>
+        </div>
+        <div class="locations-kpi-card__bar locations-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activas -->
+      <div class="locations-kpi-card locations-kpi-card--active">
+        <div class="locations-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="locations-kpi-card__body">
+          @if (isLoading()) {
+            <div class="locations-kpi-card__skeleton"></div>
+          } @else {
+            <span class="locations-kpi-card__value">{{ kpiActive() }}</span>
+          }
+          <span class="locations-kpi-card__label">Activas</span>
+        </div>
+        <div class="locations-kpi-card__bar locations-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Bloqueadas -->
+      <div class="locations-kpi-card locations-kpi-card--blocked">
+        <div class="locations-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="locations-kpi-card__body">
+          @if (isLoading()) {
+            <div class="locations-kpi-card__skeleton"></div>
+          } @else {
+            <span class="locations-kpi-card__value">{{ kpiBlocked() }}</span>
+          }
+          <span class="locations-kpi-card__label">Bloqueadas</span>
+        </div>
+        <div class="locations-kpi-card__bar locations-kpi-card__bar--blocked"></div>
+      </div>
+
+      <!-- Mantenimiento -->
+      <div class="locations-kpi-card locations-kpi-card--maintenance">
+        <div class="locations-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">build</span>
+        </div>
+        <div class="locations-kpi-card__body">
+          @if (isLoading()) {
+            <div class="locations-kpi-card__skeleton"></div>
+          } @else {
+            <span class="locations-kpi-card__value">{{ kpiMaintenance() }}</span>
+          }
+          <span class="locations-kpi-card__label">Mantenimiento</span>
+        </div>
+        <div class="locations-kpi-card__bar locations-kpi-card__bar--maintenance"></div>
+      </div>
+
+    </div>
   </header>
 
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <!-- BODY: Explorador + Editor                                              -->
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════
+       BODY: Explorador + Editor
+       ════════════════════════════════════════════════════════════════ -->
   <div class="lm-body">
 
     <!-- ── PANEL IZQUIERDO: Explorador ────────────────────────────────────── -->
@@ -229,7 +210,7 @@
             @for (child of zoneNode.children; track trackByNodeId($index, child)) {
 
             @if (child.level === 'leaf') {
-            <!-- Hoja directa bajo zona (sin pasillo ni bahía) ── -->
+            <!-- Hoja directa bajo zona ── -->
             <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: child, depth: 1 }">
             </ng-container>
             }
@@ -256,29 +237,29 @@
 
               @if (child.isExpanded) {
               <div class="lm-tree-children" role="group">
-                @for (bayOrLeaf of child.children; track trackByNodeId($index, bayOrLeaf)) {
+                @for (sub of child.children; track trackByNodeId($index, sub)) {
 
-                @if (bayOrLeaf.level === 'leaf') {
-                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: bayOrLeaf, depth: 2 }">
+                @if (sub.level === 'leaf') {
+                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: sub, depth: 2 }">
                 </ng-container>
                 }
 
-                @if (bayOrLeaf.level === 'bay') {
-                <!-- Nodo Bahía ──────────────────────── -->
-                <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="bayOrLeaf.isExpanded">
-                  <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(bayOrLeaf.id)"
-                    [attr.aria-label]="bayOrLeaf.label + ', ' + bayOrLeaf.count + ' ubicaciones'">
+                @if (sub.level === 'rack') {
+                <!-- Nodo Rack ──────────────────────────────── -->
+                <div class="lm-tree-rack" role="treeitem" [attr.aria-expanded]="sub.isExpanded">
+                  <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(sub.id)"
+                    [attr.aria-label]="sub.label + ', ' + sub.count + ' ubicaciones'">
                     <span class="lm-tree-node__indent"></span>
                     <span class="lm-tree-node__indent"></span>
                     <span class="lm-tree-node__chevron material-symbols-outlined"
-                      [class.lm-tree-node__chevron--open]="bayOrLeaf.isExpanded" aria-hidden="true">chevron_right</span>
-                    <span class="lm-tree-node__label">{{ bayOrLeaf.label }}</span>
-                    <span class="badge badge--subtle lm-tree-node__badge">{{ bayOrLeaf.count }}</span>
+                      [class.lm-tree-node__chevron--open]="sub.isExpanded" aria-hidden="true">chevron_right</span>
+                    <span class="lm-tree-node__label">{{ sub.label }}</span>
+                    <span class="badge badge--subtle lm-tree-node__badge">{{ sub.count }}</span>
                   </button>
 
-                  @if (bayOrLeaf.isExpanded) {
+                  @if (sub.isExpanded) {
                   <div class="lm-tree-children" role="group">
-                    @for (leaf of bayOrLeaf.children; track trackByNodeId($index, leaf)) {
+                    @for (leaf of sub.children; track trackByNodeId($index, leaf)) {
                     <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: leaf, depth: 3 }">
                     </ng-container>
                     }
@@ -291,103 +272,81 @@
               }
             </div>
             }
-
-            @if (child.level === 'bay') {
-            <!-- Bahía directa bajo zona (sin pasillo) ────────── -->
-            <div class="lm-tree-bay" role="treeitem" [attr.aria-expanded]="child.isExpanded">
-              <button class="lm-tree-node lm-tree-node--bay" type="button" (click)="onToggleNode(child.id)"
-                [attr.aria-label]="child.label">
-                <span class="lm-tree-node__indent"></span>
-                <span class="lm-tree-node__chevron material-symbols-outlined"
-                  [class.lm-tree-node__chevron--open]="child.isExpanded" aria-hidden="true">chevron_right</span>
-                <span class="lm-tree-node__label">{{ child.label }}</span>
-                <span class="badge badge--subtle lm-tree-node__badge">{{ child.count }}</span>
-              </button>
-              @if (child.isExpanded) {
-              <div class="lm-tree-children" role="group">
-                @for (leaf of child.children; track trackByNodeId($index, leaf)) {
-                <ng-container *ngTemplateOutlet="leafTpl; context: { $implicit: leaf, depth: 2 }">
-                </ng-container>
-                }
-              </div>
-              }
-            </div>
-            }
-
             }
           </div>
           }
         </div>
         }
       </nav>
-      }
 
-      <!-- Botón Nueva Ubicación secundario (dentro del explorador) ─────── -->
+      <!-- Footer del explorador -->
       <div class="lm-explorer__footer">
-        <button class="btn btn--secondary btn--sm" id="btn-new-location-explorer" type="button"
-          (click)="onNewLocation()" [disabled]="isLoading()">
-          <span class="material-symbols-outlined" aria-hidden="true">add</span>
-          Nueva Ubicación
-        </button>
+        <span class="form-hint">
+          {{ locations().length }} ubicación{{ locations().length !== 1 ? 'es' : '' }} en total
+        </span>
       </div>
+      }
     </aside>
 
-    <!-- ── PANEL DERECHO: Editor ───────────────────────────────────────────── -->
+    <!-- ── PANEL DERECHO: Editor / Detalle ────────────────────────────────── -->
     <main class="lm-editor" aria-label="Editor de ubicación">
 
-      <!-- Estado vacío — sin selección ────────────────────────────────── -->
-      @if (!selectedLoc() && !isCreating()) {
+      @if (!isCreating() && !selectedLoc()) {
+      <!-- Estado inicial: Sin selección ── -->
       <div class="lm-empty-state">
-        <div class="lm-empty-state__icon-wrap">
-          <span class="material-symbols-outlined lm-empty-state__icon" aria-hidden="true">
-            shelves
-          </span>
+        <div class="lm-empty-state__icon-wrap" aria-hidden="true">
+          <span class="material-symbols-outlined lm-empty-state__icon">location_on</span>
         </div>
-        <h2 class="lm-empty-state__title">Selecciona una ubicación</h2>
+        <h2 class="lm-empty-state__title">Sin selección</h2>
         <p class="lm-empty-state__desc">
-          Elige una ubicación del explorador para ver y editar sus detalles,<br>
-          o crea una nueva para comenzar a configurar el almacén.
+          Selecciona una ubicación del árbol izquierdo para consultar su información,
+          o registra una nueva ubicación física.
         </p>
-        <button class="btn btn--primary" id="btn-new-location-empty" type="button" (click)="onNewLocation()">
+        <button class="btn btn--primary" type="button" id="btn-empty-new-location" (click)="onNewLocation()">
           <span class="material-symbols-outlined" aria-hidden="true">add</span>
-          Nueva Ubicación
+          Nueva ubicación
         </button>
       </div>
-      }
+      } @else {
 
-      <!-- Formulario de edición / creación ───────────────────────────── -->
-      @if (selectedLoc() || isCreating()) {
       <div class="lm-form-container">
 
-        <!-- Encabezado del editor ─────────────────────────────────── -->
+        <!-- ── Encabezado del editor ── -->
         <div class="lm-form-header">
           <div class="lm-form-header__info">
-            @if (isCreating()) {
-            <span class="lm-form-header__tag lm-form-header__tag--new">
-              <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
-              Nueva ubicación
-            </span>
-            <h2 class="lm-form-header__title">Configurar nueva ubicación</h2>
-            } @else {
+            <div class="lm-form-header__tag">
+              <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
+              @if (isCreating()) { NUEVA UBICACIÓN } @else { UBICACIÓN FÍSICA }
+            </div>
+            <h2 class="lm-form-header__title">
+              @if (isCreating()) { Registrar nueva ubicación }
+              @else { {{ selectedLoc()?.name || selectedLoc()?.code }} }
+            </h2>
+            @if (!isCreating() && selectedLoc()?.code) {
             <span class="lm-form-header__code">{{ selectedLoc()?.code }}</span>
-            <h2 class="lm-form-header__title">{{ selectedLoc()?.name }}</h2>
-            <span class="lm-status-chip" [class]="getStatusClass(selectedLoc()!.status)">
-              <span class="material-symbols-outlined lm-status-chip__icon" aria-hidden="true">
-                {{ getStatusIcon(selectedLoc()!.status) }}
-              </span>
-              {{ LOCATION_STATUS_LABELS[selectedLoc()!.status] }}
-            </span>
             }
           </div>
+
+          <!-- Chip de estado -->
+          @if (!isCreating() && selectedLoc()?.status) {
+          <span class="lm-status-chip" [class]="getStatusClass(selectedLoc()!.status)">
+            <span class="material-symbols-outlined lm-status-chip__icon" aria-hidden="true">
+              {{ getStatusIcon(selectedLoc()!.status) }}
+            </span>
+            {{ LOCATION_STATUS_LABELS[selectedLoc()!.status] }}
+          </span>
+          }
+
+          <!-- Badge sin guardar -->
           @if (isDirty()) {
-          <span class="lm-form-header__dirty-badge">
+          <span class="lm-form-header__dirty-badge" role="status">
             <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-            Sin guardar
+            Cambios sin guardar
           </span>
           }
         </div>
 
-        <!-- Error de guardado ─────────────────────────────────────── -->
+        <!-- ── Error de guardado ── -->
         @if (saveError()) {
         <div class="lm-save-error" role="alert">
           <span class="material-symbols-outlined" aria-hidden="true">error</span>
@@ -395,36 +354,36 @@
         </div>
         }
 
-        <!-- Formulario ───────────────────────────────────────────── -->
-        <form [formGroup]="editForm" (change)="onFormChange()" (ngSubmit)="onSave()" class="lm-form" novalidate
-          id="location-edit-form">
+        <!-- ── Formulario ── -->
+        <form [formGroup]="editForm" (ngSubmit)="onSave()" novalidate class="lm-form" id="location-edit-form"
+          (input)="onFormChange()">
 
-          <!-- ── Sección: Identificación ─────────────────────────── -->
+          <!-- ── Sección: Datos Generales ────────────────────────── -->
           <section class="lm-form-section">
             <h3 class="lm-form-section__title">
               <span class="material-symbols-outlined" aria-hidden="true">badge</span>
-              Identificación
+              Identificación de Ubicación
             </h3>
-            <div class="lm-form-grid lm-form-grid--2">
 
+            <div class="lm-form-grid lm-form-grid--2">
               <div class="form-group">
                 <label class="form-label form-label--required" for="f-code">Código</label>
                 <input id="f-code" class="form-input" [class.is-error]="hasError('code')" formControlName="code"
-                  placeholder="Ej. PA-B01-R1-N1" autocomplete="off" style="text-transform: uppercase;" />
+                  placeholder="Ej. ALMC-A-R1-N1" autocomplete="off" style="text-transform: uppercase;" />
                 @if (hasError('code')) {
                 <span class="form-error" role="alert">
                   <span class="material-symbols-outlined" aria-hidden="true">error</span>
                   {{ getErrorMessage('code') }}
                 </span>
                 } @else {
-                <span class="form-hint">Solo mayúsculas, números y guiones.</span>
+                <span class="form-hint">Código único. Se auto-genera al escribir las coordenadas.</span>
                 }
               </div>
 
               <div class="form-group">
                 <label class="form-label form-label--required" for="f-name">Nombre</label>
                 <input id="f-name" class="form-input" [class.is-error]="hasError('name')" formControlName="name"
-                  placeholder="Ej. Pasillo A – Bahía 01 – Rack 1" />
+                  placeholder="Ej. Pasillo A – Rack 1 – Nivel 1" />
                 @if (hasError('name')) {
                 <span class="form-error" role="alert">
                   <span class="material-symbols-outlined" aria-hidden="true">error</span>
@@ -434,19 +393,28 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label form-label--required" for="f-warehouse">Almacén</label>
-                <input id="f-warehouse" class="form-input" formControlName="warehouseName" readonly
-                  aria-readonly="true" />
-                <span class="form-hint">Almacén asignado al contexto de sesión.</span>
+                <label class="form-label form-label--required" for="f-warehouse">Almacén / Sucursal</label>
+                <select id="f-warehouse" class="form-select" [class.is-error]="hasError('warehouseId')" formControlName="warehouseId">
+                  <option value="" disabled>Selecciona un almacén…</option>
+                  @for (b of branchService.branches(); track b.id) {
+                    <option [value]="b.id">{{ b.name }} ({{ b.code }})</option>
+                  }
+                </select>
+                @if (hasError('warehouseId')) {
+                <span class="form-error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  {{ getErrorMessage('warehouseId') }}
+                </span>
+                }
               </div>
 
               <div class="form-group">
-                <label class="form-label form-label--required" for="f-zone">Zona</label>
+                <label class="form-label form-label--required" for="f-zone">Zona / Sección</label>
                 <select id="f-zone" class="form-select" [class.is-error]="hasError('zoneId')" formControlName="zoneId"
                   (change)="onZoneChange($event)">
                   <option value="" disabled>Selecciona una zona</option>
-                  @for (zone of zones(); track zone.id) {
-                  <option [value]="zone.id">{{ zone.name }}</option>
+                  @for (sec of getSectionsForBranch(editForm.get('warehouseId')?.value); track sec.id) {
+                    <option [value]="sec.id">{{ sec.name }} ({{ sec.code }})</option>
                   }
                 </select>
                 @if (hasError('zoneId')) {
@@ -466,17 +434,13 @@
               Coordenadas Físicas
             </h3>
             <p class="lm-form-section__hint">
-              Completa solo los campos que aplican según el tipo de ubicación.
+              Define la jerarquía física dentro de la zona (Pasillo, Rack, Nivel, Posición).
             </p>
-            <div class="lm-form-grid lm-form-grid--5">
+            <div class="lm-form-grid lm-form-grid--4">
               <div class="form-group">
                 <label class="form-label" for="f-aisle">Pasillo</label>
                 <input id="f-aisle" class="form-input" formControlName="aisle" placeholder="A, B…"
                   style="text-transform: uppercase;" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="f-bay">Bahía</label>
-                <input id="f-bay" class="form-input" formControlName="bay" placeholder="01, 02…" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-rack">Rack</label>
@@ -484,7 +448,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-level">Nivel</label>
-                <input id="f-level" class="form-input" formControlName="level" placeholder="N1, N2…" />
+                <input id="f-level" class="form-input" formControlName="level" placeholder="1, 2…" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-position">Posición</label>
@@ -493,11 +457,11 @@
             </div>
           </section>
 
-          <!-- ── Sección: Clasificación Logística ────────────────── -->
+          <!-- ── Sección: Clasificación Logística y Capacidad ────── -->
           <section class="lm-form-section">
             <h3 class="lm-form-section__title">
               <span class="material-symbols-outlined" aria-hidden="true">category</span>
-              Clasificación Logística
+              Clasificación y Capacidad
             </h3>
             <div class="lm-form-grid lm-form-grid--2">
               <div class="form-group">
@@ -518,34 +482,8 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label form-label--required" for="f-function">Función Logística</label>
-                <select id="f-function" class="form-select" [class.is-error]="hasError('logisticFunction')"
-                  formControlName="logisticFunction">
-                  <option value="" disabled>Selecciona una función</option>
-                  @for (fn of logisticFunctions; track fn) {
-                  <option [value]="fn">{{ LOGISTIC_FUNCTION_LABELS[fn] }}</option>
-                  }
-                </select>
-                @if (hasError('logisticFunction')) {
-                <span class="form-error" role="alert">
-                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                  {{ getErrorMessage('logisticFunction') }}
-                </span>
-                }
-              </div>
-            </div>
-          </section>
-
-          <!-- ── Sección: Capacidad ──────────────────────────────── -->
-          <section class="lm-form-section">
-            <h3 class="lm-form-section__title">
-              <span class="material-symbols-outlined" aria-hidden="true">straighten</span>
-              Capacidad
-            </h3>
-            <div class="lm-form-grid lm-form-grid--2">
-              <div class="form-group">
                 <label class="form-label form-label--required" for="f-capacity">
-                  Capacidad Máxima
+                  Capacidad Máxima (unidades)
                 </label>
                 <input id="f-capacity" class="form-input" type="number" min="1"
                   [class.is-error]="hasError('maxCapacity')" formControlName="maxCapacity" placeholder="Ej. 4" />
@@ -553,23 +491,6 @@
                 <span class="form-error" role="alert">
                   <span class="material-symbols-outlined" aria-hidden="true">error</span>
                   {{ getErrorMessage('maxCapacity') }}
-                </span>
-                }
-              </div>
-
-              <div class="form-group">
-                <label class="form-label form-label--required" for="f-unit">Unidad de Capacidad</label>
-                <select id="f-unit" class="form-select" [class.is-error]="hasError('capacityUnit')"
-                  formControlName="capacityUnit">
-                  <option value="" disabled>Selecciona una unidad</option>
-                  @for (u of capacityUnits; track u) {
-                  <option [value]="u">{{ CAPACITY_UNIT_LABELS[u] }}</option>
-                  }
-                </select>
-                @if (hasError('capacityUnit')) {
-                <span class="form-error" role="alert">
-                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                  {{ getErrorMessage('capacityUnit') }}
                 </span>
                 }
               </div>
@@ -610,36 +531,17 @@
             }
           </section>
 
-          <!-- ── Sección: Configuración ──────────────────────────── -->
+          <!-- ── Sección: Observaciones ──────────────────────────── -->
           <section class="lm-form-section">
             <h3 class="lm-form-section__title">
-              <span class="material-symbols-outlined" aria-hidden="true">settings</span>
-              Configuración
+              <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+              Observaciones
             </h3>
             <div class="lm-form-grid lm-form-grid--1">
               <div class="form-group">
-                <label class="lm-toggle-label" for="f-storage-allowed">
-                  <div class="lm-toggle" [class.lm-toggle--on]="editForm.value.isStorageAllowed">
-                    <input id="f-storage-allowed" type="checkbox" formControlName="isStorageAllowed"
-                      class="lm-toggle__input" (change)="onFormChange()" />
-                    <span class="lm-toggle__track" aria-hidden="true">
-                      <span class="lm-toggle__thumb"></span>
-                    </span>
-                  </div>
-                  <span class="lm-toggle-label__text">
-                    Permite almacenamiento de inventario
-                  </span>
-                  <span class="form-hint lm-toggle-label__hint">
-                    Desactiva si la ubicación es solo de tránsito o maniobra.
-                  </span>
-                </label>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="f-observations">Observaciones</label>
+                <label class="form-label" for="f-observations">Observaciones / Notas de Operación</label>
                 <textarea id="f-observations" class="form-textarea" formControlName="observations" rows="3"
-                  placeholder="Notas internas, restricciones especiales, instrucciones de operación…">
-                  </textarea>
+                  placeholder="Notas internas, restricciones especiales, instrucciones de operación…"></textarea>
               </div>
             </div>
           </section>
@@ -691,7 +593,7 @@
 
             <!-- Eliminar — solo si canDelete -->
             @if (selectedLoc()?.canDelete) {
-            <button class="btn btn--sm btn--danger lm-btn-delete" type="button" id="btn-delete" (click)="onDelete()">
+            <button class="btn btn--sm btn--danger lm-btn-delete" type="button" id="btn-delete" (click)="onDelete($event)">
               <span class="material-symbols-outlined" aria-hidden="true">delete</span>
               Eliminar
             </button>
@@ -737,21 +639,37 @@
             @if (isLoadingAudit()) {
             <div class="lm-audit-loading">
               <span class="lm-spinner" aria-label="Cargando historial…"></span>
-              <span>Cargando historial…</span>
+              <span>Cargando historial de auditoría…</span>
             </div>
             } @else if (auditHistory().length === 0) {
-            <p class="lm-audit-empty">Sin registros de auditoría disponibles.</p>
+            <p class="lm-audit-empty">Sin registros de auditoría disponibles para esta ubicación.</p>
             } @else {
-            @for (entry of auditHistory(); track trackByAuditId($index, entry)) {
-            <div class="lm-audit-entry">
-              <span class="lm-audit-entry__action">{{ entry.action }}</span>
-              <span class="lm-audit-entry__user">{{ entry.performedBy }}</span>
-              <span class="lm-audit-entry__date">{{ formatDate(entry.performedAt) }}</span>
-              @if (entry.reason) {
-              <span class="lm-audit-entry__reason">{{ entry.reason }}</span>
+            <div class="lm-timeline">
+              @for (entry of auditHistory(); track trackByAuditId($index, entry); let last = $last) {
+                <div class="lm-tl-node" [ngClass]="'lm-tl-node--' + (entry.timelineColor || 'info')">
+                  <div class="lm-tl-node__dot">
+                    <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                  </div>
+                  <div class="lm-tl-node__line" [class.lm-tl-node__line--last]="last"></div>
+                  <div class="lm-tl-node__content">
+                    <span class="lm-tl-node__action">{{ entry.summary || entry.action }}</span>
+                    @if (entry.details && entry.details.length > 0) {
+                      <div class="lm-tl-details">
+                        @for (det of entry.details; track det.fieldName) {
+                          <div class="lm-tl-detail-row">
+                            <span class="lm-tl-detail-field">{{ det.fieldName }}:</span>
+                            <span class="lm-tl-detail-val">{{ det.oldValue || 'null' }} ➔ {{ det.newValue || 'null' }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                    <span class="lm-tl-node__meta">
+                      Por {{ entry.username || entry.performedBy }} · {{ formatDate(entry.performedAt || entry.createdAt!) }}
+                    </span>
+                  </div>
+                </div>
               }
             </div>
-            }
             }
           </div>
           }
@@ -778,7 +696,7 @@
 
   </div><!-- /lm-body -->
 
-</div><!-- /lm-page -->
+</div><!-- /locations-page -->
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- MODAL: Motivo de cambio de estado                                         -->
@@ -817,6 +735,49 @@
       <button class="btn btn--primary" type="button" id="btn-confirm-status" (click)="onConfirmStatusChange()">
         <span class="material-symbols-outlined" aria-hidden="true">check</span>
         Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: Confirmación de Eliminación                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+@if (locationToDelete()) {
+<div class="lm-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title"
+  (click)="closeDeleteModal()">
+  <div class="lm-modal lm-modal--danger" (click)="$event.stopPropagation()">
+    <div class="lm-modal__header">
+      <div class="lm-modal__icon-wrap lm-modal__icon-wrap--danger">
+        <span class="material-symbols-outlined">delete_forever</span>
+      </div>
+      <div>
+        <h3 class="lm-modal__title" id="modal-delete-title">¿Eliminar esta ubicación?</h3>
+        <p class="lm-modal__desc">
+          Estás a punto de eliminar permanentemente la ubicación
+          <strong>"{{ locationToDelete()?.code }}"</strong>.
+        </p>
+      </div>
+    </div>
+    <div class="lm-modal__body">
+      <p class="lm-modal__warning">
+        <span class="material-symbols-outlined">warning</span>
+        Esta acción no se puede deshacer. Las operaciones de inventario en esta posición se verán afectadas.
+      </p>
+    </div>
+    <div class="lm-modal__footer">
+      <button class="btn btn--ghost" type="button" (click)="closeDeleteModal()" [disabled]="isSaving()">
+        Cancelar
+      </button>
+      <button class="btn btn--danger" type="button" id="btn-confirm-delete" [disabled]="isSaving()" (click)="confirmDeleteLocation()">
+        @if (isSaving()) {
+          <span class="lm-spinner" aria-hidden="true"></span>
+          Eliminando…
+        } @else {
+          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+          Confirmar Eliminación
+        }
       </button>
     </div>
   </div>

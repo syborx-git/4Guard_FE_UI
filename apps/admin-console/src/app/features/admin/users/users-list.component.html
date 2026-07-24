@@ -1,165 +1,691 @@
-<!-- users-list.component.html -->
-<!-- HU-003: Gestión de Usuarios con Generar Clave Temporal -->
-<div class="users-container">
-  <div class="users-header">
-    <div>
-      <h1>Gestión de Usuarios</h1>
-      <p>Administra los roles, permisos y accesos de los operarios y supervisores al WMS.</p>
-    </div>
-    <button class="btn btn-primary" (click)="openAddModal()">+ Nuevo Usuario</button>
-  </div>
+<!--
+  users-list.component.html
+  Control de Usuarios y Seguridad — 4GUARD WMS
 
-  <div class="users-table-card">
-    <div class="table-controls">
-      <input
-        type="text"
-        class="form-control search-input"
-        placeholder="Buscar por nombre o correo..."
-        [value]="searchTerm()"
-        (input)="onSearch($event)">
+  Layout: Split View 35/65 (Master-Detail) Homologado con Gestión de Transportistas
+-->
+
+<div class="users-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="users-header">
+
+    <div class="users-header__top">
+
+      <div class="users-header__left">
+        <div class="users-header__icon-wrap">
+          <span class="material-symbols-outlined users-header__icon">manage_accounts</span>
+        </div>
+
+        <div class="users-header__copy">
+          <div class="users-header__eyebrow">
+            <a routerLink="/admin" class="users-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="users-header__eyebrow-sep">·</span>
+            <span>Seguridad y Control</span>
+          </div>
+          <h1 class="users-header__title">Control de Usuarios y Seguridad</h1>
+          <p class="users-header__subtitle">
+            Administra los accesos, roles, permisos y la auditoría de operarios y supervisores del WMS
+          </p>
+        </div>
+      </div>
+
+      <button
+        id="btn-new-user"
+        class="users-btn users-btn--primary"
+        type="button"
+        (click)="startNewUser()"
+        aria-label="Registrar nuevo usuario">
+        <span class="material-symbols-outlined">person_add</span>
+        Nuevo usuario
+      </button>
+
     </div>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Correo Electrónico</th>
-          <th>Rol</th>
-          <th>Sucursal Asignada</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (user of filteredUsers(); track user.id) {
-          <tr>
-            <td style="font-weight: var(--font-weight-semibold);">{{ user.name }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-              <span class="role-badge" [ngClass]="getRoleClass(user.role)">
-                {{ getRoleLabel(user.role) }}
-              </span>
-            </td>
-            <td>{{ user.branchName || 'N/A' }}</td>
-            <td>
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="users-kpi-grid" aria-label="Indicadores de usuarios">
+
+      <!-- Total -->
+      <div class="users-kpi-card users-kpi-card--total">
+        <div class="users-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">group</span>
+        </div>
+        <div class="users-kpi-card__body">
+          @if (isLoadingUsers()) {
+            <div class="users-kpi-card__skeleton"></div>
+          } @else {
+            <span class="users-kpi-card__value">{{ totalUsers() }}</span>
+          }
+          <span class="users-kpi-card__label">Total Usuarios</span>
+        </div>
+        <div class="users-kpi-card__bar users-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activos -->
+      <div class="users-kpi-card users-kpi-card--active">
+        <div class="users-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="users-kpi-card__body">
+          @if (isLoadingUsers()) {
+            <div class="users-kpi-card__skeleton"></div>
+          } @else {
+            <span class="users-kpi-card__value">{{ kpiActive() }}</span>
+          }
+          <span class="users-kpi-card__label">Activos</span>
+        </div>
+        <div class="users-kpi-card__bar users-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Inactivos -->
+      <div class="users-kpi-card users-kpi-card--inactive">
+        <div class="users-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="users-kpi-card__body">
+          @if (isLoadingUsers()) {
+            <div class="users-kpi-card__skeleton"></div>
+          } @else {
+            <span class="users-kpi-card__value">{{ kpiInactive() }}</span>
+          }
+          <span class="users-kpi-card__label">Inactivos / Suspendidos</span>
+        </div>
+        <div class="users-kpi-card__bar users-kpi-card__bar--inactive"></div>
+      </div>
+
+      <!-- Admins y Supervisores -->
+      <div class="users-kpi-card users-kpi-card--supervisors">
+        <div class="users-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+        </div>
+        <div class="users-kpi-card__body">
+          @if (isLoadingUsers()) {
+            <div class="users-kpi-card__skeleton"></div>
+          } @else {
+            <span class="users-kpi-card__value">{{ kpiAdminSupervisors() }}</span>
+          }
+          <span class="users-kpi-card__label">Administradores y Supervisores</span>
+        </div>
+        <div class="users-kpi-card__bar users-kpi-card__bar--supervisors"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="users-split" [class.users-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="users-directory" aria-label="Directorio de usuarios">
+
+      <!-- Buscador y filtros -->
+      <div class="users-directory__filters">
+
+        <div class="users-search">
+          <span class="material-symbols-outlined users-search__icon" aria-hidden="true">search</span>
+          <input
+            id="user-search"
+            class="users-search__input"
+            type="search"
+            placeholder="Nombre, usuario, correo o rol…"
+            [ngModel]="filterText()"
+            (ngModelChange)="filterText.set($event)"
+            aria-label="Buscar usuario"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="users-filters-row">
+          <div class="users-filter-group">
+            <label class="sr-only" for="filter-status">Estado</label>
+            <select
+              id="filter-status"
+              class="users-filter-select"
+              [ngModel]="filterStatus()"
+              (ngModelChange)="filterStatus.set($event)"
+              aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+              <option value="SUSPENDED">Suspendidos</option>
+            </select>
+          </div>
+
+          <div class="users-filter-group">
+            <label class="sr-only" for="filter-role">Rol</label>
+            <select
+              id="filter-role"
+              class="users-filter-select"
+              [ngModel]="filterRole()"
+              (ngModelChange)="filterRole.set($event)"
+              aria-label="Filtrar por rol">
+              <option value="">Todos los roles</option>
+              @for (r of availableRoles(); track r.name) {
+                <option [value]="r.name">{{ r.label }}</option>
+              }
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="users-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+
+        <!-- Hint -->
+        <p class="users-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Busca por nombre, usuario, correo o rol del sistema
+        </p>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoadingUsers()) {
+        <div class="users-directory__list" aria-busy="true" aria-label="Cargando usuarios">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="user-item user-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="user-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                <div class="skeleton skeleton--line skeleton--line-short"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (loadUsersError()) {
+        <div class="users-state users-state--error" role="alert">
+          <span class="material-symbols-outlined users-state__icon">cloud_off</span>
+          <p class="users-state__title">Error al cargar</p>
+          <p class="users-state__desc">{{ loadUsersError() }}</p>
+          <button class="users-btn users-btn--ghost" type="button" (click)="loadUsers()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="users-state" role="status">
+          <span class="material-symbols-outlined users-state__icon">group_off</span>
+          <p class="users-state__title">Sin usuarios</p>
+          <p class="users-state__desc">No hay usuarios registrados aún.</p>
+          <button class="users-btn users-btn--primary" type="button" (click)="startNewUser()">
+            <span class="material-symbols-outlined">person_add</span>
+            Registrar el primero
+          </button>
+        </div>
+      } @else if (hasNoResults) {
+        <div class="users-state" role="status">
+          <span class="material-symbols-outlined users-state__icon">search_off</span>
+          <p class="users-state__title">Sin coincidencias</p>
+          <p class="users-state__desc">
+            Ningún usuario coincide con los filtros aplicados.
+          </p>
+          <button class="users-btn users-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="users-directory__list" role="listbox" aria-label="Lista de usuarios">
+          @for (user of filteredUsers(); track user.id) {
+            <li
+              class="user-item"
+              [class.user-item--selected]="isSelectedUser(user)"
+              [class.user-item--inactive]="user.status !== 'ACTIVE'"
+              role="option"
+              [attr.aria-selected]="isSelectedUser(user)"
+              (click)="selectUser(user)"
+              (keydown.enter)="selectUser(user)"
+              (keydown.space)="selectUser(user)"
+              tabindex="0"
+              [id]="'user-item-' + user.id">
+
+              <!-- Avatar -->
+              <div class="user-avatar {{ getAvatarClass(user.role) }}" aria-hidden="true">
+                {{ getInitials(user) }}
+              </div>
+
+              <!-- Info -->
+              <div class="user-item__body">
+                <div class="user-item__name">{{ user.firstName }} {{ user.lastName }}</div>
+                <div class="user-item__username">&#64;{{ user.username }}</div>
+                <div class="user-item__meta">
+                  <span class="user-item__email">{{ user.email }}</span>
+                  <span class="user-role-badge user-role-badge--{{ user.role.toLowerCase() }}">
+                    {{ getRoleLabel(user.role) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Estado -->
+              <div class="user-item__status-col">
+                <span
+                  class="user-status-badge user-status-badge--{{ user.status.toLowerCase() }}"
+                  [attr.aria-label]="'Estado: ' + user.status">
+                  {{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                </span>
+                <span class="user-item__branch">{{ user.branchName || 'Corporativo' }}</span>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <!-- Contador -->
+        <div class="users-directory__footer">
+          <span class="users-count">
+            {{ filteredUsers().length }}
+            @if (filteredUsers().length !== totalUsers()) {
+              de {{ totalUsers() }}
+            }
+            usuario{{ filteredUsers().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="users-detail" aria-label="Detalle del usuario">
+
+      @if (formMode() === 'idle') {
+        <div class="users-empty-state">
+          <div class="users-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined users-empty-state__icon">manage_accounts</span>
+          </div>
+          <h2 class="users-empty-state__title">Sin selección</h2>
+          <p class="users-empty-state__desc">
+            Selecciona un usuario de la lista para consultar su información y auditoría,
+            o registra un nuevo usuario en el sistema.
+          </p>
+          <button
+            class="users-btn users-btn--primary"
+            type="button"
+            (click)="startNewUser()"
+            aria-label="Registrar nuevo usuario">
+            <span class="material-symbols-outlined">person_add</span>
+            Nuevo usuario
+          </button>
+        </div>
+      } @else {
+        <div class="users-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="users-form-header">
+            <div class="users-form-header__left">
+              <div class="users-form-header__breadcrumb">
+                <span class="material-symbols-outlined">group</span>
+                Usuarios
+                <span class="material-symbols-outlined users-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nuevo usuario }
+                  @else { {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }} }
+                </strong>
+              </div>
+              @if (formMode() === 'edit' && selectedUser()) {
+                <span
+                  class="user-status-badge user-status-badge--{{ selectedUser()!.status.toLowerCase() }}">
+                  {{ selectedUser()!.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                </span>
+              }
+            </div>
+
+            @if (formMode() === 'edit' && selectedUser()) {
               <button
-                class="status-toggle"
-                [class.status-active]="user.active"
-                [class.status-inactive]="!user.active"
-                (click)="toggleUserStatus(user)">
-                {{ user.active ? 'Activo' : 'Inactivo' }}
+                class="users-btn users-btn--ghost users-btn--sm"
+                type="button"
+                (click)="loadAuditLogs(selectedUser()!.id)"
+                title="Actualizar historial de auditoría">
+                <span class="material-symbols-outlined">refresh</span>
+                Actualizar Auditoría
               </button>
-            </td>
-            <td>
-              <!-- Acciones de la fila: Editar + Generar Clave Temporal + Eliminar -->
-              <div class="row-actions">
+            }
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="users-alert users-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Usuario guardado correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="users-alert users-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveUser()"
+            novalidate
+            autocomplete="off"
+            class="users-form">
+
+            <!-- SECCIÓN 1 — Información Personal & Cuenta ────────── -->
+            <fieldset class="users-form-section">
+              <legend class="users-form-section__legend">
+                <span class="material-symbols-outlined">badge</span>
+                Información Personal & Cuenta
+              </legend>
+
+              <div class="users-form-grid users-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="firstName">Nombre(s)</label>
+                  <input
+                    id="firstName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('firstName')"
+                    type="text"
+                    formControlName="firstName"
+                    placeholder="Ej. Carlos"
+                    maxlength="100"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('firstName')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('firstName') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="lastName">Apellidos</label>
+                  <input
+                    id="lastName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('lastName')"
+                    type="text"
+                    formControlName="lastName"
+                    placeholder="Ej. Mendoza"
+                    maxlength="100"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('lastName')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('lastName') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="username">Nombre de Usuario (Username)</label>
+                  <input
+                    id="username"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('username')"
+                    type="text"
+                    formControlName="username"
+                    placeholder="Ej. carlos.mendoza"
+                    maxlength="50"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('username')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('username') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="email">Correo Electrónico</label>
+                  <input
+                    id="email"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('email')"
+                    type="email"
+                    formControlName="email"
+                    placeholder="Ej. carlos.mendoza@4guard.com"
+                    maxlength="150"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('email')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('email') }}</span>
+                  }
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Rol & Asignación WMS ──────────────────── -->
+            <fieldset class="users-form-section">
+              <legend class="users-form-section__legend">
+                <span class="material-symbols-outlined">admin_panel_settings</span>
+                Rol & Asignación WMS
+              </legend>
+
+              <div class="users-form-grid users-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="role">Rol del Sistema</label>
+                  <select
+                    id="role"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('role')"
+                    formControlName="role"
+                    aria-required="true">
+                    @for (r of availableRoles(); track r.name) {
+                      <option [value]="r.name">{{ r.label }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('role')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('role') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="branchId">Sucursal Asignada</label>
+                  <select
+                    id="branchId"
+                    class="fg-select"
+                    formControlName="branchId">
+                    <option [ngValue]="null">Acceso Corporativo (Todas)</option>
+                    @for (b of availableBranches(); track b.id) {
+                      <option [value]="b.id">{{ b.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
+                  <select
+                    id="status"
+                    class="fg-select"
+                    formControlName="status"
+                    aria-required="true">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="INACTIVE">Inactivo</option>
+                  </select>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Seguridad & Acciones Rápidas ───────────── -->
+            @if (formMode() === 'edit' && selectedUser()) {
+              <fieldset class="users-form-section">
+                <legend class="users-form-section__legend">
+                  <span class="material-symbols-outlined">lock_reset</span>
+                  Seguridad & Credenciales (HU-003)
+                </legend>
+
+                <div class="users-security-card">
+                  <div class="users-security-card__info">
+                    <div class="users-security-card__title">Contraseña Temporal</div>
+                    <div class="users-security-card__desc">
+                      Genera una clave de acceso temporal para enviar o entregar al usuario.
+                    </div>
+                  </div>
+                  <button
+                    class="users-btn users-btn--secondary"
+                    type="button"
+                    [disabled]="isGenerating()"
+                    (click)="openGenerateConfirm()">
+                    <span class="material-symbols-outlined">key</span>
+                    🔑 Generar Clave Temporal
+                  </button>
+                </div>
+              </fieldset>
+            }
+
+            <!-- SECCIÓN 4 — Control & Auditoría en Tiempo Real ─────── -->
+            @if (formMode() === 'edit' && selectedUser()) {
+              <fieldset class="users-form-section users-form-section--readonly">
+                <legend class="users-form-section__legend">
+                  <span class="material-symbols-outlined">history</span>
+                  Información de Control & Auditoría
+                </legend>
+
+                <div class="users-readonly-grid">
+                  <div class="users-readonly-field">
+                    <span class="users-readonly-field__label">Organización</span>
+                    <span class="users-readonly-field__value">{{ selectedUser()!.orgName }}</span>
+                  </div>
+                  <div class="users-readonly-field">
+                    <span class="users-readonly-field__label">Último Inicio de Sesión</span>
+                    <span class="users-readonly-field__value">
+                      {{ selectedUser()!.lastLoginAt ? (selectedUser()!.lastLoginAt | date:'dd/MM/yyyy HH:mm') : 'Nunca' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA (BE GET /api/v1/users/{id}/audit) ── -->
+                <div class="users-timeline-preview">
+                  <div class="users-timeline-preview__header">
+                    <span class="material-symbols-outlined">timeline</span>
+                    <span>Historial de Auditoría en Tiempo Real</span>
+                  </div>
+
+                  @if (isLoadingAudit()) {
+                    <div class="users-timeline-preview__loading">
+                      <span class="material-symbols-outlined spin">sync</span>
+                      <span>Cargando historial de auditoría desde el servidor…</span>
+                    </div>
+                  } @else if (auditEntries().length === 0) {
+                    <p class="users-timeline-preview__empty">
+                      No se encontraron registros de auditoría para este usuario.
+                    </p>
+                  } @else {
+                    <div class="users-timeline-preview__nodes">
+                      @for (entry of auditEntries(); track entry.logId; let last = $last) {
+                        <div class="users-tl-node {{ getAuditColorClass(entry.action) }}">
+                          <div class="users-tl-node__dot">
+                            <span class="material-symbols-outlined">{{ getAuditIcon(entry.action) }}</span>
+                          </div>
+                          <div class="users-tl-node__line" [class.users-tl-node__line--last]="last"></div>
+                          <div class="users-tl-node__content">
+                            <div class="users-tl-node__header">
+                              <span class="users-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
+                              <span class="users-tl-node__tag">{{ entry.action }}</span>
+                            </div>
+
+                            @if (entry.details && entry.details.length > 0) {
+                              <div class="users-tl-node__diffs">
+                                @for (det of entry.details; track det.fieldName) {
+                                  <div class="users-tl-diff">
+                                    <span class="users-tl-diff__field">{{ det.fieldName }}:</span>
+                                    <span class="users-tl-diff__old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                    <span class="material-symbols-outlined users-tl-diff__arrow">arrow_forward</span>
+                                    <span class="users-tl-diff__new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                  </div>
+                                }
+                              </div>
+                            }
+
+                            <div class="users-tl-node__meta">
+                              Ejecutado por <strong>&#64;{{ entry.username }}</strong> · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO ──────────────────────── -->
+            <div class="users-form-actions">
+
+              @if (formMode() === 'edit' && selectedUser()) {
+                <div class="users-form-actions__status-group">
+                  <button
+                    class="users-btn"
+                    [class.users-btn--success]="selectedUser()!.status !== 'ACTIVE'"
+                    [class.users-btn--ghost]="selectedUser()!.status === 'ACTIVE'"
+                    type="button"
+                    (click)="toggleUserStatus()">
+                    <span class="material-symbols-outlined">
+                      {{ selectedUser()!.status === 'ACTIVE' ? 'pause_circle' : 'check_circle' }}
+                    </span>
+                    {{ selectedUser()!.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}
+                  </button>
+
+                  <button
+                    class="users-btn users-btn--danger"
+                    type="button"
+                    [disabled]="isDeleting()"
+                    (click)="openDeleteConfirm()">
+                    <span class="material-symbols-outlined">delete</span>
+                    Eliminar
+                  </button>
+                </div>
+              }
+
+              <div class="users-form-actions__right">
                 <button
-                  class="btn btn-secondary"
-                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
-                  (click)="editUser(user)">
-                  Editar
+                  class="users-btn users-btn--ghost"
+                  type="button"
+                  (click)="cancelForm()">
+                  Cancelar
                 </button>
 
-                <!-- HU-003: Botón Generar Clave Temporal -->
                 <button
-                  class="btn btn-key"
-                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
-                  [disabled]="isGenerating()"
-                  (click)="openGenerateConfirm(user)"
-                  [attr.aria-label]="'Generar clave temporal para ' + user.name"
-                  title="Generar Clave Temporal">
-                  🔑 Clave Temporal
-                </button>
-
-                <!-- Botón Eliminar Usuario -->
-                <button
-                  class="btn btn-danger"
-                  style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-sm);"
-                  [disabled]="isDeleting()"
-                  (click)="openDeleteConfirm(user)"
-                  [attr.aria-label]="'Eliminar usuario ' + user.name"
-                  title="Eliminar Usuario">
-                  Eliminar
+                  class="users-btn users-btn--primary"
+                  type="submit">
+                  <span class="material-symbols-outlined">save</span>
+                  Guardar Cambios
                 </button>
               </div>
-            </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="6" style="text-align: center; color: var(--color-text-secondary); padding: var(--space-8);">
-              No se encontraron usuarios matching el criterio.
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+
+            </div>
+
+          </form>
+
+        </div>
+      }
+
+    </main>
+
   </div>
+
 </div>
 
 <!-- ══════════════════════════════════════════════════════════
-     Modal: Crear / Editar Usuario
-     ══════════════════════════════════════════════════════════ -->
-@if (isModalOpen()) {
-  <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>{{ editingUserId() ? 'Editar Usuario' : 'Nuevo Usuario' }}</h2>
-        <button class="modal-close" (click)="closeModal()">&times;</button>
-      </div>
-
-      <div class="form-group">
-        <label for="user-firstname">Nombre(s)</label>
-        <input id="user-firstname" type="text" class="form-control" [(ngModel)]="userForm.firstName">
-      </div>
-
-      <div class="form-group">
-        <label for="user-lastname">Apellidos</label>
-        <input id="user-lastname" type="text" class="form-control" [(ngModel)]="userForm.lastName">
-      </div>
-
-      <div class="form-group">
-        <label for="user-email">Correo Electrónico</label>
-        <input id="user-email" type="email" class="form-control" [(ngModel)]="userForm.email">
-      </div>
-
-      <div class="form-group">
-        <label for="user-role">Rol del Sistema</label>
-        <select id="user-role" class="form-control" [(ngModel)]="userForm.role">
-          <option value="ROLE_ADMIN">Administrador General (ADMIN)</option>
-          <option value="ROLE_OPERATIONS_MANAGER">Gerente de Operaciones (OPERATIONS_MANAGER)</option>
-          <option value="ROLE_WAREHOUSE_MANAGER">Gerente de Almacén (WAREHOUSE_MANAGER)</option>
-          <option value="ROLE_DOCK_SUPERVISOR">Supervisor de Embarques (DOCK_SUPERVISOR)</option>
-          <option value="ROLE_QM_INSPECTOR">Inspector de Calidad (QM_INSPECTOR)</option>
-          <option value="ROLE_WAREHOUSE_OPERATOR">Operario de Almacén (WAREHOUSE_OPERATOR)</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="user-branch">Sucursal</label>
-        <select id="user-branch" class="form-control" [(ngModel)]="userForm.branchId">
-          <option [value]="null">Acceso Corporativo</option>
-          @for (b of availableBranches(); track b.id) {
-            <option [value]="b.id">{{ b.name }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" (click)="saveUser()">Guardar</button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ══════════════════════════════════════════════════════════
      HU-003: Diálogo de Confirmación — Generar Contraseña Temporal
-     Se muestra al hacer click en "Clave Temporal"
      ══════════════════════════════════════════════════════════ -->
 @if (confirmingUser()) {
   <fg-confirm-dialog
     title="Generar contraseña temporal"
-    [message]="'¿Deseas generar una contraseña temporal para ' + confirmingUser()!.name + '?'"
+    [message]="'¿Deseas generar una contraseña temporal para ' + confirmingUser()!.firstName + ' ' + confirmingUser()!.lastName + '?'"
     confirmLabel="Generar"
     [isLoading]="isGenerating()"
     (confirmed)="onGenerateConfirmed()"
@@ -169,21 +695,22 @@
 
 <!-- ══════════════════════════════════════════════════════════
      HU-003: Modal Premium — Contraseña Temporal Generada
-     Se muestra cuando el backend responde 200
      ══════════════════════════════════════════════════════════ -->
 @if (tempPassword() && tempPasswordUser()) {
   <fg-temp-password-modal
     [password]="tempPassword()!"
-    [userName]="tempPasswordUser()!.name"
+    [userName]="tempPasswordUser()!.firstName + ' ' + tempPasswordUser()!.lastName"
     (closed)="onTempPasswordModalClosed()">
   </fg-temp-password-modal>
 }
 
-<!-- Diálogo de Confirmación — Eliminar Usuario -->
+<!-- ══════════════════════════════════════════════════════════
+     Diálogo de Confirmación — Eliminar Usuario
+     ══════════════════════════════════════════════════════════ -->
 @if (deletingUser()) {
   <fg-confirm-dialog
     title="Eliminar usuario"
-    [message]="'¿Deseas eliminar permanentemente al usuario ' + deletingUser()!.name + '?'"
+    [message]="'¿Deseas eliminar permanentemente al usuario ' + deletingUser()!.firstName + ' ' + deletingUser()!.lastName + '?'"
     confirmLabel="Eliminar"
     [isLoading]="isDeleting()"
     (confirmed)="onDeleteConfirmed()"

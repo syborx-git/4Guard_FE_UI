@@ -39,10 +39,10 @@ import { Subject, takeUntil } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { SupplierService } from '../services/supplier.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ToastService } from '../../../core/services/toast.service';
-import { ClientService } from '../../admin/services/client.service';
-import { BranchService } from '../../admin/services/branch.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ClientService } from '../../services/client.service';
+import { BranchService } from '../../services/branch.service';
 import {
   Supplier,
   SupplierType,

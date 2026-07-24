@@ -14,12 +14,34 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Gestión de Usuarios',
   },
   {
-    path: 'shifts',
+    path: 'carriers',
+    loadChildren: () =>
+      import('./carriers/carriers.routes').then((m) => m.carriersRoutes),
+    title: '4GUARD WMS — Gestión de Transportistas',
+  },
+  {
+    path: 'sections',
+    loadChildren: () =>
+      import('./sections/sections.routes').then((m) => m.sectionsRoutes),
+    title: '4GUARD WMS — Secciones de Almacén',
+  },
+  {
+    path: 'suppliers',
+    loadChildren: () =>
+      import('./suppliers/supplier.routes').then((m) => m.supplierRoutes),
+    title: '4GUARD WMS — Catálogo de Proveedores',
+  },
+  {
+    path: 'sessions',
     loadComponent: () =>
-      import('./shifts/shift-management/shift-management.component').then(
-        (m) => m.ShiftManagementComponent
-      ),
-    title: '4GUARD WMS — Turnos y Horarios',
+      import('./sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
+    title: '4GUARD WMS — Sesiones Activas',
+  },
+  {
+    path: 'organizations',
+    loadChildren: () =>
+      import('./organizations/organization.routes').then((m) => m.organizationRoutes),
+    title: '4GUARD WMS — Gestión de Organizaciones',
   },
 ];
 

@@ -223,13 +223,17 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
     { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
-    { label: 'Layout', route: '/layout', icon: 'shelves', module: 'layout' },
     { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Turnos y Horarios', route: '/shifts', icon: 'schedule', module: 'shifts' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
+    // HU-131: Motor de Reglas de Negocio Enterprise
+    { label: 'Reglas de negocio', route: '/business-rules', icon: 'gavel', module: 'business-rules' },
+    // HU-146: Temporal debajo de Administrar para evaluación de UX.
+    // Mover a Monitoreo o Auditoría cuando se defina el módulo definitivo.
+    { label: 'Actividad por usuario', route: '/user-activity', icon: 'manage_search', module: 'user-activity' },
   ];
 
 

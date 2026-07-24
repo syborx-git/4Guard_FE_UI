@@ -9,8 +9,8 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { ActiveSessionsService, ActiveSession } from '../../core/services/active-sessions.service';
-import { AuthState } from '../../core/auth/auth.state';
+import { ActiveSessionsService, ActiveSession } from '../../../core/services/active-sessions.service';
+import { AuthState } from '../../../core/auth/auth.state';
 
 @Component({
   selector: 'fg-active-sessions-monitor',

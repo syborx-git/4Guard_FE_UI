@@ -140,8 +140,10 @@ export class AuthService {
     
     this.sessionStorageService.clearSession();
     
-    const queryParams = reason ? { reason } : {};
-    this.router.navigate(['/login'], { queryParams });
+    if (!this.router.url.includes('/login')) {
+      const queryParams = reason ? { reason } : {};
+      this.router.navigate(['/login'], { queryParams });
+    }
   }
 
   /**

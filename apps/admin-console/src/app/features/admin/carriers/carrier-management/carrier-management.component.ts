@@ -45,8 +45,8 @@ import { Subject, takeUntil } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { CarrierService } from '../services/carrier.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ToastService } from '../../../core/services/toast.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   Carrier,
   CarrierType,
@@ -264,9 +264,9 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       pagination: { page: 0, size: 50 }, // TODO: ajustar size o implementar paginación en la UI
     };
     this.carrierService.loadCarriers(params).pipe(takeUntil(this.destroy$)).subscribe({
-      error: (err: HttpErrorResponse) => {
-        const msg = err?.error?.message || err?.message || 'Error al cargar los transportistas.';
-        this.carrierService['loadError'].set(msg);
+      error: () => {
+        // El servicio centralizado (CarrierService.handleError) ya configura 'loadError'
+        // con un mensaje amigable según el HTTP Status (ej: 403, 409).
       },
     });
   }
@@ -625,8 +625,8 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   protected get isFormDirty(): boolean  { return this.form.dirty; }
   protected get isSaving():    boolean  { return this.carrierService.saving(); }
   protected get isLoading():   boolean  { return this.carrierService.loading(); }
-  protected get hasLoadError():boolean  { return !!this.carrierService['loadError']?.(); }
-  protected get loadErrorMessage(): string { return this.carrierService['loadError']?.() ?? ''; }
+  protected get hasLoadError():boolean  { return !!this.carrierService.loadError(); }
+  protected get loadErrorMessage(): string { return this.carrierService.loadError() ?? ''; }
 
   protected get isListEmpty(): boolean {
     return !this.isLoading && !this.hasLoadError && this.carrierService.carriers().length === 0;

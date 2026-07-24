@@ -19,6 +19,16 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Iniciar Sesión',
   },
 
+  // Ruta pública: Recuperar contraseña (OTP)
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent
+      ),
+    title: '4GUARD WMS — Recuperar Contraseña',
+  },
+
   // Cambio de contraseña obligatorio — fuera del shell (sin navbar)
   // Requiere sesión activa + changePasswordRequired === true
   {
@@ -103,14 +113,44 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Despacho',
       },
 
+      // Control de Usuarios y Seguridad (Homologado)
+      {
+        path: 'users',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadComponent: () =>
+          import('./features/admin/users/users-list.component').then((m) => m.UsersListComponent),
+        title: '4GUARD WMS — Control de Usuarios y Seguridad',
+      },
+
+      // Gestión de Organizaciones Multi-Tenancy (Homologado)
+      {
+        path: 'organizations',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/organizations/organization.routes').then((m) => m.organizationRoutes),
+        title: '4GUARD WMS — Gestión de Organizaciones',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',
         canActivate: [rbacGuard],
         data: { module: 'carriers' },
         loadChildren: () =>
-          import('./features/carriers/carriers.routes').then((m) => m.carriersRoutes),
+          import('./features/admin/carriers/carriers.routes').then((m) => m.carriersRoutes),
         title: '4GUARD WMS — Gestión de Transportistas',
+      },
+
+      // Secciones de Almacén
+      {
+        path: 'sections',
+        canActivate: [rbacGuard],
+        data: { module: 'sections' },
+        loadChildren: () =>
+          import('./features/admin/sections/sections.routes').then((m) => m.sectionsRoutes),
+        title: '4GUARD WMS — Secciones de Almacén',
       },
 
       // Gestión de Proveedores (HU-125)
@@ -119,7 +159,7 @@ export const adminRoutes: Routes = [
         canActivate: [rbacGuard],
         data: { module: 'suppliers' },
         loadChildren: () =>
-          import('./features/suppliers/supplier.routes').then((m) => m.supplierRoutes),
+          import('./features/admin/suppliers/supplier.routes').then((m) => m.supplierRoutes),
         title: '4GUARD WMS — Catálogo de Proveedores',
       },
 
@@ -159,8 +199,31 @@ export const adminRoutes: Routes = [
       {
         path: 'sessions',
         loadComponent: () =>
-          import('./features/sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
+          import('./features/admin/sessions/active-sessions-monitor.component').then((m) => m.ActiveSessionsMonitorComponent),
         title: '4GUARD WMS — Sesiones Activas',
+      },
+
+      // Actividad por Usuario (HU-146) — Temporal debajo de Administrar
+      // Ruta: /user-activity (primer nivel, sin anidar en /admin ni /monitoring)
+      // Decisión: ruta independiente para evaluación. Al definir el módulo definitivo,
+      // solo se cambia esta ruta y el navItem en shell.component.ts.
+      {
+        path: 'user-activity',
+        canActivate: [rbacGuard],
+        data: { module: 'user-activity' },
+        loadChildren: () =>
+          import('./features/user-activity/user-activity.routes').then((m) => m.userActivityRoutes),
+        title: '4GUARD WMS — Actividad por Usuario',
+      },
+
+      // Motor de Reglas de Negocio (HU-131)
+      {
+        path: 'business-rules',
+        canActivate: [rbacGuard],
+        data: { module: 'business-rules' },
+        loadChildren: () =>
+          import('./features/business-rules/business-rules.routes').then((m) => m.businessRulesRoutes),
+        title: '4GUARD WMS — Motor de Reglas de Negocio',
       },
 
       // Redirección por defecto

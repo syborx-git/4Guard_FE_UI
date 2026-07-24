@@ -708,12 +708,28 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       this.router.navigate(['/sessions']);
       return;
     }
+    if (moduleId === 'organizations') {
+      this.router.navigate(['/organizations']);
+      return;
+    }
+    if (moduleId === 'users') {
+      this.router.navigate(['/admin/users']);
+      return;
+    }
     if (moduleId === 'carriers') {
       this.router.navigate(['/carriers']);
       return;
     }
+    if (moduleId === 'sections') {
+      this.router.navigate(['/sections']);
+      return;
+    }
     if (moduleId === 'suppliers') {
       this.router.navigate(['/suppliers']);
+      return;
+    }
+    if (moduleId === 'locations') {
+      this.router.navigate(['/layout']);
       return;
     }
     if (moduleId === 'shifts') {

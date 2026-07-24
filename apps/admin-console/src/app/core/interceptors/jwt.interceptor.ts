@@ -19,6 +19,7 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const isExcluded =
     url.includes('/login') ||
     url.includes('/refresh') ||
+    url.includes('/logout') ||
     url.includes('/assets/') ||
     url.includes('/public');
 
@@ -35,8 +36,8 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // 401 Unauthorized redirige automáticamente al login y limpia sesión
-      if (error.status === 401) {
+      // 401 Unauthorized redirige automáticamente al login y limpia sesión si no estamos en /login
+      if (error.status === 401 && !isExcluded && !router.url.includes('/login')) {
         sessionStorageService.clearSession();
         router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
       }
