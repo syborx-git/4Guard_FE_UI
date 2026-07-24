@@ -1,0 +1,715 @@
+<!-- business-rules-config.component.html -->
+<!-- HU-131 — Motor de Reglas de Negocio Enterprise 4GUARD WMS (Polish Pass) -->
+
+<div class="br-page">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO — RÉPLICA GOOGLE AI / PREMIUM ENTERPRISE
+       ═══════════════════════════════════════════════════════════ -->
+  <header class="br-hero">
+    <div class="br-hero__glow" aria-hidden="true"></div>
+    <div class="br-hero__content">
+
+      <!-- Contenido Izquierdo -->
+      <div class="br-hero__main">
+        <nav class="br-hero__breadcrumb" aria-label="Navegación secundaria">
+          <span>ADMINISTRACIÓN WMS</span>
+          <span class="br-hero__breadcrumb-sep">/</span>
+          <span class="br-hero__breadcrumb-current">CONFIGURACIÓN OPERATIVA</span>
+          <span class="br-hero__badge">HU-131</span>
+        </nav>
+
+        <h1 class="br-hero__title">
+          <span class="material-symbols-outlined br-hero__title-icon">gavel</span>
+          Motor de Reglas de Negocio
+        </h1>
+
+        <p class="br-hero__description">
+          Configura las estrategias, parámetros y restricciones que controlan el comportamiento operativo del WMS.
+        </p>
+
+        <!-- Estado Enriquecido del Motor Operativo (Punto 6) -->
+        <div class="br-hero__meta">
+          <span class="br-hero__meta-item br-hero__meta-item--live">
+            <span class="br-live-dot"></span>
+            Motor operativo estable
+          </span>
+          <span class="br-hero__meta-sep">•</span>
+          <span class="br-hero__meta-item">
+            <span class="material-symbols-outlined">check_circle</span>
+            {{ kpis().totalActive }} reglas activas
+          </span>
+          <span class="br-hero__meta-sep">•</span>
+          <span class="br-hero__meta-item br-hero__meta-item--critical">
+            <span class="material-symbols-outlined">warning</span>
+            {{ kpis().totalCritical }} reglas críticas
+          </span>
+          <span class="br-hero__meta-sep">•</span>
+          <span class="br-hero__meta-item">
+            <span class="material-symbols-outlined">pending_actions</span>
+            1 modificación pendiente
+          </span>
+        </div>
+      </div>
+
+      <!-- Acciones de la Cabecera -->
+      <div class="br-hero__actions">
+        <button
+          class="br-btn br-btn--ghost"
+          (click)="refresh()"
+          [disabled]="isLoading()"
+          aria-label="Actualizar motor de reglas">
+          <span class="material-symbols-outlined" [class.br-spin]="isLoading()">refresh</span>
+          Actualizar
+        </button>
+
+        <button
+          class="br-btn br-btn--primary"
+          (click)="startNewRule()"
+          aria-label="Crear nueva regla de negocio">
+          <span class="material-symbols-outlined">add_circle</span>
+          Nueva Configuración
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       KPIS — 5 TARJETAS PREMIUM
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="br-kpis" aria-label="Indicadores del motor de reglas">
+    
+    <!-- 1. Reglas configuradas -->
+    <div class="br-kpi-card br-kpi-card--configured">
+      <div class="br-kpi-card__icon">
+        <span class="material-symbols-outlined">tune</span>
+      </div>
+      <div class="br-kpi-card__body">
+        <span class="br-kpi-card__value">{{ kpis().totalConfigured }}</span>
+        <span class="br-kpi-card__label">Reglas configuradas</span>
+        <span class="br-kpi-card__desc">Catálogo total registrado</span>
+      </div>
+    </div>
+
+    <!-- 2. Reglas activas -->
+    <div class="br-kpi-card br-kpi-card--active">
+      <div class="br-kpi-card__icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="br-kpi-card__body">
+        <span class="br-kpi-card__value">{{ kpis().totalActive }}</span>
+        <span class="br-kpi-card__label">Reglas activas</span>
+        <span class="br-kpi-card__desc">Ejecución en tiempo real</span>
+      </div>
+    </div>
+
+    <!-- 3. Reglas inactivas -->
+    <div class="br-kpi-card br-kpi-card--inactive">
+      <div class="br-kpi-card__icon">
+        <span class="material-symbols-outlined">pause_circle</span>
+      </div>
+      <div class="br-kpi-card__body">
+        <span class="br-kpi-card__value">{{ kpis().totalInactive }}</span>
+        <span class="br-kpi-card__label">Reglas inactivas</span>
+        <span class="br-kpi-card__desc">Pausadas o en borrador</span>
+      </div>
+    </div>
+
+    <!-- 4. Reglas críticas -->
+    <div class="br-kpi-card br-kpi-card--critical">
+      <div class="br-kpi-card__icon">
+        <span class="material-symbols-outlined">dangerous</span>
+      </div>
+      <div class="br-kpi-card__body">
+        <span class="br-kpi-card__value">{{ kpis().totalCritical }}</span>
+        <span class="br-kpi-card__label">Reglas críticas</span>
+        <span class="br-kpi-card__desc">Impacto de alta prioridad</span>
+      </div>
+    </div>
+
+    <!-- 5. Modificadas recientemente -->
+    <div class="br-kpi-card br-kpi-card--recent">
+      <div class="br-kpi-card__icon">
+        <span class="material-symbols-outlined">history_toggle_off</span>
+      </div>
+      <div class="br-kpi-card__body">
+        <span class="br-kpi-card__value">{{ kpis().recentlyModified }}</span>
+        <span class="br-kpi-card__label">Modificadas recientemente</span>
+        <span class="br-kpi-card__desc">Últimos 14 días</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       BARRA DE FILTROS REACTIVA
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="br-filters-section" aria-label="Filtros de consulta de reglas">
+    <form [formGroup]="filterForm" class="br-filters-form">
+      
+      <!-- Buscador -->
+      <div class="br-filter-field br-filter-field--search">
+        <label for="br-search" class="br-filter-label">Buscador</label>
+        <div class="br-input-wrap">
+          <span class="material-symbols-outlined br-input-icon">search</span>
+          <input
+            id="br-search"
+            type="text"
+            formControlName="searchTerm"
+            class="br-filter-input"
+            placeholder="Buscar por código, nombre o descripción..." />
+        </div>
+      </div>
+
+      <!-- Módulo -->
+      <div class="br-filter-field">
+        <label for="br-filter-module" class="br-filter-label">Módulo</label>
+        <select id="br-filter-module" formControlName="module" class="br-filter-select">
+          <option value="">Todos los módulos</option>
+          @for (m of allModules; track m.id) {
+            <option [value]="m.id">{{ m.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Categoría -->
+      <div class="br-filter-field">
+        <label for="br-filter-category" class="br-filter-label">Categoría</label>
+        <select id="br-filter-category" formControlName="category" class="br-filter-select">
+          <option value="">Todas las categorías</option>
+          @for (c of allCategories; track c.id) {
+            <option [value]="c.id">{{ c.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Tipo de dato -->
+      <div class="br-filter-field">
+        <label for="br-filter-datatype" class="br-filter-label">Tipo de dato</label>
+        <select id="br-filter-datatype" formControlName="dataType" class="br-filter-select">
+          <option value="">Todos los tipos</option>
+          @for (d of dataTypes; track d.id) {
+            <option [value]="d.id">{{ d.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Alcance -->
+      <div class="br-filter-field">
+        <label for="br-filter-scope" class="br-filter-label">Alcance</label>
+        <select id="br-filter-scope" formControlName="scope" class="br-filter-select">
+          <option value="">Todos los alcances</option>
+          @for (s of allScopes; track s.id) {
+            <option [value]="s.id">{{ s.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Estado -->
+      <div class="br-filter-field">
+        <label for="br-filter-status" class="br-filter-label">Estado</label>
+        <select id="br-filter-status" formControlName="status" class="br-filter-select">
+          <option value="">Todos los estados</option>
+          @for (st of statuses; track st.id) {
+            <option [value]="st.id">{{ st.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Acciones de filtro -->
+      <div class="br-filter-actions">
+        <button
+          type="button"
+          class="br-btn br-btn--clear"
+          (click)="resetFilters()"
+          title="Restablecer filtros">
+          <span class="material-symbols-outlined">filter_alt_off</span>
+          Limpiar
+        </button>
+      </div>
+
+    </form>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SPLIT VIEW 35% / 65% (CATÁLOGO / FORMULARIO)
+       ═══════════════════════════════════════════════════════════ -->
+  <main class="br-split-view">
+
+    <!-- ─────────────────────────────────────────────────────────
+         PANEL IZQUIERDO (35%): Catálogo de Reglas
+         ───────────────────────────────────────────────────────── -->
+    <aside class="br-catalog-panel" aria-label="Catálogo de reglas de negocio">
+      
+      <div class="br-catalog-header">
+        <div class="br-catalog-header__left">
+          <span class="material-symbols-outlined br-catalog-icon">folder_special</span>
+          <h2 class="br-catalog-title">Directorio de Reglas</h2>
+        </div>
+        <span class="br-catalog-count">{{ filteredRules().length }} encontradas</span>
+      </div>
+
+      <div class="br-catalog-list">
+        @for (rule of filteredRules(); track rule.id) {
+          <article
+            class="br-rule-card"
+            [class.br-rule-card--selected]="selectedRuleId() === rule.id && isEditMode()"
+            [class.br-rule-card--critical-accent]="rule.severity === 'CRITICAL'"
+            (click)="selectRule(rule)"
+            tabindex="0"
+            (keydown.enter)="selectRule(rule)">
+
+            <!-- Cabecera de la card -->
+            <div class="br-rule-card__top">
+              <div class="br-rule-card__code-wrap">
+                <span class="material-symbols-outlined br-rule-card__mod-icon">{{ moduleIcon(rule.module) }}</span>
+                <span class="br-rule-card__code">{{ rule.code }}</span>
+              </div>
+              <div class="br-rule-card__badges">
+                @if (rule.severity === 'CRITICAL') {
+                  <span class="br-critical-badge">
+                    <span class="material-symbols-outlined">priority_high</span> Crítica
+                  </span>
+                }
+                <span class="br-status-pill" [ngClass]="statusBadgeClass(rule.status)">
+                  {{ rule.status }}
+                </span>
+                <span class="br-sev-dot" [ngClass]="severityBadgeClass(rule.severity)" [title]="'Criticidad: ' + rule.severity"></span>
+              </div>
+            </div>
+
+            <!-- Título y descripción -->
+            <h3 class="br-rule-card__name">{{ rule.name }}</h3>
+            <p class="br-rule-card__desc">{{ rule.description }}</p>
+
+            <!-- VALOR ACTUAL (Punto 1) -->
+            <div class="br-rule-card__current-val">
+              <span class="br-current-val__label">Valor actual:</span>
+              <span class="br-current-val__value">{{ formattedValue(rule) }}</span>
+            </div>
+
+            <!-- IMPACTO DE PROCESOS (Punto 2 del Polish Pass) -->
+            <div class="br-rule-card__impact">
+              <span class="material-symbols-outlined br-impact-mini">apps</span>
+              <span class="br-impact-mini-text">Impacta: <strong>{{ ruleImpactProcesses(rule.module) }}</strong></span>
+            </div>
+
+            <!-- Metadatos de la regla con Iconografía (Punto 2) -->
+            <div class="br-rule-card__meta">
+              <span class="br-tag" [ngClass]="moduleBadgeClass(rule.module)">
+                <span class="material-symbols-outlined br-tag-icon">{{ moduleIcon(rule.module) }}</span>
+                {{ rule.module }}
+              </span>
+              <span class="br-tag br-tag--type">{{ rule.dataType }}</span>
+              <span class="br-tag br-tag--scope">{{ scopeLabel(rule.scope) }}</span>
+            </div>
+
+            <div class="br-rule-card__footer">
+              <span class="br-rule-card__modified">
+                <span class="material-symbols-outlined">schedule</span>
+                Modificado: {{ rule.lastModifiedAt | date: 'dd/MM/yy' }}
+              </span>
+              <span class="material-symbols-outlined br-rule-card__arrow">chevron_right</span>
+            </div>
+
+          </article>
+        } @empty {
+          <div class="br-empty">
+            <span class="material-symbols-outlined br-empty__icon">search_off</span>
+            <p class="br-empty__title">Sin reglas encontradas</p>
+            <p class="br-empty__desc">Intenta ajustar los criterios de búsqueda o limpia los filtros.</p>
+            <button class="br-btn br-btn--ghost" (click)="resetFilters()">Limpiar Filtros</button>
+          </div>
+        }
+
+        <!-- Tarjeta del Estado del Motor (Punto 1 del Polish Pass) -->
+        <div class="br-engine-status-card">
+          <div class="br-engine-status__header">
+            <div class="br-engine-status__title-wrap">
+              <span class="material-symbols-outlined br-engine-icon">published_with_changes</span>
+              <span class="br-engine-title">Estado del Motor</span>
+            </div>
+            <span class="br-engine-badge">Motor Sincronizado</span>
+          </div>
+          <ul class="br-engine-checklist">
+            <li><span class="material-symbols-outlined br-check-icon">check_circle</span> Auditoría activa</li>
+            <li><span class="material-symbols-outlined br-check-icon">check_circle</span> Configuración consistente</li>
+            <li><span class="material-symbols-outlined br-check-icon">check_circle</span> Sin conflictos detectados</li>
+            <li><span class="material-symbols-outlined br-check-icon">check_circle</span> Backend sincronizado</li>
+          </ul>
+          <div class="br-engine-footer">
+            <span class="material-symbols-outlined">schedule</span>
+            Última revisión: Hace 3 minutos
+          </div>
+        </div>
+
+      </div>
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────
+         PANEL DERECHO (65%): Formulario Enterprise
+         ───────────────────────────────────────────────────────── -->
+    <section class="br-form-panel" aria-label="Parámetros de configuración de regla">
+      
+      <!-- Encabezado del Formulario -->
+      <div class="br-form-header">
+        <div class="br-form-header__info">
+          <span class="br-mode-badge" [class.br-mode-badge--new]="!isEditMode()">
+            <span class="material-symbols-outlined">
+              {{ isEditMode() ? 'edit_note' : 'add_task' }}
+            </span>
+            {{ isEditMode() ? 'Edición de Regla' : 'Nueva Configuración' }}
+          </span>
+          <h2 class="br-form-title">
+            {{ isEditMode() ? (selectedRule()?.name || 'Configurar Regla') : 'Registrar Nueva Regla' }}
+          </h2>
+          
+          <!-- Metadata Enterprise de la Regla (Punto 5 del Polish Pass) -->
+          <div class="br-form-meta-enterprise">
+            <span>Versión v2.8.14</span>
+            <span class="br-meta-sep">•</span>
+            <span>Última modificación: {{ (selectedRule()?.lastModifiedAt | date: 'dd/MM/yyyy HH:mm') || '23/07/2026 12:45' }}</span>
+            <span class="br-meta-sep">•</span>
+            <span>Autor: {{ selectedRule()?.lastModifiedBy || 'Administrador WMS' }}</span>
+          </div>
+        </div>
+
+        @if (selectedRule()?.isSystem) {
+          <div class="br-system-alert" title="Esta regla es vital para la estabilidad del sistema">
+            <span class="material-symbols-outlined">shield</span>
+            <span>Regla de Sistema</span>
+          </div>
+        }
+      </div>
+
+      <!-- Tarjeta Informativa de Impacto Operativo (Punto 5) -->
+      <div class="br-impact-card">
+        <div class="br-impact-card__header">
+          <div class="br-impact-card__title">
+            <span class="material-symbols-outlined br-impact-icon">bolt</span>
+            <span>Impacto Operativo</span>
+          </div>
+          <span class="br-impact-pill">{{ ruleForm.get('functionalType')?.value || 'POLÍTICA' }}</span>
+        </div>
+        <div class="br-impact-grid">
+          <div class="br-impact-item">
+            <span class="br-impact-label">Procesos afectados</span>
+            <span class="br-impact-value">
+              <span class="material-symbols-outlined br-mini-icon">{{ moduleIcon(ruleForm.get('module')?.value) }}</span>
+              {{ ruleForm.get('module')?.value || 'SISTEMA' }} • Operación & Stock
+            </span>
+          </div>
+          <div class="br-impact-item">
+            <span class="br-impact-label">Aplicación</span>
+            <span class="br-impact-value br-impact-value--green">
+              <span class="material-symbols-outlined br-mini-icon">bolt</span>
+              Inmediata en motor WMS
+            </span>
+          </div>
+          <div class="br-impact-item">
+            <span class="br-impact-label">Alcance RLS</span>
+            <span class="br-impact-value">
+              <span class="material-symbols-outlined br-mini-icon">hub</span>
+              {{ scopeLabel(ruleForm.get('scope')?.value) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario dividido en 4 Secciones -->
+      <form [formGroup]="ruleForm" (ngSubmit)="saveConfiguration()" class="br-enterprise-form">
+
+        <!-- ══════════════════════════════════════════════════════
+             SECCIÓN 1: Identidad
+             ══════════════════════════════════════════════════════ -->
+        <fieldset class="br-section">
+          <legend class="br-section__legend">
+            <span class="material-symbols-outlined">badge</span>
+            1. Identidad de la Regla
+          </legend>
+
+          <div class="br-form-grid br-form-grid--2col">
+            
+            <!-- Código -->
+            <div class="br-field">
+              <label for="br-code" class="br-label">
+                Código Parámetro <span class="br-req">*</span>
+              </label>
+              <input
+                id="br-code"
+                type="text"
+                formControlName="code"
+                class="br-input br-input--code"
+                placeholder="EJ: PICKING_STRATEGY"
+                [readonly]="isEditMode() && selectedRule()?.isSystem" />
+              <span class="br-field-hint">Identificador único reconocido por el backend WMS.</span>
+            </div>
+
+            <!-- Nombre -->
+            <div class="br-field">
+              <label for="br-name" class="br-label">
+                Nombre Descriptivo <span class="br-req">*</span>
+              </label>
+              <input
+                id="br-name"
+                type="text"
+                formControlName="name"
+                class="br-input"
+                placeholder="Nombre claro de la regla operativa" />
+            </div>
+
+            <!-- Módulo -->
+            <div class="br-field">
+              <label for="br-module" class="br-label">
+                Módulo WMS <span class="br-req">*</span>
+              </label>
+              <select id="br-module" formControlName="module" class="br-select">
+                @for (m of allModules; track m.id) {
+                  <option [value]="m.id">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Categoría -->
+            <div class="br-field">
+              <label for="br-category" class="br-label">
+                Categoría Operativa <span class="br-req">*</span>
+              </label>
+              <select id="br-category" formControlName="category" class="br-select">
+                @for (c of allCategories; track c.id) {
+                  <option [value]="c.id">{{ c.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Descripción (Full Width) -->
+            <div class="br-field br-field--full">
+              <label for="br-desc" class="br-label">
+                Descripción Funcional Detallada <span class="br-req">*</span>
+              </label>
+              <textarea
+                id="br-desc"
+                formControlName="description"
+                rows="2"
+                class="br-textarea"
+                placeholder="Describe el propósito y comportamiento esperado de este parámetro..."></textarea>
+            </div>
+
+          </div>
+        </fieldset>
+
+        <!-- ══════════════════════════════════════════════════════
+             SECCIÓN 2: Configuración
+             ══════════════════════════════════════════════════════ -->
+        <fieldset class="br-section">
+          <legend class="br-section__legend">
+            <span class="material-symbols-outlined">tune</span>
+            2. Configuración y Parámetros
+          </legend>
+
+          <div class="br-form-grid br-form-grid--3col">
+            
+            <!-- Tipo funcional -->
+            <div class="br-field">
+              <label for="br-func-type" class="br-label">
+                Tipo Funcional <span class="br-req">*</span>
+              </label>
+              <select id="br-func-type" formControlName="functionalType" class="br-select">
+                @for (f of functionalTypes; track f.id) {
+                  <option [value]="f.id">{{ f.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Tipo de dato -->
+            <div class="br-field">
+              <label for="br-data-type" class="br-label">
+                Tipo de Dato <span class="br-req">*</span>
+              </label>
+              <select id="br-data-type" formControlName="dataType" class="br-select">
+                @for (d of dataTypes; track d.id) {
+                  <option [value]="d.id">{{ d.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Valor (Dinámico según dataType) -->
+            <div class="br-field">
+              <label for="br-value" class="br-label">
+                Valor Actual <span class="br-req">*</span>
+              </label>
+              <input
+                id="br-value"
+                type="text"
+                formControlName="value"
+                class="br-input br-input--highlight"
+                placeholder="Valor asignado a la regla" />
+            </div>
+
+            <!-- Unidad -->
+            <div class="br-field">
+              <label for="br-unit" class="br-label">Unidad de Medida</label>
+              <input
+                id="br-unit"
+                type="text"
+                formControlName="unit"
+                class="br-input"
+                placeholder="EJ: %, días, minutos, kg" />
+            </div>
+
+            <!-- Valor mínimo -->
+            <div class="br-field">
+              <label for="br-min" class="br-label">Límite Mínimo</label>
+              <input
+                id="br-min"
+                type="number"
+                formControlName="minValue"
+                class="br-input"
+                placeholder="Mínimo permitido" />
+            </div>
+
+            <!-- Valor máximo -->
+            <div class="br-field">
+              <label for="br-max" class="br-label">Límite Máximo</label>
+              <input
+                id="br-max"
+                type="number"
+                formControlName="maxValue"
+                class="br-input"
+                placeholder="Máximo permitido" />
+            </div>
+
+          </div>
+        </fieldset>
+
+        <!-- ══════════════════════════════════════════════════════
+             SECCIÓN 3: Alcance (Scope)
+             ══════════════════════════════════════════════════════ -->
+        <fieldset class="br-section">
+          <legend class="br-section__legend">
+            <span class="material-symbols-outlined">hub</span>
+            3. Alcance de Aplicación (RLS)
+          </legend>
+
+          <div class="br-scope-selector">
+            @for (sc of allScopes; track sc.id) {
+              <div
+                class="br-scope-card"
+                [class.br-scope-card--active]="ruleForm.get('scope')?.value === sc.id"
+                (click)="setScope(sc.id)">
+                <div class="br-scope-card__radio">
+                  <span class="br-scope-dot"></span>
+                </div>
+                <div class="br-scope-card__body">
+                  <span class="br-scope-card__title">{{ sc.label }}</span>
+                  <span class="br-scope-card__desc">{{ sc.desc }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </fieldset>
+
+        <!-- ══════════════════════════════════════════════════════
+             SECCIÓN 4: Control & Auditoría
+             ══════════════════════════════════════════════════════ -->
+        <fieldset class="br-section">
+          <legend class="br-section__legend">
+            <span class="material-symbols-outlined">admin_panel_settings</span>
+            4. Control y Gobernanza
+          </legend>
+
+          <div class="br-form-grid br-form-grid--3col">
+            
+            <!-- Estado -->
+            <div class="br-field">
+              <label for="br-status" class="br-label">
+                Estado Operativo <span class="br-req">*</span>
+              </label>
+              <select id="br-status" formControlName="status" class="br-select">
+                @for (st of statuses; track st.id) {
+                  <option [value]="st.id">{{ st.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Criticidad -->
+            <div class="br-field">
+              <label for="br-severity" class="br-label">
+                Nivel de Criticidad <span class="br-req">*</span>
+              </label>
+              <select id="br-severity" formControlName="severity" class="br-select">
+                @for (sev of severities; track sev.id) {
+                  <option [value]="sev.id">{{ sev.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Vigencia / Fecha Efectiva -->
+            <div class="br-field">
+              <label for="br-effective-date" class="br-label">
+                Fecha de Efectividad <span class="br-req">*</span>
+              </label>
+              <input
+                id="br-effective-date"
+                type="date"
+                formControlName="effectiveDate"
+                class="br-input" />
+            </div>
+
+            <!-- Motivo del cambio (Full Width) -->
+            <div class="br-field br-field--full">
+              <label for="br-reason" class="br-label">
+                Motivo de la Modificación / Justificación Auditada <span class="br-req">*</span>
+              </label>
+              <textarea
+                id="br-reason"
+                formControlName="changeReason"
+                rows="2"
+                class="br-textarea"
+                placeholder="Ingresa la razón del cambio para la bitácora de auditoría Enterprise..."></textarea>
+            </div>
+
+          </div>
+        </fieldset>
+
+        <!-- ══════════════════════════════════════════════════════
+             BARRA STICKY DE GUARDADO Y ACCIONES (Punto 7)
+             ══════════════════════════════════════════════════════ -->
+        <div class="br-sticky-action-bar">
+          <div class="br-action-status">
+            <span
+              class="br-action-status__dot"
+              [class.br-action-status__dot--dirty]="ruleForm.dirty"></span>
+            <span class="br-action-status__text">
+              {{ ruleForm.dirty ? 'Cambios pendientes por guardar en esta regla' : 'Sin cambios pendientes' }}
+            </span>
+          </div>
+
+          <div class="br-action-buttons">
+            <button
+              type="button"
+              class="br-btn br-btn--ghost"
+              (click)="startNewRule()">
+              <span class="material-symbols-outlined">restart_alt</span>
+              Restablecer
+            </button>
+
+            <button
+              type="submit"
+              class="br-btn br-btn--save"
+              [disabled]="ruleForm.invalid">
+              <span class="material-symbols-outlined">save</span>
+              Guardar Configuración
+            </button>
+          </div>
+        </div>
+
+      </form>
+
+    </section>
+
+  </main>
+
+</div><!-- /br-page -->
