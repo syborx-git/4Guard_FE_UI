@@ -30,7 +30,13 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       adminRoutes,
       withComponentInputBinding(),
-      withViewTransitions(),
+      withViewTransitions({
+        onViewTransitionCreated: (info) => {
+          info.transition.finished.catch(() => {
+            // Absorbe la cancelación limpia de la transición sin lanzar error no capturado en consola
+          });
+        },
+      }),
     ),
 
     // ── HTTP Client con interceptores ────────────────────────────────────────
