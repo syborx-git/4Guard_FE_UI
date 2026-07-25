@@ -546,27 +546,37 @@
               @if (formMode() === 'edit' && selectedBranch()) {
                 <div class="branches-form-actions__status-group">
 
-                  <button
-                    class="branches-btn"
-                    [class.branches-btn--success]="selectedBranch()!.status === 'INACTIVE'"
-                    [class.branches-btn--warning]="selectedBranch()!.status === 'ACTIVE'"
-                    type="button"
-                    [disabled]="isSaving"
-                    (click)="openStatusDialog('toggle')">
-                    <span class="material-symbols-outlined">
-                      {{ selectedBranch()!.status === 'ACTIVE' ? 'pause_circle' : 'check_circle' }}
-                    </span>
-                    {{ selectedBranch()!.status === 'ACTIVE' ? 'Desactivar sucursal' : 'Activar sucursal' }}
-                  </button>
+                  @if (selectedBranch()!.status === 'ACTIVE') {
+                    <button
+                      class="branches-btn branches-btn--warning"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('toggle')"
+                      aria-label="Suspender esta sucursal">
+                      <span class="material-symbols-outlined">pause_circle</span>
+                      Suspender
+                    </button>
+                  } @else {
+                    <button
+                      class="branches-btn branches-btn--success"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('toggle')"
+                      aria-label="Activar esta sucursal">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      Activar
+                    </button>
+                  }
 
                   @if (canDelete()) {
                     <button
-                      class="branches-btn branches-btn--danger-ghost"
+                      class="branches-btn branches-btn--danger"
                       type="button"
                       [disabled]="isSaving"
-                      (click)="openStatusDialog('delete')">
-                      <span class="material-symbols-outlined">delete</span>
-                      Eliminar
+                      (click)="openStatusDialog('delete')"
+                      aria-label="Desactivar o eliminar esta sucursal">
+                      <span class="material-symbols-outlined">block</span>
+                      Desactivar
                     </button>
                   }
                 </div>
@@ -584,7 +594,7 @@
 
                 <button
                   id="btn-save-branch"
-                  class="branches-btn branches-btn--primary"
+                  class="branches-btn branches-btn--save"
                   type="submit"
                   [disabled]="isSaving">
                   @if (isSaving) {

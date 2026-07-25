@@ -143,6 +143,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Sucursales',
       },
 
+      // Gestión de Clientes (Homologado)
+      {
+        path: 'clients',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/clients/clients.routes').then((m) => m.clientsRoutes),
+        title: '4GUARD WMS — Gestión de Clientes',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',
