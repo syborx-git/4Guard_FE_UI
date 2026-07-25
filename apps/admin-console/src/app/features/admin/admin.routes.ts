@@ -43,5 +43,11 @@ export const adminRoutes: Routes = [
       import('./organizations/organization.routes').then((m) => m.organizationRoutes),
     title: '4GUARD WMS — Gestión de Organizaciones',
   },
+  {
+    path: 'branches',
+    loadChildren: () =>
+      import('./branches/branches.routes').then((m) => m.branchesRoutes),
+    title: '4GUARD WMS — Gestión de Sucursales',
+  },
 ];
 
