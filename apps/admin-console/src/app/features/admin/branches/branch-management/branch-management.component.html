@@ -1,0 +1,657 @@
+<!--
+  branch-management.component.html
+  Gestión de Sucursales (Branches) — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Estilos: Dark Glassmorphism homologado con Transportistas
+-->
+
+<div class="branches-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="branches-header">
+
+    <div class="branches-header__top">
+
+      <div class="branches-header__left">
+        <div class="branches-header__icon-wrap">
+          <span class="material-symbols-outlined branches-header__icon">domain</span>
+        </div>
+
+        <div class="branches-header__copy">
+          <div class="branches-header__eyebrow">
+            <a routerLink="/admin" class="branches-header__eyebrow-tag">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="branches-header__eyebrow-sep">·</span>
+            <span>Estructura de Almacén</span>
+          </div>
+          <h1 class="branches-header__title">Gestión de Sucursales</h1>
+          <p class="branches-header__subtitle">
+            Administra los centros logísticos, bodegas físicas y sucursales operativas
+          </p>
+        </div>
+      </div>
+
+      @if (canCreate()) {
+        <button
+          id="btn-new-branch"
+          class="branches-btn branches-btn--primary"
+          type="button"
+          (click)="startNewBranch()"
+          [disabled]="isSaving"
+          aria-label="Registrar nueva sucursal">
+          <span class="material-symbols-outlined">add</span>
+          Nueva sucursal
+        </button>
+      }
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="branches-kpi-grid" aria-label="Indicadores de sucursales">
+
+      <!-- Total -->
+      <div class="branches-kpi-card branches-kpi-card--total">
+        <div class="branches-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">domain</span>
+        </div>
+        <div class="branches-kpi-card__body">
+          @if (isLoading) {
+            <div class="branches-kpi-card__skeleton"></div>
+          } @else {
+            <span class="branches-kpi-card__value">{{ totalBranches() }}</span>
+          }
+          <span class="branches-kpi-card__label">Total Registradas</span>
+        </div>
+        <div class="branches-kpi-card__bar branches-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activas -->
+      <div class="branches-kpi-card branches-kpi-card--active">
+        <div class="branches-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="branches-kpi-card__body">
+          @if (isLoading) {
+            <div class="branches-kpi-card__skeleton"></div>
+          } @else {
+            <span class="branches-kpi-card__value">{{ kpiActive() }}</span>
+          }
+          <span class="branches-kpi-card__label">Sucursales Activas</span>
+        </div>
+        <div class="branches-kpi-card__bar branches-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Inactivas -->
+      <div class="branches-kpi-card branches-kpi-card--inactive">
+        <div class="branches-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="branches-kpi-card__body">
+          @if (isLoading) {
+            <div class="branches-kpi-card__skeleton"></div>
+          } @else {
+            <span class="branches-kpi-card__value">{{ kpiInactive() }}</span>
+          }
+          <span class="branches-kpi-card__label">Sucursales Inactivas</span>
+        </div>
+        <div class="branches-kpi-card__bar branches-kpi-card__bar--inactive"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW (Master-Detail Layout 35/65)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="branches-split" [class.branches-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="branches-directory" aria-label="Directorio de sucursales">
+
+      <!-- Buscador y filtros -->
+      <div class="branches-directory__filters">
+
+        <div class="branches-search">
+          <span class="material-symbols-outlined branches-search__icon" aria-hidden="true">search</span>
+          <input
+            id="branch-search"
+            class="branches-search__input"
+            type="search"
+            placeholder="Buscar por nombre, código, dirección..."
+            [ngModel]="filterText()"
+            (ngModelChange)="filterText.set($event)"
+            aria-label="Buscar sucursal"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="branches-filters-row">
+          <div class="branches-filter-group">
+            <label class="sr-only" for="filter-status">Estado</label>
+            <select
+              id="filter-status"
+              class="branches-filter-select"
+              [ngModel]="filterStatus()"
+              (ngModelChange)="filterStatus.set($event)"
+              aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activas</option>
+              <option value="INACTIVE">Inactivas</option>
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="branches-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoading) {
+        <div class="branches-directory__list" aria-busy="true" aria-label="Cargando sucursales">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="branch-item branch-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="branch-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError) {
+        <div class="branches-state branches-state--error" role="alert">
+          <span class="material-symbols-outlined branches-state__icon">cloud_off</span>
+          <p class="branches-state__title">Error al cargar</p>
+          <p class="branches-state__desc">{{ loadErrorMessage }}</p>
+          <button class="branches-btn branches-btn--ghost" type="button" (click)="loadBranches()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="branches-state" role="status">
+          <span class="material-symbols-outlined branches-state__icon">domain</span>
+          <p class="branches-state__title">Sin sucursales</p>
+          <p class="branches-state__desc">No hay sucursales registradas aún.</p>
+          @if (canCreate()) {
+            <button class="branches-btn branches-btn--primary" type="button" (click)="startNewBranch()">
+              <span class="material-symbols-outlined">add</span>
+              Registrar la primera
+            </button>
+          }
+        </div>
+      } @else if (hasNoResults) {
+        <div class="branches-state" role="status">
+          <span class="material-symbols-outlined branches-state__icon">search_off</span>
+          <p class="branches-state__title">Sin coincidencias</p>
+          <p class="branches-state__desc">Ninguna sucursal coincide con los filtros aplicados.</p>
+          <button class="branches-btn branches-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="branches-directory__list" role="listbox" aria-label="Lista de sucursales">
+          @for (branch of filteredBranches(); track branch.id) {
+            <li
+              class="branch-item"
+              [class.branch-item--selected]="isSelectedBranch(branch)"
+              [class.branch-item--inactive]="branch.status === 'INACTIVE'"
+              role="option"
+              [attr.aria-selected]="isSelectedBranch(branch)"
+              (click)="selectBranch(branch)"
+              (keydown.enter)="selectBranch(branch)"
+              tabindex="0">
+
+              <!-- Avatar -->
+              <div class="branch-avatar" aria-hidden="true">
+                {{ getInitials(branch) }}
+              </div>
+
+              <!-- Info -->
+              <div class="branch-item__body">
+                <div class="branch-item__name">{{ branch.name }}</div>
+                <div class="branch-item__meta">
+                  <span class="branch-item__code">{{ branch.code }}</span>
+                  <span class="branch-item__tz">{{ branch.timezone }}</span>
+                </div>
+                <div class="branch-item__org">{{ branch.orgName }}</div>
+              </div>
+
+              <!-- Estado -->
+              <div class="branch-item__status-col">
+                <span
+                  class="branch-status-badge branch-status-badge--{{ branch.status.toLowerCase() }}">
+                  {{ branchStatusLabels[branch.status] }}
+                </span>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <div class="branches-directory__footer">
+          <span class="branches-count">
+            {{ filteredBranches().length }} sucursal{{ filteredBranches().length !== 1 ? 'es' : '' }}
+          </span>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="branches-detail" aria-label="Detalle de la sucursal">
+
+      @if (formMode() === 'idle') {
+        <div class="branches-empty-state">
+          <div class="branches-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined branches-empty-state__icon">domain</span>
+          </div>
+          <h2 class="branches-empty-state__title">Sin selección</h2>
+          <p class="branches-empty-state__desc">
+            Selecciona una sucursal de la lista para consultar su información,
+            o registra una nueva.
+          </p>
+          @if (canCreate()) {
+            <button
+              class="branches-btn branches-btn--primary"
+              type="button"
+              (click)="startNewBranch()"
+              aria-label="Registrar nueva sucursal">
+              <span class="material-symbols-outlined">add</span>
+              Nueva sucursal
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="branches-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="branches-form-header">
+            <div class="branches-form-header__left">
+              <div class="branches-form-header__breadcrumb">
+                <span class="material-symbols-outlined">domain</span>
+                Sucursales
+                <span class="material-symbols-outlined branches-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nueva sucursal }
+                  @else { {{ selectedBranch()?.name }} }
+                </strong>
+              </div>
+              @if (formMode() === 'edit' && selectedBranch()) {
+                <span
+                  class="branch-status-badge branch-status-badge--{{ selectedBranch()!.status.toLowerCase() }}">
+                  {{ branchStatusLabels[selectedBranch()!.status] }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="branches-alert branches-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Sucursal guardada correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="branches-alert branches-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO REACTIVO
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveBranch()"
+            novalidate
+            autocomplete="off"
+            class="branches-form">
+
+            <!-- SECCIÓN 1 — Información General ──────────────────── -->
+            <fieldset class="branches-form-section">
+              <legend class="branches-form-section__legend">
+                <span class="material-symbols-outlined">warehouse</span>
+                Información General
+              </legend>
+
+              <div class="branches-form-grid branches-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="name">Nombre de Sucursal</label>
+                  <input
+                    id="name"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('name')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. Sucursal Norte Querétaro"
+                    maxlength="150"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('name')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('name') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="code">Código de Sucursal</label>
+                  <input
+                    id="code"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('code')"
+                    type="text"
+                    formControlName="code"
+                    placeholder="Ej. SUC-NORTE"
+                    maxlength="50"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('code')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('code') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="organizationId">Organización Perteneciente</label>
+                  <select
+                    id="organizationId"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('organizationId')"
+                    formControlName="organizationId"
+                    aria-required="true">
+                    @for (org of availableOrganizations(); track org.id) {
+                      <option [value]="org.id">{{ org.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
+                  <select
+                    id="status"
+                    class="fg-select"
+                    formControlName="status"
+                    aria-required="true">
+                    <option value="ACTIVE">Activa</option>
+                    <option value="INACTIVE">Inactiva</option>
+                  </select>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Ubicación y Zona Horaria ─────────────── -->
+            <fieldset class="branches-form-section">
+              <legend class="branches-form-section__legend">
+                <span class="material-symbols-outlined">location_on</span>
+                Ubicación y Configuración
+              </legend>
+
+              <div class="branches-form-grid branches-form-grid--2">
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label fg-label--required" for="addressLine1">Dirección Principal</label>
+                  <input
+                    id="addressLine1"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('addressLine1')"
+                    type="text"
+                    formControlName="addressLine1"
+                    placeholder="Ej. Av. de la Industria 500, Parque Industrial Querétaro"
+                    maxlength="300"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('addressLine1')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('addressLine1') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="timezone">Zona Horaria</label>
+                  <select
+                    id="timezone"
+                    class="fg-select"
+                    formControlName="timezone"
+                    aria-required="true">
+                    @for (tz of timezones; track tz.value) {
+                      <option [value]="tz.value">{{ tz.label }}</option>
+                    }
+                  </select>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Información de Control y Historial ──────── -->
+            @if (formMode() === 'edit' && selectedBranch()) {
+              <fieldset class="branches-form-section branches-form-section--readonly">
+                <legend class="branches-form-section__legend">
+                  <span class="material-symbols-outlined">manage_history</span>
+                  Información de Control y Auditoría BE
+                </legend>
+
+                <div class="branches-readonly-grid">
+                  <div class="branches-readonly-field">
+                    <span class="branches-readonly-field__label">ID de Sucursal (UUID)</span>
+                    <span class="branches-readonly-field__value font-mono">{{ selectedBranch()!.id }}</span>
+                  </div>
+                  <div class="branches-readonly-field">
+                    <span class="branches-readonly-field__label">Fecha de creación</span>
+                    <span class="branches-readonly-field__value">
+                      {{ selectedBranch()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="branches-readonly-field">
+                    <span class="branches-readonly-field__label">Última actualización</span>
+                    <span class="branches-readonly-field__value">
+                      {{ selectedBranch()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="branches-readonly-field">
+                    <span class="branches-readonly-field__label">Versión de Registro</span>
+                    <span class="branches-readonly-field__value font-mono">v{{ selectedBranch()!.version || 1 }}</span>
+                  </div>
+                </div>
+
+                <!-- ── Línea de Tiempo de Auditoría BE ── -->
+                @if (canViewAudit()) {
+                  <div class="branches-timeline-box">
+                    <div class="branches-timeline-header">
+                      <div class="branches-timeline-title">
+                        <span class="material-symbols-outlined">history</span>
+                        <span>Historial de Cambios de Auditoría (GET /api/v1/branches/&#123;id&#125;/audit)</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="branches-btn branches-btn--ghost branches-btn--sm"
+                        (click)="loadAuditLogs(selectedBranch()!.id)">
+                        <span class="material-symbols-outlined">refresh</span>
+                        Actualizar
+                      </button>
+                    </div>
+
+                    @if (isLoadingAudit()) {
+                      <div class="branches-audit-loading">
+                        <span class="material-symbols-outlined spinner">sync</span>
+                        <span>Cargando bitácora de auditoría...</span>
+                      </div>
+                    } @else if (auditEntries().length === 0) {
+                      <div class="branches-audit-empty">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>No hay eventos de auditoría registrados aún para esta sucursal.</span>
+                      </div>
+                    } @else {
+                      <div class="branches-timeline-nodes">
+                        @for (entry of auditEntries(); track entry.id; let last = $last) {
+                          <div class="branches-tl-node" [ngClass]="'branches-tl-node--' + (entry.timelineColor || 'update')">
+                            <div class="branches-tl-node__dot">
+                              <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                            </div>
+                            <div class="branches-tl-node__line" [class.branches-tl-node__line--last]="last"></div>
+                            <div class="branches-tl-node__content">
+                              <div class="branches-tl-node__header">
+                                <span class="branches-tl-node__action">{{ entry.summary }}</span>
+                                <span class="branches-tl-node__meta">
+                                  Por <strong>{{ entry.performedBy }}</strong> · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                                </span>
+                              </div>
+
+                              @if (entry.details && entry.details.length > 0) {
+                                <div class="branches-tl-node__details">
+                                  @for (det of entry.details; track det.fieldName) {
+                                    <div class="branches-tl-detail-item">
+                                      <span class="branches-tl-detail-field">{{ det.fieldName }}:</span>
+                                      <span class="branches-tl-detail-old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                      <span class="material-symbols-outlined branches-tl-detail-arrow">arrow_forward</span>
+                                      <span class="branches-tl-detail-new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO ──────────────────────── -->
+            <div class="branches-form-actions">
+
+              <!-- Acciones de estado (solo en edición) -->
+              @if (formMode() === 'edit' && selectedBranch()) {
+                <div class="branches-form-actions__status-group">
+
+                  <button
+                    class="branches-btn"
+                    [class.branches-btn--success]="selectedBranch()!.status === 'INACTIVE'"
+                    [class.branches-btn--warning]="selectedBranch()!.status === 'ACTIVE'"
+                    type="button"
+                    [disabled]="isSaving"
+                    (click)="openStatusDialog('toggle')">
+                    <span class="material-symbols-outlined">
+                      {{ selectedBranch()!.status === 'ACTIVE' ? 'pause_circle' : 'check_circle' }}
+                    </span>
+                    {{ selectedBranch()!.status === 'ACTIVE' ? 'Desactivar sucursal' : 'Activar sucursal' }}
+                  </button>
+
+                  @if (canDelete()) {
+                    <button
+                      class="branches-btn branches-btn--danger-ghost"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('delete')">
+                      <span class="material-symbols-outlined">delete</span>
+                      Eliminar
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Guardar / Cancelar -->
+              <div class="branches-form-actions__main-group">
+                <button
+                  class="branches-btn branches-btn--ghost"
+                  type="button"
+                  (click)="cancelForm()"
+                  [disabled]="isSaving">
+                  Cancelar
+                </button>
+
+                <button
+                  id="btn-save-branch"
+                  class="branches-btn branches-btn--primary"
+                  type="submit"
+                  [disabled]="isSaving">
+                  @if (isSaving) {
+                    <span class="material-symbols-outlined spinner">sync</span>
+                    Guardando...
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    {{ formMode() === 'new' ? 'Crear sucursal' : 'Guardar cambios' }}
+                  }
+                </button>
+              </div>
+
+            </div>
+
+          </form>
+        </div>
+      }
+
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DIÁLOGO DE CONFIRMACIÓN DE ESTADO / ELIMINACIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  @if (statusDialogOpen()) {
+    <div class="branches-dialog-backdrop" (click)="closeStatusDialog()">
+      <div class="branches-dialog" (click)="$event.stopPropagation()">
+
+        <div class="branches-dialog__header">
+          <span class="material-symbols-outlined branches-dialog__icon">
+            {{ statusDialogAction() === 'delete' ? 'delete_forever' : 'help_outline' }}
+          </span>
+          <h3 class="branches-dialog__title">
+            {{ statusDialogAction() === 'delete' ? 'Eliminar Sucursal' : 'Cambiar Estado de Sucursal' }}
+          </h3>
+        </div>
+
+        <div class="branches-dialog__body">
+          <p>
+            @if (statusDialogAction() === 'delete') {
+              ¿Estás seguro de que deseas eliminar permanentemente la sucursal
+              <strong>"{{ selectedBranch()?.name }}"</strong>? Esta acción no se puede deshacer.
+            } @else {
+              ¿Deseas cambiar el estado operativo de
+              <strong>"{{ selectedBranch()?.name }}"</strong> a
+              <em>{{ selectedBranch()?.status === 'ACTIVE' ? 'INACTIVA' : 'ACTIVA' }}</em>?
+            }
+          </p>
+        </div>
+
+        <div class="branches-dialog__actions">
+          <button class="branches-btn branches-btn--ghost" type="button" (click)="closeStatusDialog()">
+            Cancelar
+          </button>
+          <button
+            class="branches-btn"
+            [class.branches-btn--danger]="statusDialogAction() === 'delete'"
+            [class.branches-btn--primary]="statusDialogAction() === 'toggle'"
+            type="button"
+            (click)="confirmStatusDialog()">
+            Confirmar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
