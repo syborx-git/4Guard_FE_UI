@@ -55,5 +55,11 @@ export const adminRoutes: Routes = [
       import('./clients/clients.routes').then((m) => m.clientsRoutes),
     title: '4GUARD WMS — Gestión de Clientes',
   },
+  {
+    path: 'skus',
+    loadChildren: () =>
+      import('./skus/skus.routes').then((m) => m.skusRoutes),
+    title: '4GUARD WMS — Catálogo de Productos / SKUs',
+  },
 ];
 

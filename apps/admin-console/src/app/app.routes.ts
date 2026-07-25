@@ -153,6 +153,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Clientes',
       },
 
+      // Catálogo de Productos / SKUs (Homologado)
+      {
+        path: 'skus',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/skus/skus.routes').then((m) => m.skusRoutes),
+        title: '4GUARD WMS — Catálogo de Productos / SKUs',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',
