@@ -1,128 +1,48 @@
-import { Injectable, inject, signal } from '@angular/core';
+/**
+ * @file role-permission.service.ts
+ * @description Servicio de gestión de Roles y Matriz de Permisos (RBAC).
+ * Integrado con el Backend mediante HTTP siguiendo el patrón estándar de 4GUARD WMS.
+ *
+ * Endpoints REST:
+ *   GET    /api/v1/roles                       — Listar todos los roles con sus permisos
+ *   GET    /api/v1/roles/{id}                  — Obtener rol por ID
+ *   POST   /api/v1/roles                       — Crear nuevo rol
+ *   PUT    /api/v1/roles                       — Actualizar rol (Nombre, Nivel, Permisos)
+ *   PUT    /api/v1/roles/{id}/permissions       — Asignar/Reemplazar matriz de permisos
+ *   GET    /api/v1/roles/{id}/audit            — Bitácora de auditoría BE de rol [NUEVO]
+ *   DELETE /api/v1/roles/{id}                  — Eliminar rol
+ *   GET    /api/v1/permissions                 — Catálogo completo de permisos
+ *   GET    /api/v1/permissions/{id}            — Obtener permiso por ID
+ *   GET    /api/v1/permissions/{id}/audit      — Bitácora de auditoría BE de permiso [NUEVO]
+ */
+
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, forkJoin } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError, tap, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import {
+  Permission,
+  Role,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+  RoleAuditLog,
+  PermissionAuditLog,
+  ApiResponse,
+  getPermissionModuleGroup,
+  getRoleAuditIcon,
+  getRoleAuditColor,
+  getRoleAuditSummary,
+} from '../roles/models/role-permission.model';
 
-export interface Permission {
-  id?: string;
-  code: string;
-  name: string;
-  description: string;
-}
-
-export interface Role {
-  id: string;
-  name: string;
-  level: number; // hierarchy access
-  isSystem: boolean; // system role (read-only structure)
-  permissions: string[]; // array of permission codes
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data?: T;
-  timestamp: string;
-}
-
-export interface PermissionDto {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface RoleDto {
-  id: string;
-  name: string;
-  level: number;
-  isSystem: boolean;
-  permissions: PermissionDto[];
-}
-
-const FRIENDLY_NAMES: Record<string, string> = {
-  // Roles & Permissions
-  'ROLES_READ': 'Lectura de Roles',
-  'ROLES_CREATE': 'Creación de Roles',
-  'ROLES_UPDATE': 'Edición de Roles',
-  'ROLES_DELETE': 'Eliminación de Roles',
-  'PERMISSIONS_READ': 'Lectura de Permisos',
-  'PERMISSIONS_CREATE': 'Creación de Permisos',
-  'PERMISSIONS_DELETE': 'Eliminación de Permisos',
-  // Users
-  'USERS_READ': 'Lectura de Usuarios',
-  'USERS_CREATE': 'Creación de Usuarios',
-  'USERS_UPDATE': 'Edición de Usuarios',
-  'USERS_DELETE': 'Eliminación de Usuarios',
-  // Inventory
-  'INVENTORY_READ': 'Lectura de Inventario',
-  'INVENTORY_CREATE': 'Creación de Inventario',
-  'INVENTORY_UPDATE': 'Edición de Inventario',
-  'INVENTORY_DELETE': 'Eliminación de Inventario',
-  'INVENTORY_CONFIRM': 'Confirmación de Inventario',
-  // Quality
-  'QUALITY_READ': 'Lectura de Calidad',
-  'QUALITY_UPDATE': 'Edición de Calidad',
-  'QUALITY_CONFIRM': 'Confirmación de Calidad',
-  'QUALITY_AUTHORIZE': 'Autorización de Calidad',
-  // Audit
-  'AUDIT_READ': 'Lectura de Auditoría',
-  'AUDIT_CREATE': 'Creación de Auditoría',
-  'AUDIT_EXECUTE': 'Ejecución de Auditoría',
-  // Shipping
-  'SHIPPING_READ': 'Lectura de Embarques',
-  'SHIPPING_CREATE': 'Creación de Embarques',
-  'SHIPPING_UPDATE': 'Edición de Embarques',
-  'SHIPPING_CONFIRM': 'Confirmación de Embarques',
-  // Receiving
-  'RECEIVING_READ': 'Lectura de Recibo',
-  'RECEIVING_CREATE': 'Creación de Recibo',
-  'RECEIVING_UPDATE': 'Edición de Recibo',
-  'RECEIVING_CONFIRM': 'Confirmación de Recibo',
-  // Packing
-  'PACKING_READ': 'Lectura de Empaque',
-  'PACKING_CREATE': 'Creación de Empaque',
-  'PACKING_UPDATE': 'Edición de Empaque',
-  'PACKING_CONFIRM': 'Confirmación de Empaque',
-  // Picking
-  'PICKING_READ': 'Lectura de Picking',
-  'PICKING_CREATE': 'Creación de Picking',
-  'PICKING_UPDATE': 'Edición de Picking',
-  'PICKING_CONFIRM': 'Confirmación de Picking',
-  // Ramps
-  'RAMPS_READ': 'Lectura de Rampas/Andenes',
-  'RAMPS_CREATE': 'Creación de Rampas/Andenes',
-  'RAMPS_UPDATE': 'Edición de Rampas/Andenes',
-  'RAMPS_AUTHORIZE': 'Autorización de Rampas/Andenes',
-  // Labels
-  'LABELS_READ': 'Lectura de Etiquetas',
-  'LABELS_CREATE': 'Creación de Etiquetas',
-  'LABELS_EXECUTE': 'Impresión/Ejecución de Etiquetas',
-  // Reports
-  'REPORTS_READ': 'Lectura de Reportes',
-  'REPORTS_CREATE': 'Creación de Reportes',
-  'REPORTS_EXECUTE': 'Ejecución de Reportes',
-  // Clients
-  'CLIENTS_READ': 'Lectura de Clientes',
-  'CLIENTS_CREATE': 'Creación de Clientes',
-  'CLIENTS_UPDATE': 'Edición de Clientes',
-  'CLIENTS_DELETE': 'Eliminación de Clientes',
-  // Layout
-  'LAYOUT_READ': 'Lectura de Distribución/Layout',
-  'LAYOUT_UPDATE': 'Edición de Distribución/Layout',
-  'LAYOUT_EXECUTE': 'Ejecución de Distribución/Layout',
-  // Dashboard
-  'DASHBOARD_READ': 'Lectura de Dashboard',
-  'DASHBOARD_EXECUTE': 'Ejecución de Dashboard',
-  // Metadata
-  'METADATA_READ': 'Lectura de Metadatos',
-  'METADATA_CREATE': 'Creación de Metadatos',
-  'METADATA_UPDATE': 'Edición de Metadatos',
-  // Operations
-  'OPERATIONS_READ': 'Lectura de Operaciones',
-  'OPERATIONS_CREATE': 'Creación de Operaciones',
-  'OPERATIONS_UPDATE': 'Edición de Operaciones',
-  'OPERATIONS_EXECUTE': 'Ejecución de Operaciones'
+export type {
+  Permission,
+  Role,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+  RoleAuditLog,
+  PermissionAuditLog,
+  ApiResponse,
 };
 
 @Injectable({
@@ -130,12 +50,23 @@ const FRIENDLY_NAMES: Record<string, string> = {
 })
 export class RolePermissionService {
   private readonly http = inject(HttpClient);
-  
+
   private readonly permissionList = signal<Permission[]>([]);
-  private readonly roleList = signal<Role[]>([]);
+  private readonly roleList       = signal<Role[]>([]);
+
+  // ─── Signals Reactivos de Estado ─────────────────────────────────────────────
 
   readonly permissions = this.permissionList.asReadonly();
-  readonly roles = this.roleList.asReadonly();
+  readonly roles       = this.roleList.asReadonly();
+  readonly loading     = signal<boolean>(false);
+  readonly saving      = signal<boolean>(false);
+  readonly loadError   = signal<string | null>(null);
+
+  // ─── Computed KPIs ──────────────────────────────────────────────────────────
+
+  readonly totalCount       = computed(() => this.roleList().length);
+  readonly systemRolesCount = computed(() => this.roleList().filter(r => r.isSystem).length);
+  readonly customRolesCount = computed(() => this.roleList().filter(r => !r.isSystem).length);
 
   getAllPermissions(): Permission[] {
     return this.permissionList();
@@ -148,110 +79,144 @@ export class RolePermissionService {
   /**
    * Carga paralela de roles y permisos desde el Backend.
    */
-  loadRolesAndPermissions(): Observable<[ApiResponse<RoleDto[]>, ApiResponse<PermissionDto[]>]> {
+  loadRolesAndPermissions(): Observable<[ApiResponse<Role[]>, ApiResponse<Permission[]>]> {
+    this.loading.set(true);
+    this.loadError.set(null);
+
     return forkJoin([
-      this.http.get<ApiResponse<RoleDto[]>>(`${environment.apiBaseUrl}/api/v1/roles`),
-      this.http.get<ApiResponse<PermissionDto[]>>(`${environment.apiBaseUrl}/api/v1/permissions`)
+      this.http.get<ApiResponse<any[]>>(`${environment.apiBaseUrl}/api/v1/roles`),
+      this.http.get<ApiResponse<any[]>>(`${environment.apiBaseUrl}/api/v1/permissions`)
     ]).pipe(
       tap(([rolesResp, permsResp]) => {
-        if (permsResp.success && permsResp.data) {
-          const mappedPerms = permsResp.data.map(dto => ({
-            id: dto.id,
-            code: dto.name,
-            name: FRIENDLY_NAMES[dto.name] || dto.name,
-            description: dto.description || ''
-          }));
-          this.permissionList.set(mappedPerms);
-        }
-        if (rolesResp.success && rolesResp.data) {
-          const mappedRoles = rolesResp.data.map(dto => ({
-            id: dto.id,
-            name: dto.name,
-            level: dto.level,
-            isSystem: dto.isSystem,
-            permissions: dto.permissions.map(p => p.name)
-          }));
-          this.roleList.set(mappedRoles);
-        }
+        this.loading.set(false);
+
+        // 1. Mapear catálogo de permisos
+        const permsData = permsResp.data || (Array.isArray(permsResp) ? permsResp : []);
+        const mappedPerms: Permission[] = permsData.map(dto => ({
+          id: dto.id,
+          name: dto.name,
+          description: dto.description || '',
+          createdAt: dto.createdAt || new Date().toISOString(),
+          moduleGroup: getPermissionModuleGroup(dto.name)
+        }));
+        this.permissionList.set(mappedPerms);
+
+        // 2. Mapear roles con sus objetos Permission[] integrados
+        const rolesData = rolesResp.data || (Array.isArray(rolesResp) ? rolesResp : []);
+        const mappedRoles: Role[] = rolesData.map(dto => this.mapRoleDto(dto, mappedPerms));
+        this.roleList.set(mappedRoles);
       }),
-      catchError((error: HttpErrorResponse) => this.handleError(error))
+      catchError((error: HttpErrorResponse) => {
+        this.loading.set(false);
+        const msg = error?.error?.message || error?.message || 'Error al cargar roles y permisos del servidor.';
+        this.loadError.set(msg);
+        return throwError(() => error);
+      })
     );
   }
 
   /**
-   * Crea un nuevo rol en el backend.
+   * Obtiene un rol por su ID.
    */
-  createRole(role: Omit<Role, 'id' | 'isSystem'>): Observable<ApiResponse<RoleDto>> {
-    const permissionIds = role.permissions.map(code => {
-      const match = this.permissionList().find(p => p.code === code);
-      return match ? match.id : null;
-    }).filter(id => id !== null) as string[];
+  getRoleById(id: string): Observable<ApiResponse<Role>> {
+    return this.http.get<ApiResponse<any>>(`${environment.apiBaseUrl}/api/v1/roles/${id}`).pipe(
+      map(res => {
+        const dto = res.data || res;
+        const role = this.mapRoleDto(dto, this.permissionList());
+        return { ...res, data: role };
+      })
+    );
+  }
+
+  /**
+   * Crea un nuevo rol en el Backend.
+   */
+  createRole(roleReq: CreateRoleRequest): Observable<ApiResponse<Role>> {
+    this.saving.set(true);
 
     const payload = {
-      name: role.name,
-      level: role.level,
-      isSystem: false,
-      permissionIds
+      name: roleReq.name.trim().toUpperCase(),
+      level: Number(roleReq.level),
+      permissionIds: roleReq.permissionIds || []
     };
 
-    return this.http.post<ApiResponse<RoleDto>>(`${environment.apiBaseUrl}/api/v1/roles`, payload).pipe(
+    return this.http.post<ApiResponse<any>>(`${environment.apiBaseUrl}/api/v1/roles`, payload).pipe(
       tap(response => {
-        if (response.success && response.data) {
-          const dto = response.data;
-          const newRole: Role = {
-            id: dto.id,
-            name: dto.name,
-            level: dto.level,
-            isSystem: dto.isSystem,
-            permissions: dto.permissions.map(p => p.name)
-          };
+        this.saving.set(false);
+        const dto = response.data || (response as any);
+        if (dto && dto.id) {
+          const newRole = this.mapRoleDto(dto, this.permissionList());
           this.roleList.update(list => [...list, newRole]);
+        } else {
+          this.loadRolesAndPermissions().subscribe();
         }
       }),
-      catchError((error: HttpErrorResponse) => this.handleError(error))
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
     );
   }
 
   /**
-   * Modifica un rol existente en el backend.
+   * Modifica un rol existente en el Backend (Nombre, Nivel y/o Permisos).
    */
-  updateRole(id: string, updatedFields: Partial<Role>): Observable<ApiResponse<RoleDto>> {
-    let permissionIds: string[] | undefined;
-    if (updatedFields.permissions) {
-      permissionIds = updatedFields.permissions.map(code => {
-        const match = this.permissionList().find(p => p.code === code);
-        return match ? match.id : null;
-      }).filter(id => id !== null) as string[];
-    }
+  updateRole(id: string, roleReq: UpdateRoleRequest): Observable<ApiResponse<Role>> {
+    this.saving.set(true);
 
     const payload = {
       id: id,
-      name: updatedFields.name,
-      level: updatedFields.level,
-      isSystem: updatedFields.isSystem ?? false,
-      permissionIds
+      name: roleReq.name.trim().toUpperCase(),
+      level: Number(roleReq.level),
+      permissionIds: roleReq.permissionIds || []
     };
 
-    return this.http.put<ApiResponse<RoleDto>>(`${environment.apiBaseUrl}/api/v1/roles`, payload).pipe(
+    return this.http.put<ApiResponse<any>>(`${environment.apiBaseUrl}/api/v1/roles`, payload).pipe(
       tap(response => {
-        if (response.success && response.data) {
-          const dto = response.data;
-          const updatedRole: Role = {
-            id: dto.id,
-            name: dto.name,
-            level: dto.level,
-            isSystem: dto.isSystem,
-            permissions: dto.permissions.map(p => p.name)
-          };
+        this.saving.set(false);
+        const dto = response.data || (response as any);
+        if (dto && dto.id) {
+          const updatedRole = this.mapRoleDto(dto, this.permissionList());
           this.roleList.update(list => list.map(item => item.id === id ? updatedRole : item));
+        } else {
+          this.loadRolesAndPermissions().subscribe();
         }
       }),
-      catchError((error: HttpErrorResponse) => this.handleError(error))
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
     );
   }
 
   /**
-   * Elimina un rol del backend.
+   * Asigna / Reemplaza directamente el arreglo de permisos a un rol.
+   * Endpoint: PUT /api/v1/roles/{id}/permissions
+   */
+  assignPermissions(roleId: string, permissionIds: string[]): Observable<ApiResponse<Role>> {
+    this.saving.set(true);
+    const url = `${environment.apiBaseUrl}/api/v1/roles/${roleId}/permissions`;
+
+    return this.http.put<ApiResponse<any>>(url, permissionIds).pipe(
+      tap(response => {
+        this.saving.set(false);
+        const dto = response.data || (response as any);
+        if (dto && dto.id) {
+          const updatedRole = this.mapRoleDto(dto, this.permissionList());
+          this.roleList.update(list => list.map(item => item.id === roleId ? updatedRole : item));
+        } else {
+          this.loadRolesAndPermissions().subscribe();
+        }
+      }),
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Elimina un rol del Backend.
    */
   deleteRole(id: string): Observable<ApiResponse<void>> {
     const role = this.roleList().find(item => item.id === id);
@@ -259,14 +224,90 @@ export class RolePermissionService {
       return throwError(() => new Error('No se pueden eliminar roles definidos del sistema.'));
     }
 
+    this.saving.set(true);
     return this.http.delete<ApiResponse<void>>(`${environment.apiBaseUrl}/api/v1/roles/${id}`).pipe(
-      tap(response => {
-        if (response.success) {
-          this.roleList.update(list => list.filter(item => item.id !== id));
-        }
+      tap(() => {
+        this.saving.set(false);
+        this.roleList.update(list => list.filter(item => item.id !== id));
       }),
-      catchError((error: HttpErrorResponse) => this.handleError(error))
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
     );
+  }
+
+  /**
+   * Obtiene el historial de auditoría de un rol desde la API Backend.
+   * Endpoint: GET /api/v1/roles/{id}/audit
+   */
+  getRoleAudit(roleId: string): Observable<ApiResponse<RoleAuditLog[]>> {
+    const url = `${environment.apiBaseUrl}/api/v1/roles/${roleId}/audit`;
+
+    return this.http.get<ApiResponse<RoleAuditLog[]>>(url).pipe(
+      map(res => {
+        const rawList = res.data || (Array.isArray(res) ? res : []);
+        const formattedData: RoleAuditLog[] = rawList.map((item: any) => {
+          const actionStr = item.action || 'ROLE_UPDATED';
+          return {
+            id: item.logId || item.id || String(Math.random()),
+            action: actionStr,
+            performedBy: item.username || item.performedBy || 'enrique',
+            performedAt: item.createdAt || item.performedAt || new Date().toISOString(),
+            summary: getRoleAuditSummary(actionStr),
+            timelineIcon: getRoleAuditIcon(actionStr),
+            timelineColor: getRoleAuditColor(actionStr),
+            details: item.details || []
+          };
+        });
+        return {
+          status: res.status || 200,
+          message: res.message || 'Auditoría recuperada',
+          data: formattedData
+        };
+      }),
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al recuperar historial de auditoría del rol:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Mapea un DTO de Rol convirtiendo permissions DTO/strings en objetos Permission[].
+   */
+  private mapRoleDto(dto: any, allPerms: Permission[]): Role {
+    let permissions: Permission[] = [];
+
+    if (Array.isArray(dto.permissions)) {
+      permissions = dto.permissions.map((p: any) => {
+        if (typeof p === 'string') {
+          const found = allPerms.find(item => item.name === p || item.id === p);
+          return found ? found : { id: p, name: p, description: p, moduleGroup: getPermissionModuleGroup(p) };
+        } else {
+          return {
+            id: p.id,
+            name: p.name,
+            description: p.description || '',
+            createdAt: p.createdAt,
+            moduleGroup: getPermissionModuleGroup(p.name)
+          };
+        }
+      });
+    }
+
+    return {
+      id: dto.id,
+      name: dto.name,
+      level: dto.level ?? 3,
+      isSystem: dto.isSystem ?? false,
+      permissions: permissions,
+      version: dto.version || 1,
+      createdAt: dto.createdAt || new Date().toISOString(),
+      updatedAt: dto.updatedAt || new Date().toISOString(),
+      createdBy: dto.createdBy || 'Sistema',
+      updatedBy: dto.updatedBy || 'Sistema'
+    };
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
