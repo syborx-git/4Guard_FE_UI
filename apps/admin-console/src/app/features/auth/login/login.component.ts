@@ -12,7 +12,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
 import { AuthState } from '../../../core/auth/auth.state';
@@ -36,10 +36,12 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly authState            = inject(AuthState);
   private readonly authService          = inject(AuthService);
   private readonly sessionStorageService = inject(SessionStorageService);
+  private readonly route                = inject(ActivatedRoute);
 
   // ── Estado del layout / vistas (HU-010) ──────────────────
   protected readonly viewState = signal<LoginViewState>('login');
   protected readonly showForgotModal = signal<boolean>(false);
+  protected readonly inactivityNotice = signal<boolean>(false);
 
   // ── Estado de carga y errores ────────────────────────────
   protected readonly isLoading  = signal<boolean>(false);
@@ -69,7 +71,15 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.checkAndRestoreLockoutState();
+    const reason = this.route.snapshot.queryParams['reason'];
+    if (reason === 'inactivity') {
+      this.inactivityNotice.set(true);
+      this.sessionStorageService.clearAuthLockout();
+      this.viewState.set('login');
+      this.attemptsRemaining.set(null);
+    } else {
+      this.checkAndRestoreLockoutState();
+    }
 
     // Sincronizar el conteo de intentos fallidos cuando el usuario cambia o escribe el email
     this.emailCtrl.valueChanges.subscribe((rawEmail) => {

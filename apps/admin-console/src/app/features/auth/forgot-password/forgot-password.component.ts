@@ -27,6 +27,14 @@ export class ForgotPasswordComponent implements OnDestroy {
   protected readonly isLoading = signal<boolean>(false);
   protected readonly errorMessage = signal<string | null>(null);
 
+  protected get showSteps(): boolean {
+    return this.flowState() !== 'success';
+  }
+
+  protected get currentState(): string {
+    return this.flowState();
+  }
+
   // Temporizador para reenvío de OTP (60s)
   protected readonly resendCountdown = signal<number>(60);
   protected readonly canResend = signal<boolean>(false);

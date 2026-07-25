@@ -17,13 +17,7 @@
     radial-gradient(circle at top right, rgba(197, 157, 67, 0.08), transparent 28rem),
     linear-gradient(180deg, #f8f6f1 0%, #f3f0e9 100%);
   color: #17243d;
-  font-family:
-    Inter,
-    "DM Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: 'DM Sans', sans-serif;
   animation: qualityFadeIn 320ms ease both;
 }
 
@@ -72,10 +66,7 @@
 .quality-header__title {
   margin: 0;
   color: #17243d;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: clamp(2rem, 3vw, 2.65rem);
   font-weight: 600;
   letter-spacing: -0.035em;
@@ -328,6 +319,7 @@
 .quality-card__title {
   margin: 0;
   color: #1f2d48;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1rem;
   font-weight: 700;
 }

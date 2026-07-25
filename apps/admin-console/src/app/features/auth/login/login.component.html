@@ -39,6 +39,14 @@
             Ingresa tus credenciales para acceder al sistema.
           </p>
 
+          <!-- Aviso de cierre por inactividad -->
+          @if (inactivityNotice()) {
+            <div class="login-info-alert" role="status" aria-live="polite">
+              <span class="material-symbols-outlined login-info-alert__icon">info</span>
+              <span class="login-info-alert__msg">Tu sesión se cerró por inactividad. Puedes ingresar normalmente con tus credenciales.</span>
+            </div>
+          }
+
           <!-- Error global -->
           @if (loginError()) {
             <div class="login-error" role="alert" aria-live="assertive">

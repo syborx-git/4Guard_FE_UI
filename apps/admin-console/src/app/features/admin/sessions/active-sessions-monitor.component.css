@@ -24,13 +24,7 @@
       transparent 31rem),
     linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
   color: #17243d;
-  font-family:
-    Inter,
-    "DM Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: 'DM Sans', sans-serif;
   animation: sessionsPageEnter 320ms ease both;
 }
 
@@ -126,10 +120,7 @@
 .sessions-title-text h1 {
   margin: 0;
   color: #17243d;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: clamp(2rem, 3vw, 2.65rem);
   font-weight: 600;
   letter-spacing: -0.035em;
@@ -204,7 +195,7 @@
     0 4px 14px rgba(74, 108, 212, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   color: #3a5bd9;
-  font-family: 'Playfair Display', 'Bodoni Moda', Georgia, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -482,10 +473,7 @@
   background: #17243d;
   box-shadow: 0 8px 18px rgba(23, 36, 61, 0.15);
   color: #d4b267;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -836,10 +824,7 @@
 .state-panel h2 {
   margin: 0;
   color: #26344e;
-  font-family:
-    "Playfair Display",
-    Georgia,
-    serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.55rem;
   font-weight: 600;
 }
