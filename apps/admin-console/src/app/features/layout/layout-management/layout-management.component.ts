@@ -22,6 +22,7 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -56,7 +57,7 @@ function locationCodeValidator(ctrl: AbstractControl): ValidationErrors | null {
   selector:        'fg-layout-management',
   standalone:      true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:         [CommonModule, ReactiveFormsModule, NgTemplateOutlet],
+  imports:         [CommonModule, ReactiveFormsModule, NgTemplateOutlet, RouterLink],
   templateUrl:     './layout-management.component.html',
   styleUrl:        './layout-management.component.css',
 })
