@@ -133,6 +133,46 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Organizaciones',
       },
 
+      // Gestión de Sucursales (Homologado)
+      {
+        path: 'branches',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/branches/branches.routes').then((m) => m.branchesRoutes),
+        title: '4GUARD WMS — Gestión de Sucursales',
+      },
+
+      // Gestión de Clientes (Homologado)
+      {
+        path: 'clients',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/clients/clients.routes').then((m) => m.clientsRoutes),
+        title: '4GUARD WMS — Gestión de Clientes',
+      },
+
+      // Catálogo de Productos / SKUs (Homologado)
+      {
+        path: 'skus',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/skus/skus.routes').then((m) => m.skusRoutes),
+        title: '4GUARD WMS — Catálogo de Productos / SKUs',
+      },
+
+      // Roles y Matriz de Permisos (Homologado)
+      {
+        path: 'roles',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/roles/roles.routes').then((m) => m.rolesRoutes),
+        title: '4GUARD WMS — Roles y Matriz de Permisos',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',

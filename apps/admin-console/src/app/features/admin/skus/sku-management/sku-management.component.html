@@ -1,0 +1,745 @@
+<!--
+  sku-management.component.html
+  Catálogo de Productos / SKUs — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Estilos: Prestige Gold & Midnight Navy (Modo Claro por defecto + Modo Oscuro)
+  Botones de acción homologados con Transportistas
+-->
+
+<div class="skus-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="skus-header">
+
+    <div class="skus-header__top">
+
+      <div class="skus-header__left">
+        <div class="skus-header__icon-wrap">
+          <span class="material-symbols-outlined skus-header__icon">inventory_2</span>
+        </div>
+
+        <div class="skus-header__copy">
+          <div class="skus-header__eyebrow">
+            <a routerLink="/admin" class="skus-header__eyebrow-tag">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="skus-header__eyebrow-sep">·</span>
+            <span>Catálogos de Mercancía</span>
+          </div>
+          <h1 class="skus-header__title">Catálogo de Productos / SKUs</h1>
+          <p class="skus-header__subtitle">
+            Gestión maestra de artículos, unidades de medida, peso y clientes depositantes titulares
+          </p>
+        </div>
+      </div>
+
+      @if (canCreate()) {
+        <button
+          id="btn-new-sku"
+          class="skus-btn skus-btn--primary"
+          type="button"
+          (click)="startNewSku()"
+          [disabled]="isSaving"
+          aria-label="Registrar nuevo producto / SKU">
+          <span class="material-symbols-outlined">add</span>
+          Nuevo SKU
+        </button>
+      }
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="skus-kpi-grid" aria-label="Indicadores de productos">
+
+      <!-- Total SKUs -->
+      <div class="skus-kpi-card skus-kpi-card--total">
+        <div class="skus-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">inventory_2</span>
+        </div>
+        <div class="skus-kpi-card__body">
+          @if (isLoading) {
+            <div class="skus-kpi-card__skeleton"></div>
+          } @else {
+            <span class="skus-kpi-card__value">{{ totalSkus() }}</span>
+          }
+          <span class="skus-kpi-card__label">Total Registrados</span>
+        </div>
+        <div class="skus-kpi-card__bar skus-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- SKUs Activos -->
+      <div class="skus-kpi-card skus-kpi-card--active">
+        <div class="skus-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="skus-kpi-card__body">
+          @if (isLoading) {
+            <div class="skus-kpi-card__skeleton"></div>
+          } @else {
+            <span class="skus-kpi-card__value">{{ activeSkus() }}</span>
+          }
+          <span class="skus-kpi-card__label">SKUs Activos</span>
+        </div>
+        <div class="skus-kpi-card__bar skus-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- SKUs Inactivos -->
+      <div class="skus-kpi-card skus-kpi-card--inactive">
+        <div class="skus-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">pause_circle</span>
+        </div>
+        <div class="skus-kpi-card__body">
+          @if (isLoading) {
+            <div class="skus-kpi-card__skeleton"></div>
+          } @else {
+            <span class="skus-kpi-card__value">{{ inactiveSkus() }}</span>
+          }
+          <span class="skus-kpi-card__label">SKUs Inactivos</span>
+        </div>
+        <div class="skus-kpi-card__bar skus-kpi-card__bar--inactive"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW (Master-Detail Layout 35/65)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="skus-split" [class.skus-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="skus-directory" aria-label="Directorio de SKUs">
+
+      <!-- Buscador y filtros -->
+      <div class="skus-directory__filters">
+
+        <div class="skus-search">
+          <span class="material-symbols-outlined skus-search__icon" aria-hidden="true">search</span>
+          <input
+            id="sku-search"
+            class="skus-search__input"
+            type="search"
+            placeholder="Buscar por código SKU, nombre, cliente..."
+            [ngModel]="filterText()"
+            (ngModelChange)="updateFilterText($event)"
+            aria-label="Buscar producto"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="skus-filters-row">
+          <div class="skus-filter-group">
+            <label class="sr-only" for="filter-client">Cliente</label>
+            <select
+              id="filter-client"
+              class="skus-filter-select"
+              [ngModel]="filterClientId()"
+              (ngModelChange)="updateFilterClient($event)"
+              aria-label="Filtrar por cliente depositante">
+              <option value="">Todos los clientes</option>
+              @for (c of availableClients(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="skus-filter-group">
+            <label class="sr-only" for="filter-status">Estatus</label>
+            <select
+              id="filter-status"
+              class="skus-filter-select"
+              [ngModel]="filterStatus()"
+              (ngModelChange)="updateFilterStatus($event)"
+              aria-label="Filtrar por estatus operativo">
+              <option value="">Todos los estatus</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="skus-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              title="Limpiar filtros"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoading) {
+        <div class="skus-directory__list" aria-busy="true" aria-label="Cargando productos">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="sku-item sku-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="sku-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError) {
+        <div class="skus-state skus-state--error" role="alert">
+          <span class="material-symbols-outlined skus-state__icon">cloud_off</span>
+          <p class="skus-state__title">Error al cargar</p>
+          <p class="skus-state__desc">{{ loadErrorMessage }}</p>
+          <button class="skus-btn skus-btn--ghost" type="button" (click)="loadSkus()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="skus-state" role="status">
+          <span class="material-symbols-outlined skus-state__icon">inventory_2</span>
+          <p class="skus-state__title">Sin productos</p>
+          <p class="skus-state__desc">No hay artículos o SKUs registrados aún en el catálogo.</p>
+          @if (canCreate()) {
+            <button class="skus-btn skus-btn--primary" type="button" (click)="startNewSku()">
+              <span class="material-symbols-outlined">add</span>
+              Registrar el primero
+            </button>
+          }
+        </div>
+      } @else if (hasNoResults) {
+        <div class="skus-state" role="status">
+          <span class="material-symbols-outlined skus-state__icon">search_off</span>
+          <p class="skus-state__title">Sin coincidencias</p>
+          <p class="skus-state__desc">Ningún producto coincide con los filtros aplicados.</p>
+          <button class="skus-btn skus-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="skus-directory__list" role="listbox" aria-label="Lista de productos">
+          @for (sku of paginatedSkus(); track sku.id) {
+            <li
+              class="sku-item"
+              [class.sku-item--selected]="isSelectedSku(sku)"
+              role="option"
+              [attr.aria-selected]="isSelectedSku(sku)"
+              (click)="selectSku(sku)"
+              (keydown.enter)="selectSku(sku)"
+              tabindex="0">
+
+              <!-- Avatar -->
+              <div class="sku-avatar" aria-hidden="true">
+                {{ getInitials(sku) }}
+              </div>
+
+              <!-- Info -->
+              <div class="sku-item__body">
+                <div class="sku-item__name">{{ sku.name }}</div>
+                <div class="sku-item__meta">
+                  <span class="sku-item__code">{{ sku.code }}</span>
+                  <span class="sku-item__unit-tag">{{ sku.unit }}</span>
+                  <span
+                    class="sku-item__status-badge"
+                    [class.sku-item__status-badge--active]="(sku.status || 'ACTIVE') === 'ACTIVE'"
+                    [class.sku-item__status-badge--inactive]="sku.status === 'INACTIVE'">
+                    {{ (sku.status || 'ACTIVE') === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </div>
+                <div class="sku-item__client">{{ sku.clientName }}</div>
+              </div>
+
+              <!-- Peso -->
+              <div class="sku-item__weight-col">
+                <span class="sku-weight-badge">
+                  {{ sku.weight || 0 }} kg
+                </span>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <!-- ── BARRA DE PAGINACIÓN DE REGISTROS ──────────────────────── -->
+        <div class="skus-directory__footer">
+          <div class="skus-pagination">
+
+            <!-- Selector de tamaño de página -->
+            <div class="skus-pagination__size">
+              <label class="sr-only" for="page-size-select">Mostrar por página</label>
+              <select
+                id="page-size-select"
+                class="skus-pagination__select"
+                [ngModel]="pageSize()"
+                (ngModelChange)="onPageSizeChange($event)"
+                aria-label="Mostrar por página">
+                @for (opt of pageSizeOptions; track opt) {
+                  <option [value]="opt">{{ opt }} / pág</option>
+                }
+              </select>
+            </div>
+
+            <!-- Contador de registros -->
+            <span class="skus-pagination__info">
+              {{ startIndex() }}-{{ endIndex() }} de {{ filteredSkus().length }}
+            </span>
+
+            <!-- Botones anterior / siguiente -->
+            <div class="skus-pagination__nav">
+              <button
+                class="skus-pagination__btn"
+                type="button"
+                [disabled]="currentPage() === 1"
+                (click)="prevPage()"
+                aria-label="Página anterior">
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+
+              <span class="skus-pagination__page-num">
+                {{ currentPage() }}/{{ totalPages() }}
+              </span>
+
+              <button
+                class="skus-pagination__btn"
+                type="button"
+                [disabled]="currentPage() === totalPages()"
+                (click)="nextPage()"
+                aria-label="Página siguiente">
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="skus-detail" aria-label="Detalle del producto">
+
+      @if (formMode() === 'idle') {
+        <div class="skus-empty-state">
+          <div class="skus-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined skus-empty-state__icon">inventory_2</span>
+          </div>
+          <h2 class="skus-empty-state__title">Sin selección</h2>
+          <p class="skus-empty-state__desc">
+            Selecciona un producto / SKU del directorio para consultar su información,
+            o registra uno nuevo.
+          </p>
+          @if (canCreate()) {
+            <button
+              class="skus-btn skus-btn--primary"
+              type="button"
+              (click)="startNewSku()"
+              aria-label="Registrar nuevo producto">
+              <span class="material-symbols-outlined">add</span>
+              Nuevo SKU
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="skus-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="skus-form-header">
+            <div class="skus-form-header__left">
+              <div class="skus-form-header__breadcrumb">
+                <span class="material-symbols-outlined">inventory_2</span>
+                Productos
+                <span class="material-symbols-outlined skus-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nuevo SKU }
+                  @else { {{ selectedSku()?.code }} — {{ selectedSku()?.name }} }
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="skus-alert skus-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Producto / SKU guardado correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="skus-alert skus-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO REACTIVO
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveSku()"
+            novalidate
+            autocomplete="off"
+            class="skus-form">
+
+            <!-- SECCIÓN 1 — Información del Producto ──────────────── -->
+            <fieldset class="skus-form-section">
+              <legend class="skus-form-section__legend">
+                <span class="material-symbols-outlined">inventory</span>
+                Información del Producto / SKU
+              </legend>
+
+              <div class="skus-form-grid skus-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="clientId">Cliente Depositante (Owner)</label>
+                  <select
+                    id="clientId"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('clientId')"
+                    formControlName="clientId"
+                    aria-required="true">
+                    <option value="" disabled>Selecciona un cliente depositante</option>
+                    @for (client of availableClients(); track client.id) {
+                      <option [value]="client.id">{{ client.name }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('clientId')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('clientId') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="code">Código Único de SKU</label>
+                  <input
+                    id="code"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('code')"
+                    type="text"
+                    formControlName="code"
+                    placeholder="Ej. SKU-NES-001"
+                    maxlength="50"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('code')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('code') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label fg-label--required" for="name">Nombre Comercial del Producto</label>
+                  <input
+                    id="name"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('name')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. Leche Nido 1kg Lata"
+                    maxlength="200"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('name')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('name') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="unit">Unidad de Medida</label>
+                  <select
+                    id="unit"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('unit')"
+                    formControlName="unit"
+                    aria-required="true">
+                    @for (u of unitOptions; track u.value) {
+                      <option [value]="u.value">{{ u.label }}</option>
+                    }
+                  </select>
+                  @if (fieldHasError('unit')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('unit') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="weight">Peso Unitario (kg)</label>
+                  <input
+                    id="weight"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('weight')"
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    formControlName="weight"
+                    placeholder="1.000"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('weight')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('weight') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="status">Estatus Operativo</label>
+                  <select
+                    id="status"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('status')"
+                    formControlName="status"
+                    aria-required="true">
+                    <option value="ACTIVE">ACTIVO (Disponible para operaciones)</option>
+                    <option value="INACTIVE">INACTIVO (Suspendido)</option>
+                  </select>
+                  @if (fieldHasError('status')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('status') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label" for="description">Descripción Detallada / Observaciones</label>
+                  <textarea
+                    id="description"
+                    class="fg-textarea"
+                    formControlName="description"
+                    rows="3"
+                    placeholder="Ej. Lata de leche en polvo formato 1kg con empaque secundario"
+                    maxlength="500">
+                  </textarea>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Información de Control e Historial de Auditoría BE ──────── -->
+            @if (formMode() === 'edit' && selectedSku()) {
+              <fieldset class="skus-form-section skus-form-section--readonly">
+                <legend class="skus-form-section__legend">
+                  <span class="material-symbols-outlined">manage_history</span>
+                  Información de Control y Auditoría BE
+                </legend>
+
+                <div class="skus-readonly-grid">
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">ID de Producto (UUID)</span>
+                    <span class="skus-readonly-field__value font-mono">{{ selectedSku()!.id }}</span>
+                  </div>
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Estatus Actual en BD</span>
+                    <span class="skus-readonly-field__value">
+                      <span
+                        class="sku-item__status-badge"
+                        [class.sku-item__status-badge--active]="(selectedSku()!.status || 'ACTIVE') === 'ACTIVE'"
+                        [class.sku-item__status-badge--inactive]="selectedSku()!.status === 'INACTIVE'">
+                        {{ (selectedSku()!.status || 'ACTIVE') === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE' }}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Fecha de creación</span>
+                    <span class="skus-readonly-field__value">
+                      {{ selectedSku()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Última actualización</span>
+                    <span class="skus-readonly-field__value">
+                      {{ selectedSku()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Versión de Registro</span>
+                    <span class="skus-readonly-field__value font-mono">v{{ selectedSku()!.version || 1 }}</span>
+                  </div>
+                </div>
+
+                <!-- ── Línea de Tiempo de Auditoría BE ── -->
+                @if (canViewAudit()) {
+                  <div class="skus-timeline-box">
+                    <div class="skus-timeline-header">
+                      <div class="skus-timeline-title">
+                        <span class="material-symbols-outlined">history</span>
+                        <span>Historial de Cambios de Auditoría (GET /api/v1/product-skus/&#123;id&#125;/audit)</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="skus-btn skus-btn--ghost skus-btn--sm"
+                        (click)="loadAuditLogs(selectedSku()!.id)">
+                        <span class="material-symbols-outlined">refresh</span>
+                        Actualizar
+                      </button>
+                    </div>
+
+                    @if (isLoadingAudit()) {
+                      <div class="skus-audit-loading">
+                        <span class="material-symbols-outlined spinner">sync</span>
+                        <span>Cargando bitácora de auditoría...</span>
+                      </div>
+                    } @else if (auditEntries().length === 0) {
+                      <div class="skus-audit-empty">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>No hay eventos de auditoría registrados aún para este SKU.</span>
+                      </div>
+                    } @else {
+                      <div class="skus-timeline-nodes">
+                        @for (entry of auditEntries(); track entry.id; let last = $last) {
+                          <div class="skus-tl-node" [ngClass]="'skus-tl-node--' + (entry.timelineColor || 'update')">
+                            <div class="skus-tl-node__dot">
+                              <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                            </div>
+                            <div class="skus-tl-node__line" [class.skus-tl-node__line--last]="last"></div>
+                            <div class="skus-tl-node__content">
+                              <div class="skus-tl-node__header">
+                                <span class="skus-tl-node__action">{{ entry.summary }}</span>
+                                <span class="skus-tl-node__meta">
+                                  Por <strong>{{ entry.performedBy }}</strong> · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                                </span>
+                              </div>
+
+                              @if (entry.details && entry.details.length > 0) {
+                                <div class="skus-tl-node__details">
+                                  @for (det of entry.details; track det.fieldName) {
+                                    <div class="skus-tl-detail-item">
+                                      <span class="skus-tl-detail-field">{{ det.fieldName }}:</span>
+                                      <span class="skus-tl-detail-old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                      <span class="material-symbols-outlined skus-tl-detail-arrow">arrow_forward</span>
+                                      <span class="skus-tl-detail-new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO HOMOLOGADAS CON TRANSPORTISTAS ──────── -->
+            <div class="skus-form-actions">
+
+              <!-- Acciones de estado (solo en edición) -->
+              @if (formMode() === 'edit' && selectedSku()) {
+                <div class="skus-form-actions__status-group">
+
+                  <!-- Botón Suspender / Activar (PATCH /status) -->
+                  @if (selectedSku()?.status === 'ACTIVE' || !selectedSku()?.status) {
+                    <button
+                      class="skus-btn skus-btn--warning"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="toggleStatus()"
+                      aria-label="Suspender estatus de SKU">
+                      <span class="material-symbols-outlined">pause</span>
+                      Suspender
+                    </button>
+                  } @else {
+                    <button
+                      class="skus-btn skus-btn--warning"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="toggleStatus()"
+                      aria-label="Activar estatus de SKU">
+                      <span class="material-symbols-outlined">play_arrow</span>
+                      Activar
+                    </button>
+                  }
+
+                  <!-- Botón Desactivar / Borrado Lógico (PATCH /soft-delete) -->
+                  @if (canDelete()) {
+                    <button
+                      class="skus-btn skus-btn--danger"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog()"
+                      aria-label="Eliminar lógicamente producto / SKU">
+                      <span class="material-symbols-outlined">block</span>
+                      Desactivar
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Guardar / Cancelar -->
+              <div class="skus-form-actions__main-group">
+                <button
+                  class="skus-btn skus-btn--ghost"
+                  type="button"
+                  (click)="cancelForm()"
+                  [disabled]="isSaving">
+                  Cancelar
+                </button>
+
+                <button
+                  id="btn-save-sku"
+                  class="skus-btn skus-btn--save"
+                  type="submit"
+                  [disabled]="isSaving">
+                  @if (isSaving) {
+                    <span class="material-symbols-outlined spinner">sync</span>
+                    Guardando...
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    {{ formMode() === 'new' ? 'Crear SKU' : 'Guardar cambios' }}
+                  }
+                </button>
+              </div>
+
+            </div>
+
+          </form>
+        </div>
+      }
+
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DIÁLOGO DE CONFIRMACIÓN DE ELIMINACIÓN LÓGICA (PATCH /soft-delete)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (statusDialogOpen()) {
+    <div class="skus-dialog-backdrop" (click)="closeStatusDialog()">
+      <div class="skus-dialog" (click)="$event.stopPropagation()">
+
+        <div class="skus-dialog__header">
+          <span class="material-symbols-outlined skus-dialog__icon">block</span>
+          <h3 class="skus-dialog__title">Desactivar Producto del Catálogo</h3>
+        </div>
+
+        <div class="skus-dialog__body">
+          <p>
+            ¿Estás seguro de que deseas desactivar el producto
+            <strong>"{{ selectedSku()?.code }} — {{ selectedSku()?.name }}"</strong>?
+          </p>
+          <p class="skus-dialog__hint">
+            El artículo se retirará de las listas activas de operación en el almacén, pero su historial de movimientos e inventario histórico permanecerán resguardados de forma segura.
+          </p>
+        </div>
+
+        <div class="skus-dialog__actions">
+          <button class="skus-btn skus-btn--ghost" type="button" (click)="closeStatusDialog()">
+            Cancelar
+          </button>
+          <button
+            class="skus-btn skus-btn--danger"
+            type="button"
+            (click)="confirmStatusDialog()">
+            Sí, desactivar producto
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

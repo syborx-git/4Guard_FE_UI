@@ -1,0 +1,624 @@
+<!--
+  client-management.component.html
+  Gestión de Clientes (Depositantes / Owners 3PL) — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Estilos: Prestige Gold & Midnight Navy (Modo Claro por defecto + Modo Oscuro)
+-->
+
+<div class="clients-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="clients-header">
+
+    <div class="clients-header__top">
+
+      <div class="clients-header__left">
+        <div class="clients-header__icon-wrap">
+          <span class="material-symbols-outlined clients-header__icon">partner_exchange</span>
+        </div>
+
+        <div class="clients-header__copy">
+          <div class="clients-header__eyebrow">
+            <a routerLink="/admin" class="clients-header__eyebrow-tag">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="clients-header__eyebrow-sep">·</span>
+            <span>Catálogos de Mercancía</span>
+          </div>
+          <h1 class="clients-header__title">Gestión de Clientes</h1>
+          <p class="clients-header__subtitle">
+            Administra el catálogo maestro de depositantes, códigos ERP y titulares de mercancía 3PL
+          </p>
+        </div>
+      </div>
+
+      @if (canCreate()) {
+        <button
+          id="btn-new-client"
+          class="clients-btn clients-btn--primary"
+          type="button"
+          (click)="startNewClient()"
+          [disabled]="isSaving"
+          aria-label="Registrar nuevo cliente">
+          <span class="material-symbols-outlined">add</span>
+          Nuevo cliente
+        </button>
+      }
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="clients-kpi-grid" aria-label="Indicadores de clientes">
+
+      <!-- Total -->
+      <div class="clients-kpi-card clients-kpi-card--total">
+        <div class="clients-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">partner_exchange</span>
+        </div>
+        <div class="clients-kpi-card__body">
+          @if (isLoading) {
+            <div class="clients-kpi-card__skeleton"></div>
+          } @else {
+            <span class="clients-kpi-card__value">{{ totalClients() }}</span>
+          }
+          <span class="clients-kpi-card__label">Total Registrados</span>
+        </div>
+        <div class="clients-kpi-card__bar clients-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Activos -->
+      <div class="clients-kpi-card clients-kpi-card--active">
+        <div class="clients-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="clients-kpi-card__body">
+          @if (isLoading) {
+            <div class="clients-kpi-card__skeleton"></div>
+          } @else {
+            <span class="clients-kpi-card__value">{{ kpiActive() }}</span>
+          }
+          <span class="clients-kpi-card__label">Clientes Activos</span>
+        </div>
+        <div class="clients-kpi-card__bar clients-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Inactivos -->
+      <div class="clients-kpi-card clients-kpi-card--inactive">
+        <div class="clients-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="clients-kpi-card__body">
+          @if (isLoading) {
+            <div class="clients-kpi-card__skeleton"></div>
+          } @else {
+            <span class="clients-kpi-card__value">{{ kpiInactive() }}</span>
+          }
+          <span class="clients-kpi-card__label">Clientes Inactivos</span>
+        </div>
+        <div class="clients-kpi-card__bar clients-kpi-card__bar--inactive"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW (Master-Detail Layout 35/65)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="clients-split" [class.clients-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="clients-directory" aria-label="Directorio de clientes">
+
+      <!-- Buscador y filtros -->
+      <div class="clients-directory__filters">
+
+        <div class="clients-search">
+          <span class="material-symbols-outlined clients-search__icon" aria-hidden="true">search</span>
+          <input
+            id="client-search"
+            class="clients-search__input"
+            type="search"
+            placeholder="Buscar por nombre, código ERP, organización..."
+            [ngModel]="filterText()"
+            (ngModelChange)="filterText.set($event)"
+            aria-label="Buscar cliente"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="clients-filters-row">
+          <div class="clients-filter-group">
+            <label class="sr-only" for="filter-status">Estado</label>
+            <select
+              id="filter-status"
+              class="clients-filter-select"
+              [ngModel]="filterStatus()"
+              (ngModelChange)="filterStatus.set($event)"
+              aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="clients-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoading) {
+        <div class="clients-directory__list" aria-busy="true" aria-label="Cargando clientes">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="client-item client-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="client-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError) {
+        <div class="clients-state clients-state--error" role="alert">
+          <span class="material-symbols-outlined clients-state__icon">cloud_off</span>
+          <p class="clients-state__title">Error al cargar</p>
+          <p class="clients-state__desc">{{ loadErrorMessage }}</p>
+          <button class="clients-btn clients-btn--ghost" type="button" (click)="loadClients()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="clients-state" role="status">
+          <span class="material-symbols-outlined clients-state__icon">partner_exchange</span>
+          <p class="clients-state__title">Sin clientes</p>
+          <p class="clients-state__desc">No hay clientes depositantes registrados aún.</p>
+          @if (canCreate()) {
+            <button class="clients-btn clients-btn--primary" type="button" (click)="startNewClient()">
+              <span class="material-symbols-outlined">add</span>
+              Registrar el primero
+            </button>
+          }
+        </div>
+      } @else if (hasNoResults) {
+        <div class="clients-state" role="status">
+          <span class="material-symbols-outlined clients-state__icon">search_off</span>
+          <p class="clients-state__title">Sin coincidencias</p>
+          <p class="clients-state__desc">Ningún cliente coincide con los filtros aplicados.</p>
+          <button class="clients-btn clients-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="clients-directory__list" role="listbox" aria-label="Lista de clientes">
+          @for (client of filteredClients(); track client.id) {
+            <li
+              class="client-item"
+              [class.client-item--selected]="isSelectedClient(client)"
+              [class.client-item--inactive]="client.status === 'INACTIVE'"
+              role="option"
+              [attr.aria-selected]="isSelectedClient(client)"
+              (click)="selectClient(client)"
+              (keydown.enter)="selectClient(client)"
+              tabindex="0">
+
+              <!-- Avatar -->
+              <div class="client-avatar" aria-hidden="true">
+                {{ getInitials(client) }}
+              </div>
+
+              <!-- Info -->
+              <div class="client-item__body">
+                <div class="client-item__name">{{ client.name }}</div>
+                <div class="client-item__meta">
+                  <span class="client-item__code">{{ client.externalId }}</span>
+                </div>
+                <div class="client-item__org">{{ client.orgName }}</div>
+              </div>
+
+              <!-- Estado -->
+              <div class="client-item__status-col">
+                <span
+                  class="client-status-badge client-status-badge--{{ client.status.toLowerCase() }}">
+                  {{ clientStatusLabels[client.status] }}
+                </span>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <div class="clients-directory__footer">
+          <span class="clients-count">
+            {{ filteredClients().length }} cliente{{ filteredClients().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="clients-detail" aria-label="Detalle del cliente">
+
+      @if (formMode() === 'idle') {
+        <div class="clients-empty-state">
+          <div class="clients-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined clients-empty-state__icon">partner_exchange</span>
+          </div>
+          <h2 class="clients-empty-state__title">Sin selección</h2>
+          <p class="clients-empty-state__desc">
+            Selecciona un cliente depositante de la lista para consultar su información,
+            o registra uno nuevo.
+          </p>
+          @if (canCreate()) {
+            <button
+              class="clients-btn clients-btn--primary"
+              type="button"
+              (click)="startNewClient()"
+              aria-label="Registrar nuevo cliente">
+              <span class="material-symbols-outlined">add</span>
+              Nuevo cliente
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="clients-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="clients-form-header">
+            <div class="clients-form-header__left">
+              <div class="clients-form-header__breadcrumb">
+                <span class="material-symbols-outlined">partner_exchange</span>
+                Clientes
+                <span class="material-symbols-outlined clients-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nuevo cliente }
+                  @else { {{ selectedClient()?.name }} }
+                </strong>
+              </div>
+              @if (formMode() === 'edit' && selectedClient()) {
+                <span
+                  class="client-status-badge client-status-badge--{{ selectedClient()!.status.toLowerCase() }}">
+                  {{ clientStatusLabels[selectedClient()!.status] }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="clients-alert clients-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Cliente guardado correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="clients-alert clients-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO REACTIVO
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveClient()"
+            novalidate
+            autocomplete="off"
+            class="clients-form">
+
+            <!-- SECCIÓN 1 — Información General ──────────────────── -->
+            <fieldset class="clients-form-section">
+              <legend class="clients-form-section__legend">
+                <span class="material-symbols-outlined">badge</span>
+                Información General del Cliente
+              </legend>
+
+              <div class="clients-form-grid clients-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="name">Nombre / Razón Social</label>
+                  <input
+                    id="name"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('name')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. Cliente Logística SA de CV"
+                    maxlength="150"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('name')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('name') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="externalId">Código Cliente / RFC (External ID)</label>
+                  <input
+                    id="externalId"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('externalId')"
+                    type="text"
+                    formControlName="externalId"
+                    placeholder="Ej. CLI-001 o CLO990101XXX"
+                    maxlength="50"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('externalId')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('externalId') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="organizationId">Organización Perteneciente</label>
+                  <select
+                    id="organizationId"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('organizationId')"
+                    formControlName="organizationId"
+                    aria-required="true">
+                    @for (org of availableOrganizations(); track org.id) {
+                      <option [value]="org.id">{{ org.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
+                  <select
+                    id="status"
+                    class="fg-select"
+                    formControlName="status"
+                    aria-required="true">
+                    <option value="ACTIVE">Activa</option>
+                    <option value="INACTIVE">Inactiva</option>
+                  </select>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Información de Control e Historial de Auditoría BE ──────── -->
+            @if (formMode() === 'edit' && selectedClient()) {
+              <fieldset class="clients-form-section clients-form-section--readonly">
+                <legend class="clients-form-section__legend">
+                  <span class="material-symbols-outlined">manage_history</span>
+                  Información de Control y Auditoría BE
+                </legend>
+
+                <div class="clients-readonly-grid">
+                  <div class="clients-readonly-field">
+                    <span class="clients-readonly-field__label">ID de Cliente (UUID)</span>
+                    <span class="clients-readonly-field__value font-mono">{{ selectedClient()!.id }}</span>
+                  </div>
+                  <div class="clients-readonly-field">
+                    <span class="clients-readonly-field__label">Fecha de creación</span>
+                    <span class="clients-readonly-field__value">
+                      {{ selectedClient()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="clients-readonly-field">
+                    <span class="clients-readonly-field__label">Última actualización</span>
+                    <span class="clients-readonly-field__value">
+                      {{ selectedClient()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="clients-readonly-field">
+                    <span class="clients-readonly-field__label">Versión de Registro</span>
+                    <span class="clients-readonly-field__value font-mono">v{{ selectedClient()!.version || 1 }}</span>
+                  </div>
+                </div>
+
+                <!-- ── Línea de Tiempo de Auditoría BE ── -->
+                @if (canViewAudit()) {
+                  <div class="clients-timeline-box">
+                    <div class="clients-timeline-header">
+                      <div class="clients-timeline-title">
+                        <span class="material-symbols-outlined">history</span>
+                        <span>Historial de Cambios de Auditoría (GET /api/v1/clients/&#123;id&#125;/audit)</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="clients-btn clients-btn--ghost clients-btn--sm"
+                        (click)="loadAuditLogs(selectedClient()!.id)">
+                        <span class="material-symbols-outlined">refresh</span>
+                        Actualizar
+                      </button>
+                    </div>
+
+                    @if (isLoadingAudit()) {
+                      <div class="clients-audit-loading">
+                        <span class="material-symbols-outlined spinner">sync</span>
+                        <span>Cargando bitácora de auditoría...</span>
+                      </div>
+                    } @else if (auditEntries().length === 0) {
+                      <div class="clients-audit-empty">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>No hay eventos de auditoría registrados aún para este cliente.</span>
+                      </div>
+                    } @else {
+                      <div class="clients-timeline-nodes">
+                        @for (entry of auditEntries(); track entry.id; let last = $last) {
+                          <div class="clients-tl-node" [ngClass]="'clients-tl-node--' + (entry.timelineColor || 'update')">
+                            <div class="clients-tl-node__dot">
+                              <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                            </div>
+                            <div class="clients-tl-node__line" [class.clients-tl-node__line--last]="last"></div>
+                            <div class="clients-tl-node__content">
+                              <div class="clients-tl-node__header">
+                                <span class="clients-tl-node__action">{{ entry.summary }}</span>
+                                <span class="clients-tl-node__meta">
+                                  Por <strong>{{ entry.performedBy }}</strong> · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                                </span>
+                              </div>
+
+                              @if (entry.details && entry.details.length > 0) {
+                                <div class="clients-tl-node__details">
+                                  @for (det of entry.details; track det.fieldName) {
+                                    <div class="clients-tl-detail-item">
+                                      <span class="clients-tl-detail-field">{{ det.fieldName }}:</span>
+                                      <span class="clients-tl-detail-old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                      <span class="material-symbols-outlined clients-tl-detail-arrow">arrow_forward</span>
+                                      <span class="clients-tl-detail-new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO ──────────────────────── -->
+            <div class="clients-form-actions">
+
+              <!-- Acciones de estado (solo en edición) -->
+              @if (formMode() === 'edit' && selectedClient()) {
+                <div class="clients-form-actions__status-group">
+
+                  @if (selectedClient()!.status === 'ACTIVE') {
+                    <button
+                      class="clients-btn clients-btn--warning"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('toggle')"
+                      aria-label="Suspender este cliente">
+                      <span class="material-symbols-outlined">pause_circle</span>
+                      Suspender
+                    </button>
+                  } @else {
+                    <button
+                      class="clients-btn clients-btn--success"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('toggle')"
+                      aria-label="Activar este cliente">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      Activar
+                    </button>
+                  }
+
+                  @if (canDelete()) {
+                    <button
+                      class="clients-btn clients-btn--danger"
+                      type="button"
+                      [disabled]="isSaving"
+                      (click)="openStatusDialog('delete')"
+                      aria-label="Desactivar o eliminar este cliente">
+                      <span class="material-symbols-outlined">block</span>
+                      Desactivar
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Guardar / Cancelar -->
+              <div class="clients-form-actions__main-group">
+                <button
+                  class="clients-btn clients-btn--ghost"
+                  type="button"
+                  (click)="cancelForm()"
+                  [disabled]="isSaving">
+                  Cancelar
+                </button>
+
+                <button
+                  id="btn-save-client"
+                  class="clients-btn clients-btn--save"
+                  type="submit"
+                  [disabled]="isSaving">
+                  @if (isSaving) {
+                    <span class="material-symbols-outlined spinner">sync</span>
+                    Guardando...
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    {{ formMode() === 'new' ? 'Crear cliente' : 'Guardar cambios' }}
+                  }
+                </button>
+              </div>
+
+            </div>
+
+          </form>
+        </div>
+      }
+
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DIÁLOGO DE CONFIRMACIÓN DE ESTADO / ELIMINACIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  @if (statusDialogOpen()) {
+    <div class="clients-dialog-backdrop" (click)="closeStatusDialog()">
+      <div class="clients-dialog" (click)="$event.stopPropagation()">
+
+        <div class="clients-dialog__header">
+          <span class="material-symbols-outlined clients-dialog__icon">
+            {{ statusDialogAction() === 'delete' ? 'delete_forever' : 'help_outline' }}
+          </span>
+          <h3 class="clients-dialog__title">
+            {{ statusDialogAction() === 'delete' ? 'Eliminar Cliente' : 'Cambiar Estado de Cliente' }}
+          </h3>
+        </div>
+
+        <div class="clients-dialog__body">
+          <p>
+            @if (statusDialogAction() === 'delete') {
+              ¿Estás seguro de que deseas eliminar permanentemente al cliente
+              <strong>"{{ selectedClient()?.name }}"</strong>? Esta acción no se puede deshacer.
+            } @else {
+              ¿Deseas cambiar el estado operativo de
+              <strong>"{{ selectedClient()?.name }}"</strong> a
+              <em>{{ selectedClient()?.status === 'ACTIVE' ? 'INACTIVO' : 'ACTIVO' }}</em>?
+            }
+          </p>
+        </div>
+
+        <div class="clients-dialog__actions">
+          <button class="clients-btn clients-btn--ghost" type="button" (click)="closeStatusDialog()">
+            Cancelar
+          </button>
+          <button
+            class="clients-btn"
+            [class.clients-btn--danger]="statusDialogAction() === 'delete'"
+            [class.clients-btn--primary]="statusDialogAction() === 'toggle'"
+            type="button"
+            (click)="confirmStatusDialog()">
+            Confirmar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
