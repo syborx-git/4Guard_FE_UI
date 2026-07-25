@@ -720,6 +720,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       this.router.navigate(['/clients']);
       return;
     }
+    if (moduleId === 'skus') {
+      this.router.navigate(['/skus']);
+      return;
+    }
     if (moduleId === 'users') {
       this.router.navigate(['/admin/users']);
       return;
