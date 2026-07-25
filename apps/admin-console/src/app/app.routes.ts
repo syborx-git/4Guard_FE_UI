@@ -163,6 +163,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Catálogo de Productos / SKUs',
       },
 
+      // Roles y Matriz de Permisos (Homologado)
+      {
+        path: 'roles',
+        canActivate: [rbacGuard],
+        data: { module: 'admin' },
+        loadChildren: () =>
+          import('./features/admin/roles/roles.routes').then((m) => m.rolesRoutes),
+        title: '4GUARD WMS — Roles y Matriz de Permisos',
+      },
+
       // Gestión de Transportistas (HU-128)
       {
         path: 'carriers',

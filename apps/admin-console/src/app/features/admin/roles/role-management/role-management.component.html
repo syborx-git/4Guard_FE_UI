@@ -1,0 +1,688 @@
+<!--
+  role-management.component.html
+  Roles y Matriz de Permisos (RBAC) — 4GUARD WMS
+
+  Layout: Split View 35/65 (Master-Detail)
+  Estilos: Prestige Gold & Midnight Navy (Modo Claro por defecto + Modo Oscuro)
+  Botones de acción homologados con Transportistas
+-->
+
+<div class="roles-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="roles-header">
+
+    <div class="roles-header__top">
+
+      <div class="roles-header__left">
+        <div class="roles-header__icon-wrap">
+          <span class="material-symbols-outlined roles-header__icon">shield_person</span>
+        </div>
+
+        <div class="roles-header__copy">
+          <div class="roles-header__eyebrow">
+            <a routerLink="/admin" class="roles-header__eyebrow-tag">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="roles-header__eyebrow-sep">·</span>
+            <span>Seguridad y Control de Acceso</span>
+          </div>
+          <h1 class="roles-header__title">Roles y Matriz de Permisos (RBAC)</h1>
+          <p class="roles-header__subtitle">
+            Matriz de control de acceso basada en roles, jerarquías de nivel y permisos por módulo WMS
+          </p>
+        </div>
+      </div>
+
+      @if (canCreate()) {
+        <button
+          id="btn-new-role"
+          class="roles-btn roles-btn--primary"
+          type="button"
+          (click)="startNewRole()"
+          [disabled]="isSaving"
+          aria-label="Registrar nuevo rol de usuario">
+          <span class="material-symbols-outlined">add_moderator</span>
+          Nuevo Rol
+        </button>
+      }
+
+    </div>
+
+    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+    <div class="roles-kpi-grid" aria-label="Indicadores de roles">
+
+      <!-- Total Roles -->
+      <div class="roles-kpi-card roles-kpi-card--total">
+        <div class="roles-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">shield</span>
+        </div>
+        <div class="roles-kpi-card__body">
+          @if (isLoading) {
+            <div class="roles-kpi-card__skeleton"></div>
+          } @else {
+            <span class="roles-kpi-card__value">{{ kpiTotalRoles() }}</span>
+          }
+          <span class="roles-kpi-card__label">Total Roles</span>
+        </div>
+        <div class="roles-kpi-card__bar roles-kpi-card__bar--total"></div>
+      </div>
+
+      <!-- Roles de Sistema (Protegidos) -->
+      <div class="roles-kpi-card roles-kpi-card--active">
+        <div class="roles-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">lock</span>
+        </div>
+        <div class="roles-kpi-card__body">
+          @if (isLoading) {
+            <div class="roles-kpi-card__skeleton"></div>
+          } @else {
+            <span class="roles-kpi-card__value">{{ kpiSystemRoles() }}</span>
+          }
+          <span class="roles-kpi-card__label">Roles de Sistema</span>
+        </div>
+        <div class="roles-kpi-card__bar roles-kpi-card__bar--active"></div>
+      </div>
+
+      <!-- Roles Personalizados -->
+      <div class="roles-kpi-card roles-kpi-card--inactive">
+        <div class="roles-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+        </div>
+        <div class="roles-kpi-card__body">
+          @if (isLoading) {
+            <div class="roles-kpi-card__skeleton"></div>
+          } @else {
+            <span class="roles-kpi-card__value">{{ kpiCustomRoles() }}</span>
+          }
+          <span class="roles-kpi-card__label">Roles Personalizados</span>
+        </div>
+        <div class="roles-kpi-card__bar roles-kpi-card__bar--inactive"></div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW (Master-Detail Layout 35/65)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="roles-split" [class.roles-split--form-open]="formMode() !== 'idle'">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="roles-directory" aria-label="Directorio de roles">
+
+      <!-- Buscador y filtros -->
+      <div class="roles-directory__filters">
+
+        <div class="roles-search">
+          <span class="material-symbols-outlined roles-search__icon" aria-hidden="true">search</span>
+          <input
+            id="role-search"
+            class="roles-search__input"
+            type="search"
+            placeholder="Buscar por nombre de rol o nivel..."
+            [ngModel]="filterText()"
+            (ngModelChange)="updateFilterText($event)"
+            aria-label="Buscar rol"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="roles-filters-row">
+          <div class="roles-filter-group">
+            <label class="sr-only" for="filter-type">Tipo de Rol</label>
+            <select
+              id="filter-type"
+              class="roles-filter-select"
+              [ngModel]="filterType()"
+              (ngModelChange)="updateFilterType($event)"
+              aria-label="Filtrar por tipo de rol">
+              <option value="">Todos los roles</option>
+              <option value="SYSTEM">Roles de Sistema (Protegidos)</option>
+              <option value="CUSTOM">Roles Personalizados</option>
+            </select>
+          </div>
+
+          @if (hasActiveFilters) {
+            <button
+              class="roles-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              title="Limpiar filtros"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ── Estados de la lista ──────────────────────────────────── -->
+      @if (isLoading) {
+        <div class="roles-directory__list" aria-busy="true" aria-label="Cargando roles">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="role-item role-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="role-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (hasLoadError) {
+        <div class="roles-state roles-state--error" role="alert">
+          <span class="material-symbols-outlined roles-state__icon">cloud_off</span>
+          <p class="roles-state__title">Error al cargar</p>
+          <p class="roles-state__desc">{{ loadErrorMessage }}</p>
+          <button class="roles-btn roles-btn--ghost" type="button" (click)="loadRolesAndPermissions()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty) {
+        <div class="roles-state" role="status">
+          <span class="material-symbols-outlined roles-state__icon">shield_person</span>
+          <p class="roles-state__title">Sin roles</p>
+          <p class="roles-state__desc">No hay roles registrados aún en la matriz de permisos.</p>
+          @if (canCreate()) {
+            <button class="roles-btn roles-btn--primary" type="button" (click)="startNewRole()">
+              <span class="material-symbols-outlined">add_moderator</span>
+              Registrar el primero
+            </button>
+          }
+        </div>
+      } @else if (hasNoResults) {
+        <div class="roles-state" role="status">
+          <span class="material-symbols-outlined roles-state__icon">search_off</span>
+          <p class="roles-state__title">Sin coincidencias</p>
+          <p class="roles-state__desc">Ningún rol coincide con los filtros aplicados.</p>
+          <button class="roles-btn roles-btn--ghost" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+
+        <ul class="roles-directory__list" role="listbox" aria-label="Lista de roles">
+          @for (role of paginatedRoles(); track role.id) {
+            <li
+              class="role-item"
+              [class.role-item--selected]="isSelectedRole(role)"
+              role="option"
+              [attr.aria-selected]="isSelectedRole(role)"
+              (click)="selectRole(role)"
+              (keydown.enter)="selectRole(role)"
+              tabindex="0">
+
+              <!-- Avatar -->
+              <div class="role-avatar" [class.role-avatar--system]="role.isSystem" aria-hidden="true">
+                {{ getInitials(role) }}
+              </div>
+
+              <!-- Info -->
+              <div class="role-item__body">
+                <div class="role-item__name">{{ role.name }}</div>
+                <div class="role-item__meta">
+                  <span class="role-item__level-tag">Nivel {{ role.level }}</span>
+                  <span
+                    class="role-item__type-badge"
+                    [class.role-item__type-badge--system]="role.isSystem"
+                    [class.role-item__type-badge--custom]="!role.isSystem">
+                    {{ role.isSystem ? 'Sistema' : 'Personalizado' }}
+                  </span>
+                </div>
+                <div class="role-item__perms-count">
+                  {{ role.permissions ? role.permissions.length : 0 }} permiso{{ (role.permissions?.length || 0) !== 1 ? 's' : '' }} asignado{{ (role.permissions?.length || 0) !== 1 ? 's' : '' }}
+                </div>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <!-- ── BARRA DE PAGINACIÓN DE REGISTROS ──────────────────────── -->
+        <div class="roles-directory__footer">
+          <div class="roles-pagination">
+
+            <!-- Selector de tamaño de página -->
+            <div class="roles-pagination__size">
+              <label class="sr-only" for="role-page-size-select">Mostrar por página</label>
+              <select
+                id="role-page-size-select"
+                class="roles-pagination__select"
+                [ngModel]="pageSize()"
+                (ngModelChange)="onPageSizeChange($event)"
+                aria-label="Mostrar por página">
+                @for (opt of pageSizeOptions; track opt) {
+                  <option [value]="opt">{{ opt }} / pág</option>
+                }
+              </select>
+            </div>
+
+            <!-- Contador de registros -->
+            <span class="roles-pagination__info">
+              {{ startIndex() }}-{{ endIndex() }} de {{ filteredRoles().length }}
+            </span>
+
+            <!-- Botones anterior / siguiente -->
+            <div class="roles-pagination__nav">
+              <button
+                class="roles-pagination__btn"
+                type="button"
+                [disabled]="currentPage() === 1"
+                (click)="prevPage()"
+                aria-label="Página anterior">
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+
+              <span class="roles-pagination__page-num">
+                {{ currentPage() }}/{{ totalPages() }}
+              </span>
+
+              <button
+                class="roles-pagination__btn"
+                type="button"
+                [disabled]="currentPage() === totalPages()"
+                (click)="nextPage()"
+                aria-label="Página siguiente">
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario y Matriz RBAC (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="roles-detail" aria-label="Detalle de rol y matriz de permisos">
+
+      @if (formMode() === 'idle') {
+        <div class="roles-empty-state">
+          <div class="roles-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined roles-empty-state__icon">shield_person</span>
+          </div>
+          <h2 class="roles-empty-state__title">Sin selección</h2>
+          <p class="roles-empty-state__desc">
+            Selecciona un rol del directorio para consultar o modificar sus privilegios y matriz de permisos,
+            o crea un nuevo perfil de acceso.
+          </p>
+          @if (canCreate()) {
+            <button
+              class="roles-btn roles-btn--primary"
+              type="button"
+              (click)="startNewRole()"
+              aria-label="Registrar nuevo rol">
+              <span class="material-symbols-outlined">add_moderator</span>
+              Nuevo Rol
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="roles-form-container">
+
+          <!-- ── Barra de título del formulario ── -->
+          <div class="roles-form-header">
+            <div class="roles-form-header__left">
+              <div class="roles-form-header__breadcrumb">
+                <span class="material-symbols-outlined">shield_person</span>
+                Roles RBAC
+                <span class="material-symbols-outlined roles-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'new') { Nuevo Rol }
+                  @else { {{ selectedRole()?.name }} (Nivel {{ selectedRole()?.level }}) }
+                </strong>
+              </div>
+            </div>
+
+            @if (selectedRole()?.isSystem) {
+              <div class="roles-system-tag" title="Este es un rol protegido del sistema">
+                <span class="material-symbols-outlined">lock</span>
+                <span>Rol de Sistema</span>
+              </div>
+            }
+          </div>
+
+          <!-- ── Banners de estado ── -->
+          @if (saveSuccess()) {
+            <div class="roles-alert roles-alert--success" role="status" aria-live="polite">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Rol y matriz de permisos guardados correctamente.</span>
+            </div>
+          }
+
+          @if (backendError()) {
+            <div class="roles-alert roles-alert--error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO REACTIVO & MATRIZ RBAC
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="form"
+            (ngSubmit)="saveRole()"
+            novalidate
+            autocomplete="off"
+            class="roles-form">
+
+            <!-- SECCIÓN 1 — Datos Principales del Rol ──────────────── -->
+            <fieldset class="roles-form-section">
+              <legend class="roles-form-section__legend">
+                <span class="material-symbols-outlined">badge</span>
+                Información del Rol
+              </legend>
+
+              <div class="roles-form-grid roles-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="role-name">Nombre del Rol</label>
+                  <input
+                    id="role-name"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="fieldHasError('name')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. OPERATIONS_MANAGER"
+                    maxlength="100"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('name')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('name') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="role-level">
+                    Nivel Jerárquico de Autorización (1 = Máximo, 7 = Mínimo)
+                  </label>
+                  <select
+                    id="role-level"
+                    class="fg-select"
+                    [class.fg-input--error]="fieldHasError('level')"
+                    formControlName="level"
+                    aria-required="true">
+                    <option [value]="1">Nivel 1 — Administrador General (Acceso Total)</option>
+                    <option [value]="2">Nivel 2 — Gerencia / Operaciones</option>
+                    <option [value]="3">Nivel 3 — Supervisión de Almacén</option>
+                    <option [value]="4">Nivel 4 — Operador de Almacén / Montacargas</option>
+                    <option [value]="5">Nivel 5 — Control de Calidad / Auditoría</option>
+                    <option [value]="6">Nivel 6 — Cliente Depositante (Solo lectura)</option>
+                    <option [value]="7">Nivel 7 — Consulta Básica</option>
+                  </select>
+                  @if (fieldHasError('level')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('level') }}</span>
+                  }
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Matriz de Permisos Categorizada por Módulos ── -->
+            <fieldset class="roles-form-section">
+              <div class="roles-matrix-header">
+                <legend class="roles-form-section__legend roles-form-section__legend--no-margin">
+                  <span class="material-symbols-outlined">vpn_key</span>
+                  Matriz de Permisos del Sistema ({{ selectedPermissionIds().size }} Seleccionados)
+                </legend>
+
+                <div class="roles-matrix-actions">
+                  <button
+                    type="button"
+                    class="roles-btn roles-btn--ghost roles-btn--sm"
+                    (click)="selectAllPermissions()">
+                    <span class="material-symbols-outlined">select_all</span>
+                    Seleccionar todos
+                  </button>
+                  <button
+                    type="button"
+                    class="roles-btn roles-btn--ghost roles-btn--sm"
+                    (click)="clearAllPermissions()">
+                    <span class="material-symbols-outlined">deselect</span>
+                    Desmarcar todos
+                  </button>
+                </div>
+              </div>
+
+              <!-- Grupos de Módulos WMS -->
+              <div class="roles-permission-groups">
+                @for (group of groupedPermissions(); track group.groupName) {
+                  <div class="roles-perm-card">
+                    <div class="roles-perm-card__header">
+                      <label class="roles-perm-card__title">
+                        <input
+                          type="checkbox"
+                          class="fg-checkbox"
+                          [checked]="isModuleGroupSelected(group.groupName)"
+                          (change)="toggleModuleGroup(group.groupName)"
+                        />
+                        <span>{{ group.groupName }}</span>
+                      </label>
+                      <span class="roles-perm-card__count">
+                        {{ group.permissions.length }} permiso{{ group.permissions.length !== 1 ? 's' : '' }}
+                      </span>
+                    </div>
+
+                    <div class="roles-perm-card__grid">
+                      @for (perm of group.permissions; track perm.id) {
+                        <label class="roles-perm-item" [class.roles-perm-item--selected]="isPermissionSelected(perm.id)">
+                          <input
+                            type="checkbox"
+                            class="fg-checkbox"
+                            [checked]="isPermissionSelected(perm.id)"
+                            (change)="togglePermission(perm.id)"
+                          />
+                          <div class="roles-perm-item__copy">
+                            <span class="roles-perm-item__code">{{ perm.name }}</span>
+                            <span class="roles-perm-item__desc">{{ perm.description }}</span>
+                          </div>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Información de Control e Historial de Auditoría BE ──────── -->
+            @if (formMode() === 'edit' && selectedRole()) {
+              <fieldset class="roles-form-section roles-form-section--readonly">
+                <legend class="roles-form-section__legend">
+                  <span class="material-symbols-outlined">manage_history</span>
+                  Información de Control y Auditoría BE
+                </legend>
+
+                <div class="roles-readonly-grid">
+                  <div class="roles-readonly-field">
+                    <span class="roles-readonly-field__label">ID de Rol (UUID)</span>
+                    <span class="roles-readonly-field__value font-mono">{{ selectedRole()!.id }}</span>
+                  </div>
+                  <div class="roles-readonly-field">
+                    <span class="roles-readonly-field__label">Fecha de creación</span>
+                    <span class="roles-readonly-field__value">
+                      {{ selectedRole()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="roles-readonly-field">
+                    <span class="roles-readonly-field__label">Última actualización</span>
+                    <span class="roles-readonly-field__value">
+                      {{ selectedRole()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+                  <div class="roles-readonly-field">
+                    <span class="roles-readonly-field__label">Versión de Registro</span>
+                    <span class="roles-readonly-field__value font-mono">v{{ selectedRole()!.version || 1 }}</span>
+                  </div>
+                </div>
+
+                <!-- ── Línea de Tiempo de Auditoría BE ── -->
+                @if (canViewAudit()) {
+                  <div class="roles-timeline-box">
+                    <div class="roles-timeline-header">
+                      <div class="roles-timeline-title">
+                        <span class="material-symbols-outlined">history</span>
+                        <span>Historial de Cambios de Auditoría (GET /api/v1/roles/&#123;id&#125;/audit)</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="roles-btn roles-btn--ghost roles-btn--sm"
+                        (click)="loadAuditLogs(selectedRole()!.id)">
+                        <span class="material-symbols-outlined">refresh</span>
+                        Actualizar
+                      </button>
+                    </div>
+
+                    @if (isLoadingAudit()) {
+                      <div class="roles-audit-loading">
+                        <span class="material-symbols-outlined spinner">sync</span>
+                        <span>Cargando bitácora de auditoría...</span>
+                      </div>
+                    } @else if (auditEntries().length === 0) {
+                      <div class="roles-audit-empty">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>No hay eventos de auditoría registrados aún para este rol.</span>
+                      </div>
+                    } @else {
+                      <div class="roles-timeline-nodes">
+                        @for (entry of auditEntries(); track entry.id; let last = $last) {
+                          <div class="roles-tl-node" [ngClass]="'roles-tl-node--' + (entry.timelineColor || 'update')">
+                            <div class="roles-tl-node__dot">
+                              <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                            </div>
+                            <div class="roles-tl-node__line" [class.roles-tl-node__line--last]="last"></div>
+                            <div class="roles-tl-node__content">
+                              <div class="roles-tl-node__header">
+                                <span class="roles-tl-node__action">{{ entry.summary }}</span>
+                                <span class="roles-tl-node__meta">
+                                  Por <strong>{{ entry.performedBy }}</strong> · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                                </span>
+                              </div>
+
+                              @if (entry.details && entry.details.length > 0) {
+                                <div class="roles-tl-node__details">
+                                  @for (det of entry.details; track det.fieldName) {
+                                    <div class="roles-tl-detail-item">
+                                      <span class="roles-tl-detail-field">{{ det.fieldName }}:</span>
+                                      <span class="roles-tl-detail-old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                      <span class="material-symbols-outlined roles-tl-detail-arrow">arrow_forward</span>
+                                      <span class="roles-tl-detail-new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </fieldset>
+            }
+
+            <!-- ── ACCIONES DEL FORMULARIO HOMOLOGADAS CON TRANSPORTISTAS ──────── -->
+            <div class="roles-form-actions">
+
+              <!-- Acciones de estado / eliminación (solo en edición) -->
+              @if (formMode() === 'edit' && selectedRole()) {
+                <div class="roles-form-actions__status-group">
+                  @if (canDelete()) {
+                    <button
+                      class="roles-btn roles-btn--danger"
+                      type="button"
+                      [disabled]="isSaving || selectedRole()?.isSystem"
+                      (click)="openStatusDialog()"
+                      title="{{ selectedRole()?.isSystem ? 'No se pueden eliminar roles definidos del sistema' : 'Eliminar rol' }}"
+                      aria-label="Eliminar rol">
+                      <span class="material-symbols-outlined">block</span>
+                      Desactivar / Eliminar
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Guardar / Cancelar -->
+              <div class="roles-form-actions__main-group">
+                <button
+                  class="roles-btn roles-btn--ghost"
+                  type="button"
+                  (click)="cancelForm()"
+                  [disabled]="isSaving">
+                  Cancelar
+                </button>
+
+                <button
+                  id="btn-save-role"
+                  class="roles-btn roles-btn--save"
+                  type="submit"
+                  [disabled]="isSaving">
+                  @if (isSaving) {
+                    <span class="material-symbols-outlined spinner">sync</span>
+                    Guardando...
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    {{ formMode() === 'new' ? 'Crear Rol' : 'Guardar cambios' }}
+                  }
+                </button>
+              </div>
+
+            </div>
+
+          </form>
+        </div>
+      }
+
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DIÁLOGO DE CONFIRMACIÓN DE ELIMINACIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  @if (statusDialogOpen()) {
+    <div class="roles-dialog-backdrop" (click)="closeStatusDialog()">
+      <div class="roles-dialog" (click)="$event.stopPropagation()">
+
+        <div class="roles-dialog__header">
+          <span class="material-symbols-outlined roles-dialog__icon">block</span>
+          <h3 class="roles-dialog__title">Eliminar Rol de la Matriz RBAC</h3>
+        </div>
+
+        <div class="roles-dialog__body">
+          <p>
+            ¿Estás seguro de que deseas eliminar el rol
+            <strong>"{{ selectedRole()?.name }}"</strong>?
+          </p>
+          <p class="roles-dialog__hint">
+            Esta acción removerá el perfil de la matriz de permisos. Los usuarios que tengan asignado este rol deberán ser reasignados a un nuevo perfil para conservar sus accesos al WMS.
+          </p>
+        </div>
+
+        <div class="roles-dialog__actions">
+          <button class="roles-btn roles-btn--ghost" type="button" (click)="closeStatusDialog()">
+            Cancelar
+          </button>
+          <button
+            class="roles-btn roles-btn--danger"
+            type="button"
+            (click)="confirmStatusDialog()">
+            Sí, eliminar rol
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
