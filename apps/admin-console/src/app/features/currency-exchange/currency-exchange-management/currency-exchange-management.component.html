@@ -1,0 +1,857 @@
+<!-- ════════════════════════════════════════════════════════════════════
+     HU-148 — Gestión de Divisas y Tipos de Cambio
+     4GUARD WMS Enterprise · Módulo Financiero
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="ce-page" id="hu148-currency-exchange">
+
+  <!-- ═══════════════════════════════════════════
+       HERO
+       ═══════════════════════════════════════════ -->
+  <header class="ce-hero" id="ce-hero-header">
+    <div class="ce-hero__left">
+      <div class="ce-hero__icon-wrap" aria-hidden="true">
+        <span class="material-icons-round ce-hero__icon">currency_exchange</span>
+      </div>
+      <div class="ce-hero__info">
+        <h1 class="ce-hero__title">Divisas y Tipos de Cambio</h1>
+        <p class="ce-hero__subtitle">
+          Administración financiera · HU-148 · 4GUARD WMS Enterprise
+        </p>
+      </div>
+    </div>
+    <div class="ce-hero__actions">
+      <button
+        type="button"
+        class="ce-btn ce-btn--ghost"
+        id="btn-audit-drawer"
+        (click)="openAudit()"
+        title="Historial de auditoría">
+        <span class="material-icons-round">history</span>
+        Auditoría
+      </button>
+      <button
+        type="button"
+        class="ce-btn ce-btn--primary"
+        id="btn-new-currency"
+        (click)="createNewCurrency()">
+        <span class="material-icons-round">add</span>
+        Nueva moneda
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════
+       KPI CARDS
+       ═══════════════════════════════════════════ -->
+  <section class="ce-kpi-strip" aria-label="Indicadores clave">
+    <div class="ce-kpi-card" id="kpi-base-currency">
+      <div class="ce-kpi-card__icon-wrap">
+        <span class="material-icons-round">home</span>
+      </div>
+      <div class="ce-kpi-card__body">
+        <span class="ce-kpi-card__value">{{ kpis().baseCurrencyCode }}</span>
+        <span class="ce-kpi-card__label">Moneda base</span>
+      </div>
+    </div>
+
+    <div class="ce-kpi-card" id="kpi-active-currencies">
+      <div class="ce-kpi-card__icon-wrap">
+        <span class="material-icons-round">payments</span>
+      </div>
+      <div class="ce-kpi-card__body">
+        <span class="ce-kpi-card__value">{{ kpis().activeCurrencies }}</span>
+        <span class="ce-kpi-card__label">Divisas activas</span>
+      </div>
+    </div>
+
+    <div class="ce-kpi-card" id="kpi-current-rates">
+      <div class="ce-kpi-card__icon-wrap">
+        <span class="material-icons-round">trending_up</span>
+      </div>
+      <div class="ce-kpi-card__body">
+        <span class="ce-kpi-card__value">{{ kpis().currentRates }}</span>
+        <span class="ce-kpi-card__label">Tipos vigentes</span>
+      </div>
+    </div>
+
+    <div class="ce-kpi-card ce-kpi-card--warning" id="kpi-review-required">
+      <div class="ce-kpi-card__icon-wrap">
+        <span class="material-icons-round">schedule</span>
+      </div>
+      <div class="ce-kpi-card__body">
+        <span class="ce-kpi-card__value">{{ kpis().reviewRequired }}</span>
+        <span class="ce-kpi-card__label">Requieren revisión</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       SIMULADOR DE CONVERSIÓN
+       ═══════════════════════════════════════════ -->
+  <section class="ce-simulator" id="ce-conversion-simulator" aria-label="Simulador de conversión">
+    <div class="ce-simulator__header">
+      <span class="material-icons-round ce-simulator__header-icon">calculate</span>
+      <span class="ce-simulator__header-title">Simulador de conversión</span>
+      <span class="ce-simulator__header-tag">Tiempo real</span>
+    </div>
+
+    <div class="ce-simulator__body">
+      <!-- Monto origen -->
+      <div class="ce-sim-field">
+        <label for="sim-amount" class="ce-sim-field__label">Monto</label>
+        <input
+          type="number"
+          id="sim-amount"
+          class="ce-sim-field__input"
+          [value]="simAmount()"
+          (input)="updateSimAmount($event)"
+          min="0"
+          step="100"
+          placeholder="1,000" />
+      </div>
+
+      <!-- Moneda origen -->
+      <div class="ce-sim-field">
+        <label for="sim-source" class="ce-sim-field__label">De</label>
+        <select id="sim-source" class="ce-sim-field__select" (change)="updateSimSource($event)">
+          @for (c of ceService.currencies(); track c.id) {
+            @if (c.status === 'ACTIVE') {
+              <option [value]="c.isoCode" [selected]="c.isoCode === simSource()">
+                {{ c.isoCode }} — {{ c.name }}
+              </option>
+            }
+          }
+        </select>
+      </div>
+
+      <!-- Swap button -->
+      <button
+        type="button"
+        class="ce-sim-swap"
+        id="btn-sim-swap"
+        (click)="swapSimCurrencies()"
+        title="Intercambiar monedas"
+        aria-label="Intercambiar monedas">
+        <span class="material-icons-round">swap_horiz</span>
+      </button>
+
+      <!-- Moneda destino -->
+      <div class="ce-sim-field">
+        <label for="sim-target" class="ce-sim-field__label">A</label>
+        <select id="sim-target" class="ce-sim-field__select" (change)="updateSimTarget($event)">
+          @for (c of ceService.currencies(); track c.id) {
+            @if (c.status === 'ACTIVE') {
+              <option [value]="c.isoCode" [selected]="c.isoCode === simTarget()">
+                {{ c.isoCode }} — {{ c.name }}
+              </option>
+            }
+          }
+        </select>
+      </div>
+
+      <!-- Resultado -->
+      <div class="ce-sim-result" id="sim-result-display">
+        @if (conversionResult().found) {
+          <span class="ce-sim-result__amount">
+            {{ conversionResult().result | number: '1.2-6' }}
+          </span>
+          <span class="ce-sim-result__code">{{ simTarget() }}</span>
+          <span class="ce-sim-result__rate">
+            TC: {{ conversionResult().rate | number: '1.6-6' }}
+          </span>
+        } @else {
+          <span class="ce-sim-result__na">Tipo de cambio no disponible</span>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       SPLIT VIEW
+       ═══════════════════════════════════════════ -->
+  <div class="ce-split" id="ce-split-view">
+
+    <!-- ── Panel izquierdo: Directorio ──────────────────────── -->
+    <aside class="ce-split__left" id="ce-currency-directory">
+
+      <div class="ce-dir__toolbar">
+        <div class="ce-dir__search-wrap">
+          <span class="material-icons-round ce-dir__search-icon">search</span>
+          <input
+            type="text"
+            class="ce-dir__search"
+            id="dir-search-input"
+            placeholder="Buscar moneda…"
+            [value]="searchQuery()"
+            (input)="updateSearch($event)"
+            autocomplete="off" />
+        </div>
+
+        <div class="ce-dir__filter-chips">
+          <button
+            type="button"
+            class="ce-chip"
+            [class.ce-chip--active]="statusFilter() === 'ALL'"
+            id="chip-filter-all"
+            (click)="setStatusFilter('ALL')">Todas</button>
+          <button
+            type="button"
+            class="ce-chip"
+            [class.ce-chip--active]="statusFilter() === 'ACTIVE'"
+            id="chip-filter-active"
+            (click)="setStatusFilter('ACTIVE')">Activas</button>
+          <button
+            type="button"
+            class="ce-chip"
+            [class.ce-chip--active]="statusFilter() === 'INACTIVE'"
+            id="chip-filter-inactive"
+            (click)="setStatusFilter('INACTIVE')">Inactivas</button>
+        </div>
+      </div>
+
+      <!-- Cargando -->
+      @if (isLoadingCurrencies()) {
+        <div class="ce-dir__loading" id="dir-loading-state">
+          <span class="ce-spinner" aria-hidden="true"></span>
+          <span>Cargando catálogo…</span>
+        </div>
+      }
+
+      <!-- Lista de monedas -->
+      @if (!isLoadingCurrencies()) {
+        <ul class="ce-dir__list" role="list" aria-label="Catálogo de monedas">
+          @for (currency of filteredCurrencies(); track trackByCurrencyId($index, currency)) {
+            <li
+              class="ce-dir__item"
+              [class.ce-dir__item--selected]="selectedCurrency()?.id === currency.id"
+              [class.ce-dir__item--inactive]="currency.status === 'INACTIVE'"
+              [id]="'dir-item-' + currency.id"
+              role="button"
+              tabindex="0"
+              (click)="selectCurrency(currency)"
+              (keydown.enter)="selectCurrency(currency)">
+
+              <!-- Símbolo moneda -->
+              <div class="ce-dir__item-symbol" [class.ce-dir__item-symbol--base]="currency.isBaseCurrency">
+                {{ currency.symbol }}
+              </div>
+
+              <!-- Info -->
+              <div class="ce-dir__item-body">
+                <div class="ce-dir__item-header">
+                  <span class="ce-dir__item-code">{{ currency.isoCode }}</span>
+                  @if (currency.isBaseCurrency) {
+                    <span class="ce-badge ce-badge--base" title="Moneda base">BASE</span>
+                  }
+                </div>
+                <div class="ce-dir__item-name">{{ currency.name }}</div>
+                <div class="ce-dir__item-meta">
+                  <span
+                    class="ce-badge"
+                    [class]="'ce-badge ' + freshnessClass(currency.freshnessStatus)">
+                    {{ freshnessLabelMap[currency.freshnessStatus] }}
+                  </span>
+                  @if (currency.status === 'INACTIVE') {
+                    <span class="ce-badge badge--neutral">Inactiva</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Rate -->
+              <div class="ce-dir__item-rate">
+                <span class="ce-dir__item-rate-value">
+                  {{ currency.currentRate | number: '1.4-6' }}
+                </span>
+                <span class="ce-dir__item-rate-label">MXN</span>
+              </div>
+            </li>
+          }
+
+          @if (filteredCurrencies().length === 0) {
+            <li class="ce-dir__empty" id="dir-empty-state">
+              <span class="material-icons-round">search_off</span>
+              <span>Sin resultados para la búsqueda.</span>
+            </li>
+          }
+        </ul>
+      }
+    </aside>
+
+    <!-- ── Panel derecho: Editor / Historial ─────────────────── -->
+    <main class="ce-split__right" id="ce-editor-panel">
+
+      <!-- ─────────────────────────────────────
+           VISTA: Formulario de moneda
+           ───────────────────────────────────── -->
+      @if (panelView() === 'CURRENCY_FORM') {
+        <div class="ce-editor" id="ce-currency-editor">
+
+          <!-- Header del editor -->
+          <div class="ce-editor__header">
+            <div class="ce-editor__header-left">
+              <span class="material-icons-round ce-editor__header-icon">
+                {{ formMode() === 'CREATE' ? 'add_circle' : 'edit_note' }}
+              </span>
+              <div>
+                <h2 class="ce-editor__title">
+                  {{ formMode() === 'CREATE' ? 'Nueva moneda' : (selectedCurrency()?.isoCode + ' — ' + selectedCurrency()?.name) }}
+                </h2>
+                <p class="ce-editor__subtitle">
+                  @if (formMode() === 'CREATE') {
+                    Complete los datos de la nueva divisa
+                  } @else {
+                    Última actualización: {{ formatDateMX(selectedCurrency()?.updatedAt ?? '') }}
+                    · {{ selectedCurrency()?.updatedBy }}
+                  }
+                </p>
+              </div>
+            </div>
+            @if (formMode() === 'EDIT' && selectedCurrency()) {
+              <div class="ce-editor__header-actions">
+                <button
+                  type="button"
+                  class="ce-btn ce-btn--ghost ce-btn--sm"
+                  id="btn-toggle-status"
+                  [title]="selectedCurrency()?.status === 'ACTIVE' ? 'Inactivar moneda' : 'Activar moneda'"
+                  (click)="toggleCurrencyStatus(selectedCurrency()!)">
+                  <span class="material-icons-round">
+                    {{ selectedCurrency()?.status === 'ACTIVE' ? 'toggle_off' : 'toggle_on' }}
+                  </span>
+                  {{ selectedCurrency()?.status === 'ACTIVE' ? 'Inactivar' : 'Activar' }}
+                </button>
+                <button
+                  type="button"
+                  class="ce-btn ce-btn--secondary ce-btn--sm"
+                  id="btn-open-rate-form"
+                  (click)="openRateForm()"
+                  [disabled]="selectedCurrency()?.status === 'INACTIVE'">
+                  <span class="material-icons-round">add</span>
+                  Nuevo tipo de cambio
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Formulario de moneda -->
+          <form
+            [formGroup]="currencyForm"
+            (ngSubmit)="saveCurrency()"
+            class="ce-form"
+            id="currency-form"
+            novalidate>
+
+            <!-- Fila 1: ISO Code + Nombre -->
+            <div class="ce-form__row">
+              <div class="ce-form__field ce-form__field--sm">
+                <label for="cf-iso-code" class="ce-form__label">
+                  Código ISO 4217 <span class="ce-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="cf-iso-code"
+                  class="ce-form__input"
+                  [class.ce-form__input--error]="cfError('isoCode', 'required') || cfError('isoCode', 'pattern') || cfError('isoCode', 'minlength')"
+                  formControlName="isoCode"
+                  maxlength="3"
+                  placeholder="USD"
+                  autocomplete="off"
+                  style="text-transform:uppercase" />
+
+                @if (cfError('isoCode', 'required')) {
+                  <span class="ce-form__error">El código ISO es obligatorio.</span>
+                } @else if (cfError('isoCode', 'minlength') || cfError('isoCode', 'pattern')) {
+                  <span class="ce-form__error">Debe contener exactamente 3 letras (ej. USD, EUR, MXN).</span>
+                }
+              </div>
+
+              <div class="ce-form__field ce-form__field--lg">
+                <label for="cf-name" class="ce-form__label">
+                  Nombre <span class="ce-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="cf-name"
+                  class="ce-form__input"
+                  [class.ce-form__input--error]="cfError('name', 'required') || cfError('name', 'whitespaceOnly')"
+                  formControlName="name"
+                  maxlength="80"
+                  placeholder="Dólar estadounidense"
+                  autocomplete="off" />
+
+                @if (cfError('name', 'required') || cfError('name', 'whitespaceOnly')) {
+                  <span class="ce-form__error">El nombre de la divisa es obligatorio.</span>
+                }
+              </div>
+            </div>
+
+            <!-- Fila 2: Símbolo + Decimales + Estado -->
+            <div class="ce-form__row">
+              <div class="ce-form__field ce-form__field--sm">
+                <label for="cf-symbol" class="ce-form__label">
+                  Símbolo <span class="ce-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="cf-symbol"
+                  class="ce-form__input"
+                  [class.ce-form__input--error]="cfError('symbol', 'required')"
+                  formControlName="symbol"
+                  maxlength="8"
+                  placeholder="US$"
+                  autocomplete="off" />
+
+                @if (cfError('symbol', 'required')) {
+                  <span class="ce-form__error">El símbolo es obligatorio.</span>
+                }
+              </div>
+
+              <div class="ce-form__field ce-form__field--sm">
+                <label for="cf-decimal-places" class="ce-form__label">
+                  Decimales <span class="ce-required">*</span>
+                </label>
+                <select
+                  id="cf-decimal-places"
+                  class="ce-form__select"
+                  formControlName="decimalPlaces">
+                  <option [value]="0">0</option>
+                  <option [value]="2">2</option>
+                  <option [value]="3">3</option>
+                  <option [value]="4">4</option>
+                  <option [value]="6">6</option>
+                </select>
+              </div>
+
+              <div class="ce-form__field ce-form__field--md">
+                <label for="cf-status" class="ce-form__label">Estado</label>
+                <select id="cf-status" class="ce-form__select" formControlName="status">
+                  <option value="ACTIVE">Activa</option>
+                  <option value="INACTIVE">Inactiva</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Fila 3: Moneda base -->
+            @if (formMode() === 'CREATE') {
+              <div class="ce-form__row">
+                <div class="ce-form__field">
+                  <label class="ce-form__checkbox-label" for="cf-is-base">
+                    <input
+                      type="checkbox"
+                      id="cf-is-base"
+                      class="ce-form__checkbox"
+                      formControlName="isBaseCurrency" />
+                    <span>Establecer como moneda base de la organización</span>
+                  </label>
+                  <p class="ce-form__hint">
+                    La moneda base sirve como referencia para todos los tipos de cambio.
+                    Solo puede existir una moneda base. Al activar esta opción, el tipo de
+                    cambio se fijará en 1.000000.
+                  </p>
+                </div>
+              </div>
+            }
+
+            <!-- Action bar -->
+            <div class="ce-form__action-bar">
+              @if (formMode() === 'EDIT') {
+                <div class="ce-form__action-info">
+                  <span class="material-icons-round">info_outline</span>
+                  <span>Los cambios requieren confirmación del sistema.</span>
+                </div>
+              }
+              <div class="ce-form__action-buttons">
+                <button
+                  type="button"
+                  class="ce-btn ce-btn--ghost"
+                  id="btn-reset-currency-form"
+                  (click)="formMode() === 'CREATE' ? createNewCurrency() : selectCurrency(selectedCurrency()!)"
+                  [disabled]="isSaving()">
+                  Descartar
+                </button>
+                <button
+                  type="submit"
+                  class="ce-btn ce-btn--primary"
+                  id="btn-save-currency"
+                  [disabled]="currencyForm.invalid || currencyForm.pristine || isSaving()">
+                  @if (isSaving()) {
+                    <span class="ce-spinner ce-spinner--sm" aria-hidden="true"></span>
+                    Guardando…
+                  } @else {
+                    <span class="material-icons-round">save</span>
+                    {{ formMode() === 'CREATE' ? 'Crear moneda' : 'Guardar cambios' }}
+                  }
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <!-- ── Historial de tipos de cambio ──────── -->
+          @if (formMode() === 'EDIT' && selectedCurrencyRates().length > 0) {
+            <div class="ce-rate-history" id="ce-rate-history">
+              <div class="ce-rate-history__header">
+                <span class="material-icons-round">history</span>
+                <h3>Historial de tipos de cambio</h3>
+                <span class="ce-badge badge--neutral">{{ selectedCurrencyRates().length }} registros</span>
+              </div>
+
+              <div class="ce-rate-history__table-wrap">
+                <table class="ce-rate-table" aria-label="Historial de tipos de cambio">
+                  <thead>
+                    <tr>
+                      <th>Par</th>
+                      <th>Tipo</th>
+                      <th>Vigencia desde</th>
+                      <th>Vigencia hasta</th>
+                      <th>Fuente</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (rate of selectedCurrencyRates(); track trackByRateId($index, rate)) {
+                      <tr [class.ce-rate-table__row--current]="rate.status === 'CURRENT'"
+                          [id]="'rate-row-' + rate.id">
+                        <td class="ce-rate-table__pair">
+                          <span class="ce-rate-table__source">{{ rate.sourceCurrencyCode }}</span>
+                          <span class="material-icons-round ce-rate-table__arrow">trending_flat</span>
+                          <span class="ce-rate-table__target">{{ rate.targetCurrencyCode }}</span>
+                        </td>
+                        <td class="ce-rate-table__value">{{ rate.rate | number: '1.6-6' }}</td>
+                        <td class="ce-rate-table__date">{{ formatDateMX(rate.effectiveFrom) }}</td>
+                        <td class="ce-rate-table__date">
+                          {{ rate.effectiveTo ? formatDateMX(rate.effectiveTo) : '—' }}
+                        </td>
+                        <td>{{ sourceLabelMap[rate.source] }}</td>
+                        <td>
+                          <span
+                            class="ce-badge"
+                            [class]="'ce-badge ' + rateStatusClass(rate.status)">
+                            {{ statusLabelMap[rate.status] }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ─────────────────────────────────────
+           VISTA: Formulario de tipo de cambio
+           ───────────────────────────────────── -->
+      @if (panelView() === 'RATE_FORM') {
+        <div class="ce-editor" id="ce-rate-editor">
+
+          <div class="ce-editor__header">
+            <div class="ce-editor__header-left">
+              <button
+                type="button"
+                class="ce-btn-icon ce-btn-icon--back"
+                id="btn-back-from-rate"
+                (click)="backToCurrencyForm()"
+                title="Volver"
+                aria-label="Volver al formulario de moneda">
+                <span class="material-icons-round">arrow_back</span>
+              </button>
+              <span class="material-icons-round ce-editor__header-icon">currency_exchange</span>
+              <div>
+                <h2 class="ce-editor__title">Nuevo tipo de cambio</h2>
+                <p class="ce-editor__subtitle">
+                  Moneda: {{ selectedCurrency()?.isoCode }} — {{ selectedCurrency()?.name }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form
+            [formGroup]="rateForm"
+            (ngSubmit)="saveExchangeRate()"
+            class="ce-form"
+            id="rate-form"
+            novalidate>
+
+            <!-- Fila: Par de monedas -->
+            <div class="ce-form__row">
+              <div class="ce-form__field ce-form__field--sm">
+                <label class="ce-form__label">Moneda origen</label>
+                <div class="ce-form__static-field">
+                  <span class="ce-form__static-badge">{{ selectedCurrency()?.isoCode }}</span>
+                  {{ selectedCurrency()?.name }}
+                </div>
+              </div>
+
+              <div class="ce-form__field ce-form__field--sm">
+                <label for="rf-target" class="ce-form__label">
+                  Moneda destino <span class="ce-required">*</span>
+                </label>
+                <select
+                  id="rf-target"
+                  class="ce-form__select"
+                  [class.ce-form__select--error]="rfError('targetCurrencyCode', 'required')"
+                  formControlName="targetCurrencyCode">
+                  @for (c of availableTargetCurrencies; track c.id) {
+                    <option [value]="c.isoCode">{{ c.isoCode }} — {{ c.name }}</option>
+                  }
+                </select>
+                @if (rfError('targetCurrencyCode', 'required')) {
+                  <span class="ce-form__error">Seleccione una moneda destino.</span>
+                }
+              </div>
+
+              <div class="ce-form__field ce-form__field--md">
+                <label for="rf-rate" class="ce-form__label">
+                  Tipo de cambio <span class="ce-required">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="rf-rate"
+                  class="ce-form__input"
+                  [class.ce-form__input--error]="rfError('rate', 'required') || rfError('rate', 'notPositive') || rfError('rate', 'maxDecimalPlaces')"
+                  formControlName="rate"
+                  step="0.000001"
+                  min="0.000001"
+                  placeholder="18.754321" />
+
+                @if (rfError('rate', 'required')) {
+                  <span class="ce-form__error">El tipo de cambio es obligatorio.</span>
+                } @else if (rfError('rate', 'notPositive')) {
+                  <span class="ce-form__error">El tipo de cambio debe ser mayor a 0.</span>
+                } @else if (rfError('rate', 'maxDecimalPlaces')) {
+                  <span class="ce-form__error">Máximo 6 decimales.</span>
+                }
+              </div>
+            </div>
+
+            <!-- Fila: Vigencia -->
+            <div class="ce-form__row">
+              <div class="ce-form__field ce-form__field--md">
+                <label for="rf-effective-from" class="ce-form__label">
+                  Vigente desde <span class="ce-required">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  id="rf-effective-from"
+                  class="ce-form__input"
+                  [class.ce-form__input--error]="rfError('effectiveFrom', 'required')"
+                  formControlName="effectiveFrom" />
+
+                @if (rfError('effectiveFrom', 'required')) {
+                  <span class="ce-form__error">La fecha de vigencia es obligatoria.</span>
+                }
+                <span class="ce-form__hint">Si es futura, el tipo se registrará como Programado.</span>
+              </div>
+
+              <div class="ce-form__field ce-form__field--md">
+                <label for="rf-effective-to" class="ce-form__label">Vigente hasta</label>
+                <input
+                  type="datetime-local"
+                  id="rf-effective-to"
+                  class="ce-form__input"
+                  formControlName="effectiveTo" />
+                <span class="ce-form__hint">Opcional. Si no se especifica, permanece vigente.</span>
+              </div>
+            </div>
+
+            <!-- Fila: Fuente y razón -->
+            <div class="ce-form__row">
+              <div class="ce-form__field ce-form__field--md">
+                <label for="rf-source" class="ce-form__label">
+                  Fuente <span class="ce-required">*</span>
+                </label>
+                <select id="rf-source" class="ce-form__select" formControlName="source">
+                  @for (src of rateSources; track src) {
+                    <option [value]="src">{{ sourceLabelMap[src] }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="ce-form__field ce-form__field--lg">
+                <label for="rf-reason" class="ce-form__label">
+                  Razón del cambio <span class="ce-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="rf-reason"
+                  class="ce-form__input"
+                  [class.ce-form__input--error]="rfError('reason', 'required') || rfError('reason', 'whitespaceOnly')"
+                  formControlName="reason"
+                  maxlength="200"
+                  placeholder="Actualización trimestral según política financiera." />
+
+                @if (rfError('reason', 'required') || rfError('reason', 'whitespaceOnly')) {
+                  <span class="ce-form__error">La razón del cambio es obligatoria.</span>
+                }
+              </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="ce-form__row">
+              <div class="ce-form__field ce-form__field--full">
+                <label for="rf-observations" class="ce-form__label">Observaciones</label>
+                <textarea
+                  id="rf-observations"
+                  class="ce-form__textarea"
+                  formControlName="observations"
+                  maxlength="400"
+                  rows="3"
+                  placeholder="Información adicional relevante para auditoría…"></textarea>
+                <span class="ce-form__hint">Máximo 400 caracteres.</span>
+              </div>
+            </div>
+
+            <!-- Alerta informativa -->
+            <div class="ce-form__alert ce-form__alert--info" role="note">
+              <span class="material-icons-round">info</span>
+              <span>
+                Al guardar, el tipo de cambio vigente anterior de este par será cerrado automáticamente
+                y pasará a <strong>Histórico</strong>. Esta acción queda registrada en la auditoría.
+              </span>
+            </div>
+
+            <!-- Action bar -->
+            <div class="ce-form__action-bar">
+              <div class="ce-form__action-buttons">
+                <button
+                  type="button"
+                  class="ce-btn ce-btn--ghost"
+                  id="btn-cancel-rate"
+                  (click)="backToCurrencyForm()"
+                  [disabled]="isSaving()">
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="ce-btn ce-btn--primary"
+                  id="btn-save-rate"
+                  [disabled]="rateForm.invalid || isSaving()">
+                  @if (isSaving()) {
+                    <span class="ce-spinner ce-spinner--sm" aria-hidden="true"></span>
+                    Registrando…
+                  } @else {
+                    <span class="material-icons-round">currency_exchange</span>
+                    Registrar tipo de cambio
+                  }
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      }
+
+    </main>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL DE CONFIRMACIÓN
+     ═══════════════════════════════════════════════════════ -->
+@if (showConfirmModal()) {
+  <div
+    class="ce-modal-backdrop"
+    id="ce-confirm-modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="confirm-modal-title"
+    (click)="closeConfirmModal()">
+
+    <div
+      class="ce-modal"
+      id="ce-confirm-modal"
+      (click)="$event.stopPropagation()">
+
+      <div class="ce-modal__header">
+        <span class="material-icons-round ce-modal__header-icon">warning_amber</span>
+        <h3 class="ce-modal__title" id="confirm-modal-title">
+          {{ confirmModalConfig()?.title }}
+        </h3>
+      </div>
+
+      <div class="ce-modal__body">
+        <p [innerHTML]="confirmModalConfig()?.message"></p>
+      </div>
+
+      <div class="ce-modal__footer">
+        <button
+          type="button"
+          class="ce-btn ce-btn--ghost"
+          id="btn-confirm-cancel"
+          (click)="closeConfirmModal()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="ce-btn ce-btn--primary"
+          id="btn-confirm-action"
+          (click)="confirmAction()">
+          {{ confirmModalConfig()?.confirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════
+     DRAWER DE AUDITORÍA
+     ═══════════════════════════════════════════════════════ -->
+@if (showAuditDrawer()) {
+  <div
+    class="ce-audit-backdrop"
+    id="ce-audit-backdrop"
+    (click)="closeAudit()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="audit-drawer-title">
+
+    <aside
+      class="ce-audit-drawer"
+      id="ce-audit-drawer"
+      (click)="$event.stopPropagation()">
+
+      <div class="ce-audit-drawer__header">
+        <span class="material-icons-round">history</span>
+        <h2 class="ce-audit-drawer__title" id="audit-drawer-title">Auditoría del módulo</h2>
+        <button
+          type="button"
+          class="ce-btn-icon"
+          id="btn-close-audit"
+          (click)="closeAudit()"
+          aria-label="Cerrar auditoría">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <div class="ce-audit-drawer__body">
+        @for (entry of ceService.auditEntries(); track trackByAuditId($index, entry)) {
+          <div class="ce-audit-entry" [id]="'audit-entry-' + entry.id">
+            <div class="ce-audit-entry__icon-wrap">
+              <span class="material-icons-round ce-audit-entry__icon">
+                {{ auditActionIcon(entry.action) }}
+              </span>
+            </div>
+            <div class="ce-audit-entry__body">
+              <div class="ce-audit-entry__action">{{ auditActionLabel(entry.action) }}</div>
+              <div class="ce-audit-entry__meta">
+                <span>{{ entry.performedBy }}</span>
+                <span class="ce-audit-entry__sep">·</span>
+                <span>{{ formatDateMX(entry.performedAt) }}</span>
+              </div>
+              <div class="ce-audit-entry__type">
+                {{ entry.entityType === 'CURRENCY' ? 'Moneda' : 'Tipo de cambio' }}
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (ceService.auditEntries().length === 0) {
+          <div class="ce-audit-drawer__empty">
+            <span class="material-icons-round">history_toggle_off</span>
+            <span>Sin registros de auditoría.</span>
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+}

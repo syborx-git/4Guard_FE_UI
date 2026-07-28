@@ -231,6 +231,8 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
     // HU-131: Motor de Reglas de Negocio Enterprise
     { label: 'Reglas de negocio', route: '/business-rules', icon: 'gavel', module: 'business-rules' },
+    // HU-148: Divisas y Tipos de Cambio — Módulo Financiero
+    { label: 'Divisas y cambio', route: '/currency-exchange', icon: 'currency_exchange', module: 'currency-exchange' },
     // HU-146: Temporal debajo de Administrar para evaluación de UX.
     // Mover a Monitoreo o Auditoría cuando se defina el módulo definitivo.
     { label: 'Actividad por usuario', route: '/user-activity', icon: 'manage_search', module: 'user-activity' },
