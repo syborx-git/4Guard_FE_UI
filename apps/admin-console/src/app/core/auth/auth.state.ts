@@ -178,6 +178,8 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing (HU-140)
       case 'business-rules':
         return true; // Acceso total habilitado para evaluación (HU-131)
+      case 'currency-exchange':
+        return true; // Acceso total habilitado para evaluación (HU-148)
       case 'user-activity':
         // HU-146: Solo OPERATIONS_SUPERVISOR, SHIFT_LEADER y OPERATIONS_MANAGER.
         // NOTA: La validación definitiva de RLS y permisos se ejecuta en el backend.

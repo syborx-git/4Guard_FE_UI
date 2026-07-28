@@ -8,12 +8,15 @@ import { Routes } from '@angular/router';
 import { authGuard }         from './core/guards/auth.guard';
 import { rbacGuard }         from './core/guards/rbac.guard';
 import { changePasswordGuard } from './core/guards/change-password.guard';
+import { lockoutGuard }      from './core/guards/lockout.guard';
 import { UserRole }           from '@4guard/shared-core';
 
 export const adminRoutes: Routes = [
   // Ruta pública: Login
+  // lockoutGuard: intercepta ANTES del componente para evitar evasion del bloqueo por F5 (HU-010)
   {
     path: 'login',
+    canActivate: [lockoutGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
     title: '4GUARD WMS — Iniciar Sesión',
@@ -264,6 +267,16 @@ export const adminRoutes: Routes = [
         loadChildren: () =>
           import('./features/business-rules/business-rules.routes').then((m) => m.businessRulesRoutes),
         title: '4GUARD WMS — Motor de Reglas de Negocio',
+      },
+
+      // Divisas y Tipos de Cambio (HU-148)
+      {
+        path: 'currency-exchange',
+        canActivate: [rbacGuard],
+        data: { module: 'currency-exchange' },
+        loadChildren: () =>
+          import('./features/currency-exchange/currency-exchange.routes').then((m) => m.currencyExchangeRoutes),
+        title: '4GUARD WMS — Divisas y Tipos de Cambio',
       },
 
       // Redirección por defecto
