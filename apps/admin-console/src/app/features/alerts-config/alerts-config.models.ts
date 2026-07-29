@@ -1,0 +1,429 @@
+/**
+ * @file alerts-config.models.ts
+ * @description Modelos, tipos y datos dummy para HU-134 — Configuración de Alertas y Notificaciones.
+ * 4GUARD WMS Enterprise · Torre de Control y Motor de Reglas
+ */
+
+// ═══════════════════════════════════════════════════════════════════
+// TIPOS DE DOMINIO
+// ═══════════════════════════════════════════════════════════════════
+
+export type AlertCategory =
+  | 'RECEIVING'
+  | 'INVENTORY'
+  | 'QUALITY'
+  | 'PICKING'
+  | 'SHIPPING'
+  | 'USERS'
+  | 'SYSTEM';
+
+export type AlertEvent =
+  | 'WAIT_TIME_EXCEEDED'
+  | 'PENDING_ASN'
+  | 'LOW_INVENTORY'
+  | 'LOT_EXPIRATION'
+  | 'HALTED_PICKING'
+  | 'USER_LOCKED'
+  | 'INTEGRATION_ERROR'
+  | 'SHIPMENT_DELAYED';
+
+export type AlertPriority = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type AlertStatus = 'ACTIVE' | 'INACTIVE';
+
+export type AlertChannel = 'SYSTEM' | 'EMAIL' | 'PUSH' | 'SMS' | 'WEBHOOK';
+
+export type AlertRecipientRole =
+  | 'SUPERVISOR'
+  | 'MANAGER'
+  | 'ADMIN'
+  | 'OPERATOR'
+  | 'CLIENT';
+
+export type AlertCondition =
+  | 'GREATER_THAN'
+  | 'LESS_THAN'
+  | 'EQUALS'
+  | 'TIME_EXCEEDED';
+
+export type AlertUnit = 'MINUTES' | 'HOURS' | 'PIECES' | 'PERCENTAGE';
+
+export type AlertRecurrence =
+  | 'NEVER'
+  | 'EVERY_15_MIN'
+  | 'EVERY_30_MIN'
+  | 'EVERY_HOUR';
+
+export type AlertEscalationTime =
+  | 'NONE'
+  | 'AFTER_15_MIN'
+  | 'AFTER_30_MIN'
+  | 'AFTER_60_MIN';
+
+// ═══════════════════════════════════════════════════════════════════
+// INTERFACES PRINCIPALES
+// ═══════════════════════════════════════════════════════════════════
+
+export interface AlertConfiguration {
+  id: string;
+  organizationId: string;
+  name: string;
+  category: AlertCategory;
+  event: AlertEvent;
+  priority: AlertPriority;
+  status: AlertStatus;
+  channels: AlertChannel[];
+  recipients: AlertRecipientRole[];
+  condition: AlertCondition;
+  value: number;
+  unit: AlertUnit;
+  recurrence: AlertRecurrence;
+  escalation: AlertEscalationTime;
+  messageTemplate: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface AlertHistoryEntry {
+  id: string;
+  alertId: string;
+  timestamp: string;
+  user: string;
+  changeSummary: string;
+  previousStatus?: AlertStatus;
+  newStatus?: AlertStatus;
+}
+
+export interface AlertAuditEntry {
+  id: string;
+  organizationId: string;
+  entityId: string;
+  action: 'CREATE' | 'UPDATE' | 'ACTIVATE' | 'DEACTIVATE' | 'DELETE';
+  performedBy: string;
+  performedAt: string;
+  details: string;
+}
+
+export interface AlertKpis {
+  activeAlerts: number;
+  criticalAlerts: number;
+  configuredChannels: number;
+  escalationsConfigured: number;
+}
+
+export interface ToastPreviewData {
+  title: string;
+  categoryLabel: string;
+  message: string;
+  priority: AlertPriority;
+  iconName: string;
+  formattedTimestamp: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CATÁLOGOS Y LABELS TIPADOS
+// ═══════════════════════════════════════════════════════════════════
+
+export const ALERT_CATEGORY_LABELS: Record<AlertCategory, string> = {
+  RECEIVING: 'Recepción',
+  INVENTORY: 'Inventario',
+  QUALITY: 'Calidad',
+  PICKING: 'Picking',
+  SHIPPING: 'Despacho',
+  USERS: 'Usuarios',
+  SYSTEM: 'Sistema',
+};
+
+export const ALERT_EVENT_LABELS: Record<AlertEvent, string> = {
+  WAIT_TIME_EXCEEDED: 'Tiempo de espera de camión excedido',
+  PENDING_ASN: 'Recepción sin ASN / Documento pendiente',
+  LOW_INVENTORY: 'Inventario bajo el stock mínimo',
+  LOT_EXPIRATION: 'Lote próximo a vencer (FEFO)',
+  HALTED_PICKING: 'Ola de picking detenida / bloqueada',
+  USER_LOCKED: 'Usuario bloqueado por intentos fallidos',
+  INTEGRATION_ERROR: 'Error en integración ERP / SAP',
+  SHIPMENT_DELAYED: 'Embarque retrasado sobre ventana horaria',
+};
+
+export const ALERT_PRIORITY_LABELS: Record<AlertPriority, string> = {
+  INFO: 'Información',
+  LOW: 'Baja',
+  MEDIUM: 'Media',
+  HIGH: 'Alta',
+  CRITICAL: 'Crítica',
+};
+
+export const ALERT_CONDITION_LABELS: Record<AlertCondition, string> = {
+  GREATER_THAN: 'Mayor que ( > )',
+  LESS_THAN: 'Menor que ( < )',
+  EQUALS: 'Igual a ( = )',
+  TIME_EXCEEDED: 'Tiempo excedido ( > t )',
+};
+
+export const ALERT_UNIT_LABELS: Record<AlertUnit, string> = {
+  MINUTES: 'Minutos',
+  HOURS: 'Horas',
+  PIECES: 'Piezas',
+  PERCENTAGE: 'Porcentaje',
+};
+
+export const ALERT_RECURRENCE_LABELS: Record<AlertRecurrence, string> = {
+  NEVER: 'Nunca',
+  EVERY_15_MIN: 'Cada 15 minutos',
+  EVERY_30_MIN: 'Cada 30 minutos',
+  EVERY_HOUR: 'Cada hora',
+};
+
+export const ALERT_ESCALATION_LABELS: Record<AlertEscalationTime, string> = {
+  NONE: 'Sin escalamiento',
+  AFTER_15_MIN: 'Después de 15 minutos',
+  AFTER_30_MIN: 'Después de 30 minutos',
+  AFTER_60_MIN: 'Después de 60 minutos',
+};
+
+export const RECIPIENT_ROLE_LABELS: Record<AlertRecipientRole, string> = {
+  SUPERVISOR: 'Supervisor de Operaciones',
+  MANAGER: 'Gerente de Almacén',
+  ADMIN: 'Administrador del Sistema',
+  OPERATOR: 'Operador de Montacargas / Mesa',
+  CLIENT: 'Cliente 3PL / Cuenta',
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// DATOS DUMMY REALISTAS 3PL WMS
+// ═══════════════════════════════════════════════════════════════════
+
+const ORG_ID = 'org-4guard-mx-001';
+
+export const DUMMY_ALERTS: AlertConfiguration[] = [
+  {
+    id: 'alt-001',
+    organizationId: ORG_ID,
+    name: 'Unidad con tiempo de espera excedido en patio',
+    category: 'RECEIVING',
+    event: 'WAIT_TIME_EXCEEDED',
+    priority: 'HIGH',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['SUPERVISOR', 'MANAGER'],
+    condition: 'TIME_EXCEEDED',
+    value: 30,
+    unit: 'MINUTES',
+    recurrence: 'EVERY_15_MIN',
+    escalation: 'AFTER_30_MIN',
+    messageTemplate: 'La unidad transportista {{truck}} en rampa {{ramp}} ha superado los {{value}} minutos de espera.',
+    description: 'Notifica al equipo cuando un camión sobrepasa el tiempo límite sin iniciar descarga.',
+    createdAt: '2026-01-10T08:00:00Z',
+    updatedAt: '2026-07-27T14:30:00Z',
+    updatedBy: 'gerente.operaciones@4guard.mx',
+  },
+  {
+    id: 'alt-002',
+    organizationId: ORG_ID,
+    name: 'Recepción arribada sin documento ASN',
+    category: 'RECEIVING',
+    event: 'PENDING_ASN',
+    priority: 'MEDIUM',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['SUPERVISOR', 'OPERATOR'],
+    condition: 'EQUALS',
+    value: 0,
+    unit: 'PIECES',
+    recurrence: 'NEVER',
+    escalation: 'AFTER_15_MIN',
+    messageTemplate: 'Arribo de proveedor {{supplier}} detectado sin ASN registrado en el portal.',
+    description: 'Alerta cuando llega una unidad sin orden de compra ni ASN precargado.',
+    createdAt: '2026-02-01T09:15:00Z',
+    updatedAt: '2026-07-20T10:00:00Z',
+    updatedBy: 'supervisor.recepcion@4guard.mx',
+  },
+  {
+    id: 'alt-003',
+    organizationId: ORG_ID,
+    name: 'Inventario bajo nivel mínimo crítico',
+    category: 'INVENTORY',
+    event: 'LOW_INVENTORY',
+    priority: 'HIGH',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['SUPERVISOR', 'MANAGER', 'CLIENT'],
+    condition: 'LESS_THAN',
+    value: 100,
+    unit: 'PIECES',
+    recurrence: 'EVERY_30_MIN',
+    escalation: 'AFTER_60_MIN',
+    messageTemplate: 'El SKU {{sku}} en zona {{zone}} alcanzó el stock crítico de {{qty}} pzas.',
+    description: 'Dispara reabastecimiento o alerta de quiebre de stock para clientes 3PL.',
+    createdAt: '2026-01-15T11:00:00Z',
+    updatedAt: '2026-07-26T16:45:00Z',
+    updatedBy: 'gerente.operaciones@4guard.mx',
+  },
+  {
+    id: 'alt-004',
+    organizationId: ORG_ID,
+    name: 'Lote próximo a vencer (Regla FEFO)',
+    category: 'QUALITY',
+    event: 'LOT_EXPIRATION',
+    priority: 'CRITICAL',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['SUPERVISOR', 'MANAGER', 'ADMIN'],
+    condition: 'LESS_THAN',
+    value: 15,
+    unit: 'HOURS',
+    recurrence: 'EVERY_HOUR',
+    escalation: 'AFTER_15_MIN',
+    messageTemplate: 'Atención: El lote {{lot}} del producto {{sku}} vence el {{date}} y requiere bloqueo FEFO.',
+    description: 'Previene la salida de mercancía caducada congelando lotes próximos a vencer.',
+    createdAt: '2026-03-12T07:30:00Z',
+    updatedAt: '2026-07-25T12:00:00Z',
+    updatedBy: 'calidad@4guard.mx',
+  },
+  {
+    id: 'alt-005',
+    organizationId: ORG_ID,
+    name: 'Ola de picking detenida o bloqueada',
+    category: 'PICKING',
+    event: 'HALTED_PICKING',
+    priority: 'HIGH',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['SUPERVISOR', 'OPERATOR'],
+    condition: 'TIME_EXCEEDED',
+    value: 20,
+    unit: 'MINUTES',
+    recurrence: 'EVERY_15_MIN',
+    escalation: 'AFTER_30_MIN',
+    messageTemplate: 'La ola de picking #{{waveId}} se encuentra inactiva sin avance en pasillo {{aisle}}.',
+    description: 'Detecta cuellos de botella en surtido de pedidos de e-commerce o retail.',
+    createdAt: '2026-04-05T13:20:00Z',
+    updatedAt: '2026-07-22T09:10:00Z',
+    updatedBy: 'supervisor.picking@4guard.mx',
+  },
+  {
+    id: 'alt-006',
+    organizationId: ORG_ID,
+    name: 'Usuario bloqueado por intentos fallidos de clave',
+    category: 'USERS',
+    event: 'USER_LOCKED',
+    priority: 'MEDIUM',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['ADMIN', 'MANAGER'],
+    condition: 'EQUALS',
+    value: 3,
+    unit: 'PIECES',
+    recurrence: 'NEVER',
+    escalation: 'NONE',
+    messageTemplate: 'La cuenta del operador {{username}} ha sido bloqueada temporalmente por 15 minutos.',
+    description: 'Notificación de seguridad ante sospecha de acceso no autorizado.',
+    createdAt: '2026-05-01T15:00:00Z',
+    updatedAt: '2026-07-27T08:00:00Z',
+    updatedBy: 'admin.seguridad@4guard.mx',
+  },
+  {
+    id: 'alt-007',
+    organizationId: ORG_ID,
+    name: 'Error de comunicación en interfaz ERP / SAP',
+    category: 'SYSTEM',
+    event: 'INTEGRATION_ERROR',
+    priority: 'CRITICAL',
+    status: 'INACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['ADMIN', 'MANAGER'],
+    condition: 'EQUALS',
+    value: 1,
+    unit: 'PIECES',
+    recurrence: 'EVERY_15_MIN',
+    escalation: 'AFTER_15_MIN',
+    messageTemplate: 'Fallo de sincronización en interfaz {{interfaceId}}: HTTP status {{code}}.',
+    description: 'Alertamiento inmediato ante caída de webhooks o colas de mensajes del ERP.',
+    createdAt: '2026-06-10T10:00:00Z',
+    updatedAt: '2026-07-15T11:30:00Z',
+    updatedBy: 'sistemas@4guard.mx',
+  },
+  {
+    id: 'alt-008',
+    organizationId: ORG_ID,
+    name: 'Embarque retrasado sobre ventana de despacho',
+    category: 'SHIPPING',
+    event: 'SHIPMENT_DELAYED',
+    priority: 'HIGH',
+    status: 'ACTIVE',
+    channels: ['SYSTEM'],
+    recipients: ['SUPERVISOR', 'MANAGER', 'CLIENT'],
+    condition: 'TIME_EXCEEDED',
+    value: 45,
+    unit: 'MINUTES',
+    recurrence: 'EVERY_30_MIN',
+    escalation: 'AFTER_60_MIN',
+    messageTemplate: 'La salida de la ruta {{routeId}} presenta un retraso de {{value}} minutos sobre la ventana cita.',
+    description: 'Evita penalizaciones por entrega tardía monitoreando la salida de transporte.',
+    createdAt: '2026-06-20T14:00:00Z',
+    updatedAt: '2026-07-24T17:00:00Z',
+    updatedBy: 'gerente.operaciones@4guard.mx',
+  },
+];
+
+export const DUMMY_ALERT_HISTORY: AlertHistoryEntry[] = [
+  {
+    id: 'his-001',
+    alertId: 'alt-001',
+    timestamp: '2026-07-27T14:30:00Z',
+    user: 'gerente.operaciones@4guard.mx',
+    changeSummary: 'Se actualizó el tiempo límite de 20 a 30 minutos y se agregó escalamiento a 30m.',
+    previousStatus: 'ACTIVE',
+    newStatus: 'ACTIVE',
+  },
+  {
+    id: 'his-002',
+    alertId: 'alt-001',
+    timestamp: '2026-05-10T11:15:00Z',
+    user: 'supervisor.recepcion@4guard.mx',
+    changeSummary: 'Creación de la regla de alerta inicial con prioridad ALTA.',
+    previousStatus: undefined,
+    newStatus: 'ACTIVE',
+  },
+  {
+    id: 'his-003',
+    alertId: 'alt-003',
+    timestamp: '2026-07-26T16:45:00Z',
+    user: 'gerente.operaciones@4guard.mx',
+    changeSummary: 'Ajuste de stock mínimo de 50 a 100 piezas por requerimiento del cliente 3PL.',
+    previousStatus: 'ACTIVE',
+    newStatus: 'ACTIVE',
+  },
+];
+
+export const DUMMY_ALERT_AUDIT: AlertAuditEntry[] = [
+  {
+    id: 'aud-001',
+    organizationId: ORG_ID,
+    entityId: 'alt-001',
+    action: 'UPDATE',
+    performedBy: 'gerente.operaciones@4guard.mx',
+    performedAt: '2026-07-27T14:30:00Z',
+    details: 'Modificación de parámetros de condición: value=30, escalation=AFTER_30_MIN.',
+  },
+  {
+    id: 'aud-002',
+    organizationId: ORG_ID,
+    entityId: 'alt-007',
+    action: 'DEACTIVATE',
+    performedBy: 'sistemas@4guard.mx',
+    performedAt: '2026-07-15T11:30:00Z',
+    details: 'Regla inactivada por mantenimiento en servidor de integración SAP.',
+  },
+  {
+    id: 'aud-003',
+    organizationId: ORG_ID,
+    entityId: 'alt-003',
+    action: 'UPDATE',
+    performedBy: 'gerente.operaciones@4guard.mx',
+    performedAt: '2026-07-26T16:45:00Z',
+    details: 'Actualización de valor límite a 100 PIECES.',
+  },
+];

@@ -233,6 +233,10 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Reglas de negocio', route: '/business-rules', icon: 'gavel', module: 'business-rules' },
     // HU-148: Divisas y Tipos de Cambio — Módulo Financiero
     { label: 'Divisas y cambio', route: '/currency-exchange', icon: 'currency_exchange', module: 'currency-exchange' },
+    // HU-134: Configuración de Alertas y Notificaciones
+    { label: 'Alertas y notificaciones', route: '/alerts-config', icon: 'notifications_active', module: 'alerts-config' },
+    // HU-139: Gestión de Licencias del WMS
+    { label: 'Gestión de licencias', route: '/licenses', icon: 'workspace_premium', module: 'license-management' },
     // HU-146: Temporal debajo de Administrar para evaluación de UX.
     // Mover a Monitoreo o Auditoría cuando se defina el módulo definitivo.
     { label: 'Actividad por usuario', route: '/user-activity', icon: 'manage_search', module: 'user-activity' },
