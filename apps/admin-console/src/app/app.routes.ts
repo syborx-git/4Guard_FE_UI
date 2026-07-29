@@ -279,6 +279,28 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Divisas y Tipos de Cambio',
       },
 
+      // Configuración de Alertas y Notificaciones (HU-134)
+      {
+        path: 'alerts-config',
+        canActivate: [rbacGuard],
+        data: { module: 'alerts-config' },
+        loadChildren: () =>
+          import('./features/alerts-config/alerts-config.routes').then((m) => m.alertsConfigRoutes),
+        title: '4GUARD WMS — Configuración de Alertas y Notificaciones',
+      },
+
+      // Gestión de Licencias del WMS (HU-139)
+      {
+        path: 'licenses',
+        canActivate: [rbacGuard],
+        data: { module: 'license-management' },
+        loadChildren: () =>
+          import('./features/license-management/license-management.routes').then(
+            (m) => m.licenseManagementRoutes
+          ),
+        title: '4GUARD WMS — Licencias y Capacidades del WMS',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

@@ -1,0 +1,1402 @@
+<!-- license-management.component.html -->
+<!-- HU-139 — Licencias y Capacidades del WMS -->
+
+<section class="lm-page" aria-label="Licencias y Capacidades del WMS">
+
+  <!-- ════════════════════════════════════════════════════════
+       HERO
+       ════════════════════════════════════════════════════════ -->
+  <header class="lm-hero">
+    <div class="lm-hero__left">
+      <div class="lm-hero__icon-wrap" aria-hidden="true">
+        <span class="material-icons-round">workspace_premium</span>
+      </div>
+      <div>
+        <div class="lm-hero__eyebrow">Administración WMS · Control Comercial</div>
+        <h1 class="lm-hero__title">Licencias y Capacidades del WMS</h1>
+        <p class="lm-hero__subtitle">
+          Administra la vigencia, los módulos contratados y los límites operativos asignados a cada organización.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════
+       KPI CARDS (calculados con computed() desde datos dummy)
+       ════════════════════════════════════════════════════════ -->
+  <div class="lm-kpi-strip" role="region" aria-label="Indicadores de licencias">
+
+    <div class="lm-kpi-card">
+      <div class="lm-kpi-card__icon-wrap lm-kpi-card__icon-wrap--active">
+        <span class="material-icons-round" aria-hidden="true">verified</span>
+      </div>
+      <div class="lm-kpi-card__body">
+        <span class="lm-kpi-card__value">{{ kpiActiveLicenses() }}</span>
+        <span class="lm-kpi-card__label">Licencias activas</span>
+        <span class="lm-kpi-card__sub">Activas + por vencer</span>
+      </div>
+    </div>
+
+    <div class="lm-kpi-card" [class.lm-kpi-card--warning]="kpiExpiringSoon() > 0">
+      <div class="lm-kpi-card__icon-wrap lm-kpi-card__icon-wrap--warning">
+        <span class="material-icons-round" aria-hidden="true">schedule</span>
+      </div>
+      <div class="lm-kpi-card__body">
+        <span class="lm-kpi-card__value">{{ kpiExpiringSoon() }}</span>
+        <span class="lm-kpi-card__label">Próximas a vencer</span>
+        <span class="lm-kpi-card__sub">En los próximos 30 días</span>
+      </div>
+    </div>
+
+    <div class="lm-kpi-card">
+      <div class="lm-kpi-card__icon-wrap lm-kpi-card__icon-wrap--users">
+        <span class="material-icons-round" aria-hidden="true">group</span>
+      </div>
+      <div class="lm-kpi-card__body">
+        <span class="lm-kpi-card__value">
+          {{ kpiUserCapacity().used }} <small>/ {{ kpiUserCapacity().max }}</small>
+        </span>
+        <span class="lm-kpi-card__label">Capacidad de usuarios</span>
+        <span class="lm-kpi-card__sub">{{ kpiUserCapacity().pct }}% utilizado</span>
+      </div>
+    </div>
+
+    <div class="lm-kpi-card">
+      <div class="lm-kpi-card__icon-wrap lm-kpi-card__icon-wrap--modules">
+        <span class="material-icons-round" aria-hidden="true">apps</span>
+      </div>
+      <div class="lm-kpi-card__body">
+        <span class="lm-kpi-card__value">{{ kpiModulesCount() }}</span>
+        <span class="lm-kpi-card__label">Módulos contratados</span>
+        <span class="lm-kpi-card__sub">Módulos únicos activos</span>
+      </div>
+    </div>
+
+  </div><!-- /lm-kpi-strip -->
+
+  <!-- ════════════════════════════════════════════════════════
+       LOADING / ERROR
+       ════════════════════════════════════════════════════════ -->
+  @if (isLoading()) {
+    <div class="lm-loading" role="status" aria-live="polite">
+      <span class="lm-loading__spinner" aria-hidden="true"></span>
+      <span>Cargando licencias…</span>
+    </div>
+  }
+
+  @if (loadError()) {
+    <div class="lm-error-banner" role="alert">
+      <span class="material-icons-round" aria-hidden="true">error_outline</span>
+      <span>{{ loadError() }}</span>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════
+       SPLIT VIEW: 35% Directorio | 65% Editor
+       ════════════════════════════════════════════════════════ -->
+  <div class="lm-split" [class.lm-split--loading]="isLoading()">
+
+    <!-- ══════════════════════════════
+         PANEL IZQUIERDO — DIRECTORIO
+         ══════════════════════════════ -->
+    <aside class="lm-split__left" aria-label="Directorio de licencias">
+
+      <!-- Encabezado del directorio con botón Nueva licencia -->
+      <div class="lm-dir__head">
+        <h2 class="lm-dir__head-title">Directorio de licencias</h2>
+        <button
+          id="lm-btn-new"
+          type="button"
+          class="lm-btn lm-btn--primary lm-btn--sm"
+          (click)="startCreate()"
+          aria-label="Crear nueva licencia">
+          <span class="material-icons-round" aria-hidden="true">add</span>
+          Nueva
+        </button>
+      </div>
+
+      <!-- Buscador -->
+      <div class="lm-dir__search-wrap">
+        <span class="material-icons-round lm-dir__search-icon" aria-hidden="true">search</span>
+        <input
+          id="lm-search"
+          type="text"
+          class="lm-dir__search"
+          placeholder="Buscar por organización, plan o licencia…"
+          [value]="searchQuery()"
+          (input)="setSearch($any($event.target).value)"
+          aria-label="Buscar licencia"
+          autocomplete="off"
+        />
+        @if (searchQuery()) {
+          <button
+            type="button"
+            class="lm-dir__search-clear"
+            (click)="setSearch('')"
+            aria-label="Limpiar búsqueda">
+            <span class="material-icons-round" aria-hidden="true">close</span>
+          </button>
+        }
+      </div>
+
+      <!-- Filtros por estado -->
+      <div class="lm-dir__filters" role="group" aria-label="Filtrar por estado">
+        @for (f of [
+          {key: 'ALL', label: 'Todas'},
+          {key: 'ACTIVE', label: 'Activas'},
+          {key: 'EXPIRING_SOON', label: 'Por vencer'},
+          {key: 'SUSPENDED', label: 'Suspendidas'},
+          {key: 'EXPIRED', label: 'Vencidas'}
+        ]; track f.key) {
+          <button
+            type="button"
+            class="lm-dir__chip"
+            [class.lm-dir__chip--active]="statusFilter() === f.key"
+            (click)="setStatusFilter($any(f.key))"
+            [attr.aria-pressed]="statusFilter() === f.key">
+            {{ f.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Filtro por plan -->
+      <div class="lm-dir__plan-filter">
+        <label class="lm-dir__plan-label" for="lm-plan-filter">Plan</label>
+        <select
+          id="lm-plan-filter"
+          class="lm-dir__plan-select"
+          [value]="planFilter()"
+          (change)="setPlanFilter($any($any($event.target).value))"
+          aria-label="Filtrar por plan">
+          <option value="ALL">Todos los planes</option>
+          @for (p of plans; track p) {
+            <option [value]="p">{{ planLabels[p] }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Lista de licencias -->
+      <div class="lm-dir__list" role="list" aria-label="Lista de licencias">
+        @if (!isLoading() && filteredLicenses().length === 0) {
+          <div class="lm-dir__empty" role="status">
+            <span class="material-icons-round" aria-hidden="true">search_off</span>
+            <span>Sin resultados para la búsqueda actual.</span>
+          </div>
+        }
+
+        @for (item of filteredLicenses(); track item.license.id) {
+          <div
+            class="lm-dir__item"
+            [class.lm-dir__item--selected]="selectedLicense()?.id === item.license.id"
+            [class.lm-dir__item--revoked]="item.derived === 'REVOKED'"
+            role="listitem"
+            (click)="selectLicense(item.license)"
+            [attr.aria-selected]="selectedLicense()?.id === item.license.id"
+            tabindex="0"
+            (keydown.enter)="selectLicense(item.license)"
+            (keydown.space)="selectLicense(item.license); $event.preventDefault()"
+            [attr.aria-label]="item.license.organizationName + ' — ' + statusLabels[item.derived]">
+
+            <!-- Avatar organización -->
+            <div class="lm-dir__item-avatar" [class]="'lm-dir__item-avatar--' + item.derived" aria-hidden="true">
+              {{ item.license.organizationName.charAt(0) }}
+            </div>
+
+            <!-- Info principal -->
+            <div class="lm-dir__item-body">
+              <span class="lm-dir__item-name">{{ item.license.organizationName }}</span>
+              <span class="lm-dir__item-plan">{{ planLabels[item.license.plan] }}</span>
+              <span class="lm-dir__item-key">{{ item.license.maskedLicenseKey }}</span>
+
+              <!-- Mini barra de usuarios -->
+              <div class="lm-dir__item-usage" aria-label="Uso de usuarios">
+                <div class="lm-dir__item-usage-bar">
+                  <div
+                    class="lm-dir__item-usage-fill"
+                    [class]="'lm-dir__item-usage-fill--' + getUsageClass(getUsagePct(item.license.usage.currentUsers, item.license.capacities.maxUsers))"
+                    [style.width.%]="getUsagePct(item.license.usage.currentUsers, item.license.capacities.maxUsers)"
+                    [attr.aria-valuenow]="item.license.usage.currentUsers"
+                    [attr.aria-valuemax]="item.license.capacities.maxUsers"
+                    role="progressbar">
+                  </div>
+                </div>
+                <span class="lm-dir__item-usage-txt">
+                  {{ item.license.usage.currentUsers }} / {{ item.license.capacities.maxUsers }} usuarios
+                </span>
+              </div>
+
+              <span class="lm-dir__item-date">Vence: {{ formatDate(item.license.validUntil) }}</span>
+            </div>
+
+            <!-- Badge de estado -->
+            <div class="lm-dir__item-side">
+              <span class="lm-badge" [class]="getStatusClass(item.derived)" aria-label="Estado: {{ statusLabels[item.derived] }}">
+                {{ statusLabels[item.derived] }}
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Nueva licencia movido al header del directorio (lm-dir__head) -->
+
+    </aside>
+
+    <!-- ══════════════════════════════
+         PANEL DERECHO — EDITOR
+         ══════════════════════════════ -->
+    <main class="lm-split__right" aria-label="Editor de licencia">
+
+      @if (!selectedLicense() && formMode() === 'EDIT') {
+        <!-- Estado vacío -->
+        <div class="lm-empty-state">
+          <span class="material-icons-round lm-empty-state__icon" aria-hidden="true">workspace_premium</span>
+          <h2 class="lm-empty-state__title">Selecciona una licencia</h2>
+          <p class="lm-empty-state__text">
+            Elige una licencia del directorio para ver y editar su configuración, o crea una nueva.
+          </p>
+          <button type="button" class="lm-btn lm-btn--primary" (click)="startCreate()">
+            <span class="material-icons-round" aria-hidden="true">add</span>
+            Nueva licencia
+          </button>
+        </div>
+      } @else {
+        <!-- ── Header del editor ── -->
+        <div class="lm-editor__header">
+          <div class="lm-editor__header-info">
+            <h2 class="lm-editor__title">
+              @if (formMode() === 'CREATE') {
+                Nueva licencia
+              } @else {
+                {{ selectedLicense()?.organizationName }}
+              }
+            </h2>
+            <p class="lm-editor__subtitle">
+              @if (formMode() === 'CREATE') {
+                Completa los datos para registrar una nueva licencia.
+              } @else {
+                {{ planLabels[selectedLicense()?.plan ?? 'STARTER'] }} · {{ selectedLicense()?.licenseName }}
+              }
+            </p>
+
+            <!-- Resumen compacto de salud (solo en modo edición) -->
+            @if (formMode() === 'EDIT' && selectedLicense()) {
+              <div class="lm-health-summary" aria-label="Resumen de salud de licencia">
+                <!-- Estado derivado -->
+                <div class="lm-health-chip" [class]="getStatusClass(selectedDerived())">
+                  <span class="material-icons-round" aria-hidden="true">circle</span>
+                  {{ statusLabels[selectedDerived() ?? 'DRAFT'] }}
+                </div>
+                <!-- Días restantes -->
+                @if (daysRemaining() !== null) {
+                  <div class="lm-health-chip" [class.lm-health-chip--warning]="(daysRemaining() ?? 999) <= 30" [class.lm-health-chip--danger]="(daysRemaining() ?? 999) < 0">
+                    <span class="material-icons-round" aria-hidden="true">event</span>
+                    @if ((daysRemaining() ?? 0) < 0) {
+                      Vencida hace {{ (daysRemaining() ?? 0) * -1 }} días
+                    } @else {
+                      {{ daysRemaining() }} días restantes
+                    }
+                  </div>
+                }
+                <!-- Utilización de usuarios -->
+                @if (usageStats().length > 0) {
+                  <div class="lm-health-chip" [class]="'lm-health-chip--' + usageStats()[0].status">
+                    <span class="material-icons-round" aria-hidden="true">person</span>
+                    {{ usageStats()[0].pct }}% usuarios
+                  </div>
+                }
+                <!-- Capacidades críticas -->
+                @if (hasCriticalCapacity()) {
+                  <div class="lm-health-chip lm-health-chip--danger">
+                    <span class="material-icons-round" aria-hidden="true">warning</span>
+                    Capacidad crítica
+                  </div>
+                }
+                @if (isRevokedReadOnly()) {
+                  <div class="lm-health-chip lm-health-chip--revoked">
+                    <span class="material-icons-round" aria-hidden="true">block</span>
+                    Solo lectura
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Acciones de cabecera -->
+          <div class="lm-editor__header-actions">
+            @if (formMode() === 'EDIT' && selectedLicense() && !isRevokedReadOnly()) {
+              <!-- Botón Renovar -->
+              <button
+                id="lm-btn-renew"
+                type="button"
+                class="lm-btn lm-btn--secondary"
+                (click)="openActionModal('RENEW')"
+                aria-label="Renovar licencia">
+                <span class="material-icons-round" aria-hidden="true">autorenew</span>
+                Renovar
+              </button>
+              <!-- Botones según estado -->
+              @switch (selectedLicense()?.adminStatus) {
+                @case ('ACTIVE') {
+                  <button
+                    id="lm-btn-suspend"
+                    type="button"
+                    class="lm-btn lm-btn--warning"
+                    (click)="openActionModal('SUSPEND')"
+                    aria-label="Suspender licencia">
+                    <span class="material-icons-round" aria-hidden="true">pause_circle</span>
+                    Suspender
+                  </button>
+                }
+                @case ('SUSPENDED') {
+                  <button
+                    id="lm-btn-reactivate"
+                    type="button"
+                    class="lm-btn lm-btn--success"
+                    (click)="openActionModal('REACTIVATE')"
+                    aria-label="Reactivar licencia">
+                    <span class="material-icons-round" aria-hidden="true">play_circle</span>
+                    Reactivar
+                  </button>
+                }
+              }
+              <button
+                id="lm-btn-revoke"
+                type="button"
+                class="lm-btn lm-btn--danger"
+                (click)="openActionModal('REVOKE')"
+                [disabled]="selectedLicense()?.adminStatus === 'REVOKED'"
+                aria-label="Revocar licencia">
+                <span class="material-icons-round" aria-hidden="true">block</span>
+                Revocar
+              </button>
+            }
+
+            <!-- Auditoría -->
+            <button
+              id="lm-btn-audit"
+              type="button"
+              class="lm-btn lm-btn--ghost"
+              (click)="openAuditDrawer()"
+              aria-label="Ver registro de auditoría"
+              title="Ver auditoría">
+              <span class="material-icons-round" aria-hidden="true">policy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── AVISO SOLO LECTURA (REVOKED) ── -->
+        @if (isRevokedReadOnly()) {
+          <div class="lm-revoked-banner" role="alert">
+            <span class="material-icons-round" aria-hidden="true">block</span>
+            <div>
+              <strong>Licencia revocada — Vista de solo lectura</strong>
+              <p>Esta licencia fue revocada y no puede editarse desde esta interfaz. Cualquier recuperación requiere un proceso administrativo externo.</p>
+            </div>
+          </div>
+        }
+
+        <!-- ══════════════════════════════════════════════════
+             FORMULARIO REACTIVO
+             ══════════════════════════════════════════════════ -->
+        <form
+          class="lm-form"
+          [formGroup]="licenseForm"
+          (ngSubmit)="onSubmit()"
+          aria-label="Formulario de licencia"
+          [class.lm-form--readonly]="isRevokedReadOnly()"
+          novalidate>
+
+          <!-- ────────────────────────────────────────────────
+               BLOQUE 1 — IDENTIFICACIÓN
+               ──────────────────────────────────────────────── -->
+          <section class="lm-form__section" formGroupName="identification" aria-labelledby="lm-id-title">
+            <h3 class="lm-form__section-title" id="lm-id-title">
+              <span class="material-icons-round" aria-hidden="true">badge</span>
+              Identificación
+            </h3>
+
+            <div class="lm-form__row">
+              <!-- Organización -->
+              <div class="lm-form__field lm-form__field--lg">
+                <label class="lm-form__label" for="lm-org">
+                  Organización <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <select
+                  id="lm-org"
+                  class="lm-form__select"
+                  formControlName="organizationId"
+                  [class.lm-form__input--error]="licenseForm.get('identification.organizationId')?.touched && licenseForm.get('identification.organizationId')?.invalid"
+                  [attr.disabled]="(isRevokedReadOnly() || formMode() === 'EDIT') ? '' : null"
+                  aria-required="true"
+                  [attr.aria-describedby]="licenseForm.get('identification.organizationId')?.touched && licenseForm.get('identification.organizationId')?.invalid ? 'lm-org-error' : null">
+                  <option value="">— Seleccionar organización —</option>
+                  @for (org of organizations; track org.id) {
+                    <option [value]="org.id">{{ org.name }}</option>
+                  }
+                </select>
+                @if (getFieldError('identification.organizationId')) {
+                  <span id="lm-org-error" class="lm-form__error" role="alert">{{ getFieldError('identification.organizationId') }}</span>
+                }
+              </div>
+
+              <!-- Plan -->
+              <div class="lm-form__field lm-form__field--md">
+                <label class="lm-form__label" for="lm-plan">
+                  Plan <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <select
+                  id="lm-plan"
+                  class="lm-form__select"
+                  formControlName="plan"
+                  [class.lm-form__input--error]="licenseForm.get('identification.plan')?.touched && licenseForm.get('identification.plan')?.invalid"
+                  aria-required="true">
+                  @for (p of plans; track p) {
+                    <option [value]="p">{{ planLabels[p] }}</option>
+                  }
+                </select>
+                @if (getFieldError('identification.plan')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('identification.plan') }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Nombre de licencia -->
+            <div class="lm-form__field lm-form__field--full">
+              <label class="lm-form__label" for="lm-name">
+                Nombre de la licencia <span class="lm-required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="lm-name"
+                type="text"
+                class="lm-form__input"
+                formControlName="licenseName"
+                [class.lm-form__input--error]="licenseForm.get('identification.licenseName')?.touched && licenseForm.get('identification.licenseName')?.invalid"
+                placeholder="Ej. Enterprise 3PL — Operación México"
+                maxlength="100"
+                aria-required="true"
+                [attr.aria-describedby]="'lm-name-error lm-name-hint'"
+              />
+              <span id="lm-name-hint" class="lm-form__hint">Mínimo 3 caracteres, máximo 100.</span>
+              @if (getFieldError('identification.licenseName')) {
+                <span id="lm-name-error" class="lm-form__error" role="alert">{{ getFieldError('identification.licenseName') }}</span>
+              }
+            </div>
+
+            <!-- Clave de licencia -->
+            <div class="lm-form__field lm-form__field--full">
+              <label class="lm-form__label" for="lm-key">
+                Clave de licencia <span class="lm-required" aria-hidden="true">*</span>
+              </label>
+              <div class="lm-form__input-group">
+                <input
+                  id="lm-key"
+                  type="text"
+                  class="lm-form__input lm-form__input--monospace"
+                  formControlName="licenseKey"
+                  [class.lm-form__input--error]="licenseForm.get('identification.licenseKey')?.touched && licenseForm.get('identification.licenseKey')?.invalid"
+                  placeholder="4GD-ENT-••••-••••-XXXX"
+                  maxlength="64"
+                  [attr.aria-describedby]="'lm-key-hint lm-key-error'"
+                  autocomplete="off"
+                />
+                @if (formMode() === 'EDIT' && !isRevokedReadOnly()) {
+                  <button
+                    id="lm-btn-regen"
+                    type="button"
+                    class="lm-btn lm-btn--ghost lm-btn--sm"
+                    (click)="openActionModal('REGENERATE_KEY')"
+                    title="Regenerar clave de licencia"
+                    aria-label="Regenerar clave de licencia">
+                    <span class="material-icons-round" aria-hidden="true">refresh</span>
+                    Regenerar
+                  </button>
+                }
+              </div>
+              <span id="lm-key-hint" class="lm-form__hint">
+                @if (formMode() === 'EDIT') {
+                  La clave se muestra enmascarada. Usa "Regenerar" para cambiarla.
+                } @else {
+                  Se generará automáticamente al guardar. Máximo 64 caracteres.
+                }
+              </span>
+              @if (getFieldError('identification.licenseKey')) {
+                <span id="lm-key-error" class="lm-form__error" role="alert">{{ getFieldError('identification.licenseKey') }}</span>
+              }
+            </div>
+
+            <!-- Descripción -->
+            <div class="lm-form__field lm-form__field--full">
+              <label class="lm-form__label" for="lm-desc">Descripción</label>
+              <textarea
+                id="lm-desc"
+                class="lm-form__textarea"
+                formControlName="description"
+                rows="2"
+                placeholder="Descripción opcional de esta licencia…"
+                maxlength="300"
+                aria-describedby="lm-desc-hint">
+              </textarea>
+              <span id="lm-desc-hint" class="lm-form__hint">Máximo 300 caracteres. Opcional.</span>
+            </div>
+          </section>
+
+          <!-- ────────────────────────────────────────────────
+               BLOQUE 2 — VIGENCIA
+               ──────────────────────────────────────────────── -->
+          <section class="lm-form__section" formGroupName="validity" aria-labelledby="lm-validity-title">
+            <h3 class="lm-form__section-title" id="lm-validity-title">
+              <span class="material-icons-round" aria-hidden="true">event_available</span>
+              Vigencia
+            </h3>
+
+            <div class="lm-form__row">
+              <!-- Fecha inicio -->
+              <div class="lm-form__field lm-form__field--md">
+                <label class="lm-form__label" for="lm-valid-from">
+                  Fecha de inicio <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="lm-valid-from"
+                  type="date"
+                  class="lm-form__input"
+                  formControlName="validFrom"
+                  [class.lm-form__input--error]="licenseForm.get('validity.validFrom')?.touched && licenseForm.get('validity.validFrom')?.invalid"
+                  aria-required="true"
+                />
+                @if (getFieldError('validity.validFrom')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('validity.validFrom') }}</span>
+                }
+              </div>
+
+              <!-- Fecha vencimiento -->
+              <div class="lm-form__field lm-form__field--md">
+                <label class="lm-form__label" for="lm-valid-until">
+                  Fecha de vencimiento <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="lm-valid-until"
+                  type="date"
+                  class="lm-form__input"
+                  formControlName="validUntil"
+                  [class.lm-form__input--error]="licenseForm.get('validity.validUntil')?.touched && licenseForm.get('validity.validUntil')?.invalid"
+                  aria-required="true"
+                />
+                @if (getFieldError('validity.validUntil')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('validity.validUntil') }}</span>
+                }
+              </div>
+
+              <!-- Periodo de gracia -->
+              <div class="lm-form__field lm-form__field--sm">
+                <label class="lm-form__label" for="lm-grace">
+                  Gracia (días) <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="lm-grace"
+                  type="number"
+                  class="lm-form__input"
+                  formControlName="gracePeriodDays"
+                  min="0" max="90" step="1"
+                  [class.lm-form__input--error]="licenseForm.get('validity.gracePeriodDays')?.touched && licenseForm.get('validity.gracePeriodDays')?.invalid"
+                  aria-required="true"
+                  aria-describedby="lm-grace-hint"
+                />
+                @if (getFieldError('validity.gracePeriodDays')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('validity.gracePeriodDays') }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Error de rango de fechas (validador de grupo) -->
+            @if (getGroupError('validity')) {
+              <div class="lm-form__group-error" role="alert">
+                <span class="material-icons-round" aria-hidden="true">error_outline</span>
+                {{ getGroupError('validity') }}
+              </div>
+            }
+
+            <span id="lm-grace-hint" class="lm-form__hint">
+              Periodo adicional (0–90 días) antes de restringir nuevas operaciones por vencimiento.
+            </span>
+
+            <!-- Renovación automática -->
+            <div class="lm-form__toggle-row">
+              <div class="lm-form__toggle-info">
+                <span class="lm-form__label">Renovación automática</span>
+                <span class="lm-form__hint">
+                  Preferencia administrativa. No realiza cobros ni renovaciones reales.
+                </span>
+              </div>
+              <label class="lm-toggle" [attr.aria-label]="'Renovación automática: ' + (licenseForm.get('validity.autoRenewal')?.value ? 'habilitada' : 'deshabilitada')">
+                <input
+                  id="lm-auto-renewal"
+                  type="checkbox"
+                  class="lm-toggle__input"
+                  formControlName="autoRenewal"
+                />
+                <span class="lm-toggle__track" aria-hidden="true">
+                  <span class="lm-toggle__thumb"></span>
+                </span>
+              </label>
+            </div>
+
+            <!-- Estado derivado (solo visual) -->
+            @if (selectedDerived()) {
+              <div class="lm-derived-status">
+                <span class="lm-form__label">Estado derivado (calculado)</span>
+                <span class="lm-badge" [class]="getStatusClass(selectedDerived())" aria-label="Estado derivado: {{ statusLabels[selectedDerived() ?? 'DRAFT'] }}">
+                  {{ statusLabels[selectedDerived() ?? 'DRAFT'] }}
+                </span>
+                <span class="lm-form__hint lm-derived-status__note">
+                  Calculado desde las fechas y el estado administrativo. No se guarda directamente.
+                </span>
+              </div>
+            }
+          </section>
+
+          <!-- ────────────────────────────────────────────────
+               BLOQUE 3 — CAPACIDADES CONTRATADAS
+               ──────────────────────────────────────────────── -->
+          <section class="lm-form__section" formGroupName="capacities" aria-labelledby="lm-cap-title">
+            <h3 class="lm-form__section-title" id="lm-cap-title">
+              <span class="material-icons-round" aria-hidden="true">speed</span>
+              Capacidades Contratadas
+            </h3>
+
+            <div class="lm-form__row">
+              <div class="lm-form__field lm-form__field--sm">
+                <label class="lm-form__label" for="lm-max-users">
+                  Usuarios máx. <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input id="lm-max-users" type="number" class="lm-form__input"
+                  formControlName="maxUsers" min="1" max="10000" step="1"
+                  [class.lm-form__input--error]="licenseForm.get('capacities.maxUsers')?.touched && licenseForm.get('capacities.maxUsers')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxUsers')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('capacities.maxUsers') }}</span>
+                }
+              </div>
+
+              <div class="lm-form__field lm-form__field--sm">
+                <label class="lm-form__label" for="lm-max-concurrent">
+                  Concurrentes <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input id="lm-max-concurrent" type="number" class="lm-form__input"
+                  formControlName="maxConcurrentUsers" min="1" max="10000" step="1"
+                  [class.lm-form__input--error]="licenseForm.get('capacities.maxConcurrentUsers')?.touched && licenseForm.get('capacities.maxConcurrentUsers')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxConcurrentUsers')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('capacities.maxConcurrentUsers') }}</span>
+                }
+              </div>
+
+              <div class="lm-form__field lm-form__field--sm">
+                <label class="lm-form__label" for="lm-max-warehouses">
+                  Almacenes <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input id="lm-max-warehouses" type="number" class="lm-form__input"
+                  formControlName="maxWarehouses" min="1" max="1000" step="1"
+                  [class.lm-form__input--error]="licenseForm.get('capacities.maxWarehouses')?.touched && licenseForm.get('capacities.maxWarehouses')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxWarehouses')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('capacities.maxWarehouses') }}</span>
+                }
+              </div>
+
+              <div class="lm-form__field lm-form__field--sm">
+                <label class="lm-form__label" for="lm-max-handhelds">
+                  Handhelds <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input id="lm-max-handhelds" type="number" class="lm-form__input"
+                  formControlName="maxHandheldDevices" min="1" max="10000" step="1"
+                  [class.lm-form__input--error]="licenseForm.get('capacities.maxHandheldDevices')?.touched && licenseForm.get('capacities.maxHandheldDevices')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxHandheldDevices')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('capacities.maxHandheldDevices') }}</span>
+                }
+              </div>
+
+              <div class="lm-form__field lm-form__field--sm">
+                <label class="lm-form__label" for="lm-max-integrations">
+                  Integraciones <span class="lm-required" aria-hidden="true">*</span>
+                </label>
+                <input id="lm-max-integrations" type="number" class="lm-form__input"
+                  formControlName="maxIntegrations" min="0" max="100" step="1"
+                  [class.lm-form__input--error]="licenseForm.get('capacities.maxIntegrations')?.touched && licenseForm.get('capacities.maxIntegrations')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxIntegrations')) {
+                  <span class="lm-form__error" role="alert">{{ getFieldError('capacities.maxIntegrations') }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Errores de grupo (cross-field) -->
+            @if (getGroupError('capacities')) {
+              <div class="lm-form__group-error" role="alert">
+                <span class="material-icons-round" aria-hidden="true">error_outline</span>
+                {{ getGroupError('capacities') }}
+              </div>
+            }
+
+            <div class="lm-form__hint lm-caps-hint">
+              Límites: Usuarios 1–10,000 · Concurrentes ≤ Usuarios máximos · Almacenes 1–1,000 · Handhelds 1–10,000 · Integraciones 0–100.
+            </div>
+          </section>
+
+          <!-- ────────────────────────────────────────────────
+               BLOQUE 4 — CONSUMO ACTUAL (solo lectura)
+               ──────────────────────────────────────────────── -->
+          @if (formMode() === 'EDIT' && selectedLicense()) {
+            <section class="lm-form__section" aria-labelledby="lm-usage-title">
+              <h3 class="lm-form__section-title" id="lm-usage-title">
+                <span class="material-icons-round" aria-hidden="true">analytics</span>
+                Consumo Actual
+                <span class="lm-form__section-badge">Solo lectura</span>
+              </h3>
+
+              <div class="lm-usage-grid" aria-label="Estadísticas de consumo">
+                @for (stat of usageStats(); track stat.label) {
+                  <div class="lm-usage-card"
+                    [class.lm-usage-card--warning]="stat.status === 'warning'"
+                    [class.lm-usage-card--critical]="stat.status === 'critical' || stat.status === 'full'"
+                    [class.lm-usage-card--inconsistent]="stat.status === 'inconsistent'"
+                    role="region"
+                    [attr.aria-label]="stat.label + ': ' + stat.current + ' de ' + stat.max">
+                    <div class="lm-usage-card__header">
+                      <span class="lm-usage-card__label">{{ stat.label }}</span>
+                      <span class="lm-usage-card__status-tag" [class]="'lm-usage-card__status-tag--' + stat.status">
+                        {{ stat.statusLabel }}
+                      </span>
+                    </div>
+                    <div class="lm-usage-card__nums">
+                      <strong>{{ stat.current }}</strong>
+                      <span class="lm-usage-card__sep">/</span>
+                      <span>{{ stat.max }}</span>
+                      @if (stat.status !== 'inconsistent') {
+                        <span class="lm-usage-card__pct">{{ stat.pct }}%</span>
+                      }
+                    </div>
+                    @if (stat.status !== 'inconsistent') {
+                      <div class="lm-usage-bar" role="progressbar"
+                        [attr.aria-valuenow]="stat.pct"
+                        [attr.aria-valuemin]="0"
+                        [attr.aria-valuemax]="100"
+                        [attr.aria-label]="stat.label + ' ' + stat.pct + '% utilizado'">
+                        <div class="lm-usage-bar__fill"
+                          [class]="'lm-usage-bar__fill--' + stat.status"
+                          [style.width.%]="stat.pct">
+                        </div>
+                      </div>
+                      <div class="lm-usage-card__available">{{ stat.available }} disponibles</div>
+                    } @else {
+                      <div class="lm-usage-card__inconsistent-msg">
+                        <span class="material-icons-round" aria-hidden="true">warning_amber</span>
+                        Dato inconsistente — revisar con el equipo técnico.
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </section>
+          }
+
+          <!-- ────────────────────────────────────────────────
+               BLOQUE 5 — MÓDULOS HABILITADOS
+               ──────────────────────────────────────────────── -->
+          <section class="lm-form__section" aria-labelledby="lm-modules-title">
+            <h3 class="lm-form__section-title" id="lm-modules-title">
+              <span class="material-icons-round" aria-hidden="true">apps</span>
+              Módulos Habilitados
+            </h3>
+
+            <p class="lm-modules-notice">
+              <span class="material-icons-round" aria-hidden="true">info</span>
+              La licencia define la disponibilidad del módulo. Los permisos de usuario continúan administrándose mediante roles y RBAC.
+            </p>
+
+            <div class="lm-modules-grid" role="group" aria-label="Módulos de la licencia">
+              @for (def of moduleDefinitions; track def.key) {
+                <div
+                  class="lm-module-card"
+                  [class.lm-module-card--enabled]="isModuleEnabled(def.key) && !def.comingSoon"
+                  [class.lm-module-card--required]="def.required"
+                  [class.lm-module-card--coming-soon]="def.comingSoon"
+                  [class.lm-module-card--disabled]="isRevokedReadOnly() || def.required || def.comingSoon"
+                  (click)="!isRevokedReadOnly() && !def.required && !def.comingSoon && toggleModule(def.key)"
+                  [attr.role]="def.comingSoon || def.required ? 'presentation' : 'checkbox'"
+                  [attr.aria-checked]="isModuleEnabled(def.key)"
+                  [attr.aria-label]="def.label + (def.required ? ' — Obligatorio, siempre activo' : def.comingSoon ? ' — Próximamente' : '')"
+                  [tabindex]="def.comingSoon || def.required || isRevokedReadOnly() ? -1 : 0"
+                  (keydown.space)="!isRevokedReadOnly() && !def.required && !def.comingSoon && toggleModule(def.key); $event.preventDefault()"
+                  (keydown.enter)="!isRevokedReadOnly() && !def.required && !def.comingSoon && toggleModule(def.key)">
+
+                  <div class="lm-module-card__header">
+                    <span class="material-icons-round lm-module-card__icon" aria-hidden="true">{{ def.icon }}</span>
+                    <span class="lm-module-card__badge"
+                      [class.lm-module-card__badge--premium]="def.badge === 'PREMIUM'"
+                      [class.lm-module-card__badge--integration]="def.badge === 'INTEGRACIÓN'"
+                      [class.lm-module-card__badge--soon]="def.badge === 'PRÓXIMAMENTE'">
+                      {{ def.badge }}
+                    </span>
+                  </div>
+                  <span class="lm-module-card__name">{{ def.label }}</span>
+                  <span class="lm-module-card__desc">{{ def.description }}</span>
+
+                  <div class="lm-module-card__footer">
+                    @if (def.required) {
+                      <span class="lm-module-card__required-tag" aria-label="Módulo obligatorio">
+                        <span class="material-icons-round" aria-hidden="true">lock</span>
+                        Obligatorio
+                      </span>
+                    } @else if (def.comingSoon) {
+                      <span class="lm-module-card__soon-tag">Próximamente</span>
+                    } @else if (isModuleEnabled(def.key)) {
+                      <span class="lm-module-card__enabled-tag">
+                        <span class="material-icons-round" aria-hidden="true">check_circle</span>
+                        Habilitado
+                      </span>
+                    } @else {
+                      <span class="lm-module-card__disabled-tag">No incluido</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Error módulos -->
+            @if (licenseForm.get('modules')?.touched && licenseForm.get('modules')?.invalid) {
+              <div class="lm-form__group-error" role="alert">
+                <span class="material-icons-round" aria-hidden="true">error_outline</span>
+                Debes habilitar al menos un módulo. WMS Core es obligatorio.
+              </div>
+            }
+          </section>
+
+          <!-- ────────────────────────────────────────────────
+               BLOQUE 6 — MOTIVO Y OBSERVACIONES
+               ──────────────────────────────────────────────── -->
+          <section class="lm-form__section" formGroupName="administrative" aria-labelledby="lm-admin-title">
+            <h3 class="lm-form__section-title" id="lm-admin-title">
+              <span class="material-icons-round" aria-hidden="true">edit_note</span>
+              Motivo y Observaciones
+            </h3>
+
+            <div class="lm-form__field lm-form__field--full">
+              <label class="lm-form__label" for="lm-reason">
+                Motivo del cambio
+                @if (_requiresReason()) {
+                  <span class="lm-required" aria-hidden="true">*</span>
+                }
+              </label>
+              <textarea
+                id="lm-reason"
+                class="lm-form__textarea"
+                formControlName="administrativeReason"
+                rows="2"
+                maxlength="250"
+                [class.lm-form__input--error]="licenseForm.get('administrative.administrativeReason')?.touched && licenseForm.get('administrative.administrativeReason')?.invalid"
+                placeholder="Motivo del cambio de plan, vigencia, capacidades o módulos…"
+                [attr.aria-required]="_requiresReason()"
+                aria-describedby="lm-reason-hint">
+              </textarea>
+              <span id="lm-reason-hint" class="lm-form__hint">
+                @if (_requiresReason()) {
+                  Obligatorio para cambios de plan, vigencia, capacidades, módulos o clave. Mínimo 10 caracteres.
+                } @else {
+                  Opcional para cambios de nombre o descripción. Máximo 250 caracteres.
+                }
+              </span>
+              @if (getFieldError('administrative.administrativeReason')) {
+                <span class="lm-form__error" role="alert">{{ getFieldError('administrative.administrativeReason') }}</span>
+              }
+            </div>
+
+            <div class="lm-form__field lm-form__field--full">
+              <label class="lm-form__label" for="lm-obs">Observaciones</label>
+              <textarea
+                id="lm-obs"
+                class="lm-form__textarea"
+                formControlName="observations"
+                rows="2"
+                maxlength="500"
+                placeholder="Notas internas adicionales. Opcional.">
+              </textarea>
+            </div>
+          </section>
+
+          <!-- ────────────────────────────────────────────────
+               VISTA PREVIA EN VIVO
+               ──────────────────────────────────────────────── -->
+          @if (previewData()) {
+            <div class="lm-preview-box" aria-label="Vista previa de licencia en tiempo real">
+              <div class="lm-preview-box__header">
+                <span class="material-icons-round lm-preview-box__icon" aria-hidden="true">workspace_premium</span>
+                <span class="lm-preview-box__title">Vista previa · En vivo</span>
+                <span class="lm-badge" [class]="getStatusClass(previewData()!.derivedStatus)">
+                  {{ previewData()!.derivedStatus ? statusLabels[previewData()!.derivedStatus!] : '—' }}
+                </span>
+              </div>
+              <div class="lm-preview-box__body">
+                <div class="lm-preview-card">
+                  <div class="lm-preview-card__plan">
+                    <span class="lm-preview-card__plan-badge" [class]="getPlanClass(previewData()!.plan)">
+                      {{ planLabels[previewData()!.plan] }}
+                    </span>
+                    <span class="lm-preview-card__name">{{ previewData()!.licenseName }}</span>
+                  </div>
+                  <div class="lm-preview-card__grid">
+                    <div class="lm-preview-card__item">
+                      <span class="lm-preview-card__item-label">Organización</span>
+                      <span class="lm-preview-card__item-val">{{ previewData()!.organizationName }}</span>
+                    </div>
+                    <div class="lm-preview-card__item">
+                      <span class="lm-preview-card__item-label">Vigencia</span>
+                      <span class="lm-preview-card__item-val">
+                        {{ formatDate(previewData()!.validFrom) }} — {{ formatDate(previewData()!.validUntil) }}
+                      </span>
+                    </div>
+                    <div class="lm-preview-card__item">
+                      <span class="lm-preview-card__item-label">Capacidad</span>
+                      <span class="lm-preview-card__item-val">
+                        {{ previewData()!.currentUsers }} de {{ previewData()!.maxUsers }} usuarios utilizados
+                      </span>
+                    </div>
+                    <div class="lm-preview-card__item">
+                      <span class="lm-preview-card__item-label">Módulos</span>
+                      <span class="lm-preview-card__item-val">{{ previewData()!.modulesCount }} habilitados</span>
+                    </div>
+                    <div class="lm-preview-card__item">
+                      <span class="lm-preview-card__item-label">Clave</span>
+                      <span class="lm-preview-card__item-val lm-preview-card__item-val--mono">{{ previewData()!.maskedKey }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ────────────────────────────────────────────────
+               BARRA DE ACCIONES
+               ──────────────────────────────────────────────── -->
+          @if (!isRevokedReadOnly()) {
+            <div class="lm-form__action-bar">
+              <div class="lm-form__action-info">
+                @if (isSaving()) {
+                  <span class="lm-saving-indicator" aria-live="polite">
+                    <span class="lm-spin-sm" aria-hidden="true"></span>
+                    Guardando…
+                  </span>
+                } @else if (!hasUnsavedChanges()) {
+                  <span class="material-icons-round" aria-hidden="true">check_circle</span>
+                  Sin cambios pendientes
+                } @else {
+                  <span class="material-icons-round" aria-hidden="true">edit</span>
+                  Hay cambios sin guardar
+                }
+              </div>
+              <div class="lm-form__action-buttons">
+                <button
+                  id="lm-btn-discard"
+                  type="button"
+                  class="lm-btn lm-btn--secondary"
+                  [disabled]="!hasUnsavedChanges() || isSaving()"
+                  (click)="selectedLicense() ? selectLicense(selectedLicense()!) : startCreate()"
+                  aria-label="Descartar cambios">
+                  Descartar
+                </button>
+                <button
+                  id="lm-btn-save"
+                  type="submit"
+                  class="lm-btn lm-btn--primary"
+                  [disabled]="!canSave()"
+                  [attr.aria-busy]="isSaving()"
+                  aria-label="Guardar cambios">
+                  @if (isSaving()) {
+                    <span class="lm-btn__spinner" aria-hidden="true"></span>
+                    Guardando…
+                  } @else {
+                    <span class="material-icons-round" aria-hidden="true">save</span>
+                    {{ formMode() === 'CREATE' ? 'Crear licencia' : 'Guardar cambios' }}
+                  }
+                </button>
+              </div>
+            </div>
+          }
+
+        </form>
+
+        <!-- ── HISTORIAL DE CAMBIOS ── -->
+        @if (formMode() === 'EDIT' && selectedLicense()) {
+          <div class="lm-history" aria-labelledby="lm-hist-title">
+            <div class="lm-history__header">
+              <span class="material-icons-round" aria-hidden="true">history</span>
+              <h3 class="lm-history__title" id="lm-hist-title">Historial de cambios</h3>
+            </div>
+
+            @if (selectedHistory().length === 0) {
+              <div class="lm-history__empty">Sin entradas de historial para esta licencia.</div>
+            } @else {
+              <div class="lm-history__table-wrap">
+                <table class="lm-history__table" aria-label="Historial de cambios de la licencia">
+                  <thead>
+                    <tr>
+                      <th scope="col">Fecha y hora</th>
+                      <th scope="col">Acción</th>
+                      <th scope="col">Descripción</th>
+                      <th scope="col">Usuario</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (entry of selectedHistory(); track entry.id) {
+                      <tr>
+                        <td class="lm-history__date">{{ formatDateTime(entry.performedAt) }}</td>
+                        <td>
+                          <span class="lm-badge lm-badge--hist">{{ historyActionLabels[entry.action] }}</span>
+                        </td>
+                        <td class="lm-history__desc">{{ entry.description }}</td>
+                        <td class="lm-history__user">{{ entry.performedBy }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        } @else if (formMode() === 'CREATE') {
+          <div class="lm-history lm-history--new" aria-label="Historial">
+            <div class="lm-history__new-msg">
+              <span class="material-icons-round" aria-hidden="true">history_toggle_off</span>
+              <span>El historial estará disponible después de guardar la licencia por primera vez.</span>
+            </div>
+          </div>
+        }
+
+      }<!-- /else -->
+
+    </main><!-- /lm-split__right -->
+
+  </div><!-- /lm-split -->
+
+</section><!-- /lm-root -->
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL DE CONFIRMACIÓN (Diff de cambios)
+     ════════════════════════════════════════════════════════ -->
+@if (isModalOpen()) {
+  <div class="lm-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lm-modal-title">
+    <div class="lm-modal">
+      <div class="lm-modal__header">
+        <span class="material-icons-round lm-modal__header-icon" aria-hidden="true">task_alt</span>
+        <h2 class="lm-modal__title" id="lm-modal-title">
+          {{ formMode() === 'CREATE' ? 'Confirmar nueva licencia' : 'Confirmar actualización de licencia' }}
+        </h2>
+      </div>
+
+      <div class="lm-modal__body">
+        <!-- Resumen de identificación -->
+        <div class="lm-modal__summary">
+          <div class="lm-modal__summary-row">
+            <span class="lm-modal__summary-label">Organización</span>
+            <span class="lm-modal__summary-val">{{ selectedLicense()?.organizationName ?? organizations[0]?.name }}</span>
+          </div>
+          <div class="lm-modal__summary-row">
+            <span class="lm-modal__summary-label">Plan</span>
+            <span class="lm-modal__summary-val">{{ planLabels[licenseForm.get('identification.plan')?.value ?? 'STARTER'] }}</span>
+          </div>
+          <div class="lm-modal__summary-row">
+            <span class="lm-modal__summary-label">Vigencia</span>
+            <span class="lm-modal__summary-val">
+              {{ formatDate(licenseForm.get('validity.validFrom')?.value) }} — {{ formatDate(licenseForm.get('validity.validUntil')?.value) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Campos que cambiaron (solo si hay cambios) -->
+        @if (pendingChanges().length > 0) {
+          <div class="lm-modal__changes">
+            <h3 class="lm-modal__changes-title">Campos modificados</h3>
+            @for (change of pendingChanges(); track change.label) {
+              <div class="lm-modal__change-row">
+                <span class="lm-modal__change-label">{{ change.label }}</span>
+                <div class="lm-modal__change-vals">
+                  @if (change.previous !== null && change.previous !== undefined) {
+                    <span class="lm-modal__change-prev">{{ $any(change.previous) }}</span>
+                    <span class="material-icons-round" aria-hidden="true">arrow_forward</span>
+                  }
+                  <span class="lm-modal__change-curr">{{ $any(change.current) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="lm-modal__warning" role="note">
+          <span class="material-icons-round" aria-hidden="true">info</span>
+          Los cambios se aplicarán inmediatamente al ámbito de la organización seleccionada. La modificación quedará registrada en auditoría.
+        </div>
+      </div>
+
+      <div class="lm-modal__footer">
+        <button
+          id="lm-modal-cancel"
+          type="button"
+          class="lm-btn lm-btn--secondary"
+          (click)="cancelSave()"
+          aria-label="Cancelar">
+          Cancelar
+        </button>
+        <button
+          id="lm-modal-confirm"
+          type="button"
+          class="lm-btn lm-btn--primary"
+          (click)="confirmSave()"
+          aria-label="Confirmar cambios">
+          <span class="material-icons-round" aria-hidden="true">check</span>
+          Confirmar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL DE ACCIÓN ADMINISTRATIVA
+     ════════════════════════════════════════════════════════ -->
+@if (isActionModalOpen()) {
+  <div class="lm-modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'lm-action-modal-title'">
+    <div class="lm-modal" [class.lm-modal--danger]="pendingAction() === 'REVOKE'">
+      <div class="lm-modal__header">
+        @switch (pendingAction()) {
+          @case ('SUSPEND') {
+            <span class="material-icons-round lm-modal__header-icon lm-modal__header-icon--warning" aria-hidden="true">pause_circle</span>
+          }
+          @case ('REACTIVATE') {
+            <span class="material-icons-round lm-modal__header-icon lm-modal__header-icon--success" aria-hidden="true">play_circle</span>
+          }
+          @case ('REVOKE') {
+            <span class="material-icons-round lm-modal__header-icon lm-modal__header-icon--danger" aria-hidden="true">block</span>
+          }
+          @case ('REGENERATE_KEY') {
+            <span class="material-icons-round lm-modal__header-icon" aria-hidden="true">refresh</span>
+          }
+          @case ('RENEW') {
+            <span class="material-icons-round lm-modal__header-icon lm-modal__header-icon--success" aria-hidden="true">autorenew</span>
+          }
+        }
+        <h2 class="lm-modal__title" id="lm-action-modal-title">
+          @switch (pendingAction()) {
+            @case ('SUSPEND') { Suspender licencia }
+            @case ('REACTIVATE') { Reactivar licencia }
+            @case ('REVOKE') { Revocar licencia }
+            @case ('REGENERATE_KEY') { Regenerar clave de licencia }
+            @case ('RENEW') { Renovar licencia }
+          }
+        </h2>
+      </div>
+
+      <div class="lm-modal__body">
+
+        @switch (pendingAction()) {
+          @case ('SUSPEND') {
+            <div class="lm-modal__warning lm-modal__warning--amber" role="alert">
+              <span class="material-icons-round" aria-hidden="true">warning</span>
+              La suspensión puede restringir nuevas operaciones de la organización. Los datos históricos no serán eliminados.
+            </div>
+          }
+          @case ('REVOKE') {
+            <div class="lm-modal__warning lm-modal__warning--danger" role="alert">
+              <span class="material-icons-round" aria-hidden="true">error</span>
+              <strong>Acción crítica.</strong> La licencia quedará revocada y pasará a modo solo lectura en esta interfaz. Cualquier recuperación requiere un proceso administrativo externo.
+            </div>
+          }
+          @case ('REGENERATE_KEY') {
+            <div class="lm-modal__warning" role="note">
+              <span class="material-icons-round" aria-hidden="true">info</span>
+              La clave anterior quedará registrada en auditoría (enmascarada). Se generará una nueva clave automáticamente.
+            </div>
+          }
+          @case ('REACTIVATE') {
+            <div class="lm-modal__warning lm-modal__warning--green" role="note">
+              <span class="material-icons-round" aria-hidden="true">check_circle</span>
+              La licencia volverá a estado activo. Se validará la vigencia contractual.
+            </div>
+          }
+          @default {}
+        }
+
+        <!-- Formulario de renovación -->
+        @if (pendingAction() === 'RENEW') {
+          <div class="lm-renewal-form">
+            <div class="lm-form__field">
+              <label class="lm-form__label" for="lm-renew-until">Nueva fecha de vencimiento *</label>
+              <input id="lm-renew-until" type="date" class="lm-form__input"
+                [value]="renewalNewUntil()"
+                (change)="renewalNewUntil.set($any($event.target).value)"
+                aria-required="true" />
+            </div>
+            <div class="lm-form__field">
+              <label class="lm-form__label" for="lm-renew-plan">Cambio de plan (opcional)</label>
+              <select id="lm-renew-plan" class="lm-form__select"
+                [value]="renewalNewPlan()"
+                (change)="renewalNewPlan.set($any($event.target).value)">
+                <option value="">Mantener plan actual ({{ planLabels[selectedLicense()?.plan ?? 'STARTER'] }})</option>
+                @for (p of plans; track p) {
+                  <option [value]="p">{{ planLabels[p] }}</option>
+                }
+              </select>
+            </div>
+            <div class="lm-form__field">
+              <label class="lm-form__label" for="lm-renew-reason">Motivo de renovación *</label>
+              <textarea id="lm-renew-reason" class="lm-form__textarea" rows="2"
+                [value]="renewalReason()"
+                (input)="renewalReason.set($any($event.target).value)"
+                placeholder="Motivo de la renovación… (mínimo 10 caracteres)"
+                maxlength="250">
+              </textarea>
+            </div>
+          </div>
+        }
+
+        <!-- Campo motivo (para acciones que no sean RENEW) -->
+        @if (pendingAction() !== 'RENEW') {
+          <div class="lm-form__field lm-modal__reason-field">
+            <label class="lm-form__label" for="lm-action-reason">
+              Motivo <span class="lm-required" aria-hidden="true">*</span>
+            </label>
+            <textarea
+              id="lm-action-reason"
+              class="lm-form__textarea"
+              [class.lm-form__input--error]="actionReasonError()"
+              rows="2"
+              [value]="actionReason()"
+              (input)="actionReason.set($any($event.target).value); actionReasonError.set(null)"
+              placeholder="Describe el motivo de esta acción… (mínimo 10 caracteres)"
+              maxlength="250"
+              aria-required="true"
+              [attr.aria-describedby]="actionReasonError() ? 'lm-action-reason-error' : null">
+            </textarea>
+            @if (actionReasonError()) {
+              <span id="lm-action-reason-error" class="lm-form__error" role="alert">{{ actionReasonError() }}</span>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="lm-modal__footer">
+        <button
+          id="lm-action-cancel"
+          type="button"
+          class="lm-btn lm-btn--secondary"
+          (click)="closeActionModal()"
+          aria-label="Cancelar">
+          Cancelar
+        </button>
+        @if (pendingAction() === 'RENEW') {
+          <button
+            id="lm-action-renew-confirm"
+            type="button"
+            class="lm-btn lm-btn--primary"
+            (click)="confirmRenewal()"
+            aria-label="Confirmar renovación">
+            <span class="material-icons-round" aria-hidden="true">autorenew</span>
+            Confirmar renovación
+          </button>
+        } @else {
+          <button
+            id="lm-action-confirm"
+            type="button"
+            class="lm-btn"
+            [class.lm-btn--danger]="pendingAction() === 'REVOKE'"
+            [class.lm-btn--warning]="pendingAction() === 'SUSPEND'"
+            [class.lm-btn--success]="pendingAction() === 'REACTIVATE'"
+            [class.lm-btn--primary]="pendingAction() === 'REGENERATE_KEY'"
+            (click)="confirmAction()"
+            [attr.aria-label]="'Confirmar acción'">
+            <span class="material-icons-round" aria-hidden="true">check</span>
+            Confirmar
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER DE AUDITORÍA
+     ════════════════════════════════════════════════════════ -->
+@if (isDrawerOpen()) {
+  <div class="lm-drawer-overlay" (click)="closeAuditDrawer()" aria-hidden="true"></div>
+  <aside class="lm-drawer" role="complementary" aria-labelledby="lm-drawer-title">
+    <div class="lm-drawer__header">
+      <div class="lm-drawer__title-wrap">
+        <span class="material-icons-round lm-drawer__icon" aria-hidden="true">policy</span>
+        <h2 class="lm-drawer__title" id="lm-drawer-title">Auditoría de licencia</h2>
+      </div>
+      <button
+        id="lm-drawer-close"
+        type="button"
+        class="lm-btn lm-btn--ghost"
+        (click)="closeAuditDrawer()"
+        aria-label="Cerrar auditoría">
+        <span class="material-icons-round" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <div class="lm-drawer__body">
+      @if (drawerAuditEntries().length === 0) {
+        <div class="lm-drawer__empty">
+          <span class="material-icons-round" aria-hidden="true">policy</span>
+          <span>Sin registros de auditoría para esta licencia.</span>
+        </div>
+      } @else {
+        <div class="lm-drawer__entries" role="list">
+          @for (entry of drawerAuditEntries(); track entry.id) {
+            <div class="lm-drawer__entry" role="listitem">
+              <div class="lm-drawer__entry-header">
+                <span class="lm-badge lm-badge--audit">{{ entry.action }}</span>
+                <span class="lm-badge"
+                  [class.lm-badge--active]="entry.transactionStatus === 'SUCCESS'"
+                  [class.lm-badge--expired]="entry.transactionStatus === 'FAILED'">
+                  {{ entry.transactionStatus }}
+                </span>
+              </div>
+              <div class="lm-drawer__entry-row">
+                <span class="lm-drawer__entry-label">Usuario</span>
+                <span>{{ entry.performedBy }}</span>
+              </div>
+              <div class="lm-drawer__entry-row">
+                <span class="lm-drawer__entry-label">Fecha</span>
+                <span>{{ formatDateTime(entry.performedAt) }}</span>
+              </div>
+              <div class="lm-drawer__entry-row">
+                <span class="lm-drawer__entry-label">Motivo</span>
+                <span>{{ entry.reason }}</span>
+              </div>
+              @if (entry.previousValue !== null) {
+                <div class="lm-drawer__entry-row">
+                  <span class="lm-drawer__entry-label">Valor anterior</span>
+                  <span class="lm-drawer__entry-json">{{ entry.previousValue | json }}</span>
+                </div>
+              }
+              <div class="lm-drawer__entry-row">
+                <span class="lm-drawer__entry-label">Valor nuevo</span>
+                <span class="lm-drawer__entry-json">{{ entry.newValue | json }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="lm-drawer__footer">
+      <span class="material-icons-round" aria-hidden="true">security</span>
+      <span>
+        <strong>Seguridad RLS activa.</strong> Los cambios afectan únicamente a la organización seleccionada y quedan registrados de forma inmutable en audit_logs.
+      </span>
+    </div>
+  </aside>
+}
