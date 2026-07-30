@@ -830,10 +830,53 @@
   background: rgba(200, 73, 73, 0.02);
 }
 
+.fg-input--success {
+  border-color: var(--c-success);
+  background: rgba(32, 132, 87, 0.02);
+}
+
+.fg-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.fg-input-wrap .fg-input {
+  padding-right: 2.3rem;
+}
+
+.fg-input-spinner,
+.fg-input-icon {
+  position: absolute;
+  right: 0.7rem;
+  font-size: 18px !important;
+  pointer-events: none;
+}
+
+.fg-input-icon--success { color: var(--c-success); }
+.fg-input-icon--error   { color: var(--c-danger); }
+
 .fg-textarea { resize: vertical; min-height: 80px; }
 .fg-error    { font-size: 0.71rem; color: var(--c-danger); }
 .fg-hint     { font-size: 0.70rem; color: var(--text-muted); line-height: 1.4; }
 .fg-hint--right { text-align: right; }
+
+.fg-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.71rem;
+  font-weight: 600;
+  color: var(--c-success);
+}
+.fg-success .material-symbols-outlined { font-size: 14px !important; }
+
+.fg-info {
+  font-size: 0.71rem;
+  font-weight: 500;
+  color: var(--text-gold);
+}
 
 /* Checkboxes */
 .carriers-checkbox-grid {
