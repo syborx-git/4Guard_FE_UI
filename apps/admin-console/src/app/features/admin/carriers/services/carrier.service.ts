@@ -533,6 +533,27 @@ export class CarrierService {
   }
 
   /**
+   * Valida si un RFC (taxId) ya está registrado en el sistema para otro transportista.
+   * GET /api/v1/carriers/validate-rfc?taxId=...&organizationId=...[&excludeId=...]
+   */
+  validateTaxId(taxId: string, organizationId?: string, excludeId?: string): Observable<CarrierApiResponse<string>> {
+    if (this.USE_MOCK) {
+      return of({ success: true, message: 'RFC disponible', data: taxId, timestamp: new Date().toISOString() });
+    }
+
+    const orgId = organizationId || this.getSessionOrgId();
+    let url = `${this.API_URL}/validate-rfc?taxId=${encodeURIComponent(taxId.trim())}`;
+    if (orgId) {
+      url += `&organizationId=${orgId}`;
+    }
+    if (excludeId) {
+      url += `&excludeId=${excludeId}`;
+    }
+
+    return this.http.get<CarrierApiResponse<string>>(url);
+  }
+
+  /**
    * Cambia el estado de un transportista (Activar / Suspender / Desactivar).
    * PATCH /api/v1/carriers/{id}/status
    *
