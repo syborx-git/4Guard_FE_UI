@@ -75,6 +75,44 @@ docs/
 
 ---
 
+## 🛠️ Flujo de Trabajo SDD: Paso a Paso para Crear un Nuevo Módulo
+
+### 📌 Paso 1: Definir / Verificar el Contrato BE en `docs/`
+*(Fase de Especificación — 2 minutos)*
+1. Abre o crea `docs/api/modules/[modulo].md` *(ej: `docs/api/modules/suppliers.md`)*.
+2. Revisa que contenga:
+   - **Endpoints exactos** con métodos y permisos (`CARRIERS_READ`, etc.).
+   - **Request / Response DTOs** mapeados a interfaces TypeScript.
+   - **Quirks / Comportamientos especiales** (`PUT` body vs path, soft delete, paginación).
+   - **Enums del módulo** (`ACTIVE`, `INACTIVE`, `BLOCKED`).
+
+### 📌 Paso 2: Marcar el Módulo en `module-status.md`
+*(Fase de Tracking)*
+Abre [`docs/architecture/module-status.md`](./architecture/module-status.md) y cambia el estado del módulo a **`🔧 En desarrollo`**:
+```markdown
+| Proveedores | /suppliers | 🔧 En desarrollo | — |
+```
+
+### 📌 Paso 3: Lanzar el Prompt Estándar (Ejecución Asistida)
+*(Fase de Generación de Código)*
+Abre [`docs/ai/prompt-library.md`](./ai/prompt-library.md), copia la plantilla de **"Crear módulo CRUD completo"** y ajusta los nombres del módulo:
+- Especifica la entidad y los paths.
+- La IA leerá automáticamente `docs/ai/context.md`, `docs/api/modules/[modulo].md`, `docs/coding/state-management.md`, `docs/coding/error-handling.md` y `docs/coding/notifications.md`.
+
+### 📌 Paso 4: Generación & Self-Correction de la IA
+La IA construirá:
+- Los componentes Standalone + Signals (`signal`, `computed`, `inject`).
+- Integración con `ToastService` para notificaciones.
+- Variables CSS homologadas (`--bg-card`, `--accent-gold`, `--accent-navy`).
+- Layout split view 30/70 con header KPI Cards.
+
+### 📌 Paso 5: Verificación en Runtime & Cierre de Estatus
+1. Revisa que el proyecto compile sin errores de TypeScript/SCSS.
+2. Comprueba en runtime el renderizado Dark/Light mode y el flujo de API.
+3. Actualiza el estatus en [`docs/architecture/module-status.md`](./architecture/module-status.md) a **`✅ Completo`**.
+
+---
+
 ## 🎨 Referencias de Estilo (Golden Standard)
 
 | Pantalla | Ruta | Componente |
