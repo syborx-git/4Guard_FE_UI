@@ -38,7 +38,7 @@
 | **Rendimiento** | `/performance` | ⬜ | — | HU-138 |
 | **Turnos** | `/shifts` | ⬜ | — | HU-140 |
 | **Sesiones Activas** | `/sessions` | ✅ | `active-sessions` | Con monitor en tiempo real |
-| **Actividad de Usuario** | `/user-activity` | ⬜ | — | HU-146 |
+| **Actividad de Usuario** | `/user-activity` | ✅ | `user-activity-report` | HU-146 completo y conectado a API |
 | **Motor de Reglas** | `/business-rules` | ⬜ | — | HU-131 |
 | **Divisas** | `/currency-exchange` | ⬜ | — | HU-148 |
 | **Alertas** | `/alerts-config` | ⬜ | — | HU-134 |

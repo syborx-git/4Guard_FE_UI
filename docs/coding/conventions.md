@@ -130,6 +130,14 @@ export class CarrierService {
 
 ---
 
+## 🚫 Regla Estricta: Cero Datos Hardcodeados (Directiva BD Obligatoria)
+
+1. **Cero Mocks en Producción:** Queda estrictamente prohibido mantener datos simulados (`MOCK_*`) o arreglos hardcodeados en memoria dentro de los servicios de `admin-console`.
+2. **Fuente Única de Verdad (BD Backend):** Todos los componentes, dropdowns, tablas y KPI cards deben consumir sus datos desde los endpoints HTTP reales conectados a la base de datos de `4Guard_BEAPI`.
+3. **Manejo de Errores Sin Mock Fallback:** Si un servicio falla o la base de datos responde vacía/error, el frontend **NUNCA** debe recurrir a datos mock fijos como fallback silencioso. Debe emitir una notificación discreta vía `ToastService.error()` y mostrar el estado de error/pantalla vacía (`empty state`).
+
+---
+
 ## 🎨 Estilos — Reglas de Oro
 
 1. **Nunca hard-codear colores en HTML.** Siempre usar variables CSS (`var(--gold)`, `var(--text-primary)`).

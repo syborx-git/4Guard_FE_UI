@@ -36,20 +36,50 @@
  * en backend y base de datos. El filtrado aquí es solo para evaluación de UX.
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { catchError, delay, tap, map } from 'rxjs/operators';
 import {
   UserActivityEvent,
   ActivityReportProfile,
   ActivityFilters,
   ActivityKpis,
   PaginationState,
+  ActivityResult,
+  ActivitySeverity,
 } from './user-activity.models';
 import {
   MOCK_ACTIVITY_EVENTS,
   MOCK_REPORT_PROFILES,
 } from './user-activity.mock';
+import { ToastService } from '../../core/services/toast.service';
+import { environment } from '../../../environments/environment';
+
+export interface UserActivityDetailDto {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface UserActivityLogResponseDto {
+  logId: string;
+  userId: string;
+  username: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  details: UserActivityDetailDto[];
+}
+
+export interface ApiResponseWrapper<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
 
 // ─── Hora fuera de turno: antes de 06:00 o después de 22:00 ──────────────────
 
@@ -57,6 +87,45 @@ function isOutsideShiftHour(isoString: string): boolean {
   const date = new Date(isoString);
   const hours = date.getHours();
   return hours < 6 || hours >= 22;
+}
+
+function mapLogDtoToEvent(log: UserActivityLogResponseDto): UserActivityEvent {
+  const result: ActivityResult = log.details?.some(d => d.newValue === 'FAILED' || d.newValue === 'REJECTED') ? 'ERROR' : 'SUCCESS';
+  const severity: ActivitySeverity = log.action.includes('DELETE') || log.action.includes('CRITICAL') ? 'HIGH' : log.action.includes('UPDATE') || log.action.includes('STATUS') ? 'MEDIUM' : 'INFO';
+
+  const previousValues: Record<string, unknown> = {};
+  const newValues: Record<string, unknown> = {};
+  if (log.details && Array.isArray(log.details)) {
+    log.details.forEach(d => {
+      previousValues[d.fieldName] = d.oldValue;
+      newValues[d.fieldName] = d.newValue;
+    });
+  }
+
+  return {
+    id: log.logId || `log-${Date.now()}`,
+    occurredAt: log.createdAt || new Date().toISOString(),
+    userId: log.userId || 'u-system',
+    userName: log.username || 'Usuario Sistema',
+    userEmail: `${log.username || 'user'}@4guard.mx`,
+    userRole: 'OPERATOR',
+    organizationId: '',
+    warehouseId: 'BR-01',
+    warehouseName: 'Almacén Principal',
+    module: log.entityType || 'Sistema',
+    action: log.action || 'ACTIVITY',
+    entityType: log.entityType || 'SYSTEM',
+    entityId: log.entityId,
+    description: `Acción ${log.action} ejecutada sobre ${log.entityType || 'sistema'}`,
+    result,
+    severity,
+    previousValues,
+    newValues,
+    ipAddress: log.ipAddress || '192.168.1.1',
+    device: 'Web Console',
+    browser: log.userAgent || 'Chrome',
+    outsideShift: isOutsideShiftHour(log.createdAt || new Date().toISOString())
+  };
 }
 
 // ─── Filtro de texto libre ────────────────────────────────────────────────────
@@ -78,10 +147,13 @@ function matchesText(event: UserActivityEvent, text: string): boolean {
   providedIn: 'root',
 })
 export class UserActivityService {
+  private readonly http = inject(HttpClient);
+  private readonly toast = inject(ToastService);
+  private readonly API_URL = `${environment.apiBaseUrl}/api/v1/audit/user-activity`;
   // ─── Eventos base (inmutables durante la sesión) ──────────────────────────
 
-  /** Todos los eventos disponibles — fuente de verdad, nunca se sobreescribe */
-  private readonly _allEvents = signal<UserActivityEvent[]>(MOCK_ACTIVITY_EVENTS);
+  /** Todos los eventos disponibles — provienen exclusivamente del backend */
+  private readonly _allEvents = signal<UserActivityEvent[]>([]);
 
   /** Filtros actualmente aplicados */
   private readonly _activeFilters = signal<ActivityFilters | null>(null);
@@ -234,8 +306,35 @@ export class UserActivityService {
    */
   refreshEvents(): Observable<UserActivityEvent[]> {
     this.isLoading.set(true);
-    return of(this._allEvents()).pipe(
-      delay(800),
+    this.hasError.set(false);
+
+    let params = new HttpParams();
+    const filters = this._activeFilters();
+    if (filters) {
+      if (filters.action) params = params.set('action', filters.action);
+      if (filters.dateFrom) params = params.set('fromDate', `${filters.dateFrom}T00:00:00Z`);
+      if (filters.dateTo) params = params.set('toDate', `${filters.dateTo}T23:59:59Z`);
+    }
+
+    return this.http.get<ApiResponseWrapper<UserActivityLogResponseDto[]>>(this.API_URL, { params }).pipe(
+      map(res => {
+        const events = (res.success && Array.isArray(res.data))
+          ? res.data.map(log => mapLogDtoToEvent(log))
+          : [];
+        this._allEvents.set(events);
+        return events;
+      }),
+      catchError((err: HttpErrorResponse) => {
+        this.hasError.set(true);
+        this._allEvents.set([]);
+        const errorMsg = err.error?.message ?? 'No se pudo conectar con el servicio de auditoría de BD';
+        this.toast.error(errorMsg);
+        return of([]);
+      }),
+      tap({
+        next: () => this.isLoading.set(false),
+        error: () => this.isLoading.set(false)
+      })
     );
   }
 

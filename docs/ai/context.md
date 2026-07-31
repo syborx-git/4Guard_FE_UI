@@ -149,6 +149,7 @@ El sistema de estados de máquina finita (ubicaciones, pedidos) usa colores sem�
 6. **Empty state** con icon + title + descripción cuando no hay datos
 7. **Sticky** header y footer en todos los formularios de detalle
 8. **BEM** con prefijo de módulo para todas las clases CSS
+9. **Cero Datos Hardcodeados / BD Obligatoria:** Todos los componentes, dropdowns y listas consumen estrictamente del Backend `4Guard_BEAPI`. Queda prohibido mantener datos o fallbacks mock fijos en producción. En caso de error, mostrar pantalla vacía (`empty state`) + `ToastService.error()`.
 
 ---
 
