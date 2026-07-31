@@ -78,8 +78,10 @@ docs/
 ## 🛠️ Flujo de Trabajo SDD: Paso a Paso para Crear un Nuevo Módulo
 
 ### 📌 Paso 1: Definir / Verificar el Contrato BE en `docs/`
-*(Fase de Especificación — 2 minutos)*
-1. Abre o crea `docs/api/modules/[modulo].md` *(ej: `docs/api/modules/suppliers.md`)*.
+
+_(Fase de Especificación — 2 minutos)_
+
+1. Abre o crea `docs/api/modules/[modulo].md` _(ej: `docs/api/modules/suppliers.md`)_.
 2. Revisa que contenga:
    - **Endpoints exactos** con métodos y permisos (`CARRIERS_READ`, etc.).
    - **Request / Response DTOs** mapeados a interfaces TypeScript.
@@ -87,26 +89,33 @@ docs/
    - **Enums del módulo** (`ACTIVE`, `INACTIVE`, `BLOCKED`).
 
 ### 📌 Paso 2: Marcar el Módulo en `module-status.md`
-*(Fase de Tracking)*
+
+_(Fase de Tracking)_
 Abre [`docs/architecture/module-status.md`](./architecture/module-status.md) y cambia el estado del módulo a **`🔧 En desarrollo`**:
+
 ```markdown
 | Proveedores | /suppliers | 🔧 En desarrollo | — |
 ```
 
 ### 📌 Paso 3: Lanzar el Prompt Estándar (Ejecución Asistida)
-*(Fase de Generación de Código)*
+
+_(Fase de Generación de Código)_
 Abre [`docs/ai/prompt-library.md`](./ai/prompt-library.md), copia la plantilla de **"Crear módulo CRUD completo"** y ajusta los nombres del módulo:
+
 - Especifica la entidad y los paths.
 - La IA leerá automáticamente `docs/ai/context.md`, `docs/api/modules/[modulo].md`, `docs/coding/state-management.md`, `docs/coding/error-handling.md` y `docs/coding/notifications.md`.
 
 ### 📌 Paso 4: Generación & Self-Correction de la IA
+
 La IA construirá:
+
 - Los componentes Standalone + Signals (`signal`, `computed`, `inject`).
 - Integración con `ToastService` para notificaciones.
 - Variables CSS homologadas (`--bg-card`, `--accent-gold`, `--accent-navy`).
 - Layout split view 30/70 con header KPI Cards.
 
 ### 📌 Paso 5: Verificación en Runtime & Cierre de Estatus
+
 1. Revisa que el proyecto compile sin errores de TypeScript/SCSS.
 2. Comprueba en runtime el renderizado Dark/Light mode y el flujo de API.
 3. Actualiza el estatus en [`docs/architecture/module-status.md`](./architecture/module-status.md) a **`✅ Completo`**.
@@ -115,12 +124,12 @@ La IA construirá:
 
 ## 🎨 Referencias de Estilo (Golden Standard)
 
-| Pantalla | Ruta | Componente |
-|---|---|---|
-| Gestión de Transportistas | `/carriers` | `carrier-management.component` |
-| Gestión de Ubicaciones Físicas | `/layout` | `layout-management.component` |
-| Torre de Control | `/dashboard` | `dashboard.*` |
-| Topología Cromática | `/layout` (grid view) | FSM color map |
+| Pantalla                       | Ruta                  | Componente                     |
+| ------------------------------ | --------------------- | ------------------------------ |
+| Gestión de Transportistas      | `/carriers`           | `carrier-management.component` |
+| Gestión de Ubicaciones Físicas | `/layout`             | `layout-management.component`  |
+| Torre de Control               | `/dashboard`          | `dashboard.*`                  |
+| Topología Cromática            | `/layout` (grid view) | FSM color map                  |
 
 ---
 
@@ -137,10 +146,10 @@ La IA construirá:
 
 ## 🔗 Archivos clave del proyecto
 
-| Archivo | Propósito |
-|---|---|
-| [`styles/themes/_dark.scss`](../apps/admin-console/src/styles/themes/_dark.scss) | Tokens light + dark |
-| [`styles/abstracts/_variables.scss`](../apps/admin-console/src/styles/abstracts/_variables.scss) | Variables SCSS base |
-| [`app/app.routes.ts`](../apps/admin-console/src/app/app.routes.ts) | Todas las rutas |
-| [`carrier-management.component.css`](../apps/admin-console/src/app/features/admin/carriers/carrier-management/carrier-management.component.css) | Referencia de estilos |
-| [`libs/shared-core/src/index.ts`](../libs/shared-core/src/index.ts) | Exports de @4guard/shared-core |
+| Archivo                                                                                                                                         | Propósito                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| [`styles/themes/_dark.scss`](../apps/admin-console/src/styles/themes/_dark.scss)                                                                | Tokens light + dark            |
+| [`styles/abstracts/_variables.scss`](../apps/admin-console/src/styles/abstracts/_variables.scss)                                                | Variables SCSS base            |
+| [`app/app.routes.ts`](../apps/admin-console/src/app/app.routes.ts)                                                                              | Todas las rutas                |
+| [`carrier-management.component.css`](../apps/admin-console/src/app/features/admin/carriers/carrier-management/carrier-management.component.css) | Referencia de estilos          |
+| [`libs/shared-core/src/index.ts`](../libs/shared-core/src/index.ts)                                                                             | Exports de @4guard/shared-core |
