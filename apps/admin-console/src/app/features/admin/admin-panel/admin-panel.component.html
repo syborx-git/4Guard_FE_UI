@@ -494,6 +494,9 @@
           <li [class.active]="selectedModule() === 'audit'" (click)="selectModule('audit')">
             <span class="material-symbols-outlined">find_in_page</span> Logs de Auditoría
           </li>
+          <li [class.active]="selectedModule() === 'user-activity'" (click)="selectModule('user-activity')">
+            <span class="material-symbols-outlined">manage_search</span> Actividad por Usuario
+          </li>
           <li [class.active]="selectedModule() === 'notifications'" (click)="selectModule('notifications')">
             <span class="material-symbols-outlined">notifications_active</span> Alertas Técnicas
             @if (unreadNotificationsCount() > 0) {
