@@ -68,10 +68,12 @@ function distinctStartEndTimeValidator(control: AbstractControl): ValidationErro
   return null;
 }
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'fg-shift-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './shift-management.component.html',
   styleUrl: './shift-management.component.css',
 })
@@ -327,17 +329,20 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
     const val = this.shiftForm.value;
     const mode = this.formMode();
 
+    const formatTime = (t: string) => (t && t.length === 5 ? `${t}:00` : t);
+
     if (mode === 'new') {
       const createReq: CreateShiftRequest = {
         code: val.code,
         name: val.name,
         description: val.description,
-        startTime: val.startTime,
-        endTime: val.endTime,
+        startTime: formatTime(val.startTime),
+        endTime: formatTime(val.endTime),
         operatingDays: val.operatingDays,
         status: val.status,
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
+        scopeType: 'BRANCH',
       };
 
       this.shiftService.createShift(createReq).subscribe({
@@ -347,13 +352,11 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
           this.shiftForm.markAsPristine();
           const msg = `Turno "${created.name}" (${created.code}) registrado exitosamente.`;
           this.successMessage.set(msg);
-          this.toastService.success(msg);
         },
         error: (err) => {
           this.isSubmitting.set(false);
           const errMsg = err?.message || 'Error al guardar el nuevo turno.';
           this.formError.set(errMsg);
-          this.toastService.error(errMsg);
         },
       });
     } else if (mode === 'edit') {
@@ -367,12 +370,13 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         code: val.code,
         name: val.name,
         description: val.description,
-        startTime: val.startTime,
-        endTime: val.endTime,
+        startTime: formatTime(val.startTime),
+        endTime: formatTime(val.endTime),
         operatingDays: val.operatingDays,
         status: val.status,
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
+        scopeType: 'BRANCH',
       };
 
       this.shiftService.updateShift(selected.id, updateReq).subscribe({

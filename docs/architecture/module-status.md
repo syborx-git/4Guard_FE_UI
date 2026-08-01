@@ -36,7 +36,7 @@
 | **Control de Calidad** | `/quality` | 🔶 | (verificar) | Epic 2 |
 | **Despacho** | `/shipping` | ⬜ | — | Epic 4 |
 | **Rendimiento** | `/performance` | ⬜ | — | HU-138 |
-| **Turnos** | `/shifts` | ⬜ | — | HU-140 |
+| **Turnos** | `/shifts` | ✅ | `shift-management` | HU-140 con spec `docs/api/modules/shifts.md` |
 | **Sesiones Activas** | `/sessions` | ✅ | `active-sessions` | Con monitor en tiempo real |
 | **Actividad de Usuario** | `/user-activity` | ✅ | `user-activity-report` | HU-146 completo y conectado a API |
 | **Motor de Reglas** | `/business-rules` | ⬜ | — | HU-131 |
