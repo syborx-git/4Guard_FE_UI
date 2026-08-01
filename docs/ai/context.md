@@ -160,9 +160,10 @@ Antes de implementar cualquier módulo CRUD, leer en este orden:
 1. **`docs/ai/context.md`** (este archivo) — diseño y convenciones globales
 2. **`docs/api/contracts.md`** — patrones globales del BE (wrapper, IDs, fechas, errores)
 3. **`docs/api/modules/[modulo].md`** — contrato exacto del BE para ese módulo
-4. **`docs/design/component-specs.md`** — patrón visual (split view, KPI cards, dark mode)
-5. **`docs/coding/conventions.md`** — checklist de implementación
-6. **`docs/examples/feature-template.md`** — template a seguir
+4. **`docs/patterns/`** — Seleccionar el patrón UI adecuado (`split-view-master-detail`, `dashboard-kpi-bento`, `audit-log-drawer`, `wizard-multi-step`, `fsm-chromatic-grid`). Si el usuario **no especifica un patrón en el prompt**, evaluar las palabras clave usando el **Motor de Auto-Detección** de `docs/patterns/README.md`, seleccionar el patrón automáticamente e informarlo en la respuesta.
+5. **`docs/design/component-specs.md`** — patrón visual de pantallas de referencia
+6. **`docs/coding/conventions.md`** — checklist de implementación
+7. **`docs/examples/feature-template.md`** — template a seguir
 
 ### Módulos disponibles en docs/api/modules/
 
