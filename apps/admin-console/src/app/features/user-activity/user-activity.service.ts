@@ -50,8 +50,7 @@ import {
   ActivitySeverity,
 } from './user-activity.models';
 import {
-  MOCK_ACTIVITY_EVENTS,
-  MOCK_REPORT_PROFILES,
+  DEFAULT_REPORT_PROFILES,
 } from './user-activity.mock';
 import { ToastService } from '../../core/services/toast.service';
 import { environment } from '../../../environments/environment';
@@ -271,7 +270,7 @@ export class UserActivityService {
    * Lista reactiva de perfiles guardados.
    * NOTA: Los cambios son solo en memoria y se pierden al refrescar.
    */
-  private readonly _profiles = signal<ActivityReportProfile[]>(MOCK_REPORT_PROFILES);
+  private readonly _profiles = signal<ActivityReportProfile[]>(DEFAULT_REPORT_PROFILES);
 
   readonly profiles = this._profiles.asReadonly();
 

@@ -45,9 +45,10 @@ docs/
 │       ├── roles-permissions.md
 │       ├── suppliers.md
 │       └── skus-sections-auth-audit.md
-├── ai/                     # Contexto para IA
+├── ai/                     # Contexto para IA & AI Reviewer
 │   ├── context.md          ← LEER PRIMERO si eres una IA
-│   └── prompt-library.md   ← ⭐ Prompts probados para generación de módulos
+│   ├── prompt-library.md   ← ⭐ Prompts probados para generación de módulos
+│   └── reviewer.md         ← 🛡️ Protocolo y Prompt de Auditoría del AI Reviewer
 ├── testing/                # Estrategia de testing
 │   └── strategy.md
 ├── deployment/             # Guías de despliegue
@@ -55,7 +56,8 @@ docs/
 ├── security/               # Autenticación y RBAC
 │   └── auth-flow.md
 └── examples/               # Templates
-    └── feature-template.md ← Template SDD para nuevas features
+    ├── feature-template.md      ← Template SDD para nuevas features
+    └── pull-request-template.md ← 🛡️ Template oficial de PR para GitHub
 ```
 
 ---
