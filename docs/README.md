@@ -8,8 +8,9 @@
 
 ```
 docs/
-├── adr/                    # Architecture Decision Records
-│   └── ADR-001-to-005.md
+├── adr/                    # Architecture Decision Records (Estándar MADR)
+│   ├── README.md           ← ⭐ Catálogo maestro (ADR-001 al ADR-010)
+│   └── template.md         ← Plantilla para proponer nuevas decisiones
 ├── architecture/           # Arquitectura general del sistema
 │   ├── overview.md
 │   ├── module-status.md    ← ⭐ Estado de cada módulo (✅🔶⬜)
@@ -17,6 +18,13 @@ docs/
 ├── design/                 # Design System & Component Specs
 │   ├── design-system.md    ← Tokens, colores, tipografía, animaciones
 │   └── component-specs.md  ← Specs de las 4 pantallas de referencia
+├── patterns/               # ⭐ Catálogo de Patrones UI & Arquitectura
+│   ├── README.md           ← Matriz de decisión de patrones UI
+│   ├── split-view-master-detail.md  ← Patrón 1: Split View 30/70 (CRUD Estándar)
+│   ├── dashboard-kpi-bento.md       ← Patrón 2: Dashboard / Bento Grid
+│   ├── audit-log-drawer.md          ← Patrón 3: Audit Log & Drawer Lateral
+│   ├── wizard-multi-step.md         ← Patrón 4: Wizard / Formulario Multi-Paso
+│   └── fsm-chromatic-grid.md        ← Patrón 5: Topología Cromática FSM
 ├── coding/                 # Convenciones de código
 │   ├── conventions.md      ← Checklist de implementación
 │   ├── state-management.md ← ⭐ Patrón de Angular Signals por módulo
