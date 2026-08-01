@@ -17,7 +17,7 @@ Requisitos:
 - Homologa visualmente con el módulo de Transportistas (carrier-management)
 - Patrón de state: docs/coding/state-management.md
 - Manejo de errores: docs/coding/error-handling.md
-- Notificaciones: docs/coding/notifications.md
+- Notificaciones: Usar exclusivamente ToastService (toast.success / toast.error). Cero banners estáticos de éxito/error en HTML (docs/coding/notifications.md)
 - Design system: docs/design/design-system.md (dark mode con CSS variables)
 
 Estructura de archivos a generar:

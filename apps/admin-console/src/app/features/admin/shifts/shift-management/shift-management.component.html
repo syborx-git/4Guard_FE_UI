@@ -1,28 +1,26 @@
 <div class="shift-page">
-  <!-- ==================== HEADER PRINCIPAL ==================== -->
-  <header class="shift-header">
-    <div class="shift-header__main">
-      <div class="shift-header__icon-wrap" aria-hidden="true">
-        <span class="material-symbols-outlined shift-header__icon">schedule</span>
-      </div>
-
-      <div class="shift-header__copy">
-        <div class="shift-header__eyebrow">
-          <a routerLink="/admin" class="shift-header__eyebrow-tag" title="Regresar al panel de administración">
-            ← ADMINISTRACIÓN WMS
-          </a>
-          <span class="shift-header__eyebrow-sep">·</span>
-          <span class="shift-eyebrow-category">Configuración Operativa</span>
-        </div>
-
-        <h1 class="shift-header__title">Configuración de Turnos y Horarios</h1>
-        <p class="shift-header__subtitle">
-          Gestión operativa de jornadas, horarios de almacén y disponibilidad temporal.
-        </p>
-      </div>
+  <!-- ==================== HEADER PRINCIPAL GOLDEN STANDARD ==================== -->
+  <header class="hero-header">
+    <div class="hero-header__icon-box" aria-hidden="true">
+      <span class="material-symbols-outlined">schedule</span>
     </div>
 
-    <div class="shift-header__actions">
+    <div class="hero-header__content">
+      <div class="hero-header__breadcrumb">
+        <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
+          <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+        </a>
+        <span class="breadcrumb-dot">·</span>
+        <span class="hero-header__eyebrow">CONFIGURACIÓN OPERATIVA</span>
+      </div>
+
+      <h1 class="hero-header__title">Configuración de Turnos y Horarios</h1>
+      <p class="hero-header__subtitle">
+        Gestión operativa de jornadas, horarios de almacén y disponibilidad temporal.
+      </p>
+    </div>
+
+    <div class="hero-header__actions">
       @if (canCreateOrEdit()) {
       <button
         type="button"
@@ -201,22 +199,6 @@
           <strong>Modo Solo Lectura (Líder de Turno)</strong>
           <p>Su rol le permite consultar turnos y horarios operativos, pero no modificar parámetros del catálogo.</p>
         </div>
-      </div>
-      }
-
-      <!-- Banner de Mensaje de Éxito -->
-      @if (successMessage()) {
-      <div class="shift-banner shift-banner--success">
-        <span class="material-symbols-outlined">check_circle</span>
-        <span>{{ successMessage() }}</span>
-      </div>
-      }
-
-      <!-- Banner de Mensaje de Error -->
-      @if (formError()) {
-      <div class="shift-banner shift-banner--danger">
-        <span class="material-symbols-outlined">error</span>
-        <span>{{ formError() }}</span>
       </div>
       }
 
@@ -466,6 +448,71 @@
             <span class="material-symbols-outlined">verified_user</span>
             Los cambios guardados se aplican al catálogo operativo de 4GUARD WMS. La persistencia transaccional y los registros de auditoría detallados (audit_logs) son procesados automáticamente por el backend.
           </p>
+
+          <!-- SECCIÓN DE AUDITORÍA Y TRAZABILIDAD EN TIEMPO REAL (BE GET /api/v1/shifts/{id}/audit) -->
+          @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
+          <fieldset class="shift-form__fieldset">
+            <legend class="shift-form__legend shift-audit-legend">
+              <span class="legend-title-row">
+                <span class="material-symbols-outlined">history</span>
+                <span>Historial de Auditoría en Tiempo Real</span>
+              </span>
+              <button
+                type="button"
+                class="btn-refresh-audit"
+                (click)="loadAuditLogs(current.id)"
+                title="Actualizar historial de auditoría"
+                [disabled]="isLoadingAudit()"
+              >
+                <span class="material-symbols-outlined" [class.spin]="isLoadingAudit()">sync</span>
+                <span>Actualizar Auditoría</span>
+              </button>
+            </legend>
+
+            @if (isLoadingAudit()) {
+            <div class="shift-audit-loading">
+              <span class="material-symbols-outlined spin">sync</span>
+              <span>Cargando historial de auditoría desde el servidor…</span>
+            </div>
+            } @else if (auditLogs().length === 0) {
+            <div class="shift-audit-empty">
+              <span class="material-symbols-outlined">find_in_page</span>
+              <span>No se encontraron registros de auditoría para este turno.</span>
+            </div>
+            } @else {
+            <div class="shift-audit-timeline">
+              @for (entry of auditLogs(); track entry.logId) {
+              <div class="shift-tl-node {{ getAuditColorClass(entry.action) }}">
+                <div class="shift-tl-node__badge">
+                  <span class="material-symbols-outlined">{{ getAuditIcon(entry.action) }}</span>
+                </div>
+                <div class="shift-tl-node__content">
+                  <div class="shift-tl-node__header">
+                    <strong class="shift-tl-node__action">{{ getAuditSummary(entry.action) }}</strong>
+                    <span class="shift-tl-node__meta">
+                      por <b>{{ entry.username }}</b> el <b>{{ entry.createdAt | date:'dd/MM/yyyy HH:mm' }}</b>
+                    </span>
+                  </div>
+
+                  @if (entry.details && entry.details.length > 0) {
+                  <div class="shift-tl-node__details">
+                    @for (detail of entry.details; track detail.fieldName) {
+                    <div class="shift-tl-detail-chip">
+                      <span class="detail-field">{{ detail.fieldName }}:</span>
+                      <span class="detail-old">{{ detail.oldValue || 'vacío' }}</span>
+                      <span class="detail-arrow">→</span>
+                      <span class="detail-new">{{ detail.newValue || 'vacío' }}</span>
+                    </div>
+                    }
+                  </div>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+            }
+          </fieldset>
+          }
 
           <!-- Footer con datos de auditoría si están disponibles -->
           @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {

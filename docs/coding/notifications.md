@@ -108,9 +108,10 @@ alert('Error al guardar');
 // ❌ Nunca usar console.log para mensajes al usuario
 console.log('Guardado correctamente');
 
-// ❌ No crear notificaciones ad-hoc en el template
+// ❌ No crear notificaciones ni banners de éxito/error ad-hoc en los templates HTML
 <div *ngIf="saveError">{{ saveError }}</div>
-// ← Para errores de carga usa error signal en el template, no toast
+<div class="banner-success"><span class="material-symbols-outlined">check_circle</span> Turno actualizado</div>
+// ← Toda confirmación de escritura o error debe transmitirse EXCLUSIVAMENTE mediante ToastService
 ```
 
 ---

@@ -19,7 +19,7 @@ Cuando el usuario pida: `"Audita mi código"`, `"Revisa este módulo para PR"` o
 | 3 | **Angular Signals State** | [`ADR-006`](../adr/ADR-006-angular-signals-state.md) | PASS / FAIL | Reactividad con `signal()` y `computed()`. |
 | 4 | **Soporte Dark Mode** | [`ADR-003`](../adr/ADR-003-synexia-theme-engine.md) | PASS / FAIL | Selector `:host-context(.theme-dark)` presente en CSS. |
 | 5 | **Encapsulamiento CSS** | [`ADR-005`](../adr/ADR-005-component-isolated-styles.md) | PASS / FAIL | Variables de tokens en `:host` sin clases globales sueltas. |
-| 6 | **Toast Notification** | [`notifications.md`](../coding/notifications.md) | PASS / FAIL | Manejo de error HTTP invoca `ToastService.error()`. |
+| 6 | **Toast Notification (Zero Inline Banners)** | [`notifications.md`](../coding/notifications.md) | PASS / FAIL | Notificaciones de éxito/error usan exclusivamente `ToastService` (`toastService.success()` / `toastService.error()`). Cero banners estáticos inline (`shift-banner`, `check_circle`) en el HTML. |
 | 7 | **Guardia RBAC** | [`ADR-004`](../adr/ADR-004-rbac-guard.md) | PASS / FAIL | Rutas configuradas con `canActivate: [rbacGuard]`. |
 | 8 | **Tipado DTO & ISO UTC** | [`ADR-008`](../adr/ADR-008-api-contracts-uuid-utc.md) | PASS / FAIL | Cero uso de `any`, UUIDs e ISO-8601 UTC. |
 | 9 | **Matriz SDD Tracking** | [`module-status.md`](../architecture/module-status.md) | PASS / FAIL | Estado marcado como `✅ Completo` en la matriz. |

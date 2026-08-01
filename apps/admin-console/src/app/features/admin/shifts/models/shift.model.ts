@@ -76,7 +76,9 @@ export interface CreateShiftRequest {
   warehouseSectionId?: string | null;
 }
 
-export interface UpdateShiftRequest extends CreateShiftRequest {}
+export interface UpdateShiftRequest extends CreateShiftRequest {
+  id?: string;
+}
 
 export interface UpdateShiftStatusRequest {
   status: ShiftStatus;

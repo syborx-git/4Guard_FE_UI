@@ -390,6 +390,7 @@ export interface ShiftFilterParams {
 2. **Duración Neta:** El campo `netDurationMinutes` devuelto por el BE ya resta el tiempo de descanso `restBreakMinutes`.
 3. **Ordenamiento Cronológico Obligatorio:** Toda consulta `GET /api/v1/shifts` devuelve los turnos ordenados cronológicamente por `startTime`.
 4. **Soft Delete:** El endpoint `DELETE /api/v1/shifts/{id}` no borra físicamente el registro de la BD PostgreSQL, garantizando la integridad de auditoría en caso de referencias operativas pasadas.
+5. **ID en Payload de Actualización (PUT):** El DTO de edición `UpdateShiftRequest` en el Backend valida que el campo `"id"` esté presente dentro del cuerpo del JSON enviado (`@NotNull`), además de la variable en la ruta URL (`/api/v1/shifts/{id}`).
 
 ---
 

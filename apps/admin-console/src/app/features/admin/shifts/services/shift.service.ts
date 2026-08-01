@@ -140,7 +140,7 @@ export class ShiftService {
   );
 
   constructor() {
-    this.loadShifts();
+    // La carga se realiza de manera perezosa (lazy) desde ShiftManagementComponent.ngOnInit()
   }
 
   // ─── Métodos HTTP para Backend (Spring Boot) ──────────────────────────────
