@@ -299,25 +299,107 @@ Cada ubicación es una celda en un grid 2D. El color de la celda representa su e
 
 ## 📋 Resumen de Patrones Transversales
 
-### Patrón: Header de Pantalla
+### Patrón: Header de Pantalla Golden Standard (Hero Header con Retorno a Administrar)
 
-Todas las pantallas de gestión comparten este patrón:
+Todas las pantallas de gestión y monitoreo implementan el **Header de Pantalla Golden Standard** oficial:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ [Icon Box Navy 52x52]  [ ← ADMINISTRACIÓN WMS ] · CATEGORÍA DEL MÓDULO            │
+│                        Título de la Pantalla (h1: 1.7rem - 2.1rem)               │
+│                        Subtítulo descriptivo de la operación (0.84rem)           │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Estructura HTML Estándar
+```html
+<header class="hero-header">
+  <!-- 1. Ícono Navy Rectangular Redondeado (52x52px) -->
+  <div class="hero-header__icon-box">
+    <span class="material-symbols-outlined">domain</span>
+  </div>
+
+  <!-- 2. Contenido Principal -->
+  <div class="hero-header__content">
+    <!-- Breadcrumb: Botón Badge de Retorno + Categoría -->
+    <div class="hero-header__breadcrumb">
+      <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
+        <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+      </a>
+      <span class="breadcrumb-dot">·</span>
+      <span class="hero-header__eyebrow">ESTRUCTURA DE ALMACÉN</span>
+    </div>
+
+    <!-- Título Principal & Subtítulo -->
+    <h1 class="hero-header__title">Gestión de Sucursales</h1>
+    <p class="hero-header__subtitle">Administra los centros logísticos, bodegas físicas y sucursales operativas</p>
+  </div>
+</header>
+```
+
+#### Estilos CSS Estándar
+```css
+.hero-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.hero-header__icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #172033;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(23, 32, 51, 0.15);
+}
+
+.btn-back-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  border: 1px solid rgba(197, 168, 107, 0.38);
+  border-radius: 7px;
+  background: rgba(197, 168, 107, 0.09);
+  color: #b58b37;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 180ms ease;
+}
+
+.btn-back-admin:hover {
+  background: rgba(197, 168, 107, 0.2);
+  color: #8c671b;
+  border-color: rgba(197, 168, 107, 0.6);
+  transform: translateX(-2px);
+}
+```
+
+### Patrón: Diálogo de Confirmación Homologado (`ConfirmDialogComponent`)
+
+Queda **estrictamente prohibido** utilizar `window.confirm()` o `window.alert()` del navegador. Todo flujo destructivo (eliminar, revocar, suspender, cambiar estado) DEBE usar el componente `<fg-confirm-dialog>`:
 
 ```html
-<header class="[module]-header">
-  <div class="[module]-header__top">
-    <div class="[module]-header__left">
-      <!-- Icon 54x54 navy gradient -->
-      <!-- Eyebrow: HU-XXX · MÓDULO -->
-      <!-- Title: font Outfit 1.7rem -->
-      <!-- Subtitle: 0.82rem secondary -->
-    </div>
-    <div class="[module]-header__actions">
-      <!-- Btn Primary + Btn Ghost -->
-    </div>
-  </div>
-  <!-- KPI Grid 4 columns -->
-</header>
+@if (targetItem(); as item) {
+  <fg-confirm-dialog
+    [title]="'Revocar Sesión Activa'"
+    [message]="'¿Estás seguro de que deseas revocar la sesión de ' + item.name + '?'"
+    [confirmLabel]="'Revocar Sesión'"
+    [isLoading]="isProcessing()"
+    (confirmed)="confirmAction()"
+    (cancelled)="cancelAction()"
+  ></fg-confirm-dialog>
+}
 ```
 
 ### Patrón: Form Section

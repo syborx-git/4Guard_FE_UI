@@ -1,6 +1,8 @@
 # 4GUARD WMS — Convenciones de Código
 
-> **Stack:** Angular 17+ Standalone | **Linting:** ESLint + Prettier | **Estilo CSS:** SCSS 7-1 pattern
+> **Stack:** Angular 17+ Standalone | **Linting:** ESLint + Prettier | **Estilo CSS:** SCSS 7-1 pattern  
+> 🚨 **REGLA DE ORO DE VERIFICACIÓN:** Ningún cambio de código o plantilla HTML se considera completo sin ejecutar la verificación de compilación (`ng build admin-console`) para garantizar 0 errores de sintaxis o de compilador.  
+> ⛔ **PROHIBICIÓN NATIVA `alert()` / `confirm()`:** Queda estrictamente prohibido usar `window.confirm()` o `window.alert()` nativos del navegador. Todo diálogo de confirmación debe implementarse mediante `<fg-confirm-dialog>` (`ConfirmDialogComponent`).
 
 ---
 

@@ -22,12 +22,13 @@ Los tokens JWT de acceso expiran periódicamente por razones de seguridad. Sin u
 
 ## Decisión Tomada
 
-Se implementa la **Renovación Transparente mediante Interceptor Functional de Angular 17+** (`authInterceptor`).
+Se implementa la **Renovación Transparente y Redirección por Revocación mediante Interceptor Functional de Angular 17+** (`authInterceptor` y `jwtInterceptor`).
 
 ```typescript
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   // Adjunta Header Authorization: Bearer <token>
-  // Captura 401, renueva token y reintenta la petición original
+  // Captura 401: Renueva token y reintenta la petición original.
+  // Captura 403 / 401 de revocación: Limpia sesión y redirige a /login.
 };
 ```
 
@@ -36,7 +37,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 ### Positivas
 - Experiencia de usuario ininterrumpida mientras la sesión sea válida.
 - Cero pérdida de estado o borradores de formularios.
-- Centralización de credenciales `Bearer` en un único interceptor.
+- Centralización de credenciales `Bearer` en interceptores funcionales.
+- Expulsión automática al `/login` tanto ante `401 Unauthorized` como ante `403 Forbidden` cuando una sesión es revocada administrativamente por el Backend.
 
 ### Negativas / Compromisos
 - Requiere cola de peticiones si ocurren múltiples llamadas concurrentes mientras se renueva el token.

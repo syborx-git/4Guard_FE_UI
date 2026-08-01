@@ -23,7 +23,7 @@ Cuando el usuario pida: `"Audita mi código"`, `"Revisa este módulo para PR"` o
 | 7 | **Guardia RBAC** | [`ADR-004`](../adr/ADR-004-rbac-guard.md) | PASS / FAIL | Rutas configuradas con `canActivate: [rbacGuard]`. |
 | 8 | **Tipado DTO & ISO UTC** | [`ADR-008`](../adr/ADR-008-api-contracts-uuid-utc.md) | PASS / FAIL | Cero uso de `any`, UUIDs e ISO-8601 UTC. |
 | 9 | **Matriz SDD Tracking** | [`module-status.md`](../architecture/module-status.md) | PASS / FAIL | Estado marcado como `✅ Completo` en la matriz. |
-| 10 | **UI Back Link** | [`component-specs.md`](../design/component-specs.md) | PASS / FAIL | Enlace `← Administrar` presente en el breadcrumb. |
+| 10 | **Golden Hero Header** | [`component-specs.md`](../design/component-specs.md) | PASS / FAIL | Header Hero con ícono navy 52x52, badge `← ADMINISTRACIÓN WMS` en monospace dorado, categoría y `routerLink="/admin"`. |
 
 ---
 

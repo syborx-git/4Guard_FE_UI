@@ -43,19 +43,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(activeReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Interceptar 401 Unauthorized únicamente en peticiones protegidas que no estén excluidas
+      // Interceptar 401 Unauthorized o 403 Forbidden únicamente en peticiones protegidas que no estén excluidas
       if (error.status === 401 && !isAuthOrPublic) {
-        
         // Detener flujo, llamar a refreshToken() y reintentar con el nuevo token obtenido
         return authService.refreshToken().pipe(
           switchMap((response) => {
             const newToken = response?.data?.accessToken || localStorage.getItem('4g_token');
-            
+
             // Clonar la petición original con el nuevo Bearer Token
             const retriedReq = req.clone({
               headers: req.headers.set('Authorization', `Bearer ${newToken}`)
             });
-            
+
             return next(retriedReq);
           }),
           catchError((refreshError) => {
@@ -66,6 +65,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             return throwError(() => refreshError);
           })
         );
+      }
+
+      // Si recibe 403 Forbidden por revocación de sesión en un endpoint protegido
+      if (error.status === 403 && !isAuthOrPublic && !router.url.includes('/login')) {
+        authService.clearSessionAndRedirect('session_expired');
       }
 
       return throwError(() => error);

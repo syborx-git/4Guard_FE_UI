@@ -233,9 +233,10 @@ interface AuthResponse {
 | Método | Ruta | Permission | Descripción |
 |---|---|---|---|
 | `GET` | `/audit/active-sessions` | `AUDIT_READ` | Sesiones activas (últimas 24h) |
+| `DELETE` | `/audit/active-sessions/{userId}` | `AUDIT_WRITE` / `OPERATIONS_MANAGER` | Revocar sesión activa de usuario en caché y registrar en BD |
 
 ```typescript
-// Query params opcionales
+// Query params opcionales en GET
 // ?organizationId=UUID&branchId=UUID
 
 interface ActiveSessionResponse {
@@ -248,6 +249,10 @@ interface ActiveSessionResponse {
   lastActivity: string;
   ipAddress: string | null;
 }
+
+// DELETE /audit/active-sessions/{userId}
+// Path param: userId (UUID)
+// Respuestas: 200 OK (Sesión revocada), 401 Unauthorized, 403 Forbidden, 404 Not Found
 ```
 
 ---
