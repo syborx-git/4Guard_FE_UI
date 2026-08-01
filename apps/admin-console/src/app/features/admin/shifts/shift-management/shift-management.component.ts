@@ -424,13 +424,9 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
           this.populateForm(created);
           this.shiftForm.markAsPristine();
           this.loadAuditLogs(created.id);
-          const msg = `Turno "${created.name}" (${created.code}) registrado exitosamente.`;
-          this.toastService.success(msg);
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          const errMsg = err?.message || 'Error al guardar el nuevo turno.';
-          this.toastService.error(errMsg);
         },
       });
     } else if (mode === 'edit') {
@@ -460,13 +456,9 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
           this.populateForm(updated);
           this.shiftForm.markAsPristine();
           this.loadAuditLogs(updated.id);
-          const msg = `Turno "${updated.name}" actualizado correctamente.`;
-          this.toastService.success(msg);
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          const errMsg = err?.message || 'Error al actualizar el turno.';
-          this.toastService.error(errMsg);
         },
       });
     }
@@ -482,14 +474,9 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         this.isSubmitting.set(false);
         this.populateForm(updated);
         this.loadAuditLogs(updated.id);
-        const actionLabel = updated.status === 'ACTIVE' ? 'activado' : 'desactivado';
-        const msg = `Turno "${updated.name}" ${actionLabel} correctamente.`;
-        this.toastService.success(msg);
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        const errMsg = err?.message || 'Error al cambiar estatus del turno.';
-        this.toastService.error(errMsg);
       },
     });
   }

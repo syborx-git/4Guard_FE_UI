@@ -116,11 +116,27 @@ console.log('Guardado correctamente');
 
 ---
 
-## Convención: Toast vs Error Signal
+## 🚫 Regla de No-Duplicación (Servicio HTTP vs Componente)
 
-| Situación | Usar |
-|---|---|
-| Operación de escritura completada (éxito o fallo) | `ToastService` |
-| Error al cargar la lista inicial | `this.error.set(message)` → mostrar en pantalla vacía |
-| Error al cargar el detalle de un item | `this.error.set(message)` + toast.error() |
-| Error 401 (sesión expirada) | Automático por interceptor |
+Para evitar notificaciones redundantes (Toast duplicados al usuario):
+
+1. **Centralización en el Servicio HTTP:** Si el Servicio de la entidad (ej: `ShiftService`, `CarrierService`) ya gestiona `this.toast.success()` / `this.toast.error()` dentro de sus operadores RxJS `tap()` y `catchError()`, el componente invocador **NO debe volver a llamar a `toast.success()` o `toast.error()`** en las funciones de respuesta `next()` o `error()` de su `.subscribe()`.
+2. **Emisión Única:** La notificación Toast debe ser emitida **exactamente una sola vez** por transacción.
+
+```typescript
+// ✅ CORRECTO: El servicio emite el toast en tap(), el componente solo actualiza su UI local
+// En ShiftService:
+public createShift(req: CreateShiftRequest) {
+  return this.http.post(...).pipe(
+    tap(created => this.toast.success(`Turno "${created.name}" registrado exitosamente.`))
+  );
+}
+
+// En Componente:
+this.shiftService.createShift(req).subscribe({
+  next: (created) => {
+    this.isSubmitting.set(false);
+    this.populateForm(created); // Cero llamadas a toast.success() duplicadas
+  }
+});
+```

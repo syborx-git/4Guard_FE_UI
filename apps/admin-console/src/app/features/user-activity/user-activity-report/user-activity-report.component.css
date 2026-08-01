@@ -207,6 +207,32 @@
   margin-bottom: 0.9rem;
 }
 
+.btn-back-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.25));
+  border-radius: 6px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.09));
+  color: #b58b37;
+  font-family: var(--font-m, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: all 180ms ease;
+}
+
+.btn-back-admin:hover {
+  background: rgba(197, 168, 107, 0.18);
+  transform: translateY(-1px);
+}
+
+.btn-back-admin .material-symbols-outlined {
+  font-size: 15px;
+}
+
 .ua-hero__back-link {
   display: inline-flex;
   align-items: center;
