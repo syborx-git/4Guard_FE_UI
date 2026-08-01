@@ -756,7 +756,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       return;
     }
     if (moduleId === 'shifts') {
-      this.router.navigate(['/admin/shifts']);
+      this.router.navigate(['/shifts']);
       return;
     }
     if (moduleId === 'user-activity') {

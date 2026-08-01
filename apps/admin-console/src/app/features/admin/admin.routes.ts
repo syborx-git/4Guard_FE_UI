@@ -73,5 +73,10 @@ export const adminRoutes: Routes = [
       import('../user-activity/user-activity.routes').then((m) => m.userActivityRoutes),
     title: '4GUARD WMS — Actividad por Usuario',
   },
+  {
+    path: 'shifts',
+    redirectTo: '/shifts',
+    pathMatch: 'full',
+  },
 ];
 
