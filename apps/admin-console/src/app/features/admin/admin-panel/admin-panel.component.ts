@@ -589,12 +589,14 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
     { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
+    { id: 'currency-exchange', title: 'Divisas y Tipos de Cambio', icon: 'currency_exchange', description: 'Gestión multi-divisa, paridades cambiarias y valuación financiera.', category: 'MERCHANDISE' },
     
     // Seguridad
     { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
     { id: 'shifts', title: 'Turnos y Horarios', icon: 'schedule', description: 'Configuración de jornadas operativas, horarios y disponibilidad de almacén.', category: 'SECURITY' },
     { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
+    { id: 'licenses', title: 'Gestión de Licencias', icon: 'workspace_premium', description: 'Administración de licencias WMS, vigencia de módulos y perfiles corporativos.', category: 'SECURITY' },
     
     // Soporte y Auditoría
     { id: 'inventory', title: 'Monitor de Inventario', icon: 'shelves', description: 'Saldos activos por SSCC, cuarentenas preventivas y lotes.', category: 'SUPPORT' },
@@ -602,7 +604,8 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'incidences', title: 'Incidencias de Calidad', icon: 'report_problem', description: 'Seguimiento a anomalías, mermas y bloqueos de calidad.', category: 'SUPPORT', badgeCount: () => this.incidenceService.incidences().filter(i => i.status !== 'CLOSED').length },
     { id: 'audit', title: 'Consola de Auditoría', icon: 'find_in_page', description: 'Bitácora forense de red y comparador de cambios JSON.', category: 'SUPPORT' },
     { id: 'user-activity', title: 'Actividad por Usuario', icon: 'manage_search', description: 'Consulta, análisis y trazabilidad de acciones realizadas por los usuarios.', category: 'SUPPORT' },
-    { id: 'alerts-config', title: 'Alertas y Notificaciones', icon: 'notifications_active', description: 'Configuración de reglas, umbrales y notificaciones operativas.', category: 'SUPPORT' }
+    { id: 'alerts-config', title: 'Alertas y Notificaciones', icon: 'notifications_active', description: 'Configuración de reglas, umbrales y notificaciones operativas.', category: 'SUPPORT' },
+    { id: 'business-rules', title: 'Reglas de Negocio', icon: 'gavel', description: 'Motor de reglas de negocio enterprise, políticas operativas y disparadores.', category: 'SUPPORT' }
   ];
 
   // Cálculo unificado de filtrado, búsqueda y paginación reactiva
@@ -765,6 +768,18 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     }
     if (moduleId === 'alerts-config') {
       this.router.navigate(['/alerts-config']);
+      return;
+    }
+    if (moduleId === 'business-rules') {
+      this.router.navigate(['/business-rules']);
+      return;
+    }
+    if (moduleId === 'currency-exchange') {
+      this.router.navigate(['/currency-exchange']);
+      return;
+    }
+    if (moduleId === 'licenses' || moduleId === 'license-management') {
+      this.router.navigate(['/licenses']);
       return;
     }
     this.selectedModule.set(moduleId);

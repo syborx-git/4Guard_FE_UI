@@ -228,12 +228,6 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    // HU-131: Motor de Reglas de Negocio Enterprise
-    { label: 'Reglas de negocio', route: '/business-rules', icon: 'gavel', module: 'business-rules' },
-    // HU-148: Divisas y Tipos de Cambio — Módulo Financiero
-    { label: 'Divisas y cambio', route: '/currency-exchange', icon: 'currency_exchange', module: 'currency-exchange' },
-    // HU-139: Gestión de Licencias del WMS
-    { label: 'Gestión de licencias', route: '/licenses', icon: 'workspace_premium', module: 'license-management' },
   ];
 
 
