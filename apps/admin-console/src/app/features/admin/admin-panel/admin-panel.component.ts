@@ -225,6 +225,12 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
         description: 'Historial detallado de auditoría forense del sistema. Registro de llamadas a API, modificaciones JSON y direcciones IP.',
         icon: 'find_in_page'
       },
+      'user-activity': {
+        categoryLabel: 'MONITOREO Y SOPORTE',
+        title: 'Reporte de Actividad por Usuario',
+        description: 'Consulta, analiza y exporta las acciones realizadas por los usuarios dentro de la operación del WMS.',
+        icon: 'manage_search'
+      },
       notifications: {
         categoryLabel: 'MONITOREO Y SOPORTE',
         title: 'Notificaciones y Alertas del Sistema',
@@ -595,7 +601,8 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'movements', title: 'Movimientos de Stock', icon: 'history', description: 'Historial inmutable de traslados, recibos y despachos.', category: 'SUPPORT' },
     { id: 'incidences', title: 'Incidencias de Calidad', icon: 'report_problem', description: 'Seguimiento a anomalías, mermas y bloqueos de calidad.', category: 'SUPPORT', badgeCount: () => this.incidenceService.incidences().filter(i => i.status !== 'CLOSED').length },
     { id: 'audit', title: 'Consola de Auditoría', icon: 'find_in_page', description: 'Bitácora forense de red y comparador de cambios JSON.', category: 'SUPPORT' },
-    { id: 'notifications', title: 'Alertas del Sistema', icon: 'notifications_active', description: 'Bandeja técnica de notificaciones y alertas críticas.', category: 'SUPPORT', badgeCount: () => this.notifService.notifications().filter(n => !n.read).length }
+    { id: 'user-activity', title: 'Actividad por Usuario', icon: 'manage_search', description: 'Consulta, análisis y trazabilidad de acciones realizadas por los usuarios.', category: 'SUPPORT' },
+    { id: 'alerts-config', title: 'Alertas y Notificaciones', icon: 'notifications_active', description: 'Configuración de reglas, umbrales y notificaciones operativas.', category: 'SUPPORT' }
   ];
 
   // Cálculo unificado de filtrado, búsqueda y paginación reactiva
@@ -749,7 +756,15 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       return;
     }
     if (moduleId === 'shifts') {
-      this.router.navigate(['/admin/shifts']);
+      this.router.navigate(['/shifts']);
+      return;
+    }
+    if (moduleId === 'user-activity') {
+      this.router.navigate(['/admin/user-activity']);
+      return;
+    }
+    if (moduleId === 'alerts-config') {
+      this.router.navigate(['/alerts-config']);
       return;
     }
     this.selectedModule.set(moduleId);

@@ -67,5 +67,21 @@ export const adminRoutes: Routes = [
       import('./roles/roles.routes').then((m) => m.rolesRoutes),
     title: '4GUARD WMS — Roles y Matriz de Permisos',
   },
+  {
+    path: 'user-activity',
+    loadChildren: () =>
+      import('../user-activity/user-activity.routes').then((m) => m.userActivityRoutes),
+    title: '4GUARD WMS — Actividad por Usuario',
+  },
+  {
+    path: 'shifts',
+    redirectTo: '/shifts',
+    pathMatch: 'full',
+  },
+  {
+    path: 'alerts-config',
+    redirectTo: '/alerts-config',
+    pathMatch: 'full',
+  },
 ];
 

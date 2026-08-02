@@ -88,6 +88,8 @@ function dateRangeValidator(control: AbstractControl): ValidationErrors | null {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
+import { RouterLink } from '@angular/router';
+
 const PAGE_SIZE_DEFAULT = 10;
 
 @Component({
@@ -97,6 +99,7 @@ const PAGE_SIZE_DEFAULT = 10;
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
+    RouterLink,
     ActivityDetailDrawerComponent,
     ReportProfileManagerComponent,
   ],
@@ -246,6 +249,10 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
       dateFrom: this.formatDate(weekAgo),
       dateTo: this.formatDate(today),
     });
+
+    // Carga inicial automática de datos desde el backend al entrar a la pantalla
+    this.applyFilters();
+    this.refresh();
   }
 
   ngOnDestroy(): void {

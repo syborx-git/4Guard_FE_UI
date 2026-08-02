@@ -1,8 +1,7 @@
 /**
  * @file shift.model.ts
  * @description Modelos de dominio e interfaces DTO para la Gestión de Turnos y Horarios (HU-140).
- * Soporta configuración operativa de jornadas, selección de días de la semana,
- * tolerancia de puntualidad y cálculo de cruce de medianoche.
+ * Alineado 100% con el Contrato API REST (docs/api/modules/shifts.md).
  */
 
 export type OperatingDay =
@@ -15,6 +14,7 @@ export type OperatingDay =
   | 'SUNDAY';
 
 export type ShiftStatus = 'ACTIVE' | 'INACTIVE';
+export type ScopeType = 'GLOBAL' | 'BRANCH' | 'WAREHOUSE_SECTION';
 
 export interface OperatingDayConfig {
   value: OperatingDay;
@@ -42,19 +42,23 @@ export interface Shift {
   code: string;
   name: string;
   description?: string;
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  startTime: string; // HH:mm:ss o HH:mm
+  endTime: string;   // HH:mm:ss o HH:mm
   operatingDays: OperatingDay[];
   status: ShiftStatus;
   restBreakMinutes?: number;
   toleranceMinutes?: number;
+  isOvernight?: boolean;
+  netDurationMinutes?: number;
   branchId?: string;
   branchName?: string;
+  warehouseSectionId?: string;
+  warehouseSectionName?: string;
+  scopeType?: ScopeType;
   createdAt?: string;
   updatedAt?: string;
   updatedBy?: string;
-  scopeType?: 'GLOBAL' | 'WAREHOUSE';
-  warehouseId?: string;
+  createdBy?: string;
 }
 
 export interface CreateShiftRequest {
@@ -64,35 +68,60 @@ export interface CreateShiftRequest {
   startTime: string;
   endTime: string;
   operatingDays: OperatingDay[];
-  status: ShiftStatus;
+  status?: ShiftStatus;
   restBreakMinutes?: number;
   toleranceMinutes?: number;
-  branchId?: string;
-  // New optional fields
-  scopeType?: 'GLOBAL' | 'WAREHOUSE';
-  warehouseId?: string;
+  scopeType?: ScopeType;
+  branchId?: string | null;
+  warehouseSectionId?: string | null;
 }
 
-export interface UpdateShiftRequest {
+export interface UpdateShiftRequest extends CreateShiftRequest {
+  id?: string;
+}
+
+export interface UpdateShiftStatusRequest {
+  status: ShiftStatus;
+}
+
+export interface ShiftResponse extends Shift {}
+
+export interface ShiftSummaryResponse {
+  id: string;
   code: string;
   name: string;
-  description?: string;
   startTime: string;
   endTime: string;
-  operatingDays: OperatingDay[];
+  isOvernight: boolean;
+  netDurationMinutes: number;
   status: ShiftStatus;
-  restBreakMinutes?: number;
-  toleranceMinutes?: number;
-  branchId?: string;
-  // New optional fields
-  scopeType?: 'GLOBAL' | 'WAREHOUSE';
-  warehouseId?: string;
+  scopeType: ScopeType;
+  branchId?: string | null;
+  branchName?: string | null;
+  operatingDays: OperatingDay[];
+}
+
+export interface ShiftAuditLogDetail {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface ShiftAuditLogResponse {
+  logId: string;
+  action: string;
+  username: string;
+  createdAt: string;
+  details: ShiftAuditLogDetail[];
 }
 
 export interface ShiftFilters {
   searchTerm?: string;
   status?: ShiftStatus | 'ALL';
   day?: OperatingDay | 'ALL';
+  branchId?: string;
+  warehouseSectionId?: string;
+  scopeType?: ScopeType | 'ALL';
 }
 
 export interface ShiftDurationCalculation {
@@ -125,7 +154,6 @@ export function calculateShiftDuration(
   let isOvernight = false;
 
   if (endTotalMins <= startTotalMins) {
-    // Si hora fin es menor o igual a inicio (y no son 00:00 exactos), cruza medianoche
     endTotalMins += 24 * 60;
     isOvernight = true;
   }

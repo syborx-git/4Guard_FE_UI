@@ -121,6 +121,10 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   protected readonly backendError = signal<string | null>(null);
   protected readonly auditEntries = signal<CarrierAuditEntry[]>([]);
 
+  // ── Validaciones asíncronas de RFC en el evento blur ───────────────────────
+  protected readonly rfcValidating = signal<boolean>(false);
+  protected readonly rfcAvailable = signal<boolean | null>(null);
+
   // ─── Filtros del directorio ──────────────────────────────────────────────────
 
   protected filterText = '';
@@ -321,6 +325,8 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    this.rfcValidating.set(false);
+    this.rfcAvailable.set(null);
     this.auditEntries.set([]);
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -337,6 +343,8 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    this.rfcValidating.set(false);
+    this.rfcAvailable.set(null);
   }
 
   // ─── Helpers del formulario ────────────────────────────────────────────────────
@@ -357,8 +365,73 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       notes:        carrier.notes || '',
     });
     this.selectedVehicleTypes = new Set(carrier.supportedVehicleTypes);
+    this.rfcValidating.set(false);
+    this.rfcAvailable.set(null);
     this.form.markAsPristine();
     this.form.markAsUntouched();
+  }
+
+  // ─── Evento Blur para Validación de RFC Duplicado vía Backend ─────────────
+
+  protected onRfcBlur(): void {
+    const ctrl = this.form.get('rfc');
+    if (!ctrl || !ctrl.value) {
+      this.rfcAvailable.set(null);
+      return;
+    }
+
+    const rfcVal = String(ctrl.value).trim().toUpperCase();
+    ctrl.setValue(rfcVal, { emitEvent: false });
+
+    // Validar sintaxis del RFC (12 caracteres persona moral o 13 persona física)
+    const syntaxValid = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i.test(rfcVal);
+    if (!syntaxValid) {
+      this.rfcAvailable.set(null);
+      return;
+    }
+
+    // En modo edición, si el RFC no ha cambiado respecto al transportista actual, es válido
+    if (this.formMode() === 'edit' && this.selectedCarrier()?.rfc?.toUpperCase() === rfcVal) {
+      this.rfcAvailable.set(true);
+      return;
+    }
+
+    const excludeId = this.formMode() === 'edit' ? this.selectedCarrier()?.id : undefined;
+
+    this.rfcValidating.set(true);
+    this.rfcAvailable.set(null);
+
+    this.carrierService.validateTaxId(rfcVal, undefined, excludeId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.rfcValidating.set(false);
+          this.rfcAvailable.set(true);
+          if (ctrl.errors && ctrl.errors['rfcExists']) {
+            const { rfcExists, rfcExistsMsg, ...otherErrors } = ctrl.errors;
+            ctrl.setErrors(Object.keys(otherErrors).length > 0 ? otherErrors : null);
+          }
+          const successMsg = res?.message || `El RFC '${rfcVal}' está disponible para registro.`;
+          this.toastService.success(successMsg);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.rfcValidating.set(false);
+          this.rfcAvailable.set(false);
+          const serverMsg = err?.error?.message || `El RFC '${rfcVal}' ya existe para otro transportista.`;
+          ctrl.setErrors({ rfcExists: true, rfcExistsMsg: serverMsg });
+          ctrl.markAsTouched();
+          this.toastService.error(serverMsg);
+        }
+      });
+  }
+
+  protected onRfcInput(): void {
+    this.rfcAvailable.set(null);
+    const ctrl = this.form.get('rfc');
+    if (ctrl?.errors && ctrl.errors['rfcExists']) {
+      const { rfcExists, rfcExistsMsg, ...otherErrors } = ctrl.errors;
+      ctrl.setErrors(Object.keys(otherErrors).length > 0 ? otherErrors : null);
+    }
   }
 
   protected toggleVehicleType(type: VehicleCapabilityType): void {
@@ -408,6 +481,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     if (ctrl.errors['maxlength'])      return `Máximo ${ctrl.errors['maxlength'].requiredLength} caracteres.`;
     if (ctrl.errors['email'])          return 'Ingresa un correo electrónico válido.';
     if (ctrl.errors['invalidRfc'])     return 'El RFC no tiene un formato válido.';
+    if (ctrl.errors['rfcExists'])      return ctrl.errors['rfcExistsMsg'] || 'El RFC ingresado ya existe para otro transportista.';
     if (ctrl.errors['invalidPhone'])   return 'El teléfono debe tener entre 7 y 15 dígitos.';
     return 'Campo inválido.';
   }
@@ -431,7 +505,17 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(true);
     this.backendError.set(null);
 
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      const rfcCtrl = this.form.get('rfc');
+      if (rfcCtrl?.errors?.['rfcExists']) {
+        const msg = rfcCtrl.errors['rfcExistsMsg'] || 'El RFC ingresado ya existe para otro transportista.';
+        this.toastService.error(msg);
+      } else {
+        this.toastService.error('Revisa los campos obligatorios del formulario antes de guardar.');
+      }
+      return;
+    }
 
     const raw = this.form.getRawValue();
     const dto: CreateCarrierRequest = {
@@ -571,12 +655,18 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   private handleBackendError(err: HttpErrorResponse): void {
     const status = err.status;
     const serverMsg = err?.error?.message || err?.message;
+    let msg = 'Ocurrió un error inesperado al procesar la solicitud.';
 
-    if (status === 409) {
-      if (serverMsg?.toLowerCase().includes('rfc')) {
-        this.backendError.set('El RFC ingresado ya está registrado para otro transportista.');
+    if (status === 409 || status === 400) {
+      if (serverMsg?.toLowerCase().includes('rfc') || serverMsg?.toLowerCase().includes('taxid')) {
+        msg = serverMsg || 'El RFC ingresado ya existe para otro transportista.';
+        const ctrl = this.form.get('rfc');
+        if (ctrl) {
+          ctrl.setErrors({ rfcExists: true, rfcExistsMsg: msg });
+          ctrl.markAsTouched();
+        }
       } else if (serverMsg?.toLowerCase().includes('razón') || serverMsg?.toLowerCase().includes('business')) {
-        this.backendError.set('La razón social ingresada ya existe en el sistema.');
+        msg = 'La razón social ingresada ya existe en el sistema.';
       } else if (serverMsg?.toLowerCase().includes('version') || serverMsg?.toLowerCase().includes('modificado')) {
         this.backendError.set('El registro fue modificado por otro usuario. Recarga y vuelve a intentarlo.');
       } else {

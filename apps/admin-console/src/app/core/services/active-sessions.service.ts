@@ -10,6 +10,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
+import { ToastService } from './toast.service';
+
 export interface ActiveSession {
   userId: string;
   username: string;
@@ -33,11 +35,19 @@ export interface ActiveSessionsResponse {
   timestamp: string;
 }
 
+export interface RevokeSessionResponse {
+  success: boolean;
+  message: string;
+  data: null;
+  timestamp: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ActiveSessionsService {
   private readonly http = inject(HttpClient);
+  private readonly toast = inject(ToastService);
   private readonly API_URL = 'http://localhost:8080/api/v1/audit/active-sessions';
 
   /**
@@ -48,7 +58,25 @@ export class ActiveSessionsService {
     return this.http
       .get<ActiveSessionsResponse>(this.API_URL)
       .pipe(
-        catchError((error: HttpErrorResponse) => throwError(() => error))
+        catchError((error: HttpErrorResponse) => {
+          this.toast.error(error.error?.message || 'Error al obtener las sesiones activas');
+          return throwError(() => error);
+        })
+      );
+  }
+
+  /**
+   * Revoca la sesión activa de un usuario específico por su userId (UUID).
+   * DELETE /api/v1/audit/active-sessions/{userId}
+   */
+  revokeSession(userId: string): Observable<RevokeSessionResponse> {
+    return this.http
+      .delete<RevokeSessionResponse>(`${this.API_URL}/${userId}`)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          this.toast.error(error.error?.message || 'Error al revocar la sesión');
+          return throwError(() => error);
+        })
       );
   }
 }
