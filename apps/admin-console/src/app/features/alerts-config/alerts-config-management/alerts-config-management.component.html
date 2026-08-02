@@ -13,6 +13,13 @@
         <span class="material-icons-round ac-hero__icon">notifications_active</span>
       </div>
       <div class="ac-hero__info">
+        <div class="ac-hero__breadcrumb">
+          <a routerLink="/admin" class="btn-back-admin" title="Regresar a Administración WMS">
+            <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+          </a>
+          <span class="breadcrumb-dot">·</span>
+          <span class="ac-hero__eyebrow">CONFIGURACIÓN DEL SISTEMA · MOTOR DE REGLAS</span>
+        </div>
         <h1 class="ac-hero__title">Configuración de Alertas y Notificaciones</h1>
         <p class="ac-hero__subtitle">
           Define las reglas de negocio, prioridades y destinatarios que determinan cuándo y cómo el sistema debe alertar sobre eventos críticos en la operación del almacén.
@@ -644,52 +651,93 @@
         @if (selectedAlert()) {
           <section class="ac-history-section">
             <div class="ac-history-section__header">
-              <span class="material-icons-round">history</span>
-              <h3>Historial de Cambios de esta Regla</h3>
-              <span class="ac-history-count">{{ selectedAlertHistory().length }} registros</span>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="material-icons-round">history</span>
+                <h3>Historial de Auditoría y Trazabilidad (Backend API)</h3>
+                <span class="ac-history-count">{{ remoteAuditLogs().length || selectedAlertHistory().length }} registros</span>
+              </div>
+              <button
+                type="button"
+                class="ac-btn ac-btn--ghost ac-btn--sm"
+                (click)="loadAuditLogs(selectedAlert()!.id)"
+                [disabled]="isLoadingAudit()"
+                title="Refrescar auditoría desde el servidor">
+                <span class="material-icons-round" [class.ac-spin]="isLoadingAudit()">refresh</span>
+                <span>Refrescar</span>
+              </button>
             </div>
 
-            <div class="ac-history-table-wrap">
-              <table class="ac-history-table">
-                <thead>
-                  <tr>
-                    <th>FECHA Y HORA</th>
-                    <th>USUARIO</th>
-                    <th>CAMBIO REALIZADO</th>
-                    <th>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (entry of selectedAlertHistory(); track entry.id) {
+            @if (isLoadingAudit()) {
+              <div style="padding: 1.5rem; text-align: center; color: var(--ac-txt-3); font-size: 0.8rem;">
+                <span class="ac-spinner ac-spinner--sm"></span> Cargando bitácora de auditoría...
+              </div>
+            } @else {
+              <div class="ac-history-table-wrap">
+                <table class="ac-history-table">
+                  <thead>
                     <tr>
-                      <td class="ac-history-table__date">
-                        {{ entry.timestamp | date:'dd/MM/yyyy · HH:mm' }}
-                      </td>
-                      <td class="ac-history-table__user">{{ entry.user }}</td>
-                      <td class="ac-history-table__summary">{{ entry.changeSummary }}</td>
-                      <td>
-                        @if (entry.newStatus) {
-                          <span
-                            class="ac-badge"
-                            [class.badge--success]="entry.newStatus === 'ACTIVE'"
-                            [class.badge--neutral]="entry.newStatus === 'INACTIVE'">
-                            {{ entry.newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
-                          </span>
-                        } @else {
-                          <span class="ac-badge badge--info">Registrado</span>
-                        }
-                      </td>
+                      <th>FECHA Y HORA</th>
+                      <th>USUARIO</th>
+                      <th>ACCIÓN / CAMBIOS</th>
+                      <th>IP ORIGEN</th>
                     </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="4" class="ac-history-table__empty">
-                        Sin cambios registrados recientemente.
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    @for (log of remoteAuditLogs(); track log.logId) {
+                      <tr>
+                        <td class="ac-history-table__date">
+                          {{ log.createdAt | date:'dd/MM/yyyy · HH:mm' }} hrs
+                        </td>
+                        <td class="ac-history-table__user">{{ log.username }}</td>
+                        <td class="ac-history-table__summary">
+                          <strong style="color: var(--ac-gold); font-size: 0.72rem;">{{ log.action }}</strong>
+                          @if (log.changes && log.changes.length > 0) {
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem;">
+                              @for (ch of log.changes; track ch.field) {
+                                <span style="font-family: monospace; font-size: 0.65rem; background: var(--ac-surface-3); border: 1px solid var(--ac-border); padding: 0.1rem 0.4rem; border-radius: 4px; color: var(--ac-txt-2);">
+                                  {{ ch.field }}: <s style="opacity: 0.6;">{{ ch.oldValue }}</s> ➔ <strong>{{ ch.newValue }}</strong>
+                                </span>
+                              }
+                            </div>
+                          }
+                        </td>
+                        <td class="ac-history-table__user" style="font-family: monospace; font-size: 0.7rem;">
+                          {{ log.ipAddress || '127.0.0.1' }}
+                        </td>
+                      </tr>
+                    } @empty {
+                      @for (entry of selectedAlertHistory(); track entry.id) {
+                        <tr>
+                          <td class="ac-history-table__date">
+                            {{ entry.timestamp | date:'dd/MM/yyyy · HH:mm' }}
+                          </td>
+                          <td class="ac-history-table__user">{{ entry.user }}</td>
+                          <td class="ac-history-table__summary">{{ entry.changeSummary }}</td>
+                          <td>
+                            @if (entry.newStatus) {
+                              <span
+                                class="ac-badge"
+                                [class.badge--success]="entry.newStatus === 'ACTIVE'"
+                                [class.badge--neutral]="entry.newStatus === 'INACTIVE'">
+                                {{ entry.newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                              </span>
+                            } @else {
+                              <span class="ac-badge badge--info">Registrado</span>
+                            }
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="4" class="ac-history-table__empty">
+                            Sin registros de auditoría reportados por la API.
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
           </section>
         }
       </div>

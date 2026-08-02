@@ -41,7 +41,7 @@
 | **Actividad de Usuario** | `/user-activity` | ✅ | `user-activity-report` | HU-146 completo y conectado a API |
 | **Motor de Reglas** | `/business-rules` | ⬜ | — | HU-131 |
 | **Divisas** | `/currency-exchange` | ⬜ | — | HU-148 |
-| **Alertas** | `/alerts-config` | ⬜ | — | HU-134 |
+| **Alertas** | `/alerts-config` | ✅ | `alerts-config-management` | HU-134 completo y conectado a API /api/v1/alerts-config |
 | **Licencias** | `/license-management` | ⬜ | — | HU-139 |
 
 ---

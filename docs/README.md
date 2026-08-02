@@ -44,6 +44,7 @@ docs/
 │       ├── clients.md
 │       ├── roles-permissions.md
 │       ├── suppliers.md
+│       ├── alerts-config.md
 │       └── skus-sections-auth-audit.md
 ├── ai/                     # Contexto para IA & AI Reviewer
 │   ├── context.md          ← LEER PRIMERO si eres una IA
@@ -134,12 +135,14 @@ La IA construirá:
 
 ## 🎨 Referencias de Estilo (Golden Standard)
 
-| Pantalla                       | Ruta                  | Componente                     |
-| ------------------------------ | --------------------- | ------------------------------ |
-| Gestión de Transportistas      | `/carriers`           | `carrier-management.component` |
-| Gestión de Ubicaciones Físicas | `/layout`             | `layout-management.component`  |
-| Torre de Control               | `/dashboard`          | `dashboard.*`                  |
-| Topología Cromática            | `/layout` (grid view) | FSM color map                  |
+| Pantalla                       | Ruta                  | Componente                          |
+| ------------------------------ | --------------------- | ----------------------------------- |
+| Gestión de Transportistas      | `/carriers`           | `carrier-management.component`      |
+| Turnos y Horarios              | `/shifts`             | `shift-management.component`        |
+| Configuración de Alertas       | `/alerts-config`      | `alerts-config-management.component`|
+| Gestión de Ubicaciones Físicas | `/layout`             | `layout-management.component`       |
+| Torre de Control               | `/dashboard`          | `dashboard.*`                       |
+| Topología Cromática            | `/layout` (grid view) | FSM color map                       |
 
 ---
 

@@ -190,9 +190,66 @@ También generar el helper type:
 
 ---
 
+## 🏛️ Agregar Header Hero Golden Standard con Navegación `/admin`
+
+```
+Homologa la cabecera (Header Hero) del módulo [Módulo] con la barra de navegación Golden Standard de 4GUARD WMS.
+
+Referencia visual: Turnos y Horarios (shift-management.component.html)
+
+Estructura requerida:
+<div class="hero-header__breadcrumb">
+  <a routerLink="/admin" class="btn-back-admin" title="Regresar a Administración WMS">
+    <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+  </a>
+  <span class="breadcrumb-dot">·</span>
+  <span class="hero-header__eyebrow">[CATEGORÍA EN MONOSPACE GOLD]</span>
+</div>
+
+Requisitos:
+1. Importar RouterLink en el componente Standalone.
+2. Botón .btn-back-admin con fondo --gold-bg, borde --gold-border y hover animado.
+3. Eyebrow en texto monospace dorado con uppercase.
+```
+
+---
+
+## ⚡ Implementar Carga Perezosa (Lazy Loading) de Módulos Operativos
+
+```
+Asegura la carga perezosa (Lazy Loading) en el servicio y componente del módulo [Módulo].
+
+Requisitos (ADR-008 / SDD Level 5):
+1. Remover cualquier llamada HTTP ansiosa de los constructores (constructor()) en los servicios HTTP.
+2. Trasladar la invocación this.[service].loadData() al método ngOnInit() del componente Standalone.
+3. Asegurar que las peticiones a la API REST de Spring Boot se ejecuten ÚNICA Y EXCLUSIVAMENTE cuando el usuario navegue hacia la pantalla del módulo.
+4. Validar que la compilación de TypeScript no reporte errores (npx tsc --noEmit).
+```
+
+---
+
+## 📜 Integrar Auditoría con Diff de Cambios Remotos (GET /{id}/audit)
+
+```
+Integra la sección de Auditoría y Trazabilidad en Tiempo Real para el módulo [Módulo].
+
+Endpoint BE: GET /api/v1/[entidad]/{id}/audit
+
+Requisitos:
+1. Definir el método getAuditApi(id) en el servicio inyectando HttpClient.
+2. Manejar la respuesta con la estructura AlertConfigAuditResponse / ShiftAuditLogResponse:
+   - logId, username, createdAt, action, ipAddress
+   - changes: [{ field, oldValue, newValue }]
+3. En la UI: renderizar una línea de tiempo / tabla con chips de cambios diff (campo: anterior ➔ nuevo).
+4. Incluir un botón de Refrescar Auditoría (refresh) con spinner de carga.
+5. Invocar la recarga de auditoría automáticamente al seleccionar un ícono de lista o al realizar un guardar/mutación exitosa.
+```
+
+---
+
 ## 💡 Tips de uso
 
 1. **Siempre especifica el módulo objetivo** — "en el módulo de Sucursales" es más preciso que "en el sistema".
-2. **Menciona la pantalla de referencia** — "homologado con carrier-management" activa el design system correcto.
-3. **Cita el archivo del contrato BE** — "Lee docs/api/modules/branches.md" evita que se inventen endpoints.
+2. **Menciona la pantalla de referencia** — "homologado con carrier-management o shift-management" activa el design system correcto.
+3. **Cita el archivo del contrato BE** — "Lee docs/api/modules/alerts-config.md" evita que se inventen endpoints.
 4. **Para bugs**, incluir la ruta exacta del archivo y una descripción del comportamiento esperado vs actual.

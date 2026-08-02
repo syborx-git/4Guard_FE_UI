@@ -19,9 +19,13 @@ export type AlertCategory =
 
 export type AlertEvent =
   | 'WAIT_TIME_EXCEEDED'
-  | 'PENDING_ASN'
   | 'LOW_INVENTORY'
   | 'LOT_EXPIRATION'
+  | 'ORDER_DELAYED'
+  | 'INVENTORY_DISCREPANCY'
+  | 'UNAUTHORIZED_ACCESS'
+  | 'SYSTEM_ERROR'
+  | 'PENDING_ASN'
   | 'HALTED_PICKING'
   | 'USER_LOCKED'
   | 'INTEGRATION_ERROR'
@@ -31,28 +35,40 @@ export type AlertPriority = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type AlertStatus = 'ACTIVE' | 'INACTIVE';
 
-export type AlertChannel = 'SYSTEM' | 'EMAIL' | 'PUSH' | 'SMS' | 'WEBHOOK';
+export type AlertChannel = 'SYSTEM' | 'PUSH' | 'EMAIL' | 'SMS' | 'WEBHOOK';
 
 export type AlertRecipientRole =
+  | 'OPERATOR'
   | 'SUPERVISOR'
   | 'MANAGER'
-  | 'ADMIN'
-  | 'OPERATOR'
-  | 'CLIENT';
+  | 'CONTROL_DESK'
+  | 'CLIENT'
+  | 'ADMIN';
 
 export type AlertCondition =
   | 'GREATER_THAN'
   | 'LESS_THAN'
+  | 'EQUAL'
+  | 'GREATER_OR_EQUAL'
+  | 'LESS_OR_EQUAL'
   | 'EQUALS'
   | 'TIME_EXCEEDED';
 
-export type AlertUnit = 'MINUTES' | 'HOURS' | 'PIECES' | 'PERCENTAGE';
+export type AlertUnit =
+  | 'MINUTES'
+  | 'HOURS'
+  | 'DAYS'
+  | 'PERCENTAGE'
+  | 'UNITS'
+  | 'PIECES'
+  | 'PALLETS';
 
 export type AlertRecurrence =
   | 'NEVER'
   | 'EVERY_15_MIN'
   | 'EVERY_30_MIN'
-  | 'EVERY_HOUR';
+  | 'EVERY_HOUR'
+  | 'DAILY';
 
 export type AlertEscalationTime =
   | 'NONE'
@@ -61,7 +77,7 @@ export type AlertEscalationTime =
   | 'AFTER_60_MIN';
 
 // ═══════════════════════════════════════════════════════════════════
-// INTERFACES PRINCIPALES
+// INTERFACES PRINCIPALES & DTOS DEL BE
 // ═══════════════════════════════════════════════════════════════════
 
 export interface AlertConfiguration {
@@ -69,7 +85,7 @@ export interface AlertConfiguration {
   organizationId: string;
   name: string;
   category: AlertCategory;
-  event: AlertEvent;
+  event: AlertEvent | string;
   priority: AlertPriority;
   status: AlertStatus;
   channels: AlertChannel[];
@@ -80,10 +96,65 @@ export interface AlertConfiguration {
   recurrence: AlertRecurrence;
   escalation: AlertEscalationTime;
   messageTemplate: string;
-  description: string;
+  description: string | null;
   createdAt: string;
   updatedAt: string;
-  updatedBy: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface CreateAlertConfigRequest {
+  name: string;
+  category: AlertCategory;
+  event: AlertEvent | string;
+  priority: AlertPriority;
+  status: AlertStatus;
+  channels: AlertChannel[];
+  recipients: AlertRecipientRole[];
+  condition: AlertCondition;
+  value: number;
+  unit: AlertUnit;
+  recurrence: AlertRecurrence;
+  escalation: AlertEscalationTime;
+  messageTemplate: string;
+  description?: string;
+}
+
+export interface UpdateAlertConfigRequest {
+  id?: string;
+  name?: string;
+  category?: AlertCategory;
+  event?: AlertEvent | string;
+  priority?: AlertPriority;
+  status?: AlertStatus;
+  channels?: AlertChannel[];
+  recipients?: AlertRecipientRole[];
+  condition?: AlertCondition;
+  value?: number;
+  unit?: AlertUnit;
+  recurrence?: AlertRecurrence;
+  escalation?: AlertEscalationTime;
+  messageTemplate?: string;
+  description?: string;
+}
+
+export interface UpdateAlertConfigStatusRequest {
+  status: AlertStatus;
+}
+
+export interface AlertConfigAuditDetail {
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface AlertConfigAuditResponse {
+  logId: string;
+  action: string;
+  username: string;
+  ipAddress?: string;
+  createdAt: string;
+  changes: AlertConfigAuditDetail[];
 }
 
 export interface AlertHistoryEntry {
@@ -141,6 +212,10 @@ export const ALERT_EVENT_LABELS: Record<AlertEvent, string> = {
   PENDING_ASN: 'Recepción sin ASN / Documento pendiente',
   LOW_INVENTORY: 'Inventario bajo el stock mínimo',
   LOT_EXPIRATION: 'Lote próximo a vencer (FEFO)',
+  ORDER_DELAYED: 'Orden / Embarque retrasado',
+  INVENTORY_DISCREPANCY: 'Discrepancia en inventario',
+  UNAUTHORIZED_ACCESS: 'Intento de acceso no autorizado',
+  SYSTEM_ERROR: 'Error crítico del sistema',
   HALTED_PICKING: 'Ola de picking detenida / bloqueada',
   USER_LOCKED: 'Usuario bloqueado por intentos fallidos',
   INTEGRATION_ERROR: 'Error en integración ERP / SAP',
@@ -158,15 +233,21 @@ export const ALERT_PRIORITY_LABELS: Record<AlertPriority, string> = {
 export const ALERT_CONDITION_LABELS: Record<AlertCondition, string> = {
   GREATER_THAN: 'Mayor que ( > )',
   LESS_THAN: 'Menor que ( < )',
+  EQUAL: 'Igual a ( = )',
   EQUALS: 'Igual a ( = )',
+  GREATER_OR_EQUAL: 'Mayor o igual que ( >= )',
+  LESS_OR_EQUAL: 'Menor o igual que ( <= )',
   TIME_EXCEEDED: 'Tiempo excedido ( > t )',
 };
 
 export const ALERT_UNIT_LABELS: Record<AlertUnit, string> = {
   MINUTES: 'Minutos',
   HOURS: 'Horas',
-  PIECES: 'Piezas',
+  DAYS: 'Días',
   PERCENTAGE: 'Porcentaje',
+  UNITS: 'Unidades',
+  PIECES: 'Piezas',
+  PALLETS: 'Pallets',
 };
 
 export const ALERT_RECURRENCE_LABELS: Record<AlertRecurrence, string> = {
@@ -174,6 +255,7 @@ export const ALERT_RECURRENCE_LABELS: Record<AlertRecurrence, string> = {
   EVERY_15_MIN: 'Cada 15 minutos',
   EVERY_30_MIN: 'Cada 30 minutos',
   EVERY_HOUR: 'Cada hora',
+  DAILY: 'Diariamente',
 };
 
 export const ALERT_ESCALATION_LABELS: Record<AlertEscalationTime, string> = {
@@ -184,10 +266,11 @@ export const ALERT_ESCALATION_LABELS: Record<AlertEscalationTime, string> = {
 };
 
 export const RECIPIENT_ROLE_LABELS: Record<AlertRecipientRole, string> = {
+  OPERATOR: 'Operador de Montacargas / Andén',
   SUPERVISOR: 'Supervisor de Operaciones',
   MANAGER: 'Gerente de Almacén',
+  CONTROL_DESK: 'Mesa de Control',
   ADMIN: 'Administrador del Sistema',
-  OPERATOR: 'Operador de Montacargas / Mesa',
   CLIENT: 'Cliente 3PL / Cuenta',
 };
 

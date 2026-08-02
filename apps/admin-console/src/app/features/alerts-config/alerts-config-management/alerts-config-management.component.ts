@@ -25,6 +25,7 @@ import {
   ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -51,6 +52,7 @@ import {
   AlertEscalationTime,
   AlertAuditEntry,
   AlertHistoryEntry,
+  AlertConfigAuditResponse,
   ToastPreviewData,
   ALERT_CATEGORY_LABELS,
   ALERT_EVENT_LABELS,
@@ -74,7 +76,7 @@ type FormMode = 'CREATE' | 'EDIT';
 @Component({
   selector: 'fg-alerts-config-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DatePipe],
+  imports: [CommonModule, ReactiveFormsModule, DatePipe, RouterLink],
   templateUrl: './alerts-config-management.component.html',
   styleUrl: './alerts-config-management.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -102,8 +104,10 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de UI en Signals ──────────────────────────────────────────────
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
+  protected readonly isLoadingAudit = signal(false);
   protected readonly formMode = signal<FormMode>('CREATE');
   protected readonly selectedAlert = signal<AlertConfiguration | null>(null);
+  protected readonly remoteAuditLogs = signal<AlertConfigAuditResponse[]>([]);
 
   // Filtros
   protected readonly searchQuery = signal('');
@@ -137,8 +141,8 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
       const matchesText =
         !query ||
         alert.name.toLowerCase().includes(query) ||
-        alert.description.toLowerCase().includes(query) ||
-        ALERT_EVENT_LABELS[alert.event].toLowerCase().includes(query);
+        (alert.description && alert.description.toLowerCase().includes(query)) ||
+        (ALERT_EVENT_LABELS[alert.event as AlertEvent] || alert.event).toLowerCase().includes(query);
 
       // Filtro por estado / críticas
       let matchesStatus = true;
@@ -322,6 +326,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   protected selectAlert(alert: AlertConfiguration): void {
     this.selectedAlert.set(alert);
     this.formMode.set('EDIT');
+    this.loadAuditLogs(alert.id);
 
     this.form.reset({
       name: alert.name,
@@ -349,6 +354,25 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
     });
 
     this.cdr.markForCheck();
+  }
+
+  /** Consulta el historial de auditoría real del backend para la regla seleccionada */
+  protected loadAuditLogs(alertId: string): void {
+    this.isLoadingAudit.set(true);
+    this.alertsService
+      .getAlertAuditApi(alertId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingAudit.set(false);
+          this.remoteAuditLogs.set(res.data || []);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingAudit.set(false);
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   protected createNewAlert(): void {

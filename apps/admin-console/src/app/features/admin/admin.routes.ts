@@ -78,5 +78,10 @@ export const adminRoutes: Routes = [
     redirectTo: '/shifts',
     pathMatch: 'full',
   },
+  {
+    path: 'alerts-config',
+    redirectTo: '/alerts-config',
+    pathMatch: 'full',
+  },
 ];
 
