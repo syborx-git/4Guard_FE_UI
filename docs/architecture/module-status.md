@@ -53,6 +53,7 @@ Cuando crees un nuevo módulo, homológalo con estas 2 pantallas:
 | Pantalla | Ruta del componente | Por qué es referencia |
 |---|---|---|
 | Gestión de Transportistas | `features/admin/carriers/carrier-management/` | Variables locales, dark mode, split view, KPI cards, badges |
+| Configuración de Alertas | `features/alerts-config/alerts-config-management/` | Golden Standard: Live Toast Signals, Multi-tenant JWT, auditoría diff real y canales V1 |
 | Gestión de Ubicaciones | `features/layout/layout-management/` | Árbol jerárquico, FSM colors, ocupación panel |
 
 ---

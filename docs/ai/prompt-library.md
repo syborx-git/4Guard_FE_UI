@@ -247,6 +247,21 @@ Requisitos:
 
 ---
 
+## 🔔 Sincronización Reactiva de Formularios con Signals (`formValuesSignal`)
+
+```
+Implementa una Vista Previa en Tiempo Real (Live Preview) para el formulario reactivo de [Módulo].
+
+Requisitos (Angular Signals / SDD Level 5):
+1. Declarar un signal interno `formValuesSignal = signal<any>(null)` en el componente.
+2. En `initForm()`, suscribir `this.form.valueChanges` para emitir `this.formValuesSignal.set(this.form.getRawValue())`.
+3. Actualizar `this.formValuesSignal.set(...)` al resetear el formulario (`selectItem`, `createNewItem`).
+4. Definir la propiedad computada `livePreview = computed(() => ...)` que lea `formValuesSignal()`.
+5. Asegurar que cada pulsación de tecla o cambio en los campos (ej. messageTemplate, priority) actualice de inmediato la vista previa o simulador en pantalla sin requerir guardar.
+```
+
+---
+
 ## 💡 Tips de uso
 
 1. **Siempre especifica el módulo objetivo** — "en el módulo de Sucursales" es más preciso que "en el sistema".
