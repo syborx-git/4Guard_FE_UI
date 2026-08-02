@@ -1,74 +1,59 @@
 /**
  * @file license-management.service.ts
- * @description Servicio dummy tipado para HU-139 — Gestión de Licencias del WMS.
+ * @description Servicio de Gestión de Licencias del WMS (HU-139) — 4GUARD WMS.
  *
- * Simula todas las operaciones CRUD con:
- * - Angular Signals para estado interno reactivo.
- * - RxJS Observable<ServiceResult<T>> para operaciones asíncronas simuladas.
- * - Transacciones atómicas: si falla cualquier paso, no se producen cambios parciales.
- * - Delay mock de 600ms para simular latencia de red.
- *
- * TODO (integración real):
- * - Reemplazar `of(...)` por `this.http.post/put/patch(...)` del HttpClient.
- * - Mantener la misma firma Observable<ServiceResult<T>> para no modificar componentes.
- * - El backend debe implementar RLS y audit_logs de forma nativa.
+ * Conectado al API REST de Spring Boot (/api/v1/licenses) con Angular Signals,
+ * HttpClient y patrón ServiceResult<T> homologado con SDD Level 5. Cero Mocks.
  */
 
-import { Injectable, signal } from '@angular/core';
-import { Observable, of, throwError, delay } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+import { ToastService } from '../../core/services/toast.service';
 import {
   WmsLicense,
+  LicenseCapacity,
+  LicenseUsage,
   LicenseHistoryEntry,
   LicenseAuditEntry,
   LicenseRenewalPayload,
-  LicensePlan,
   ServiceResult,
-  DUMMY_LICENSES,
-  DUMMY_LICENSE_HISTORY,
-  DUMMY_LICENSE_AUDIT,
   computeDerivedStatus,
 } from './license-management.models';
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  error?: {
+    code: string;
+    details?: string[];
+  };
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class LicenseManagementService {
+  private readonly http = inject(HttpClient);
+  private readonly toast = inject(ToastService);
+  private readonly apiUrl = `${environment.apiBaseUrl}/api/v1/licenses`;
 
-  // ─── Estado Interno Mutable (Signals) ─────────────────────────────────────
-  private readonly _licenses = signal<WmsLicense[]>([
-    ...DUMMY_LICENSES.map(l => ({ ...l })),
-  ]);
-  private readonly _history = signal<LicenseHistoryEntry[]>([
-    ...DUMMY_LICENSE_HISTORY.map(h => ({ ...h })),
-  ]);
-  private readonly _auditLog = signal<LicenseAuditEntry[]>([
-    ...DUMMY_LICENSE_AUDIT.map(a => ({ ...a })),
-  ]);
+  // ─── Estado Interno Mutable (Signals — Cero Mocks ADR-007) ────────────────
+  private readonly _licenses = signal<WmsLicense[]>([]);
+  private readonly _history = signal<LicenseHistoryEntry[]>([]);
+  private readonly _auditLog = signal<LicenseAuditEntry[]>([]);
 
   // ─── Señales Públicas (solo lectura) ──────────────────────────────────────
   readonly licenses = this._licenses.asReadonly();
   readonly historyEntries = this._history.asReadonly();
   readonly auditEntries = this._auditLog.asReadonly();
 
-  /** Delay simulado de red en ms. */
-  private readonly MOCK_DELAY = 600;
-
-  /** Genera un ID único para nuevas entidades. */
-  private generateId(prefix: string): string {
-    return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
-  }
-
-  /** Genera una clave de licencia dummy. La UI siempre mostrará la versión enmascarada. */
-  private generateLicenseKey(plan: LicensePlan, orgId: string): string {
-    const planCode = plan.substring(0, 3).toUpperCase();
-    const year = new Date().getFullYear();
-    const suffix = Math.floor(Math.random() * 9_000 + 1_000).toString();
-    const orgCode = orgId.split('-').pop()?.toUpperCase() ?? 'XXX';
-    return `4GD-${planCode}-${year}-${orgCode}-${suffix}`;
-  }
-
   /** Enmascara la parte central de una clave de licencia. */
   maskLicenseKey(key: string): string {
+    if (!key) return '';
     const parts = key.split('-');
     if (parts.length < 4) return key.replace(/.(?=.{4})/g, '•');
     return parts
@@ -76,391 +61,329 @@ export class LicenseManagementService {
       .join('-');
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CONSULTAS
-  // ═══════════════════════════════════════════════════════════════════════════
+  /** Normaliza la entidad de licencia garantizando que capacities y usage estén siempre definidos. */
+  private normalizeLicense(item: WmsLicense): WmsLicense {
+    if (!item) return item;
+    const capacities: LicenseCapacity = item.capacities ?? {
+      maxUsers: item.maxUsers ?? 10,
+      maxConcurrentUsers: item.maxConcurrentUsers ?? 5,
+      maxWarehouses: item.maxWarehouses ?? 1,
+      maxHandheldDevices: item.maxHandheldDevices ?? 5,
+      maxIntegrations: item.maxIntegrations ?? 1,
+    };
 
-  /** Retorna todas las licencias. */
-  getLicenses(): Observable<ServiceResult<WmsLicense[]>> {
-    // TODO: GET /api/licenses
-    return of({
-      data: this._licenses().map(l => ({ ...l })),
-      message: 'Licencias cargadas correctamente.',
-      success: true,
-    }).pipe(delay(this.MOCK_DELAY));
+    const usage: LicenseUsage = item.usage ?? {
+      currentUsers: item.currentUsers ?? 0,
+      concurrentUsersPeak: item.concurrentUsersPeak ?? 0,
+      currentWarehouses: item.currentWarehouses ?? 0,
+      registeredHandheldDevices: item.registeredHandheldDevices ?? 0,
+      activeIntegrations: item.activeIntegrations ?? 0,
+    };
+
+    return {
+      ...item,
+      capacities,
+      usage,
+      maxUsers: capacities.maxUsers,
+      maxConcurrentUsers: capacities.maxConcurrentUsers,
+      maxWarehouses: capacities.maxWarehouses,
+      maxHandheldDevices: capacities.maxHandheldDevices,
+      maxIntegrations: capacities.maxIntegrations,
+      currentUsers: usage.currentUsers,
+      concurrentUsersPeak: usage.concurrentUsersPeak,
+      currentWarehouses: usage.currentWarehouses,
+      registeredHandheldDevices: usage.registeredHandheldDevices,
+      activeIntegrations: usage.activeIntegrations,
+    };
   }
 
-  /** Retorna una licencia por ID. */
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONSULTAS REST HTTP (Spring Boot Backend API)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Retorna todas las licencias consumiendo la API REST de Spring Boot (GET /api/v1/licenses). */
+  getLicenses(): Observable<ServiceResult<WmsLicense[]>> {
+    return this.http.get<ApiResponse<WmsLicense[]>>(this.apiUrl).pipe(
+      map((res) => {
+        const normalizedData = (res.data || []).map((l) => this.normalizeLicense(l));
+        return {
+          ...res,
+          data: normalizedData,
+        };
+      }),
+      tap((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          this._licenses.set(res.data);
+        }
+      }),
+      map((res) => ({
+        data: res.data || [],
+        message: res.message || 'Licencias cargadas correctamente desde el servidor backend.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al consultar las licencias en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+          data: [],
+        }));
+      })
+    );
+  }
+
+  /** Retorna una licencia por ID (GET /api/v1/licenses/{id}). */
   getLicenseById(id: string): Observable<ServiceResult<WmsLicense>> {
-    // TODO: GET /api/licenses/:id
-    const found = this._licenses().find(l => l.id === id);
-    if (!found) {
-      return throwError(() => ({
-        success: false,
-        message: `Licencia con ID "${id}" no encontrada.`,
-      })).pipe(delay(200));
-    }
-    return of({ data: { ...found }, message: 'Licencia encontrada.', success: true })
-      .pipe(delay(200));
+    return this.http.get<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}`).pipe(
+      map((res) => {
+        const dataAny = res.data as unknown;
+        let lic: WmsLicense;
+        if (dataAny && typeof dataAny === 'object' && 'license' in dataAny) {
+          const detail = dataAny as { license: WmsLicense; usage: LicenseUsage };
+          lic = this.normalizeLicense({
+            ...detail.license,
+            usage: detail.usage,
+          });
+        } else {
+          lic = this.normalizeLicense(res.data);
+        }
+        return {
+          data: lic,
+          message: res.message || 'Licencia encontrada en backend.',
+          success: res.success ?? true,
+        };
+      }),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || `Licencia con ID "${id}" no encontrada en servidor.`);
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
   /** Retorna el historial de una licencia específica. */
   getLicenseHistory(licenseId: string): LicenseHistoryEntry[] {
-    // TODO: GET /api/licenses/:id/history
     return this._history().filter(h => h.licenseId === licenseId);
   }
 
-  /** Retorna las entradas de auditoría de una licencia específica. */
+  /** Retorna las entradas de auditoría de una licencia específica desde el Backend (GET /api/v1/licenses/{id}/audit). */
+  getLicenseAudit(id: string): Observable<ApiResponse<LicenseAuditEntry[]>> {
+    return this.http.get<ApiResponse<LicenseAuditEntry[]>>(`${this.apiUrl}/${id}/audit`).pipe(
+      tap((res) => {
+        if (res.data) {
+          this._auditLog.set(res.data);
+        }
+      }),
+      catchError((err: any) => {
+        console.error('Error al cargar la auditoría de la licencia:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  /** Retorna las entradas de auditoría en memoria del signal. */
   getAuditEntries(licenseId: string): LicenseAuditEntry[] {
-    // TODO: GET /api/audit-logs?licenseId=:id
     return this._auditLog().filter(a => a.licenseId === licenseId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MUTACIONES — Todas son transacciones atómicas simuladas.
-  // Si se produce un error simulado, no se modifica ninguna señal.
+  // MUTACIONES REST HTTP (Spring Boot Backend API)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /** Crea una nueva licencia. */
+  /** Crea una nueva licencia (POST /api/v1/licenses). */
   createLicense(
     payload: Omit<WmsLicense, 'id' | 'createdAt' | 'updatedAt' | 'licenseKey' | 'maskedLicenseKey'>,
     performedBy: string
   ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: POST /api/licenses
-
-    const licenseKey = this.generateLicenseKey(payload.plan, payload.organizationId);
-    const maskedLicenseKey = this.maskLicenseKey(licenseKey);
-    const now = new Date().toISOString();
-
-    const newLicense: WmsLicense = {
-      ...payload,
-      id: this.generateId('lic'),
-      licenseKey,
-      maskedLicenseKey,
-      createdAt: now,
-      updatedAt: now,
-      updatedBy: performedBy,
-    };
-
-    const historyEntry: LicenseHistoryEntry = {
-      id: this.generateId('hist'),
-      licenseId: newLicense.id,
-      action: 'CREATED',
-      description: `Licencia "${newLicense.licenseName}" creada para ${newLicense.organizationName}.`,
-      previousValue: null,
-      newValue: { plan: newLicense.plan, adminStatus: newLicense.adminStatus },
-      performedBy,
-      performedAt: now,
-    };
-
-    const auditEntry: LicenseAuditEntry = {
-      id: this.generateId('aud'),
-      organizationId: newLicense.organizationId,
-      licenseId: newLicense.id,
-      action: 'CREATED',
-      previousValue: null,
-      newValue: { plan: newLicense.plan, adminStatus: newLicense.adminStatus, maxUsers: newLicense.capacities.maxUsers },
-      reason: newLicense.administrativeReason,
-      performedBy,
-      performedAt: now,
-      transactionStatus: 'SUCCESS',
-    };
-
-    // Transacción atómica: actualizar las tres señales en un solo bloque
-    this._licenses.update(list => [...list, newLicense]);
-    this._history.update(list => [historyEntry, ...list]);
-    this._auditLog.update(list => [auditEntry, ...list]);
-
-    return of({ data: { ...newLicense }, message: 'Licencia creada exitosamente.', success: true })
-      .pipe(delay(this.MOCK_DELAY));
+    return this.http.post<ApiResponse<WmsLicense>>(this.apiUrl, payload).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => [normalized, ...list]);
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Licencia creada exitosamente en servidor.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al crear la licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
-  /** Actualiza datos generales de una licencia existente. */
+  /** Actualiza datos generales de una licencia existente (PUT /api/v1/licenses/{id}). */
   updateLicense(
     id: string,
     payload: Partial<WmsLicense>,
     changedFields: Record<string, { previous: unknown; current: unknown }>,
     performedBy: string
   ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: PUT /api/licenses/:id
-
-    const idx = this._licenses().findIndex(l => l.id === id);
-    if (idx === -1) {
-      return throwError(() => ({ success: false, message: 'Licencia no encontrada.' }));
-    }
-
-    const original = this._licenses()[idx];
-    const now = new Date().toISOString();
-
-    const updated: WmsLicense = {
-      ...original,
-      ...payload,
-      id: original.id,             // Proteger ID
-      licenseKey: original.licenseKey,  // Proteger clave
-      maskedLicenseKey: original.maskedLicenseKey,
-      organizationId: original.organizationId, // No cambiar org sin proceso
-      createdAt: original.createdAt,
-      updatedAt: now,
-      updatedBy: performedBy,
-    };
-
-    const hasCapacityChange = Object.keys(changedFields).some(k =>
-      ['maxUsers', 'maxConcurrentUsers', 'maxWarehouses', 'maxHandheldDevices', 'maxIntegrations'].includes(k)
+    return this.http.put<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}`, payload).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => list.map((l) => (l.id === id ? normalized : l)));
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Licencia actualizada correctamente.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al actualizar la licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
     );
-    const hasModuleChange = 'enabledModules' in changedFields;
-    const action = hasCapacityChange
-      ? 'CAPACITY_CHANGED'
-      : hasModuleChange
-        ? 'MODULES_CHANGED'
-        : 'UPDATED';
-
-    const historyEntry: LicenseHistoryEntry = {
-      id: this.generateId('hist'),
-      licenseId: id,
-      action,
-      description: `Licencia actualizada. Campos modificados: ${Object.keys(changedFields).join(', ')}.`,
-      previousValue: Object.fromEntries(Object.entries(changedFields).map(([k, v]) => [k, v.previous])),
-      newValue: Object.fromEntries(Object.entries(changedFields).map(([k, v]) => [k, v.current])),
-      performedBy,
-      performedAt: now,
-    };
-
-    const auditEntry: LicenseAuditEntry = {
-      id: this.generateId('aud'),
-      organizationId: original.organizationId,
-      licenseId: id,
-      action,
-      previousValue: Object.fromEntries(Object.entries(changedFields).map(([k, v]) => [k, v.previous])),
-      newValue: Object.fromEntries(Object.entries(changedFields).map(([k, v]) => [k, v.current])),
-      reason: payload.administrativeReason ?? original.administrativeReason,
-      performedBy,
-      performedAt: now,
-      transactionStatus: 'SUCCESS',
-    };
-
-    // Transacción atómica
-    this._licenses.update(list => list.map(l => l.id === id ? updated : l));
-    this._history.update(list => [historyEntry, ...list]);
-    this._auditLog.update(list => [auditEntry, ...list]);
-
-    return of({ data: { ...updated }, message: 'Licencia actualizada correctamente.', success: true })
-      .pipe(delay(this.MOCK_DELAY));
   }
 
-  /** Renueva la vigencia de una licencia. */
+  /** Renueva la vigencia de una licencia (POST /api/v1/licenses/{id}/renew). */
   renewLicense(
     id: string,
     payload: LicenseRenewalPayload,
     performedBy: string
   ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: POST /api/licenses/:id/renew
-
-    const idx = this._licenses().findIndex(l => l.id === id);
-    if (idx === -1) {
-      return throwError(() => ({ success: false, message: 'Licencia no encontrada.' }));
-    }
-
-    const original = this._licenses()[idx];
-    const now = new Date().toISOString();
-
-    const renewed: WmsLicense = {
-      ...original,
-      ...(payload.newPlan ? { plan: payload.newPlan } : {}),
-      ...(payload.newCapacities ? { capacities: { ...original.capacities, ...payload.newCapacities } } : {}),
-      validUntil: payload.newValidUntil,
-      adminStatus: 'ACTIVE',
-      administrativeReason: payload.reason,
-      updatedAt: now,
-      updatedBy: performedBy,
-    };
-
-    const historyEntry: LicenseHistoryEntry = {
-      id: this.generateId('hist'),
-      licenseId: id,
-      action: 'RENEWED',
-      description: `Licencia renovada. Nueva vigencia hasta ${new Date(payload.newValidUntil).toLocaleDateString('es-MX')}.`,
-      previousValue: { validUntil: original.validUntil, plan: original.plan },
-      newValue: { validUntil: payload.newValidUntil, plan: renewed.plan },
-      performedBy,
-      performedAt: now,
-    };
-
-    const auditEntry: LicenseAuditEntry = {
-      id: this.generateId('aud'),
-      organizationId: original.organizationId,
-      licenseId: id,
-      action: 'RENEWED',
-      previousValue: { validUntil: original.validUntil, plan: original.plan, adminStatus: original.adminStatus },
-      newValue: { validUntil: payload.newValidUntil, plan: renewed.plan, adminStatus: 'ACTIVE' },
-      reason: payload.reason,
-      performedBy,
-      performedAt: now,
-      transactionStatus: 'SUCCESS',
-    };
-
-    this._licenses.update(list => list.map(l => l.id === id ? renewed : l));
-    this._history.update(list => [historyEntry, ...list]);
-    this._auditLog.update(list => [auditEntry, ...list]);
-
-    return of({ data: { ...renewed }, message: 'Licencia renovada exitosamente.', success: true })
-      .pipe(delay(this.MOCK_DELAY));
+    return this.http.post<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}/renew`, payload).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => list.map((l) => (l.id === id ? normalized : l)));
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Licencia renovada exitosamente.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al renovar la licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
-  /** Suspende una licencia activa. */
-  suspendLicense(
-    id: string,
-    reason: string,
-    performedBy: string
-  ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: POST /api/licenses/:id/suspend
-    return this._changeAdminStatus(id, 'SUSPENDED', 'SUSPENDED', reason, performedBy,
-      'Licencia suspendida. Las nuevas operaciones pueden ser restringidas. Los datos históricos se conservan.');
+  /** Suspende una licencia activa (POST /api/v1/licenses/{id}/suspend). */
+  suspendLicense(id: string, reason: string, performedBy: string): Observable<ServiceResult<WmsLicense>> {
+    return this.http.post<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}/suspend`, { reason }).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => list.map((l) => (l.id === id ? normalized : l)));
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Licencia suspendida correctamente.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al suspender la licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
-  /** Reactiva una licencia suspendida. */
-  reactivateLicense(
-    id: string,
-    reason: string,
-    performedBy: string
-  ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: POST /api/licenses/:id/reactivate
-    return this._changeAdminStatus(id, 'ACTIVE', 'REACTIVATED', reason, performedBy,
-      'Licencia reactivada. Las operaciones se restituyen conforme a la vigencia contractual.');
+  /** Reactiva una licencia suspendida (POST /api/v1/licenses/{id}/reactivate). */
+  reactivateLicense(id: string, reason: string, performedBy: string): Observable<ServiceResult<WmsLicense>> {
+    return this.http.post<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}/reactivate`, { reason }).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => list.map((l) => (l.id === id ? normalized : l)));
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Licencia reactivada correctamente.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al reactivar la licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
-  /** Revoca una licencia de forma permanente en esta interfaz.
-   * NOTA: La recuperación de una licencia revocada requiere un proceso administrativo externo.
-   */
-  revokeLicense(
-    id: string,
-    reason: string,
-    performedBy: string
-  ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: POST /api/licenses/:id/revoke
-    return this._changeAdminStatus(id, 'REVOKED', 'REVOKED', reason, performedBy,
-      'Licencia revocada. La interfaz pasa a modo solo lectura. Cualquier recuperación requiere proceso administrativo externo.');
+  /** Revoca una licencia de forma permanente (POST /api/v1/licenses/{id}/revoke). */
+  revokeLicense(id: string, reason: string, performedBy: string): Observable<ServiceResult<WmsLicense>> {
+    return this.http.post<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}/revoke`, { reason }).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => list.map((l) => (l.id === id ? normalized : l)));
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Licencia revocada correctamente.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al revocar la licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
-  /** Regenera la clave de licencia. La clave anterior queda registrada en auditoría (enmascarada). */
-  regenerateLicenseKey(
-    id: string,
-    reason: string,
-    performedBy: string
-  ): Observable<ServiceResult<WmsLicense>> {
-    // TODO: POST /api/licenses/:id/regenerate-key
-
-    const idx = this._licenses().findIndex(l => l.id === id);
-    if (idx === -1) {
-      return throwError(() => ({ success: false, message: 'Licencia no encontrada.' }));
-    }
-
-    const original = this._licenses()[idx];
-    const now = new Date().toISOString();
-
-    const newKey = this.generateLicenseKey(original.plan, original.organizationId);
-    const newMaskedKey = this.maskLicenseKey(newKey);
-
-    const updated: WmsLicense = {
-      ...original,
-      licenseKey: newKey,
-      maskedLicenseKey: newMaskedKey,
-      administrativeReason: reason,
-      updatedAt: now,
-      updatedBy: performedBy,
-    };
-
-    const historyEntry: LicenseHistoryEntry = {
-      id: this.generateId('hist'),
-      licenseId: id,
-      action: 'KEY_REGENERATED',
-      description: `Clave de licencia regenerada. Clave anterior registrada en auditoría (enmascarada).`,
-      previousValue: { maskedKey: original.maskedLicenseKey },
-      newValue: { maskedKey: newMaskedKey },
-      performedBy,
-      performedAt: now,
-    };
-
-    const auditEntry: LicenseAuditEntry = {
-      id: this.generateId('aud'),
-      organizationId: original.organizationId,
-      licenseId: id,
-      action: 'KEY_REGENERATED',
-      previousValue: { maskedKey: original.maskedLicenseKey }, // Nunca exponer clave completa
-      newValue: { maskedKey: newMaskedKey },
-      reason,
-      performedBy,
-      performedAt: now,
-      transactionStatus: 'SUCCESS',
-    };
-
-    this._licenses.update(list => list.map(l => l.id === id ? updated : l));
-    this._history.update(list => [historyEntry, ...list]);
-    this._auditLog.update(list => [auditEntry, ...list]);
-
-    return of({ data: { ...updated }, message: 'Clave de licencia regenerada exitosamente.', success: true })
-      .pipe(delay(this.MOCK_DELAY));
+  /** Actualiza una licencia en el signal local en memoria. */
+  updateLocalLicense(updated: WmsLicense): void {
+    this._licenses.update(list => list.map(l => l.id === updated.id ? updated : l));
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MÉTODO PRIVADO COMPARTIDO — Cambio de estado administrativo
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  private _changeAdminStatus(
-    id: string,
-    newAdminStatus: WmsLicense['adminStatus'],
-    historyAction: LicenseHistoryEntry['action'],
-    reason: string,
-    performedBy: string,
-    description: string
-  ): Observable<ServiceResult<WmsLicense>> {
-    const idx = this._licenses().findIndex(l => l.id === id);
-    if (idx === -1) {
-      return throwError(() => ({ success: false, message: 'Licencia no encontrada.' }));
-    }
-
-    const original = this._licenses()[idx];
-    const now = new Date().toISOString();
-
-    const updated: WmsLicense = {
-      ...original,
-      adminStatus: newAdminStatus,
-      administrativeReason: reason,
-      updatedAt: now,
-      updatedBy: performedBy,
-    };
-
-    const historyEntry: LicenseHistoryEntry = {
-      id: this.generateId('hist'),
-      licenseId: id,
-      action: historyAction,
-      description,
-      previousValue: { adminStatus: original.adminStatus },
-      newValue: { adminStatus: newAdminStatus },
-      performedBy,
-      performedAt: now,
-    };
-
-    const auditEntry: LicenseAuditEntry = {
-      id: this.generateId('aud'),
-      organizationId: original.organizationId,
-      licenseId: id,
-      action: historyAction,
-      previousValue: { adminStatus: original.adminStatus },
-      newValue: { adminStatus: newAdminStatus },
-      reason,
-      performedBy,
-      performedAt: now,
-      transactionStatus: 'SUCCESS',
-    };
-
-    // Transacción atómica
-    this._licenses.update(list => list.map(l => l.id === id ? updated : l));
-    this._history.update(list => [historyEntry, ...list]);
-    this._auditLog.update(list => [auditEntry, ...list]);
-
-    const actionLabel = historyAction.charAt(0) + historyAction.slice(1).toLowerCase();
-    return of({ data: { ...updated }, message: `Licencia ${actionLabel} correctamente.`, success: true })
-      .pipe(delay(this.MOCK_DELAY));
+  /** Regenera la clave de licencia (POST /api/v1/licenses/{id}/regenerate-key). */
+  regenerateLicenseKey(id: string, reason: string, performedBy: string): Observable<ServiceResult<WmsLicense>> {
+    return this.http.post<ApiResponse<WmsLicense>>(`${this.apiUrl}/${id}/regenerate-key`, { reason }).pipe(
+      tap((res) => {
+        if (res.success && res.data) {
+          const normalized = this.normalizeLicense(res.data);
+          this._licenses.update((list) => list.map((l) => (l.id === id ? normalized : l)));
+        }
+      }),
+      map((res) => ({
+        data: res.data,
+        message: res.message || 'Clave de licencia regenerada exitosamente.',
+        success: res.success ?? true,
+      })),
+      catchError((err: any) => {
+        const errMsg: string = String(err?.error?.message || err?.message || 'Error al regenerar la clave de licencia en el servidor.');
+        this.toast.error(errMsg);
+        return throwError(() => ({
+          success: false,
+          message: errMsg,
+        }));
+      })
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

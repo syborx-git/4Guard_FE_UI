@@ -42,7 +42,7 @@
 | **Motor de Reglas** | `/business-rules` | ⬜ | — | HU-131 |
 | **Divisas** | `/currency-exchange` | ⬜ | — | HU-148 |
 | **Alertas** | `/alerts-config` | ✅ | `alerts-config-management` | HU-134 completo y conectado a API /api/v1/alerts-config |
-| **Licencias** | `/license-management` | ⬜ | — | HU-139 |
+| **Licencias** | `/licenses` | ✅ | `license-management` | HU-139 completo con spec `docs/api/modules/license-management.md` y HTTP REST |
 
 ---
 
