@@ -40,6 +40,19 @@ import {
   ARRIVAL_CLEARANCE_CLASSES,
   INCIDENT_TYPE_LABELS,
 } from '../models/transport-arrival.models';
+import { ReceptionPriorityService } from '../services/reception-priority.service';
+import {
+  PrioritySource,
+  PriorityReasonCode,
+  PriorityExpirationPolicy,
+  OperationalAvailability,
+  PrioritySuggestion,
+  ReceptionPriorityDecision,
+  PRIORITY_FACTOR_LABELS,
+  PRIORITY_REASON_LABELS,
+  OPERATIONAL_AVAILABILITY_LABELS,
+  OPERATIONAL_AVAILABILITY_CLASSES,
+} from '../models/reception-priority.models';
 
 export type TabMode = 'AGENDA' | 'TODAY' | 'HISTORY';
 
@@ -52,6 +65,7 @@ export type TabMode = 'AGENDA' | 'TODAY' | 'HISTORY';
 })
 export class ReceivingCenterComponent implements OnInit {
   protected readonly service = inject(ReceptionAppointmentService);
+  protected readonly priorityService = inject(ReceptionPriorityService);
   protected readonly poService = inject(PurchaseOrderValidationService);
   protected readonly arrivalService = inject(TransportArrivalService);
   private readonly fb      = inject(FormBuilder);
@@ -68,6 +82,24 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly arrivalClearanceLabels = ARRIVAL_CLEARANCE_LABELS;
   protected readonly arrivalClearanceClasses = ARRIVAL_CLEARANCE_CLASSES;
   protected readonly incidentTypeLabels = INCIDENT_TYPE_LABELS;
+
+  // HU-026 Labels & Maps
+  protected readonly priorityFactorLabels = PRIORITY_FACTOR_LABELS;
+  protected readonly priorityReasonLabels = PRIORITY_REASON_LABELS;
+  protected readonly operationalAvailabilityLabels = OPERATIONAL_AVAILABILITY_LABELS;
+  protected readonly operationalAvailabilityClasses = OPERATIONAL_AVAILABILITY_CLASSES;
+  protected readonly priorityReasonCodesList: PriorityReasonCode[] = [
+    'CUSTOMER_COMMITMENT',
+    'PRODUCTION_IMPACT',
+    'COLD_CHAIN',
+    'HAZARDOUS_MATERIAL',
+    'SLA_RISK',
+    'DELIVERY_WINDOW',
+    'OPERATIONAL_CONTINGENCY',
+    'MANAGEMENT_DECISION',
+    'DELAY_ESCALATION',
+    'OTHER',
+  ];
 
   // Mock Master Catalogs for Form
   protected readonly clients = [
@@ -98,11 +130,12 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly docks = ['AND-01', 'AND-02', 'AND-03', 'AND-04', 'AND-05', 'AND-06', 'AND-07', 'AND-08'];
   protected readonly vehicleTypes = ['Tráiler 53ft', 'Torton 15t', 'Rabón 8t', 'Camioneta 3.5t', 'Contenedor 40ft'];
 
-  // Signals para Filtros y Pestañas
+  // Signals para Filtros, Pestañas y Orden Operativo
   protected readonly activeTab     = signal<TabMode>('AGENDA');
   protected readonly searchQuery   = signal('');
   protected readonly statusFilter  = signal<string>('ALL');
   protected readonly dockFilter    = signal<string>('ALL');
+  protected readonly sortMode      = signal<'SCHEDULE' | 'OPERATIONAL'>('SCHEDULE');
 
   // Signals para Modales y Drawers
   protected readonly isDrawerOpen        = signal(false);
@@ -114,13 +147,20 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly isCancelModalOpen   = signal(false);
   protected readonly isAuditDrawerOpen   = signal(false);
 
-  // Form Group para Nueva Cita / Edición
+  // HU-026: Signals para Modal de Cambio de Prioridad
+  protected readonly isPriorityModalOpen = signal(false);
+  protected readonly selectedAppointmentForPriority = signal<ReceptionAppointment | null>(null);
+  protected readonly currentPrioritySuggestion = signal<PrioritySuggestion | null>(null);
+  protected readonly priorityErrorMessage = signal<string | null>(null);
+
+  // Form Groups
   protected appointmentForm!: FormGroup;
   protected arrivalForm!: FormGroup;
   protected reprogramForm!: FormGroup;
   protected cancelForm!: FormGroup;
+  protected priorityForm!: FormGroup;
 
-  // Mensaje de Error en Formulario
+  // Mensaje de Error en Formulario General
   protected formErrorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -206,15 +246,23 @@ export class ReceivingCenterComponent implements OnInit {
 
   protected readonly todayDate = new Date().toISOString().split('T')[0];
 
-  /** Citas filtradas según pestaña activa, búsqueda y filtros de estado/andén */
+  /** Conteo de recepciones URGENT activas en la sucursal para control de abuso */
+  protected readonly activeUrgentCount = computed(() =>
+    this.service.appointments().filter(
+      (a) => a.priority === 'URGENT' && !['COMPLETED', 'CANCELLED', 'NO_SHOW', 'REJECTED'].includes(a.status)
+    ).length
+  );
+
+  /** Citas filtradas según pestaña activa, búsqueda, filtros y modo de ordenamiento */
   protected readonly filteredAppointments = computed(() => {
     const list = this.service.appointments();
     const tab = this.activeTab();
     const q = this.searchQuery().trim().toLowerCase();
     const statusF = this.statusFilter();
     const dockF = this.dockFilter();
+    const sort = this.sortMode();
 
-    return list.filter((appt) => {
+    const filtered = list.filter((appt) => {
       // Pestaña
       if (tab === 'TODAY' && appt.scheduledDate !== this.todayDate) {
         return false;
@@ -247,7 +295,38 @@ export class ReceivingCenterComponent implements OnInit {
 
       return true;
     });
+
+    if (sort === 'OPERATIONAL') {
+      return [...filtered].sort(
+        (a, b) => this.priorityService.getOperationalRankScore(b) - this.priorityService.getOperationalRankScore(a)
+      );
+    }
+
+    return filtered;
   });
+
+  /** Grupo 1: Atención Inmediata (READY + URGENT / HIGH / NORMAL) */
+  protected readonly attentionRequiredGroup = computed(() =>
+    this.filteredAppointments().filter(
+      (a) => this.priorityService.calculateOperationalAvailability(a) === 'READY'
+    )
+  );
+
+  /** Grupo 2: Bloqueos Prioritarios (BLOCKED / REVIEW_REQUIRED) */
+  protected readonly priorityBlockedGroup = computed(() =>
+    this.filteredAppointments().filter((a) => {
+      const avail = this.priorityService.calculateOperationalAvailability(a);
+      return avail === 'BLOCKED' || avail === 'REVIEW_REQUIRED';
+    })
+  );
+
+  /** Grupo 3: Cola Previa en Espera (WAITING_DOCUMENTS / WAITING_CHECKIN) */
+  protected readonly standardQueueGroup = computed(() =>
+    this.filteredAppointments().filter((a) => {
+      const avail = this.priorityService.calculateOperationalAvailability(a);
+      return avail === 'WAITING_DOCUMENTS' || avail === 'WAITING_CHECKIN' || avail === 'IN_RECEIVING';
+    })
+  );
 
   /** KPI 1: Recepciones Programadas (SCHEDULED + CONFIRMED) */
   protected readonly kpiScheduled = computed(() =>
@@ -1132,6 +1211,104 @@ export class ReceivingCenterComponent implements OnInit {
         valid: obs.length > 0,
       },
     ];
+  }
+
+  // ─── ACCIONES HU-026: MODAL DE CAMBIO DE PRIORIDAD ─────────────────────────
+
+  /** Abre el modal compacto de priorización para una cita */
+  openPriorityModal(appt: ReceptionAppointment): void {
+    this.priorityErrorMessage.set(null);
+    this.selectedAppointmentForPriority.set(appt);
+
+    // Calcular la recomendación explicable del motor en tiempo real
+    const suggestion = this.priorityService.calculateSuggestedPriority(appt);
+    this.currentPrioritySuggestion.set(suggestion);
+
+    // Inicializar el formulario con la prioridad actual de la cita (fuente de verdad)
+    const existingDecision = appt.priorityDecision;
+    this.priorityForm.reset({
+      newPriority: appt.priority,
+      reasonCode: existingDecision?.reasonCode || 'CUSTOMER_COMMITMENT',
+      reason: existingDecision?.reason || '',
+      expirationPolicy: existingDecision?.expirationPolicy || 'UNTIL_RECEIVING_START',
+      expiresAt: existingDecision?.expiresAt || '',
+    });
+
+    this.isPriorityModalOpen.set(true);
+  }
+
+  /** Cierra el modal de priorización */
+  closePriorityModal(): void {
+    this.isPriorityModalOpen.set(false);
+    this.selectedAppointmentForPriority.set(null);
+    this.currentPrioritySuggestion.set(null);
+    this.priorityErrorMessage.set(null);
+  }
+
+  /** Procesa la acción de guardar la prioridad */
+  savePriorityChange(): void {
+    const appt = this.selectedAppointmentForPriority();
+    const suggestion = this.currentPrioritySuggestion();
+    if (!appt || !suggestion) return;
+
+    this.priorityErrorMessage.set(null);
+    const formVal = this.priorityForm.value;
+    const newPriority: PriorityLevel = formVal.newPriority;
+    const isManual = newPriority !== suggestion.priority;
+    const source: PrioritySource = isManual ? 'MANUAL' : 'SYSTEM';
+    const userRole = 'OPERATIONS_SUPERVISOR'; // Obtenido del contexto de sesión RBAC (AuthState)
+
+    // Validar políticas de negocio
+    const valResult = this.priorityService.validatePriorityChange(
+      appt.status,
+      newPriority,
+      source,
+      formVal.reasonCode,
+      formVal.reason,
+      userRole
+    );
+
+    if (!valResult.valid) {
+      this.priorityErrorMessage.set(valResult.error || 'No se puede cambiar la prioridad.');
+      return;
+    }
+
+    const decision: ReceptionPriorityDecision = {
+      suggestedPriority: suggestion.priority,
+      appliedPriority: newPriority,
+      source,
+      reasonCode: formVal.reasonCode,
+      reason: formVal.reason?.trim(),
+      expirationPolicy: formVal.expirationPolicy || 'UNTIL_RECEIVING_START',
+      expiresAt: formVal.expiresAt || undefined,
+      assignedBy: 'Carlos Mendoza',
+      assignedByRole: userRole,
+      assignedByUserId: 'USR-SUP-001',
+      assignedAt: new Date().toISOString(),
+      active: true,
+    };
+
+    const res = this.service.updateAppointmentPriority(appt.id, newPriority, decision, appt.updatedAt);
+    if (!res.success) {
+      this.priorityErrorMessage.set(res.error || 'Error al guardar la prioridad.');
+      return;
+    }
+
+    this.closePriorityModal();
+  }
+
+  /** Revierte una prioridad manual ejecutiva regresando a la sugerencia actual */
+  revertPriorityOverride(appt: ReceptionAppointment): void {
+    if (!appt || !appt.priorityDecision || appt.priorityDecision.source !== 'MANUAL') return;
+
+    const targetAppt: ReceptionAppointment = appt;
+    const suggestion = this.priorityService.calculateSuggestedPriority(targetAppt);
+    this.service.revertAppointmentPriority(
+      targetAppt.id,
+      'Reversión manual por el supervisor desde el Centro de Recepciones',
+      suggestion.priority,
+      { userId: 'USR-SUP-001', userName: 'Carlos Mendoza', role: 'OPERATIONS_SUPERVISOR', branchId: targetAppt.branchId }
+    );
   }
 }
 

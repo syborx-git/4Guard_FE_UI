@@ -91,6 +91,12 @@ export interface ReceptionAppointment {
   arrivalIncidentsCount?: number;
   openArrivalIncidentsCount?: number;
 
+  // HU-026: Priorización Operativa de Recepciones
+  systemSuggestedPriority?: PriorityLevel;
+  priorityDecision?: import('./reception-priority.models').ReceptionPriorityDecision;
+  priorityUpdatedAt?: string;
+  version?: number; // Para control de concurrencia optimista
+
   createdAt: string;
   createdBy: string;
   updatedAt?: string;
@@ -110,7 +116,13 @@ export interface AppointmentAuditEntry {
     | 'MARK_NO_SHOW'
     | 'REJECT'
     | 'UPDATE_PROGRESS'
-    | 'CLONE_NEW';
+    | 'CLONE_NEW'
+    | 'PRIORITY_ASSIGNED'
+    | 'PRIORITY_CHANGED'
+    | 'PRIORITY_ESCALATED'
+    | 'PRIORITY_DOWNGRADED'
+    | 'PRIORITY_OVERRIDE_EXPIRED'
+    | 'PRIORITY_OVERRIDE_REVERTED';
   previousValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
   reason?: string;

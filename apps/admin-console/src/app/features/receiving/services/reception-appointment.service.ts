@@ -9,10 +9,12 @@ import {
   ReceptionAppointment,
   AppointmentAuditEntry,
   AppointmentStatus,
+  PriorityLevel,
   ReceptionProgress,
   ArrivalData,
   INITIAL_APPOINTMENTS_SEED,
 } from '../models/reception-appointment.models';
+import { ReceptionPriorityDecision } from '../models/reception-priority.models';
 import { ArrivalClearanceStatus, TransportArrivalRecord, ArrivalIncident } from '../models/transport-arrival.models';
 
 @Injectable({ providedIn: 'root' })
@@ -532,6 +534,113 @@ export class ReceptionAppointmentService {
   }
 
   /**
+   * HU-026: Actualiza la prioridad de una cita de recepción.
+   * La prioridad aplicada vive directamente en appointment.priority (Fuente de verdad).
+   * Mantiene soporte de concurrencia optimista mediante expectedUpdatedAt/version.
+   */
+  updateAppointmentPriority(
+    id: string,
+    newPriority: PriorityLevel,
+    decision: ReceptionPriorityDecision,
+    expectedUpdatedAt?: string,
+    userContext?: { userId: string; userName: string; role: string; branchId: string }
+  ): { success: boolean; error?: string } {
+    const appt = this.getAppointmentById(id);
+    if (!appt) {
+      return { success: false, error: `La cita ${id} no fue encontrada.` };
+    }
+
+    // Control de concurrencia optimista (preparado para backend futuro)
+    if (expectedUpdatedAt && appt.updatedAt && appt.updatedAt !== expectedUpdatedAt) {
+      return {
+        success: false,
+        error: 'La cita fue modificada por otro usuario mientras revisaba la prioridad. Por favor actualice los datos.',
+      };
+    }
+
+    const prevPriority = appt.priority;
+    const nowIso = new Date().toISOString();
+    const newVersion = (appt.version || 1) + 1;
+
+    // Determinar la acción de auditoría
+    let auditAction: AppointmentAuditEntry['action'] = 'PRIORITY_CHANGED';
+    if (newPriority === 'URGENT' && prevPriority !== 'URGENT') {
+      auditAction = 'PRIORITY_ESCALATED';
+    } else if (prevPriority === 'URGENT' && newPriority !== 'URGENT') {
+      auditAction = 'PRIORITY_DOWNGRADED';
+    } else if (decision.source === 'MANUAL') {
+      auditAction = 'PRIORITY_ASSIGNED';
+    }
+
+    this.updateAppointment(id, {
+      priority: newPriority, // FUENTE DE VERDAD
+      systemSuggestedPriority: decision.suggestedPriority,
+      priorityDecision: decision,
+      priorityUpdatedAt: nowIso,
+      version: newVersion,
+    });
+
+    const actorName = userContext?.userName || decision.assignedBy;
+    const reasonText = decision.reason
+      ? `[${decision.reasonCode || 'MANUAL'}] ${decision.reason}`
+      : `Prioridad cambiada a ${newPriority} por ${actorName}`;
+
+    this._logAudit({
+      appointmentId: id,
+      action: auditAction,
+      previousValues: { priority: prevPriority, suggestedPriority: appt.systemSuggestedPriority },
+      newValues: { priority: newPriority, suggestedPriority: decision.suggestedPriority, source: decision.source },
+      branchId: appt.branchId,
+      performedBy: actorName,
+      reason: reasonText,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * HU-026: Revierte un override manual de prioridad y recalcula la recomendación actual.
+   */
+  revertAppointmentPriority(
+    id: string,
+    revertReason: string,
+    suggestedPriority: PriorityLevel,
+    userContext?: { userId: string; userName: string; role: string; branchId: string }
+  ): void {
+    const appt = this.getAppointmentById(id);
+    if (!appt) return;
+
+    const prevPriority = appt.priority;
+    const nowIso = new Date().toISOString();
+    const actorName = userContext?.userName || 'Supervisor';
+
+    const updatedDecision: ReceptionPriorityDecision | undefined = appt.priorityDecision
+      ? {
+          ...appt.priorityDecision,
+          revertedBy: actorName,
+          revertedAt: nowIso,
+          revertReason,
+        }
+      : undefined;
+
+    this.updateAppointment(id, {
+      priority: suggestedPriority, // Regresa a la recomendación actual recalculada
+      priorityDecision: updatedDecision,
+      priorityUpdatedAt: nowIso,
+    });
+
+    this._logAudit({
+      appointmentId: id,
+      action: 'PRIORITY_OVERRIDE_REVERTED',
+      previousValues: { priority: prevPriority, manualOverrideActive: true },
+      newValues: { priority: suggestedPriority, manualOverrideActive: false },
+      branchId: appt.branchId,
+      performedBy: actorName,
+      reason: `Reversión de prioridad manual: ${revertReason}`,
+    });
+  }
+
+  /**
    * Clona una cita (utilizado principalmente para crear nueva cita basada en un NO_SHOW).
    */
   cloneAsNewAppointment(originalId: string, newDate: string, newTime: string, newDock: string): ReceptionAppointment {
@@ -582,11 +691,11 @@ export class ReceptionAppointmentService {
   /**
    * Registra una entrada en la auditoría.
    */
-  private _logAudit(entry: Omit<AppointmentAuditEntry, 'id' | 'performedBy' | 'performedAt'>): void {
+  private _logAudit(entry: Omit<AppointmentAuditEntry, 'id' | 'performedBy' | 'performedAt'> & { performedBy?: string }): void {
     const newEntry: AppointmentAuditEntry = {
       ...entry,
       id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      performedBy: 'OPERATIONS_MANAGER',
+      performedBy: entry.performedBy || 'OPERATIONS_MANAGER',
       performedAt: new Date().toISOString(),
     };
 

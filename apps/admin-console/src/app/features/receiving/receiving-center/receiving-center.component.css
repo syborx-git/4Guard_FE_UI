@@ -1722,5 +1722,209 @@
 }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 
+/* ════════════════════════════════════════════════════════════════════════
+   HU-026: PRIORIZACIÓN OPERATIVA DE RECEPCIONES (ESTILOS)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Toggle de Ordenamiento (Horario vs Operativo) */
+.rc-sort-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--ac-surface);
+  border: 1px solid var(--ac-border-mid);
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--ac-r);
+  margin-left: auto;
+}
+
+.rc-sort-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--ac-txt-3);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-right: 0.1rem;
+}
+
+.rc-sort-btn {
+  background: transparent;
+  border: none;
+  color: var(--ac-txt-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.rc-sort-btn:hover { color: var(--ac-txt-1); }
+.rc-sort-btn--active {
+  background: var(--ac-surface-3);
+  color: var(--ac-gold);
+  border: 1px solid var(--ac-border-mid);
+}
+
+/* Estilos para Títulos de Hora y ASN en Negrito Marcado (High Contrast) */
+.rc-time-title {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important; /* Negrito oscuro visible */
+  letter-spacing: -0.01em;
+}
+
+.rc-asn-title {
+  font-size: 0.98rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important; /* Negrito oscuro visible */
+  letter-spacing: -0.01em;
+}
+
+/* Badges Interactivos de Prioridad con Íconos (Sistema vs Manual) */
+.rc-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  user-select: none;
+}
+.rc-priority-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.rc-priority-icon {
+  font-size: 0.88rem !important;
+  line-height: 1;
+}
+
+.rc-priority-badge--normal {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+.rc-priority-badge--high {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+.rc-priority-badge--urgent {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+  animation: rc-pulse-urgent 2s infinite;
+}
+
+@keyframes rc-pulse-urgent {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Badges de Disponibilidad Operativa (Colores Vivos de Alto Contraste) */
+.rc-avail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.rc-avail-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+.op-avail--ready           { background: #dcfce7 !important; color: #15803d !important; border: 1px solid #86efac !important; }
+.op-avail--waiting-doc     { background: #dbeafe !important; color: #1d4ed8 !important; border: 1px solid #93c5fd !important; }
+.op-avail--waiting-checkin { background: #f3e8ff !important; color: #7e22ce !important; border: 1px solid #d8b4fe !important; }
+.op-avail--review          { background: #fef3c7 !important; color: #b45309 !important; border: 1px solid #fcd34d !important; }
+.op-avail--blocked         { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
+.op-avail--receiving       { background: #fef9c3 !important; color: #a16207 !important; border: 1px solid #fde047 !important; }
+
+/* Modal Compacto fg-priority-modal */
+.rc-modal--priority {
+  max-width: 540px;
+  width: 95%;
+}
+
+.po-factors-list {
+  margin: 0.35rem 0 0;
+  padding-left: 0.8rem;
+  font-size: 0.72rem;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.po-priority-toggle-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.po-priority-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--ac-surface-2);
+  border: 1px solid var(--ac-border-mid);
+  border-radius: var(--ac-r);
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.po-priority-option input { display: none; }
+.po-priority-option:hover { border-color: var(--ac-gold); }
+.po-priority-option--selected {
+  background: var(--ac-surface-3);
+  border-color: var(--ac-gold);
+  box-shadow: 0 0 0 2px var(--ac-gold-glow);
+}
+.po-priority-option--high.po-priority-option--selected { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,.3); }
+.po-priority-option--urgent.po-priority-option--selected { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,.3); }
+
+.po-priority-option__title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ac-txt-1);
+}
+.po-priority-option__sub {
+  font-size: 0.62rem;
+  color: var(--ac-txt-3);
+}
+
+.po-gatekeeper-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--ac-surface-2);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-r);
+  font-size: 0.7rem;
+  color: var(--ac-txt-2);
+  margin-top: 0.75rem;
+}
+.po-gatekeeper-notice .material-symbols-outlined {
+  color: var(--ac-gold);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+
 
 

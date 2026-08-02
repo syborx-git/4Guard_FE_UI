@@ -376,22 +376,45 @@
                 <td class="rc-table__td-time">
                   <div class="rc-time-main">
                     <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
-                    <strong>{{ appt.scheduledTime }}</strong>
+                    <strong class="rc-time-title">{{ appt.scheduledTime }}</strong>
                   </div>
                   <span class="rc-time-sub">{{ formatDate(appt.scheduledDate) }}</span>
                 </td>
 
-                <!-- ASN / Ref, OC Validation Badge (HU-029) & Check-In Badge (HU-027) -->
+                <!-- ASN / Ref, Priority Badge, Availability Badge, OC Badge (HU-029) & Check-In Badge (HU-027) -->
                 <td>
                   <div class="rc-asn-main">
-                    <strong>{{ appt.asnReference }}</strong>
-                    <span class="rc-priority-tag" [class.rc-priority-tag--high]="appt.priority === 'HIGH'" [class.rc-priority-tag--urgent]="appt.priority === 'URGENT'">
-                      {{ priorityLabels[appt.priority] }}
+                    <strong class="rc-asn-title">{{ appt.asnReference }}</strong>
+                    <span
+                      class="rc-priority-badge"
+                      [class.rc-priority-badge--normal]="appt.priority === 'NORMAL'"
+                      [class.rc-priority-badge--high]="appt.priority === 'HIGH'"
+                      [class.rc-priority-badge--urgent]="appt.priority === 'URGENT'"
+                      (click)="openPriorityModal(appt)"
+                      role="button"
+                      tabindex="0"
+                      [title]="'Prioridad ' + priorityLabels[appt.priority] + ' (' + (appt.priorityDecision?.source === 'MANUAL' ? 'Asignada por ' + appt.priorityDecision?.assignedBy : 'Sugerida por Sistema') + ')'">
+                      <span class="material-symbols-outlined rc-priority-icon" aria-hidden="true">
+                        {{ appt.priorityDecision?.source === 'MANUAL' ? 'person' : 'smart_toy' }}
+                      </span>
+                      <span>{{ priorityLabels[appt.priority] }}</span>
                     </span>
                   </div>
                   <div class="rc-asn-sub-wrap">
                     <span class="rc-asn-sub">{{ appt.id }} · {{ appt.poNumber || 'Sin OC' }}</span>
                     <div class="rc-badges-flex">
+                      <!-- Badge de Disponibilidad Operativa Calculada (HU-026) -->
+                      <span
+                        class="rc-avail-badge"
+                        [class]="operationalAvailabilityClasses[priorityService.calculateOperationalAvailability(appt)]"
+                        (click)="openPriorityModal(appt)"
+                        role="button"
+                        tabindex="0"
+                        title="Disponibilidad Operativa Calculada (HU-026)">
+                        {{ operationalAvailabilityLabels[priorityService.calculateOperationalAvailability(appt)] }}
+                      </span>
+
+                      <!-- Badge Validación OC (HU-029) -->
                       <span
                         class="rc-po-badge"
                         [class]="poStatusClasses[appt.poValidationStatus || 'PENDING']"
@@ -403,6 +426,7 @@
                         {{ poStatusLabels[appt.poValidationStatus || 'PENDING'] }}
                       </span>
 
+                      <!-- Badge Check-In (HU-027) -->
                       <span
                         class="rc-po-badge"
                         [class]="arrivalClearanceClasses[appt.arrivalClearanceStatus || 'PENDING']"
@@ -1788,6 +1812,162 @@
     </footer>
 
   </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL COMPACTO DE PRIORIZACIÓN OPERATIVA (HU-026)
+     ════════════════════════════════════════════════════════ -->
+@if (isPriorityModalOpen() && selectedAppointmentForPriority()) {
+  <div class="rc-modal-backdrop" (click)="closePriorityModal()">
+    <div class="rc-modal rc-modal--priority" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="priority-modal-title">
+      
+      <header class="rc-modal__header">
+        <div class="rc-modal__title-wrap">
+          <span class="material-symbols-outlined rc-modal__icon" aria-hidden="true">tune</span>
+          <div>
+            <h3 id="priority-modal-title" class="rc-modal__title">Priorización Operativa de Recepción</h3>
+            <span class="rc-modal__sub">{{ selectedAppointmentForPriority()!.asnReference }} · Cita {{ selectedAppointmentForPriority()!.id }}</span>
+          </div>
+        </div>
+        <button type="button" class="rc-modal__close" (click)="closePriorityModal()" aria-label="Cerrar modal">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <form [formGroup]="priorityForm" (ngSubmit)="savePriorityChange()" class="rc-modal__body">
+
+        <!-- Banner Explicativo de Recomendación del Motor -->
+        @if (currentPrioritySuggestion()) {
+          <div class="po-outcome-explanation-card po-outcome-explanation-card--match" style="margin-top:0;">
+            <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+            <div>
+              <strong>Recomendación del Sistema: {{ priorityLabels[currentPrioritySuggestion()!.priority] }}</strong> (Score: {{ currentPrioritySuggestion()!.score }} pts)
+              <ul class="po-factors-list">
+                @for (factor of currentPrioritySuggestion()!.factors; track factor.code) {
+                  <li>• {{ priorityFactorLabels[factor.code](factor) }}: <strong>+{{ factor.points }} pts</strong></li>
+                }
+                @if (currentPrioritySuggestion()!.factors.length === 0) {
+                  <li>• Sin factores de urgencia acumulados (Cita a tiempo)</li>
+                }
+              </ul>
+            </div>
+          </div>
+        }
+
+        <!-- Advertencia de Control de Abuso (Si hay >=3 URGENTES) -->
+        @if (priorityForm.get('newPriority')?.value === 'URGENT' && activeUrgentCount() >= 3) {
+          <div class="po-outcome-explanation-card po-outcome-explanation-card--diff" style="margin-top:0.5rem;">
+            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+            <div>
+              <strong>Advertencia de Control de Abuso:</strong> Existen {{ activeUrgentCount() }} recepciones marcadas como URGENTES en la sucursal. Cuando todo es urgente, la prioridad pierde efectividad operativa.
+            </div>
+          </div>
+        }
+
+        <!-- Mensaje de Error en Modal -->
+        @if (priorityErrorMessage()) {
+          <div class="rc-alert rc-alert--danger" style="margin-top:0.5rem;">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <span>{{ priorityErrorMessage() }}</span>
+          </div>
+        }
+
+        <!-- Selector de Nueva Prioridad -->
+        <div class="rc-form-field" style="margin-top:0.75rem;">
+          <label class="rc-label">Seleccionar Prioridad Aplicada <span class="rc-req">*</span></label>
+          <div class="po-priority-toggle-options">
+            <label class="po-priority-option" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+              <input type="radio" formControlName="newPriority" value="NORMAL" />
+              <span class="po-priority-option__title">Normal</span>
+              <span class="po-priority-option__sub">Atención según agenda</span>
+            </label>
+            <label class="po-priority-option po-priority-option--high" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'HIGH'">
+              <input type="radio" formControlName="newPriority" value="HIGH" />
+              <span class="po-priority-option__title">Alta</span>
+              <span class="po-priority-option__sub">Atención preferente</span>
+            </label>
+            <label class="po-priority-option po-priority-option--urgent" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'URGENT'">
+              <input type="radio" formControlName="newPriority" value="URGENT" />
+              <span class="po-priority-option__title">Urgente</span>
+              <span class="po-priority-option__sub">Atención inmediata</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Campos de Justificación Manual (Obligatorio para HIGH y URGENT) -->
+        @if (priorityForm.get('newPriority')?.value !== currentPrioritySuggestion()?.priority || priorityForm.get('newPriority')?.value !== 'NORMAL') {
+          <div class="rc-form-row" style="margin-top:0.75rem;">
+            <div class="rc-form-field">
+              <label class="rc-label">Categoría del Motivo</label>
+              <select formControlName="reasonCode" class="rc-select">
+                @for (code of priorityReasonCodesList; track code) {
+                  <option [value]="code">{{ priorityReasonLabels[code] }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="rc-form-field">
+              <label class="rc-label">Política de Vigencia</label>
+              <select formControlName="expirationPolicy" class="rc-select">
+                <option value="UNTIL_RECEIVING_START">Hasta iniciar recepción</option>
+                <option value="SPECIFIC_TIME">Hora específica</option>
+                <option value="PERMANENT">Permanente</option>
+              </select>
+            </div>
+          </div>
+
+          @if (priorityForm.get('expirationPolicy')?.value === 'SPECIFIC_TIME') {
+            <div class="rc-form-field">
+              <label class="rc-label">Fecha y Hora Límite de Expiración</label>
+              <input type="datetime-local" formControlName="expiresAt" class="rc-input" />
+            </div>
+          }
+
+          <div class="rc-form-field">
+            <label class="rc-label">
+              Justificación de la Decisión
+              @if (priorityForm.get('newPriority')?.value === 'URGENT' || priorityForm.get('newPriority')?.value === 'HIGH') {
+                <span class="rc-req">* (Mínimo 10 caracteres)</span>
+              }
+            </label>
+            <textarea
+              formControlName="reason"
+              class="rc-textarea"
+              rows="3"
+              placeholder="Explicar las causas de negocio u operativas por las que se asigna o modifica la prioridad..."></textarea>
+          </div>
+        }
+
+        <!-- Recordatorio de Compuertas Seguras -->
+        <div class="po-gatekeeper-notice">
+          <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+          <span>
+            <strong>Seguridad de Compuertas:</strong> La prioridad ordena la atención en patio y andenes, pero <strong>NUNCA omite</strong> la validación documental de OC ni la autorización de caseta.
+          </span>
+        </div>
+
+        <footer class="rc-modal__footer">
+          @if (selectedAppointmentForPriority()?.priorityDecision?.source === 'MANUAL') {
+            <button
+              type="button"
+              class="rc-btn rc-btn--warning-ghost"
+              (click)="revertPriorityOverride(selectedAppointmentForPriority()!); closePriorityModal()"
+              title="Revertir intervención manual y regresar a la sugerencia actual">
+              <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+              Revertir Override
+            </button>
+          }
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="closePriorityModal()">Cancelar</button>
+          <button type="submit" class="rc-btn rc-btn--gold">
+            <span class="material-symbols-outlined" aria-hidden="true">save</span>
+            Guardar Prioridad
+          </button>
+        </footer>
+
+      </form>
+
+    </div>
+  </div>
 }
 
 
