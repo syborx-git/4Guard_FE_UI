@@ -40,6 +40,7 @@ import { AlertsConfigService } from '../alerts-config.service';
 
 import {
   AlertConfiguration,
+  CreateAlertConfigRequest,
   AlertCategory,
   AlertEvent,
   AlertPriority,
@@ -114,6 +115,12 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   protected readonly statusFilter = signal<StatusFilter>('ALL');
   protected readonly categoryFilter = signal<'ALL' | AlertCategory>('ALL');
 
+  protected clearFilters(): void {
+    this.searchQuery.set('');
+    this.statusFilter.set('ALL');
+    this.categoryFilter.set('ALL');
+  }
+
   // Overlays
   protected readonly showConfirmModal = signal(false);
   protected readonly confirmModalConfig = signal<{
@@ -126,6 +133,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
 
   // ─── Formulario Reactivo ─────────────────────────────────────────────────
   protected form!: FormGroup;
+  protected formValuesSignal = signal<any>(null);
 
   // ─── Signals Computadas ─────────────────────────────────────────────────
 
@@ -182,7 +190,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   /** Computado para la Vista Previa del Toast del Sistema en tiempo real */
   protected readonly toastPreview = computed<ToastPreviewData>(() => {
     const alert = this.selectedAlert();
-    const formVals = this.form ? this.form.getRawValue() : null;
+    const formVals = this.formValuesSignal() || (this.form ? this.form.getRawValue() : null);
 
     const name = formVals?.name || alert?.name || 'Inventario Bajo';
     const category = formVals?.category || alert?.category || 'INVENTORY';
@@ -296,6 +304,12 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
       ],
       description: ['', [Validators.maxLength(300)]],
     });
+
+    this.formValuesSignal.set(this.form.getRawValue());
+    this.form.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.formValuesSignal.set(this.form.getRawValue());
+      this.cdr.markForCheck();
+    });
   }
 
   private loadAlerts(): void {
@@ -334,11 +348,8 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
       event: alert.event,
       priority: alert.priority,
       status: alert.status,
-      channelSystem: true,
-      channelEmail: false,
-      channelPush: false,
-      channelSms: false,
-      channelWebhook: false,
+      channelSystem: alert.channels ? alert.channels.includes('SYSTEM') : true,
+      channelPush: alert.channels ? alert.channels.includes('PUSH') : false,
       recipientSupervisor: alert.recipients.includes('SUPERVISOR'),
       recipientManager: alert.recipients.includes('MANAGER'),
       recipientAdmin: alert.recipients.includes('ADMIN'),
@@ -353,6 +364,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
       description: alert.description || '',
     });
 
+    this.formValuesSignal.set(this.form.getRawValue());
     this.cdr.markForCheck();
   }
 
@@ -404,6 +416,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
       description: '',
     });
 
+    this.formValuesSignal.set(this.form.getRawValue());
     this.cdr.markForCheck();
   }
 
@@ -426,7 +439,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
    */
   protected testAlertNotification(): void {
     const preview = this.toastPreview();
-    const message = `[PRUEBA DE ALERTA] ${preview.title}: ${preview.message}`;
+    const message = `${preview.title}: ${preview.message}`;
 
     switch (preview.priority) {
       case 'CRITICAL':
@@ -473,14 +486,18 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
     const currentUser =
       this.authState.currentUser()?.email || 'gerente.operaciones@4guard.mx';
 
-    const payload: Omit<AlertConfiguration, 'id' | 'createdAt' | 'updatedAt'> = {
-      organizationId: 'org-4guard-mx-001',
+    const channels: AlertChannel[] = [];
+    if (raw.channelSystem) channels.push('SYSTEM');
+    if (raw.channelPush) channels.push('PUSH');
+    if (channels.length === 0) channels.push('SYSTEM');
+
+    const payload: CreateAlertConfigRequest = {
       name: raw.name.trim(),
       category: raw.category,
       event: raw.event,
       priority: raw.priority,
       status: raw.status,
-      channels: ['SYSTEM'],
+      channels,
       recipients,
       condition: raw.condition,
       value: parseFloat(raw.value),

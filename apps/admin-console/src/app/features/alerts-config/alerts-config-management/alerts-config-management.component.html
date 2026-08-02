@@ -7,90 +7,87 @@
   <!-- ═══════════════════════════════════════════
        HERO
        ═══════════════════════════════════════════ -->
-  <header class="ac-hero" id="ac-hero-header">
-    <div class="ac-hero__left">
-      <div class="ac-hero__icon-wrap" aria-hidden="true">
-        <span class="material-icons-round ac-hero__icon">notifications_active</span>
-      </div>
-      <div class="ac-hero__info">
-        <div class="ac-hero__breadcrumb">
-          <a routerLink="/admin" class="btn-back-admin" title="Regresar a Administración WMS">
-            <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
-          </a>
-          <span class="breadcrumb-dot">·</span>
-          <span class="ac-hero__eyebrow">CONFIGURACIÓN DEL SISTEMA · MOTOR DE REGLAS</span>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL (GOLDEN STANDARD)
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="carriers-header" id="ac-hero-header">
+    <div class="carriers-header__top">
+      <div class="carriers-header__left">
+        <div class="carriers-header__icon-wrap">
+          <span class="material-icons-round carriers-header__icon">notifications_active</span>
         </div>
-        <h1 class="ac-hero__title">Configuración de Alertas y Notificaciones</h1>
-        <p class="ac-hero__subtitle">
-          Define las reglas de negocio, prioridades y destinatarios que determinan cuándo y cómo el sistema debe alertar sobre eventos críticos en la operación del almacén.
-        </p>
+
+        <div class="carriers-header__copy">
+          <div class="carriers-header__eyebrow">
+            <a routerLink="/admin" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-icons-round" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="carriers-header__eyebrow-sep">·</span>
+            <span>Configuración del Sistema · Motor de Reglas</span>
+          </div>
+          <h1 class="carriers-header__title">Configuración de Alertas y Notificaciones</h1>
+          <p class="carriers-header__subtitle">
+            Define las reglas de negocio, prioridades y destinatarios que determinan cuándo y cómo el sistema debe alertar sobre eventos críticos en la operación del almacén.
+          </p>
+        </div>
+      </div>
+
+      <div class="carriers-header__actions">
+        <button
+          type="button"
+          class="ac-btn ac-btn--primary"
+          id="btn-new-alert"
+          (click)="createNewAlert()">
+          <span class="material-icons-round">add_alert</span>
+          Nueva alerta
+        </button>
       </div>
     </div>
-    <div class="ac-hero__actions">
-      <button
-        type="button"
-        class="ac-btn ac-btn--ghost"
-        id="btn-audit-drawer"
-        (click)="openAudit()"
-        title="Ver registro de auditoría global">
-        <span class="material-icons-round">history</span>
-        Auditoría
-      </button>
-      <button
-        type="button"
-        class="ac-btn ac-btn--primary"
-        id="btn-new-alert"
-        (click)="createNewAlert()">
-        <span class="material-icons-round">add_alert</span>
-        Nueva alerta
-      </button>
+
+    <!-- ── KPI CARDS (4 columnas homologadas) ────────────────────────── -->
+    <div class="carriers-kpi-grid" aria-label="Indicadores clave de alertas">
+      <div class="carriers-kpi-card" id="kpi-active-alerts">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">notifications</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().activeAlerts }}</span>
+          <span class="carriers-kpi-card__label">Alertas Activas</span>
+        </div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--danger" id="kpi-critical-alerts">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">error</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().criticalAlerts }}</span>
+          <span class="carriers-kpi-card__label">Alertas Críticas</span>
+        </div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--warning" id="kpi-channels">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">campaign</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().configuredChannels }}</span>
+          <span class="carriers-kpi-card__label">Canales Configurados</span>
+        </div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--inactive" id="kpi-escalations">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">schedule_send</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().escalationsConfigured }}</span>
+          <span class="carriers-kpi-card__label">Escalamientos</span>
+        </div>
+      </div>
     </div>
   </header>
-
-  <!-- ═══════════════════════════════════════════
-       KPI CARDS
-       ═══════════════════════════════════════════ -->
-  <section class="ac-kpi-strip" aria-label="Indicadores clave de alertas">
-    <div class="ac-kpi-card" id="kpi-active-alerts">
-      <div class="ac-kpi-card__body">
-        <span class="ac-kpi-card__value">{{ kpis().activeAlerts }}</span>
-        <span class="ac-kpi-card__label">Alertas Activas</span>
-      </div>
-      <div class="ac-kpi-card__icon-wrap">
-        <span class="material-icons-round">notifications</span>
-      </div>
-    </div>
-
-    <div class="ac-kpi-card ac-kpi-card--critical" id="kpi-critical-alerts">
-      <div class="ac-kpi-card__body">
-        <span class="ac-kpi-card__value">{{ kpis().criticalAlerts }}</span>
-        <span class="ac-kpi-card__label">Alertas Críticas</span>
-      </div>
-      <div class="ac-kpi-card__icon-wrap">
-        <span class="material-icons-round">error</span>
-      </div>
-    </div>
-
-    <div class="ac-kpi-card" id="kpi-channels">
-      <div class="ac-kpi-card__body">
-        <span class="ac-kpi-card__value">{{ kpis().configuredChannels }}</span>
-        <span class="ac-kpi-card__label">Canales Configurados</span>
-      </div>
-      <div class="ac-kpi-card__icon-wrap">
-        <span class="material-icons-round">campaign</span>
-      </div>
-    </div>
-
-    <div class="ac-kpi-card ac-kpi-card--warning" id="kpi-escalations">
-      <div class="ac-kpi-card__body">
-        <span class="ac-kpi-card__value">{{ kpis().escalationsConfigured }}</span>
-        <span class="ac-kpi-card__label">Escalamientos</span>
-      </div>
-      <div class="ac-kpi-card__icon-wrap">
-        <span class="material-icons-round">schedule_send</span>
-      </div>
-    </div>
-  </section>
 
   <!-- ═══════════════════════════════════════════
        MASTER-DETAIL SPLIT VIEW (35% / 65%)
@@ -101,19 +98,20 @@
     <aside class="ac-split__left" aria-label="Directorio de alertas">
       <div class="ac-dir__toolbar">
 
-        <!-- Buscador pill -->
+        <!-- Buscador principal -->
         <div class="ac-dir__search-wrap">
           <span class="material-icons-round ac-dir__search-icon">search</span>
           <input
-            type="text"
+            type="search"
             class="ac-dir__search"
             id="alert-search-input"
-            placeholder="Buscar alerta..."
+            placeholder="Buscar por nombre, evento o descripción…"
             [value]="searchQuery()"
-            (input)="searchQuery.set($any($event.target).value)" />
+            (input)="searchQuery.set($any($event.target).value)"
+            autocomplete="off" />
         </div>
 
-        <!-- Chips de Estado -->
+        <!-- Chips de Filtro Rápido -->
         <div class="ac-dir__filter-chips">
           <button
             type="button"
@@ -145,23 +143,43 @@
           </button>
         </div>
 
-        <!-- Selector de Categoría -->
-        <div class="ac-dir__category-select-wrap">
-          <select
-            class="ac-dir__category-select"
-            id="filter-category-select"
-            [value]="categoryFilter()"
-            (change)="categoryFilter.set($any($event.target).value)">
-            <option value="ALL">Todas las Categorías</option>
-            <option value="RECEIVING">Recepción</option>
-            <option value="INVENTORY">Inventario</option>
-            <option value="QUALITY">Calidad</option>
-            <option value="PICKING">Picking</option>
-            <option value="SHIPPING">Despacho</option>
-            <option value="USERS">Usuarios</option>
-            <option value="SYSTEM">Sistema</option>
-          </select>
+        <!-- Fila de Selectores de Filtro (Categoría y Limpiar) -->
+        <div class="ac-dir__filters-row">
+          <div class="ac-dir__filter-group">
+            <select
+              class="ac-dir__category-select"
+              id="filter-category-select"
+              [value]="categoryFilter()"
+              (change)="categoryFilter.set($any($event.target).value)"
+              aria-label="Filtrar por categoría">
+              <option value="ALL">Todas las Categorías</option>
+              <option value="RECEIVING">Recepción</option>
+              <option value="INVENTORY">Inventario</option>
+              <option value="QUALITY">Calidad</option>
+              <option value="PICKING">Picking</option>
+              <option value="SHIPPING">Despacho</option>
+              <option value="USERS">Usuarios</option>
+              <option value="SYSTEM">Sistema</option>
+            </select>
+          </div>
+
+          @if (searchQuery() || statusFilter() !== 'ALL' || categoryFilter() !== 'ALL') {
+            <button
+              class="ac-dir__filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              title="Limpiar filtros"
+              aria-label="Limpiar filtros de búsqueda">
+              <span class="material-icons-round">filter_alt_off</span>
+            </button>
+          }
         </div>
+
+        <!-- Hint de búsqueda extendida -->
+        <p class="ac-dir__search-hint">
+          <span class="material-icons-round">info</span>
+          Busca por nombre de regla, evento o plantilla
+        </p>
       </div>
 
       <!-- Cargando -->
@@ -171,7 +189,7 @@
           <span>Cargando centro de alertas...</span>
         </div>
       } @else {
-        <!-- Lista de Tarjetas de Alerta -->
+        <!-- Lista de Tarjetas de Alerta (Homologadas con Transportistas) -->
         <ul class="ac-dir__list" role="list" id="alert-items-list">
           @for (alert of filteredAlerts(); track trackByAlertId($index, alert)) {
             <li
@@ -182,22 +200,15 @@
               tabindex="0"
               (keydown.enter)="selectAlert(alert)">
 
-              <!-- Icono de Categoría -->
+              <!-- Icono Avatar Genérico de Alerta -->
               <div
                 class="ac-dir__item-avatar"
                 [class.ac-dir__item-avatar--critical]="alert.priority === 'CRITICAL'"
-                [class.ac-dir__item-avatar--high]="alert.priority === 'HIGH'">
-                <span class="material-icons-round">
-                  @switch (alert.category) {
-                    @case ('RECEIVING') { move_to_inbox }
-                    @case ('INVENTORY') { inventory_2 }
-                    @case ('QUALITY') { fact_check }
-                    @case ('PICKING') { shopping_cart }
-                    @case ('SHIPPING') { local_shipping }
-                    @case ('USERS') { group }
-                    @default { settings }
-                  }
-                </span>
+                [class.ac-dir__item-avatar--high]="alert.priority === 'HIGH'"
+                [class.ac-dir__item-avatar--medium]="alert.priority === 'MEDIUM'"
+                [class.ac-dir__item-avatar--low]="alert.priority === 'LOW'"
+                [class.ac-dir__item-avatar--info]="alert.priority === 'INFO'">
+                <span class="material-icons-round">notifications_active</span>
               </div>
 
               <!-- Info principal -->
@@ -212,7 +223,7 @@
                 </div>
               </div>
 
-              <!-- Badges de Prioridad & Estado -->
+              <!-- Badges de Prioridad -->
               <div class="ac-dir__item-side">
                 <span
                   class="ac-priority-badge"
@@ -223,15 +234,6 @@
                   [class.ac-priority-badge--info]="alert.priority === 'INFO'">
                   {{ priorityLabels[alert.priority] }}
                 </span>
-
-                <button
-                  type="button"
-                  class="ac-status-toggle"
-                  [class.ac-status-toggle--active]="alert.status === 'ACTIVE'"
-                  (click)="confirmToggleStatus(alert, $event)"
-                  [title]="alert.status === 'ACTIVE' ? 'Inactivar regla' : 'Activar regla'">
-                  <span class="ac-status-toggle__dot"></span>
-                </button>
               </div>
             </li>
           } @empty {
@@ -241,6 +243,13 @@
             </li>
           }
         </ul>
+
+        <!-- Footer Paginador / Contador de Resultados (Homologado con Transportistas) -->
+        <div class="ac-dir__footer">
+          <span class="ac-dir__count">
+            Mostrando <strong>{{ filteredAlerts().length }}</strong> de {{ alertsService.alerts().length }} regla{{ alertsService.alerts().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
       }
     </aside>
 
@@ -371,7 +380,7 @@
             </div>
           </div>
 
-          <!-- Fila 3: Canales de Notificación (Sólo Sistema habilitado) -->
+          <!-- Fila 3: Canales de Notificación (Sistema y Push) -->
           <div class="ac-form__section">
             <h3 class="ac-form__section-title">
               <span class="material-icons-round">campaign</span>
@@ -380,41 +389,21 @@
             <div class="ac-channels-grid">
 
               <!-- Canal Sistema (Funcional) -->
-              <label class="ac-channel-card ac-channel-card--active">
+              <label class="ac-channel-card" [class.ac-channel-card--active]="form.get('channelSystem')?.value">
                 <input type="checkbox" formControlName="channelSystem" class="ac-channel-card__check" />
                 <span class="material-icons-round ac-channel-card__icon">desktop_windows</span>
                 <span class="ac-channel-card__label">Notificación del sistema</span>
                 <span class="ac-channel-card__badge ac-channel-card__badge--active">Habilitado</span>
               </label>
 
-              <!-- Canales Próximamente -->
-              <label class="ac-channel-card ac-channel-card--disabled">
-                <input type="checkbox" formControlName="channelEmail" class="ac-channel-card__check" />
-                <span class="material-icons-round ac-channel-card__icon">mail</span>
-                <span class="ac-channel-card__label">Correo electrónico</span>
-                <span class="ac-channel-card__badge">Próximamente</span>
-              </label>
-
-              <label class="ac-channel-card ac-channel-card--disabled">
+              <!-- Canal Push (Funcional) -->
+              <label class="ac-channel-card" [class.ac-channel-card--active]="form.get('channelPush')?.value">
                 <input type="checkbox" formControlName="channelPush" class="ac-channel-card__check" />
                 <span class="material-icons-round ac-channel-card__icon">notifications_active</span>
                 <span class="ac-channel-card__label">Notificación Push</span>
-                <span class="ac-channel-card__badge">Próximamente</span>
+                <span class="ac-channel-card__badge ac-channel-card__badge--active">Habilitado</span>
               </label>
 
-              <label class="ac-channel-card ac-channel-card--disabled">
-                <input type="checkbox" formControlName="channelSms" class="ac-channel-card__check" />
-                <span class="material-icons-round ac-channel-card__icon">sms</span>
-                <span class="ac-channel-card__label">Mensaje SMS</span>
-                <span class="ac-channel-card__badge">Próximamente</span>
-              </label>
-
-              <label class="ac-channel-card ac-channel-card--disabled">
-                <input type="checkbox" formControlName="channelWebhook" class="ac-channel-card__check" />
-                <span class="material-icons-round ac-channel-card__icon">webhook</span>
-                <span class="ac-channel-card__label">Webhook ERP</span>
-                <span class="ac-channel-card__badge">Próximamente</span>
-              </label>
             </div>
           </div>
 
@@ -609,12 +598,38 @@
             </div>
           </div>
 
-          <!-- Barra de Acciones del Formulario -->
+          <!-- Barra de Acciones del Formulario (Homologado con Transportistas) -->
           <div class="ac-form__action-bar">
-            <div class="ac-form__action-info">
-              <span class="material-icons-round">info</span>
-              <span>Los cambios se aplicarán inmediatamente a las reglas del motor.</span>
-            </div>
+            <!-- Acciones de Estado (lado izquierdo) -->
+            @if (formMode() === 'EDIT' && selectedAlert()) {
+              <div class="ac-form__status-group">
+                @if (selectedAlert()!.status === 'ACTIVE') {
+                  <button
+                    type="button"
+                    class="ac-btn ac-btn--danger"
+                    [disabled]="isSaving()"
+                    (click)="confirmToggleStatus(selectedAlert()!, $event)">
+                    <span class="material-icons-round">block</span>
+                    <span>Desactivar</span>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="ac-btn ac-btn--success"
+                    [disabled]="isSaving()"
+                    (click)="confirmToggleStatus(selectedAlert()!, $event)">
+                    <span class="material-icons-round">check_circle</span>
+                    <span>Activar</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="ac-form__action-info">
+                <span class="material-icons-round">info</span>
+                <span>Los cambios se aplicarán inmediatamente a las reglas del motor.</span>
+              </div>
+            }
+
             <div class="ac-form__action-buttons">
               <button
                 type="button"
@@ -627,7 +642,7 @@
                 type="button"
                 class="ac-btn ac-btn--ghost"
                 (click)="createNewAlert()">
-                Descartar
+                Cancelar
               </button>
               <button
                 type="submit"
@@ -638,7 +653,7 @@
                   <span>Guardando...</span>
                 } @else {
                   <span class="material-icons-round">save</span>
-                  <span>Guardar regla</span>
+                  <span>Guardar cambios</span>
                 }
               </button>
             </div>

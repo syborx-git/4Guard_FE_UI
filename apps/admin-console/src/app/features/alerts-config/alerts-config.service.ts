@@ -157,7 +157,7 @@ export class AlertsConfigService {
    * Crea una nueva regla de alerta mediante POST /api/v1/alerts-config
    */
   createAlert(
-    payload: CreateAlertConfigRequest | Omit<AlertConfiguration, 'id' | 'createdAt' | 'updatedAt'>
+    payload: CreateAlertConfigRequest | Omit<AlertConfiguration, 'id' | 'createdAt' | 'updatedAt'> | Omit<AlertConfiguration, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>
   ): Observable<ServiceResult<AlertConfiguration>> {
     return this.http.post<ApiResponse<AlertConfiguration>>(this.API_URL, payload).pipe(
       tap((res) => {
@@ -172,11 +172,14 @@ export class AlertsConfigService {
       })),
       catchError((err: HttpErrorResponse) => {
         const backendMessage = err.error?.message || err.message;
-        // Fallback local si el BE no está disponible temporalmente
+        if (err.status > 0) {
+          return throwError(() => ({ success: false, message: backendMessage }));
+        }
+        // Fallback local solo si el servidor backend no responde (Network Offline)
         const now = new Date().toISOString();
         const newAlert: AlertConfiguration = {
           ...(payload as any),
-          id: `alt-${Date.now()}`,
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'e13f0907-9fa5-4bdf-87db-2eb5e7683999',
           createdAt: now,
           updatedAt: now,
         };
@@ -214,7 +217,11 @@ export class AlertsConfigService {
         message: res.message || 'Regla de alerta actualizada correctamente.',
         success: res.success ?? true,
       })),
-      catchError(() => {
+      catchError((err: HttpErrorResponse) => {
+        const backendMessage = err.error?.message || err.message;
+        if (err.status > 0) {
+          return throwError(() => ({ success: false, message: backendMessage }));
+        }
         // Fallback local
         const list = this._alerts();
         const idx = list.findIndex((a) => a.id === id);
