@@ -262,6 +262,34 @@ Requisitos (Angular Signals / SDD Level 5):
 
 ---
 
+## 🛡️ Modales Emergentes Desacoplados (Prevención de Refresco HTML)
+
+```
+Implementa un modal emergente desacoplado para la acción [Acción/Revocar/Eliminar] en el módulo [Módulo].
+
+Requisitos (SDD Level 5 / ADR-002):
+1. Usar un contenedor <div class="carriers-dialog__form"> en lugar de <form> en la plantilla del modal para evitar que el navegador envíe el formulario padre.
+2. En el handler TS, aceptar event?: Event e invocar event?.preventDefault(); event?.stopPropagation(); como primera instrucción.
+3. El botón de confirmación debe ser <button type="button" (click)="confirmAction($event)"> con estado [disabled]="isSaving()".
+4. Soportar estados de feedback visual: Spinner ("Procesando...") y notificaciones exclusivas con ToastService.
+```
+
+---
+
+## 🔓 Modo Consulta Solo Lectura con Acciones Habilitadas
+
+```
+Implementa la protección de solo lectura para el estado [REVOKED/CLOSED] en el módulo [Módulo].
+
+Requisitos (SDD Level 5):
+1. Definir una propiedad computada `isReadOnly = computed(() => this.selectedItem()?.status === '[ESTADO_FINAL]')`.
+2. Aplicar [disabled]="isReadOnly()" en los contenedores <fieldset> de los campos del formulario para que todos los inputs/selects queden deshabilitados automáticamente en modo consulta.
+3. Mantener la barra de acciones (.carriers-form-actions) fuera de los fieldsets deshabilitados.
+4. Asegurar que los botones de reactivación/reapertura (ej. Activar o Reabrir) permanezcan 100% habilitados y cliqueables.
+```
+
+---
+
 ## 💡 Tips de uso
 
 1. **Siempre especifica el módulo objetivo** — "en el módulo de Sucursales" es más preciso que "en el sistema".
