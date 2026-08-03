@@ -290,6 +290,26 @@ Requisitos (SDD Level 5):
 
 ---
 
+## 💱 Integración de Cotizaciones en Vivo desde API de Banco Central (Banxico SIE REST)
+
+```
+Integra la consulta de cotizaciones en tiempo real desde el servicio oficial de Banco Central (Banxico SIE REST) en el módulo de [Módulo/Divisas].
+
+Endpoint BE: GET /api/v1/exchange-rates/banxico/live/{seriesId}
+
+Requisitos (HU-148 / SDD Level 5):
+1. Definir la interfaz BanxicoLiveRateData (seriesId, currencyCode, rate, publicationDate, sourceType).
+2. Crear el método getBanxicoLiveRate(seriesId) en el servicio con fallback resiliente en caso de interrupción.
+3. En la UI del formulario de registro de tipo de cambio:
+   - Agregar el botón "Obtener de Banxico (Live)" con estado de carga (isFetchingBanxico).
+   - Mapear el código ISO a la serie correspondiente (USD -> SF57805, EUR -> SF46410).
+   - Auto-poblar los campos rate, sourceType ('CENTRAL_BANK') y notes sin bloquear la edición del usuario.
+   - Mostrar un Banner Informativo dorado que confirme la tasa recuperada y recuerde al usuario que puede editar el valor libremente antes de guardar.
+4. Notificar mediante ToastService la confirmación de la cotización recibida.
+```
+
+---
+
 ## 💡 Tips de uso
 
 1. **Siempre especifica el módulo objetivo** — "en el módulo de Sucursales" es más preciso que "en el sistema".

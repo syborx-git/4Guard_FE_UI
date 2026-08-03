@@ -114,7 +114,7 @@ export function dateRangeValidator(): ValidatorFn {
 // ═══════════════════════════════════════════════════════════════════
 export function differentCurrenciesValidator(): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
-    const source = group.get('isoCode')?.value as string | null;
+    const source = (group.get('code')?.value || group.get('isoCode')?.value) as string | null;
     const target = group.get('targetCurrencyCode')?.value as string | null;
 
     if (!source || !target) {
@@ -131,13 +131,13 @@ export function differentCurrenciesValidator(): ValidatorFn {
 
 // ═══════════════════════════════════════════════════════════════════
 // baseCurrencyRulesValidator
-// Valida que, si isBaseCurrency es true, el rate sea 1.000000
+// Valida que, si isBase es true, el rate sea 1.000000
 // y el status sea ACTIVE.
 // Debe aplicarse al FormGroup que contenga los controles relevantes.
 // ═══════════════════════════════════════════════════════════════════
 export function baseCurrencyRulesValidator(): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
-    const isBase = group.get('isBaseCurrency')?.value as boolean;
+    const isBase = (group.get('isBase')?.value ?? group.get('isBaseCurrency')?.value) as boolean;
     const rate = parseFloat(String(group.get('rate')?.value ?? '0'));
     const status = group.get('status')?.value as string;
 
