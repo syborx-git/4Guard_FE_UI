@@ -3,15 +3,15 @@
  * @description Componente principal HU-148 — Gestión de Divisas y Tipos de Cambio.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * DISEÑO & ARQUITECTURA
+ * DISEÑO & ARQUITECTURA (Homologado con Transportistas y Licencias WMS)
  * ═══════════════════════════════════════════════════════════════════════════
  * - Hero compacto + 4 KPI cards financieras
- * - Split View 35% / 65% (Directorio de monedas / Editor + Historial)
- * - Formulario de moneda con ReactiveFormsModule + validadores personalizados
+ * - Split View 35% / 65% (Directorio de monedas / Editor + Historial + Paridades)
+ * - Formulario de moneda con ReactiveFormsModule + validadores reactivos
  * - Formulario de tipo de cambio con validaciones financieras
- * - Simulador de conversión en tiempo real con Angular Signals
- * - Panel de auditoría con trail completo
- * - Soporte nativo Dark Mode + micro-animaciones 180ms–260ms
+ * - Calculadora / simulador de conversión en tiempo real
+ * - Panel de auditoría forense con trail completo
+ * - Soporte nativo Dark/Light Mode + micro-animaciones
  * - ChangeDetectionStrategy.OnPush + signals para máximo rendimiento
  */
 
@@ -24,7 +24,6 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
-  effect,
 } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import {
@@ -44,10 +43,12 @@ import {
   ExchangeRate,
   CurrencyAuditEntry,
   CurrencyStatus,
-  ExchangeRateSource,
-  EXCHANGE_RATE_SOURCE_LABELS,
+  RateSourceType,
+  RATE_SOURCE_LABELS,
   EXCHANGE_RATE_STATUS_LABELS,
-  FRESHNESS_LABELS,
+  AUDIT_ACTION_LABELS,
+  ConvertCurrencyResult,
+  BanxicoLiveRateData,
 } from '../currency-exchange.models';
 
 import {
@@ -56,8 +57,7 @@ import {
   noWhitespaceOnlyValidator,
 } from '../currency-exchange.validators';
 
-// ─── Tipos del componente ──────────────────────────────────────────────────
-type PanelView = 'CURRENCY_FORM' | 'RATE_FORM' | 'AUDIT';
+type PanelView = 'CURRENCY_FORM' | 'RATE_FORM' | 'CONVERTER' | 'AUDIT';
 type FormMode = 'CREATE' | 'EDIT';
 
 @Component({
@@ -79,14 +79,13 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   // ─── Destroy subject ────────────────────────────────────────────────────
   private readonly destroy$ = new Subject<void>();
 
-  // ─── Catálogos de etiquetas (expuestos al template) ────────────────────
-  protected readonly sourceLabelMap = EXCHANGE_RATE_SOURCE_LABELS;
+  // ─── Catálogos de etiquetas ─────────────────────────────────────────────
+  protected readonly sourceLabelMap = RATE_SOURCE_LABELS;
   protected readonly statusLabelMap = EXCHANGE_RATE_STATUS_LABELS;
-  protected readonly freshnessLabelMap = FRESHNESS_LABELS;
+  protected readonly auditActionMap = AUDIT_ACTION_LABELS;
 
   // ─── Estado de UI ────────────────────────────────────────────────────────
-  protected readonly isLoadingCurrencies = signal(false);
-  protected readonly isLoadingRates = signal(false);
+  protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly panelView = signal<PanelView>('CURRENCY_FORM');
   protected readonly formMode = signal<FormMode>('CREATE');
@@ -102,55 +101,16 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   protected readonly searchQuery = signal('');
   protected readonly statusFilter = signal<'ALL' | CurrencyStatus>('ALL');
 
-  // ─── Señales para simulador de conversión ───────────────────────────────
+  // ─── Banxico Live State ───────────────────────────────────────────────
+  protected readonly isFetchingBanxico = signal(false);
+  protected readonly banxicoLiveInfo = signal<BanxicoLiveRateData | null>(null);
+
+  // ─── Calculadora de conversión ─────────────────────────────────────────
   protected readonly simAmount = signal<number>(1000);
   protected readonly simSource = signal<string>('USD');
   protected readonly simTarget = signal<string>('MXN');
-
-  protected readonly conversionResult = computed(() => {
-    const amount = this.simAmount();
-    const source = this.simSource();
-    const target = this.simTarget();
-    const currencies = this.ceService.currencies();
-
-    if (source === target) {
-      return { result: amount, rate: 1, found: true };
-    }
-
-    // Buscar tipo de cambio directo
-    const directRate = this.ceService.getCurrentRate(source, target);
-    if (directRate) {
-      return {
-        result: amount * directRate.rate,
-        rate: directRate.rate,
-        found: true,
-      };
-    }
-
-    // Búsqueda inversa: target → source
-    const inverseRate = this.ceService.getCurrentRate(target, source);
-    if (inverseRate) {
-      return {
-        result: amount / inverseRate.rate,
-        rate: 1 / inverseRate.rate,
-        found: true,
-      };
-    }
-
-    // Si ambas tienen rate respecto a MXN, triangular
-    const srcCurrency = currencies.find((c) => c.isoCode === source);
-    const tgtCurrency = currencies.find((c) => c.isoCode === target);
-    if (srcCurrency && tgtCurrency && srcCurrency.currentRate > 0) {
-      const rate = tgtCurrency.currentRate / srcCurrency.currentRate;
-      return {
-        result: amount * rate,
-        rate,
-        found: true,
-      };
-    }
-
-    return { result: 0, rate: 0, found: false };
-  });
+  protected readonly isConverting = signal(false);
+  protected readonly liveConversion = signal<ConvertCurrencyResult | null>(null);
 
   // ─── Monedas filtradas para el directorio ───────────────────────────────
   protected readonly filteredCurrencies = computed(() => {
@@ -159,7 +119,7 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     return this.ceService.currencies().filter((c) => {
       const matchSearch =
         !q ||
-        c.isoCode.toLowerCase().includes(q) ||
+        c.code.toLowerCase().includes(q) ||
         c.name.toLowerCase().includes(q) ||
         c.symbol.toLowerCase().includes(q);
       const matchStatus = sf === 'ALL' || c.status === sf;
@@ -173,56 +133,45 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     if (!sel) return [];
     return this.ceService
       .exchangeRates()
-      .filter((r) => r.sourceCurrencyCode === sel.isoCode)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      .filter((r) => r.fromCurrencyCode === sel.code || r.toCurrencyCode === sel.code);
   });
 
   // ─── KPIs computados ────────────────────────────────────────────────────
   protected readonly kpis = computed(() => {
     const currencies = this.ceService.currencies();
     const rates = this.ceService.exchangeRates();
-    const base = currencies.find((c) => c.isBaseCurrency);
+    const base = currencies.find((c) => c.isBase);
+    const usdMxn = rates.find((r) => r.fromCurrencyCode === 'USD' && r.toCurrencyCode === 'MXN');
 
     return {
-      baseCurrencyCode: base?.isoCode ?? '—',
+      baseCurrencyCode: base?.code ?? '—',
       activeCurrencies: currencies.filter((c) => c.status === 'ACTIVE').length,
-      currentRates: rates.filter((r) => r.status === 'CURRENT').length,
-      reviewRequired: currencies.filter((c) => c.freshnessStatus === 'REVIEW_REQUIRED').length,
+      totalRates: rates.length,
+      latestRateUsdMxn: usdMxn ? usdMxn.rate : 18.45,
     };
   });
 
   // ─── Usuario actual ─────────────────────────────────────────────────────
   protected get currentUserEmail(): string {
-    return this.authState.currentUser()?.email ?? 'gerente.operaciones@4guard.mx';
+    return this.authState.currentUser()?.email ?? 'admin';
   }
 
   // ─── Formularios ────────────────────────────────────────────────────────
   protected currencyForm!: FormGroup;
   protected rateForm!: FormGroup;
 
-  // ─── Fuentes disponibles ─────────────────────────────────────────────────
-  protected readonly rateSources: ExchangeRateSource[] = [
+  // ─── Fuentes de tasa disponibles ─────────────────────────────────────────
+  protected readonly rateSources: RateSourceType[] = [
     'MANUAL',
-    'OFFICIAL_REFERENCE',
-    'BANK',
-    'COMMERCIAL_AGREEMENT',
-    'CLIENT_CONTRACT',
-    'OTHER',
+    'CENTRAL_BANK',
+    'API_AUTO',
+    'CUSTOM',
   ];
 
   // ─── Auditoría filtrada ──────────────────────────────────────────────────
   protected readonly auditEntries = computed<CurrencyAuditEntry[]>(() => {
-    const sel = this.selectedCurrency();
-    const all = this.ceService.auditEntries();
-    if (!sel) return all;
-    return all.filter((a) => a.entityId === sel.id || a.entityId.startsWith('er-'));
+    return this.ceService.auditEntries();
   });
-
-  // ─── Estado del formulario de tipo de cambio ─────────────────────────────
-  protected readonly selectedRatePair = signal<string>('');
 
   // ════════════════════════════════════════════════════════════════════════
   // LIFECYCLE
@@ -245,7 +194,7 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
 
   private _buildCurrencyForm(): void {
     this.currencyForm = this.fb.group({
-      isoCode: [
+      code: [
         '',
         [
           Validators.required,
@@ -264,14 +213,15 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
         [Validators.required, Validators.maxLength(8), noWhitespaceOnlyValidator()],
       ],
       decimalPlaces: [2, [Validators.required, Validators.min(0), Validators.max(6)]],
-      isBaseCurrency: [false],
+      isBase: [false],
       status: ['ACTIVE', Validators.required],
     });
   }
 
   private _buildRateForm(): void {
+    const today = new Date().toISOString().slice(0, 10);
     this.rateForm = this.fb.group({
-      targetCurrencyCode: ['MXN', Validators.required],
+      toCurrencyId: ['', Validators.required],
       rate: [
         '',
         [
@@ -280,11 +230,9 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
           maximumDecimalPlacesValidator(6),
         ],
       ],
-      effectiveFrom: ['', Validators.required],
-      effectiveTo: [''],
-      source: ['MANUAL', Validators.required],
-      reason: ['', [Validators.required, Validators.maxLength(200), noWhitespaceOnlyValidator()]],
-      observations: ['', [Validators.maxLength(400)]],
+      effectiveDate: [today, Validators.required],
+      sourceType: ['MANUAL', Validators.required],
+      notes: ['', [Validators.maxLength(255)]],
     });
   }
 
@@ -293,28 +241,26 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   // ════════════════════════════════════════════════════════════════════════
 
   private _loadInitialData(): void {
-    this.isLoadingCurrencies.set(true);
-    this.ceService
-      .getCurrencies()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.isLoadingCurrencies.set(false);
-          // Seleccionar primera moneda no base por defecto
-          const nonBase = this.ceService.currencies().find((c) => !c.isBaseCurrency);
-          if (nonBase) {
-            this.selectCurrency(nonBase);
-          } else if (this.ceService.currencies().length > 0) {
-            this.selectCurrency(this.ceService.currencies()[0]);
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.isLoadingCurrencies.set(false);
-          this.toast.error('Error al cargar el catálogo de monedas.');
-          this.cdr.markForCheck();
-        },
-      });
+    this.isLoading.set(true);
+
+    this.ceService.getCurrencies().pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        const list = this.ceService.currencies();
+        if (list.length > 0) {
+          const nonBase = list.find((c) => !c.isBase);
+          this.selectCurrency(nonBase || list[0]);
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      },
+    });
+
+    this.ceService.getExchangeRates().pipe(takeUntil(this.destroy$)).subscribe();
+    this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -333,21 +279,21 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     this.selectedCurrency.set(null);
     this.panelView.set('CURRENCY_FORM');
     this.formMode.set('CREATE');
-    this.currencyForm.reset({ decimalPlaces: 2, status: 'ACTIVE', isBaseCurrency: false });
+    this.currencyForm.reset({ decimalPlaces: 2, status: 'ACTIVE', isBase: false });
+    this.currencyForm.get('code')?.enable();
     this.cdr.markForCheck();
   }
 
   private _patchCurrencyForm(c: Currency): void {
     this.currencyForm.patchValue({
-      isoCode: c.isoCode,
+      code: c.code,
       name: c.name,
       symbol: c.symbol,
       decimalPlaces: c.decimalPlaces,
-      isBaseCurrency: c.isBaseCurrency,
+      isBase: c.isBase,
       status: c.status,
     });
-    // ISO code inmutable en edición
-    this.currencyForm.get('isoCode')?.disable();
+    this.currencyForm.get('code')?.disable();
     this.currencyForm.markAsPristine();
   }
 
@@ -358,8 +304,57 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   protected openRateForm(): void {
     if (!this.selectedCurrency()) return;
     this.panelView.set('RATE_FORM');
-    const today = new Date().toISOString().slice(0, 16);
-    this.rateForm.reset({ source: 'MANUAL', targetCurrencyCode: 'MXN', effectiveFrom: today });
+    const today = new Date().toISOString().slice(0, 10);
+    this.banxicoLiveInfo.set(null);
+    this.rateForm.reset({ sourceType: 'MANUAL', effectiveDate: today });
+    this.cdr.markForCheck();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CONSULTA LIVE BANXICO (GET /api/v1/exchange-rates/banxico/live/{seriesId})
+  // ════════════════════════════════════════════════════════════════════════
+
+  protected fetchBanxicoLive(): void {
+    const selCurrency = this.selectedCurrency();
+    const code = selCurrency?.code?.toUpperCase() || 'USD';
+    const seriesId = code === 'EUR' ? 'SF46410' : 'SF57805';
+
+    this.isFetchingBanxico.set(true);
+
+    this.ceService
+      .getBanxicoLiveRate(seriesId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isFetchingBanxico.set(false);
+          if (res.success && res.data) {
+            this.banxicoLiveInfo.set(res.data);
+            
+            // Auto-poblar el formulario permitiendo edición
+            this.rateForm.patchValue({
+              rate: res.data.rate,
+              sourceType: 'CENTRAL_BANK',
+              notes: `Cotización oficial Banxico (${res.data.seriesId}) pub: ${res.data.publicationDate}`,
+            });
+            this.rateForm.markAsDirty();
+
+            this.toast.success(
+              `Valor de ${code} recuperado de Banxico: ${res.data.rate}. Puedes editarlo libremente.`
+            );
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isFetchingBanxico.set(false);
+          this.toast.error('Error al conectar con la API de Banxico.');
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  protected openConverter(): void {
+    this.panelView.set('CONVERTER');
+    this.executeLiveConversion();
     this.cdr.markForCheck();
   }
 
@@ -379,7 +374,7 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // GUARDAR MONEDA
+  // ACCIONES CON MONEDAS
   // ════════════════════════════════════════════════════════════════════════
 
   protected saveCurrency(): void {
@@ -387,121 +382,121 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
 
     const raw = this.currencyForm.getRawValue();
 
-    // Validación de duplicado ISO
-    const isDuplicate = this.ceService.isDuplicateIsoCode(
-      raw.isoCode,
-      this.selectedCurrency()?.id
-    );
-    if (isDuplicate) {
-      this.toast.error(`El código ISO ${raw.isoCode.toUpperCase()} ya existe en el catálogo.`);
-      return;
-    }
-
     if (this.formMode() === 'CREATE') {
+      if (this.ceService.isDuplicateCode(raw.code)) {
+        this.toast.error(`El código de divisa ${raw.code.toUpperCase()} ya existe.`);
+        return;
+      }
       this._doCreateCurrency(raw);
     } else {
       this._doUpdateCurrency(raw);
     }
   }
 
-  private _doCreateCurrency(raw: Record<string, unknown>): void {
+  private _doCreateCurrency(raw: any): void {
     this.isSaving.set(true);
 
     this.ceService
       .createCurrency({
-        organizationId: 'org-4guard-mx-001',
-        isoCode: String(raw['isoCode']).toUpperCase(),
-        name: String(raw['name']),
-        symbol: String(raw['symbol']),
-        decimalPlaces: Number(raw['decimalPlaces']),
-        isBaseCurrency: Boolean(raw['isBaseCurrency']),
-        status: raw['status'] as CurrencyStatus,
-        currentRate: Boolean(raw['isBaseCurrency']) ? 1.0 : 0,
-        freshnessStatus: 'CURRENT',
-        updatedBy: this.currentUserEmail,
+        organizationId: this.selectedCurrency()?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+        code: String(raw.code).toUpperCase(),
+        name: String(raw.name),
+        symbol: String(raw.symbol),
+        isBase: Boolean(raw.isBase),
+        decimalPlaces: Number(raw.decimalPlaces),
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           this.isSaving.set(false);
           this.toast.success(res.message);
-          this.selectCurrency(res.data);
+          if (res.data) this.selectCurrency(res.data);
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.isSaving.set(false);
-          this.toast.error(err.message ?? 'Error al crear la moneda.');
           this.cdr.markForCheck();
         },
       });
   }
 
-  private _doUpdateCurrency(raw: Record<string, unknown>): void {
+  private _doUpdateCurrency(raw: any): void {
     const currency = this.selectedCurrency();
     if (!currency) return;
 
     this.isSaving.set(true);
 
     this.ceService
-      .updateCurrency(
-        currency.id,
-        {
-          name: String(raw['name']),
-          symbol: String(raw['symbol']),
-          decimalPlaces: Number(raw['decimalPlaces']),
-          status: raw['status'] as CurrencyStatus,
-        },
-        this.currentUserEmail
-      )
+      .updateCurrency(currency.id, {
+        name: String(raw.name),
+        symbol: String(raw.symbol),
+        decimalPlaces: Number(raw.decimalPlaces),
+      })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           this.isSaving.set(false);
           this.toast.success(res.message);
-          this.selectedCurrency.set(res.data);
+          if (res.data) this.selectedCurrency.set(res.data);
           this.currencyForm.markAsPristine();
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.isSaving.set(false);
-          this.toast.error(err.message ?? 'Error al actualizar la moneda.');
           this.cdr.markForCheck();
         },
       });
   }
 
-  // ════════════════════════════════════════════════════════════════════════
-  // CAMBIAR ESTADO MONEDA
-  // ════════════════════════════════════════════════════════════════════════
-
   protected toggleCurrencyStatus(currency: Currency): void {
-    if (currency.isBaseCurrency) {
-      this.toast.error('La moneda base no puede inactivarse.');
+    if (currency.isBase) {
+      this.toast.error('La divisa base principal no puede inactivarse.');
       return;
     }
 
-    const newStatus: CurrencyStatus =
-      currency.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const newStatus: CurrencyStatus = currency.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
     this.confirmModalConfig.set({
-      title: `${newStatus === 'INACTIVE' ? 'Inactivar' : 'Activar'} moneda`,
-      message: `¿Deseas ${newStatus === 'INACTIVE' ? 'inactivar' : 'activar'} la moneda <strong>${currency.isoCode} — ${currency.name}</strong>?`,
+      title: `${newStatus === 'INACTIVE' ? 'Inactivar' : 'Activar'} divisa`,
+      message: `¿Deseas ${newStatus === 'INACTIVE' ? 'inactivar' : 'activar'} la divisa <strong>${currency.code} — ${currency.name}</strong>?`,
       confirmLabel: newStatus === 'INACTIVE' ? 'Inactivar' : 'Activar',
       action: () => {
         this.ceService
-          .toggleCurrencyStatus(currency.id, newStatus, this.currentUserEmail)
+          .updateCurrencyStatus(currency.id, newStatus)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (res) => {
               this.toast.success(res.message);
-              // Si es la moneda seleccionada, re-seleccionar
               if (this.selectedCurrency()?.id === currency.id) {
-                this.selectedCurrency.set(res.data);
+                this.selectedCurrency.set({ ...currency, status: newStatus });
               }
               this.cdr.markForCheck();
             },
-            error: (err) => {
-              this.toast.error(err.message ?? 'Error al cambiar estado.');
+          });
+      },
+    });
+
+    this.showConfirmModal.set(true);
+    this.cdr.markForCheck();
+  }
+
+  protected setAsBaseCurrency(currency: Currency): void {
+    if (currency.isBase) return;
+
+    this.confirmModalConfig.set({
+      title: 'Asignar Divisa Base Principal',
+      message: `¿Confirmas establecer <strong>${currency.code} — ${currency.name}</strong> como la Divisa Base de la Organización? Esto desmarcará la divisa base anterior.`,
+      confirmLabel: 'Establecer como Base',
+      action: () => {
+        this.ceService
+          .setBaseCurrency(currency.id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (res) => {
+              this.toast.success(res.message);
+              if (this.selectedCurrency()?.id === currency.id) {
+                this.selectedCurrency.set({ ...currency, isBase: true });
+              }
               this.cdr.markForCheck();
             },
           });
@@ -522,46 +517,88 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     const raw = this.rateForm.value;
     const currency = this.selectedCurrency()!;
 
-    if (raw.targetCurrencyCode === currency.isoCode) {
-      this.toast.error('La moneda origen y destino no pueden ser iguales.');
-      return;
-    }
-
     this.isSaving.set(true);
 
     this.ceService
-      .createExchangeRate(
-        {
-          organizationId: 'org-4guard-mx-001',
-          sourceCurrencyCode: currency.isoCode,
-          targetCurrencyCode: raw.targetCurrencyCode,
-          rate: parseFloat(raw.rate),
-          effectiveFrom: new Date(raw.effectiveFrom).toISOString(),
-          effectiveTo: raw.effectiveTo ? new Date(raw.effectiveTo).toISOString() : null,
-          source: raw.source,
-          reason: raw.reason,
-          observations: raw.observations ?? '',
-          createdBy: this.currentUserEmail,
-          status: 'CURRENT',
-        },
-        this.currentUserEmail
-      )
+      .createExchangeRate({
+        organizationId: currency.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+        fromCurrencyId: currency.id,
+        toCurrencyId: raw.toCurrencyId,
+        rate: parseFloat(raw.rate),
+        effectiveDate: raw.effectiveDate,
+        sourceType: raw.sourceType,
+        notes: raw.notes ?? '',
+      })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           this.isSaving.set(false);
           this.toast.success(res.message);
           this.panelView.set('CURRENCY_FORM');
-          // Refrescar la moneda seleccionada
-          const updated = this.ceService.currencies().find(
-            (c) => c.id === this.selectedCurrency()!.id
-          );
-          if (updated) this.selectedCurrency.set(updated);
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.isSaving.set(false);
-          this.toast.error(err.message ?? 'Error al registrar el tipo de cambio.');
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CALCULADORA
+  // ════════════════════════════════════════════════════════════════════════
+
+  protected updateSimAmount(event: Event): void {
+    const val = parseFloat((event.target as HTMLInputElement).value);
+    this.simAmount.set(isNaN(val) ? 0 : val);
+    this.executeLiveConversion();
+  }
+
+  protected updateSimSource(event: Event): void {
+    this.simSource.set((event.target as HTMLSelectElement).value);
+    this.executeLiveConversion();
+  }
+
+  protected updateSimTarget(event: Event): void {
+    this.simTarget.set((event.target as HTMLSelectElement).value);
+    this.executeLiveConversion();
+  }
+
+  protected swapSimCurrencies(): void {
+    const src = this.simSource();
+    const tgt = this.simTarget();
+    this.simSource.set(tgt);
+    this.simTarget.set(src);
+    this.executeLiveConversion();
+  }
+
+  protected executeLiveConversion(): void {
+    const amount = this.simAmount();
+    const fromCode = this.simSource();
+    const toCode = this.simTarget();
+
+    if (amount <= 0 || !fromCode || !toCode) return;
+
+    this.isConverting.set(true);
+
+    this.ceService
+      .convertCurrency({
+        organizationId: this.selectedCurrency()?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+        fromCode,
+        toCode,
+        amount,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isConverting.set(false);
+          if (res.data) {
+            this.liveConversion.set(res.data);
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isConverting.set(false);
           this.cdr.markForCheck();
         },
       });
@@ -583,30 +620,6 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // SIMULADOR
-  // ════════════════════════════════════════════════════════════════════════
-
-  protected updateSimAmount(event: Event): void {
-    const val = parseFloat((event.target as HTMLInputElement).value);
-    this.simAmount.set(isNaN(val) ? 0 : val);
-  }
-
-  protected updateSimSource(event: Event): void {
-    this.simSource.set((event.target as HTMLSelectElement).value);
-  }
-
-  protected updateSimTarget(event: Event): void {
-    this.simTarget.set((event.target as HTMLSelectElement).value);
-  }
-
-  protected swapSimCurrencies(): void {
-    const src = this.simSource();
-    const tgt = this.simTarget();
-    this.simSource.set(tgt);
-    this.simTarget.set(src);
-  }
-
-  // ════════════════════════════════════════════════════════════════════════
   // FILTROS
   // ════════════════════════════════════════════════════════════════════════
 
@@ -619,7 +632,7 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // UTILIDADES DE TEMPLATE
+  // TEMPLATE HELPERS
   // ════════════════════════════════════════════════════════════════════════
 
   protected trackByCurrencyId(_: number, c: Currency): string {
@@ -634,7 +647,7 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     return a.id;
   }
 
-  protected formatDateMX(isoDate: string): string {
+  protected formatDateMX(isoDate?: string | null): string {
     if (!isoDate) return '—';
     const d = new Date(isoDate);
     return new Intl.DateTimeFormat('es-MX', {
@@ -646,72 +659,18 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     }).format(d);
   }
 
-  protected formatCurrencyAmount(amount: number, code: string): string {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    }).format(amount);
-  }
-
-  protected freshnessClass(status: string): string {
-    const map: Record<string, string> = {
-      CURRENT: 'badge--success',
-      REVIEW_REQUIRED: 'badge--warning',
-      OUTDATED: 'badge--danger',
-    };
-    return map[status] ?? 'badge--neutral';
-  }
-
-  protected rateStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      CURRENT: 'badge--success',
-      SCHEDULED: 'badge--info',
-      HISTORICAL: 'badge--neutral',
-    };
-    return map[status] ?? 'badge--neutral';
-  }
-
-  protected auditActionLabel(action: string): string {
-    const map: Record<string, string> = {
-      CREATE: 'Creación',
-      UPDATE: 'Modificación',
-      ACTIVATE: 'Activación',
-      DEACTIVATE: 'Desactivación',
-      CHANGE_BASE_CURRENCY: 'Cambio de moneda base',
-      CREATE_EXCHANGE_RATE: 'Nuevo tipo de cambio',
-    };
-    return map[action] ?? action;
-  }
-
-  protected auditActionIcon(action: string): string {
-    const map: Record<string, string> = {
-      CREATE: 'add_circle',
-      UPDATE: 'edit',
-      ACTIVATE: 'check_circle',
-      DEACTIVATE: 'cancel',
-      CHANGE_BASE_CURRENCY: 'swap_horiz',
-      CREATE_EXCHANGE_RATE: 'currency_exchange',
-    };
-    return map[action] ?? 'history';
-  }
-
-  /** Retorna lista de monedas excepto la seleccionada (para target del tipo de cambio) */
   protected get availableTargetCurrencies(): Currency[] {
     const sel = this.selectedCurrency();
     return this.ceService
       .currencies()
-      .filter((c) => c.status === 'ACTIVE' && c.isoCode !== sel?.isoCode);
+      .filter((c) => c.status === 'ACTIVE' && c.id !== sel?.id);
   }
 
-  /** Verifica si un campo del currencyForm tiene error visible */
   protected cfError(field: string, error: string): boolean {
     const ctrl = this.currencyForm.get(field);
     return !!(ctrl?.touched && ctrl?.hasError(error));
   }
 
-  /** Verifica si un campo del rateForm tiene error visible */
   protected rfError(field: string, error: string): boolean {
     const ctrl = this.rateForm.get(field);
     return !!(ctrl?.touched && ctrl?.hasError(error));
