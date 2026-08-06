@@ -51,13 +51,13 @@ export interface PriorityFactorResult {
 
 export const PRIORITY_FACTOR_LABELS: Record<PriorityFactorCode, (factor: PriorityFactorResult) => string> = {
   INITIAL_DECLARED_PRIORITY: (f) => `Prioridad declarada al programar (${f.valueText || 'NORMAL'})`,
-  APPOINTMENT_SCHEDULE_DELAY: (f) => `${f.valueNumeric || 0} min de retraso sobre hora programada`,
-  PATIO_WAITING_TIME: (f) => `${f.valueNumeric || 0} min en espera tras registro de arribo`,
+  APPOINTMENT_SCHEDULE_DELAY: (f) => `Desviación respecto a la cita programada: ${f.valueNumeric || 0} min`,
+  PATIO_WAITING_TIME: (f) => `Tiempo acumulado de espera en patio: ${f.valueNumeric || 0} min`,
   MANUAL_OVERRIDE_ACTIVE: () => `Prioridad manual ejecutiva vigente`,
   RECEPTION_TYPE_WEIGHT: (f) => `Tipo de recepción (${f.valueText || 'Nacional'})`,
-  COLD_CHAIN_RISK: () => `Riesgo de cadena de frío (preparado)`,
-  HAZARDOUS_MATERIAL_RISK: () => `Material peligroso (preparado)`,
-  CUSTOMER_SLA_RISK: () => `Riesgo contractual SLA (preparado)`,
+  COLD_CHAIN_RISK: () => `Riesgo de cadena de frío`,
+  HAZARDOUS_MATERIAL_RISK: () => `Material peligroso`,
+  CUSTOMER_SLA_RISK: () => `Riesgo contractual SLA`,
 };
 
 export const PRIORITY_REASON_LABELS: Record<PriorityReasonCode, string> = {

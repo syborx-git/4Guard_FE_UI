@@ -19,8 +19,9 @@ import { ArrivalClearanceStatus, TransportArrivalRecord, ArrivalIncident } from 
 
 @Injectable({ providedIn: 'root' })
 export class ReceptionAppointmentService {
-  private readonly STORAGE_KEY = '4guard_reception_appointments_v1';
-  private readonly AUDIT_KEY = '4guard_reception_audit_v1';
+  private readonly STORAGE_KEY = '4guard_reception_appointments_v2';
+  private readonly AUDIT_KEY = '4guard_reception_audit_v2';
+
 
   // State Signals
   private readonly _appointments = signal<ReceptionAppointment[]>([]);
@@ -52,17 +53,29 @@ export class ReceptionAppointmentService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this._appointments.set(parsed);
-          return;
+          // Validar que la data local tenga la versión con arrivalClearanceStatus en APT-0001
+          const sample = parsed.find((a: any) => a.id === 'APT-0001');
+          if (sample && sample.arrivalClearanceStatus === 'CLEARED') {
+            this._appointments.set(parsed);
+            return;
+          }
         }
       }
     } catch (e) {
       console.warn('Error al rehidratar citas desde localStorage. Usando datos iniciales.', e);
     }
-    // Seed por defecto si está vacío o falla
+    // Seed por defecto si está vacío, desactualizado o falla
+    this.resetToSeedData();
+  }
+
+  /**
+   * Resetea el estado local al seed oficial con 6 escenarios.
+   */
+  resetToSeedData(): void {
     this._appointments.set(INITIAL_APPOINTMENTS_SEED);
     this._saveAppointmentsStorage();
   }
+
 
   /**
    * Rehidrata el historial de auditoría desde localStorage de manera independiente.
@@ -686,6 +699,109 @@ export class ReceptionAppointmentService {
     });
 
     return newAppt;
+  }
+
+  /**
+   * HU-030: Asigna o reserva un muelle a una cita de recepción.
+   */
+  assignDockToAppointment(
+    appointmentId: string,
+    dockCode: string,
+    dockAssignmentStatus: import('../models/dock-assignment.models').DockAssignmentStatus = 'RESERVED',
+    assignedBy = 'OPERATIONS_MANAGER'
+  ): ReceptionAppointment {
+    const appt = this.getAppointmentById(appointmentId);
+    if (!appt) throw new Error(`Cita ${appointmentId} no encontrada.`);
+
+    const now = new Date().toISOString();
+    const updated: ReceptionAppointment = {
+      ...appt,
+      dockNumber: dockCode,
+      dockAssignmentStatus,
+      dockAssignedAt: now,
+      dockAssignedBy: assignedBy,
+      dockReservationExpiresAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+      updatedAt: now,
+      version: (appt.version || 1) + 1,
+    };
+
+    this._appointments.update((list) => list.map((item) => (item.id === appointmentId ? updated : item)));
+    this._saveAppointmentsStorage();
+
+    this._logAudit({
+      appointmentId,
+      action: 'EDIT',
+      previousValues: { dockNumber: appt.dockNumber, dockAssignmentStatus: appt.dockAssignmentStatus },
+      newValues: { dockNumber: dockCode, dockAssignmentStatus },
+      branchId: appt.branchId,
+      reason: `Asignación de muelle ${dockCode} (${dockAssignmentStatus})`,
+    });
+
+    return updated;
+  }
+
+  /**
+   * HU-030: Actualiza el estado del flujo de asignación del muelle (POSITIONING, OCCUPIED, RELEASED).
+   */
+  updateDockAssignmentStatus(
+    appointmentId: string,
+    dockAssignmentStatus: import('../models/dock-assignment.models').DockAssignmentStatus
+  ): ReceptionAppointment {
+    const appt = this.getAppointmentById(appointmentId);
+    if (!appt) throw new Error(`Cita ${appointmentId} no encontrada.`);
+
+    const now = new Date().toISOString();
+    let newApptStatus = appt.status;
+    if (dockAssignmentStatus === 'OCCUPIED') {
+      newApptStatus = 'IN_RECEIVING';
+    } else if (dockAssignmentStatus === 'RELEASED') {
+      newApptStatus = 'COMPLETED';
+    }
+
+    const updated: ReceptionAppointment = {
+      ...appt,
+      status: newApptStatus,
+      dockAssignmentStatus,
+      updatedAt: now,
+      version: (appt.version || 1) + 1,
+    };
+
+    this._appointments.update((list) => list.map((item) => (item.id === appointmentId ? updated : item)));
+    this._saveAppointmentsStorage();
+
+    return updated;
+  }
+
+
+  /**
+   * Registra una entrada personalizada de auditoría desde el Orquestador de Muelles.
+   */
+  logCustomAudit(params: {
+    appointmentId: string;
+    action: AppointmentAuditEntry['action'];
+    previousValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+    reason?: string;
+    userSnapshot: import('../models/dock-assignment.models').DockAuditUserSnapshot;
+  }): void {
+    const appt = this.getAppointmentById(params.appointmentId);
+    const newEntry: AppointmentAuditEntry = {
+      id: `AUD-DOCK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      appointmentId: params.appointmentId,
+      action: params.action,
+      previousValues: params.previousValues,
+      newValues: params.newValues,
+      reason: params.reason,
+      branchId: params.userSnapshot.branchId,
+      performedBy: params.userSnapshot.performedByName,
+      performedByUserId: params.userSnapshot.performedByUserId,
+      performedByRole: params.userSnapshot.performedByRole,
+      capabilitiesUsed: params.userSnapshot.capabilitiesUsed,
+      performedAt: new Date().toISOString(),
+    };
+
+    this._auditLog.update((logs) => [newEntry, ...logs]);
+    this._saveAuditStorage();
   }
 
   /**

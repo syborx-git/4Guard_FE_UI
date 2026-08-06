@@ -100,7 +100,51 @@ export type POAuditAction =
   | 'EXCEPTION_AUTHORIZED'
   | 'VALIDATION_REJECTED'
   | 'MARKED_NOT_REQUIRED'
-  | 'VALIDATION_INVALIDATED';
+  | 'VALIDATION_INVALIDATED'
+  | 'DOCUMENT_UPLOADED'
+  | 'DOCUMENT_REPLACED'
+  | 'DOCUMENT_DOWNLOADED'
+  | 'DOCUMENT_VIEWED'
+  | 'DOCUMENT_VERSION_RESTORED';
+
+/** Modelo RBAC basado en Capacidades Documentales (EVOLUCIÓN V2) */
+export type DocumentCapability =
+  | 'DOCUMENT_VIEW'
+  | 'DOCUMENT_UPLOAD'
+  | 'DOCUMENT_DOWNLOAD'
+  | 'DOCUMENT_REPLACE'
+  | 'DOCUMENT_VERSION_HISTORY'
+  | 'DOCUMENT_DELETE';
+
+/** Representa una versión inalterable del documento original de la OC */
+export interface PODocumentVersion {
+  id: string;
+  versionNumber: number;
+  versionLabel: string; // e.g. 'v1', 'v2'
+  fileName: string;
+  fileSizeFormatted: string;
+  fileType: 'PDF' | 'IMAGE';
+  mimeType: string;
+  fileUrl?: string; // URL blob/object o preview sintético
+  uploadedBy: string;
+  userRole: string;
+  uploadedAt: string;
+  changeReason?: string;
+  source: 'MANUAL_UPLOAD' | 'CAMERA_CAPTURE' | 'ERP_INTEGRATION';
+}
+
+/** Expediente Documental Completo de la Orden de Compra */
+export interface PODocumentRecord {
+  poNumber: string;
+  appointmentId: string;
+  branchId: string;
+  currentVersionNumber: number;
+  activeVersion: PODocumentVersion;
+  versionsHistory: PODocumentVersion[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 export interface POAuditEntry {
   id: string;
@@ -121,11 +165,17 @@ export interface POAuditEntry {
 
 // Labels descriptivos para la UI
 export const PO_VALIDATION_STATUS_LABELS: Record<POValidationStatus, string> = {
-  PENDING: 'Pendiente OC',
-  VALIDATED: 'Validada OC',
-  EXCEPTED: 'Excepción OC',
-  REJECTED: 'Rechazada OC',
-  NOT_REQUIRED: 'No Requerida OC',
+  PENDING: 'Pendiente de Revisión Documental',
+  VALIDATED: 'Aprobada Documentalmente',
+  EXCEPTED: 'Autorizada por Excepción Documental',
+  REJECTED: 'Rechazo Documental',
+  NOT_REQUIRED: 'Sin OC Requerida',
+};
+
+export const PO_COMPARISON_OUTCOME_LABELS: Record<POComparisonOutcome, string> = {
+  MATCH: 'Coincidencia Total (100%)',
+  WITH_DIFFERENCES: 'Diferencias Detectadas',
+  BLOCKED: 'Bloqueo Técnico por Discrepancia',
 };
 
 export const PO_VALIDATION_STATUS_CLASSES: Record<POValidationStatus, string> = {

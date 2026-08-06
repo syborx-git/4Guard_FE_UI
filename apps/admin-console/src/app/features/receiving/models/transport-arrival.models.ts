@@ -119,12 +119,12 @@ export interface ArrivalAuditEntry {
 
 // Etiquetas y Clases CSS para Estados de Liberación de Arribo
 export const ARRIVAL_CLEARANCE_LABELS: Record<ArrivalClearanceStatus, string> = {
-  PENDING: 'CHECK-IN PENDIENTE',
-  CLEARED: 'ARRIBO LIBERADO',
-  REVIEW_REQUIRED: 'ARRIBO EN REVISIÓN',
-  WARNING_CLEARED: 'LIBERADO CON ADVERTENCIA',
-  BLOCKED: 'ARRIBO BLOQUEADO',
-  REJECTED_AT_GATE: 'RECHAZADO EN CASETA',
+  PENDING: 'Check-In Pendiente',
+  CLEARED: 'Ingreso Autorizado',
+  REVIEW_REQUIRED: 'Revisión en Caseta Requerida',
+  WARNING_CLEARED: 'Autorizado con Advertencia',
+  BLOCKED: 'Ingreso Bloqueado en Caseta',
+  REJECTED_AT_GATE: 'Rechazado en Caseta',
 };
 
 export const ARRIVAL_CLEARANCE_CLASSES: Record<ArrivalClearanceStatus, string> = {
@@ -270,4 +270,10 @@ export const ARRIVAL_INCIDENT_POLICY: Record<ArrivalIncidentType, ArrivalInciden
     initialClearance: 'REVIEW_REQUIRED',
     userMessage: 'Incidencia operativa registrada manualmente en caseta.',
   },
+};
+
+export const GATE_DECISION_LABELS: Record<GateDecision, string> = {
+  ADMITTED: 'Admitido a Patio',
+  HELD: 'Retenido para Inspección',
+  REJECTED: 'Rechazado en Acceso',
 };
