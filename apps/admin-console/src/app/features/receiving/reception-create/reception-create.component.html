@@ -1,0 +1,310 @@
+<div class="rc-console">
+  <!-- Top Navigation Header -->
+  <header class="rc-console-header">
+    <div class="rc-header-left">
+      <button class="rc-back-btn" (click)="navigateToCenter()" title="Regresar al Centro de Recepciones">
+        <span class="material-symbols-outlined">arrow_back</span>
+        <span>Centro de Recepciones</span>
+      </button>
+      <div class="rc-header-divider"></div>
+      <div class="rc-header-titles">
+        <span class="rc-phase-badge">FASE 2 — HU-016 · PREPARACIÓN DE EXPEDIENTE</span>
+        <h1 class="rc-console-title">Preparación de Expediente de Recepción</h1>
+      </div>
+    </div>
+    <div class="rc-header-right">
+      <span class="rc-env-badge" title="Etapa A: Validación visual sin persistencia local">ETAPA A · SIN PERSISTENCIA</span>
+    </div>
+  </header>
+
+  <!-- Error Alert -->
+  @if (error()) {
+    <div class="rc-alert rc-alert--danger">
+      <span class="material-symbols-outlined">error</span>
+      <div class="rc-alert-body">
+        <strong>Error de Preparación</strong>
+        <p>{{ error() }}</p>
+      </div>
+      <button class="rc-alert-close" (click)="error.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="rc-loading-container">
+      <div class="rc-spinner"></div>
+      <p>Cargando contexto logístico y documental de la cita...</p>
+    </div>
+  }
+
+  <!-- Main Preparation Console -->
+  @if (!isLoading() && viewModel(); as vm) {
+    <main class="rc-console-body">
+
+      <!-- Header Summary Card -->
+      <div class="rc-summary-card">
+        <div class="rc-summary-grid">
+          <div class="rc-summary-item">
+            <span class="rc-summary-label">Cita de Recepción</span>
+            <span class="rc-summary-value">{{ vm.appointmentId }}</span>
+            <span class="rc-summary-sub">ASN: {{ vm.asnReference }}</span>
+          </div>
+          <div class="rc-summary-item">
+            <span class="rc-summary-label">Orden de Compra (OC)</span>
+            <span class="rc-summary-value">{{ vm.poNumber }}</span>
+            <span class="rc-summary-sub">Cliente: {{ vm.clientName }}</span>
+          </div>
+          <div class="rc-summary-item">
+            <span class="rc-summary-label">Proveedor / Emisor</span>
+            <span class="rc-summary-value">{{ vm.supplierName }}</span>
+            <span class="rc-summary-sub">Transportista: {{ vm.carrierName }}</span>
+          </div>
+          <div class="rc-summary-item">
+            <span class="rc-summary-label">Vehículo & Muelle</span>
+            <span class="rc-summary-value">{{ vm.dockInfo.label }}</span>
+            <span class="rc-summary-sub">Placas: {{ vm.vehiclePlates }} {{ vm.driverName ? '· Chófer: ' + vm.driverName : '' }}</span>
+          </div>
+          <div class="rc-summary-item rc-summary-item--folio">
+            <span class="rc-summary-label">Folio Oficial de Recepción</span>
+            <span class="rc-summary-value rc-summary-value--pending">Será asignado por el servidor</span>
+            <span class="rc-summary-sub">Pendiente de transacción en servidor</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Readiness & Prerequisites Cards Grid -->
+      <div class="rc-sections-grid">
+
+        <!-- Column 1: Readiness & Prerrequisitos de Fase 1 -->
+        <div class="rc-card rc-card--prereqs">
+          <div class="rc-card-header">
+            <div class="rc-card-title">
+              <span class="material-symbols-outlined">fact_check</span>
+              <h3>Prerrequisitos de Preparación Operativa</h3>
+            </div>
+            <div class="rc-readiness-chip" [class]="vm.operationalReadiness.overallClass">
+              <span class="material-symbols-outlined">
+                {{ vm.operationalReadiness.overallState === 'READY' ? 'verified' : (vm.operationalReadiness.overallState === 'READY_WITH_WARNINGS' ? 'warning' : 'block') }}
+              </span>
+              <span>{{ vm.operationalReadiness.overallLabel }}</span>
+            </div>
+          </div>
+
+          <div class="rc-card-content">
+            <ul class="rc-reqs-list">
+              @for (req of vm.operationalReadiness.requirements; track req.name) {
+                <li class="rc-req-item">
+                  <span class="material-symbols-outlined rc-req-icon" [class]="'icon--' + req.status.toLowerCase()">
+                    {{ req.status === 'SUCCESS' ? 'check_circle' : (req.status === 'WARNING' ? 'warning' : (req.status === 'BLOCKED' ? 'cancel' : 'help')) }}
+                  </span>
+                  <div class="rc-req-info">
+                    <span class="rc-req-name">{{ req.name }}</span>
+                    <span class="rc-req-detail">{{ req.detail }}</span>
+                  </div>
+                </li>
+              }
+            </ul>
+
+            <div class="rc-extra-verifications">
+              <!-- Sucursal del Usuario (NOT_VERIFIABLE) -->
+              <div class="rc-verif-box rc-verif-box--not-verifiable">
+                <div class="rc-verif-header">
+                  <span class="material-symbols-outlined">help_center</span>
+                  <strong>Verificación de Sucursal del Usuario</strong>
+                  <span class="rc-badge rc-badge--not-verifiable">NOT_VERIFIABLE</span>
+                </div>
+                <p class="rc-verif-detail">{{ vm.branchVerification.reason }}</p>
+                <span class="rc-verif-sub">Cita: {{ vm.branchName }} ({{ vm.branchId }})</span>
+              </div>
+
+              <!-- Permisos de Usuario -->
+              <div class="rc-verif-box" [class]="vm.hasCreatePermission ? 'rc-verif-box--success' : 'rc-verif-box--danger'">
+                <div class="rc-verif-header">
+                  <span class="material-symbols-outlined">{{ vm.hasCreatePermission ? 'admin_panel_settings' : 'lock' }}</span>
+                  <strong>Capacidad RECEIVING_CREATE</strong>
+                  <span class="rc-badge" [class]="vm.hasCreatePermission ? 'rc-badge--success' : 'rc-badge--danger'">
+                    {{ vm.hasCreatePermission ? 'AUTORIZADO' : 'NO AUTORIZADO' }}
+                  </span>
+                </div>
+                <p class="rc-verif-detail">
+                  {{ vm.hasCreatePermission ? 'Su usuario cuenta con el permiso RECEIVING_CREATE para validar el expediente.' : 'Acción no autorizada: Falta el permiso RECEIVING_CREATE en su token.' }}
+                </p>
+              </div>
+
+              <!-- Prioridad Operativa -->
+              <div class="rc-verif-box rc-verif-box--info">
+                <div class="rc-verif-header">
+                  <span class="material-symbols-outlined">priority_high</span>
+                  <strong>Prioridad Operativa: {{ vm.priorityInfo.level }}</strong>
+                  <span class="rc-badge rc-badge--info">{{ vm.priorityInfo.isVerifiable ? 'VERIFICADA' : 'NO VERIFICABLE' }}</span>
+                </div>
+                <p class="rc-verif-detail">Origen: {{ vm.priorityInfo.origin }}</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Column 2: Advertencias Heredadas -->
+        <div class="rc-card rc-card--warnings">
+          <div class="rc-card-header">
+            <div class="rc-card-title">
+              <span class="material-symbols-outlined">report_problem</span>
+              <h3>Advertencias y Observaciones Heredadas</h3>
+            </div>
+            <span class="rc-count-pill">{{ vm.warnings.length }} {{ vm.warnings.length === 1 ? 'registrada' : 'registradas' }}</span>
+          </div>
+
+          <div class="rc-card-content">
+            @if (vm.warnings.length === 0) {
+              <div class="rc-empty-warnings">
+                <span class="material-symbols-outlined">sentiment_satisfied</span>
+                <p>No hay advertencias registradas en las etapas previas de Fase 1.</p>
+              </div>
+            } @else {
+              <ul class="rc-warnings-list">
+                @for (warn of vm.warnings; track warn.code) {
+                  <li class="rc-warning-item" [class]="'warning--' + warn.severity.toLowerCase()">
+                    <span class="material-symbols-outlined rc-warn-icon">
+                      {{ warn.severity === 'WARNING' ? 'warning' : 'info' }}
+                    </span>
+                    <div class="rc-warn-body">
+                      <div class="rc-warn-title">
+                        <strong>[{{ warn.source }}] {{ warn.code }}</strong>
+                      </div>
+                      <p class="rc-warn-text">{{ warn.label }}</p>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Lines Breakdown Table Section -->
+      <section class="rc-card rc-card--lines">
+        <div class="rc-card-header">
+          <div class="rc-card-title">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <h3>Desglose de Líneas Esperadas (Cita vs Orden de Compra)</h3>
+          </div>
+          <div class="rc-po-badge" [class]="vm.isPoEligible ? 'po-chip--released' : 'po-chip--rejected'">
+            <span>Elegibilidad OC: {{ vm.poStatusLabel }}</span>
+          </div>
+        </div>
+
+        <div class="rc-card-content">
+          <div class="rc-table-wrapper">
+            <table class="rc-lines-table">
+              <thead>
+                <tr>
+                  <th>Estado Cruce</th>
+                  <th>ID Línea / SKU</th>
+                  <th>Descripción del Producto</th>
+                  <th>Unidad</th>
+                  <th class="text-right">OC Total Auth</th>
+                  <th class="text-right">Recibido Previo</th>
+                  <th class="text-right">Saldo OC</th>
+                  <th class="text-right">Anunciada en Cita</th>
+                  <th>Notas de Cruce</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of vm.lines; track line.lineId) {
+                  <tr [class]="'row--' + line.matchingStatus.toLowerCase()">
+                    <td>
+                      <span class="rc-match-chip" [class]="'chip--' + line.matchingStatus.toLowerCase()">
+                        <span class="material-symbols-outlined">
+                          {{ line.matchingStatus === 'MATCHED' ? 'check_circle' : (line.matchingStatus === 'UNMATCHED' ? 'warning' : 'help') }}
+                        </span>
+                        {{ line.matchingStatus }}
+                      </span>
+                    </td>
+                    <td class="cell-sku">
+                      <strong>{{ line.sku }}</strong>
+                      <span class="cell-sub">{{ line.lineId }}</span>
+                    </td>
+                    <td>{{ line.description }}</td>
+                    <td><span class="rc-unit-tag">{{ line.unit }}</span></td>
+                    <td class="text-right font-mono">{{ line.authorizedQty }}</td>
+                    <td class="text-right font-mono">{{ line.previouslyReceivedQty }}</td>
+                    <td class="text-right font-mono highlight-pending">{{ line.pendingQty }}</td>
+                    <td class="text-right font-mono">
+                      @if (line.expectedQty !== null) {
+                        <span class="highlight-expected">{{ line.expectedQty }}</span>
+                      } @else {
+                        <span class="rc-no-expected">No anunciada en esta cita</span>
+                      }
+                    </td>
+                    <td class="cell-note">{{ line.matchingNote }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Post-Validation Banner (Only when isValidated is true) -->
+      @if (isValidated()) {
+        <div class="rc-validated-banner" [class.rc-validated-banner--unverified]="vm.branchVerification.status === 'NOT_VERIFIABLE'">
+          <span class="material-symbols-outlined banner-icon">
+            {{ vm.branchVerification.status === 'NOT_VERIFIABLE' ? 'rule' : 'verified_user' }}
+          </span>
+          <div class="banner-content">
+            <h4>Preparación Visual Validada (Front-end)</h4>
+            <p>{{ validationMessage() }}</p>
+            <span class="banner-sub">Folio oficial: Será asignado por el servidor backend al procesar la creación transaccional.</span>
+          </div>
+        </div>
+      }
+
+      <!-- Main Action Bar -->
+      <footer class="rc-action-bar">
+        <div class="rc-action-info">
+          <span class="rc-action-note">
+            <span class="material-symbols-outlined">info</span>
+            Etapa A: La validación no altera inventario, no muta FSM y no persiste registros locales.
+          </span>
+        </div>
+        <div class="rc-action-buttons">
+          <button class="rc-btn rc-btn--secondary" (click)="navigateToCenter()">
+            Regresar al Centro
+          </button>
+          <button
+            class="rc-btn rc-btn--primary"
+            [disabled]="!vm.hasCreatePermission || !vm.isPoEligible || vm.operationalReadiness.overallState === 'BLOCKED' || isValidated()"
+            (click)="validateExpedient()"
+          >
+            <span class="material-symbols-outlined">playlist_add_check</span>
+            <span>{{ isValidated() ? 'Preparación Validada' : 'Validar expediente para creación' }}</span>
+          </button>
+        </div>
+      </footer>
+
+      <!-- Collapsible Technical Panel (Dev/QA Tool ONLY) -->
+      <div class="rc-tech-accordion">
+        <button class="rc-tech-toggle-btn" (click)="toggleTechnicalPanel()">
+          <span class="material-symbols-outlined">{{ showTechnicalPanel() ? 'keyboard_arrow_down' : 'chevron_right' }}</span>
+          <span>{{ showTechnicalPanel() ? 'Ocultar Panel Técnico Dev/QA' : 'Ver Previsualización Técnica CreateReceptionCommand (JSON)' }}</span>
+        </button>
+
+        @if (showTechnicalPanel()) {
+          <div class="rc-tech-content">
+            <div class="rc-tech-header">
+              <span class="rc-tech-label">Herramienta de Desarrollo & QA — DTO del Comando Transaccional (CreateReceptionCommand)</span>
+              <button class="rc-btn-copy" (click)="copyCommandJson()">
+                <span class="material-symbols-outlined">content_copy</span>
+                <span>Copiar JSON</span>
+              </button>
+            </div>
+            <pre class="rc-json-code"><code>{{ commandJson() }}</code></pre>
+          </div>
+        }
+      </div>
+
+    </main>
+  }
+</div>

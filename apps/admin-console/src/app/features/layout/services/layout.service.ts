@@ -207,14 +207,14 @@ export class LayoutService {
           }));
 
           return {
-            id: entry.logId,
+            id: entry.logId || entry.id || `AUD-${Date.now()}`,
             locationId: id,
             action: entry.action,
             summary,
             performedBy: entry.username || 'Sistema WMS',
-            performedAt: entry.createdAt,
+            performedAt: entry.performedAt || entry.createdAt || new Date().toISOString(),
             username: entry.username || 'Sistema WMS',
-            createdAt: entry.createdAt,
+            createdAt: entry.createdAt || entry.performedAt || new Date().toISOString(),
             details: friendlyDetails,
             timelineIcon: icon,
             timelineColor: color,
@@ -248,7 +248,7 @@ export class LayoutService {
 
   // ── Mappers Privados ───────────────────────────────────────────────────────
 
-  private mapLocationToWarehouseLocation(loc: Location | LocationResponse): WarehouseLocation {
+  private mapLocationToWarehouseLocation(loc: any): WarehouseLocation {
     const maxCap = loc.capacityUnits || 1;
     const currentOcc = loc.currentOccupancy ?? 0;
     const occPct = Math.min(100, Math.round((currentOcc / maxCap) * 100));
@@ -271,7 +271,7 @@ export class LayoutService {
       coordX: loc.coordX,
       coordY: loc.coordY,
       coordZ: loc.coordZ,
-      locationType: (loc.type as LocationType) || 'PALLET',
+      locationType: (loc.type as any) || 'PALLET',
       maxCapacity: maxCap,
       currentOccupancy: currentOcc,
       occupancyPercentage: occPct,

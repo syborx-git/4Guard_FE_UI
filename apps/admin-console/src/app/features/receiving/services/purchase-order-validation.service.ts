@@ -140,6 +140,19 @@ export class PurchaseOrderValidationService {
   }
 
   /**
+   * Obtiene la auditoría filtrada para una cita u Orden de Compra específica.
+   */
+  getAuditByAppointment(appointmentId: string, poNumber?: string): POAuditEntry[] {
+    const logs = this._poAuditLog();
+    return logs.filter((log) => {
+      const matchAppt = log.appointmentId === appointmentId;
+      const matchPO = poNumber && log.poNumber.trim().toUpperCase() === poNumber.trim().toUpperCase();
+      return matchAppt || matchPO;
+    });
+  }
+
+
+  /**
    * Calcula la huella digital (sourceFingerprint) de los datos fuente comparados.
    */
   computeSourceFingerprint(appointment: ReceptionAppointment, po?: PurchaseOrder): string {

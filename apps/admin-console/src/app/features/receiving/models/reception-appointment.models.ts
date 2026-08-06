@@ -91,6 +91,19 @@ export interface ReceptionAppointment {
   arrivalIncidentsCount?: number;
   openArrivalIncidentsCount?: number;
 
+  // HU-026: Priorización Operativa de Recepciones
+  systemSuggestedPriority?: PriorityLevel;
+  priorityDecision?: import('./reception-priority.models').ReceptionPriorityDecision;
+  priorityUpdatedAt?: string;
+
+  // HU-030: Asignación Operativa de Muelle de Descarga
+  dockAssignmentStatus?: import('./dock-assignment.models').DockAssignmentStatus;
+  dockAssignedAt?: string;
+  dockAssignedBy?: string;
+  dockReservationExpiresAt?: string;
+
+  version?: number; // Para control de concurrencia optimista
+
   createdAt: string;
   createdBy: string;
   updatedAt?: string;
@@ -110,12 +123,29 @@ export interface AppointmentAuditEntry {
     | 'MARK_NO_SHOW'
     | 'REJECT'
     | 'UPDATE_PROGRESS'
-    | 'CLONE_NEW';
+    | 'CLONE_NEW'
+    | 'PRIORITY_ASSIGNED'
+    | 'PRIORITY_CHANGED'
+    | 'PRIORITY_ESCALATED'
+    | 'PRIORITY_DOWNGRADED'
+    | 'PRIORITY_OVERRIDE_EXPIRED'
+    | 'PRIORITY_OVERRIDE_REVERTED'
+    | 'DOCK_RESERVED'
+    | 'DOCK_REASSIGNED'
+    | 'DOCK_POSITIONING_STARTED'
+    | 'DOCK_OCCUPIED'
+    | 'DOCK_RELEASED'
+    | 'DOCK_RESERVATION_EXPIRED'
+    | 'DOCK_OVERRIDE_APPLIED'
+    | 'DOCK_ASSIGNMENT_BLOCKED';
   previousValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
   reason?: string;
   branchId: string;
   performedBy: string;
+  performedByUserId?: string;
+  performedByRole?: string;
+  capabilitiesUsed?: string[];
   performedAt: string;
 }
 

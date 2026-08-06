@@ -188,6 +188,116 @@
 
         </div>
 
+        <!-- Botón menú waffle (4 cubos) -->
+        <div class="shell__waffle-container">
+          <button
+            id="waffle-menu-btn"
+            type="button"
+            class="shell__header-btn shell__header-btn--waffle"
+            [class.shell__header-btn--waffle-active]="showWaffleMenu()"
+            (click)="toggleWaffleMenu($event)"
+            aria-label="Ecosistema de aplicaciones 4GUARD WMS"
+            title="Ecosistema de aplicaciones WMS">
+            <span class="material-symbols-outlined">apps</span>
+          </button>
+
+          <!-- Waffle Popup Dropdown -->
+          @if (showWaffleMenu()) {
+            <div class="waffle-popup" (click)="$event.stopPropagation()">
+              
+              <!-- Popup Header -->
+              <div class="waffle-popup__header">
+                <div class="waffle-popup__title-group">
+                  <h3 class="waffle-popup__title">TUS FAVORITOS</h3>
+                  <span class="waffle-popup__tag">GOOGLE & WMS</span>
+                </div>
+                <button
+                  type="button"
+                  class="waffle-popup__edit-btn"
+                  (click)="onEditFavorites()"
+                  title="Personalizar accesos directos">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="waffle-popup__search-box">
+                <span class="material-symbols-outlined waffle-popup__search-icon">search</span>
+                <input
+                  type="text"
+                  class="waffle-popup__search-input"
+                  placeholder="Buscar aplicación o servicio..."
+                  [value]="waffleSearchQuery()"
+                  (input)="onWaffleSearchInput($event)"
+                />
+                @if (waffleSearchQuery()) {
+                  <button type="button" class="waffle-popup__search-clear" (click)="clearWaffleSearch()">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                }
+              </div>
+
+              <!-- Filter Tabs (Pills) -->
+              <div class="waffle-popup__tabs">
+                <button
+                  type="button"
+                  class="waffle-popup__tab"
+                  [class.waffle-popup__tab--active]="waffleActiveTab() === 'all'"
+                  (click)="setWaffleTab('all')">
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  class="waffle-popup__tab"
+                  [class.waffle-popup__tab--active]="waffleActiveTab() === 'google'"
+                  (click)="setWaffleTab('google')">
+                  Google Suite
+                </button>
+                <button
+                  type="button"
+                  class="waffle-popup__tab"
+                  [class.waffle-popup__tab--active]="waffleActiveTab() === 'wms'"
+                  (click)="setWaffleTab('wms')">
+                  Módulos WMS
+                </button>
+              </div>
+
+              <!-- Section Header -->
+              <div class="waffle-popup__section-label">FAVORITOS DESTACADOS</div>
+
+              <!-- Apps Grid -->
+              <div class="waffle-popup__grid">
+                @for (item of filteredWaffleItems(); track item.id) {
+                  <div
+                    class="waffle-card"
+                    (click)="onWaffleItemClick(item)"
+                    [attr.title]="item.name">
+                    <div class="waffle-card__icon-box" [style.background]="item.iconBg">
+                      <span class="material-symbols-outlined waffle-card__icon">{{ item.icon }}</span>
+                      @if (item.badge) {
+                        <span class="waffle-card__badge" [style.background]="item.badgeBg || '#d4af37'">
+                          {{ item.badge }}
+                        </span>
+                      }
+                    </div>
+                    <span class="waffle-card__label">{{ item.name }}</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Popup Footer -->
+              <div class="waffle-popup__footer">
+                <div class="waffle-popup__footer-brand">
+                  <span class="material-symbols-outlined waffle-popup__footer-icon">auto_awesome</span>
+                  <span>ECOSISTEMA 4GUARD WMS</span>
+                </div>
+                <span class="waffle-popup__footer-version">V2.8.14</span>
+              </div>
+
+            </div>
+          }
+        </div>
+
         <!-- Botón claro / oscuro -->
         <button
           id="theme-toggle-btn"

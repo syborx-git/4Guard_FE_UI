@@ -1,0 +1,227 @@
+@if (isOpen && appointment) {
+  <div class="dock-drawer-overlay" (click)="onClose()"></div>
+  <aside class="dock-drawer" role="dialog" aria-modal="true" aria-labelledby="dock-drawer-title">
+
+    <!-- HEADER FIJO -->
+    <header class="dock-drawer__header">
+      <div class="dock-drawer__title-wrap">
+        <span class="material-symbols-outlined dock-drawer__icon" aria-hidden="true">meeting_room</span>
+        <div>
+          <h3 id="dock-drawer-title" class="dock-drawer__title">ASIGNACIÓN OPERATIVA DE MUELLE</h3>
+          <p class="dock-drawer__subtitle">
+            Cita <strong>{{ appointment.id }}</strong> ({{ appointment.asnReference }}) · {{ appointment.supplierName }}
+          </p>
+        </div>
+      </div>
+      <button type="button" class="dock-drawer__close" (click)="onClose()" aria-label="Cerrar asistente de muelle">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <!-- CUERPO CON SCROLL -->
+    <div class="dock-drawer__body">
+
+      <!-- MENSAJES DE ALERTA -->
+      @if (errorMessage()) {
+        <div class="dock-alert dock-alert--danger" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      @if (successMessage()) {
+        <div class="dock-alert dock-alert--success" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+          <span>{{ successMessage() }}</span>
+        </div>
+      }
+
+      <!-- RESUMEN DE COMPUERTAS Y DATOS DE LA CITA -->
+      <section class="dock-summary-card">
+        <div class="dock-summary-grid">
+          <div class="dock-summary-item">
+            <span class="lbl">Sucursal</span>
+            <strong>{{ appointment.branchName }}</strong>
+          </div>
+          <div class="dock-summary-item">
+            <span class="lbl">Transportista / Placas</span>
+            <strong>{{ appointment.carrierName }} ({{ appointment.arrivalData?.actualPlates || appointment.expectedPlates }})</strong>
+          </div>
+          <div class="dock-summary-item">
+            <span class="lbl">Check-In Caseta (HU-027)</span>
+            <span class="dock-tag" [class.dock-tag--success]="appointment.arrivalClearanceStatus === 'CLEARED' || appointment.arrivalClearanceStatus === 'WARNING_CLEARED'" [class.dock-tag--danger]="appointment.arrivalClearanceStatus !== 'CLEARED' && appointment.arrivalClearanceStatus !== 'WARNING_CLEARED'">
+              {{ (appointment.arrivalClearanceStatus === 'CLEARED' || appointment.arrivalClearanceStatus === 'WARNING_CLEARED') ? '✔ Admitido en Caseta' : '⚠ Check-In Pendiente/Rechazado' }}
+            </span>
+
+          </div>
+          <div class="dock-summary-item">
+            <span class="lbl">Validación OC (HU-029)</span>
+            <span class="dock-tag" [class.dock-tag--success]="appointment.poValidationStatus === 'VALIDATED' || appointment.poValidationStatus === 'EXCEPTED'" [class.dock-tag--neutral]="appointment.poValidationStatus === 'NOT_REQUIRED'">
+              {{ appointment.poValidationStatus || 'PENDING' }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. COMPUERTAS DE ELEGIBILIDAD (Hard Gates) -->
+      @if (!eligibility().isEligible) {
+        <div class="dock-blocker-card" role="alert">
+          <div class="dock-blocker-head">
+            <span class="material-symbols-outlined" aria-hidden="true">block</span>
+            <div>
+              <strong>Asignación Bloqueada por Compuertas Operativas</strong>
+              <p>El vehículo no cumple los requisitos previos obligatorios para recibir asignación de muelle.</p>
+            </div>
+          </div>
+          <ul class="dock-blocker-list">
+            @for (b of eligibility().blockers; track b) {
+              <li>{{ b }}</li>
+            }
+          </ul>
+        </div>
+      } @else {
+
+        <!-- 2. OPERATIONAL DOCK RECOMMENDATION ENGINE -->
+        @if (recommendation(); as rec) {
+          @if (rec.category !== 'UNAVAILABLE') {
+            <div class="dock-engine-card">
+              <div class="dock-engine-head">
+                <span class="material-symbols-outlined" aria-hidden="true">psychology</span>
+                <div class="dock-engine-title-wrap">
+                  <span class="dock-engine-badge">Recomendación Óptima</span>
+                  <h4 class="dock-engine-title">Muelle {{ rec.suggestedDockCode }}</h4>
+                </div>
+              </div>
+
+              <div class="dock-engine-reasons">
+                <span class="lbl">Motivos del Operational Dock Recommendation Engine:</span>
+                <ul>
+                  @for (r of rec.reasons; track r) {
+                    <li>✔ {{ r }}</li>
+                  }
+                </ul>
+              </div>
+
+              <div class="dock-engine-actions">
+                <button type="button" class="rc-btn rc-btn--gold" (click)="acceptRecommendation()">
+                  <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+                  Aceptar Recomendación
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="dock-alert dock-alert--warning">
+              <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+              <span>No existen muelles disponibles actualmente en la sucursal. Todos los muelles están ocupados o en mantenimiento.</span>
+            </div>
+          }
+        }
+
+        <!-- 3. SELECTOR VISUAL DE MUELLES DE LA SUCURSAL -->
+        <section class="dock-grid-section">
+          <h4 class="dock-section-title">
+            <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+            Selección Manual de Muelle de Descarga
+          </h4>
+
+          <div class="dock-cards-grid">
+            @for (dock of branchDocks(); track dock.id) {
+              <div
+                class="dock-card"
+                [class.dock-card--selected]="selectedDockCode() === dock.code"
+                [class.dock-card--suggested]="suggestedDockCode() === dock.code"
+                [class.dock-card--occupied]="dock.operationalStatus === 'OCCUPIED'"
+                [class.dock-card--reserved]="dock.operationalStatus === 'RESERVED'"
+                [class.dock-card--maintenance]="dock.operationalStatus === 'MAINTENANCE' || dock.operationalStatus === 'BLOCKED'"
+                (click)="selectDock(dock.code, dock.operationalStatus, dock.reservedAppointmentId)">
+                
+                <div class="dock-card-head">
+                  <strong class="dock-card-code">{{ dock.displayName }}</strong>
+                  <span class="dock-status-badge" [class.badge--available]="dock.operationalStatus === 'AVAILABLE'" [class.badge--occupied]="dock.operationalStatus === 'OCCUPIED'" [class.badge--reserved]="dock.operationalStatus === 'RESERVED'" [class.badge--blocked]="dock.operationalStatus === 'MAINTENANCE' || dock.operationalStatus === 'BLOCKED'">
+                    {{ dock.operationalStatus === 'AVAILABLE' ? 'Disponible' : (dock.operationalStatus === 'OCCUPIED' ? 'Ocupado' : (dock.operationalStatus === 'RESERVED' ? 'Reservado' : 'Mantenimiento')) }}
+                  </span>
+                </div>
+
+                @if (suggestedDockCode() === dock.code) {
+                  <span class="dock-tag-sug">★ Recomendado</span>
+                }
+
+                @if (dock.operationalStatus === 'OCCUPIED') {
+                  <span class="dock-card-sub">Tráiler en descarga · Cita {{ dock.currentAppointmentId }}</span>
+                } @else if (dock.operationalStatus === 'RESERVED') {
+                  <span class="dock-card-sub" [class.sub--expired]="getDockReservationStatusInfo(dock).isExpired">{{ getDockReservationStatusInfo(dock).label }}</span>
+                } @else if (dock.operationalStatus === 'AVAILABLE') {
+                  <span class="dock-card-sub">Libre para posicionamiento</span>
+                }
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- 4. FORMULARIO DE EXCEPCIÓN HUMANA (Si difiere del recomendado) -->
+        @if (isManualOverride()) {
+          <div class="dock-override-card">
+            <div class="dock-override-head">
+              <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+              <strong>Justificación de Excepción de Muelle Requerida</strong>
+            </div>
+            <p class="dock-override-desc">
+              Ha seleccionado el <strong>Muelle {{ selectedDockCode() }}</strong> en lugar del recomendado (<strong>Muelle {{ suggestedDockCode() }}</strong>). Registre el motivo de supervisión.
+            </p>
+
+            <div class="po-form-field">
+              <label class="rc-label">Motivo de Excepción <span class="rc-req">*</span></label>
+              <select class="rc-select" [value]="overrideReasonCode()" (change)="overrideReasonCode.set($any($event.target).value)">
+                <option value="">-- Seleccionar Motivo de Excepción --</option>
+                @for (opt of overrideReasonOptions; track opt.key) {
+                  <option [value]="opt.key">{{ opt.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="po-form-field" style="margin-top: 0.5rem;">
+              <label class="rc-label">Observaciones Adicionales</label>
+              <input type="text" class="rc-input" placeholder="Detalle adicional de supervisión..." [value]="overrideReasonNotes()" (input)="overrideReasonNotes.set($any($event.target).value)" />
+            </div>
+          </div>
+        }
+
+      }
+
+    </div>
+
+    <!-- FOOTER FIJO CON ACCIONES -->
+    <footer class="dock-drawer__footer">
+      <button type="button" class="rc-btn rc-btn--secondary" (click)="onClose()">
+        Cancelar
+      </button>
+
+      @if (eligibility().isEligible) {
+        @if ((appointment.dockAssignmentStatus === 'RESERVED' || appointment.dockAssignmentStatus === 'ASSIGNED') && canConfirmPositioning()) {
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="confirmPositioning()" [disabled]="isSubmitting()">
+            <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+            Iniciar Traslado a Muelle
+          </button>
+        }
+
+        @if (appointment.dockAssignmentStatus === 'POSITIONING' && canConfirmOccupancy()) {
+          <button type="button" class="rc-btn rc-btn--gold" (click)="confirmOccupancy()" [disabled]="isSubmitting()">
+            <span class="material-symbols-outlined" aria-hidden="true">precision_manufacturing</span>
+            Confirmar Ocupación de Muelle
+          </button>
+        } @else if (appointment.dockAssignmentStatus === 'OCCUPIED' && canRelease()) {
+          <button type="button" class="rc-btn rc-btn--warning-ghost" (click)="releaseDock()" [disabled]="isSubmitting()">
+            <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+            Liberar Muelle {{ appointment.dockNumber }}
+          </button>
+        } @else if (canAssign()) {
+          <button type="button" class="rc-btn rc-btn--gold" [disabled]="isSubmitting() || !selectedDockCode()" (click)="confirmAssignment()">
+            <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
+            {{ appointment.dockNumber && appointment.dockNumber !== selectedDockCode() ? 'Reasignar a Muelle ' + selectedDockCode() : 'Reservar Muelle ' + selectedDockCode() }}
+          </button>
+        }
+      }
+    </footer>
+
+  </aside>
+}

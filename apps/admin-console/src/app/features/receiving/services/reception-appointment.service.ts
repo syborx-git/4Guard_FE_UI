@@ -9,16 +9,19 @@ import {
   ReceptionAppointment,
   AppointmentAuditEntry,
   AppointmentStatus,
+  PriorityLevel,
   ReceptionProgress,
   ArrivalData,
   INITIAL_APPOINTMENTS_SEED,
 } from '../models/reception-appointment.models';
+import { ReceptionPriorityDecision } from '../models/reception-priority.models';
 import { ArrivalClearanceStatus, TransportArrivalRecord, ArrivalIncident } from '../models/transport-arrival.models';
 
 @Injectable({ providedIn: 'root' })
 export class ReceptionAppointmentService {
-  private readonly STORAGE_KEY = '4guard_reception_appointments_v1';
-  private readonly AUDIT_KEY = '4guard_reception_audit_v1';
+  private readonly STORAGE_KEY = '4guard_reception_appointments_v2';
+  private readonly AUDIT_KEY = '4guard_reception_audit_v2';
+
 
   // State Signals
   private readonly _appointments = signal<ReceptionAppointment[]>([]);
@@ -50,17 +53,29 @@ export class ReceptionAppointmentService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this._appointments.set(parsed);
-          return;
+          // Validar que la data local tenga la versión con arrivalClearanceStatus en APT-0001
+          const sample = parsed.find((a: any) => a.id === 'APT-0001');
+          if (sample && sample.arrivalClearanceStatus === 'CLEARED') {
+            this._appointments.set(parsed);
+            return;
+          }
         }
       }
     } catch (e) {
       console.warn('Error al rehidratar citas desde localStorage. Usando datos iniciales.', e);
     }
-    // Seed por defecto si está vacío o falla
+    // Seed por defecto si está vacío, desactualizado o falla
+    this.resetToSeedData();
+  }
+
+  /**
+   * Resetea el estado local al seed oficial con 6 escenarios.
+   */
+  resetToSeedData(): void {
     this._appointments.set(INITIAL_APPOINTMENTS_SEED);
     this._saveAppointmentsStorage();
   }
+
 
   /**
    * Rehidrata el historial de auditoría desde localStorage de manera independiente.
@@ -532,6 +547,113 @@ export class ReceptionAppointmentService {
   }
 
   /**
+   * HU-026: Actualiza la prioridad de una cita de recepción.
+   * La prioridad aplicada vive directamente en appointment.priority (Fuente de verdad).
+   * Mantiene soporte de concurrencia optimista mediante expectedUpdatedAt/version.
+   */
+  updateAppointmentPriority(
+    id: string,
+    newPriority: PriorityLevel,
+    decision: ReceptionPriorityDecision,
+    expectedUpdatedAt?: string,
+    userContext?: { userId: string; userName: string; role: string; branchId: string }
+  ): { success: boolean; error?: string } {
+    const appt = this.getAppointmentById(id);
+    if (!appt) {
+      return { success: false, error: `La cita ${id} no fue encontrada.` };
+    }
+
+    // Control de concurrencia optimista (preparado para backend futuro)
+    if (expectedUpdatedAt && appt.updatedAt && appt.updatedAt !== expectedUpdatedAt) {
+      return {
+        success: false,
+        error: 'La cita fue modificada por otro usuario mientras revisaba la prioridad. Por favor actualice los datos.',
+      };
+    }
+
+    const prevPriority = appt.priority;
+    const nowIso = new Date().toISOString();
+    const newVersion = (appt.version || 1) + 1;
+
+    // Determinar la acción de auditoría
+    let auditAction: AppointmentAuditEntry['action'] = 'PRIORITY_CHANGED';
+    if (newPriority === 'URGENT' && prevPriority !== 'URGENT') {
+      auditAction = 'PRIORITY_ESCALATED';
+    } else if (prevPriority === 'URGENT' && newPriority !== 'URGENT') {
+      auditAction = 'PRIORITY_DOWNGRADED';
+    } else if (decision.source === 'MANUAL') {
+      auditAction = 'PRIORITY_ASSIGNED';
+    }
+
+    this.updateAppointment(id, {
+      priority: newPriority, // FUENTE DE VERDAD
+      systemSuggestedPriority: decision.suggestedPriority,
+      priorityDecision: decision,
+      priorityUpdatedAt: nowIso,
+      version: newVersion,
+    });
+
+    const actorName = userContext?.userName || decision.assignedBy;
+    const reasonText = decision.reason
+      ? `[${decision.reasonCode || 'MANUAL'}] ${decision.reason}`
+      : `Prioridad cambiada a ${newPriority} por ${actorName}`;
+
+    this._logAudit({
+      appointmentId: id,
+      action: auditAction,
+      previousValues: { priority: prevPriority, suggestedPriority: appt.systemSuggestedPriority },
+      newValues: { priority: newPriority, suggestedPriority: decision.suggestedPriority, source: decision.source },
+      branchId: appt.branchId,
+      performedBy: actorName,
+      reason: reasonText,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * HU-026: Revierte un override manual de prioridad y recalcula la recomendación actual.
+   */
+  revertAppointmentPriority(
+    id: string,
+    revertReason: string,
+    suggestedPriority: PriorityLevel,
+    userContext?: { userId: string; userName: string; role: string; branchId: string }
+  ): void {
+    const appt = this.getAppointmentById(id);
+    if (!appt) return;
+
+    const prevPriority = appt.priority;
+    const nowIso = new Date().toISOString();
+    const actorName = userContext?.userName || 'Supervisor';
+
+    const updatedDecision: ReceptionPriorityDecision | undefined = appt.priorityDecision
+      ? {
+          ...appt.priorityDecision,
+          revertedBy: actorName,
+          revertedAt: nowIso,
+          revertReason,
+        }
+      : undefined;
+
+    this.updateAppointment(id, {
+      priority: suggestedPriority, // Regresa a la recomendación actual recalculada
+      priorityDecision: updatedDecision,
+      priorityUpdatedAt: nowIso,
+    });
+
+    this._logAudit({
+      appointmentId: id,
+      action: 'PRIORITY_OVERRIDE_REVERTED',
+      previousValues: { priority: prevPriority, manualOverrideActive: true },
+      newValues: { priority: suggestedPriority, manualOverrideActive: false },
+      branchId: appt.branchId,
+      performedBy: actorName,
+      reason: `Reversión de prioridad manual: ${revertReason}`,
+    });
+  }
+
+  /**
    * Clona una cita (utilizado principalmente para crear nueva cita basada en un NO_SHOW).
    */
   cloneAsNewAppointment(originalId: string, newDate: string, newTime: string, newDock: string): ReceptionAppointment {
@@ -580,13 +702,116 @@ export class ReceptionAppointmentService {
   }
 
   /**
+   * HU-030: Asigna o reserva un muelle a una cita de recepción.
+   */
+  assignDockToAppointment(
+    appointmentId: string,
+    dockCode: string,
+    dockAssignmentStatus: import('../models/dock-assignment.models').DockAssignmentStatus = 'RESERVED',
+    assignedBy = 'OPERATIONS_MANAGER'
+  ): ReceptionAppointment {
+    const appt = this.getAppointmentById(appointmentId);
+    if (!appt) throw new Error(`Cita ${appointmentId} no encontrada.`);
+
+    const now = new Date().toISOString();
+    const updated: ReceptionAppointment = {
+      ...appt,
+      dockNumber: dockCode,
+      dockAssignmentStatus,
+      dockAssignedAt: now,
+      dockAssignedBy: assignedBy,
+      dockReservationExpiresAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+      updatedAt: now,
+      version: (appt.version || 1) + 1,
+    };
+
+    this._appointments.update((list) => list.map((item) => (item.id === appointmentId ? updated : item)));
+    this._saveAppointmentsStorage();
+
+    this._logAudit({
+      appointmentId,
+      action: 'EDIT',
+      previousValues: { dockNumber: appt.dockNumber, dockAssignmentStatus: appt.dockAssignmentStatus },
+      newValues: { dockNumber: dockCode, dockAssignmentStatus },
+      branchId: appt.branchId,
+      reason: `Asignación de muelle ${dockCode} (${dockAssignmentStatus})`,
+    });
+
+    return updated;
+  }
+
+  /**
+   * HU-030: Actualiza el estado del flujo de asignación del muelle (POSITIONING, OCCUPIED, RELEASED).
+   */
+  updateDockAssignmentStatus(
+    appointmentId: string,
+    dockAssignmentStatus: import('../models/dock-assignment.models').DockAssignmentStatus
+  ): ReceptionAppointment {
+    const appt = this.getAppointmentById(appointmentId);
+    if (!appt) throw new Error(`Cita ${appointmentId} no encontrada.`);
+
+    const now = new Date().toISOString();
+    let newApptStatus = appt.status;
+    if (dockAssignmentStatus === 'OCCUPIED') {
+      newApptStatus = 'IN_RECEIVING';
+    } else if (dockAssignmentStatus === 'RELEASED') {
+      newApptStatus = 'COMPLETED';
+    }
+
+    const updated: ReceptionAppointment = {
+      ...appt,
+      status: newApptStatus,
+      dockAssignmentStatus,
+      updatedAt: now,
+      version: (appt.version || 1) + 1,
+    };
+
+    this._appointments.update((list) => list.map((item) => (item.id === appointmentId ? updated : item)));
+    this._saveAppointmentsStorage();
+
+    return updated;
+  }
+
+
+  /**
+   * Registra una entrada personalizada de auditoría desde el Orquestador de Muelles.
+   */
+  logCustomAudit(params: {
+    appointmentId: string;
+    action: AppointmentAuditEntry['action'];
+    previousValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+    reason?: string;
+    userSnapshot: import('../models/dock-assignment.models').DockAuditUserSnapshot;
+  }): void {
+    const appt = this.getAppointmentById(params.appointmentId);
+    const newEntry: AppointmentAuditEntry = {
+      id: `AUD-DOCK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      appointmentId: params.appointmentId,
+      action: params.action,
+      previousValues: params.previousValues,
+      newValues: params.newValues,
+      reason: params.reason,
+      branchId: params.userSnapshot.branchId,
+      performedBy: params.userSnapshot.performedByName,
+      performedByUserId: params.userSnapshot.performedByUserId,
+      performedByRole: params.userSnapshot.performedByRole,
+      capabilitiesUsed: params.userSnapshot.capabilitiesUsed,
+      performedAt: new Date().toISOString(),
+    };
+
+    this._auditLog.update((logs) => [newEntry, ...logs]);
+    this._saveAuditStorage();
+  }
+
+  /**
    * Registra una entrada en la auditoría.
    */
-  private _logAudit(entry: Omit<AppointmentAuditEntry, 'id' | 'performedBy' | 'performedAt'>): void {
+  private _logAudit(entry: Omit<AppointmentAuditEntry, 'id' | 'performedBy' | 'performedAt'> & { performedBy?: string }): void {
     const newEntry: AppointmentAuditEntry = {
       ...entry,
       id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      performedBy: 'OPERATIONS_MANAGER',
+      performedBy: entry.performedBy || 'OPERATIONS_MANAGER',
       performedAt: new Date().toISOString(),
     };
 

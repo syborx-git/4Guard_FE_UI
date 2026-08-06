@@ -9,6 +9,8 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ReceptionAppointmentService } from '../services/reception-appointment.service';
+import { DockAssignmentOrchestratorService } from '../services/dock-assignment-orchestrator.service';
+import { AuthState } from '../../../core/auth/auth.state';
 import {
   ReceptionAppointment,
   AppointmentStatus,
@@ -20,6 +22,7 @@ import {
   PRIORITY_LABELS,
   RECEPTION_TYPE_LABELS,
 } from '../models/reception-appointment.models';
+import { getOperationalReadiness } from '../models/reception-creation.models';
 import { PurchaseOrderValidationService } from '../services/purchase-order-validation.service';
 import {
   POValidationStatus,
@@ -40,18 +43,37 @@ import {
   ARRIVAL_CLEARANCE_CLASSES,
   INCIDENT_TYPE_LABELS,
 } from '../models/transport-arrival.models';
+import { ReceptionPriorityService } from '../services/reception-priority.service';
+import {
+  PrioritySource,
+  PriorityReasonCode,
+  PriorityExpirationPolicy,
+  OperationalAvailability,
+  PrioritySuggestion,
+  ReceptionPriorityDecision,
+  PRIORITY_FACTOR_LABELS,
+  PRIORITY_REASON_LABELS,
+  OPERATIONAL_AVAILABILITY_LABELS,
+  OPERATIONAL_AVAILABILITY_CLASSES,
+} from '../models/reception-priority.models';
+
+import { PurchaseOrderDetailDrawerComponent } from '../components/purchase-order-detail-drawer/purchase-order-detail-drawer.component';
+import { DockAssignmentDrawerComponent } from '../components/dock-assignment-drawer/dock-assignment-drawer.component';
 
 export type TabMode = 'AGENDA' | 'TODAY' | 'HISTORY';
 
 @Component({
   selector: 'fg-receiving-center',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, PurchaseOrderDetailDrawerComponent, DockAssignmentDrawerComponent],
   templateUrl: './receiving-center.component.html',
   styleUrl: './receiving-center.component.css',
 })
+
+
 export class ReceivingCenterComponent implements OnInit {
   protected readonly service = inject(ReceptionAppointmentService);
+  protected readonly priorityService = inject(ReceptionPriorityService);
   protected readonly poService = inject(PurchaseOrderValidationService);
   protected readonly arrivalService = inject(TransportArrivalService);
   private readonly fb      = inject(FormBuilder);
@@ -68,6 +90,155 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly arrivalClearanceLabels = ARRIVAL_CLEARANCE_LABELS;
   protected readonly arrivalClearanceClasses = ARRIVAL_CLEARANCE_CLASSES;
   protected readonly incidentTypeLabels = INCIDENT_TYPE_LABELS;
+
+  // HU-026 Labels & Maps
+  protected readonly priorityFactorLabels = PRIORITY_FACTOR_LABELS;
+  protected readonly priorityReasonLabels = PRIORITY_REASON_LABELS;
+  protected readonly operationalAvailabilityLabels = OPERATIONAL_AVAILABILITY_LABELS;
+  protected readonly operationalAvailabilityClasses = OPERATIONAL_AVAILABILITY_CLASSES;
+  protected readonly priorityReasonCodesList: PriorityReasonCode[] = [
+    'CUSTOMER_COMMITMENT',
+    'PRODUCTION_IMPACT',
+    'COLD_CHAIN',
+    'HAZARDOUS_MATERIAL',
+    'SLA_RISK',
+    'DELIVERY_WINDOW',
+    'OPERATIONAL_CONTINGENCY',
+    'MANAGEMENT_DECISION',
+    'DELAY_ESCALATION',
+    'OTHER',
+  ];
+
+  // Enterprise UI Polish Pass Mappings
+  protected readonly enterprisePriorityLabels: Record<string, string> = {
+    URGENT: 'P1 • CRÍTICA',
+    HIGH: 'P2 • ALTA',
+    NORMAL: 'P3 • NORMAL',
+  };
+
+  protected readonly enterprisePriorityIcons: Record<string, string> = {
+    URGENT: 'local_fire_department',
+    HIGH: 'bolt',
+    NORMAL: 'schedule',
+  };
+
+  protected readonly enterpriseCheckInLabels: Record<string, string> = {
+    PENDING: 'Control de Acceso',
+    CLEARED: 'Arribo Autorizado',
+    WARNING_CLEARED: 'Arribo con Advertencia',
+    REVIEW_REQUIRED: 'Check-In Evaluado',
+    BLOCKED: 'Ingreso Rechazado',
+    REJECTED_AT_GATE: 'Rechazado en Caseta',
+  };
+
+  protected readonly enterpriseCheckInSubtexts: Record<string, string> = {
+    PENDING: 'Esperando evaluación automática',
+    CLEARED: 'Unidad validada en caseta',
+    WARNING_CLEARED: 'Incidencias autorizadas',
+    REVIEW_REQUIRED: 'Requiere revisión supervisor',
+    BLOCKED: 'Bloqueo por incidencias',
+    REJECTED_AT_GATE: 'Rechazo en acceso físico',
+  };
+
+  /** Helper para desglose detallado de reglas de negocio en EVOLUTION PASS V2 (Requisito 3) */
+  protected getRuleDetails(appt: ReceptionAppointment, factorKey: string): { icon: string; name: string; observedValue: string; impact: string; pts: string } {
+    const key = (factorKey || '').toUpperCase();
+    if (key.includes('WAITING') || key.includes('PATIO') || key.includes('TIME') || key.includes('DELAY')) {
+      const delay = this.getDelayMinutes(appt);
+      return {
+        icon: 'schedule',
+        name: 'Tiempo de Espera en Patio',
+        observedValue: delay > 0 ? `${delay} minutos acumulados` : 'A tiempo (0 min de retraso)',
+        impact: delay > 45 ? 'Muy Alto' : (delay > 15 ? 'Alto' : 'Medio'),
+        pts: delay > 0 ? '+30 pts' : '+0 pts',
+      };
+    }
+    if (key.includes('VIP') || key.includes('CLIENT') || key.includes('STRATEGIC') || key.includes('COMMITMENT')) {
+      return {
+        icon: 'workspace_premium',
+        name: 'Cliente Estratégico (SLA / 3PL)',
+        observedValue: appt.clientName || 'Nestlé México 3PL',
+        impact: 'Muy Alto',
+        pts: '+25 pts',
+      };
+    }
+    if (key.includes('WINDOW') || key.includes('SCHEDULE')) {
+      return {
+        icon: 'meeting_room',
+        name: 'Ventana de Descarga Programada',
+        observedValue: `${appt.scheduledTime} hrs · ${appt.dockNumber}`,
+        impact: 'Alto',
+        pts: '+15 pts',
+      };
+    }
+    if (key.includes('DOCK')) {
+      return {
+        icon: 'sensor_door',
+        name: 'Disponibilidad de Andén',
+        observedValue: `${appt.dockNumber} (Asignado y Libre)`,
+        impact: 'Alto',
+        pts: '+10 pts',
+      };
+    }
+    if (key.includes('DRIVER') || key.includes('UNIT') || key.includes('CARRIER')) {
+      return {
+        icon: 'badge',
+        name: 'Operador y Unidad en Sitio',
+        observedValue: appt.expectedDriver || appt.arrivalData?.actualDriver || 'Operador Verificado',
+        impact: 'Medio',
+        pts: '+10 pts',
+      };
+    }
+    if (key.includes('SUPPLIER') || key.includes('HISTORY')) {
+      return {
+        icon: 'star',
+        name: 'Historial de Cumplimiento Proveedor',
+        observedValue: '98% Nivel de Servicio Cumplido',
+        impact: 'Medio',
+        pts: '+5 pts',
+      };
+    }
+    if (key.includes('PO') || key.includes('DOC') || key.includes('DOCUMENT')) {
+      return {
+        icon: 'description',
+        name: 'Estado Documental vs OC',
+        observedValue: this.poStatusLabels[appt.poValidationStatus || 'PENDING'],
+        impact: 'Estándar',
+        pts: '+5 pts',
+      };
+    }
+    return {
+      icon: 'ac_unit',
+      name: 'Riesgo Operativo / Cadena de Frío',
+      observedValue: appt.receptionType === 'IMPORT' ? 'Recepción de Importación' : 'Temperatura Estándar',
+      impact: 'Estándar',
+      pts: '+0 pts',
+    };
+  }
+
+  /** Retorna la hora actual formateada HH:mm (Requisito 10) */
+  protected getCurrentFormattedTime(): string {
+    const d = new Date();
+    return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  protected getFsmStageInfo(status: string): { label: string; step: string; cssClass: string } {
+    switch (status) {
+      case 'DRAFT':
+      case 'SCHEDULED':
+        return { label: 'Planeación', step: 'Etapa 1/5', cssClass: 'rc-stage--plan' };
+      case 'CONFIRMED':
+        return { label: 'Documentación', step: 'Etapa 2/5', cssClass: 'rc-stage--doc' };
+      case 'ARRIVED':
+        return { label: 'Check-In Caseta', step: 'Etapa 3/5', cssClass: 'rc-stage--checkin' };
+      case 'IN_RECEIVING':
+        return { label: 'Recepción Física', step: 'Etapa 4/5', cssClass: 'rc-stage--receiving' };
+      case 'COMPLETED':
+        return { label: 'Calidad & Cuadratura', step: 'Etapa 5/5', cssClass: 'rc-stage--complete' };
+      default:
+        return { label: 'Cerrado', step: 'Finalizado', cssClass: 'rc-stage--closed' };
+    }
+  }
 
   // Mock Master Catalogs for Form
   protected readonly clients = [
@@ -98,11 +269,12 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly docks = ['AND-01', 'AND-02', 'AND-03', 'AND-04', 'AND-05', 'AND-06', 'AND-07', 'AND-08'];
   protected readonly vehicleTypes = ['Tráiler 53ft', 'Torton 15t', 'Rabón 8t', 'Camioneta 3.5t', 'Contenedor 40ft'];
 
-  // Signals para Filtros y Pestañas
+  // Signals para Filtros, Pestañas y Orden Operativo
   protected readonly activeTab     = signal<TabMode>('AGENDA');
   protected readonly searchQuery   = signal('');
   protected readonly statusFilter  = signal<string>('ALL');
   protected readonly dockFilter    = signal<string>('ALL');
+  protected readonly sortMode      = signal<'SCHEDULE' | 'OPERATIONAL'>('SCHEDULE');
 
   // Signals para Modales y Drawers
   protected readonly isDrawerOpen        = signal(false);
@@ -114,13 +286,218 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly isCancelModalOpen   = signal(false);
   protected readonly isAuditDrawerOpen   = signal(false);
 
-  // Form Group para Nueva Cita / Edición
+  // HU-026 EVOLUTION PASS: Signals para Drawer Enterprise de Motor Operativo
+  protected readonly isPriorityModalOpen = signal(false);
+  protected readonly isPriorityDrawerOpen = signal(false);
+  protected readonly priorityDrawerTab = signal<'ANALYSIS' | 'OVERRIDE_FORM'>('ANALYSIS');
+  protected readonly selectedAppointmentForPriority = signal<ReceptionAppointment | null>(null);
+  protected readonly currentPrioritySuggestion = signal<PrioritySuggestion | null>(null);
+  protected readonly priorityErrorMessage = signal<string | null>(null);
+  protected readonly showOverrideConfirm = signal(false);
+
+  private readonly dockOrchestrator = inject(DockAssignmentOrchestratorService);
+  private readonly authState = inject(AuthState);
+
+  // HU-030: Signals para Drawer Enterprise de Asignación de Muelle
+  protected readonly isDockDrawerOpen = signal(false);
+  protected readonly selectedDockAppt = signal<ReceptionAppointment | null>(null);
+
+  protected openDockDrawer(appt: ReceptionAppointment): void {
+    this.selectedDockAppt.set(appt);
+    this.isDockDrawerOpen.set(true);
+  }
+
+  protected closeDockDrawer(): void {
+    this.isDockDrawerOpen.set(false);
+    this.selectedDockAppt.set(null);
+  }
+
+  /**
+   * Manejador de evento UI tras completar la transacción en el Orquestador.
+   * IMPORTANTE: No repite mutaciones de estado para evitar doble auditoría.
+   */
+  protected onDockStatusUpdated(event: { appointmentId: string; dockCode: string; status: any }): void {
+    const updated = this.service.getAppointmentById(event.appointmentId);
+    if (updated) {
+      this.selectedDockAppt.set(updated);
+    }
+  }
+
+  protected resetDemoData(): void {
+    this.dockOrchestrator.resetAllDemoData();
+    this.selectedDockAppt.set(null);
+    this.isDockDrawerOpen.set(false);
+  }
+
+  // HU-030 & HARDENING FASE 1 V3.1: Signals y Helpers Visuales de Derivación (Categoría B)
+  protected readonly showPhase2Notice = signal<boolean>(false);
+  protected readonly phase2NoticeAppt = signal<ReceptionAppointment | null>(null);
+
+  /**
+   * Evaluador Visual de Preparación Operativa (Contrato Fase 1 → Fase 2).
+   * Retorna uno de tres estados globales: 'READY' | 'READY_WITH_WARNINGS' | 'BLOCKED'
+   * y un listado de los 4 prerrequisitos logísticos con su estado individual.
+   */
+  protected getOperationalReadiness(appt: ReceptionAppointment | null): {
+    overallState: 'READY' | 'READY_WITH_WARNINGS' | 'BLOCKED';
+    overallLabel: string;
+    overallClass: string;
+    requirements: { name: string; status: 'SUCCESS' | 'WARNING' | 'PENDING' | 'BLOCKED' | 'NOT_VERIFIABLE'; detail: string }[];
+  } {
+    if (!appt) {
+      return {
+        overallState: 'BLOCKED',
+        overallLabel: 'Bloqueada para continuar',
+        overallClass: 'readiness--blocked',
+        requirements: [],
+      };
+    }
+
+    const reqs: { name: string; status: 'SUCCESS' | 'WARNING' | 'PENDING' | 'BLOCKED' | 'NOT_VERIFIABLE'; detail: string }[] = [];
+
+    // 1. Documentación (PO)
+    const poStatus = appt.poValidationStatus;
+    if (poStatus === 'VALIDATED' || poStatus === 'NOT_REQUIRED') {
+      reqs.push({ name: 'Documentación Documental (OC)', status: 'SUCCESS', detail: poStatus === 'VALIDATED' ? 'Aprobada documentalmente contra PO' : 'Sin Orden de Compra requerida' });
+    } else if (poStatus === 'EXCEPTED') {
+      reqs.push({ name: 'Documentación Documental (OC)', status: 'WARNING', detail: 'Autorizada por excepción documental' });
+    } else if (poStatus === 'REJECTED') {
+      reqs.push({ name: 'Documentación Documental (OC)', status: 'BLOCKED', detail: 'Rechazo documental por discrepancia crítica' });
+    } else if (poStatus === 'PENDING') {
+      reqs.push({ name: 'Documentación Documental (OC)', status: 'PENDING', detail: 'Pendiente de revisión documental' });
+    } else {
+      reqs.push({ name: 'Documentación Documental (OC)', status: 'NOT_VERIFIABLE', detail: 'No verificable con los datos actuales' });
+    }
+
+    // 2. Caseta & Arribo
+    const clearance = appt.arrivalClearanceStatus;
+    const hasIncidents = (appt.openArrivalIncidentsCount ?? 0) > 0;
+    if (clearance === 'CLEARED' && !hasIncidents) {
+      reqs.push({ name: 'Control de Caseta & Arribo', status: 'SUCCESS', detail: 'Ingreso a patio autorizado sin incidencias' });
+    } else if (clearance === 'WARNING_CLEARED' || (clearance === 'CLEARED' && hasIncidents)) {
+      reqs.push({ name: 'Control de Caseta & Arribo', status: 'WARNING', detail: 'Ingreso autorizado con advertencias/incidencias' });
+    } else if (clearance === 'REVIEW_REQUIRED') {
+      reqs.push({ name: 'Control de Caseta & Arribo', status: 'WARNING', detail: 'Revisión técnica en caseta requerida' });
+    } else if (clearance === 'BLOCKED' || clearance === 'REJECTED_AT_GATE') {
+      reqs.push({ name: 'Control de Caseta & Arribo', status: 'BLOCKED', detail: 'Ingreso bloqueado o rechazado físicamente en caseta' });
+    } else if (!clearance || clearance === 'PENDING') {
+      reqs.push({ name: 'Control de Caseta & Arribo', status: 'PENDING', detail: 'Check-In de transporte pendiente' });
+    } else {
+      reqs.push({ name: 'Control de Caseta & Arribo', status: 'NOT_VERIFIABLE', detail: 'No verificable con los datos actuales' });
+    }
+
+    // 3. Priorización Operativa
+    if (appt.priorityDecision || appt.priority) {
+      const isManual = appt.priorityDecision?.source === 'MANUAL';
+      const pLevel = appt.priority || 'NORMAL';
+      reqs.push({
+        name: 'Priorización Operativa',
+        status: 'SUCCESS',
+        detail: isManual ? `Prioridad ${pLevel} confirmada por supervisión` : `Prioridad ${pLevel} asignada por motor de reglas`,
+      });
+    } else {
+      reqs.push({ name: 'Priorización Operativa', status: 'NOT_VERIFIABLE', detail: 'No verificable con los datos actuales' });
+    }
+
+    // 4. Reserva / Asignación de Muelle
+    const dockCode = appt.dockNumber;
+    const dockStatus = appt.dockAssignmentStatus;
+    if (dockCode && (dockStatus === 'RESERVED' || dockStatus === 'ASSIGNED' || dockStatus === 'POSITIONING' || dockStatus === 'OCCUPIED')) {
+      const expiresAt = appt.dockReservationExpiresAt;
+      const isExpired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
+
+      if (isExpired) {
+        reqs.push({ name: 'Reserva de Muelle de Descarga', status: 'WARNING', detail: `Muelle ${dockCode} con reserva vencida (Pendiente de liberación/renovación)` });
+      } else {
+        reqs.push({ name: 'Reserva de Muelle de Descarga', status: 'SUCCESS', detail: `Muelle ${dockCode} reservado y vigente` });
+      }
+    } else if (!dockCode || dockStatus === 'UNASSIGNED') {
+      reqs.push({ name: 'Reserva de Muelle de Descarga', status: 'PENDING', detail: 'Sin muelle asignado' });
+    } else {
+      reqs.push({ name: 'Reserva de Muelle de Descarga', status: 'NOT_VERIFIABLE', detail: 'No verificable con los datos actuales' });
+    }
+
+    // Determinar Estado Global
+    const hasBlocked = reqs.some((r) => r.status === 'BLOCKED' || r.status === 'PENDING');
+    const hasWarningOrUnverifiable = reqs.some((r) => r.status === 'WARNING' || r.status === 'NOT_VERIFIABLE');
+
+    if (hasBlocked) {
+      return {
+        overallState: 'BLOCKED',
+        overallLabel: 'Bloqueada para continuar',
+        overallClass: 'readiness--blocked',
+        requirements: reqs,
+      };
+    }
+
+    if (hasWarningOrUnverifiable) {
+      return {
+        overallState: 'READY_WITH_WARNINGS',
+        overallLabel: 'Lista con advertencias',
+        overallClass: 'readiness--warning',
+        requirements: reqs,
+      };
+    }
+
+    return {
+      overallState: 'READY',
+      overallLabel: 'Lista para crear recepción',
+      overallClass: 'readiness--ready',
+      requirements: reqs,
+    };
+  }
+
+  /**
+   * Helper Visual: Retorna la etiqueta de decisión de caseta derivada del registro real sin fallback hardcodeado.
+   */
+  protected getGateDecisionLabel(record?: import('../models/transport-arrival.models').TransportArrivalRecord | null): string {
+    if (!record || !record.gateDecision) {
+      return 'EN ESPERA';
+    }
+    const map: Record<string, string> = {
+      ADMITTED: 'Admitido a Patio',
+      HELD: 'Retenido para Inspección',
+      REJECTED: 'Rechazado en Acceso',
+    };
+    return map[record.gateDecision] || record.gateDecision;
+  }
+
+  /**
+   * Helper Visual: Formatea el puntaje acumulativo del motor de priorización.
+   */
+  protected getFormattedScore(score: number): string {
+    return `${score} pts acumulados`;
+  }
+
+  /**
+   * Helper Visual: Valida coincidencia entre la sucursal de la cita y la sucursal activa.
+   */
+  protected getBranchMatchInfo(appt: ReceptionAppointment): { isMatch: boolean; activeBranchId: string; appointmentBranchId: string } {
+    const activeBranchId = (this.authState as any).activeBranchId?.() || 'SUC-001';
+    return {
+      isMatch: appt.branchId === activeBranchId,
+      activeBranchId,
+      appointmentBranchId: appt.branchId,
+    };
+  }
+
+  /**
+   * Handler de Presentación (HU-016 Etapa A): Navega a la Consola de Preparación de Expediente de Recepción.
+   * IMPORTANTE: No altera la FSM, no navega al Wizard ni simula recepciones activas ni expedientes simulados.
+   */
+  protected onPrepareReceptionCreation(appt: ReceptionAppointment): void {
+    this.router.navigate(['/receiving/appointments', appt.id, 'create-reception']);
+  }
+
+  // Form Groups
+
   protected appointmentForm!: FormGroup;
   protected arrivalForm!: FormGroup;
   protected reprogramForm!: FormGroup;
   protected cancelForm!: FormGroup;
+  protected priorityForm!: FormGroup;
 
-  // Mensaje de Error en Formulario
+  // Mensaje de Error en Formulario General
   protected formErrorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -177,6 +554,15 @@ export class ReceivingCenterComponent implements OnInit {
     this.cancelForm = this.fb.group({
       reason: ['', [Validators.required, Validators.minLength(5)]],
     });
+
+    // Formulario de Priorización Operativa (HU-026)
+    this.priorityForm = this.fb.group({
+      newPriority: ['NORMAL', Validators.required],
+      reasonCode: ['CUSTOMER_COMMITMENT', Validators.required],
+      reason: [''],
+      expirationPolicy: ['UNTIL_RECEIVING_START'],
+      expiresAt: [''],
+    });
   }
 
   // Getter del FormArray de Líneas
@@ -206,15 +592,23 @@ export class ReceivingCenterComponent implements OnInit {
 
   protected readonly todayDate = new Date().toISOString().split('T')[0];
 
-  /** Citas filtradas según pestaña activa, búsqueda y filtros de estado/andén */
+  /** Conteo de recepciones URGENT activas en la sucursal para control de abuso */
+  protected readonly activeUrgentCount = computed(() =>
+    this.service.appointments().filter(
+      (a) => a.priority === 'URGENT' && !['COMPLETED', 'CANCELLED', 'NO_SHOW', 'REJECTED'].includes(a.status)
+    ).length
+  );
+
+  /** Citas filtradas según pestaña activa, búsqueda, filtros y modo de ordenamiento */
   protected readonly filteredAppointments = computed(() => {
     const list = this.service.appointments();
     const tab = this.activeTab();
     const q = this.searchQuery().trim().toLowerCase();
     const statusF = this.statusFilter();
     const dockF = this.dockFilter();
+    const sort = this.sortMode();
 
-    return list.filter((appt) => {
+    const filtered = list.filter((appt) => {
       // Pestaña
       if (tab === 'TODAY' && appt.scheduledDate !== this.todayDate) {
         return false;
@@ -247,7 +641,38 @@ export class ReceivingCenterComponent implements OnInit {
 
       return true;
     });
+
+    if (sort === 'OPERATIONAL') {
+      return [...filtered].sort(
+        (a, b) => this.priorityService.getOperationalRankScore(b) - this.priorityService.getOperationalRankScore(a)
+      );
+    }
+
+    return filtered;
   });
+
+  /** Grupo 1: Atención Inmediata (READY + URGENT / HIGH / NORMAL) */
+  protected readonly attentionRequiredGroup = computed(() =>
+    this.filteredAppointments().filter(
+      (a) => this.priorityService.calculateOperationalAvailability(a) === 'READY'
+    )
+  );
+
+  /** Grupo 2: Bloqueos Prioritarios (BLOCKED / REVIEW_REQUIRED) */
+  protected readonly priorityBlockedGroup = computed(() =>
+    this.filteredAppointments().filter((a) => {
+      const avail = this.priorityService.calculateOperationalAvailability(a);
+      return avail === 'BLOCKED' || avail === 'REVIEW_REQUIRED';
+    })
+  );
+
+  /** Grupo 3: Cola Previa en Espera (WAITING_DOCUMENTS / WAITING_CHECKIN) */
+  protected readonly standardQueueGroup = computed(() =>
+    this.filteredAppointments().filter((a) => {
+      const avail = this.priorityService.calculateOperationalAvailability(a);
+      return avail === 'WAITING_DOCUMENTS' || avail === 'WAITING_CHECKIN' || avail === 'IN_RECEIVING';
+    })
+  );
 
   /** KPI 1: Recepciones Programadas (SCHEDULED + CONFIRMED) */
   protected readonly kpiScheduled = computed(() =>
@@ -754,6 +1179,22 @@ export class ReceivingCenterComponent implements OnInit {
     }
   }
 
+  // Signals para Drawer de Consulta y Análisis Documental de OC (HU-029 Evolución)
+  protected readonly isPODetailDrawerOpen = signal(false);
+  protected readonly selectedPODetailAppt = signal<ReceptionAppointment | null>(null);
+
+  /** Abre el Drawer de Consulta y Expediente Documental de la Orden de Compra */
+  openPODetailDrawer(appt: ReceptionAppointment): void {
+    this.selectedPODetailAppt.set(appt);
+    this.isPODetailDrawerOpen.set(true);
+  }
+
+  /** Cierra el Drawer de Consulta Documental */
+  closePODetailDrawer(): void {
+    this.isPODetailDrawerOpen.set(false);
+    this.selectedPODetailAppt.set(null);
+  }
+
   // Signals para Drawer de Validación Documental vs OC (HU-029)
   protected readonly isPOValidationDrawerOpen   = signal(false);
   protected readonly selectedPOValidationAppt   = signal<ReceptionAppointment | null>(null);
@@ -763,6 +1204,7 @@ export class ReceivingCenterComponent implements OnInit {
   protected readonly poNotRequiredReason        = signal('');
   protected readonly poDrawerErrorMessage        = signal<string | null>(null);
   protected readonly poDrawerMode                = signal<'OVERVIEW' | 'EXCEPTION_FORM' | 'REJECT_FORM' | 'NOT_REQUIRED_FORM'>('OVERVIEW');
+
 
   /** Abre el Drawer de Validación Documental ejecutando automáticamente el motor de comparación */
   openPOValidationDrawer(appt: ReceptionAppointment): void {
@@ -1132,6 +1574,198 @@ export class ReceivingCenterComponent implements OnInit {
         valid: obs.length > 0,
       },
     ];
+  }
+
+  // ─── ACCIONES HU-026: MODAL DE CAMBIO DE PRIORIDAD ─────────────────────────
+
+  /** Abre el modal o drawer de priorización para una cita */
+  openPriorityModal(appt: ReceptionAppointment): void {
+    this.openPriorityDrawer(appt);
+  }
+
+  /** Cierra el modal de priorización */
+  closePriorityModal(): void {
+    this.isPriorityModalOpen.set(false);
+    this.selectedAppointmentForPriority.set(null);
+    this.currentPrioritySuggestion.set(null);
+    this.priorityErrorMessage.set(null);
+  }
+
+  /** Procesa la acción de guardar la prioridad */
+  savePriorityChange(): void {
+    const appt = this.selectedAppointmentForPriority();
+    const suggestion = this.currentPrioritySuggestion();
+    if (!appt || !suggestion) return;
+
+    this.priorityErrorMessage.set(null);
+    const formVal = this.priorityForm.value;
+    const newPriority: PriorityLevel = formVal.newPriority;
+    const isManual = newPriority !== suggestion.priority;
+    const source: PrioritySource = isManual ? 'MANUAL' : 'SYSTEM';
+    const userRole = 'OPERATIONS_SUPERVISOR'; // Obtenido del contexto de sesión RBAC (AuthState)
+
+    // Validar políticas de negocio
+    const valResult = this.priorityService.validatePriorityChange(
+      appt.status,
+      newPriority,
+      source,
+      formVal.reasonCode,
+      formVal.reason,
+      userRole
+    );
+
+    if (!valResult.valid) {
+      this.priorityErrorMessage.set(valResult.error || 'No se puede cambiar la prioridad.');
+      return;
+    }
+
+    const decision: ReceptionPriorityDecision = {
+      suggestedPriority: suggestion.priority,
+      appliedPriority: newPriority,
+      source,
+      reasonCode: formVal.reasonCode,
+      reason: formVal.reason?.trim(),
+      expirationPolicy: formVal.expirationPolicy || 'UNTIL_RECEIVING_START',
+      expiresAt: formVal.expiresAt || undefined,
+      assignedBy: 'Carlos Mendoza',
+      assignedByRole: userRole,
+      assignedByUserId: 'USR-SUP-001',
+      assignedAt: new Date().toISOString(),
+      active: true,
+    };
+
+    const res = this.service.updateAppointmentPriority(appt.id, newPriority, decision, appt.updatedAt);
+    if (!res.success) {
+      this.priorityErrorMessage.set(res.error || 'Error al guardar la prioridad.');
+      return;
+    }
+    this.closePriorityModal();
+  }
+
+  /** Revierte una prioridad manual ejecutiva regresando a la sugerencia actual */
+  revertPriorityOverride(appt: ReceptionAppointment): void {
+    if (!appt || !appt.priorityDecision || appt.priorityDecision.source !== 'MANUAL') return;
+
+    const targetAppt: ReceptionAppointment = appt;
+    const suggestion = this.priorityService.calculateSuggestedPriority(targetAppt);
+    this.service.revertAppointmentPriority(
+      targetAppt.id,
+      'Reversión manual por el supervisor desde el Centro de Recepciones',
+      suggestion.priority,
+      { userId: 'USR-SUP-001', userName: 'Carlos Mendoza', role: 'OPERATIONS_SUPERVISOR', branchId: targetAppt.branchId }
+    );
+  }
+
+  /** Abre el Drawer Enterprise de Motor de Priorización Operativa */
+  openPriorityDrawer(appt: ReceptionAppointment): void {
+    this.priorityErrorMessage.set(null);
+    this.selectedAppointmentForPriority.set(appt);
+    this.priorityDrawerTab.set('ANALYSIS');
+
+    const suggestion = this.priorityService.calculateSuggestedPriority(appt);
+    this.currentPrioritySuggestion.set(suggestion);
+
+    const existingDecision = appt.priorityDecision;
+    if (this.priorityForm) {
+      this.priorityForm.reset({
+        newPriority: appt.priority || suggestion.priority,
+        reasonCode: existingDecision?.reasonCode || 'CUSTOMER_COMMITMENT',
+        reason: existingDecision?.reason || '',
+        expirationPolicy: existingDecision?.expirationPolicy || 'UNTIL_RECEIVING_START',
+        expiresAt: existingDecision?.expiresAt || '',
+      });
+    }
+
+    this.isPriorityDrawerOpen.set(true);
+  }
+
+  /** Cierra el Drawer de priorización */
+  closePriorityDrawer(): void {
+    this.isPriorityDrawerOpen.set(false);
+    this.selectedAppointmentForPriority.set(null);
+    this.currentPrioritySuggestion.set(null);
+    this.priorityErrorMessage.set(null);
+    this.priorityDrawerTab.set('ANALYSIS');
+    this.showOverrideConfirm.set(false);
+  }
+
+  /** Acepta la recomendación del motor operativo */
+  acceptSystemRecommendation(): void {
+    const appt = this.selectedAppointmentForPriority();
+    const suggestion = this.currentPrioritySuggestion();
+    if (!appt || !suggestion) return;
+
+    const userRole = 'OPERATIONS_SUPERVISOR';
+    const decision: ReceptionPriorityDecision = {
+      suggestedPriority: suggestion.priority,
+      appliedPriority: suggestion.priority,
+      source: 'SYSTEM',
+      reasonCode: 'MANAGEMENT_DECISION',
+      reason: 'Aceptación de sugerencia del Motor Operativo de Reglas de Negocio',
+      expirationPolicy: 'UNTIL_RECEIVING_START',
+      assignedBy: 'Carlos Mendoza',
+      assignedByRole: userRole,
+      assignedByUserId: 'USR-SUP-001',
+      assignedAt: new Date().toISOString(),
+      active: true,
+    };
+
+    const res = this.service.updateAppointmentPriority(appt.id, suggestion.priority, decision, appt.updatedAt);
+    if (!res.success) {
+      this.priorityErrorMessage.set(res.error || 'Error al aplicar la recomendación del motor.');
+      return;
+    }
+
+    this.closePriorityDrawer();
+  }
+
+  /** Guarda una modificación de prioridad manual del supervisor desde el Drawer */
+  saveCustomPriorityOverride(): void {
+    const appt = this.selectedAppointmentForPriority();
+    const suggestion = this.currentPrioritySuggestion();
+    if (!appt || !suggestion) return;
+
+    this.priorityErrorMessage.set(null);
+    const formVal = this.priorityForm.value;
+    const newPriority: PriorityLevel = formVal.newPriority;
+    const reasonCode = formVal.reasonCode;
+    const reasonText = (formVal.reason || '').trim();
+    const userRole = 'OPERATIONS_SUPERVISOR';
+
+    // Si selecciona 'Otro', la justificación debe tener al menos 30 caracteres
+    if (reasonCode === 'OTHER' && reasonText.length < 30) {
+      this.priorityErrorMessage.set('Para la opción "Otro", debes ingresar una justificación detallada de al menos 30 caracteres.');
+      return;
+    }
+
+    // Validar regla de mínimo 10 caracteres para URGENT o HIGH
+    if ((newPriority === 'URGENT' || newPriority === 'HIGH') && reasonText.length < 10 && reasonCode !== 'OTHER') {
+      this.priorityErrorMessage.set('Debes ingresar una justificación de al menos 10 caracteres.');
+      return;
+    }
+
+    const decision: ReceptionPriorityDecision = {
+      suggestedPriority: suggestion.priority,
+      appliedPriority: newPriority,
+      source: 'MANUAL',
+      reasonCode: formVal.reasonCode,
+      reason: reasonText,
+      expirationPolicy: formVal.expirationPolicy || 'UNTIL_RECEIVING_START',
+      expiresAt: formVal.expiresAt || undefined,
+      assignedBy: 'Carlos Mendoza',
+      assignedByRole: userRole,
+      assignedByUserId: 'USR-SUP-001',
+      assignedAt: new Date().toISOString(),
+      active: true,
+    };
+
+    const res = this.service.updateAppointmentPriority(appt.id, newPriority, decision, appt.updatedAt);
+    if (!res.success) {
+      this.priorityErrorMessage.set(res.error || 'Error al guardar la prioridad.');
+      return;
+    }
+
+    this.closePriorityDrawer();
   }
 }
 

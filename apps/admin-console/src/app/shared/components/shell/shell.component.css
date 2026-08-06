@@ -637,6 +637,7 @@
 
 /* ── Zona derecha ─────────────────────────────────────────── */
 .shell__header-right {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -760,6 +761,323 @@
 
 .shell__header-btn .material-symbols-outlined {
   font-size: 17px !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MENÚ WAFFLE (4 CUBOS — ECOSISTEMA DE APLICACIONES)
+   ══════════════════════════════════════════════════════════ */
+.shell__waffle-container {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+}
+
+.shell__header-btn--waffle-active,
+.shell__header-btn--waffle-active:hover {
+  color: #d4af37 !important;
+  background: rgba(212, 175, 55, 0.18) !important;
+  border-color: rgba(212, 175, 55, 0.45) !important;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+}
+
+.waffle-popup {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  z-index: 1000;
+  width: 380px;
+  padding: 1.25rem;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  animation: waffle-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes waffle-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Waffle Header */
+.waffle-popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.waffle-popup__title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.waffle-popup__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.waffle-popup__tag {
+  padding: 0.18rem 0.55rem;
+  background: #d4af37;
+  color: #0b1329;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 6px rgba(212, 175, 55, 0.3);
+}
+
+.waffle-popup__edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.waffle-popup__edit-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: rotate(15deg);
+}
+
+.waffle-popup__edit-btn .material-symbols-outlined {
+  font-size: 16px !important;
+}
+
+/* Search Bar */
+.waffle-popup__search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.waffle-popup__search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: #64748b;
+  font-size: 18px !important;
+  pointer-events: none;
+}
+
+.waffle-popup__search-input {
+  width: 100%;
+  padding: 0.65rem 2.2rem 0.65rem 2.4rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.waffle-popup__search-input::placeholder {
+  color: #64748b;
+}
+
+.waffle-popup__search-input:focus {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.waffle-popup__search-clear {
+  position: absolute;
+  right: 0.65rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.waffle-popup__search-clear .material-symbols-outlined {
+  font-size: 16px !important;
+}
+
+/* Tabs */
+.waffle-popup__tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+
+.waffle-popup__tab {
+  padding: 0.35rem 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: #94a3b8;
+  font-size: 0.725rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.waffle-popup__tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+.waffle-popup__tab--active {
+  background: #d4af37 !important;
+  border-color: #d4af37 !important;
+  color: #0b1329 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+}
+
+/* Section Label */
+.waffle-popup__section-label {
+  font-size: 0.675rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+
+/* Waffle Grid */
+.waffle-popup__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.1rem;
+  margin-bottom: 1.25rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.waffle-popup__grid::-webkit-scrollbar {
+  width: 4px;
+}
+.waffle-popup__grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* Waffle Card */
+.waffle-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.4rem 0.2rem;
+  border-radius: 12px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.waffle-card:hover {
+  transform: translateY(-4px);
+}
+
+.waffle-card__icon-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  transition: box-shadow 0.2s ease;
+}
+
+.waffle-card:hover .waffle-card__icon-box {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.waffle-card__icon {
+  font-size: 28px !important;
+  color: #ffffff;
+}
+
+.waffle-card__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  color: #0b1329;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.04em;
+}
+
+.waffle-card__label {
+  font-size: 0.675rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.waffle-card:hover .waffle-card__label {
+  color: #ffffff;
+}
+
+/* Waffle Footer */
+.waffle-popup__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.waffle-popup__footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #d4af37;
+  letter-spacing: 0.06em;
+}
+
+.waffle-popup__footer-icon {
+  font-size: 15px !important;
+  color: #d4af37;
+}
+
+.waffle-popup__footer-version {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
 }
 
 /* ══════════════════════════════════════════════════════════

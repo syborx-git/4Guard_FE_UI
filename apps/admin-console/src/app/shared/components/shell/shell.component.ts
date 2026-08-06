@@ -15,7 +15,7 @@ import {
   OnDestroy,
   PLATFORM_ID
 } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
@@ -24,6 +24,18 @@ import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
 import { UsersService } from '../../../core/services/users.service';
 import { UserProfileDto } from '../../../core/models/user.models';
+
+export interface WaffleItem {
+  id: string;
+  name: string;
+  category: 'google' | 'wms';
+  icon: string;
+  iconBg: string;
+  route?: string;
+  url?: string;
+  badge?: string;
+  badgeBg?: string;
+}
 
 /** Valida que confirmPassword coincida con newPassword. */
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -57,6 +69,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly syncState = inject(SyncState);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
 
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
@@ -148,18 +161,167 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly reqNumberOrSymbol = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdValue() ?? ''));
 
 
-  /** Cierra el menú de perfil al hacer click fuera del sidebar */
+  // ── Waffle Menu (Ecosistema de Aplicaciones) ─────────────────────
+  protected readonly showWaffleMenu = signal(false);
+  protected readonly waffleSearchQuery = signal('');
+  protected readonly waffleActiveTab = signal<'all' | 'google' | 'wms'>('all');
+
+  protected readonly waffleItems: WaffleItem[] = [
+    {
+      id: 'gmail',
+      name: 'GMAIL',
+      category: 'google',
+      icon: 'mail',
+      iconBg: 'linear-gradient(135deg, #ea4335 0%, #c5221f 100%)',
+      url: 'https://mail.google.com',
+    },
+    {
+      id: 'drive',
+      name: 'DRIVE',
+      category: 'google',
+      icon: 'folder_shared',
+      iconBg: 'linear-gradient(135deg, #34a853 0%, #1e8e3e 100%)',
+      url: 'https://drive.google.com',
+    },
+    {
+      id: 'calendar',
+      name: 'CALENDAR',
+      category: 'google',
+      icon: 'calendar_month',
+      iconBg: 'linear-gradient(135deg, #4285f4 0%, #1a73e8 100%)',
+      badge: 'HOY',
+      badgeBg: '#f59e0b',
+      url: 'https://calendar.google.com',
+    },
+    {
+      id: 'maps',
+      name: 'MAPS WMS',
+      category: 'wms',
+      icon: 'pin_drop',
+      iconBg: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+      route: '/layout',
+    },
+    {
+      id: 'gemini',
+      name: 'GEMINI IA',
+      category: 'google',
+      icon: 'auto_awesome',
+      iconBg: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
+      badge: 'IA',
+      badgeBg: '#d4af37',
+      url: 'https://gemini.google.com',
+    },
+    {
+      id: 'meet',
+      name: 'MEET',
+      category: 'google',
+      icon: 'videocam',
+      iconBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      url: 'https://meet.google.com',
+    },
+    {
+      id: 'evidencia',
+      name: 'EVIDENCIA',
+      category: 'wms',
+      icon: 'photo_camera',
+      iconBg: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+      route: '/receiving',
+    },
+    {
+      id: 'traductor',
+      name: 'TRADUCTOR',
+      category: 'google',
+      icon: 'translate',
+      iconBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+      url: 'https://translate.google.com',
+    },
+    {
+      id: 'tutoriales',
+      name: 'TUTORIALES',
+      category: 'wms',
+      icon: 'play_circle',
+      iconBg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+      route: '/dashboard',
+    },
+    {
+      id: 'reglas',
+      name: 'REGLAS',
+      category: 'wms',
+      icon: 'tune',
+      iconBg: 'linear-gradient(135deg, #d4af37 0%, #85581a 100%)',
+      badge: 'HU-131',
+      badgeBg: '#b8860b',
+      route: '/business-rules',
+    },
+    {
+      id: 'divisas',
+      name: 'DIVISAS',
+      category: 'wms',
+      icon: 'currency_exchange',
+      iconBg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+      route: '/currency-exchange',
+    },
+  ];
+
+  protected readonly filteredWaffleItems = computed(() => {
+    const query = this.waffleSearchQuery().toLowerCase().trim();
+    const tab = this.waffleActiveTab();
+
+    return this.waffleItems.filter((item) => {
+      const matchesTab = tab === 'all' || item.category === tab;
+      const matchesQuery = !query || item.name.toLowerCase().includes(query);
+      return matchesTab && matchesQuery;
+    });
+  });
+
+  /** Cierra el menú de perfil y Waffle menu al hacer click fuera */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (!target.closest('.sidebar__user-trigger') && !target.closest('.profile-menu')) {
       this.showProfileMenu.set(false);
     }
+    if (!target.closest('.shell__waffle-container')) {
+      this.showWaffleMenu.set(false);
+    }
+  }
+
+  protected toggleWaffleMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showProfileMenu.set(false);
+    this.showWaffleMenu.update((v) => !v);
+  }
+
+  protected setWaffleTab(tab: 'all' | 'google' | 'wms'): void {
+    this.waffleActiveTab.set(tab);
+  }
+
+  protected onWaffleSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.waffleSearchQuery.set(target.value);
+  }
+
+  protected clearWaffleSearch(): void {
+    this.waffleSearchQuery.set('');
+  }
+
+  protected onEditFavorites(): void {
+    alert('Modo edición de accesos directos activado.');
+  }
+
+  protected onWaffleItemClick(item: WaffleItem): void {
+    this.showWaffleMenu.set(false);
+    if (item.route) {
+      this.router.navigate([item.route]);
+    } else if (item.url) {
+      window.open(item.url, '_blank');
+    }
   }
 
   protected toggleProfileMenu(event: MouseEvent): void {
     event.stopPropagation();
-    this.showProfileMenu.update(v => !v);
+    this.showWaffleMenu.set(false);
+    this.showProfileMenu.update((v) => !v);
   }
 
   protected openChangePassword(): void {
