@@ -247,6 +247,69 @@ Requisitos:
 
 ---
 
+## 🔔 Sincronización Reactiva de Formularios con Signals (`formValuesSignal`)
+
+```
+Implementa una Vista Previa en Tiempo Real (Live Preview) para el formulario reactivo de [Módulo].
+
+Requisitos (Angular Signals / SDD Level 5):
+1. Declarar un signal interno `formValuesSignal = signal<any>(null)` en el componente.
+2. En `initForm()`, suscribir `this.form.valueChanges` para emitir `this.formValuesSignal.set(this.form.getRawValue())`.
+3. Actualizar `this.formValuesSignal.set(...)` al resetear el formulario (`selectItem`, `createNewItem`).
+4. Definir la propiedad computada `livePreview = computed(() => ...)` que lea `formValuesSignal()`.
+5. Asegurar que cada pulsación de tecla o cambio en los campos (ej. messageTemplate, priority) actualice de inmediato la vista previa o simulador en pantalla sin requerir guardar.
+```
+
+---
+
+## 🛡️ Modales Emergentes Desacoplados (Prevención de Refresco HTML)
+
+```
+Implementa un modal emergente desacoplado para la acción [Acción/Revocar/Eliminar] en el módulo [Módulo].
+
+Requisitos (SDD Level 5 / ADR-002):
+1. Usar un contenedor <div class="carriers-dialog__form"> en lugar de <form> en la plantilla del modal para evitar que el navegador envíe el formulario padre.
+2. En el handler TS, aceptar event?: Event e invocar event?.preventDefault(); event?.stopPropagation(); como primera instrucción.
+3. El botón de confirmación debe ser <button type="button" (click)="confirmAction($event)"> con estado [disabled]="isSaving()".
+4. Soportar estados de feedback visual: Spinner ("Procesando...") y notificaciones exclusivas con ToastService.
+```
+
+---
+
+## 🔓 Modo Consulta Solo Lectura con Acciones Habilitadas
+
+```
+Implementa la protección de solo lectura para el estado [REVOKED/CLOSED] en el módulo [Módulo].
+
+Requisitos (SDD Level 5):
+1. Definir una propiedad computada `isReadOnly = computed(() => this.selectedItem()?.status === '[ESTADO_FINAL]')`.
+2. Aplicar [disabled]="isReadOnly()" en los contenedores <fieldset> de los campos del formulario para que todos los inputs/selects queden deshabilitados automáticamente en modo consulta.
+3. Mantener la barra de acciones (.carriers-form-actions) fuera de los fieldsets deshabilitados.
+4. Asegurar que los botones de reactivación/reapertura (ej. Activar o Reabrir) permanezcan 100% habilitados y cliqueables.
+```
+
+---
+
+## 💱 Integración de Cotizaciones en Vivo desde API de Banco Central (Banxico SIE REST)
+
+```
+Integra la consulta de cotizaciones en tiempo real desde el servicio oficial de Banco Central (Banxico SIE REST) en el módulo de [Módulo/Divisas].
+
+Endpoint BE: GET /api/v1/exchange-rates/banxico/live/{seriesId}
+
+Requisitos (HU-148 / SDD Level 5):
+1. Definir la interfaz BanxicoLiveRateData (seriesId, currencyCode, rate, publicationDate, sourceType).
+2. Crear el método getBanxicoLiveRate(seriesId) en el servicio con fallback resiliente en caso de interrupción.
+3. En la UI del formulario de registro de tipo de cambio:
+   - Agregar el botón "Obtener de Banxico (Live)" con estado de carga (isFetchingBanxico).
+   - Mapear el código ISO a la serie correspondiente (USD -> SF57805, EUR -> SF46410).
+   - Auto-poblar los campos rate, sourceType ('CENTRAL_BANK') y notes sin bloquear la edición del usuario.
+   - Mostrar un Banner Informativo dorado que confirme la tasa recuperada y recuerde al usuario que puede editar el valor libremente antes de guardar.
+4. Notificar mediante ToastService la confirmación de la cotización recibida.
+```
+
+---
+
 ## 💡 Tips de uso
 
 1. **Siempre especifica el módulo objetivo** — "en el módulo de Sucursales" es más preciso que "en el sistema".

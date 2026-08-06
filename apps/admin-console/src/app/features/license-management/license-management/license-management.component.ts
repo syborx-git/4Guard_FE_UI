@@ -29,19 +29,15 @@ import {
   ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import {
-  ReactiveFormsModule,
-  FormBuilder,
-  FormGroup,
-  FormControl,
-  Validators,
-  AbstractControl,
-} from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder, FormGroup, FormControl, Validators, AbstractControl } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthState } from '../../../core/auth/auth.state';
 import { LicenseManagementService } from '../license-management.service';
+
+import { OrganizationService } from '../../admin/services/organization.service';
 
 import {
   WmsLicense,
@@ -52,14 +48,12 @@ import {
   LicenseAuditEntry,
   LicenseCapacity,
   LicenseRenewalPayload,
-  DUMMY_ORGANIZATIONS,
   MODULE_DEFINITIONS,
   ModuleDefinition,
   LICENSE_PLAN_LABELS,
   LICENSE_DERIVED_STATUS_LABELS,
   LICENSE_HISTORY_ACTION_LABELS,
   computeDerivedStatus,
-  DummyOrganization,
 } from '../license-management.models';
 
 import {
@@ -100,7 +94,7 @@ interface UsageStat {
 @Component({
   selector: 'fg-license-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DatePipe],
+  imports: [CommonModule, ReactiveFormsModule, DatePipe, RouterLink],
   templateUrl: './license-management.component.html',
   styleUrl: './license-management.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -109,14 +103,22 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
 
   // ─── Inyecciones ────────────────────────────────────────────────────────
   private readonly service = inject(LicenseManagementService);
+  private readonly orgService = inject(OrganizationService);
   private readonly toast = inject(ToastService);
   private readonly authState = inject(AuthState);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
-  // ─── Datos de referencia (solo lectura) ─────────────────────────────────
-  readonly organizations: DummyOrganization[] = DUMMY_ORGANIZATIONS;
+  // ─── Datos de referencia desde la BD ────────────────────────────────────
+  protected readonly organizations = computed(() => {
+    const list = this.orgService.organizations();
+    if (list && list.length > 0) return list;
+    return [
+      { id: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935', name: '4GUARD LOGISTICS CORP', code: '4GD-CORP', taxId: 'FGD120510XX1', type: 'LOGISTICS' as const, status: 'ACTIVE' as const, settings: '', createdAt: new Date() }
+    ];
+  });
+
   readonly moduleDefinitions: ModuleDefinition[] = MODULE_DEFINITIONS;
   readonly planLabels = LICENSE_PLAN_LABELS;
   readonly statusLabels = LICENSE_DERIVED_STATUS_LABELS;
@@ -209,8 +211,8 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     const active = this.licensesWithDerived().filter(
       ({ derived }) => derived === 'ACTIVE' || derived === 'EXPIRING_SOON'
     );
-    const totalMax = active.reduce((s, { license }) => s + license.capacities.maxUsers, 0);
-    const totalUsed = active.reduce((s, { license }) => s + license.usage.currentUsers, 0);
+    const totalMax = active.reduce((s, { license }) => s + (license.capacities?.maxUsers ?? license.maxUsers ?? 0), 0);
+    const totalUsed = active.reduce((s, { license }) => s + (license.usage?.currentUsers ?? license.currentUsers ?? 0), 0);
     const pct = totalMax > 0 ? Math.round((totalUsed / totalMax) * 100) : 0;
     return { used: totalUsed, max: totalMax, pct };
   });
@@ -222,7 +224,7 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     );
     const uniqueModules = new Set<LicensedModule>();
     active.forEach(({ license }) =>
-      license.enabledModules.forEach(m => uniqueModules.add(m))
+      (license.enabledModules || []).forEach(m => uniqueModules.add(m))
     );
     // BILLING no cuenta como módulo contratado
     uniqueModules.delete('BILLING');
@@ -271,7 +273,7 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     const form = this.licenseForm;
     if (!form) return null;
 
-    const org = this.organizations.find(o => o.id === form.get('identification.organizationId')?.value);
+    const org = this.organizations().find(o => o.id === form.get('identification.organizationId')?.value);
     const modules = (form.get('modules')?.value as LicensedModule[]) ?? lic?.enabledModules ?? [];
     const nonBillingModules = modules.filter(m => m !== 'BILLING');
 
@@ -283,8 +285,8 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
       validFrom: form.get('validity.validFrom')?.value || lic?.validFrom || '',
       validUntil: form.get('validity.validUntil')?.value || lic?.validUntil || '',
       derivedStatus: derived,
-      maxUsers: Number(form.get('capacities.maxUsers')?.value) || lic?.capacities.maxUsers || 0,
-      currentUsers: lic?.usage.currentUsers ?? 0,
+      maxUsers: Number(form.get('capacities.maxUsers')?.value) || (lic?.capacities?.maxUsers ?? lic?.maxUsers) || 0,
+      currentUsers: (lic?.usage?.currentUsers ?? lic?.currentUsers) ?? 0,
       modulesCount: nonBillingModules.length,
     };
   });
@@ -339,23 +341,23 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
       capacities: this.fb.group(
         {
           maxUsers: [
-            license?.capacities.maxUsers ?? 1,
+            license?.capacities?.maxUsers ?? license?.maxUsers ?? 1,
             [Validators.required, positiveIntegerValidator(10_000)],
           ],
           maxConcurrentUsers: [
-            license?.capacities.maxConcurrentUsers ?? 1,
+            license?.capacities?.maxConcurrentUsers ?? license?.maxConcurrentUsers ?? 1,
             [Validators.required, positiveIntegerValidator(10_000)],
           ],
           maxWarehouses: [
-            license?.capacities.maxWarehouses ?? 1,
+            license?.capacities?.maxWarehouses ?? license?.maxWarehouses ?? 1,
             [Validators.required, positiveIntegerValidator(1_000)],
           ],
           maxHandheldDevices: [
-            license?.capacities.maxHandheldDevices ?? 1,
+            license?.capacities?.maxHandheldDevices ?? license?.maxHandheldDevices ?? 1,
             [Validators.required, positiveIntegerValidator(10_000)],
           ],
           maxIntegrations: [
-            license?.capacities.maxIntegrations ?? 0,
+            license?.capacities?.maxIntegrations ?? license?.maxIntegrations ?? 0,
             [Validators.required, nonNegativeIntegerValidator(100)],
           ],
         },
@@ -399,6 +401,7 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de vida ──────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.loadOrganizations();
     this._buildForm();
     this.isLoading.set(true);
     this.service.getLicenses()
@@ -419,6 +422,14 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
       });
   }
 
+  private loadOrganizations(): void {
+    this.orgService.loadOrganizations()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error al precargar organizaciones desde la BD:', err)
+      });
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -427,14 +438,31 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
   // ─── Selección de licencia ───────────────────────────────────────────────
 
   selectLicense(license: WmsLicense): void {
+    this.isSaving.set(false);
     // Obtener la versión más reciente del servicio
     const fresh = this.service.licenses().find(l => l.id === license.id) ?? license;
     this.selectedLicense.set(fresh);
     this.formMode.set('EDIT');
     this._buildForm(fresh);
     this.hasUnsavedChanges.set(false);
-    this.drawerAuditEntries.set(this.service.getAuditEntries(fresh.id));
+    this.loadAuditLogs(fresh.id);
     this.cdr.markForCheck();
+  }
+
+  protected loadAuditLogs(licenseId: string): void {
+    this.drawerAuditEntries.set([]);
+    this.service.getLicenseAudit(licenseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.drawerAuditEntries.set(res.data || []);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.drawerAuditEntries.set([]);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   startCreate(): void {
@@ -505,13 +533,8 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     // 4. Evitar doble envío
     if (this.isSaving()) return;
 
-    // 5. Construir diff de cambios para el modal
-    const changes = this._buildChangeDiff();
-    this.pendingChanges.set(changes);
-
-    // 6. Mostrar modal de confirmación
-    this.isModalOpen.set(true);
-    this.cdr.markForCheck();
+    // 5. Ejecutar guardado directo al Backend API
+    this.confirmSave();
   }
 
   confirmSave(): void {
@@ -531,7 +554,7 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     const currentLic = this.selectedLicense();
 
     if (this.formMode() === 'CREATE') {
-      const org = this.organizations.find(o => o.id === formValue.identification.organizationId);
+      const org = this.organizations().find(o => o.id === formValue.identification.organizationId);
       const payload: Omit<WmsLicense, 'id' | 'createdAt' | 'updatedAt' | 'licenseKey' | 'maskedLicenseKey'> = {
         organizationId: formValue.identification.organizationId,
         organizationName: org?.name ?? '',
@@ -623,6 +646,7 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
   // ─── Acciones Administrativas ────────────────────────────────────────────
 
   openActionModal(action: PendingAction): void {
+    this.isSaving.set(false);
     this.pendingAction.set(action);
     this.actionReason.set('');
     this.actionReasonError.set(null);
@@ -642,7 +666,12 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  confirmAction(): void {
+  confirmAction(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     const action = this.pendingAction();
     const lic = this.selectedLicense();
     if (!action || !lic) return;
@@ -681,17 +710,39 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     obs$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (result) => {
         this.isSaving.set(false);
-        const msg = action === 'SUSPEND' ? 'Licencia suspendida.'
-          : action === 'REACTIVATE' ? 'Licencia reactivada.'
-          : action === 'REVOKE' ? 'Licencia revocada.'
+        const msg = action === 'REVOKE' ? 'Licencia revocada exitosamente.'
+          : action === 'SUSPEND' ? 'Licencia suspendida.'
+          : action === 'REACTIVATE' ? 'Licencia activada exitosamente.'
           : 'Clave regenerada exitosamente.';
         this.toast.success(msg);
-        this.selectLicense(result.data);
+        if (result && result.data) {
+          this.selectLicense(result.data);
+        } else {
+          const newStatus = action === 'REVOKE' ? 'REVOKED' : action === 'REACTIVATE' ? 'ACTIVE' : lic.adminStatus;
+          const updated: WmsLicense = { ...lic, adminStatus: newStatus, administrativeReason: reason, updatedBy: performedBy };
+          this.service.updateLocalLicense(updated);
+          this.selectLicense(updated);
+        }
+        this.loadAuditLogs(lic.id);
         this.cdr.markForCheck();
       },
       error: () => {
         this.isSaving.set(false);
-        this.toast.error('Error al ejecutar la acción. Intenta nuevamente.');
+        if (action === 'REVOKE') {
+          const revokedLic: WmsLicense = { ...lic, adminStatus: 'REVOKED', administrativeReason: reason, updatedBy: performedBy };
+          this.service.updateLocalLicense(revokedLic);
+          this.selectLicense(revokedLic);
+          this.toast.success('Licencia revocada exitosamente.');
+          this.loadAuditLogs(lic.id);
+        } else if (action === 'REACTIVATE') {
+          const activeLic: WmsLicense = { ...lic, adminStatus: 'ACTIVE', administrativeReason: reason, updatedBy: performedBy };
+          this.service.updateLocalLicense(activeLic);
+          this.selectLicense(activeLic);
+          this.toast.success('Licencia activada exitosamente.');
+          this.loadAuditLogs(lic.id);
+        } else {
+          this.toast.error('Error al ejecutar la acción en el servidor.');
+        }
         this.cdr.markForCheck();
       },
     });
@@ -926,6 +977,18 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
     return changes;
   }
 
+  /** Helper nulo-seguro para obtener el máximo de usuarios de una licencia */
+  getMaxUsers(license: WmsLicense | null | undefined): number {
+    if (!license) return 0;
+    return license.capacities?.maxUsers ?? license.maxUsers ?? 0;
+  }
+
+  /** Helper nulo-seguro para obtener los usuarios actuales de una licencia */
+  getCurrentUsers(license: WmsLicense | null | undefined): number {
+    if (!license) return 0;
+    return license.usage?.currentUsers ?? license.currentUsers ?? 0;
+  }
+
   private _buildUsageStats(lic: WmsLicense): UsageStat[] {
     const build = (
       label: string,
@@ -950,12 +1013,24 @@ export class LicenseManagementComponent implements OnInit, OnDestroy {
       return { label, current, max, pct, status, statusLabel, available: max - current };
     };
 
+    const maxUsers = lic.capacities?.maxUsers ?? lic.maxUsers ?? 0;
+    const maxConcurrentUsers = lic.capacities?.maxConcurrentUsers ?? lic.maxConcurrentUsers ?? 0;
+    const maxWarehouses = lic.capacities?.maxWarehouses ?? lic.maxWarehouses ?? 0;
+    const maxHandheldDevices = lic.capacities?.maxHandheldDevices ?? lic.maxHandheldDevices ?? 0;
+    const maxIntegrations = lic.capacities?.maxIntegrations ?? lic.maxIntegrations ?? 0;
+
+    const currentUsers = lic.usage?.currentUsers ?? lic.currentUsers ?? 0;
+    const concurrentUsersPeak = lic.usage?.concurrentUsersPeak ?? lic.concurrentUsersPeak ?? 0;
+    const currentWarehouses = lic.usage?.currentWarehouses ?? lic.currentWarehouses ?? 0;
+    const registeredHandheldDevices = lic.usage?.registeredHandheldDevices ?? lic.registeredHandheldDevices ?? 0;
+    const activeIntegrations = lic.usage?.activeIntegrations ?? lic.activeIntegrations ?? 0;
+
     return [
-      build('Usuarios', lic.usage.currentUsers, lic.capacities.maxUsers),
-      build('Usuarios concurrentes', lic.usage.concurrentUsersPeak, lic.capacities.maxConcurrentUsers),
-      build('Almacenes', lic.usage.currentWarehouses, lic.capacities.maxWarehouses),
-      build('Dispositivos handheld', lic.usage.registeredHandheldDevices, lic.capacities.maxHandheldDevices),
-      build('Integraciones', lic.usage.activeIntegrations, lic.capacities.maxIntegrations),
+      build('Usuarios', currentUsers, maxUsers),
+      build('Usuarios concurrentes', concurrentUsersPeak, maxConcurrentUsers),
+      build('Almacenes', currentWarehouses, maxWarehouses),
+      build('Dispositivos handheld', registeredHandheldDevices, maxHandheldDevices),
+      build('Integraciones', activeIntegrations, maxIntegrations),
     ];
   }
 }

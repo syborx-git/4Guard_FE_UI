@@ -212,7 +212,7 @@ export function uniqueLicenseKeyValidator(
 
     const isDuplicate = licenses.some(
       (lic) =>
-        lic.licenseKey.trim().toUpperCase() === normalizedKey &&
+        (lic.licenseKey || '').trim().toUpperCase() === normalizedKey &&
         lic.id !== currentId
     );
 
