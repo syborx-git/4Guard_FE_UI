@@ -42,6 +42,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   protected readonly viewState = signal<LoginViewState>('login');
   protected readonly showForgotModal = signal<boolean>(false);
   protected readonly inactivityNotice = signal<boolean>(false);
+  protected readonly savedProcessName = signal<string | null>(null);
 
   // ── Estado de carga y errores ────────────────────────────
   protected readonly isLoading  = signal<boolean>(false);
@@ -81,6 +82,10 @@ export class LoginComponent implements OnInit, OnDestroy {
       const reason = this.route.snapshot.queryParams['reason'];
       if (reason === 'inactivity') {
         this.inactivityNotice.set(true);
+        const process = localStorage.getItem('4g_pending_process_name');
+        if (process) {
+          this.savedProcessName.set(process);
+        }
       }
       this.viewState.set('login');
       this.attemptsRemaining.set(null);

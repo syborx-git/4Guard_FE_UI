@@ -390,6 +390,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
+    { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
   ];
 
 
@@ -398,8 +399,18 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
   );
 
+  protected readonly resumedProcessNotice = signal<string | null>(null);
+
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    // Verificar si se reanudó un proceso guardado por inactividad
+    const resumedProcess = localStorage.getItem('4g_resumed_process_name');
+    if (resumedProcess) {
+      this.resumedProcessNotice.set(resumedProcess);
+      localStorage.removeItem('4g_resumed_process_name');
+      setTimeout(() => this.resumedProcessNotice.set(null), 7000);
+    }
 
     this.restoreTheme();
     this.updateClock();

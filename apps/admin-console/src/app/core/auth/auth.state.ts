@@ -110,7 +110,22 @@ export class AuthState {
     this.setSession(session);
     if (session.user.changePasswordRequired) {
       this.router.navigate(['/change-password']);
+      return;
+    }
+
+    const returnUrl = localStorage.getItem('4g_return_url');
+    const pendingProcess = localStorage.getItem('4g_pending_process_name');
+
+    if (returnUrl && returnUrl !== '/dashboard') {
+      if (pendingProcess) {
+        localStorage.setItem('4g_resumed_process_name', pendingProcess);
+      }
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
+      this.router.navigateByUrl(returnUrl);
     } else {
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
       this.router.navigate(['/dashboard']);
     }
   }
@@ -172,6 +187,8 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing
       case 'suppliers':
         return true; // Acceso total habilitado para desarrollo y testing
+      case 'warehouse-movements':
+        return true;
       case 'performance':
         return true; // Acceso total habilitado para desarrollo y testing
       case 'shifts':

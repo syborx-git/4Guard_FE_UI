@@ -327,6 +327,24 @@
 
     <!-- Router content -->
     <main class="shell__content" role="main" id="main-content">
+      @if (resumedProcessNotice()) {
+        <div class="bg-emerald-950/90 border border-emerald-500/40 text-emerald-100 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-3 mb-6 animate-fade-in">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+              <span class="material-symbols-outlined text-xl">sync_saved_loc</span>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Proceso Reanudado con Éxito</h4>
+              <p class="text-xs text-slate-200 mt-0.5">
+                Has vuelto a <strong class="text-white font-bold underline">{{ resumedProcessNotice() }}</strong>. Tu trabajo y contexto se mantienen disponibles.
+              </p>
+            </div>
+          </div>
+          <button (click)="resumedProcessNotice.set(null)" type="button" class="text-emerald-400 hover:text-emerald-200 p-1">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+      }
       <router-outlet />
     </main>
   </div>
