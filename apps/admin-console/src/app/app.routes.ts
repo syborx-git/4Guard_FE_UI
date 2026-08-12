@@ -301,6 +301,18 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Licencias y Capacidades del WMS',
       },
 
+      // Movimientos de Almacén (Recepción, Traspasos, Outbound)
+      {
+        path: 'warehouse-movements',
+        canActivate: [rbacGuard],
+        data: { module: 'warehouse-movements' },
+        loadChildren: () =>
+          import('./features/warehouse-movements/warehouse-movements.routes').then(
+            (m) => m.WAREHOUSE_MOVEMENTS_ROUTES
+          ),
+        title: '4GUARD WMS — Movimientos de Almacén',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

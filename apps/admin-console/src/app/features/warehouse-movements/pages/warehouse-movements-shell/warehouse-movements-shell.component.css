@@ -1,0 +1,12 @@
+/**
+ * warehouse-movements-shell.component.css
+ * Estilos del contenedor shell del módulo Movimientos de Almacén.
+ */
+
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #030712;
+  color: #f3f4f6;
+}

@@ -1,0 +1,324 @@
+<!-- Contenedor Submódulo Salidas de Almacén -->
+<div class="space-y-6">
+
+  <!-- Header Submódulo + Navigation Tabs -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+        <span class="material-symbols-outlined text-2xl">local_shipping</span>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-slate-100 tracking-tight">Salidas de Almacén (Despacho / Outbound)</h2>
+        <p class="text-xs text-slate-400">Despacho de mercancía con sugerencia FIFO/FEFO y selección granular de tarimas</p>
+      </div>
+    </div>
+
+    <!-- Sub-tabs bar -->
+    <div class="flex gap-2 border-b border-slate-800 pb-3 text-xs font-semibold">
+      <button
+        type="button"
+        (click)="activeTab.set('alta-salidas')"
+        [ngClass]="activeTab() === 'alta-salidas' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'text-slate-300 border-slate-800 hover:bg-slate-800'"
+        class="px-4 py-2.5 rounded-lg border transition-colors flex items-center gap-2"
+      >
+        <span class="material-symbols-outlined text-base">unarchive</span>
+        1. Alta de Salidas (Despacho)
+      </button>
+
+      <button
+        type="button"
+        (click)="activeTab.set('consulta-salidas')"
+        [ngClass]="activeTab() === 'consulta-salidas' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'text-slate-300 border-slate-800 hover:bg-slate-800'"
+        class="px-4 py-2.5 rounded-lg border transition-colors flex items-center gap-2"
+      >
+        <span class="material-symbols-outlined text-base">history</span>
+        2. Consulta de Salidas Despachadas
+      </button>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 1: ALTA DE SALIDAS -->
+  <div *ngIf="activeTab() === 'alta-salidas'" class="space-y-6">
+
+    <!-- Formulario de Transporte y Destino -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+        <span class="material-symbols-outlined text-amber-400">local_shipping</span>
+        Captura de Transporte, Destino y Sello
+      </h3>
+
+      <form [formGroup]="outboundForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Cliente Propietario *</label>
+          <input type="text" formControlName="client" class="fg-input" placeholder="Nestlé México" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Planta Destino (Física) *</label>
+          <select formControlName="destinationPlant" class="fg-input">
+            <option *ngFor="let p of destinationPlants" [value]="p">{{ p }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-amber-400 mb-1">No. Sello / Cincho (Obligatorio) *</label>
+          <input type="text" formControlName="sealNumber" class="fg-input font-mono font-bold text-amber-300 border-amber-500/50" placeholder="SL-88401" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Línea Transportista *</label>
+          <input type="text" formControlName="carrierName" class="fg-input" placeholder="Transportes Castores" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre Operador (Chofer) *</label>
+          <input type="text" formControlName="driverName" class="fg-input" placeholder="Juan Pérez" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Número Económico *</label>
+          <input type="text" formControlName="economicNumber" class="fg-input font-mono" placeholder="ECO-901" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Placas Tractor *</label>
+          <input type="text" formControlName="tractorPlates" class="fg-input" placeholder="12-AA-34" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Placas Caja *</label>
+          <input type="text" formControlName="boxPlates" class="fg-input" placeholder="78-BB-90" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Tipo de Transporte *</label>
+          <select formControlName="transportType" class="fg-input">
+            <option *ngFor="let t of transportTypes" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <!-- ALGORITMO SUGERIDO FIFO / FEFO Y SELECCIÓN DE REMISIÓN DE INVENTARIO -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-400">verified</span>
+          Lotes y Remisiones Disponibles (Sugerido FIFO/FEFO)
+        </h3>
+        <span class="text-xs text-amber-400 font-semibold">Resaltado visual del lote más antiguo</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          *ngFor="let b of availableBatches()"
+          (click)="selectBatch(b)"
+          [ngClass]="{
+            'ring-2 ring-amber-400': selectedBatch()?.remisionNo === b.remisionNo,
+            'bg-amber-500/10 border-amber-500/50': b.isFifoSuggested
+          }"
+          class="p-4 rounded-xl border border-slate-800 bg-slate-950/60 cursor-pointer hover:border-slate-700 transition-all relative"
+        >
+          <!-- Badge FIFO Sugerido -->
+          <div *ngIf="b.isFifoSuggested" class="absolute right-3 top-3 px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md animate-pulse">
+            <span class="material-symbols-outlined text-xs">star</span>
+            <span>SUGERIDO FIFO / FEFO</span>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-100 text-sm font-mono">{{ b.remisionNo }}</span>
+              <span class="text-slate-400">({{ b.client }})</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Lote: <strong class="font-mono text-slate-100">{{ b.lotNumber }}</strong></div>
+              <div>Bahía: <strong class="font-mono text-amber-300">{{ b.locationCode }}</strong></div>
+              <div>Caducidad: <strong class="text-rose-400">{{ b.expirationDate }}</strong></div>
+              <div>Disp: <strong class="text-emerald-400 font-mono">{{ b.availablePallets }} Tarimas</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SELECCIÓN GRANULAR DE UAs POR CHECKBOX -->
+    <div *ngIf="selectedBatch() as batch" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-400">checklist</span>
+            Selección Granular de Tarimas (Salida Parcial)
+          </h3>
+          <p class="text-xs text-slate-400">Marca o desmarca checkboxes por cada palet individual sin descuadrar el inventario.</p>
+        </div>
+
+        <div class="text-right text-xs">
+          <span class="text-slate-400 block">Seleccionadas:</span>
+          <span class="font-mono font-bold text-amber-400 text-base">
+            {{ totalSelectedPallets() }} / {{ batch.pallets.length }} Tarimas ({{ totalSelectedPieces() }} Pzas)
+          </span>
+        </div>
+      </div>
+
+      <!-- Tabla Granular con Checkbox -->
+      <div class="border border-slate-800 rounded-xl overflow-hidden shadow-xl text-xs">
+        <table class="w-full text-left text-slate-300">
+          <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+            <tr>
+              <th class="p-3 text-center">
+                <input type="checkbox" checked (change)="toggleAllPallets($event)" class="rounded bg-slate-800 border-slate-700 text-amber-400 focus:ring-amber-500" />
+              </th>
+              <th class="p-3">Código UA</th>
+              <th class="p-3">Descripción SKU</th>
+              <th class="p-3 text-center">Tipo Tarima</th>
+              <th class="p-3 text-right">Piezas</th>
+              <th class="p-3">Observaciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800 bg-slate-950/40">
+            <tr *ngFor="let p of batch.pallets" class="hover:bg-slate-800/40">
+              <td class="p-3 text-center">
+                <input
+                  type="checkbox"
+                  [checked]="!!selectedPalletsMap()[p.id]"
+                  (change)="togglePalletSelection(p.id, $event)"
+                  class="rounded bg-slate-800 border-slate-700 text-amber-400 focus:ring-amber-500"
+                />
+              </td>
+              <td class="p-3 font-mono font-bold text-amber-300">{{ p.palletCode }}</td>
+              <td class="p-3">{{ p.description }}</td>
+              <td class="p-3 text-center">{{ p.palletTypeLabel }}</td>
+              <td class="p-3 text-right font-mono font-bold text-slate-100">{{ p.pieces }}</td>
+              <td class="p-3 text-slate-400">{{ p.observations || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- BOTÓN EJECUTAR DESPACHO -->
+      <div class="flex justify-end pt-4 border-t border-slate-800">
+        <button
+          type="button"
+          (click)="executeDispatch()"
+          [disabled]="totalSelectedPallets() === 0"
+          class="px-6 py-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl shadow-xl flex items-center gap-2 transition-colors"
+        >
+          <span class="material-symbols-outlined text-lg">local_shipping</span>
+          <span>Procesar y Autorizar Salida (Formato de Mercancía)</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- PESTAÑA 2: CONSULTA DE SALIDAS -->
+  <div *ngIf="activeTab() === 'consulta-salidas'" class="space-y-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider">Historial de Salidas Despachadas</h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Folio Salida</label>
+          <input
+            type="text"
+            [ngModel]="searchFolio()"
+            (ngModelChange)="searchFolio.set($event)"
+            placeholder="ej. DESP-8820"
+            class="fg-input font-mono"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Cliente</label>
+          <input
+            type="text"
+            [ngModel]="searchClient()"
+            (ngModelChange)="searchClient.set($event)"
+            placeholder="Filtrar cliente..."
+            class="fg-input"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Línea Transportista</label>
+          <input
+            type="text"
+            [ngModel]="searchCarrier()"
+            (ngModelChange)="searchCarrier.set($event)"
+            placeholder="Filtrar transportista..."
+            class="fg-input"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla Histórica de Salidas -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+      <table class="w-full text-left text-xs text-slate-300">
+        <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+          <tr>
+            <th class="p-3">Folio</th>
+            <th class="p-3">Fecha Despacho</th>
+            <th class="p-3">Cliente</th>
+            <th class="p-3">Planta Destino</th>
+            <th class="p-3">Transporte</th>
+            <th class="p-3 text-center">Tarimas</th>
+            <th class="p-3 text-right">Piezas</th>
+            <th class="p-3 text-center">Acción</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800">
+          <tr *ngFor="let d of filteredDispatches()" class="hover:bg-slate-800/40">
+            <td class="p-3 font-mono font-bold text-amber-400">#{{ d.folio }}</td>
+            <td class="p-3 text-slate-400">{{ d.dispatchedAt }}</td>
+            <td class="p-3 font-medium text-slate-200">{{ d.client }}</td>
+            <td class="p-3 font-semibold text-emerald-400">{{ d.destinationPlant }}</td>
+            <td class="p-3 text-slate-300">{{ d.carrierName }} ({{ d.transportType }})</td>
+            <td class="p-3 text-center font-mono font-bold">{{ d.totalPallets }}</td>
+            <td class="p-3 text-right font-mono font-bold text-slate-100">{{ d.totalPieces }}</td>
+            <td class="p-3 text-center">
+              <button
+                (click)="openPrintPreview(d)"
+                class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded border border-slate-700 text-xs font-semibold flex items-center gap-1 mx-auto"
+              >
+                <span class="material-symbols-outlined text-sm">print</span>
+                <span>Soporte Físico</span>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL IMPRESIÓN SALIDA DE MERCANCÍA -->
+<div *ngIf="showPrintModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+  <div class="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-slate-100 font-bold text-sm">
+        <span class="material-symbols-outlined text-amber-400">print</span>
+        <span>Formato de Salida de Mercancía / Despacho</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button (click)="triggerBrowserPrint()" type="button" class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1.5 shadow">
+          <span class="material-symbols-outlined text-base">print</span>
+          <span>Imprimir Ahora</span>
+        </button>
+        <button (click)="closePrintModal()" type="button" class="text-slate-400 hover:text-slate-200">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="p-6 overflow-y-auto bg-slate-200 text-slate-900">
+      <fg-print-dispatch-layout
+        *ngIf="selectedPrintDispatch()"
+        [dispatch]="selectedPrintDispatch()!"
+      ></fg-print-dispatch-layout>
+    </div>
+  </div>
+</div>

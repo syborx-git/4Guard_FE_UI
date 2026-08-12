@@ -39,11 +39,16 @@
             Ingresa tus credenciales para acceder al sistema.
           </p>
 
-          <!-- Aviso de cierre por inactividad -->
+          <!-- Aviso de cierre por inactividad y preservación de proceso -->
           @if (inactivityNotice()) {
             <div class="login-info-alert" role="status" aria-live="polite">
-              <span class="material-symbols-outlined login-info-alert__icon">info</span>
-              <span class="login-info-alert__msg">Tu sesión se cerró por inactividad. Puedes ingresar normalmente con tus credenciales.</span>
+              <span class="material-symbols-outlined login-info-alert__icon">hourglass_pause</span>
+              <div class="space-y-0.5">
+                <span class="login-info-alert__msg font-bold">Sesión Pausada por Inactividad</span>
+                <p class="text-xs text-amber-300 font-medium">
+                  Tu trabajo en <strong class="text-white underline">{{ savedProcessName() || 'tu proceso activo' }}</strong> se ha preservado. Ingresa para reanudar.
+                </p>
+              </div>
             </div>
           }
 

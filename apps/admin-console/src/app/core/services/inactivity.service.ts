@@ -184,6 +184,16 @@ export class InactivityService implements OnDestroy {
     this.stopCountdown();
 
     this.writeAuditLog('SESSION_TIMEOUT_LOGOUT');
+
+    // Preservar la ruta y proceso actual antes de limpiar la sesión (HU-005 / Reanudación de Proceso)
+    const currentUrl = this.router.url;
+    if (currentUrl && !currentUrl.includes('/login') && !currentUrl.includes('/change-password')) {
+      const processName = this.getProcessNameFromUrl(currentUrl);
+      localStorage.setItem('4g_return_url', currentUrl);
+      localStorage.setItem('4g_pending_process_name', processName);
+      localStorage.setItem('4g_inactivity_timestamp', new Date().toISOString());
+    }
+
     this.authState.clearSession();
 
     // Limpieza completa de tokens y eliminación de estados de bloqueo residuales
@@ -194,6 +204,22 @@ export class InactivityService implements OnDestroy {
     localStorage.removeItem('4guard_failed_attempts');
 
     this.router.navigate(['/login'], { queryParams: { reason: 'inactivity' } });
+  }
+
+  private getProcessNameFromUrl(url: string): string {
+    if (url.includes('/warehouse-movements/receiving')) return 'Recepción de Mercancía (Movimientos)';
+    if (url.includes('/warehouse-movements/transfers')) return 'Cambio de Almacén (Traspasos)';
+    if (url.includes('/warehouse-movements/outbound')) return 'Salidas de Almacén (Despacho)';
+    if (url.includes('/warehouse-movements')) return 'Movimientos de Almacén';
+    if (url.includes('/receiving')) return 'Recepción de Mercancía';
+    if (url.includes('/inventory')) return 'Gestión de Inventario';
+    if (url.includes('/shipping')) return 'Despacho y Embarques';
+    if (url.includes('/quality')) return 'Control de Calidad';
+    if (url.includes('/layout')) return 'Gestión de Layout';
+    if (url.includes('/performance')) return 'Rendimiento Operativo';
+    if (url.includes('/admin')) return 'Administración y Usuarios';
+    if (url.includes('/profile')) return 'Mi Perfil';
+    return 'Consola Operativa';
   }
 
   private writeAuditLog(event: string): void {
