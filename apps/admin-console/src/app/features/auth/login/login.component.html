@@ -1,8 +1,20 @@
-<!-- apps/admin-console/src/app/features/auth/login/login.component.html -->
 <div class="login-page" role="main" aria-label="Inicio de sesión">
 
   <!-- ══ Panel izquierdo — Branding & Logo Destacado ══════════════════════════ -->
   <aside class="login-brand" aria-hidden="true">
+    <!-- Animación Ghost Cursor (Estela fluida azul neón 4GUARD en fondo oscuro del panel izquierdo) -->
+    <fg-ghost-cursor
+      color="#38bdf8"
+      [brightness]="2.0"
+      [blobSize]="1.2"
+      [bloomStrength]="0.15"
+      [bloomRadius]="1.0"
+      [bloomThreshold]="0.025"
+      [trailLength]="50"
+      [grainIntensity]="0.03"
+      [zIndex]="1"
+    ></fg-ghost-cursor>
+
     <div class="login-brand__overlay"></div>
     <div class="login-brand__grid"></div>
 

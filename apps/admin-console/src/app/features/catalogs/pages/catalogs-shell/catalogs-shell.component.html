@@ -1,0 +1,42 @@
+<div class="catalogs-shell-wrapper font-sans p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+  
+  <!-- Banner Header Principal de Catálogos (Estilo Ejecutivo Light "Blanquito") -->
+  <div class="module-header-card shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex items-center gap-4">
+      <div class="module-header-icon-wrap">
+        <span class="material-symbols-outlined text-3xl">style</span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="module-header-title">Catálogos Maestros</h1>
+          <span class="module-header-badge">
+            WMS 4GUARD
+          </span>
+        </div>
+        <p class="module-header-subtitle">
+          Administración centralizada de Usuarios, Clientes, SKUs, Topología de Almacén y Montacarguistas
+        </p>
+      </div>
+    </div>
+
+    <!-- Pestañas Primarias de Catálogos (Usuarios | Clientes | SKUs | Almacén | Montacarguistas) -->
+    <div class="primary-tabs-nav">
+      @for (tab of tabs; track tab.route) {
+        <a
+          [routerLink]="tab.route"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="primary-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">{{ tab.icon }}</span>
+          <span>{{ tab.label }}</span>
+        </a>
+      }
+    </div>
+  </div>
+
+  <!-- Router Outlet de Catálogos -->
+  <main class="catalogs-main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

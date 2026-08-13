@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   MOVIMIENTOS DE ALMACÉN WMS — SHELL HEADER (ESTILO LIGHT CAPTURA 2)
+   CATÁLOGOS MAESTROS WMS — SHELL HEADER (ESTILO LIGHT CAPTURA 2)
    ════════════════════════════════════════════════════════════════ */
 
 :host {
@@ -7,7 +7,7 @@
   width: 100%;
 }
 
-.movements-shell-wrapper {
+.catalogs-shell-wrapper {
   min-height: 100vh;
 }
 
@@ -83,7 +83,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
   border-radius: 10px;
   color: #475569;
   font-family: 'DM Sans', sans-serif;
@@ -105,7 +105,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   ADAPTACIÓN PARA MODO OSCURO (OPCIONAL SI CAMBIAN A DARK THEME)
+   ADAPTACIÓN PARA MODO OSCURO
    ───────────────────────────────────────────────────────────── */
 
 :host-context(.theme-dark) .module-header-card,

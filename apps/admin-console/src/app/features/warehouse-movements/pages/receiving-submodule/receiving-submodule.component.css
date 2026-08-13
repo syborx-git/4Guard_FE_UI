@@ -1,6 +1,6 @@
 /**
  * receiving-submodule.component.css
- * Estilos dark mode Slate/Amber/Emerald para Recepción de Mercancía.
+ * Estilos Light Theme "Blanquito" (Captura 2) para Recepción de Mercancía.
  */
 
 :host {
@@ -8,40 +8,99 @@
   width: 100%;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   ESTILO LIGHT THEME "BLANQUITO" (CAPTURA 2)
+   ───────────────────────────────────────────────────────────── */
+
+.bg-slate-900,
+.bg-slate-950,
+.bg-slate-950\/80,
+.bg-slate-950\/90,
+.bg-slate-950\/50,
+.bg-slate-950\/40,
+.wizard-card {
+  background-color: #FFFFFF !important;
+  border-color: rgba(197, 168, 107, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(53, 47, 36, 0.05) !important;
+  color: #202633 !important;
+}
+
+.text-slate-100,
+.text-slate-200,
+.text-white {
+  color: #202633 !important;
+}
+
+.text-slate-300,
+.text-slate-400,
+.text-slate-500 {
+  color: #747985 !important;
+}
+
+.border-slate-800,
+.border-slate-700 {
+  border-color: #E2E8F0 !important;
+}
+
+input,
+select,
+textarea,
 .fg-input,
 .field__input {
-  width: 100%;
-  background-color: #090d16 !important;
-  border: 1px solid #1e293b !important;
-  border-radius: 0.5rem !important;
-  padding: 0.625rem 0.75rem !important;
-  font-size: 0.875rem !important;
-  font-family: monospace, sans-serif !important;
-  color: #ffffff !important;
-  transition: all 0.15s ease-in-out !important;
+  background-color: #F8FAFC !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
+  border-radius: 0.6rem !important;
+  font-family: inherit !important;
 }
 
+input:focus,
+select:focus,
+textarea:focus,
 .fg-input:focus,
 .field__input:focus {
-  outline: none !important;
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 0 1px #f59e0b !important;
+  background-color: #FFFFFF !important;
+  border-color: #EAB308 !important;
+  box-shadow: 0 0 0 3px rgba(234, 195, 73, 0.2) !important;
 }
 
-.field__label {
+.field__label,
+label {
   display: block !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  color: #94a3b8 !important;
-  margin-bottom: 0.25rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  margin-bottom: 0.35rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
 }
 
-.wizard-card {
-  background-color: rgba(15, 23, 42, 0.9) !important;
-  border: 1px solid #1e293b !important;
-  border-radius: 1rem !important;
-  padding: 1.5rem !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+.hover\:bg-slate-800:hover {
+  background-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+.text-amber-400 {
+  color: #B45309 !important;
+}
+
+.bg-amber-500\/10 {
+  background-color: rgba(234, 195, 73, 0.12) !important;
+}
+
+.border-amber-500\/30,
+.border-amber-500\/40 {
+  border-color: rgba(234, 195, 73, 0.35) !important;
+}
+
+.bg-amber-500\/15 {
+  background-color: rgba(234, 195, 73, 0.18) !important;
+  color: #B45309 !important;
+}
+
+.bg-slate-800 {
+  background-color: #F1F5F9 !important;
+  color: #334155 !important;
 }
 
 .form-row {

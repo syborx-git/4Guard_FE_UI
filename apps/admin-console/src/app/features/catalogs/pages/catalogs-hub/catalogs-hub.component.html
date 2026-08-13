@@ -1,0 +1,76 @@
+<div class="catalogs-hub-page">
+  <section class="admin-dashboard">
+
+    <!-- HERO / ENCABEZADO (Idéntico a Consola de Administración - Captura 1) -->
+    <header class="admin-hero">
+      <div class="admin-hero__eyebrow">
+        <span class="admin-hero__eyebrow-line"></span>
+        <span class="material-symbols-outlined">style</span>
+        <span>Console & Catalog Management</span>
+      </div>
+
+      <div class="admin-hero__content">
+        <div class="admin-hero__icon">
+          <span class="material-symbols-outlined">dataset</span>
+        </div>
+
+        <div class="admin-hero__copy">
+          <h1 class="admin-hero__title">
+            Consola de Catálogos Maestros WMS
+          </h1>
+          <p class="admin-hero__subtitle">
+            Administración centralizada de usuarios, clientes, catálogo de SKUs, topología de almacenaje y personal operativo de andén.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENIDO CATEGORIZADO -->
+    <div class="admin-dashboard__content">
+      <section class="admin-category">
+        
+        <header class="admin-category__header">
+          <div class="admin-category__heading">
+            <span class="material-symbols-outlined">apps</span>
+            <h2>Catálogos Maestros de Operación</h2>
+          </div>
+          <span class="admin-category__caption">WMS CATALOGS & REGISTRIES</span>
+        </header>
+
+        <!-- GRIDS DE TARJETAS LIQUID GLASS -->
+        <div class="admin-modules-grid">
+          @for (card of catalogCards; track card.id) {
+            <article
+              class="admin-module-card"
+              tabindex="0"
+              role="button"
+              (click)="navigateTo(card.route)"
+              (keydown.enter)="navigateTo(card.route)"
+            >
+              <div class="admin-module-card__glow"></div>
+
+              <div class="admin-module-card__top">
+                <div class="admin-module-card__icon">
+                  <span class="material-symbols-outlined">{{ card.icon }}</span>
+                </div>
+                <span class="admin-module-card__index">{{ card.index }}</span>
+              </div>
+
+              <div class="admin-module-card__body">
+                <h3 class="admin-module-card__title">{{ card.title }}</h3>
+                <p class="admin-module-card__description">{{ card.description }}</p>
+              </div>
+
+              <div class="admin-module-card__footer">
+                <span>{{ card.actionText }}</span>
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </div>
+            </article>
+          }
+        </div>
+
+      </section>
+    </div>
+
+  </section>
+</div>

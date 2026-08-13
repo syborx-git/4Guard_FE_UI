@@ -30,10 +30,12 @@
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
     "@angular/service-worker": "^17.3.0",
+    "@types/three": "^0.185.4",
     "chart.js": "^4.4.0",
     "dexie": "^3.2.7",
     "ng2-charts": "^5.0.4",
     "rxjs": "~7.8.0",
+    "three": "^0.185.1",
     "tslib": "^2.6.0",
     "zone.js": "~0.14.4"
   },

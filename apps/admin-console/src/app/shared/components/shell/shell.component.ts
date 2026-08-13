@@ -391,6 +391,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
     { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
+    { label: 'Catálogos', route: '/catalogs', icon: 'style', module: 'catalogs' },
   ];
 
 

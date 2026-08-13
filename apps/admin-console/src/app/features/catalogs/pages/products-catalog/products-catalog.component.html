@@ -1,0 +1,378 @@
+<div class="catalog-sub-page font-sans">
+
+  <!-- Toast Alert -->
+  @if (toastMessage()) {
+    <div
+      class="toast-banner transition-all border"
+      [ngClass]="{
+        'toast-success': toastMessage()?.type === 'success',
+        'toast-error': toastMessage()?.type === 'error'
+      }"
+    >
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined">
+          {{ toastMessage()?.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        <span>{{ toastMessage()?.text }}</span>
+      </div>
+      <button (click)="toastMessage.set(null)" class="hover:opacity-75">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Header y Sub-Pestañas de Productos / SKUs -->
+  <div class="catalog-card-container shadow-xl">
+    <div class="catalog-header-row">
+      <div class="flex items-center gap-3">
+        <div class="catalog-icon-wrap">
+          <span class="material-symbols-outlined text-2xl">inventory_2</span>
+        </div>
+        <div>
+          <h2 class="catalog-title">Catálogo de Productos / SKUs y Caducidad</h2>
+          <p class="catalog-subtitle">
+            Maestro de artículos, selector de 20 proveedores oficiales, unidades de medida y trazabilidad NOM-251
+          </p>
+        </div>
+      </div>
+
+      <!-- Sub-tabs Buttons -->
+      <div class="subtabs-bar">
+        <button
+          type="button"
+          (click)="activeTab.set('create')"
+          [ngClass]="activeTab() === 'create' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">add_box</span>
+          1. Alta de Productos
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('inactivate')"
+          [ngClass]="activeTab() === 'inactivate' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">disabled_by_default</span>
+          2. Inactivación NOM-251
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('consult')"
+          [ngClass]="activeTab() === 'consult' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">search</span>
+          3. Consulta de SKUs
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. ALTA DE PRODUCTOS -->
+    @if (activeTab() === 'create') {
+      <form [formGroup]="productForm" (ngSubmit)="onSubmitCreateProduct()" class="mt-6 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="form-field-label">Código SKU Único *</label>
+            <input
+              type="text"
+              formControlName="sku"
+              placeholder="Ej. SK-10023"
+              class="form-field-input font-mono text-amber-500 uppercase"
+            />
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="form-field-label">Descripción Técnica del Producto *</label>
+            <input
+              type="text"
+              formControlName="description"
+              placeholder="Ej. TAPA PLASTICA VERDE 38MM C/LINER SILICONA"
+              class="form-field-input"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="form-field-label">Lote de Producto por Defecto *</label>
+            <input
+              type="text"
+              formControlName="lotNumber"
+              placeholder="Ej. LOT-2026-A19"
+              class="form-field-input font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Proveedor Oficial (20 de 4Guard) *</label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                readonly
+                formControlName="supplier"
+                placeholder="Seleccione un Proveedor"
+                class="form-field-input font-bold cursor-pointer"
+                (click)="openSupplierModal()"
+              />
+              <button
+                type="button"
+                (click)="openSupplierModal()"
+                class="btn-secondary text-xs"
+              >
+                <span class="material-symbols-outlined text-base">list</span>
+                Lista
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-field-label">Unidad de Medida (UOM) *</label>
+            <select
+              formControlName="uom"
+              class="form-field-select font-semibold"
+            >
+              @for (u of uomOptions; track u.code) {
+                <option [value]="u.code">{{ u.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="form-field-label">Días de Caducidad Certificados *</label>
+            <input
+              type="number"
+              formControlName="expirationDays"
+              placeholder="Ej. 365"
+              class="form-field-input"
+            />
+            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
+              Configura el umbral de criticidad (>90d Verde, 30-90d Amarillo, <30d Rojo).
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="activeTab.set('consult')"
+            class="btn-secondary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="productForm.invalid"
+            class="btn-primary"
+          >
+            <span class="material-symbols-outlined text-base">save</span>
+            Guardar SKU en Catálogo
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- 2. INACTIVACIÓN NOM-251 O 3. CONSULTA DE SKUS -->
+    @if (activeTab() === 'consult' || activeTab() === 'inactivate') {
+      <div class="mt-6 space-y-4">
+
+        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-start gap-3">
+          <span class="material-symbols-outlined text-amber-500 mt-0.5">verified</span>
+          <div class="text-xs space-y-0.5">
+            <span class="font-bold text-slate-900 dark:text-white block">Cumplimiento Normativo NOM-251 / Traceability Standard</span>
+            <p class="text-slate-600 dark:text-slate-400">
+              Los SKUs inactivos se conservan en la base de datos para preservar el historial de auditoría de recepciones y movimientos pasados. No se aplican borrados físicos.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="form-field-label">Buscar SKU o Descripción</label>
+            <div class="relative">
+              <input
+                type="text"
+                [value]="searchTerm()"
+                (input)="searchTerm.set($any($event.target).value)"
+                placeholder="Ej. SK-10023, PET..."
+                class="form-field-input pl-9"
+              />
+              <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-sm">search</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-field-label">Filtrar por Proveedor</label>
+            <select
+              [value]="supplierFilter()"
+              (change)="supplierFilter.set($any($event.target).value)"
+              class="form-field-select"
+            >
+              <option value="ALL">Todos los Proveedores (20)</option>
+              @for (sup of officialSuppliers; track sup) {
+                <option [value]="sup">{{ sup }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="form-field-label">Unidad de Medida (UOM)</label>
+            <select
+              [value]="uomFilter()"
+              (change)="uomFilter.set($any($event.target).value)"
+              class="form-field-select"
+            >
+              <option value="ALL">Todas las UOM</option>
+              @for (u of uomOptions; track u.code) {
+                <option [value]="u.code">{{ u.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="form-field-label">Estatus NOM-251</label>
+            <select
+              [value]="statusFilter()"
+              (change)="statusFilter.set($any($event.target).value)"
+              class="form-field-select"
+            >
+              <option value="ALL">Todos</option>
+              <option value="ACTIVO">ACTIVO</option>
+              <option value="INACTIVO">INACTIVO</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código SKU</th>
+                <th>Descripción de Producto</th>
+                <th>Lote por Defecto</th>
+                <th>Proveedor Oficial</th>
+                <th class="text-center">UOM</th>
+                <th>Caducidad Certificada (Días)</th>
+                <th class="text-center">Estado NOM-251</th>
+                <th class="text-right">Inactivar / Conmutar</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of filteredProducts(); track p.id) {
+                <tr>
+                  <td class="font-mono font-bold text-amber-600 dark:text-amber-400">{{ p.sku }}</td>
+                  <td class="font-medium text-slate-900 dark:text-white max-w-xs truncate" title="{{ p.description }}">
+                    {{ p.description }}
+                  </td>
+                  <td class="font-mono text-slate-500 dark:text-slate-400 text-[11px]">{{ p.lotNumber }}</td>
+                  <td>
+                    <span class="role-badge">
+                      🏭 {{ p.supplier }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="font-mono font-bold text-[11px] text-slate-700 dark:text-slate-300">
+                      {{ p.uom }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-slate-900 dark:text-white">{{ p.expirationDays }} días</span>
+                      
+                      <span
+                        class="px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1"
+                        [ngClass]="{
+                          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30': getBadgeCriticality(p.expirationDays) === 'ACEPTABLE',
+                          'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30': getBadgeCriticality(p.expirationDays) === 'PRECAUCION',
+                          'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 animate-pulse': getBadgeCriticality(p.expirationDays) === 'CRITICO'
+                        }"
+                      >
+                        <span class="material-symbols-outlined text-[12px]">
+                          {{ getBadgeCriticality(p.expirationDays) === 'ACEPTABLE' ? 'verified' : getBadgeCriticality(p.expirationDays) === 'PRECAUCION' ? 'warning' : 'dangerous' }}
+                        </span>
+                        {{ getBadgeCriticality(p.expirationDays) === 'ACEPTABLE' ? 'Aceptable (>90d)' : getBadgeCriticality(p.expirationDays) === 'PRECAUCION' ? 'Precaución (30-90d)' : 'Crítico (<30d)' }}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td class="text-center">
+                    <span
+                      class="status-pill"
+                      [ngClass]="{
+                        'status-pill-active': p.status === 'ACTIVO',
+                        'status-pill-inactive': p.status === 'INACTIVO'
+                      }"
+                    >
+                      {{ p.status }}
+                    </span>
+                  </td>
+
+                  <td class="text-right">
+                    <button
+                      (click)="onToggleStatus(p)"
+                      [class]="p.status === 'ACTIVO' ? 'action-icon-btn-danger' : 'action-icon-btn-success'"
+                      class="btn-secondary text-xs py-1"
+                    >
+                      <span class="material-symbols-outlined text-sm">
+                        {{ p.status === 'ACTIVO' ? 'toggle_off' : 'toggle_on' }}
+                      </span>
+                      {{ p.status === 'ACTIVO' ? 'Inactivar' : 'Reactivar' }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="empty-table-row">
+                    No se encontraron productos con los filtros seleccionados.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <!-- Modal Selector de los 20 Proveedores Oficiales de 4Guard -->
+  @if (showSupplierModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-xl">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined text-amber-500">factory</span>
+            Seleccionar Proveedor Oficial 4Guard (20 Disponibles)
+          </h3>
+          <button (click)="closeSupplierModal()" class="modal-close-btn">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body grid grid-cols-2 sm:grid-cols-2 gap-2 max-h-80 overflow-y-auto">
+          @for (sup of officialSuppliers; track sup) {
+            <button
+              (click)="selectSupplier(sup)"
+              class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-amber-500 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-sm text-amber-500">domain</span>
+              {{ sup }}
+            </button>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeSupplierModal()" class="btn-secondary">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
