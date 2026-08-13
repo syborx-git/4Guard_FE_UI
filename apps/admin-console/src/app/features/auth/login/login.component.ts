@@ -21,13 +21,14 @@ import { SessionStorageService } from '../../../core/services/session-storage.se
 import { LoginResponse } from '../../../core/models/auth.models';
 import { AUTH_CONFIG } from '../../../core/config/auth.config';
 import { ForgotPasswordModalComponent } from './forgot-password-modal/forgot-password-modal.component';
+import { GhostCursorComponent } from '../../../shared/components/ghost-cursor/ghost-cursor.component';
 
 type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
 
 @Component({
   selector: 'fg-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent, GhostCursorComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })

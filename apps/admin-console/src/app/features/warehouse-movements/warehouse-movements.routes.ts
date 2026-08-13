@@ -1,6 +1,7 @@
 /**
  * @file warehouse-movements.routes.ts
  * @description Rutas lazy-loaded del módulo Movimientos de Almacén.
+ * Redirección directa al submódulo de Recepción (sin páginas intermedias obligatorias).
  */
 
 import { Routes } from '@angular/router';

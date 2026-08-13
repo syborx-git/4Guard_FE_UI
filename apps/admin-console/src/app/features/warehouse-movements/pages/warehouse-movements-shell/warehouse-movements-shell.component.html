@@ -1,31 +1,31 @@
-<div class="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto font-sans">
+<div class="movements-shell-wrapper font-sans p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
   
-  <!-- Banner Top Header del Módulo -->
-  <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/40 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+  <!-- Banner Header Principal (Estilo Ejecutivo Light "Blanquito" Captura 2 + Estructura Captura 1) -->
+  <div class="module-header-card shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
     <div class="flex items-center gap-4">
-      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
+      <div class="module-header-icon-wrap">
         <span class="material-symbols-outlined text-3xl">swap_horiz</span>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-2xl font-black text-slate-100 tracking-tight">Movimientos de Almacén</h1>
-          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+          <h1 class="module-header-title">Movimientos de Almacén</h1>
+          <span class="module-header-badge">
             WMS 4GUARD
           </span>
         </div>
-        <p class="text-xs text-slate-400 mt-1">
+        <p class="module-header-subtitle">
           Gestión integral de Recepción (F01), Cambio de Almacén en ceros y Salidas Outbound FIFO/FEFO
         </p>
       </div>
     </div>
 
-    <!-- Pestañas Primarias del Módulo -->
-    <div class="flex flex-wrap gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
+    <!-- Pestañas Primarias del Módulo (Recepción | Cambio de Almacén | Salidas) -->
+    <div class="primary-tabs-nav">
       <a
         routerLink="receiving"
-        routerLinkActive="bg-amber-400 text-slate-950 font-bold shadow-md"
+        routerLinkActive="tab-active"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-slate-100 transition-all flex items-center gap-2"
+        class="primary-tab-btn"
       >
         <span class="material-symbols-outlined text-base">move_to_inbox</span>
         <span>Recepción de Mercancía</span>
@@ -33,9 +33,9 @@
 
       <a
         routerLink="transfers"
-        routerLinkActive="bg-amber-400 text-slate-950 font-bold shadow-md"
+        routerLinkActive="tab-active"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-slate-100 transition-all flex items-center gap-2"
+        class="primary-tab-btn"
       >
         <span class="material-symbols-outlined text-base">compare_arrows</span>
         <span>Cambio de Almacén</span>
@@ -43,9 +43,9 @@
 
       <a
         routerLink="outbound"
-        routerLinkActive="bg-amber-400 text-slate-950 font-bold shadow-md"
+        routerLinkActive="tab-active"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-slate-100 transition-all flex items-center gap-2"
+        class="primary-tab-btn"
       >
         <span class="material-symbols-outlined text-base">local_shipping</span>
         <span>Salidas de Almacén</span>
@@ -54,8 +54,7 @@
   </div>
 
   <!-- Router Outlet de Submódulos -->
-  <div>
+  <main class="movements-main-content">
     <router-outlet></router-outlet>
-  </div>
-
+  </main>
 </div>

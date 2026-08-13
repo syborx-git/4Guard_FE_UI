@@ -189,6 +189,8 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing
       case 'warehouse-movements':
         return true;
+      case 'catalogs':
+        return true;
       case 'performance':
         return true; // Acceso total habilitado para desarrollo y testing
       case 'shifts':

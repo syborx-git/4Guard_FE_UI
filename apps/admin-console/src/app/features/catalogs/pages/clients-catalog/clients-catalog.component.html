@@ -1,0 +1,433 @@
+<div class="catalog-sub-page font-sans">
+
+  <!-- Toast Alert -->
+  @if (toastMessage()) {
+    <div
+      class="toast-banner transition-all border"
+      [ngClass]="{
+        'toast-success': toastMessage()?.type === 'success',
+        'toast-error': toastMessage()?.type === 'error'
+      }"
+    >
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined">
+          {{ toastMessage()?.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        <span>{{ toastMessage()?.text }}</span>
+      </div>
+      <button (click)="toastMessage.set(null)" class="hover:opacity-75">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Header y Sub-Pestañas de Clientes -->
+  <div class="catalog-card-container shadow-xl">
+    <div class="catalog-header-row">
+      <div class="flex items-center gap-3">
+        <div class="catalog-icon-wrap">
+          <span class="material-symbols-outlined text-2xl">business</span>
+        </div>
+        <div>
+          <h2 class="catalog-title">Catálogo de Clientes y Cuentas Corporativas</h2>
+          <p class="catalog-subtitle">
+            Registro de Razón Social, RFC, contraseñas de portal web, matriz de contactos y Destinos Físicos de Entrega
+          </p>
+        </div>
+      </div>
+
+      <!-- Sub-tabs Buttons -->
+      <div class="subtabs-bar">
+        <button
+          type="button"
+          (click)="activeTab.set('create')"
+          [ngClass]="activeTab() === 'create' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">domain_add</span>
+          1. Alta de Clientes
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('consult')"
+          [ngClass]="activeTab() === 'consult' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">search</span>
+          2. Consulta / Modificar
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. ALTA DE CLIENTES -->
+    @if (activeTab() === 'create') {
+      <form [formGroup]="clientForm" (ngSubmit)="onSubmitCreateClient()" class="mt-6 space-y-5">
+
+        <!-- Sección 1: Datos Generales -->
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-3">
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+            <span class="material-symbols-outlined text-amber-500 text-base">corporate_fare</span>
+            Información General de la Empresa
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="form-field-label">Razón Social *</label>
+              <input
+                type="text"
+                formControlName="businessName"
+                placeholder="Ej. NESTLE MEXICO S.A. DE C.V."
+                class="form-field-input"
+              />
+            </div>
+            <div>
+              <label class="form-field-label">RFC Fiscal *</label>
+              <input
+                type="text"
+                formControlName="rfc"
+                placeholder="Ej. NME850101K99"
+                class="form-field-input font-mono text-amber-500 uppercase"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="form-field-label">Teléfono Principal *</label>
+              <input
+                type="text"
+                formControlName="phone"
+                placeholder="Ej. 55 5268 2000"
+                class="form-field-input"
+              />
+            </div>
+            <div>
+              <label class="form-field-label">Contraseña Web Autoservicio</label>
+              <input
+                type="password"
+                formControlName="webPortalPassword"
+                placeholder="Acceso Portal Clientes"
+                class="form-field-input"
+              />
+            </div>
+            <div>
+              <label class="form-field-label">Dirección Fiscal / Corporativa *</label>
+              <input
+                type="text"
+                formControlName="address"
+                placeholder="Av. Ejército Nacional 453, CDMX"
+                class="form-field-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección 2: Panel Dinámico de Contactos -->
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-500 text-base">contacts</span>
+              Panel Dinámico de Contactos Corporativos
+            </h3>
+            <button
+              type="button"
+              (click)="addContactField()"
+              class="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-semibold hover:bg-amber-500/20 flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-xs">add</span>
+              Agregar Contacto
+            </button>
+          </div>
+
+          <div formArrayName="contacts" class="space-y-3">
+            @for (ctrl of contactsFormArray.controls; track $index) {
+              <div [formGroupName]="$index" class="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 items-end">
+                <div>
+                  <label class="form-field-label">Nombre Contacto</label>
+                  <input
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. Ing. Carlos Fuentes"
+                    class="form-field-input"
+                  />
+                </div>
+                <div>
+                  <label class="form-field-label">Departamento</label>
+                  <input
+                    type="text"
+                    formControlName="department"
+                    placeholder="Ej. Logística"
+                    class="form-field-input"
+                  />
+                </div>
+                <div>
+                  <label class="form-field-label">Teléfono Directo</label>
+                  <input
+                    type="text"
+                    formControlName="phone"
+                    placeholder="Ej. 55 1234 5678"
+                    class="form-field-input"
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1">
+                    <label class="form-field-label">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      formControlName="email"
+                      placeholder="cfuentes@empresa.com"
+                      class="form-field-input"
+                    />
+                  </div>
+                  @if (contactsFormArray.length > 1) {
+                    <button
+                      type="button"
+                      (click)="removeContactField($index)"
+                      class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg"
+                      title="Eliminar Contacto"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Sección 3: Destinos Físicos de Entrega -->
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-500 text-base">factory</span>
+              Destinos Físicos de Entrega (Plantas Toluca, Querétaro, Veracruz)
+            </h3>
+            <button
+              type="button"
+              (click)="addDestinationField()"
+              class="px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-semibold hover:bg-amber-500/20 flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-xs">add_location_alt</span>
+              Agregar Destino Físico
+            </button>
+          </div>
+
+          <div formArrayName="destinations" class="space-y-3">
+            @for (ctrl of destinationsFormArray.controls; track $index) {
+              <div [formGroupName]="$index" class="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="form-field-label">Nombre de Planta / Destino *</label>
+                    <input
+                      type="text"
+                      formControlName="plantName"
+                      placeholder="Ej. Planta Toluca (Café y Cacao)"
+                      class="form-field-input"
+                    />
+                  </div>
+                  <div>
+                    <label class="form-field-label">Persona de Contacto en Planta *</label>
+                    <input
+                      type="text"
+                      formControlName="contactPerson"
+                      placeholder="Ej. Ing. Fernando Ruiz"
+                      class="form-field-input"
+                    />
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1">
+                      <label class="form-field-label">Teléfono de Planta *</label>
+                      <input
+                        type="text"
+                        formControlName="phone"
+                        placeholder="Ej. 722 279 1000"
+                        class="form-field-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      (click)="removeDestinationField($index)"
+                      class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg mt-4"
+                      title="Eliminar Destino"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="form-field-label">Dirección Completa del Destino *</label>
+                  <input
+                    type="text"
+                    formControlName="fullAddress"
+                    placeholder="Ej. Km 62.5 Carretera México-Toluca, Zona Industrial, Toluca, EdoMex"
+                    class="form-field-input"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="activeTab.set('consult')"
+            class="btn-secondary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="clientForm.invalid"
+            class="btn-primary"
+          >
+            <span class="material-symbols-outlined text-base">check_circle</span>
+            Guardar Cliente y Destinos Físicos
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- 2. CONSULTA DE CLIENTES -->
+    @if (activeTab() === 'consult') {
+      <div class="mt-6 space-y-4">
+        <!-- Buscador -->
+        <div class="max-w-md">
+          <label class="form-field-label">Buscar Cliente por Razón Social o RFC</label>
+          <div class="relative">
+            <input
+              type="text"
+              [value]="searchTerm()"
+              (input)="searchTerm.set($any($event.target).value)"
+              placeholder="Ej. NESTLE, PEPSICO, NME850..."
+              class="form-field-input pl-9"
+            />
+            <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-sm">search</span>
+          </div>
+        </div>
+
+        <!-- Tarjetas de Clientes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          @for (c of filteredClients(); track c.id) {
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-3 shadow-sm hover:border-amber-500/40 transition-all">
+              <div class="flex items-start justify-between">
+                <div>
+                  <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    {{ c.code }}
+                  </span>
+                  <h3 class="text-base font-bold text-slate-900 dark:text-white mt-1">{{ c.businessName }}</h3>
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-mono block">RFC: {{ c.rfc }}</span>
+                </div>
+                <button
+                  (click)="openClientModal(c)"
+                  class="btn-secondary text-xs"
+                >
+                  <span class="material-symbols-outlined text-sm">location_city</span>
+                  Destinos ({{ c.destinations.length }})
+                </button>
+              </div>
+
+              <div class="text-xs text-slate-700 dark:text-slate-300 space-y-1 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <p class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-sm text-slate-400">location_on</span>
+                  <span>{{ c.address }}</span>
+                </p>
+                <p class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-sm text-slate-400">call</span>
+                  <span>{{ c.phone }}</span>
+                </p>
+              </div>
+
+              <div class="space-y-1">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs text-amber-500">factory</span>
+                  Destinos Físicos Registrados:
+                </span>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (dest of c.destinations; track dest.id) {
+                    <span class="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] text-slate-700 dark:text-slate-300">
+                      🏢 {{ dest.plantName }}
+                    </span>
+                  }
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="col-span-2 p-8 text-center text-slate-500 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950/40">
+              No se encontraron clientes registrados con el criterio de búsqueda.
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <!-- Modal de Gestión de Destinos Físicos Vincular -->
+  @if (selectedClientForEdit()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-2xl">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">
+              <span class="material-symbols-outlined text-amber-500">factory</span>
+              Destinos Físicos Vinculados — {{ selectedClientForEdit()?.businessName }}
+            </h3>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">RFC: {{ selectedClientForEdit()?.rfc }}</span>
+          </div>
+          <button (click)="closeClientModal()" class="modal-close-btn">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body space-y-3 max-h-64 overflow-y-auto">
+          @for (dest of selectedClientForEdit()?.destinations; track dest.id) {
+            <div class="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-900 dark:text-white">🏢 {{ dest.plantName }}</span>
+                <span class="text-[10px] font-mono text-slate-500">{{ dest.destinationCode }}</span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs text-slate-400">pin_drop</span>
+                {{ dest.fullAddress }}
+              </p>
+              <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-900">
+                <span>Contacto: {{ dest.contactPerson }}</span>
+                <span>Tel: {{ dest.phone }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-3">
+          <h4 class="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">add_location_alt</span>
+            Vincular Nuevo Destino Físico a esta Cuenta
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <input #pName type="text" placeholder="Nombre Planta (Ej. Planta Veracruz)" class="form-field-input" />
+            <input #pContact type="text" placeholder="Contacto (Ej. Lic. Sergio Ramos)" class="form-field-input" />
+            <input #pPhone type="text" placeholder="Teléfono (Ej. 228 816 3000)" class="form-field-input" />
+            <input #pAddress type="text" placeholder="Dirección Completa" class="form-field-input" />
+          </div>
+          <button
+            type="button"
+            (click)="addDestinationToSelectedClient(pName.value, pAddress.value, pContact.value, pPhone.value)"
+            class="w-full py-1.5 btn-primary text-xs justify-center"
+          >
+            Vincular Destino
+          </button>
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeClientModal()" class="btn-secondary">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

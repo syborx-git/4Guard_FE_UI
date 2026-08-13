@@ -313,6 +313,16 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Movimientos de Almacén',
       },
 
+      // Catálogos Maestros (Legacy 4SND Optimizado)
+      {
+        path: 'catalogs',
+        canActivate: [rbacGuard],
+        data: { module: 'catalogs' },
+        loadChildren: () =>
+          import('./features/catalogs/catalogs.routes').then((m) => m.catalogsRoutes),
+        title: '4GUARD WMS — Catálogos Maestros',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
