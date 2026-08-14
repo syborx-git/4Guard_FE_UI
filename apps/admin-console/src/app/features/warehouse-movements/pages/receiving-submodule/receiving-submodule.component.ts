@@ -1,12 +1,13 @@
 /**
  * @file receiving-submodule.component.ts
- * @description Submódulo 1: Recepción de Mercancía con 5 pestañas operativas internas.
- * Incluye Carga Rápida con auto-foco ininterrumpido y firma modal de Líder.
+ * @description Submódulo 1: Recepción de Mercancía — Workbench Unificado (Master-Detail).
+ * Integra Búsqueda, Alta, Cancelación, Cambio de Remisión y Consulta en una sola experiencia transaccional.
  */
 
 import { Component, ElementRef, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
   CheckInCasetaData,
@@ -19,12 +20,7 @@ import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/lea
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
 import { PrintCancellationLayoutComponent } from '../../components/print-layouts/print-cancellation-layout.component';
 
-type ReceivingTab =
-  | 'captura-caseta'
-  | 'alta-recepcion'
-  | 'cancelar-recepcion'
-  | 'cambio-remision'
-  | 'consulta-recepcion';
+export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 
 @Component({
   selector: 'fg-receiving-submodule',
@@ -43,21 +39,31 @@ type ReceivingTab =
 export class ReceivingSubmoduleComponent {
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly fb = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
 
-  // Tab activo
-  activeTab = signal<ReceivingTab>('captura-caseta');
-
-  // Elemento input para auto-foco en Carga Rápida (CORRECCIÓN 2)
+  // Auto-foco en escáner de UAs
   @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;
 
-  // Catalogos Reactivos desde Servicio
+  // ── ESTADO DEL WORKBENCH ──
+  searchQuery = signal('');
+  statusFilter = signal<string>('ALL');
+  selectedReception = signal<ReceptionHeader | null>(null);
+  detailSubTab = signal<ReceptionDetailSubTab>('descarga');
+
+  // Modales del Workbench
+  showCheckInModal = signal(false);
+  showChangeRemisionModal = signal(false);
+  showLeaderModal = signal(false);
+  showPrintModal = signal(false);
+
+  // Catálogos Reactivos desde Servicio
   palletTypes = Object.entries(PALLET_TYPE_LABELS) as [PalletType, string][];
   carrierLines = this.movementsService.carrierLines;
   clients = this.movementsService.clients;
   ramps = this.movementsService.ramps;
   forkliftOperators = this.movementsService.forkliftOperators;
 
-  // ── PESTAÑA A: Captura de Datos (CAPTURAR DATOS DE FACTURA / F01-PO-CP-7.1.3-03) ──
+  // ── FORMULARIO: Captura de Caseta (CheckIn F01-PO-CP-7.1.3-03) ──
   checkInForm = this.fb.group({
     carrierLineCode: ['TR-01'],
     carrierLine: ['Transportes Castores', [Validators.required]],
@@ -82,126 +88,385 @@ export class ReceivingSubmoduleComponent {
   sealList = signal<string[]>(['SL-90812']);
   tempSealInput = signal('');
   generatedFolio = signal<string | null>(null);
-  showFolioModal = signal(false);
-  copyToastMsg = signal<string | null>(null);
 
-  // Modal de Alta Rápida con Botón [+]
+  // Modal Alta Rápida de Entidades [+]
   showQuickAddModal = signal(false);
   quickAddType = signal<'CARRIER' | 'RAMP' | null>(null);
   quickAddCodeInput = signal('');
   quickAddNameInput = signal('');
   quickAddRampNumInput = signal<number>(13);
 
-  // ── PESTAÑA B: Alta de Recepción (Andén) ──
-  altaSearchFolio = signal('');
-  currentReception = signal<ReceptionHeader | null>(null);
+  // Catálogos del Paso 2 (Andén / Descarga)
+  suppliers = signal([
+    { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
+    { code: 'SUP-02', name: 'NESTLE MEXICO S.A DE C.V PLANTA TOLUCA' },
+    { code: 'SUP-03', name: 'DISTRIBUIDORA AUTOMOTRIZ S.A.' },
+  ]);
 
+  products = signal([
+    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 40 },
+    { id: '90811224', name: 'NESCAFE CLASICO 200G FRASCO', defaultPieces: 48 },
+    { id: '77012399', name: 'CARNATION CLAVEL 360G LATA', defaultPieces: 24 },
+    { id: '55409811', name: 'NESQUIK CHOCOLATE 500G', defaultPieces: 36 },
+  ]);
+
+  // ── FORMULARIO: Alta de Descarga en Andén (Paso 2) ──
   altaForm = this.fb.group({
-    lotNumber: ['LOT-2026-N1', [Validators.required]],
-    elaborationDate: ['2026-01-15', [Validators.required]],
-    expirationDate: ['2026-12-30', [Validators.required]],
-    productId: ['SKU-NES-680', [Validators.required]],
-    productName: ['Cereal Nestlé Nesquik 680g', [Validators.required]],
-    piecesPerPallet: [480, [Validators.required, Validators.min(1)]],
-    selectedPalletType: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
+    lotNumber: ['01.07.2026', [Validators.required]],
+    expirationDate: ['2028-07-31', [Validators.required]],
+    forkliftOperator: ['ALAN HUERTA PEREZ', [Validators.required]],
+    rampNumber: [11, [Validators.required]],
+    productId: ['12572733', [Validators.required]],
+    productName: ['FFEE-MATE ORIGINAL BOTELLA 12X400G N1', [Validators.required]],
+    supplierName: ['LE MEXICO S.A DE C.V', [Validators.required]],
+    piecesPerPallet: [40, [Validators.required, Validators.min(1)]],
+    selectedPalletType: ['TARIMA_CHEP' as PalletType, [Validators.required]],
     observations: [''],
   });
 
-  // Stream de Carga Rápida (Tarimas adicionadas dinámicamente)
+  // Stream de Escaneo Carga Rápida (UAs)
   palletStream = signal<ReceptionPalletItem[]>([]);
   uaCodeInput = signal('');
   uaObsInput = signal('');
 
-  // Computados en tiempo real (Signals)
+  // ── FORMULARIO: Cambio de Remisión ──
+  newRemisionInput = signal('');
+  changeJustification = signal('');
+
+  // ── ESTADO DE MODAL LÍDER E IMPRESIÓN ──
+  leaderModalTitle = signal('');
+  leaderAction = signal<'COMPLETE' | 'CANCEL' | null>(null);
+  cancellationJustification = signal('');
+  printType = signal<'RECEPTION' | 'CANCELLATION' | null>(null);
+  selectedPrintReception = signal<ReceptionHeader | null>(null);
+
+  // ── COMPUTADOS DEL WORKBENCH ──
+  kpiTotal = computed(() => this.movementsService.receptions().length);
+  kpiRegistered = computed(() => this.movementsService.receptions().filter((r) => r.status === 'REGISTERED').length);
+  kpiCompleted = computed(() => this.movementsService.receptions().filter((r) => r.status === 'COMPLETED').length);
+  kpiCancelled = computed(() => this.movementsService.receptions().filter((r) => r.status === 'CANCELLED').length);
+
+  filteredReceptions = computed(() => {
+    const list = this.movementsService.receptions();
+    const q = this.searchQuery().toLowerCase().trim();
+    const st = this.statusFilter();
+
+    return list.filter((r) => {
+      const matchStatus = st === 'ALL' || r.status === st;
+      const matchQuery =
+        !q ||
+        r.folio.toLowerCase().includes(q) ||
+        r.checkIn.docNumber.toLowerCase().includes(q) ||
+        r.checkIn.client.toLowerCase().includes(q) ||
+        r.productName.toLowerCase().includes(q) ||
+        r.productId.toLowerCase().includes(q);
+
+      return matchStatus && matchQuery;
+    });
+  });
+
   totalTarimas = computed(() => this.palletStream().length);
   totalProductos = computed(() => {
     const set = new Set(this.palletStream().map((p) => p.productId));
     return set.size;
   });
-  totalPiezas = computed(() =>
-    this.palletStream().reduce((acc, p) => acc + p.pieces, 0)
-  );
+  totalPiezas = computed(() => this.palletStream().reduce((acc, p) => acc + p.pieces, 0));
 
-  // ── Modales de Autorización e Impresión ──
-  showLeaderModal = signal(false);
-  leaderModalTitle = signal('');
-  leaderAction = signal<'COMPLETE' | 'CANCEL' | null>(null);
-
-  showPrintModal = signal(false);
-  printType = signal<'RECEPTION' | 'CANCELLATION' | null>(null);
-  selectedPrintReception = signal<ReceptionHeader | null>(null);
-
-  // ── PESTAÑA C: Cancelar Recepción ──
-  cancelFolioInput = signal('');
-  cancellationJustification = signal('');
-  cancelSearchResult = signal<ReceptionHeader | null>(null);
-
-  // ── PESTAÑA D: Cambio de Remisión ──
-  oldRemisionInput = signal('');
-  newRemisionInput = signal('');
-  changeJustification = signal('');
-  remisionSuccessMsg = signal<string | null>(null);
-
-  // ── PESTAÑA E: Consulta ──
-  searchClient = signal('');
-  searchDoc = signal('');
-  searchProduct = signal('');
-  filteredReceptions = computed(() => {
+  constructor() {
+    // Al iniciar, seleccionar la primera recepción existente si hay alguna
     const list = this.movementsService.receptions();
-    const c = this.searchClient().toLowerCase().trim();
-    const d = this.searchDoc().toLowerCase().trim();
-    const p = this.searchProduct().toLowerCase().trim();
+    if (list.length > 0) {
+      this.selectReception(list[0]);
+    }
+  }
 
-    return list.filter((r) => {
-      const matchClient = !c || r.checkIn.client.toLowerCase().includes(c);
-      const matchDoc = !d || r.checkIn.docNumber.toLowerCase().includes(d);
-      const matchProd = !p || r.productName.toLowerCase().includes(p) || r.productId.toLowerCase().includes(p);
-      return matchClient && matchDoc && matchProd;
+  // ── OPERACIONES DEL WORKBENCH ──
+
+  selectReception(rec: ReceptionHeader): void {
+    this.selectedReception.set(rec);
+    this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
+    this.altaForm.patchValue({
+      lotNumber: rec.lotNumber || '01.07.2026',
+      expirationDate: rec.expirationDate || '2028-07-31',
+      forkliftOperator: rec.checkIn.forkliftOperator || 'ALAN HUERTA PEREZ',
+      rampNumber: rec.checkIn.rampNumber || 11,
+      productId: rec.productId || '12572733',
+      productName: rec.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      supplierName: rec.supplierName || 'LE MEXICO S.A DE C.V',
+      piecesPerPallet: rec.piecesPerPallet || 40,
+      selectedPalletType: rec.selectedPalletType || 'TARIMA_CHEP',
+      observations: rec.observations || '',
     });
-  });
+  }
 
-  // ── HANDLERS DE CATÁLOGOS REACTIVOS ──
+  openNewReceptionModal(): void {
+    this.resetCheckInForm();
+    this.showCheckInModal.set(true);
+  }
+
+  closeNewReceptionModal(): void {
+    this.showCheckInModal.set(false);
+  }
+
+  submitCheckIn(): void {
+    if (this.checkInForm.invalid) {
+      this.checkInForm.markAllAsTouched();
+      this.toast.warning('Por favor completa los datos obligatorios de caseta.');
+      return;
+    }
+
+    const folio = this.movementsService.generateNextReceptionFolio();
+    this.generatedFolio.set(folio);
+
+    const formData = this.checkInForm.value as any;
+    formData.sealNumbers = [...this.sealList()];
+    if (formData.sealNumber && !formData.sealNumbers.includes(formData.sealNumber)) {
+      formData.sealNumbers.push(formData.sealNumber);
+    }
+
+    const newRec = this.movementsService.saveCheckIn(formData, folio);
+    this.showCheckInModal.set(false);
+    this.selectReception(newRec);
+    this.detailSubTab.set('descarga');
+    this.toast.success(`Pre-Recepción #${folio} creada exitosamente`);
+  }
+
+  openChangeRemisionModal(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+    this.newRemisionInput.set(current.checkIn.docNumber);
+    this.changeJustification.set('');
+    this.showChangeRemisionModal.set(true);
+  }
+
+  closeChangeRemisionModal(): void {
+    this.showChangeRemisionModal.set(false);
+  }
+
+  submitChangeRemision(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+    const oldRem = current.checkIn.docNumber;
+    const newRem = this.newRemisionInput().trim();
+    const just = this.changeJustification().trim();
+
+    if (!newRem || !just) {
+      this.toast.warning('La nueva remisión y la justificación son obligatorias.');
+      return;
+    }
+
+    const count = this.movementsService.updateRemisionNumber(oldRem, newRem, just);
+    if (count > 0) {
+      this.toast.success(`Remisión actualizada de "${oldRem}" a "${newRem}"`);
+      this.showChangeRemisionModal.set(false);
+      // Re-seleccionar la recepción actualizada
+      const updated = this.movementsService.findReceptionByFolio(current.folio);
+      if (updated) this.selectReception(updated);
+    } else {
+      this.toast.error('No se pudo actualizar la remisión.');
+    }
+  }
+
+  openCancelModal(): void {
+    const rec = this.selectedReception();
+    if (!rec) return;
+    this.cancellationJustification.set('');
+    this.leaderModalTitle.set(`Autorizar Cancelación de Recepción #${rec.folio}`);
+    this.leaderAction.set('CANCEL');
+    this.showLeaderModal.set(true);
+  }
+
+  initiateCompleteReception(): void {
+    const rec = this.selectedReception();
+    if (!rec) {
+      this.toast.warning('No hay ninguna recepción seleccionada.');
+      return;
+    }
+    if (this.palletStream().length === 0) {
+      this.toast.warning('Debes ingresar al menos 1 Tarima en la lista de descarga antes de generar la impresión.');
+      return;
+    }
+
+    const currentStream = [...this.palletStream()];
+    const formVals = this.altaForm.value;
+
+    const updated = this.movementsService.completeReception(
+      rec.folio,
+      formVals.lotNumber || '01.07.2026',
+      rec.elaborationDate || '2026-01-01',
+      formVals.expirationDate || '2028-07-31',
+      formVals.productId || '12572733',
+      formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      formVals.piecesPerPallet || 40,
+      (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP',
+      currentStream,
+      formVals.observations || undefined,
+      'Christian Durán',
+      'Gerente Operativo'
+    );
+
+    const recToPrint: ReceptionHeader = updated || {
+      ...rec,
+      status: 'COMPLETED',
+      lotNumber: formVals.lotNumber || '01.07.2026',
+      expirationDate: formVals.expirationDate || '2028-07-31',
+      productId: formVals.productId || '12572733',
+      productName: formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      supplierName: formVals.supplierName || 'LE MEXICO S.A DE C.V',
+      piecesPerPallet: formVals.piecesPerPallet || 40,
+      selectedPalletType: (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP',
+      pallets: currentStream,
+      observations: formVals.observations || undefined,
+    };
+
+    if (updated) {
+      this.selectedReception.set(updated);
+    } else {
+      this.selectedReception.set(recToPrint);
+    }
+
+    this.selectedPrintReception.set(recToPrint);
+    this.printType.set('RECEPTION');
+    this.showPrintModal.set(true);
+    this.toast.success(`Recepción #${rec.folio} completada. Formato oficial generado con ${currentStream.length} tarimas.`);
+  }
+
+  onLeaderValidated(event: { leaderName: string }): void {
+    this.showLeaderModal.set(false);
+    const action = this.leaderAction();
+    const rec = this.selectedReception();
+    if (!rec) return;
+
+    if (action === 'COMPLETE') {
+      const updated = this.movementsService.completeReception(
+        rec.folio,
+        this.altaForm.value.lotNumber || '01.07.2026',
+        rec.elaborationDate || '2026-01-01',
+        this.altaForm.value.expirationDate || '2028-07-31',
+        this.altaForm.value.productId || '12572733',
+        this.altaForm.value.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+        this.altaForm.value.piecesPerPallet || 40,
+        (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP',
+        this.palletStream(),
+        this.altaForm.value.observations || undefined,
+        'Christian Durán',
+        event.leaderName
+      );
+
+      if (updated) {
+        this.selectReception(updated);
+        this.selectedPrintReception.set(updated);
+        this.printType.set('RECEPTION');
+        this.showPrintModal.set(true);
+        this.toast.success(`Recepción #${updated.folio} cerrada exitosamente`);
+      }
+    } else if (action === 'CANCEL') {
+      const cancelled = this.movementsService.cancelReception(
+        rec.folio,
+        this.cancellationJustification() || 'Cancelado por el operador en andén',
+        event.leaderName
+      );
+
+      if (cancelled) {
+        this.selectReception(cancelled);
+        this.selectedPrintReception.set(cancelled);
+        this.printType.set('CANCELLATION');
+        this.showPrintModal.set(true);
+        this.toast.info(`Recepción #${cancelled.folio} cancelada`);
+      }
+    }
+
+    this.leaderAction.set(null);
+  }
+
+  onProductSelect(productId: string): void {
+    const prod = this.products().find((p) => p.id === productId);
+    if (prod) {
+      this.altaForm.patchValue({
+        productId: prod.id,
+        productName: prod.name,
+        piecesPerPallet: prod.defaultPieces,
+      });
+    }
+  }
+
+  // ── ESCÁNER Y CARGA RÁPIDA DE UAs (PASO 2) ──
+  onUaEnter(event?: Event): void {
+    if (event) event.preventDefault();
+    let code = this.uaCodeInput().trim();
+    if (!code) {
+      // Auto-generar código si el usuario presiona [+]
+      code = `03761304${Date.now().toString().slice(-10)}`;
+    }
+
+    const pzas = this.altaForm.value.piecesPerPallet || 40;
+    const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP';
+    const prodId = this.altaForm.value.productId || '12572733';
+    const prodName = this.altaForm.value.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1';
+    const suppName = this.altaForm.value.supplierName || 'LE MEXICO S.A DE C.V';
+    const nextNum = this.palletStream().length + 1;
+
+    const newItem: ReceptionPalletItem = {
+      id: `ua-${Date.now()}-${nextNum}`,
+      palletNumber: nextNum,
+      palletCode: code.toUpperCase(),
+      description: prodName,
+      productId: prodId,
+      supplierName: suppName,
+      pieces: pzas,
+      observations: this.uaObsInput().trim() || undefined,
+      palletTypeId: pType,
+      palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP',
+    };
+
+    this.palletStream.update((list) => [...list, newItem]);
+    this.uaCodeInput.set('');
+    this.uaObsInput.set('');
+
+    setTimeout(() => {
+      if (this.uaInput?.nativeElement) {
+        this.uaInput.nativeElement.focus();
+      }
+    }, 10);
+  }
+
+  removePalletFromStream(id: string): void {
+    this.palletStream.update((list) => {
+      const filtered = list.filter((item) => item.id !== id);
+      // Re-indexar números consecutivos
+      return filtered.map((item, idx) => ({ ...item, palletNumber: idx + 1 }));
+    });
+  }
+
+  // ── AUXILIARES Y CATÁLOGOS ──
   onCarrierLineSelect(code: string): void {
     const item = this.carrierLines().find((c) => c.code === code);
     if (item) {
-      this.checkInForm.patchValue({
-        carrierLineCode: item.code,
-        carrierLine: item.name,
-      });
+      this.checkInForm.patchValue({ carrierLineCode: item.code, carrierLine: item.name });
     }
   }
 
   onClientSelect(code: string): void {
     const item = this.clients().find((c) => c.code === code);
     if (item) {
-      this.checkInForm.patchValue({
-        clientCode: item.code,
-        client: item.name,
-      });
+      this.checkInForm.patchValue({ clientCode: item.code, client: item.name });
     }
   }
 
   onRampSelect(code: string): void {
     const item = this.ramps().find((r) => r.code === code);
     if (item) {
-      this.checkInForm.patchValue({
-        rampCode: item.code,
-        rampNumber: item.rampNumber,
-      });
+      this.checkInForm.patchValue({ rampCode: item.code, rampNumber: item.rampNumber });
     }
   }
 
   onForkliftOperatorSelect(code: string): void {
     const item = this.forkliftOperators().find((m) => m.code === code);
     if (item) {
-      this.checkInForm.patchValue({
-        forkliftOperatorCode: item.code,
-        forkliftOperator: item.name,
-      });
+      this.checkInForm.patchValue({ forkliftOperatorCode: item.code, forkliftOperator: item.name });
     }
   }
 
-  // ── MODAL DE ALTA RÁPIDA DE ENTIDADES [+] ──
   openQuickAddModal(type: 'CARRIER' | 'RAMP'): void {
     this.quickAddType.set(type);
     if (type === 'CARRIER') {
@@ -226,23 +491,16 @@ export class ReceivingSubmoduleComponent {
 
     if (type === 'CARRIER') {
       this.movementsService.addCarrierLine({ code, name });
-      this.checkInForm.patchValue({
-        carrierLineCode: code,
-        carrierLine: name,
-      });
+      this.checkInForm.patchValue({ carrierLineCode: code, carrierLine: name });
     } else if (type === 'RAMP') {
       const rNum = this.quickAddRampNumInput();
       this.movementsService.addRamp({ code, rampNumber: rNum, name });
-      this.checkInForm.patchValue({
-        rampCode: code,
-        rampNumber: rNum,
-      });
+      this.checkInForm.patchValue({ rampCode: code, rampNumber: rNum });
     }
 
     this.showQuickAddModal.set(false);
   }
 
-  // ── ACCIONES PESTAÑA A (Captura de Datos) ──
   addSeal(): void {
     const s = this.tempSealInput().trim();
     if (s && !this.sealList().includes(s)) {
@@ -255,52 +513,6 @@ export class ReceivingSubmoduleComponent {
     this.sealList.update((list) => list.filter((_, i) => i !== index));
   }
 
-  submitCheckIn(): void {
-    if (this.checkInForm.invalid) {
-      this.checkInForm.markAllAsTouched();
-      return;
-    }
-    const folio = this.movementsService.generateNextReceptionFolio();
-    this.generatedFolio.set(folio);
-
-    const formData = this.checkInForm.value as any;
-    formData.sealNumbers = [...this.sealList()];
-    if (formData.sealNumber && !formData.sealNumbers.includes(formData.sealNumber)) {
-      formData.sealNumbers.push(formData.sealNumber);
-    }
-
-    const header = this.movementsService.saveCheckIn(formData, folio);
-    this.currentReception.set(header);
-    this.altaSearchFolio.set(folio);
-
-    // Desplegar Modal Elegante y Minimalista
-    this.showFolioModal.set(true);
-  }
-
-  /**
-   * CORRECCIÓN 4: Al presionar "CONTINUAR A ALTA DE RECEPCIÓN (ANDÉN)"
-   * Pasa automáticamente a Pestaña 2 y PRECARGA el Folio generado detonando el autocompletado.
-   */
-  proceedToAltaRecepcion(): void {
-    const folio = this.generatedFolio();
-    this.showFolioModal.set(false);
-    this.activeTab.set('alta-recepcion');
-
-    if (folio) {
-      this.altaSearchFolio.set(folio);
-      this.searchReceptionFolio();
-    }
-  }
-
-  copyFolioToClipboard(): void {
-    const folio = this.generatedFolio();
-    if (folio) {
-      navigator.clipboard.writeText(folio);
-      this.copyToastMsg.set(`Folio #${folio} copiado al portapapeles`);
-      setTimeout(() => this.copyToastMsg.set(null), 3000);
-    }
-  }
-
   resetCheckInForm(): void {
     this.checkInForm.reset({
       carrierLineCode: 'TR-01',
@@ -311,7 +523,7 @@ export class ReceivingSubmoduleComponent {
       expirationDate: '2026-12-30',
       lotNumber: 'LOT-2026-N1',
       docDate: '2026-08-11',
-      clientCode: 'CLI-004',
+      clientCode: 'CLI-001',
       client: 'Nestlé México',
       rampCode: 'R-04',
       rampNumber: 4,
@@ -325,176 +537,24 @@ export class ReceivingSubmoduleComponent {
     this.sealList.set(['SL-90812']);
   }
 
-  // ── ACCIONES PESTAÑA B ──
-  searchReceptionFolio(): void {
-    const f = this.altaSearchFolio().trim();
-    if (!f) return;
-    const r = this.movementsService.findReceptionByFolio(f);
-    if (r) {
-      this.currentReception.set(r);
-      if (r.pallets && r.pallets.length > 0) {
-        this.palletStream.set([...r.pallets]);
-      }
-    } else {
-      alert(`No se encontró la recepción con Folio #${f}`);
-    }
-  }
+  openPrintPreview(rec: ReceptionHeader): void {
+    const palletsToPrint = rec.pallets && rec.pallets.length > 0 ? rec.pallets : [...this.palletStream()];
+    const formVals = this.altaForm.value;
 
-  /**
-   * CORRECCIÓN 2: Stream de Carga Rápida con Auto-Foco Ininterrumpido
-   * Al dar Enter sobre N. Tarima, agrega la fila a la Signal y re-enfoca automáticamente.
-   */
-  onUaEnter(event: Event): void {
-    event.preventDefault();
-    const code = this.uaCodeInput().trim();
-    if (!code) return;
-
-    const pzas = this.altaForm.value.piecesPerPallet || 480;
-    const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
-    const prodId = this.altaForm.value.productId || 'SKU-NES-680';
-    const prodName = this.altaForm.value.productName || 'Producto General';
-
-    const newItem: ReceptionPalletItem = {
-      id: `ua-${Date.now()}`,
-      palletCode: code.toUpperCase(),
-      description: prodName,
-      productId: prodId,
-      pieces: pzas,
-      observations: this.uaObsInput().trim() || undefined,
-      palletTypeId: pType,
-      palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera',
+    const recToPrint: ReceptionHeader = {
+      ...rec,
+      lotNumber: rec.lotNumber || formVals.lotNumber || '01.07.2026',
+      expirationDate: rec.expirationDate || formVals.expirationDate || '2028-07-31',
+      productId: rec.productId || formVals.productId || '12572733',
+      productName: rec.productName || formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      supplierName: rec.supplierName || formVals.supplierName || 'LE MEXICO S.A DE C.V',
+      piecesPerPallet: rec.piecesPerPallet || formVals.piecesPerPallet || 40,
+      selectedPalletType: rec.selectedPalletType || (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP',
+      pallets: palletsToPrint,
+      observations: rec.observations || formVals.observations || undefined,
     };
 
-    // Agregar a la lista reactiva
-    this.palletStream.update((list) => [...list, newItem]);
-
-    // Limpiar campos de escaneo
-    this.uaCodeInput.set('');
-    this.uaObsInput.set('');
-
-    // AUTO-FOCO ININTERRUMPIDO INMEDIATO
-    setTimeout(() => {
-      if (this.uaInput?.nativeElement) {
-        this.uaInput.nativeElement.focus();
-      }
-    }, 10);
-  }
-
-  removePalletFromStream(id: string): void {
-    this.palletStream.update((list) => list.filter((item) => item.id !== id));
-  }
-
-  initiateCompleteReception(): void {
-    if (this.palletStream().length === 0) {
-      alert('Debes ingresar al menos 1 Tarima/UA en la lista de descarga.');
-      return;
-    }
-    this.leaderModalTitle.set('Autorizar Cierre de Recepción');
-    this.leaderAction.set('COMPLETE');
-    this.showLeaderModal.set(true);
-  }
-
-  // ── ACCIONES PESTAÑA C ──
-  searchCancelFolio(): void {
-    const f = this.cancelFolioInput().trim();
-    if (!f) return;
-    const r = this.movementsService.findReceptionByFolio(f);
-    if (r) {
-      this.cancelSearchResult.set(r);
-    } else {
-      alert(`No se encontró la recepción #${f}`);
-    }
-  }
-
-  initiateCancelReception(): void {
-    if (!this.cancelSearchResult()) return;
-    if (!this.cancellationJustification().trim()) {
-      alert('La justificación de cancelación es obligatoria.');
-      return;
-    }
-    this.leaderModalTitle.set('Autorizar Cancelación de Recepción');
-    this.leaderAction.set('CANCEL');
-    this.showLeaderModal.set(true);
-  }
-
-  // ── CALLBACK DE VALIDACIÓN DEL MODAL DE LÍDER ──
-  onLeaderValidated(event: { leaderName: string }): void {
-    this.showLeaderModal.set(false);
-    const action = this.leaderAction();
-
-    if (action === 'COMPLETE') {
-      const rec = this.currentReception();
-      if (!rec) return;
-
-      const updated = this.movementsService.completeReception(
-        rec.folio,
-        this.altaForm.value.lotNumber || 'LOT-DESCONOCIDO',
-        this.altaForm.value.elaborationDate || '2026-01-01',
-        this.altaForm.value.expirationDate || '2026-12-31',
-        this.altaForm.value.productId || 'SKU-GEN',
-        this.altaForm.value.productName || 'Producto General',
-        this.altaForm.value.piecesPerPallet || 480,
-        (this.altaForm.value.selectedPalletType as PalletType) || 'MADERA',
-        this.palletStream(),
-        this.altaForm.value.observations || undefined,
-        'Christian Durán',
-        event.leaderName
-      );
-
-      if (updated) {
-        this.selectedPrintReception.set(updated);
-        this.printType.set('RECEPTION');
-        this.showPrintModal.set(true);
-      }
-    } else if (action === 'CANCEL') {
-      const rec = this.cancelSearchResult();
-      if (!rec) return;
-
-      const cancelled = this.movementsService.cancelReception(
-        rec.folio,
-        this.cancellationJustification(),
-        event.leaderName
-      );
-
-      if (cancelled) {
-        this.selectedPrintReception.set(cancelled);
-        this.printType.set('CANCELLATION');
-        this.showPrintModal.set(true);
-      }
-    }
-
-    this.leaderAction.set(null);
-  }
-
-  // ── ACCIONES PESTAÑA D ──
-  submitChangeRemision(): void {
-    if (!this.oldRemisionInput().trim() || !this.newRemisionInput().trim() || !this.changeJustification().trim()) {
-      alert('Todos los campos son obligatorios para cambiar la remisión.');
-      return;
-    }
-
-    const count = this.movementsService.updateRemisionNumber(
-      this.oldRemisionInput(),
-      this.newRemisionInput(),
-      this.changeJustification()
-    );
-
-    if (count > 0) {
-      this.remisionSuccessMsg.set(
-        `Se actualizó la Remisión "${this.oldRemisionInput()}" a "${this.newRemisionInput()}" en ${count} registro(s).`
-      );
-      this.oldRemisionInput.set('');
-      this.newRemisionInput.set('');
-      this.changeJustification.set('');
-      setTimeout(() => this.remisionSuccessMsg.set(null), 5000);
-    } else {
-      alert(`No se encontraron registros con la remisión "${this.oldRemisionInput()}".`);
-    }
-  }
-
-  // ── IMPRESIÓN Y REIMPRESIÓN ──
-  openPrintPreview(rec: ReceptionHeader): void {
-    this.selectedPrintReception.set(rec);
+    this.selectedPrintReception.set(recToPrint);
     this.printType.set(rec.status === 'CANCELLED' ? 'CANCELLATION' : 'RECEPTION');
     this.showPrintModal.set(true);
   }

@@ -1,22 +1,24 @@
 <div class="movements-shell-wrapper font-sans p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
   
-  <!-- Banner Header Principal (Estilo Ejecutivo Light "Blanquito" Captura 2 + Estructura Captura 1) -->
-  <div class="module-header-card shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-    <div class="flex items-center gap-4">
-      <div class="module-header-icon-wrap">
-        <span class="material-symbols-outlined text-3xl">swap_horiz</span>
+  <!-- Header Principal Golden Standard (Hero Header) -->
+  <header class="hero-header">
+    <div class="hero-header__icon-box">
+      <span class="material-symbols-outlined text-3xl">swap_horiz</span>
+    </div>
+
+    <div class="hero-header__content flex-1">
+      <div class="hero-header__breadcrumb flex items-center gap-2 mb-1">
+        <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
+          <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+        </a>
+        <span class="breadcrumb-dot text-slate-400">·</span>
+        <span class="hero-header__eyebrow uppercase text-xs font-bold tracking-wider">OPERACIÓN Y LOGÍSTICA</span>
       </div>
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="module-header-title">Movimientos de Almacén</h1>
-          <span class="module-header-badge">
-            WMS 4GUARD
-          </span>
-        </div>
-        <p class="module-header-subtitle">
-          Gestión integral de Recepción (F01), Cambio de Almacén en ceros y Salidas Outbound FIFO/FEFO
-        </p>
-      </div>
+
+      <h1 class="hero-header__title text-2xl font-bold text-slate-100">Movimientos de Almacén</h1>
+      <p class="hero-header__subtitle text-xs text-slate-400">
+        Gestión unificada de Recepción de Mercancías (F01), Cambio de Almacén en ceros y Salidas Outbound FIFO/FEFO
+      </p>
     </div>
 
     <!-- Pestañas Primarias del Módulo (Recepción | Cambio de Almacén | Salidas) -->
@@ -51,7 +53,7 @@
         <span>Salidas de Almacén</span>
       </a>
     </div>
-  </div>
+  </header>
 
   <!-- Router Outlet de Submódulos -->
   <main class="movements-main-content">

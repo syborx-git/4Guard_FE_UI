@@ -67,17 +67,19 @@ export interface CheckInCasetaData {
 
 export interface ReceptionPalletItem {
   id: string;               // ID consecutivo o timestamp
-  palletCode: string;       // Código Tarima / UA (ej. UA-90821)
+  palletNumber?: number;    // N. Tarima (1, 2, 3...)
+  palletCode: string;       // Código Tarima / UA (ej. 037613041909243094)
   description: string;      // Descripción SKU
-  productId: string;        // ID Producto
-  pieces: number;           // Pzas
+  productId: string;        // SKU (ej. 12572733)
+  supplierName?: string;    // Proveedor (ej. LE MEXICO S.A DE C.V)
+  pieces: number;           // Cant X Tarima (ej. 40.00)
   observations?: string;    // Observaciones
   palletTypeId: PalletType; // Tipo Tarima key
   palletTypeLabel: string;  // Tipo Tarima nombre legible
 }
 
 export interface ReceptionHeader {
-  folio: string;             // ej. 26510
+  folio: string;             // ej. 26506
   status: 'REGISTERED' | 'COMPLETED' | 'CANCELLED';
   checkIn: CheckInCasetaData;
   lotNumber: string;
@@ -85,6 +87,8 @@ export interface ReceptionHeader {
   expirationDate: string;
   productId: string;
   productName: string;
+  supplierName?: string;     // Nombre del proveedor seleccionado
+  storageLocation?: string;  // Lugar de almacenaje (ej. Bodega M 98)
   piecesPerPallet: number;
   selectedPalletType: PalletType;
   observations?: string;

@@ -7,6 +7,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import { LocationStockInfo, WarehouseTransfer } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
@@ -22,6 +23,7 @@ type TransferTab = 'alta-cambio' | 'consulta-cambios';
 })
 export class TransferSubmoduleComponent {
   private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly toast = inject(ToastService);
 
   activeTab = signal<TransferTab>('alta-cambio');
 
@@ -94,11 +96,12 @@ export class TransferSubmoduleComponent {
       );
 
       if (transfer) {
+        this.toast.success(`Traspaso #${transfer.folio} ejecutado exitosamente`);
         this.selectedPrintTransfer.set(transfer);
         this.showPrintModal.set(true);
       }
     } catch (err: any) {
-      alert(err.message || 'Ocurrió un error al ejecutar el traspaso.');
+      this.toast.error(err.message || 'Ocurrió un error al ejecutar el traspaso.');
     }
   }
 
