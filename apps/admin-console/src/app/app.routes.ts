@@ -323,6 +323,18 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Catálogos Maestros',
       },
 
+      // Consulta de Inventarios y Exportación Excel
+      {
+        path: 'inventory-query',
+        canActivate: [rbacGuard],
+        data: { module: 'inventory-query' },
+        loadChildren: () =>
+          import('./features/inventory-query/inventory-query.routes').then(
+            (m) => m.INVENTORY_QUERY_ROUTES
+          ),
+        title: '4GUARD WMS — Consulta de Inventarios',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

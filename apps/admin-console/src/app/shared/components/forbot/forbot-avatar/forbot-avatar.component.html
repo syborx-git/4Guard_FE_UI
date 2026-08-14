@@ -1,0 +1,30 @@
+<div
+  class="forbot-avatar-container relative inline-flex items-center justify-center select-none"
+  [style.width.px]="size"
+  [style.height.px]="size"
+>
+  <!-- Halo neón exterior en Rojo Corporativo 4GUARD y Ámbar -->
+  <div class="absolute inset-0 rounded-xl bg-gradient-to-tr from-rose-600 via-amber-500 to-rose-700 blur-sm opacity-70 animate-pulse"></div>
+
+  <!-- Contenedor del Avatar SVG/CSS estilo 4GUARD -->
+  <div class="relative w-full h-full rounded-xl bg-slate-950 border border-rose-500/50 p-1 flex items-center justify-center shadow-lg overflow-hidden">
+    
+    @if (!useLogoImage) {
+      <!-- Símbolo estilizado del número "4" en Rojo Corporativo 4Guard (#E11D48) y Blanco (#FFFFFF) -->
+      <svg class="w-full h-full text-rose-500 drop-shadow-[0_0_8px_rgba(225,29,72,0.85)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3v18" stroke="#E11D48" />
+        <path d="M7 3l-4 11h14" stroke="#FFFFFF" />
+      </svg>
+    } @else {
+      <!-- Logo Oficial de 4GUARD -->
+      <img src="assets/logo-4guard.svg" alt="4GUARD AI" class="w-full h-full object-contain p-0.5" />
+    }
+
+  </div>
+
+  <!-- Punto Verde "En Vivo / Online" -->
+  <span class="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
+    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-950 shadow-[0_0_6px_rgba(16,185,129,0.8)]"></span>
+  </span>
+</div>

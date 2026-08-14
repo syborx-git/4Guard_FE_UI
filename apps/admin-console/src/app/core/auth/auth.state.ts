@@ -7,7 +7,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { SessionStorageService } from '../services/session-storage.service';
 import { AuthService } from '../services/auth.service';
-import { AuthenticatedUser, JwtSession } from '../models/auth.models';
+import { AuthenticatedUser, JwtSession, ShiftType } from '../models/auth.models';
 
 @Injectable({
   providedIn: 'root'
@@ -21,11 +21,16 @@ export class AuthState {
   private readonly _currentUser = signal<AuthenticatedUser | null>(this.sessionStorageService.getUser());
   private readonly _accessToken = signal<string | null>(this.sessionStorageService.getAccessToken());
   private readonly _refreshToken = signal<string | null>(this.sessionStorageService.getRefreshToken());
+  private readonly _currentShift = signal<ShiftType>(this._currentUser()?.shift || 'TURNO 1');
 
   // ─── Señales Públicas Read-Only ───────────────────────────────────────────
   readonly currentUser = this._currentUser.asReadonly();
   readonly accessToken = this._accessToken.asReadonly();
   readonly refreshToken = this._refreshToken.asReadonly();
+  readonly currentShift = this._currentShift.asReadonly();
+
+  // ─── Señales Computadas Derivadas ──────────────────────────────────────────
+  readonly userShiftBadge = computed(() => this._currentShift() || 'TURNO 1');
 
   // ─── Señales Computadas Derivadas ──────────────────────────────────────────
   readonly isAuthenticated = computed(() => {
@@ -148,6 +153,50 @@ export class AuthState {
   }
 
   /**
+   * Bloquea la estación de trabajo preservando la ruta y el formulario activo en memoria.
+   */
+  lockWorkstation(): void {
+    const currentUrl = this.router.url;
+    if (currentUrl && currentUrl !== '/login') {
+      localStorage.setItem('4g_return_url', currentUrl);
+      localStorage.setItem('4g_pending_process_name', 'Proceso de Trabajo Activo en Andén');
+    }
+    this.logout('inactivity');
+  }
+
+  /**
+   * Conmuta atómicamente la señal del usuario/operador activo mediante PIN de 4 dígitos.
+   */
+  switchOperator(newOperator: AuthenticatedUser, pin: string): boolean {
+    const expectedPin = newOperator.pinCode || '1234';
+    if (pin.trim() !== expectedPin) {
+      return false;
+    }
+
+    const updatedUser: AuthenticatedUser = {
+      ...newOperator,
+      shift: newOperator.shift || 'TURNO 1'
+    };
+
+    const session = this.sessionStorageService.getSession();
+    if (session) {
+      session.user = updatedUser;
+      this.sessionStorageService.saveSession(session);
+    } else {
+      this.sessionStorageService.saveSession({
+        accessToken: 'dev-switch-token',
+        refreshToken: 'dev-refresh-token',
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        user: updatedUser
+      });
+    }
+
+    this._currentUser.set(updatedUser);
+    this._currentShift.set(updatedUser.shift || 'TURNO 1');
+    return true;
+  }
+
+  /**
    * Verifica si el usuario actual tiene acceso a un módulo específico (Compatibilidad).
    */
   canAccessModule(module: string): boolean {
@@ -190,6 +239,8 @@ export class AuthState {
       case 'warehouse-movements':
         return true;
       case 'catalogs':
+        return true;
+      case 'inventory-query':
         return true;
       case 'performance':
         return true; // Acceso total habilitado para desarrollo y testing
