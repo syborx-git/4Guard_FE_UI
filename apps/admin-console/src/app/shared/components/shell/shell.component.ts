@@ -56,20 +56,43 @@ interface NavItem {
 }
 
 import { PasswordCollapseComponent } from '../password-collapse/password-collapse.component';
+import { QuickOperatorSwitchModalComponent } from './quick-operator-switch-modal/quick-operator-switch-modal.component';
+import { ForbotTriggerButtonComponent } from '../forbot/forbot-trigger-button/forbot-trigger-button.component';
+import { ForbotChatDrawerComponent } from '../forbot/forbot-chat-drawer/forbot-chat-drawer.component';
+import { ForbotEngineService } from '../../../core/forbot/services/forbot-engine.service';
 
 @Component({
   selector: 'fg-admin-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, CommonModule],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ReactiveFormsModule,
+    CommonModule,
+    QuickOperatorSwitchModalComponent,
+    ForbotTriggerButtonComponent,
+    ForbotChatDrawerComponent
+  ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
 export class ShellComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
+  protected readonly forbotEngine = inject(ForbotEngineService);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+
+  /** Listener global para abrir/cerrar ForBot con Ctrl + K */
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'K')) {
+      event.preventDefault();
+      this.forbotEngine.toggleDrawer();
+    }
+  }
 
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
@@ -97,6 +120,21 @@ export class ShellComponent implements OnInit, OnDestroy {
   // ── Profile dropdown & Change Password modal ──────────────
   protected readonly showProfileMenu = signal(false);
   protected readonly showChangePasswordModal = signal(false);
+  protected readonly isQuickOperatorModalOpen = signal(false);
+
+  protected openQuickOperatorModal(): void {
+    this.showProfileMenu.set(false);
+    this.isQuickOperatorModalOpen.set(true);
+  }
+
+  protected closeQuickOperatorModal(): void {
+    this.isQuickOperatorModalOpen.set(false);
+  }
+
+  protected lockWorkstation(): void {
+    this.showProfileMenu.set(false);
+    this.authState.lockWorkstation();
+  }
   protected readonly isChangingPassword = signal(false);
   protected readonly changePasswordError = signal<string | null>(null);
   protected readonly changePasswordSuccess = signal(false);
@@ -392,6 +430,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
     { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
     { label: 'Catálogos', route: '/catalogs', icon: 'style', module: 'catalogs' },
+    { label: 'Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
   ];
 
 

@@ -37,6 +37,7 @@
     "rxjs": "~7.8.0",
     "three": "^0.185.1",
     "tslib": "^2.6.0",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.14.4"
   },
   "devDependencies": {

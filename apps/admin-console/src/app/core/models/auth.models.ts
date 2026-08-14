@@ -8,6 +8,8 @@ export interface LoginRequest {
   password: string;
 }
 
+export type ShiftType = 'TURNO 1' | 'TURNO 2';
+
 export interface AuthenticatedUser {
   id: string;
   username: string;
@@ -18,6 +20,22 @@ export interface AuthenticatedUser {
   permissions: string[];
   /** Indica si el usuario debe cambiar su contraseña en el próximo inicio de sesión. */
   changePasswordRequired: boolean;
+  /** PIN de 4 dígitos para conmutación rápida de operador en andén */
+  pinCode?: string;
+  /** Turno asignado al operador activo */
+  shift?: ShiftType;
+}
+
+export interface OperatorUser {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  role: string;
+  roleLevel: number;
+  permissions: string[];
+  pinCode: string;
+  shift: ShiftType;
 }
 
 export interface JwtSession {
