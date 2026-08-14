@@ -1,0 +1,108 @@
+@if (isOpen) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+    <div class="bg-white border border-amber-500/30 rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in text-slate-800">
+      
+      <!-- Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-amber-500/20 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <span class="material-symbols-outlined text-2xl">sync_alt</span>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-100 tracking-tight">
+              Cambio Rápido de Operador (PIN)
+            </h2>
+            <p class="text-[11px] text-slate-400">Conmutación ágil de turno y firma de capturas en andén</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          (click)="onClose()"
+          class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
+        >
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Formulario -->
+      <form [formGroup]="switchForm" (ngSubmit)="onSwitchSubmit()" class="p-6 space-y-4">
+        
+        <!-- Mensaje de Éxito -->
+        @if (switchSuccess()) {
+          <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-bounce">
+            <span class="material-symbols-outlined text-lg text-emerald-600">check_circle</span>
+            <span>{{ switchSuccess() }}</span>
+          </div>
+        }
+
+        <!-- Mensaje de Error -->
+        @if (pinError()) {
+          <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg text-rose-600">warning</span>
+            <span>{{ pinError() }}</span>
+          </div>
+        }
+
+        <!-- Dropdown de Operador -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700 block uppercase tracking-wider">
+            Seleccionar Operador del Turno
+          </label>
+          <select
+            formControlName="selectedOperatorId"
+            class="w-full text-xs p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:border-amber-500 focus:outline-none font-semibold text-slate-900"
+          >
+            @for (op of availableOperators; track op.id) {
+              <option [value]="op.id">
+                {{ op.fullName }} — {{ op.role }} ({{ op.shift }})
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Campo PIN (4 dígitos) -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700 block uppercase tracking-wider">
+            PIN de Seguridad (4 Dígitos)
+          </label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">pin</span>
+            <input
+              type="password"
+              maxlength="4"
+              formControlName="pinCode"
+              placeholder="Ingresa PIN (ej. 1234, 4321, 9999)..."
+              class="w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:border-amber-500 focus:outline-none font-mono tracking-widest text-slate-900"
+            />
+          </div>
+          <span class="text-[10px] text-slate-500 block">
+            * Pista PIN de prueba: <strong>1234</strong> (Enrique), <strong>4321</strong> (Christian), <strong>9999</strong> (Pablo), <strong>8888</strong> (María).
+          </span>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="pt-2 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            (click)="onClose()"
+            class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-semibold"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            [disabled]="switchForm.invalid"
+            class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            <span class="material-symbols-outlined text-base">sync_alt</span>
+            <span>CONMUTAR OPERADOR</span>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+}

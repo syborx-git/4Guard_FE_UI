@@ -89,33 +89,89 @@
         </button>
       }
 
-      <!-- Profile dropdown menu -->
+      <!-- Profile dropdown menu (Consola Operativa de Andén) -->
       @if (showProfileMenu() && !isSidebarCollapsed()) {
-        <div class="profile-menu" role="menu">
+        <div class="profile-menu shadow-2xl animate-fade-in" role="menu">
+          
+          <!-- Encabezado con Avatar, Nombre, Rol y Badge de Turno -->
           <div class="profile-menu__header">
             <div class="profile-menu__avatar">{{ authState.userInitials() }}</div>
             <div class="profile-menu__info">
               <span class="profile-menu__name">{{ authState.userFullName() }}</span>
-              <span class="profile-menu__role">{{ authState.roleLabel() }}</span>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="profile-menu__role">{{ authState.roleLabel() }}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  {{ authState.userShiftBadge() }}
+                </span>
+              </div>
             </div>
           </div>
+
+          <!-- SECCIÓN 1: Acciones de Operación en Andén -->
+          <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+            Operación en Andén
+          </div>
+
+          <button
+            type="button"
+            class="profile-menu__item hover:bg-slate-800 text-amber-300"
+            (click)="lockWorkstation()"
+            role="menuitem"
+          >
+            <span class="material-symbols-outlined profile-menu__item-icon text-amber-400">lock</span>
+            <span>Pausar / Bloquear Estación</span>
+          </button>
+
+          <button
+            type="button"
+            class="profile-menu__item hover:bg-slate-800 text-emerald-300"
+            (click)="openQuickOperatorModal()"
+            role="menuitem"
+          >
+            <span class="material-symbols-outlined profile-menu__item-icon text-emerald-400">sync_alt</span>
+            <span>Cambio Rápido de Operador (PIN)</span>
+          </button>
+
           <div class="profile-menu__divider"></div>
+
+          <!-- SECCIÓN 2: Configuración de Cuenta -->
+          <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Configuración
+          </div>
+
           <button
             id="view-profile-menu-btn"
-            class="profile-menu__item"
+            class="profile-menu__item hover:bg-slate-800"
             (click)="openProfileModal()"
-            role="menuitem">
+            role="menuitem"
+          >
             <span class="material-symbols-outlined profile-menu__item-icon">person</span>
             <span>Ver mi perfil</span>
           </button>
+
           <button
             id="change-pwd-menu-btn"
-            class="profile-menu__item"
+            class="profile-menu__item hover:bg-slate-800"
             (click)="openChangePassword()"
-            role="menuitem">
+            role="menuitem"
+          >
             <span class="material-symbols-outlined profile-menu__item-icon">lock_reset</span>
             <span>Cambiar contraseña</span>
           </button>
+
+          <div class="profile-menu__divider"></div>
+
+          <!-- SECCIÓN 3: Salida Definitiva -->
+          <button
+            id="logout-menu-btn"
+            class="profile-menu__item hover:bg-rose-950/40 text-rose-300"
+            (click)="logout()"
+            role="menuitem"
+          >
+            <span class="material-symbols-outlined profile-menu__item-icon text-rose-400">logout</span>
+            <span>Cerrar Sesión Definitiva</span>
+          </button>
+
         </div>
       }
     </div>
@@ -682,3 +738,17 @@
     </div>
   </div>
 }
+
+<!-- Modal Cambio Rápido de Operador por PIN -->
+<fg-quick-operator-switch-modal
+  [isOpen]="isQuickOperatorModalOpen()"
+  (closeModal)="closeQuickOperatorModal()"
+></fg-quick-operator-switch-modal>
+
+<!-- Drawer Conversacional ForBot AI -->
+<fg-forbot-chat-drawer></fg-forbot-chat-drawer>
+
+<!-- Floating Action Button (FAB) ForBot AI — Esquina Inferior Derecha -->
+<div class="fixed bottom-6 right-6 z-50">
+  <fg-forbot-trigger-button></fg-forbot-trigger-button>
+</div>

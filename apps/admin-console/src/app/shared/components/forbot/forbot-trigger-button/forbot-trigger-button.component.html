@@ -1,0 +1,39 @@
+<div class="relative flex items-center justify-center">
+
+  <!-- Tooltip Inteligente al Hover (Desplegado a la izquierda) -->
+  <div class="absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 whitespace-nowrap z-50">
+    <div class="px-3.5 py-2 rounded-xl bg-slate-900/95 text-slate-100 border border-rose-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-xs font-bold flex items-center gap-2 font-sans backdrop-blur-md">
+      <span class="text-rose-400">🤖 ForBot AI</span>
+      <span class="text-slate-400 font-mono text-[10px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-700">Ctrl + K</span>
+    </div>
+  </div>
+
+  <!-- Botón Flotante Circular Neón Orbital (FAB) en Rojo y Ámbar 4GUARD -->
+  <button
+    type="button"
+    (click)="onToggleForbot()"
+    title="Abrir ForBot AI (Ctrl + K)"
+    class="group relative w-15 h-15 sm:w-16 sm:h-16 rounded-full bg-slate-950/85 backdrop-blur-xl border border-rose-500/40 hover:border-amber-400/80 shadow-[0_0_25px_rgba(225,29,72,0.35)] hover:shadow-[0_0_35px_rgba(245,158,11,0.5)] transition-all duration-300 transform hover:scale-110 flex items-center justify-center cursor-pointer overflow-visible"
+  >
+    <!-- Halo exterior con pulso orbital neón Rojo / Ámbar -->
+    <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-rose-600/30 via-amber-500/30 to-rose-700/30 blur-md opacity-70 group-hover:opacity-100 animate-pulse"></div>
+
+    <!-- Anillo orbital exterior giratorio sutil -->
+    <div class="absolute inset-1 rounded-full border border-dashed border-rose-400/40 group-hover:border-amber-400/60 animate-spin-slow"></div>
+
+    <!-- Símbolo "4" Neón de ForBot AI en Rojo Corporativo (#E11D48) y Blanco (#FFFFFF) -->
+    <div class="relative w-8 h-8 flex items-center justify-center text-rose-500 group-hover:text-amber-300 transition-colors">
+      <svg class="w-full h-full drop-shadow-[0_0_10px_rgba(225,29,72,0.9)] group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3v18" stroke="#E11D48" />
+        <path d="M7 3l-4 11h14" stroke="#FFFFFF" />
+      </svg>
+    </div>
+
+    <!-- Punto Verde Neón de Estado Activo (Esquina inferior derecha) -->
+    <span class="absolute bottom-0.5 right-0.5 flex h-3.5 w-3.5">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80"></span>
+      <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-slate-950 shadow-[0_0_8px_rgba(16,185,129,0.9)]"></span>
+    </span>
+
+  </button>
+</div>
