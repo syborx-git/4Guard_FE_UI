@@ -589,6 +589,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
     { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
+    { id: 'forklift-operators', title: 'Montacarguistas', icon: 'engineering', description: 'Alta, licenciamiento DC-3, asignación de turnos y disponibilidad en andén.', category: 'MERCHANDISE' },
     { id: 'currency-exchange', title: 'Divisas y Tipos de Cambio', icon: 'currency_exchange', description: 'Gestión multi-divisa, paridades cambiarias y valuación financiera.', category: 'MERCHANDISE' },
     
     // Seguridad
@@ -752,6 +753,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     }
     if (moduleId === 'suppliers') {
       this.router.navigate(['/suppliers']);
+      return;
+    }
+    if (moduleId === 'forklift-operators') {
+      this.router.navigate(['/admin/forklift-operators']);
       return;
     }
     if (moduleId === 'locations') {

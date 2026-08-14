@@ -79,6 +79,12 @@ export const adminRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'forklift-operators',
+    loadComponent: () =>
+      import('./forklift-operators/forklift-operators.component').then((m) => m.ForkliftOperatorsComponent),
+    title: '4GUARD WMS — Administración de Montacarguistas',
+  },
+  {
     path: 'alerts-config',
     redirectTo: '/alerts-config',
     pathMatch: 'full',

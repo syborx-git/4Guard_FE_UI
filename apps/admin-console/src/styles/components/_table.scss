@@ -54,13 +54,13 @@
   // ── Body ────────────────────────────────────────────────────
   tbody {
     tr {
-      background: $surface-secondary;
-      border-bottom: 1px solid $border-subtle;
+      background: var(--bg-card, #ffffff);
+      border-bottom: 1px solid var(--border-card, #e2e8f0);
       transition: background $transition-fast;
 
       &:last-child { border-bottom: none; }
 
-      &:hover { background: $purple-corporate; }
+      &:hover { background: rgba(197, 168, 107, 0.06); }
 
       &.is-selected {
         background: rgba(234, 195, 73, 0.06);

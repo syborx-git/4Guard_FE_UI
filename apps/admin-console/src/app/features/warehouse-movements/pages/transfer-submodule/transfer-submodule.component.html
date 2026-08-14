@@ -1,39 +1,56 @@
-<!-- Contenedor Submódulo Cambio de Almacén -->
+<!--
+  transfer-submodule.component.html
+  Submódulo 2: Cambio de Almacén (Traspasos Internos) — 4GUARD WMS
+  Homologado con el sistema de diseño WMS (Midnight Navy & Prestige Gold)
+-->
+
 <div class="space-y-6">
 
   <!-- Header Submódulo + Navigation Tabs -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-        <span class="material-symbols-outlined text-2xl">compare_arrows</span>
+  <div class="catalog-card-container shadow-xl">
+    <div class="catalog-header-row">
+      <div class="flex items-center gap-4">
+        <div class="catalog-icon-wrap">
+          <span class="material-symbols-outlined text-3xl">compare_arrows</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <a routerLink="/warehouse-movements" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>MOVIMIENTOS DE ALMACÉN</span>
+            </a>
+            <span class="text-xs text-slate-400">·</span>
+            <span class="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">REUBICACIÓN DE UAS</span>
+          </div>
+          <h2 class="catalog-title">Cambio de Almacén (Traspasos Internos)</h2>
+          <p class="catalog-subtitle">
+            Reubicación de Unidades de Almacenamiento (UAs) entre bahías con regla estricta de validación en ceros
+          </p>
+        </div>
       </div>
-      <div>
-        <h2 class="text-xl font-bold text-slate-100 tracking-tight">Cambio de Almacén (Traspasos Internos)</h2>
-        <p class="text-xs text-slate-400">Reubicación de UAs entre bahías con regla estricta de validación en ceros</p>
+
+      <!-- Sub-tabs bar -->
+      <div class="subtabs-bar">
+        <button
+          type="button"
+          (click)="activeTab.set('alta-cambio')"
+          [ngClass]="activeTab() === 'alta-cambio' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">swap_horiz</span>
+          1. Alta de Cambio de Almacén
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('consulta-cambios')"
+          [ngClass]="activeTab() === 'consulta-cambios' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">manage_search</span>
+          2. Consulta de Cambios (Buscador por Folio)
+        </button>
       </div>
-    </div>
-
-    <!-- Sub-tabs bar -->
-    <div class="flex gap-2 border-b border-slate-800 pb-3 text-xs font-semibold">
-      <button
-        type="button"
-        (click)="activeTab.set('alta-cambio')"
-        [ngClass]="activeTab() === 'alta-cambio' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'text-slate-300 border-slate-800 hover:bg-slate-800'"
-        class="px-4 py-2.5 rounded-lg border transition-colors flex items-center gap-2"
-      >
-        <span class="material-symbols-outlined text-base">swap_horiz</span>
-        1. Alta de Cambio de Almacén
-      </button>
-
-      <button
-        type="button"
-        (click)="activeTab.set('consulta-cambios')"
-        [ngClass]="activeTab() === 'consulta-cambios' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'text-slate-300 border-slate-800 hover:bg-slate-800'"
-        class="px-4 py-2.5 rounded-lg border transition-colors flex items-center gap-2"
-      >
-        <span class="material-symbols-outlined text-base">manage_search</span>
-        2. Consulta de Cambios (Buscador por Folio)
-      </button>
     </div>
   </div>
 
@@ -41,67 +58,72 @@
   <div *ngIf="activeTab() === 'alta-cambio'" class="space-y-6">
 
     <!-- Configuración del Montacarguista -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="catalog-card-container p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 border-amber-500">
       <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-amber-400 text-xl">forklift</span>
-        <label class="text-xs font-bold text-slate-200">Montacarguista Asignado *</label>
+        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl">engineering</span>
+        <div>
+          <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Asignación de Operador de Montacargas</h3>
+          <p class="text-xs text-slate-500">Selecciona al montacarguista certificado que ejecutará el movimiento físico</p>
+        </div>
       </div>
-      <select
-        [ngModel]="selectedForkliftOperator()"
-        (ngModelChange)="selectedForkliftOperator.set($event)"
-        class="fg-input sm:w-80"
-      >
-        <option value="Roberto Gómez">Roberto Gómez (Montacarguista Andén A)</option>
-        <option value="Pablo Hernández">Pablo Hernández (Montacarguista Senior)</option>
-        <option value="José Luis Morales">José Luis Morales (Montacarguista Racks)</option>
-      </select>
+      <div class="w-full sm:w-80">
+        <select
+          [ngModel]="selectedForkliftOperator()"
+          (ngModelChange)="selectedForkliftOperator.set($event)"
+          class="form-field-select font-semibold"
+        >
+          <option value="Roberto Gómez">Roberto Gómez (Montacarguista Andén A)</option>
+          <option value="Pablo Hernández">Pablo Hernández (Montacarguista Senior)</option>
+          <option value="José Luis Morales">José Luis Morales (Montacarguista Racks)</option>
+        </select>
+      </div>
     </div>
 
     <!-- PANELES COMPARATIVOS: ORIGEN VS DESTINO -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       <!-- PANEL ORIGEN -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <span class="material-symbols-outlined text-slate-400">output</span>
-            Panel Origen (Ubicación A Vaciar)
+      <div class="catalog-card-container p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-500">output</span>
+            Panel Origen (Ubicación a Vaciar)
           </h3>
-          <span class="px-2.5 py-1 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+          <span class="role-badge font-mono font-bold">
             {{ originStock().totalPallets }} Tarimas Almacenadas
           </span>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Bahía Origen *</label>
+          <label class="form-field-label">Bahía Origen *</label>
           <input
             type="text"
             [ngModel]="originLocationCode()"
             (ngModelChange)="originLocationCode.set($event)"
             placeholder="ej. A-14"
-            class="fg-input font-mono font-bold text-base text-slate-100"
+            class="form-field-input font-mono font-bold text-base text-amber-600 dark:text-amber-400"
           />
         </div>
 
         <!-- Tabla de Tarimas en Origen -->
-        <div class="border border-slate-800 rounded-lg overflow-hidden text-xs">
-          <table class="w-full text-left">
-            <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+        <div class="table-wrapper text-xs">
+          <table class="data-table">
+            <thead>
               <tr>
-                <th class="p-2.5">Código UA</th>
-                <th class="p-2.5">Descripción SKU</th>
-                <th class="p-2.5 text-right">Pzas</th>
+                <th>Código UA</th>
+                <th>Descripción SKU</th>
+                <th class="text-right">Piezas</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-800 bg-slate-950/40">
+            <tbody>
               <tr *ngFor="let p of originStock().pallets">
-                <td class="p-2.5 font-mono font-bold text-amber-300">{{ p.palletCode }}</td>
-                <td class="p-2.5 text-slate-300">{{ p.description }}</td>
-                <td class="p-2.5 text-right font-mono font-bold text-slate-100">{{ p.pieces }}</td>
+                <td class="font-mono font-bold text-amber-600 dark:text-amber-400">{{ p.palletCode }}</td>
+                <td class="font-medium text-slate-900 dark:text-white">{{ p.description }}</td>
+                <td class="text-right font-mono font-bold text-slate-900 dark:text-white">{{ p.pieces }}</td>
               </tr>
               <tr *ngIf="originStock().totalPallets === 0">
-                <td colspan="3" class="p-6 text-center text-slate-500 italic">
-                  La bahía origen especificada no contiene stock.
+                <td colspan="3" class="p-6 text-center text-slate-400 italic">
+                  La bahía origen especificada no contiene stock disponible.
                 </td>
               </tr>
             </tbody>
@@ -110,203 +132,179 @@
       </div>
 
       <!-- PANEL DESTINO (REGLA DE CEROS) -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <span class="material-symbols-outlined text-emerald-400">input</span>
+      <div class="catalog-card-container p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400">input</span>
             Panel Destino (Validación En Ceros)
           </h3>
           
           <span
-            [ngClass]="isDestinationEmpty() ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'"
-            class="px-2.5 py-1 rounded text-[10px] font-bold border"
+            [ngClass]="isDestinationEmpty() ? 'status-pill-active' : 'status-pill-inactive'"
+            class="status-pill font-mono"
           >
-            {{ isDestinationEmpty() ? 'BAHÍA VACÍA (0 PIEZAS)' : 'OCUPADA (' + destinationStock().totalPieces + ' Pzas)' }}
+            {{ isDestinationEmpty() ? '✨ BAHÍA VACÍA (0 PIEZAS)' : '🔴 OCUPADA (' + destinationStock().totalPieces + ' Pzas)' }}
           </span>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Bahía Destino *</label>
+          <label class="form-field-label">Bahía Destino *</label>
           <input
             type="text"
             [ngModel]="destinationLocationCode()"
             (ngModelChange)="destinationLocationCode.set($event)"
             placeholder="ej. M-98"
-            class="fg-input font-mono font-bold text-base text-emerald-300"
+            class="form-field-input font-mono font-bold text-base text-emerald-600 dark:text-emerald-400"
           />
         </div>
 
-        <!-- CORRECCIÓN 5: ALERTA VISUAL EN BANNER ROSE/ROJO SI LA BAHÍA NO ESTÁ VACÍA -->
-        <div *ngIf="!isDestinationEmpty()" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-3 animate-pulse">
-          <span class="material-symbols-outlined text-xl text-rose-500">warning</span>
+        <!-- Alerta Visual si Bahía no está vacía -->
+        <div *ngIf="!isDestinationEmpty()" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-3">
+          <span class="material-symbols-outlined text-2xl text-rose-500">warning</span>
           <div>
             <strong class="block font-bold">Bahía Destino Ocupada</strong>
-            <span>Esta ubicación contiene stock ({{ destinationStock().totalPallets }} tarimas / {{ destinationStock().totalPieces }} pzas) y no permite traspasos.</span>
+            <span>Esta ubicación contiene stock ({{ destinationStock().totalPallets }} tarimas / {{ destinationStock().totalPieces }} pzas) y rechaza traspasos por regla estricta WMS.</span>
           </div>
         </div>
 
-        <div *ngIf="isDestinationEmpty()" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-3">
-          <span class="material-symbols-outlined text-xl">verified</span>
+        <div *ngIf="isDestinationEmpty()" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-3">
+          <span class="material-symbols-outlined text-2xl text-emerald-500">verified</span>
           <div>
-            <strong class="block font-bold">Bahía Validada Exitosamente</strong>
-            <span>La ubicación {{ destinationLocationCode() }} está completamente en ceros y lista para recibir la reubicación.</span>
+            <strong class="block font-bold">Bahía Valida y Desocupada</strong>
+            <span>La ubicación {{ destinationLocationCode() }} está completamente libre (0 UAs) y lista para recibir las tarimas de la bahía {{ originLocationCode() }}.</span>
           </div>
         </div>
-
-        <!-- Resumen de Destino -->
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs space-y-2">
-          <div class="flex justify-between">
-            <span class="text-slate-400">Total Tarimas A Recibir:</span>
-            <span class="font-mono font-bold text-slate-100">{{ originStock().totalPallets }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Total Piezas A Recibir:</span>
-            <span class="font-mono font-bold text-emerald-400">{{ originStock().totalPieces }}</span>
-          </div>
-        </div>
-
       </div>
 
     </div>
 
-    <!-- BOTÓN DE CONFIRMACIÓN CON BLOQUEO REACTIVO (CORRECCIÓN 5) -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-end shadow-xl">
+    <!-- BOTÓN DE ACCIÓN PRINCIPAL DE TRASPASO -->
+    <div class="catalog-card-container p-6 flex items-center justify-between gap-4">
+      <div class="text-xs text-slate-500">
+        <span class="font-bold text-slate-900 dark:text-white">Resumen:</span>
+        Reubicación de {{ originStock().totalPallets }} tarima(s) desde {{ originLocationCode() }} hacia {{ destinationLocationCode() }}.
+      </div>
+
       <button
         type="button"
         (click)="confirmTransfer()"
         [disabled]="!canExecuteTransfer()"
-        class="px-6 py-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs rounded-xl shadow-xl flex items-center gap-2 transition-colors"
+        class="carriers-btn carriers-btn--primary px-6 py-3 text-sm font-bold flex items-center gap-2"
       >
-        <span class="material-symbols-outlined text-lg">sync_alt</span>
-        <span>Confirmar Cambio de Almacén</span>
+        <span class="material-symbols-outlined text-lg">swap_horiz</span>
+        <span>Ejecutar Traspaso de Bahía y Generar Formato</span>
       </button>
     </div>
 
   </div>
 
-  <!-- PESTAÑA 2: CONSULTA DE CAMBIOS DE ALMACÉN -->
-  <div *ngIf="activeTab() === 'consulta-cambios'" class="space-y-6">
-    
-    <!-- CORRECCIÓN 4: BUSCADOR PRIORITARIO DESTACADO POR FOLIO DE TRASPASO -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-      <div class="border-b border-slate-800 pb-3">
-        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-          <span class="material-symbols-outlined text-base">search</span>
-          Buscador Avanzado de Cambio de Almacén
-        </h3>
-      </div>
+  <!-- PESTAÑA 2: CONSULTA DE CAMBIOS -->
+  <div *ngIf="activeTab() === 'consulta-cambios'" class="space-y-4">
+    <div class="catalog-card-container p-6 space-y-4">
+      
+      <!-- Buscador -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="form-field-label">Buscar por Folio de Traspaso</label>
+          <div class="relative">
+            <input
+              type="text"
+              [value]="searchFolio()"
+              (input)="searchFolio.set($any($event.target.value))"
+              placeholder="Ej. FOL-TR-001..."
+              class="form-field-input pl-9"
+            />
+            <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-sm">search</span>
+          </div>
+        </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- CAMPO PRIORITARIO PRINCIPAL -->
-        <div class="sm:col-span-3 bg-slate-950 p-4 rounded-xl border border-amber-500/40">
-          <label class="block text-xs font-bold text-amber-400 mb-1 flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-base">tag</span>
-            Buscador Prioritario por Folio de Traspaso (Búsqueda Directa) *
-          </label>
+        <div>
+          <label class="form-field-label">Filtrar por Origen</label>
           <input
             type="text"
-            [ngModel]="searchFolio()"
-            (ngModelChange)="searchFolio.set($event)"
-            placeholder="Escribe Folio exacto o parcial (ej. TR-4080)..."
-            class="fg-input font-mono font-bold text-amber-300 text-sm border-amber-500/50"
+            [value]="searchOrigin()"
+            (input)="searchOrigin.set($any($event.target.value))"
+            placeholder="Ej. A-14..."
+            class="form-field-input"
           />
         </div>
 
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Bahía Origen</label>
+          <label class="form-field-label">Filtrar por Destino</label>
           <input
             type="text"
-            [ngModel]="searchOrigin()"
-            (ngModelChange)="searchOrigin.set($event)"
-            placeholder="ej. A-14"
-            class="fg-input font-mono"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Bahía Destino</label>
-          <input
-            type="text"
-            [ngModel]="searchDestination()"
-            (ngModelChange)="searchDestination.set($event)"
-            placeholder="ej. M-98"
-            class="fg-input font-mono"
+            [value]="searchDestination()"
+            (input)="searchDestination.set($any($event.target.value))"
+            placeholder="Ej. M-98..."
+            class="form-field-input"
           />
         </div>
       </div>
-    </div>
 
-    <!-- Tabla Histórica -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-      <table class="w-full text-left text-xs text-slate-300">
-        <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
-          <tr>
-            <th class="p-3">Folio</th>
-            <th class="p-3">Fecha</th>
-            <th class="p-3">Montacarguista</th>
-            <th class="p-3 text-center">Origen</th>
-            <th class="p-3 text-center">Destino</th>
-            <th class="p-3 text-center">Tarimas</th>
-            <th class="p-3 text-right">Piezas</th>
-            <th class="p-3 text-center">Acción</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800">
-          <tr *ngFor="let t of filteredTransfers()" class="hover:bg-slate-800/40">
-            <td class="p-3 font-mono font-bold text-amber-400">#{{ t.folio }}</td>
-            <td class="p-3 text-slate-400">{{ t.transferredAt }}</td>
-            <td class="p-3 font-medium text-slate-200">{{ t.forkliftOperator }}</td>
-            <td class="p-3 text-center font-mono font-bold text-slate-300">{{ t.originLocation }}</td>
-            <td class="p-3 text-center font-mono font-bold text-emerald-400">{{ t.destinationLocation }}</td>
-            <td class="p-3 text-center font-mono font-bold">{{ t.totalPallets }}</td>
-            <td class="p-3 text-right font-mono font-bold text-slate-100">{{ t.totalPieces }}</td>
-            <td class="p-3 text-center">
-              <button
-                (click)="openPrintPreview(t)"
-                class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded border border-slate-700 text-xs font-semibold flex items-center gap-1 mx-auto"
-              >
-                <span class="material-symbols-outlined text-sm">print</span>
-                <span>Ticket</span>
-              </button>
-            </td>
-          </tr>
-          <tr *ngIf="filteredTransfers().length === 0">
-            <td colspan="8" class="p-8 text-center text-slate-500 italic">
-              No se encontraron traspasos con el criterio especificado.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <!-- Tabla de Traspasos -->
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Folio Traspaso</th>
+              <th>Bahía Origen</th>
+              <th>Bahía Destino</th>
+              <th class="text-center">Tarimas Movidas</th>
+              <th>Montacarguista</th>
+              <th>Fecha Registro</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of filteredTransfers()">
+              <td>
+                <span class="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">{{ t.folio }}</span>
+              </td>
+              <td>
+                <span class="font-mono font-bold text-slate-900 dark:text-white">{{ t.originLocation }}</span>
+              </td>
+              <td>
+                <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">{{ t.destinationLocation }}</span>
+              </td>
+              <td class="text-center">
+                <span class="role-badge font-mono font-bold">
+                  {{ t.palletsTransferred }} Tarimas
+                </span>
+              </td>
+              <td class="font-medium text-slate-900 dark:text-white">
+                {{ t.forkliftOperator }}
+              </td>
+              <td class="text-slate-500 text-xs">
+                {{ t.timestamp }}
+              </td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  (click)="openPrintPreview(t)"
+                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                >
+                  <span class="material-symbols-outlined text-sm">print</span>
+                  <span>Imprimir Formato</span>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredTransfers().length === 0">
+              <td colspan="7" class="p-6 text-center text-slate-400 italic">
+                No se encontraron traspasos registrados con los filtros ingresados.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
+    </div>
   </div>
 
-</div>
+  <!-- Modal Impresión -->
+  <fg-print-transfer-layout
+    *ngIf="showPrintModal() && selectedPrintTransfer()"
+    [transfer]="selectedPrintTransfer()!"
+    (close)="closePrintModal()"
+  ></fg-print-transfer-layout>
 
-<!-- MODAL IMPRESIÓN CAMBIO DE ALMACÉN -->
-<div *ngIf="showPrintModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-  <div class="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-    <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-      <div class="flex items-center gap-2 text-slate-100 font-bold text-sm">
-        <span class="material-symbols-outlined text-amber-400">print</span>
-        <span>Ticket de Cambio de Almacén para Montacarguista</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <button (click)="triggerBrowserPrint()" type="button" class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1.5 shadow">
-          <span class="material-symbols-outlined text-base">print</span>
-          <span>Imprimir Ahora</span>
-        </button>
-        <button (click)="closePrintModal()" type="button" class="text-slate-400 hover:text-slate-200">
-          <span class="material-symbols-outlined text-xl">close</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="p-6 overflow-y-auto bg-slate-200 text-slate-900">
-      <fg-print-transfer-layout
-        *ngIf="selectedPrintTransfer()"
-        [transfer]="selectedPrintTransfer()!"
-      ></fg-print-transfer-layout>
-    </div>
-  </div>
 </div>
