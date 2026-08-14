@@ -32,16 +32,7 @@
 | **SKUs / Catálogo** | `/product-skus` | ⬜ | — | Catálogo de productos |
 | **Secciones de Almacén** | `/sections` | ⬜ | — | Áreas del almacén |
 | **Inventario** | `/inventory` | 🔶 | (verificar) | Epic 3 |
-| **Recepción** | `/receiving` | 🔶 | (verificar) | Epic 2 |
-| **Control de Calidad** | `/quality` | 🔶 | (verificar) | Epic 2 |
-| **Despacho** | `/shipping` | ⬜ | — | Epic 4 |
-| **Rendimiento** | `/performance` | ⬜ | — | HU-138 |
-| **Turnos** | `/shifts` | ✅ | `shift-management` | HU-140 con spec `docs/api/modules/shifts.md` |
-| **Sesiones Activas** | `/sessions` | ✅ | `active-sessions` | Con monitor en tiempo real |
-| **Actividad de Usuario** | `/user-activity` | ✅ | `user-activity-report` | HU-146 completo y conectado a API |
-| **Motor de Reglas** | `/business-rules` | ⬜ | — | HU-131 |
-| **Divisas** | `/currency-exchange` | ⬜ | — | HU-148 |
-| **Alertas** | `/alerts-config` | ✅ | `alerts-config-management` | HU-134 completo y conectado a API /api/v1/alerts-config |
+| **Movimientos de Almacén** | `/warehouse-movements` | 🔧 | `warehouse-movements-shell` | SDD activo, refactor a vista unificada |
 | **Licencias** | `/licenses` | ✅ | `license-management` | HU-139 completo con spec `docs/api/modules/license-management.md` y HTTP REST |
 
 ---

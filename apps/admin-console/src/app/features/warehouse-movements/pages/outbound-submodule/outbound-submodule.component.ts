@@ -7,6 +7,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
   InventoryBatch,
@@ -27,6 +28,7 @@ type OutboundTab = 'alta-salidas' | 'consulta-salidas';
 export class OutboundSubmoduleComponent {
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly fb = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
 
   activeTab = signal<OutboundTab>('alta-salidas');
 
@@ -143,11 +145,11 @@ export class OutboundSubmoduleComponent {
 
   executeDispatch(): void {
     if (this.outboundForm.invalid) {
-      alert('Por favor completa los datos obligatorios del transporte.');
+      this.toast.warning('Por favor completa los datos obligatorios del transporte.');
       return;
     }
     if (this.totalSelectedPallets() === 0) {
-      alert('Debes seleccionar al menos 1 Tarima/UA para autorizar la salida.');
+      this.toast.warning('Debes seleccionar al menos 1 Tarima/UA para autorizar la salida.');
       return;
     }
 
@@ -174,6 +176,7 @@ export class OutboundSubmoduleComponent {
     };
 
     const result = this.movementsService.executeDispatch(dispatchData);
+    this.toast.success(`Despacho #${result.folio} autorizado y listo para salida`);
     this.selectedPrintDispatch.set(result);
     this.showPrintModal.set(true);
   }
