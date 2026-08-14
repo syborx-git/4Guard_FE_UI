@@ -4,7 +4,8 @@
  * Administra el estado global de Recepciones, Traspasos, Salidas Outbound e Inventario de Bahías.
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { ForkliftOperatorAdminService } from '../../admin/services/forklift-operator.service';
 import {
   ReceptionHeader,
   CheckInCasetaData,
@@ -25,6 +26,7 @@ import {
   providedIn: 'root',
 })
 export class WarehouseMovementsService {
+  private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
   // Consecutivo base de recepción
   private nextFolioNumber = signal(26510);
   private nextTransferNumber = signal(4081);
@@ -76,7 +78,10 @@ export class WarehouseMovementsService {
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();
   readonly ramps = this.rampsSignal.asReadonly();
-  readonly forkliftOperators = this.forkliftOperatorsSignal.asReadonly();
+  readonly forkliftOperators = computed<ForkliftOperatorItem[]>(() => {
+    const adminOps = this.forkliftAdminService.dropdownOperators();
+    return adminOps.length > 0 ? adminOps : this.forkliftOperatorsSignal();
+  });
 
   addCarrierLine(item: CarrierLineItem): void {
     this.carrierLinesSignal.update((list) => [...list, item]);

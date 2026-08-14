@@ -123,12 +123,16 @@ export class OutboundSubmoduleComponent {
     this.selectedPalletsMap.set(initialMap);
   }
 
-  togglePalletSelection(palletId: string, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  togglePalletSelection(palletId: string, event?: Event): void {
+    const checked = event ? (event.target as HTMLInputElement).checked : !this.selectedPalletsMap()[palletId];
     this.selectedPalletsMap.update((map) => ({
       ...map,
       [palletId]: checked,
     }));
+  }
+
+  confirmOutbound(): void {
+    this.executeDispatch();
   }
 
   toggleAllPallets(event: Event): void {
