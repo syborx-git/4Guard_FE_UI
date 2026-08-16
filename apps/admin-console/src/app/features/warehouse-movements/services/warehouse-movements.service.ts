@@ -254,10 +254,61 @@ export class WarehouseMovementsService {
 
   // Readonly Computed Public Exposures
   readonly receptions = this.receptionsSignal.asReadonly();
+  readonly pendingReceptions = computed(() =>
+    this.receptionsSignal().filter((r) => r.status === 'REGISTERED')
+  );
+  readonly pendingReceptionsCount = computed(() => this.pendingReceptions().length);
   readonly transfers = this.transfersSignal.asReadonly();
   readonly dispatches = this.dispatchesSignal.asReadonly();
   readonly locations = this.locationsSignal.asReadonly();
   readonly inventoryBatches = this.inventoryBatchesSignal.asReadonly();
+
+  // Simula la llegada de un nuevo registro desde Caseta de Seguridad
+  simulateQuickCasetaArrival(): ReceptionHeader {
+    const folio = this.generateNextReceptionFolio();
+    const mockClients = ['Nestlé México', 'Nestlé Planta Toluca', 'Unilever México', 'Distribuidora Automotriz'];
+    const mockCarriers = ['Transportes Castores', 'Express Tresguerras', 'TMS Maniobras', 'Fletes Directos'];
+    const mockDrivers = ['Carlos Ruiz', 'Martín Solís', 'Jorge Valenzuela', 'Raúl Domínguez'];
+    const randomClient = mockClients[Math.floor(Math.random() * mockClients.length)];
+    const randomCarrier = mockCarriers[Math.floor(Math.random() * mockCarriers.length)];
+    const randomDriver = mockDrivers[Math.floor(Math.random() * mockDrivers.length)];
+    const randomRamp = Math.floor(Math.random() * 8) + 1;
+    const randomRem = `REM-2026-${Math.floor(Math.random() * 899 + 100)}`;
+    const randomTime = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+    const newHeader: ReceptionHeader = {
+      folio,
+      status: 'REGISTERED',
+      checkIn: {
+        carrierLine: randomCarrier,
+        receptionTime: randomTime,
+        docNumber: randomRem,
+        docDate: new Date().toISOString().slice(0, 10),
+        client: randomClient,
+        rampNumber: randomRamp,
+        forkliftOperator: 'Pablo Hernández',
+        driverName: randomDriver,
+        tractorPlates: `${Math.floor(Math.random() * 89 + 10)}-AB-${Math.floor(Math.random() * 89 + 10)}`,
+        boxPlates: `${Math.floor(Math.random() * 89 + 10)}-XX-${Math.floor(Math.random() * 89 + 10)}`,
+        sealNumber: `SL-${Math.floor(Math.random() * 89999 + 10000)}`,
+      },
+      lotNumber: `LOT-2026-${String.fromCharCode(65 + Math.floor(Math.random() * 6))}${Math.floor(Math.random() * 9 + 1)}`,
+      elaborationDate: '2026-01-15',
+      expirationDate: '2026-12-30',
+      productId: '12572733',
+      productName: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      supplierName: 'LE MEXICO S.A DE C.V',
+      piecesPerPallet: 480,
+      selectedPalletType: 'MADERA_ESTANDAR',
+      observations: `Ingreso registrado en caseta andén ${randomRamp}`,
+      pallets: [],
+      createdAt: randomTime,
+      capturedBy: 'Caseta de Seguridad',
+    };
+
+    this.receptionsSignal.update((list) => [newHeader, ...list]);
+    return newHeader;
+  }
 
   constructor() {
     this.seedInitialData();
@@ -371,20 +422,39 @@ export class WarehouseMovementsService {
       folio: assignedFolio,
       status: 'REGISTERED',
       checkIn: data,
-      lotNumber: '',
-      elaborationDate: '',
-      expirationDate: '',
-      productId: '',
-      productName: '',
+      lotNumber: data.lotNumber || 'LOT-2026-A1',
+      elaborationDate: data.elaborationDate || '2026-01-15',
+      expirationDate: data.expirationDate || '2026-11-15',
+      productId: '12572733',
+      productName: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      supplierName: 'LE MEXICO S.A DE C.V',
       piecesPerPallet: 480,
-      selectedPalletType: 'MADERA',
+      selectedPalletType: 'MADERA_ESTANDAR',
+      observations: '',
       pallets: [],
       createdAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-      capturedBy: 'Usuario Activo',
+      capturedBy: 'Caseta de Seguridad',
     };
 
     this.receptionsSignal.update((list) => [newHeader, ...list]);
     return newHeader;
+  }
+
+  // Actualiza datos de una recepción en progreso
+  updateReception(folio: string, partial: Partial<ReceptionHeader>): ReceptionHeader | null {
+    const list = this.receptionsSignal();
+    const index = list.findIndex((r) => r.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: ReceptionHeader = {
+      ...list[index],
+      ...partial,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.receptionsSignal.set(newArr);
+    return updated;
   }
 
   // Busca una recepción por Folio

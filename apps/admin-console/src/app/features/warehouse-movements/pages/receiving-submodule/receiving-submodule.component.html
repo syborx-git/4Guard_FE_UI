@@ -1,78 +1,174 @@
 <!-- ════════════════════════════════════════════════════════════════
-     RECEPCIONES WORKBENCH — VISTA UNIFICADA MASTER-DETAIL
+     RECEPCIONES WORKBENCH — FLUJO CONTINUO SIMPLIFICADO & INTUITIVO
      ════════════════════════════════════════════════════════════════ -->
-<div class="receiving-workbench space-y-6">
+<div class="receiving-workbench space-y-5">
 
-  <!-- ── 1. KPI CARDS HEADER ── -->
+  <!-- ── 0. COLA DE PRE-RECEPCIONES EN ESPERA (ADMINISTRADOR NIVEL 7) ── -->
+  @if (pendingReceptionsCount() > 0) {
+    <div class="notification-banner p-4 shadow-2xl space-y-3 animate-fade-up">
+      <!-- Header de la Cola de Notificaciones -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gold/20 pb-2.5">
+        <div class="flex items-center gap-3">
+          <div class="notification-banner__icon-wrap p-2 flex items-center justify-center animate-pulse">
+            <span class="material-symbols-outlined text-xl font-bold">notifications_active</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="notification-banner__title text-xs font-black uppercase">COLA DE PRE-RECEPCIONES REGISTRADAS EN CASETA</span>
+              <span class="notification-banner__badge font-mono text-xs px-2.5 py-0.5 rounded-lg">
+                {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'Folio en espera' : 'Folios en espera' }}
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-300 mt-0.5">
+              Permanecen en fila hasta que inicies o completes su proceso de descarga en andén.
+            </p>
+          </div>
+        </div>
+
+        <!-- Botones de Acción de la Cola -->
+        <div class="flex items-center gap-2 self-end sm:self-center">
+          <button
+            type="button"
+            (click)="simulateQuickArrival()"
+            class="btn-secondary-outline text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 hover:scale-105 transition-all text-amber-300 border-amber-500/40 bg-amber-500/10"
+            title="Simular un nuevo registro de entrada desde Caseta"
+          >
+            <span class="material-symbols-outlined text-sm">bolt</span>
+            <span>+ Simular Llegada Caseta</span>
+          </button>
+          <button
+            type="button"
+            (click)="toggleQueueBanner()"
+            class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+            [title]="isQueueBannerExpanded() ? 'Minimizar fila' : 'Expandir fila'"
+          >
+            <span class="material-symbols-outlined text-base">
+              {{ isQueueBannerExpanded() ? 'expand_less' : 'expand_more' }}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Fila / Grid de Notificaciones en Espera -->
+      @if (isQueueBannerExpanded()) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+          @for (item of pendingReceptions(); track item.folio) {
+            <div
+              class="p-3 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:border-gold/60 transition-all flex flex-col justify-between gap-2.5 shadow-md"
+              [class.ring-2]="selectedReception()?.folio === item.folio"
+              [class.ring-amber-400]="selectedReception()?.folio === item.folio"
+            >
+              <div class="space-y-1">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="font-mono text-xs font-black text-amber-300">FOLIO #{{ item.folio }}</span>
+                  <span class="text-[10px] font-mono text-slate-400">Rampa {{ item.checkIn.rampNumber }} · {{ item.checkIn.receptionTime }}</span>
+                </div>
+                <div class="font-bold text-xs text-white truncate">{{ item.checkIn.client }}</div>
+                <p class="text-[11px] text-slate-400 truncate">
+                  Rem: <span class="font-mono text-slate-200 font-bold">{{ item.checkIn.docNumber }}</span> · {{ item.checkIn.carrierLine }}
+                </p>
+              </div>
+
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800">
+                <span class="text-[10px] text-amber-400/90 font-mono truncate max-w-[130px]">Chofer: {{ item.checkIn.driverName }}</span>
+                <button
+                  type="button"
+                  (click)="loadFromNotification(item.folio)"
+                  class="btn-primary-gold text-[10px] font-black px-3 py-1 rounded-lg flex items-center gap-1 shadow-sm hover:scale-105 transition-transform"
+                >
+                  <span class="material-symbols-outlined text-xs">visibility</span>
+                  <span>Atender Folio</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- Botón de simulación cuando no hay folios en espera -->
+    <div class="flex justify-end">
+      <button
+        type="button"
+        (click)="simulateQuickArrival()"
+        class="text-xs text-secondary hover:text-gold flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-subtle hover:border-gold transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">bolt</span>
+        <span>+ Simular Llegada de Caseta (Probar Notificación)</span>
+      </button>
+    </div>
+  }
+
+  <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON TRANSPORTISTAS) ── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Total Recepciones -->
-    <div class="kpi-card shadow-sm hover-lift">
-      <div class="kpi-card__icon-wrap bg-navy/10 text-navy">
-        <span class="material-symbols-outlined">inbox</span>
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white">
+        <span class="material-symbols-outlined">local_shipping</span>
       </div>
-      <div>
-        <div class="kpi-card__value text-navy">{{ kpiTotal() }}</div>
-        <div class="kpi-card__label">Total Recepciones</div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value">{{ kpiTotal() }}</span>
+        <span class="kpi-card__label">Total Recepciones</span>
       </div>
-      <div class="kpi-card__bar bg-navy"></div>
+      <div class="kpi-card__bar bg-slate-800 dark:bg-slate-300"></div>
     </div>
 
     <!-- En Caseta / Registradas -->
-    <div class="kpi-card shadow-sm hover-lift">
-      <div class="kpi-card__icon-wrap bg-amber-500/10 text-amber-600">
-        <span class="material-symbols-outlined">assignment_turned_in</span>
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-amber-500/15 text-amber-600 dark:text-amber-400">
+        <span class="material-symbols-outlined">pending_actions</span>
       </div>
-      <div>
-        <div class="kpi-card__value text-amber-600">{{ kpiRegistered() }}</div>
-        <div class="kpi-card__label">Registradas Caseta</div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value text-amber-600 dark:text-amber-400">{{ kpiRegistered() }}</span>
+        <span class="kpi-card__label">Registradas Caseta</span>
       </div>
       <div class="kpi-card__bar bg-amber-500"></div>
     </div>
 
     <!-- Completadas / Cierres -->
-    <div class="kpi-card shadow-sm hover-lift">
-      <div class="kpi-card__icon-wrap bg-emerald-500/10 text-emerald-600">
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
         <span class="material-symbols-outlined">check_circle</span>
       </div>
-      <div>
-        <div class="kpi-card__value text-emerald-600">{{ kpiCompleted() }}</div>
-        <div class="kpi-card__label">Completadas</div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">{{ kpiCompleted() }}</span>
+        <span class="kpi-card__label">Completadas</span>
       </div>
       <div class="kpi-card__bar bg-emerald-500"></div>
     </div>
 
     <!-- Canceladas -->
-    <div class="kpi-card shadow-sm hover-lift">
-      <div class="kpi-card__icon-wrap bg-rose-500/10 text-rose-600">
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-rose-500/15 text-rose-600 dark:text-rose-400">
         <span class="material-symbols-outlined">cancel</span>
       </div>
-      <div>
-        <div class="kpi-card__value text-rose-600">{{ kpiCancelled() }}</div>
-        <div class="kpi-card__label">Canceladas</div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value text-rose-600 dark:text-rose-400">{{ kpiCancelled() }}</span>
+        <span class="kpi-card__label">Canceladas</span>
       </div>
       <div class="kpi-card__bar bg-rose-500"></div>
     </div>
   </div>
 
   <!-- ── 2. MAIN WORKBENCH GRID (MASTER-DETAIL) ── -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-    <!-- ── 2A. LEFT PANEL: LISTA Y BÚSQUEDA MASTER (col-span-4) ── -->
+    <!-- ── 2A. LEFT PANEL: DIRECTORIO Y BÚSQUEDA MASTER (col-span-4) ── -->
     <div class="lg:col-span-4 synexia-card p-4 space-y-4">
       
-      <!-- Header de Lista & Botón [+ Nueva Recepción] -->
+      <!-- Header de Lista & Botón [+ Nueva Pre-Recepción] -->
       <div class="flex items-center justify-between gap-2 border-b border-subtle pb-3">
         <div>
-          <h3 class="font-bold text-sm text-primary uppercase tracking-wide">DIRECTORIO DE RECEPCIONES</h3>
-          <p class="text-xs text-secondary">Control del turno en andén</p>
+          <h3 class="font-bold text-xs text-primary uppercase tracking-wide">DIRECTORIO DE RECEPCIONES</h3>
+          <p class="text-[11px] text-secondary">Control del turno en andén</p>
         </div>
         <button
           type="button"
           (click)="openNewReceptionModal()"
-          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl shadow-md transition-transform hover:scale-105"
+          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md transition-transform hover:scale-105"
         >
           <span class="material-symbols-outlined text-sm">add</span>
-          <span>Nueva Recepción</span>
+          <span>Pre-Recepción</span>
         </button>
       </div>
 
@@ -84,7 +180,7 @@
             type="text"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
-            placeholder="Buscar por Folio, Remisión, Cliente, SKU..."
+            placeholder="Buscar por Folio, Remisión, Cliente..."
             class="fg-input pl-9 text-xs w-full"
           />
         </div>
@@ -104,7 +200,7 @@
       </div>
 
       <!-- Lista de Recepciones Master -->
-      <div class="receptions-master-list space-y-2 max-h-[580px] overflow-y-auto pr-1">
+      <div class="receptions-master-list space-y-2 max-h-[640px] overflow-y-auto pr-1">
         @for (rec of filteredReceptions(); track rec.folio) {
           <div
             (click)="selectReception(rec)"
@@ -139,45 +235,38 @@
       </div>
     </div>
 
-    <!-- ── 2B. RIGHT PANEL: CENTRO DE OPERACIONES DETALLE (col-span-8) ── -->
-    <div class="lg:col-span-8 space-y-6">
+    <!-- ── 2B. RIGHT PANEL: PANTALLA UNIFICADA DE RECEPCIÓN Y DESCARGA (col-span-8) ── -->
+    <div class="lg:col-span-8 space-y-4">
       @if (selectedReception(); as rec) {
         
-        <!-- Header de Recepción Seleccionada -->
-        <div class="synexia-card p-5 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-lg font-extrabold text-gold">RECEPCIÓN #{{ rec.folio }}</span>
-                <span
-                  class="status-badge"
-                  [class.status-badge--registered]="rec.status === 'REGISTERED'"
-                  [class.status-badge--completed]="rec.status === 'COMPLETED'"
-                  [class.status-badge--cancelled]="rec.status === 'CANCELLED'"
-                >
-                  {{ rec.status }}
-                </span>
-              </div>
-              <h2 class="text-base font-bold text-primary mt-0.5">{{ rec.checkIn.client }}</h2>
-              <p class="text-xs text-secondary">Rampa {{ rec.checkIn.rampNumber }} · {{ rec.checkIn.carrierLine }} · Chofer: {{ rec.checkIn.driverName }}</p>
+        <!-- PANTALLA INTEGRADA EN UN SOLO FORM / CONTENEDOR HOMOLOGADO CON TRANSPORTISTAS -->
+        <div class="synexia-card p-5 space-y-6">
+          
+          <!-- 1. CABECERA BREADCRUMB & ACCIONES (ESTILO TRANSPORTISTAS) -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+              <span class="material-symbols-outlined text-base text-secondary">local_shipping</span>
+              <span class="text-secondary font-medium">Movimientos</span>
+              <span class="material-symbols-outlined text-xs text-muted">chevron_right</span>
+              <strong class="text-primary font-bold text-sm">{{ rec.checkIn.client }}</strong>
+              <span class="font-mono text-xs font-bold text-gold px-2.5 py-0.5 rounded-md bg-gold/10 border border-gold/30">FOLIO #{{ rec.folio }}</span>
+              <span
+                class="transportistas-status-badge"
+                [class.transportistas-status-badge--registered]="rec.status === 'REGISTERED'"
+                [class.transportistas-status-badge--active]="rec.status === 'COMPLETED'"
+                [class.transportistas-status-badge--cancelled]="rec.status === 'CANCELLED'"
+              >
+                {{ rec.status === 'COMPLETED' ? 'Completado' : (rec.status === 'REGISTERED' ? 'En Espera' : 'Cancelado') }}
+              </span>
             </div>
 
-            <!-- Botones de Acción Contextual -->
-            <div class="flex flex-wrap items-center gap-2">
+            <!-- BOTONES DE ACCIÓN SUPERIOR -->
+            <div class="flex items-center gap-2">
               @if (rec.status !== 'CANCELLED') {
                 <button
                   type="button"
-                  (click)="openChangeRemisionModal()"
-                  class="btn-secondary-outline text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1"
-                >
-                  <span class="material-symbols-outlined text-sm">edit</span>
-                  <span>Cambiar Remisión</span>
-                </button>
-
-                <button
-                  type="button"
                   (click)="openCancelModal()"
-                  class="btn-danger-outline text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1"
+                  class="btn-danger-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
                 >
                   <span class="material-symbols-outlined text-sm">cancel</span>
                   <span>Cancelar</span>
@@ -187,7 +276,7 @@
               <button
                 type="button"
                 (click)="openPrintPreview(rec)"
-                class="btn-primary-gold text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm"
+                class="btn-primary-gold text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm text-slate-900"
               >
                 <span class="material-symbols-outlined text-sm">print</span>
                 <span>Imprimir Pauta</span>
@@ -195,315 +284,258 @@
             </div>
           </div>
 
-          <!-- Metadata Rápida Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-subtle p-3 rounded-xl text-xs">
-            <div>
-              <span class="text-tertiary block font-mono text-[10px] uppercase">No. Remisión</span>
-              <span class="font-mono font-bold text-primary">{{ rec.checkIn.docNumber }}</span>
+          <!-- 2. SECCIÓN 1: INFORMACIÓN GENERAL DE CASETA -->
+          <div class="space-y-3">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">apartment</span>
+              <span>INFORMACIÓN GENERAL DE CASETA</span>
             </div>
-            <div>
-              <span class="text-tertiary block font-mono text-[10px] uppercase">Hora Llegada</span>
-              <span class="font-medium text-primary">{{ rec.checkIn.receptionTime }}</span>
-            </div>
-            <div>
-              <span class="text-tertiary block font-mono text-[10px] uppercase">Placas Caja</span>
-              <span class="font-mono text-primary">{{ rec.checkIn.boxPlates }}</span>
-            </div>
-            <div>
-              <span class="text-tertiary block font-mono text-[10px] uppercase">Montacarguista</span>
-              <span class="font-medium text-primary">{{ rec.checkIn.forkliftOperator }}</span>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-subtle p-3.5 rounded-xl border border-subtle">
+              <div class="fg-field">
+                <label class="fg-label">No. Remisión</label>
+                <span class="font-mono font-bold text-primary text-xs">{{ rec.checkIn.docNumber }}</span>
+              </div>
+              <div class="fg-field">
+                <label class="fg-label">Hora de Llegada</label>
+                <span class="font-mono font-medium text-primary text-xs">{{ rec.checkIn.receptionTime }}</span>
+              </div>
+              <div class="fg-field">
+                <label class="fg-label">Línea Transportadora</label>
+                <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn.carrierLine }}</span>
+              </div>
+              <div class="fg-field">
+                <label class="fg-label">Chofer & Placas</label>
+                <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn.driverName }} ({{ rec.checkIn.tractorPlates }})</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Sub-pestañas de Detalle de la Entidad -->
-        <div class="synexia-card p-5 space-y-6">
-          <div class="flex items-center gap-2 border-b border-subtle pb-3 text-xs font-bold">
-            <button
-              type="button"
-              (click)="detailSubTab.set('descarga')"
-              [class.subtab-active]="detailSubTab() === 'descarga'"
-              class="subtab-btn flex items-center gap-1.5 px-4 py-2 rounded-lg transition-colors"
-            >
-              <span class="material-symbols-outlined text-sm">inventory_2</span>
-              <span>1. Descarga & Carga Rápida UAs</span>
-            </button>
-
-            <button
-              type="button"
-              (click)="detailSubTab.set('caseta')"
-              [class.subtab-active]="detailSubTab() === 'caseta'"
-              class="subtab-btn flex items-center gap-1.5 px-4 py-2 rounded-lg transition-colors"
-            >
-              <span class="material-symbols-outlined text-sm">badge</span>
-              <span>2. Datos de Caseta</span>
-            </button>
-
-            <button
-              type="button"
-              (click)="detailSubTab.set('trazabilidad')"
-              [class.subtab-active]="detailSubTab() === 'trazabilidad'"
-              class="subtab-btn flex items-center gap-1.5 px-4 py-2 rounded-lg transition-colors"
-            >
-              <span class="material-symbols-outlined text-sm">history</span>
-              <span>3. Trazabilidad & Auditoría</span>
-            </button>
-          </div>
-
-          <!-- ── SUB-PESTAÑA 1: DESCARGA & CARGA DE TARIMAS (PASO 2 GERENTE OPERATIVO) ── -->
-          @if (detailSubTab() === 'descarga') {
-            <div class="space-y-5">
-              
-              <!-- Header del Paso 2 -->
-              <div class="flex items-center justify-between bg-gold-subtle p-3 rounded-xl border border-gold-border text-xs">
-                <div class="flex items-center gap-2 text-gold font-bold">
-                  <span class="material-symbols-outlined">badge</span>
-                  <span>PASO 2: CAPTURA OPERATIVA DE DESCARGA (GERENTE OPERATIVO)</span>
-                </div>
-                <span class="font-mono text-[11px] text-secondary">FOLIO #{{ rec.folio }}</span>
+          <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO -->
+          @if (rec.status !== 'CANCELLED') {
+            <form [formGroup]="altaForm" class="space-y-3.5 pt-1">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span>PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO</span>
               </div>
 
-              <!-- Resumen Live de Tarimas Descargadas -->
-              <div class="grid grid-cols-3 gap-3 bg-surface-subtle p-3 rounded-xl text-center">
-                <div>
-                  <span class="text-tertiary block text-[10px] uppercase font-bold">Total Tarimas</span>
-                  <span class="font-mono text-lg font-bold text-gold">{{ totalTarimas() }}</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Lote de Recepción</label>
+                  <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase" placeholder="Ej. LOT-2026-A1" />
                 </div>
-                <div>
-                  <span class="text-tertiary block text-[10px] uppercase font-bold">Productos (SKU)</span>
-                  <span class="font-mono text-lg font-bold text-primary">{{ totalProductos() }}</span>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Fecha de Caducidad</label>
+                  <input type="date" formControlName="expirationDate" class="fg-input" />
                 </div>
-                <div>
-                  <span class="text-tertiary block text-[10px] uppercase font-bold">Piezas Totales</span>
-                  <span class="font-mono text-lg font-bold text-emerald-600">{{ totalPiezas() }}</span>
-                </div>
-              </div>
 
-              <!-- Formulario del Paso 2 (Gerente Operativo) -->
-              @if (rec.status !== 'CANCELLED') {
-                <form [formGroup]="altaForm" class="space-y-3 bg-surface-subtle p-4 rounded-xl border border-subtle">
-                  <h4 class="font-bold text-xs text-primary uppercase border-b border-subtle pb-2">PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO</h4>
-
-                  <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">LOTE RECEPCIÓN:</label>
-                      <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase w-full" placeholder="01.07.2026" />
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">FECHA CADUCIDAD:</label>
-                      <input type="date" formControlName="expirationDate" class="fg-input w-full" />
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">MONTACARGUISTA:</label>
-                      <select formControlName="forkliftOperator" class="fg-input w-full font-bold">
-                        @for (op of forkliftOperators(); track op.code) {
-                          <option [value]="op.name">{{ op.name }}</option>
-                        }
-                      </select>
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">RAMPA DE RECEPCIÓN:</label>
-                      <select formControlName="rampNumber" class="fg-input w-full font-bold">
-                        @for (rm of ramps(); track rm.code) {
-                          <option [value]="rm.rampNumber">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
-                        }
-                      </select>
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">PRODUCTO (SKU):</label>
-                      <select (change)="onProductSelect($any($event.target).value)" class="fg-input w-full font-bold">
-                        @for (p of products(); track p.id) {
-                          <option [value]="p.id">{{ p.id }} - {{ p.name }}</option>
-                        }
-                      </select>
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">PIEZAS POR TARIMA:</label>
-                      <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono w-full" placeholder="40" />
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">TIPO TARIMA:</label>
-                      <select formControlName="selectedPalletType" class="fg-input w-full font-bold">
-                        @for (pt of palletTypes; track pt[0]) {
-                          <option [value]="pt[0]">{{ pt[1] }}</option>
-                        }
-                      </select>
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-secondary uppercase block mb-1">PROVEEDOR:</label>
-                      <select formControlName="supplierName" class="fg-input w-full font-bold">
-                        @for (sup of suppliers(); track sup.code) {
-                          <option [value]="sup.name">{{ sup.name }}</option>
-                        }
-                      </select>
-                    </div>
-
-                    <div class="md:col-span-4">
-                      <label class="font-bold text-secondary uppercase block mb-1">OBSERVACIÓN DE LA DESCARGA:</label>
-                      <input type="text" formControlName="observations" class="fg-input w-full" placeholder="Observaciones generales para el formato impreso..." />
-                    </div>
-                  </div>
-                </form>
-
-                <!-- Barra de Adición / Escaneo de Tarimas (UAs) -->
-                <div class="scan-bar p-3 rounded-xl border border-gold/40 bg-gold-subtle flex flex-col sm:flex-row items-center gap-3">
-                  <div class="flex items-center gap-2 text-gold font-bold text-xs whitespace-nowrap">
-                    <span class="material-symbols-outlined text-lg">qr_code_scanner</span>
-                    <span>CAPTURA TARIMA (UA):</span>
-                  </div>
-                  <input
-                    #uaInput
-                    type="text"
-                    [ngModel]="uaCodeInput()"
-                    (ngModelChange)="uaCodeInput.set($event)"
-                    (keyup.enter)="onUaEnter($event)"
-                    placeholder="Código de Barras / Código Tarima (ENTER o dejar vacío para auto-generar)..."
-                    class="fg-input font-mono text-xs w-full border-gold focus:ring-2 focus:ring-gold"
-                  />
-                  <input
-                    type="text"
-                    [ngModel]="uaObsInput()"
-                    (ngModelChange)="uaObsInput.set($event)"
-                    placeholder="Obs (opcional)"
-                    class="fg-input text-xs w-48"
-                  />
-                  <button
-                    type="button"
-                    (click)="onUaEnter()"
-                    class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-4 py-2 rounded-xl whitespace-nowrap"
-                  >
-                    <span class="material-symbols-outlined text-sm">add</span>
-                    <span>Agregar Tarima</span>
-                  </button>
-                </div>
-              }
-
-              <!-- Tabla de Tarimas Registradas (Idéntica al Formato Impreso 2 & 3) -->
-              <div class="overflow-x-auto border border-subtle rounded-xl">
-                <table class="w-full text-xs text-left">
-                  <thead class="bg-surface-subtle text-secondary uppercase text-[10px] font-bold">
-                    <tr>
-                      <th class="p-3 text-center w-12">N. Tarima</th>
-                      <th class="p-3">Código Tarima</th>
-                      <th class="p-3">SKU</th>
-                      <th class="p-3">Descripción</th>
-                      <th class="p-3">Proveedor</th>
-                      <th class="p-3">Tipo Tarima</th>
-                      <th class="p-3 text-right">Cant x Tarima</th>
-                      <th class="p-3">Observaciones</th>
-                      @if (rec.status !== 'CANCELLED') {
-                        <th class="p-3 text-center">Acciones</th>
-                      }
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-subtle">
-                    @for (pallet of palletStream(); track pallet.id) {
-                      <tr class="hover:bg-surface-subtle/50 font-mono">
-                        <td class="p-3 text-center font-bold text-secondary">{{ pallet.palletNumber }}</td>
-                        <td class="p-3 font-bold text-gold">{{ pallet.palletCode }}</td>
-                        <td class="p-3 font-medium text-primary">{{ pallet.productId }}</td>
-                        <td class="p-3 font-medium text-primary font-sans">{{ pallet.description }}</td>
-                        <td class="p-3 text-secondary font-sans uppercase">{{ pallet.supplierName }}</td>
-                        <td class="p-3 text-secondary font-sans">{{ pallet.palletTypeLabel }}</td>
-                        <td class="p-3 text-right font-bold text-emerald-600">{{ pallet.pieces }} PZAS</td>
-                        <td class="p-3 text-tertiary italic font-sans">{{ pallet.observations || '-' }}</td>
-                        @if (rec.status !== 'CANCELLED') {
-                          <td class="p-3 text-center">
-                            <button
-                              type="button"
-                              (click)="removePalletFromStream(pallet.id)"
-                              class="text-rose-500 hover:text-rose-700 p-1"
-                              title="Eliminar Tarima"
-                            >
-                              <span class="material-symbols-outlined text-sm">delete</span>
-                            </button>
-                          </td>
-                        }
-                      </tr>
-                    } @empty {
-                      <tr>
-                        <td colspan="9" class="text-center py-8 text-secondary">
-                          <span class="material-symbols-outlined text-3xl opacity-40 mb-1">inventory_2</span>
-                          <p class="text-xs font-medium">No hay tarimas registradas en este folio.</p>
-                          <p class="text-[11px] text-tertiary">Ingresa el código arriba o haz clic en [+ Agregar Tarima].</p>
-                        </td>
-                      </tr>
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Montacarguista</label>
+                  <select formControlName="forkliftOperator" class="fg-input">
+                    @for (op of forkliftOperators(); track op.code) {
+                      <option [value]="op.name">{{ op.name }}</option>
                     }
-                  </tbody>
-                </table>
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Rampa de Recepción</label>
+                  <select formControlName="rampNumber" class="fg-input">
+                    @for (rm of ramps(); track rm.code) {
+                      <option [value]="rm.rampNumber">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Producto (SKU)</label>
+                  <select (change)="onProductSelect($any($event.target).value)" class="fg-input">
+                    @for (p of products(); track p.id) {
+                      <option [value]="p.id" [selected]="p.id === altaForm.value.productId">{{ p.id }} - {{ p.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Piezas por Tarima</label>
+                  <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono" placeholder="480" />
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Tipo de Tarima</label>
+                  <select formControlName="selectedPalletType" class="fg-input">
+                    @for (pt of palletTypes; track pt[0]) {
+                      <option [value]="pt[0]">{{ pt[1] }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required">Proveedor</label>
+                  <select formControlName="supplierName" class="fg-input">
+                    @for (sup of suppliers(); track sup.code) {
+                      <option [value]="sup.name">{{ sup.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field sm:col-span-2 lg:col-span-4">
+                  <label class="fg-label">Observaciones de la Descarga</label>
+                  <input type="text" formControlName="observations" class="fg-input" placeholder="Ej. Ingreso directo andén 4 sin incidentes..." />
+                </div>
+              </div>
+            </form>
+
+            <!-- 4. SECCIÓN 3: CAPTURA DE TARIMAS (UA) -->
+            <div class="space-y-3 pt-1">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">qr_code_scanner</span>
+                <span>CAPTURA DE TARIMAS (UA)</span>
               </div>
 
-              <!-- Footer Cierre e Impresión Oficial -->
-              @if (rec.status !== 'CANCELLED' && rec.status !== 'COMPLETED') {
-                <div class="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    (click)="initiateCompleteReception()"
-                    class="btn-save flex items-center gap-1.5 px-6 py-3 rounded-xl font-bold text-xs shadow-md"
-                  >
-                    <span class="material-symbols-outlined text-base">print</span>
-                    <span>Autorizar y Generar Formato de Impresión Oficial</span>
-                  </button>
+              <div class="scan-bar p-3.5 rounded-xl border border-gold/40 bg-gold-subtle flex flex-col sm:flex-row items-center gap-3">
+                <div class="flex items-center gap-2 text-gold font-bold text-xs whitespace-nowrap">
+                  <span class="material-symbols-outlined text-lg">barcode_scanner</span>
+                  <span>ESCANEAR UA:</span>
                 </div>
-              }
+                <input
+                  #uaInput
+                  type="text"
+                  [ngModel]="uaCodeInput()"
+                  (ngModelChange)="uaCodeInput.set($event)"
+                  (keyup.enter)="onUaEnter($event)"
+                  placeholder="Código de Barras / Código de Tarima"
+                  class="fg-input font-mono text-xs w-full border-gold focus:ring-2 focus:ring-gold"
+                />
+                <input
+                  type="text"
+                  [ngModel]="uaObsInput()"
+                  (ngModelChange)="uaObsInput.set($event)"
+                  placeholder="Observación (opcional)"
+                  class="fg-input text-xs w-full sm:w-56"
+                />
+                <button
+                  type="button"
+                  (click)="onUaEnter()"
+                  class="btn-primary-gold flex items-center justify-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl whitespace-nowrap w-full sm:w-auto text-slate-900 shadow-sm"
+                >
+                  <span class="material-symbols-outlined text-sm">add</span>
+                  <span>Agregar Tarima</span>
+                </button>
+              </div>
             </div>
           }
 
-          <!-- ── SUB-PESTAÑA 2: DATOS DE CASETA ── -->
-          @if (detailSubTab() === 'caseta') {
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div class="p-4 rounded-xl border border-subtle bg-surface-subtle space-y-2">
-                <h4 class="font-bold text-gold uppercase text-[11px] tracking-wider mb-2">IDENTIFICACIÓN VEHICULAR</h4>
-                <div><span class="text-secondary">Línea Transportadora:</span> <span class="font-bold text-primary ml-1">{{ rec.checkIn.carrierLine }}</span></div>
-                <div><span class="text-secondary">Nombre del Chofer:</span> <span class="font-bold text-primary ml-1">{{ rec.checkIn.driverName }}</span></div>
-                <div><span class="text-secondary">Placas Tracto:</span> <span class="font-mono text-primary ml-1">{{ rec.checkIn.tractorPlates }}</span></div>
-                <div><span class="text-secondary">Placas Caja:</span> <span class="font-mono text-primary ml-1">{{ rec.checkIn.boxPlates }}</span></div>
-              </div>
+          <!-- 5. SECCIÓN 4: RESUMEN Y DETALLE DE TARIMAS DESCARGADAS -->
+          <div class="space-y-3 pt-1">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">analytics</span>
+              <span>RESUMEN Y DETALLE DE TARIMAS DESCARGADAS</span>
+            </div>
 
-              <div class="p-4 rounded-xl border border-subtle bg-surface-subtle space-y-2">
-                <h4 class="font-bold text-gold uppercase text-[11px] tracking-wider mb-2">DATOS DE OPERACIÓN EN ANDÉN</h4>
-                <div><span class="text-secondary">Rampa Asignada:</span> <span class="font-bold text-primary ml-1">Rampa {{ rec.checkIn.rampNumber }}</span></div>
-                <div><span class="text-secondary">Hora Recepción:</span> <span class="font-bold text-primary ml-1">{{ rec.checkIn.receptionTime }}</span></div>
-                <div><span class="text-secondary">Montacarguista:</span> <span class="font-bold text-primary ml-1">{{ rec.checkIn.forkliftOperator }}</span></div>
-                <div><span class="text-secondary">Sellos / Cinchos:</span> <span class="font-mono text-gold ml-1">{{ rec.checkIn.sealNumber || 'N/A' }}</span></div>
+            <!-- TOTALIZADORES EN VIVO -->
+            <div class="grid grid-cols-3 gap-3 bg-surface-subtle p-3.5 rounded-xl text-center border border-subtle">
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Total Tarimas</span>
+                <span class="font-mono text-lg sm:text-xl font-bold text-gold">{{ totalTarimas() }}</span>
+              </div>
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Productos (SKU)</span>
+                <span class="font-mono text-lg sm:text-xl font-bold text-primary">{{ totalProductos() }}</span>
+              </div>
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Piezas Totales</span>
+                <span class="font-mono text-lg sm:text-xl font-bold text-emerald-600">{{ totalPiezas() }} PZAS</span>
               </div>
             </div>
-          }
+          </div>
 
-          <!-- ── SUB-PESTAÑA 3: TRAZABILIDAD & AUDITORÍA ── -->
-          @if (detailSubTab() === 'trazabilidad') {
-            <div class="space-y-3 text-xs">
-              <div class="p-3 rounded-xl border border-subtle bg-surface-subtle flex justify-between items-center">
-                <div>
-                  <span class="text-secondary block text-[10px] uppercase font-bold">Capturado por</span>
-                  <span class="font-bold text-primary">{{ rec.capturedBy }}</span>
-                </div>
-                <span class="font-mono text-tertiary">{{ rec.createdAt }}</span>
-              </div>
+          <!-- 6. TABLA DE TARIMAS DESCARGADAS (CON EDITAR Y ELIMINAR PARA ADMIN) -->
+          <div class="overflow-x-auto border border-subtle rounded-xl shadow-sm">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-surface-subtle text-slate-700 dark:text-slate-300 uppercase text-[11px] font-black border-b border-subtle">
+                <tr>
+                  <th class="p-3 text-center w-12">N. Tarima</th>
+                  <th class="p-3">Código Tarima</th>
+                  <th class="p-3">SKU</th>
+                  <th class="p-3">Descripción</th>
+                  <th class="p-3">Proveedor</th>
+                  <th class="p-3">Tipo Tarima</th>
+                  <th class="p-3 text-right">Cant x Tarima</th>
+                  <th class="p-3">Observaciones</th>
+                  @if (rec.status !== 'CANCELLED') {
+                    <th class="p-3 text-center w-24">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-subtle font-medium">
+                @for (pallet of palletStream(); track pallet.id) {
+                  <tr class="hover:bg-surface-subtle/70 font-mono">
+                    <td class="p-3 text-center font-black text-slate-700 dark:text-slate-300">{{ pallet.palletNumber }}</td>
+                    <td class="p-3 font-black text-amber-600 dark:text-amber-400">{{ pallet.palletCode }}</td>
+                    <td class="p-3 font-bold text-slate-900 dark:text-slate-100">{{ pallet.productId }}</td>
+                    <td class="p-3 font-bold text-slate-900 dark:text-slate-100 font-sans">{{ pallet.description }}</td>
+                    <td class="p-3 text-slate-700 dark:text-slate-300 font-sans uppercase">{{ pallet.supplierName || '-' }}</td>
+                    <td class="p-3 text-slate-700 dark:text-slate-300 font-sans">{{ pallet.palletTypeLabel }}</td>
+                    <td class="p-3 text-right font-black text-emerald-600 dark:text-emerald-400">{{ pallet.pieces }} PZAS</td>
+                    <td class="p-3 text-slate-600 dark:text-slate-400 italic font-sans">{{ pallet.observations || '-' }}</td>
+                    @if (rec.status !== 'CANCELLED') {
+                      <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            (click)="openEditPalletModal(pallet)"
+                            class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 p-1.5 rounded-lg transition-colors hover:bg-amber-500/10"
+                            title="Editar Tarima (Admin)"
+                          >
+                            <span class="material-symbols-outlined text-base">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            (click)="removePalletFromStream(pallet.id)"
+                            class="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg transition-colors hover:bg-rose-500/10"
+                            title="Eliminar Tarima"
+                          >
+                            <span class="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="9" class="text-center py-8 text-slate-500 dark:text-slate-400">
+                      <span class="material-symbols-outlined text-3xl opacity-40 mb-1">inventory_2</span>
+                      <p class="text-xs font-bold text-slate-700 dark:text-slate-300">No hay tarimas registradas en este folio.</p>
+                      <p class="text-[11px] text-slate-500">Ingresa el código arriba o haz clic en [+ Agregar Tarima].</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
 
-              @if (rec.leaderAuthorizedBy) {
-                <div class="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex justify-between items-center">
-                  <div>
-                    <span class="text-emerald-600 block text-[10px] uppercase font-bold">Autorizado por Líder</span>
-                    <span class="font-bold text-emerald-700">{{ rec.leaderAuthorizedBy }}</span>
-                  </div>
-                  <span class="font-mono text-emerald-600">{{ rec.completedAt || rec.cancelledAt }}</span>
-                </div>
-              }
+          <!-- 7. FOOTER CON ACCIONES DE GUARDADO Y AUTORIZACIÓN -->
+          @if (rec.status !== 'CANCELLED' && rec.status !== 'COMPLETED') {
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
+              <button
+                type="button"
+                (click)="saveDraftReception()"
+                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center"
+              >
+                <span class="material-symbols-outlined text-sm">save</span>
+                <span>Guardar Avance de Descarga</span>
+              </button>
 
-              @if (rec.cancellationReason) {
-                <div class="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 space-y-1">
-                  <span class="text-rose-600 block text-[10px] uppercase font-bold">Motivo de Cancelación</span>
-                  <p class="text-rose-700 italic font-medium">{{ rec.cancellationReason }}</p>
-                </div>
-              }
+              <button
+                type="button"
+                (click)="initiateCompleteReception()"
+                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900"
+              >
+                <span class="material-symbols-outlined text-base">print</span>
+                <span>Autorizar y Generar Formato de Impresión Oficial</span>
+              </button>
             </div>
           }
         </div>
@@ -513,7 +545,7 @@
           <span class="material-symbols-outlined text-5xl text-gold opacity-50">move_to_inbox</span>
           <h3 class="text-base font-bold text-primary">Selecciona una Recepción del Directorio</h3>
           <p class="text-xs text-secondary max-w-sm mx-auto">
-            Elige un folio de la lista izquierda para consultar su detalle, editar remisión, descargar tarimas o autorizar el cierre.
+            Elige un folio de la lista izquierda para consultar su detalle, descargar tarimas o autorizar el cierre oficial.
           </p>
           <button
             type="button"
@@ -521,14 +553,14 @@
             class="btn-primary-gold text-xs font-bold px-4 py-2.5 rounded-xl shadow-md inline-flex items-center gap-1.5"
           >
             <span class="material-symbols-outlined text-sm">add</span>
-            <span>Nueva Recepción (Caseta)</span>
+            <span>Nueva Pre-Recepción (Caseta)</span>
           </button>
         </div>
       }
     </div>
   </div>
 
-  <!-- ── 3. MODAL: CAPTURA DE CASETA (NUEVA RECEPCIÓN) ── -->
+  <!-- ── 3. MODAL: CAPTURA DE CASETA (NUEVA PRE-RECEPCIÓN) ── -->
   @if (showCheckInModal()) {
     <div class="modal-overlay">
       <div class="modal-card max-w-3xl w-full shadow-2xl animate-fade-up">
@@ -695,14 +727,81 @@
           <!-- Footer Fijo Inferior -->
           <div class="modal-footer flex items-center justify-end gap-3">
             <button type="button" (click)="closeNewReceptionModal()" class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold">Cancelar</button>
-            <button type="submit" class="btn-save text-xs px-5 py-2 rounded-xl font-bold shadow-md">Registrar Recepción</button>
+            <button type="submit" class="btn-save text-xs px-5 py-2 rounded-xl font-bold shadow-md">Registrar Pre-Recepción</button>
           </div>
         </form>
       </div>
     </div>
   }
 
-  <!-- ── 4. MODAL: CAMBIO DE REMISIÓN ── -->
+  <!-- ── 4. MODAL: EDICIÓN DE TARIMA INDIVIDUAL (ADMINISTRADOR) ── -->
+  @if (showEditPalletModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-lg w-full shadow-2xl animate-fade-up">
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-gold">edit_square</span>
+            <h3 class="font-bold text-sm text-primary uppercase">EDITAR TARIMA #{{ editPalletForm.value.palletNumber }}</h3>
+          </div>
+          <button type="button" (click)="closeEditPalletModal()" class="text-secondary hover:text-primary">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <form [formGroup]="editPalletForm" (ngSubmit)="saveEditedPallet()" class="flex flex-col flex-1 min-h-0">
+          <div class="modal-body space-y-3.5 text-xs">
+            <div>
+              <label class="font-bold text-secondary uppercase block mb-1">CÓDIGO TARIMA (UA):</label>
+              <input type="text" formControlName="palletCode" class="fg-input font-mono uppercase w-full font-bold" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="font-bold text-secondary uppercase block mb-1">SKU:</label>
+                <input type="text" formControlName="productId" class="fg-input font-mono w-full" />
+              </div>
+              <div>
+                <label class="font-bold text-secondary uppercase block mb-1">CANT X TARIMA:</label>
+                <input type="number" formControlName="pieces" class="fg-input font-mono w-full font-bold" />
+              </div>
+            </div>
+
+            <div>
+              <label class="font-bold text-secondary uppercase block mb-1">DESCRIPCIÓN SKU:</label>
+              <input type="text" formControlName="description" class="fg-input w-full" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="font-bold text-secondary uppercase block mb-1">PROVEEDOR:</label>
+                <input type="text" formControlName="supplierName" class="fg-input w-full uppercase" />
+              </div>
+              <div>
+                <label class="font-bold text-secondary uppercase block mb-1">TIPO TARIMA:</label>
+                <select formControlName="palletTypeId" class="fg-input w-full font-bold">
+                  @for (pt of palletTypes; track pt[0]) {
+                    <option [value]="pt[0]">{{ pt[1] }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="font-bold text-secondary uppercase block mb-1">OBSERVACIONES:</label>
+              <input type="text" formControlName="observations" class="fg-input w-full" placeholder="Observación específica de esta tarima..." />
+            </div>
+          </div>
+
+          <div class="modal-footer flex items-center justify-end gap-2">
+            <button type="button" (click)="closeEditPalletModal()" class="btn-ghost text-xs px-3 py-1.5 rounded-lg">Cancelar</button>
+            <button type="submit" class="btn-save text-xs px-4 py-1.5 rounded-lg font-bold">Guardar Tarima</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ── 5. MODAL: CAMBIO DE REMISIÓN ── -->
   @if (showChangeRemisionModal()) {
     <div class="modal-overlay">
       <div class="modal-card max-w-md w-full p-6 space-y-4 shadow-2xl animate-fade-up">
@@ -744,7 +843,7 @@
     </div>
   }
 
-  <!-- ── 5. MODALES DE SISTEMA (LÍDER & IMPRESIÓN) ── -->
+  <!-- ── 6. MODALES DE SISTEMA (LÍDER & IMPRESIÓN) ── -->
   @if (showLeaderModal()) {
     <fg-leader-auth-modal
       [title]="leaderModalTitle()"

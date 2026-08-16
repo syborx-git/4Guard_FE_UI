@@ -206,6 +206,62 @@
           </div>
         }
 
+        <!-- Pill Notificaciones: Pre-Recepciones en Espera -->
+        @if (pendingReceptionsCount() > 0) {
+          <div class="shell__reception-pill-container relative">
+            <button
+              type="button"
+              (click)="toggleReceptionAlerts($event)"
+              class="shell__alert-badge shell__alert-badge--reception"
+              title="Pre-Recepciones registradas en Caseta pendientes de atención"
+            >
+              <span class="material-symbols-outlined shell__alert-icon">move_to_inbox</span>
+              <span class="shell__alert-text">
+                {{ pendingReceptionsCount() }}
+                {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
+              </span>
+            </button>
+
+            <!-- Dropdown flotante con la cola de notificaciones en fila -->
+            @if (showReceptionAlertsDropdown()) {
+              <div class="shell__reception-dropdown animate-fade-up">
+                <div class="flex items-center justify-between border-b border-subtle pb-2.5 mb-2.5">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gold text-base">notifications_active</span>
+                    <h4 class="font-bold text-[11px] text-primary uppercase tracking-wider">PRE-RECEPCIONES EN ESPERA</h4>
+                  </div>
+                  <span class="font-mono text-[10px] font-bold text-gold bg-gold/10 px-2 py-0.5 rounded-md border border-gold/30">
+                    {{ pendingReceptionsCount() }} en cola
+                  </span>
+                </div>
+
+                <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  @for (rec of pendingReceptions(); track rec.folio) {
+                    <div class="p-2.5 rounded-xl border border-subtle bg-surface-subtle hover:border-gold transition-colors flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-mono text-xs font-bold text-gold">#{{ rec.folio }}</span>
+                          <span class="font-bold text-primary truncate max-w-[140px]">{{ rec.checkIn.client }}</span>
+                        </div>
+                        <p class="text-[10px] text-secondary mt-0.5 font-mono">
+                          Rem: {{ rec.checkIn.docNumber }} · Rampa {{ rec.checkIn.rampNumber }} · {{ rec.checkIn.receptionTime }}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="openReceptionFromAlert(rec.folio)"
+                        class="btn-primary-gold text-[10px] font-bold px-2.5 py-1 rounded-lg whitespace-nowrap"
+                      >
+                        Atender
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
         <!-- Badge alertas criticas -->
         <div class="shell__alert-badge shell__alert-badge--critical">
           <span class="material-symbols-outlined shell__alert-icon">warning</span>
