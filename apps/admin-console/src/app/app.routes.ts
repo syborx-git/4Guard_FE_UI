@@ -86,14 +86,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Layout',
       },
 
-      // Recepción
+      // Recepción (Redirección directa a Movimientos de Almacén)
       {
         path: 'receiving',
-        canActivate: [rbacGuard],
-        data: { module: 'receiving' },
-        loadChildren: () =>
-          import('./features/receiving/receiving.routes').then((m) => m.receivingRoutes),
-        title: '4GUARD WMS — Recepción',
+        redirectTo: 'warehouse-movements/receiving',
+        pathMatch: 'prefix',
       },
 
       // Control de Calidad

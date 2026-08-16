@@ -60,6 +60,7 @@ import { QuickOperatorSwitchModalComponent } from './quick-operator-switch-modal
 import { ForbotTriggerButtonComponent } from '../forbot/forbot-trigger-button/forbot-trigger-button.component';
 import { ForbotChatDrawerComponent } from '../forbot/forbot-chat-drawer/forbot-chat-drawer.component';
 import { ForbotEngineService } from '../../../core/forbot/services/forbot-engine.service';
+import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 
 @Component({
   selector: 'fg-admin-shell',
@@ -81,9 +82,27 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
   protected readonly forbotEngine = inject(ForbotEngineService);
+  private readonly movementsService = inject(WarehouseMovementsService);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+
+  // ── Pre-Recepciones en Cola de Notificaciones ──
+  protected readonly pendingReceptions = this.movementsService.pendingReceptions;
+  protected readonly pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
+  protected readonly showReceptionAlertsDropdown = signal(false);
+
+  protected toggleReceptionAlerts(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showProfileMenu.set(false);
+    this.showWaffleMenu.set(false);
+    this.showReceptionAlertsDropdown.update((v) => !v);
+  }
+
+  protected openReceptionFromAlert(folio: string): void {
+    this.showReceptionAlertsDropdown.set(false);
+    this.router.navigate(['/warehouse-movements/receiving'], { queryParams: { folio } });
+  }
 
   /** Listener global para abrir/cerrar ForBot con Ctrl + K */
   @HostListener('window:keydown', ['$event'])
@@ -312,7 +331,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     });
   });
 
-  /** Cierra el menú de perfil y Waffle menu al hacer click fuera */
+  /** Cierra el menú de perfil, Waffle menu y dropdown de recepciones al hacer click fuera */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
@@ -321,6 +340,9 @@ export class ShellComponent implements OnInit, OnDestroy {
     }
     if (!target.closest('.shell__waffle-container')) {
       this.showWaffleMenu.set(false);
+    }
+    if (!target.closest('.shell__reception-pill-container')) {
+      this.showReceptionAlertsDropdown.set(false);
     }
   }
 
@@ -423,14 +445,14 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
     { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
-    { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
+    { label: 'Recepción', route: '/warehouse-movements/receiving', icon: 'move_to_inbox', module: 'warehouse-movements' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
+    { label: 'Movimientos de Almacén', route: '/warehouse-movements/receiving', icon: 'swap_horiz', module: 'warehouse-movements' },
     { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },
-    { label: 'Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
+    { label: 'Consulta Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
   ];
 
 

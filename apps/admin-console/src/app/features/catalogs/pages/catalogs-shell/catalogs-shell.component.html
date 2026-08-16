@@ -19,20 +19,6 @@
       </div>
     </div>
 
-    <!-- Pestañas Primarias de Catálogos (Usuarios | Clientes | SKUs | Almacén | Montacarguistas) -->
-    <div class="primary-tabs-nav">
-      @for (tab of tabs; track tab.route) {
-        <a
-          [routerLink]="tab.route"
-          routerLinkActive="tab-active"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="primary-tab-btn"
-        >
-          <span class="material-symbols-outlined text-base">{{ tab.icon }}</span>
-          <span>{{ tab.label }}</span>
-        </a>
-      }
-    </div>
   </div>
 
   <!-- Router Outlet de Catálogos -->

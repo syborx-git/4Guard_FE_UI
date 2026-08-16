@@ -670,6 +670,45 @@
   animation: critical-soft-pulse 2.4s ease-in-out infinite;
 }
 
+.shell__alert-badge--reception {
+  color: #fef08a;
+  background: rgba(234, 179, 8, 0.14);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  box-shadow: 0 0 14px rgba(234, 179, 8, 0.15);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.shell__alert-badge--reception:hover {
+  background: rgba(234, 179, 8, 0.25);
+  border-color: rgba(234, 179, 8, 0.6);
+  transform: translateY(-1px);
+}
+
+.shell__alert-badge--reception .shell__alert-icon {
+  color: #fbbf24;
+}
+
+.shell__reception-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 340px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-card, rgba(0, 0, 0, 0.1));
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  z-index: 999;
+  backdrop-filter: blur(16px);
+}
+
+:host-context(.theme-dark) .shell__reception-dropdown,
+:host-context(.dark) .shell__reception-dropdown {
+  background: #111a26;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 @keyframes critical-soft-pulse {
 
   0%,
