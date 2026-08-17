@@ -66,10 +66,10 @@
 .quality-header__title {
   margin: 0;
   color: #17243d;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
   font-size: clamp(2rem, 3vw, 2.65rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
+  font-weight: 350 !important;
+  letter-spacing: -0.045em !important;
   line-height: 1.05;
 }
 

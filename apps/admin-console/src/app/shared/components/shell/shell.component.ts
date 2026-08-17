@@ -451,24 +451,15 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
-    { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
-    {
-      label: 'Recepción',
-      route: '/warehouse-movements/receiving',
-      icon: 'move_to_inbox',
-      module: 'warehouse-movements',
-      children: [
-        { label: 'Recepción de Mercancía', route: '/warehouse-movements/receiving', icon: 'move_to_inbox' },
-        { label: 'Cambio de Almacén', route: '/warehouse-movements/transfers', icon: 'swap_horiz' },
-        { label: 'Salidas de Almacén', route: '/warehouse-movements/outbound', icon: 'local_shipping' },
-      ],
-    },
+    { label: 'Catálogos', route: '/catalogs', icon: 'style', module: 'catalogs' },
+    { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
+    { label: 'Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
+    { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },
-    { label: 'Consulta Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
+    { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
   ];
 
   /** Filtra los nav items segun el rol del usuario */
