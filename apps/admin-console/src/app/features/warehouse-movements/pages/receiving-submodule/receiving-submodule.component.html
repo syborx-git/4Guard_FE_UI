@@ -65,13 +65,13 @@
       <!-- Header de Lista & Botón [+ Nueva Pre-Recepción] -->
       <div class="flex items-center justify-between gap-2 border-b border-subtle pb-3">
         <div>
-          <h3 class="font-bold text-xs text-primary uppercase tracking-wide">DIRECTORIO DE RECEPCIONES</h3>
-          <p class="text-[11px] text-secondary">Control del turno en andén</p>
+          <h3 class="directory-title">DIRECTORIO DE RECEPCIONES</h3>
+          <p class="directory-subtitle">Control del turno en andén</p>
         </div>
         <button
           type="button"
-          (click)="openNewReceptionModal()"
-          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md transition-transform hover:scale-105"
+          (click)="startNewReception()"
+          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-md transition-transform hover:scale-105"
         >
           <span class="material-symbols-outlined text-sm">add</span>
           <span>Pre-Recepción</span>
@@ -114,22 +114,22 @@
             class="reception-item-card p-3 rounded-xl border border-subtle cursor-pointer transition-all hover:border-gold"
           >
             <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="font-mono text-xs font-bold text-gold">#{{ rec.folio }}</span>
+              <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400">#{{ rec.folio }}</span>
               <span
                 class="status-badge"
                 [class.status-badge--registered]="rec.status === 'REGISTERED'"
                 [class.status-badge--completed]="rec.status === 'COMPLETED'"
                 [class.status-badge--cancelled]="rec.status === 'CANCELLED'"
               >
-                {{ rec.status }}
+                {{ rec.status === 'REGISTERED' ? 'EN ESPERA' : (rec.status === 'COMPLETED' ? 'COMPLETADO' : 'CANCELADO') }}
               </span>
             </div>
 
-            <div class="font-bold text-xs text-primary truncate mb-1">{{ rec.checkIn.client }}</div>
+            <div class="font-bold text-xs text-slate-800 dark:text-slate-100 truncate mb-1">{{ rec.checkIn.client }}</div>
 
-            <div class="flex items-center justify-between text-[11px] text-secondary">
-              <span class="font-mono">Rem: {{ rec.checkIn.docNumber }}</span>
-              <span>Rampa {{ rec.checkIn.rampNumber }}</span>
+            <div class="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
+              <span class="font-mono font-medium">Rem: {{ rec.checkIn.docNumber }}</span>
+              <span class="font-medium">Rampa {{ rec.checkIn.rampNumber }}</span>
             </div>
           </div>
         } @empty {
