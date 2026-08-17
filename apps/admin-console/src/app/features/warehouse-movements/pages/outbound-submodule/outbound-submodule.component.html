@@ -1,314 +1,906 @@
 <!--
   outbound-submodule.component.html
-  Submódulo 3: Salidas de Almacén (Despacho / Outbound) — 4GUARD WMS
-  Homologado 100% con el sistema de diseño WMS (Midnight Navy & Prestige Gold)
+  Submódulo 3: Salida de Almacén (Despacho / Outbound MVP1) — 4GUARD WMS
+  Arquitectura Master-Detail Workbench homologada con Recepción de Mercancía y Cambio de Almacén.
+  Folio institucional: SAL-YYYY-XXXXXX
 -->
 
-<div class="space-y-6">
+<div class="space-y-5">
 
-  <!-- Header Submódulo + Navigation Tabs -->
-  <div class="catalog-card-container shadow-xl">
-    <div class="catalog-header-row">
-      <div class="flex items-center gap-4">
-        <div class="catalog-icon-wrap">
-          <span class="material-symbols-outlined text-3xl">local_shipping</span>
-        </div>
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <a routerLink="/warehouse-movements" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
-              <span>MOVIMIENTOS DE ALMACÉN</span>
-            </a>
-            <span class="text-xs text-slate-400">·</span>
-            <span class="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">OUTBOUND & DESPACHO</span>
-          </div>
-          <h2 class="catalog-title">Salidas de Almacén (Despacho / Outbound)</h2>
-          <p class="catalog-subtitle">
-            Despacho de mercancía con sugerencia algorítmica FIFO/FEFO y selección granular de tarimas
-          </p>
-        </div>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       KPI CARDS SUPERIORES (4 MÉTRICAS EN TIEMPO REAL)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="outbound-kpi-row">
+
+    <div class="outbound-kpi-card">
+      <div class="kpi-icon-box">
+        <span class="material-symbols-outlined">local_shipping</span>
       </div>
-
-      <!-- Sub-tabs bar -->
-      <div class="subtabs-bar">
-        <button
-          type="button"
-          (click)="activeTab.set('alta-salidas')"
-          [ngClass]="activeTab() === 'alta-salidas' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
-          class="subtab-btn"
-        >
-          <span class="material-symbols-outlined text-base">unarchive</span>
-          1. Alta de Salidas (Despacho)
-        </button>
-
-        <button
-          type="button"
-          (click)="activeTab.set('consulta-salidas')"
-          [ngClass]="activeTab() === 'consulta-salidas' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
-          class="subtab-btn"
-        >
-          <span class="material-symbols-outlined text-base">history</span>
-          2. Consulta de Salidas Despachadas
-        </button>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ kpiTotalOutbounds() }}</div>
+        <div class="kpi-label">Total Salidas</div>
       </div>
     </div>
+
+    <div class="outbound-kpi-card">
+      <div class="kpi-icon-box">
+        <span class="material-symbols-outlined">inventory</span>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ kpiTotalPallets() }}</div>
+        <div class="kpi-label">Tarimas Despachadas</div>
+      </div>
+    </div>
+
+    <div class="outbound-kpi-card">
+      <div class="kpi-icon-box">
+        <span class="material-symbols-outlined">groups</span>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ kpiClients() }}</div>
+        <div class="kpi-label">Clientes Atendidos</div>
+      </div>
+    </div>
+
+    <div class="outbound-kpi-card">
+      <div class="kpi-icon-box">
+        <span class="material-symbols-outlined">scale</span>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ kpiTotalPieces() | number }}</div>
+        <div class="kpi-label">Piezas Despachadas</div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- PESTAÑA 1: ALTA DE SALIDAS -->
-  <div *ngIf="activeTab() === 'alta-salidas'" class="space-y-6">
+  <!-- ═══════════════════════════════════════════════════════════════════
+       WORKBENCH MASTER-DETAIL (4 COL DIRECTORIO + 8 COL PANEL)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="outbound-workbench">
 
-    <!-- Formulario de Transporte y Destino -->
-    <div class="catalog-card-container p-6 space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-        <h3 class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
-          <span class="material-symbols-outlined text-amber-600">local_shipping</span>
-          1. Captura de Transporte, Destino y Sello Oficial
-        </h3>
-        <span class="role-badge font-mono font-bold">Paso 1 de 2</span>
-      </div>
+    <!-- ── PANEL IZQUIERDO: DIRECTORIO MASTER DE SALIDAS ── -->
+    <div class="outbound-master-panel">
 
-      <form [formGroup]="outboundForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="form-field-label">Cliente Propietario *</label>
-          <input type="text" formControlName="client" class="form-field-input font-bold" placeholder="Nestlé México" />
+      <div class="master-panel__header">
+        <div class="master-panel__title">Directorio de Salidas</div>
+        <div class="master-panel__search">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            type="text"
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+            placeholder="Folio, cliente, sello..."
+          />
         </div>
-
-        <div>
-          <label class="form-field-label">Planta Destino (Física) *</label>
-          <select formControlName="destinationPlant" class="form-field-select font-semibold">
-            <option *ngFor="let p of destinationPlants" [value]="p">{{ p }}</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="form-field-label text-amber-600 dark:text-amber-400">No. Sello / Cincho (Obligatorio) *</label>
-          <input type="text" formControlName="sealNumber" class="form-field-input font-mono font-bold text-amber-600 dark:text-amber-400 border-amber-500/50" placeholder="SL-88401" />
-        </div>
-
-        <div>
-          <label class="form-field-label">Línea Transportista *</label>
-          <input type="text" formControlName="carrierName" class="form-field-input" placeholder="Transportes Castores" />
-        </div>
-
-        <div>
-          <label class="form-field-label">Nombre Operador (Chofer) *</label>
-          <input type="text" formControlName="driverName" class="form-field-input" placeholder="Juan Pérez" />
-        </div>
-
-        <div>
-          <label class="form-field-label">Número Económico *</label>
-          <input type="text" formControlName="economicNumber" class="form-field-input font-mono" placeholder="ECO-901" />
-        </div>
-
-        <div>
-          <label class="form-field-label">Placas Tractor *</label>
-          <input type="text" formControlName="tractorPlates" class="form-field-input font-mono" placeholder="12-AA-34" />
-        </div>
-
-        <div>
-          <label class="form-field-label">Placas Caja *</label>
-          <input type="text" formControlName="boxPlates" class="form-field-input font-mono" placeholder="78-BB-90" />
-        </div>
-
-        <div>
-          <label class="form-field-label">Tipo de Transporte *</label>
-          <select formControlName="transportType" class="form-field-select">
-            <option *ngFor="let t of transportTypes" [value]="t">{{ t }}</option>
-          </select>
-        </div>
-      </form>
-    </div>
-
-    <!-- SECCIÓN DE SELECCIÓN DE PRODUCTO Y LOTES (FIFO/FEFO) -->
-    <div class="catalog-card-container p-6 space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-        <h3 class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
-          <span class="material-symbols-outlined text-amber-600">inventory_2</span>
-          2. Sugerencia FIFO / FEFO y Selección Granular de Tarimas
-        </h3>
-        <span class="role-badge font-mono font-bold text-emerald-600 dark:text-emerald-400">
-          Algoritmo Activo: FEFO / FIFO
-        </span>
-      </div>
-
-      <!-- Lotes Sugeridos -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div *ngFor="let b of availableBatches()" (click)="selectedBatch.set(b)" [ngClass]="selectedBatch()?.batchNumber === b.batchNumber ? 'border-amber-500 bg-amber-500/10' : 'border-slate-200 dark:border-slate-800'" class="p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.01] space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">Lote: {{ b.batchNumber }}</span>
-            <span class="status-pill status-pill-active font-mono text-[10px]">Caduca: {{ b.expirationDate }}</span>
-          </div>
-          <p class="text-xs font-semibold text-slate-900 dark:text-white">{{ b.productName }}</p>
-          <div class="flex items-center justify-between text-xs text-slate-500 font-mono">
-            <span>Ubicación: {{ b.locationCode }}</span>
-            <span>Total: {{ b.totalPallets }} Tarimas / {{ b.totalPieces }} Pzas</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabla de UAs del Lote Seleccionado -->
-      <div *ngIf="selectedBatch()" class="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-        <div class="flex items-center justify-between">
-          <h4 class="text-xs font-bold text-slate-900 dark:text-white uppercase">Tarimas en Lote {{ selectedBatch()?.batchNumber }}</h4>
-          <span class="text-xs font-mono text-slate-500">Seleccionadas: {{ totalSelectedPallets() }} Tarimas ({{ totalSelectedPieces() }} Pzas)</span>
-        </div>
-
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="w-10 text-center">Sel</th>
-                <th>Código UA / Tarima</th>
-                <th>Cajas por Tarima</th>
-                <th class="text-right">Piezas</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let p of selectedBatch()?.pallets">
-                <td class="text-center">
-                  <input type="checkbox" [checked]="!!selectedPalletsMap()[p.id]" (change)="togglePalletSelection(p.id)" class="w-4 h-4 accent-amber-500 cursor-pointer" />
-                </td>
-                <td class="font-mono font-bold text-amber-600 dark:text-amber-400">{{ p.palletCode }}</td>
-                <td class="font-mono text-slate-900 dark:text-white">{{ p.boxesCount || 40 }} Cajas</td>
-                <td class="text-right font-mono font-bold text-slate-900 dark:text-white">{{ p.pieces }} Pzas</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- BOTÓN DE ACCIÓN PRINCIPAL DE CONFIRMACIÓN -->
-    <div class="catalog-card-container p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="text-xs text-slate-500">
-        <span class="font-bold text-slate-900 dark:text-white">Resumen Despacho:</span>
-        {{ totalSelectedPallets() }} Tarima(s) con {{ totalSelectedPieces() }} pieza(s) listas para embarque a {{ outboundForm.value.destinationPlant }}.
       </div>
 
       <button
         type="button"
-        (click)="confirmOutbound()"
-        [disabled]="outboundForm.invalid || totalSelectedPallets() === 0"
-        class="carriers-btn carriers-btn--primary px-6 py-3 text-sm font-bold flex items-center gap-2"
+        class="master-panel__new-btn"
+        (click)="startNewOutbound()"
       >
-        <span class="material-symbols-outlined text-lg">local_shipping</span>
-        <span>Confirmar Despacho y Generar Formato Oficial</span>
+        <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
+        Nueva Salida
       </button>
+
+      <div class="outbound-master-list">
+
+        <!-- Tarjetas de Salidas Registradas -->
+        @for (outbound of filteredOutbounds(); track outbound.folio) {
+          <div
+            class="outbound-item-card"
+            [class.selected-item]="selectedOutbound()?.folio === outbound.folio"
+            (click)="selectOutboundItem(outbound)"
+          >
+            <div class="outbound-item-card__folio">{{ outbound.folio }}</div>
+            <div class="outbound-item-card__client">{{ outbound.clientName }}</div>
+            <div class="outbound-item-card__dest">→ {{ outbound.destinationName }}</div>
+            <div class="outbound-item-card__meta">
+              <span class="outbound-item-card__seal">{{ outbound.sealNumber }}</span>
+              <div style="display:flex;align-items:center;gap:0.4rem;">
+                <span class="status-badge--completed">Completado</span>
+                <span class="outbound-item-card__time">{{ outbound.timestamp }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Estado vacío del directorio -->
+        @if (filteredOutbounds().length === 0) {
+          <div class="master-panel__empty">
+            <span class="material-symbols-outlined" style="font-size:2rem;color:var(--text-muted);display:block;margin-bottom:0.5rem;">local_shipping</span>
+            Sin salidas registradas
+          </div>
+        }
+
+      </div>
     </div>
 
-  </div>
+    <!-- ── PANEL DERECHO: WORKBENCH TRI-ESTADO ── -->
+    <div class="outbound-detail-panel">
 
-  <!-- PESTAÑA 2: CONSULTA DE SALIDAS -->
-  <div *ngIf="activeTab() === 'consulta-salidas'" class="space-y-4">
-    <div class="catalog-card-container p-6 space-y-4">
-      
-      <!-- Buscador -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label class="form-field-label">Buscar por Folio de Despacho</label>
-          <div class="relative">
-            <input
-              type="text"
-              [value]="searchFolio()"
-              (input)="searchFolio.set($any($event.target.value))"
-              placeholder="Ej. FOL-OUT-001..."
-              class="form-field-input pl-9"
-            />
-            <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-sm">search</span>
+      <!-- ─────────────── MODO IDLE: SIN SELECCIÓN ─────────────── -->
+      @if (formMode() === 'idle') {
+        <div class="outbound-empty-state">
+          <div class="outbound-empty-state__icon-wrap">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div class="outbound-empty-state__title">Sin selección</div>
+          <div class="outbound-empty-state__subtitle">
+            Selecciona una salida del directorio para ver su detalle,
+            o inicia una nueva operación de despacho.
+          </div>
+          <button type="button" class="outbound-empty-state__btn" (click)="startNewOutbound()">
+            <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
+            Nueva Salida de Almacén
+          </button>
+        </div>
+      }
+
+      <!-- ─────────────── MODO CREATE: FORMULARIO 2 PASOS ─────────────── -->
+      @if (formMode() === 'create') {
+
+        <!-- Breadcrumb + Acciones -->
+        <div class="outbound-breadcrumb-bar">
+          <div class="outbound-breadcrumb-bar__path">
+            <span>Movimientos</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>Salida de Almacén</span>
+            <span class="breadcrumb-sep">›</span>
+            @if (currentStep() === 1) {
+              <span class="breadcrumb-active">EN PROCESO [Paso 1 de 2]</span>
+            } @else {
+              <span class="breadcrumb-active">EN PROCESO [Paso 2 de 2]</span>
+            }
+          </div>
+          <div class="outbound-breadcrumb-bar__actions">
+            <button type="button" class="btn-cancel" (click)="resetToIdle()">
+              <span class="material-symbols-outlined" style="font-size:0.85rem;">close</span>
+              Cancelar
+            </button>
           </div>
         </div>
 
-        <div>
-          <label class="form-field-label">Filtrar por Cliente</label>
-          <input
-            type="text"
-            [value]="searchClient()"
-            (input)="searchClient.set($any($event.target.value))"
-            placeholder="Ej. Nestlé..."
-            class="form-field-input"
-          />
-        </div>
+        <div class="outbound-panel-body">
 
-        <div>
-          <label class="form-field-label">Filtrar por Transportista</label>
-          <input
-            type="text"
-            [value]="searchCarrier()"
-            (input)="searchCarrier.set($any($event.target.value))"
-            placeholder="Ej. Castores..."
-            class="form-field-input"
-          />
-        </div>
-      </div>
+          <!-- ══ PASO 1: TRANSPORTE, DESTINO Y SELLO ══ -->
+          @if (currentStep() === 1) {
 
-      <!-- Tabla de Despachos -->
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Folio Despacho</th>
-              <th>Cliente / Destino</th>
-              <th>Transportista / Chofer</th>
-              <th>No. Sello</th>
-              <th class="text-center">Total UAs</th>
-              <th>Fecha Registro</th>
-              <th class="text-right">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let d of filteredDispatches()">
-              <td>
-                <span class="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">{{ d.folio }}</span>
-              </td>
-              <td>
-                <div class="font-bold text-slate-900 dark:text-white">{{ d.client }}</div>
-                <div class="text-xs text-slate-500">{{ d.destinationPlant }}</div>
-              </td>
-              <td>
-                <div class="font-bold text-slate-900 dark:text-white">{{ d.carrierName }}</div>
-                <div class="text-xs text-slate-500">{{ d.driverName }} ({{ d.economicNumber }})</div>
-              </td>
-              <td>
-                <span class="font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                  {{ d.sealNumber }}
-                </span>
-              </td>
-              <td class="text-center">
-                <span class="role-badge font-mono font-bold">
-                  {{ d.totalPallets }} Tarimas
-                </span>
-              </td>
-              <td class="text-slate-500 text-xs">
-                {{ d.timestamp }}
-              </td>
-              <td class="text-right">
+            <!-- Sección: Cliente y Destino -->
+            <div class="form-section">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">person_pin</span>
+                1. Cliente Propietario y Destino
+                <span class="step-badge" style="margin-left:auto;">Paso 1 de 2</span>
+              </div>
+
+              <div class="fg-grid-3">
+                <!-- Cliente -->
+                <div class="fg-field">
+                  <label class="fg-label">Cliente Propietario <span class="req">*</span></label>
+                  <select
+                    class="fg-select"
+                    [value]="selectedClientCode()"
+                    (change)="onClientChange($any($event.target).value)"
+                  >
+                    @for (c of clients(); track c.code) {
+                      <option [value]="c.code">{{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <!-- Destino (filtrado por cliente) -->
+                <div class="fg-field" style="grid-column: span 2;">
+                  <label class="fg-label">Planta / Destino Físico <span class="req">*</span></label>
+                  <select
+                    class="fg-select"
+                    [value]="selectedDestinationId()"
+                    (change)="selectedDestinationId.set($any($event.target).value)"
+                  >
+                    @for (d of destinationsForClient(); track d.id) {
+                      <option [value]="d.id">{{ d.name }} — {{ d.city }}, {{ d.state }}</option>
+                    }
+                    @if (destinationsForClient().length === 0) {
+                      <option value="">Sin destinos disponibles</option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+              <!-- Dirección del Destino (solo lectura) -->
+              @if (selectedDestination()) {
+                <div style="margin-top:0.75rem;padding:0.6rem 0.9rem;background:var(--bg-subtle);border-radius:10px;border:1px solid var(--border-subtle);">
+                  <span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Dirección del Destino</span>
+                  <p style="font-size:0.78rem;color:var(--text-primary);margin-top:0.2rem;">
+                    {{ selectedDestination()?.address }} — {{ selectedDestination()?.city }}, {{ selectedDestination()?.state }}
+                  </p>
+                </div>
+              }
+            </div>
+
+            <!-- Sección: Transportista y Vehículo -->
+            <div class="form-section">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">local_shipping</span>
+                2. Línea Transportista y Datos del Vehículo
+              </div>
+
+              <div class="fg-grid-3">
+                <!-- Transportista -->
+                <div class="fg-field">
+                  <label class="fg-label">Línea Transportista <span class="req">*</span></label>
+                  <select
+                    class="fg-select"
+                    [value]="selectedCarrierCode()"
+                    (change)="onCarrierChange($any($event.target).value)"
+                  >
+                    @for (c of carriers(); track c.code) {
+                      <option [value]="c.code">{{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <!-- Nombre del Chofer -->
+                <div class="fg-field">
+                  <label class="fg-label">Nombre del Operador (Chofer) <span class="req">*</span></label>
+                  <input
+                    type="text"
+                    class="fg-input"
+                    [value]="driverName()"
+                    (input)="driverName.set($any($event.target).value)"
+                    placeholder="Juan Pérez"
+                  />
+                </div>
+
+                <!-- Número Económico -->
+                <div class="fg-field">
+                  <label class="fg-label">Número Económico <span class="req">*</span></label>
+                  <input
+                    type="text"
+                    class="fg-input mono"
+                    [value]="economicNumber()"
+                    (input)="economicNumber.set($any($event.target).value)"
+                    placeholder="ECO-901"
+                  />
+                </div>
+
+                <!-- Placas Tractor -->
+                <div class="fg-field">
+                  <label class="fg-label">Placas Tractor</label>
+                  <input
+                    type="text"
+                    class="fg-input mono"
+                    [value]="tractorPlates()"
+                    (input)="tractorPlates.set($any($event.target).value)"
+                    placeholder="12-AA-34"
+                  />
+                </div>
+
+                <!-- Placas Caja -->
+                <div class="fg-field">
+                  <label class="fg-label">Placas Caja</label>
+                  <input
+                    type="text"
+                    class="fg-input mono"
+                    [value]="boxPlates()"
+                    (input)="boxPlates.set($any($event.target).value)"
+                    placeholder="78-BB-90"
+                  />
+                </div>
+
+                <!-- Tipo de Transporte -->
+                <div class="fg-field">
+                  <label class="fg-label">Tipo de Transporte</label>
+                  <select
+                    class="fg-select"
+                    [value]="selectedTransportType()"
+                    (change)="selectedTransportType.set($any($event.target).value)"
+                  >
+                    @for (t of transportTypes; track t.id) {
+                      <option [value]="t.id">{{ t.label }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección: Número de Sello -->
+            <div class="form-section">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">lock</span>
+                3. No. Sello / Cincho Oficial
+              </div>
+              <div class="fg-grid-2">
+                <div class="fg-field">
+                  <label class="fg-label">Número de Sello / Cincho <span class="req">*</span></label>
+                  <input
+                    type="text"
+                    class="fg-input mono gold-accent"
+                    [value]="sealNumber()"
+                    (input)="sealNumber.set($any($event.target).value)"
+                    placeholder="SL-88401"
+                    style="font-size:0.95rem;"
+                  />
+                </div>
+                <div class="fg-field" style="justify-content:flex-end;align-self:flex-end;">
+                  <p style="font-size:0.72rem;color:var(--text-muted);font-style:italic;">
+                    El número de sello es obligatorio para toda salida de almacén.<br/>
+                    Se registra como parte del comprobante oficial.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón Continuar -->
+            <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+              <button type="button" class="btn-secondary" (click)="resetToIdle()">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="btn-primary-gold"
+                [disabled]="!isStep1Valid()"
+                (click)="goToStep2()"
+              >
+                <span>Continuar a Paso 2</span>
+                <span class="material-symbols-outlined" style="font-size:1rem;">arrow_forward</span>
+              </button>
+            </div>
+
+          }
+
+          <!-- ══ PASO 2: SELECCIÓN DE MERCANCÍA Y TARIMAS ══ -->
+          @if (currentStep() === 2) {
+
+            <!-- Resumen transporte (cabecera colapsada) -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;background:var(--bg-subtle);border:1px solid var(--border-subtle);border-radius:12px;">
+              <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+                <div>
+                  <span style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Cliente</span>
+                  <div style="font-size:0.8rem;font-weight:700;color:var(--text-primary);">{{ selectedClient()?.name }}</div>
+                </div>
+                <div>
+                  <span style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Destino</span>
+                  <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">{{ selectedDestination()?.name }}</div>
+                </div>
+                <div>
+                  <span style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Transportista</span>
+                  <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">{{ selectedCarrier()?.name }}</div>
+                </div>
+                <div>
+                  <span class="seal-chip">
+                    <span class="material-symbols-outlined" style="font-size:0.7rem;">lock</span>
+                    {{ sealNumber() }}
+                  </span>
+                </div>
+              </div>
+              <button type="button" class="btn-ghost" (click)="goBackToStep1()">
+                <span class="material-symbols-outlined" style="font-size:0.85rem;">edit</span>
+                Editar
+              </button>
+            </div>
+
+            <!-- Selección de Lote / Remisión -->
+            <div class="form-section">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">receipt_long</span>
+                4. Selección de Remisión / Lote Disponible
+                <span class="step-badge" style="margin-left:auto;">Paso 2 de 2</span>
+              </div>
+
+              @if (availableBatches().length === 0) {
+                <div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.8rem;">
+                  <span class="material-symbols-outlined" style="font-size:2rem;display:block;margin-bottom:0.5rem;">inventory_2</span>
+                  No hay lotes/remisiones disponibles para este cliente.
+                </div>
+              }
+
+              <div class="batch-cards-row">
+                @for (batch of availableBatches(); track batch.remisionNo) {
+                  <div
+                    class="batch-card"
+                    [class.selected]="selectedBatch()?.remisionNo === batch.remisionNo"
+                    (click)="pickBatch(batch)"
+                  >
+                    <div class="batch-card__left">
+                      <span class="batch-card__remision">{{ batch.remisionNo }}</span>
+                      <span class="batch-card__product">{{ batch.productName }}</span>
+                      <span class="batch-card__lot">Lote: {{ batch.lotNumber }}</span>
+                    </div>
+                    <div class="batch-card__right">
+                      <span class="batch-card__count">{{ batch.availablePallets }} tarima(s)</span>
+                      <span class="batch-card__exp">Cad. {{ batch.expirationDate }}</span>
+                      @if (batch.isFifoSuggested) {
+                        <span class="fifo-badge">FIFO/FEFO ★</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Tabla de Tarimas / UAs del Lote Seleccionado -->
+            @if (selectedBatch()) {
+              <div class="form-section">
+                <div class="form-section__legend">
+                  <span class="material-symbols-outlined">pallet</span>
+                  5. Tarimas / UAs del Lote {{ selectedBatch()?.remisionNo }}
+                </div>
+
+                <!-- Encabezado de la tabla con toggle-all -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                  <span style="font-size:0.72rem;color:var(--text-muted);">
+                    Seleccionadas: <strong style="color:var(--text-primary);">{{ totalSelectedPallets() }}</strong> de {{ selectedBatch()?.pallets?.length }}
+                  </span>
+                  <button type="button" class="toggle-all-btn" (click)="toggleAllPallets()">
+                    <span class="material-symbols-outlined" style="font-size:0.75rem;">
+                      {{ areAllPalletsSelected() ? 'deselect' : 'select_all' }}
+                    </span>
+                    {{ areAllPalletsSelected() ? 'Deseleccionar todas' : 'Seleccionar todas' }}
+                  </button>
+                </div>
+
+                <div class="ua-table-wrapper">
+                  <table class="ua-table">
+                    <thead>
+                      <tr>
+                        <th style="width:40px;text-align:center;">Sel.</th>
+                        <th>UA / SSCC</th>
+                        <th>Descripción</th>
+                        <th>Lote</th>
+                        <th>Caducidad</th>
+                        <th style="text-align:right;">Piezas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (pallet of selectedBatch()?.pallets || []; track pallet.id) {
+                        <tr [class.selected-row]="isPalletSelected(pallet.id)">
+                          <td style="text-align:center;">
+                            <input
+                              type="checkbox"
+                              [checked]="isPalletSelected(pallet.id)"
+                              (change)="togglePallet(pallet.id)"
+                              style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"
+                            />
+                          </td>
+                          <td class="mono gold">{{ pallet.palletCode }}</td>
+                          <td>{{ pallet.description }}</td>
+                          <td class="mono muted">{{ selectedBatch()?.lotNumber }}</td>
+                          <td class="mono muted">{{ selectedBatch()?.expirationDate }}</td>
+                          <td style="text-align:right;" class="mono">{{ pallet.pieces | number }} pz</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <!-- Barra de Totalizadores en Vivo -->
+            <div class="totals-bar">
+              <div class="totals-bar__item">
+                <span class="totals-bar__value" style="color:var(--gold);">{{ totalSelectedPallets() }}</span>
+                <span class="totals-bar__label">Tarimas</span>
+              </div>
+              <div style="width:1px;height:36px;background:var(--border-subtle);"></div>
+              <div class="totals-bar__item">
+                <span class="totals-bar__value">{{ totalSelectedPieces() | number }}</span>
+                <span class="totals-bar__label">Piezas</span>
+              </div>
+              <div style="width:1px;height:36px;background:var(--border-subtle);"></div>
+              <div class="totals-bar__item">
+                <span class="totals-bar__value">{{ totalSelectedSkus() }}</span>
+                <span class="totals-bar__label">SKUs</span>
+              </div>
+              <div style="flex:1;"></div>
+
+              <!-- Botones de acción -->
+              <div style="display:flex;gap:0.65rem;align-items:center;">
+                <button type="button" class="btn-secondary" (click)="goBackToStep1()">
+                  <span class="material-symbols-outlined" style="font-size:0.9rem;">arrow_back</span>
+                  Atrás
+                </button>
                 <button
                   type="button"
-                  (click)="openPrintPreview(d)"
-                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                  class="btn-primary-gold"
+                  [disabled]="!canConfirm()"
+                  (click)="openConfirmModal()"
                 >
-                  <span class="material-symbols-outlined text-sm">print</span>
-                  <span>Imprimir Formato</span>
+                  <span class="material-symbols-outlined" style="font-size:1rem;">local_shipping</span>
+                  Confirmar Despacho
                 </button>
-              </td>
-            </tr>
-            <tr *ngIf="filteredDispatches().length === 0">
-              <td colspan="7" class="p-6 text-center text-slate-400 italic">
-                No se encontraron despachos registrados con los filtros ingresados.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+            </div>
+
+          }
+
+        </div><!-- /outbound-panel-body -->
+      }
+
+      <!-- ─────────────── MODO DETAIL: CONSULTA HISTÓRICA ─────────────── -->
+      @if (formMode() === 'detail' && selectedOutbound()) {
+
+        <div class="outbound-breadcrumb-bar">
+          <div class="outbound-breadcrumb-bar__path">
+            <span>Movimientos</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>Salida de Almacén</span>
+            <span class="breadcrumb-sep">›</span>
+            <span class="breadcrumb-active">{{ selectedOutbound()!.folio }}</span>
+            <span style="margin-left:0.5rem;">
+              <span class="status-badge--completed">Completado</span>
+            </span>
+          </div>
+          <div class="outbound-breadcrumb-bar__actions">
+            <button type="button" class="btn-ghost" (click)="openPrintPreview(selectedOutbound()!)">
+              <span class="material-symbols-outlined" style="font-size:0.85rem;">print</span>
+              Imprimir Salida
+            </button>
+          </div>
+        </div>
+
+        <div class="outbound-panel-body">
+
+          <!-- Información General -->
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">receipt_long</span>
+              Información General
+            </div>
+            <div class="detail-info-grid">
+              <div class="detail-field">
+                <span class="fg-label">Folio</span>
+                <span class="fg-value mono">{{ selectedOutbound()!.folio }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Fecha / Hora</span>
+                <span class="fg-value">{{ selectedOutbound()!.dispatchedAt }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Registrado por</span>
+                <span class="fg-value">{{ selectedOutbound()!.dispatchedBy }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Cliente</span>
+                <span class="fg-value">{{ selectedOutbound()!.clientName }}</span>
+              </div>
+              <div class="detail-field" style="grid-column:span 2;">
+                <span class="fg-label">Destino</span>
+                <span class="fg-value">{{ selectedOutbound()!.destinationName }}</span>
+                @if (selectedOutbound()!.destinationAddress) {
+                  <span style="font-size:0.72rem;color:var(--text-muted);">{{ selectedOutbound()!.destinationAddress }}</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Datos del Transporte -->
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">local_shipping</span>
+              Datos del Transporte (Snapshot)
+            </div>
+            <div class="detail-info-grid">
+              <div class="detail-field">
+                <span class="fg-label">Transportista</span>
+                <span class="fg-value">{{ selectedOutbound()!.carrierName }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Operador / Chofer</span>
+                <span class="fg-value">{{ selectedOutbound()!.driverName }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Número Económico</span>
+                <span class="fg-value mono">{{ selectedOutbound()!.economicNumber }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Placas Tractor</span>
+                <span class="fg-value mono">{{ selectedOutbound()!.tractorPlates }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Placas Caja</span>
+                <span class="fg-value mono">{{ selectedOutbound()!.boxPlates }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Tipo de Transporte</span>
+                <span class="fg-value">{{ getTransportLabel(selectedOutbound()!.transportType) }}</span>
+              </div>
+              <div class="detail-field" style="grid-column:span 3;">
+                <span class="fg-label">No. Sello / Cincho</span>
+                <span class="seal-chip" style="margin-top:0.2rem;">
+                  <span class="material-symbols-outlined" style="font-size:0.8rem;">lock</span>
+                  {{ selectedOutbound()!.sealNumber }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detalle de Tarimas Despachadas -->
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">pallet</span>
+              Tarimas / UAs Despachadas
+              <span style="margin-left:0.5rem;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">
+                Remisión: {{ selectedOutbound()!.remisionNo }}
+              </span>
+            </div>
+
+            <div class="ua-table-wrapper">
+              <table class="ua-table">
+                <thead>
+                  <tr>
+                    <th>UA / SSCC</th>
+                    <th>SKU</th>
+                    <th>Descripción</th>
+                    <th>Lote</th>
+                    <th>Caducidad</th>
+                    <th style="text-align:right;">Piezas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of selectedOutbound()!.items; track item.id) {
+                    <tr>
+                      <td class="mono gold">{{ item.palletCode }}</td>
+                      <td class="mono muted">{{ item.productId }}</td>
+                      <td>{{ item.description }}</td>
+                      <td class="mono muted">{{ item.lotNumber }}</td>
+                      <td class="mono muted">{{ item.expirationDate }}</td>
+                      <td style="text-align:right;" class="mono">{{ item.pieces | number }} pz</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr style="background:var(--bg-subtle);font-weight:700;">
+                    <td colspan="5" style="padding:0.5rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
+                      Totales: {{ selectedOutbound()!.totalPallets }} Tarima(s) · {{ selectedOutbound()!.distinctSkus }} SKU(s)
+                    </td>
+                    <td style="text-align:right;padding:0.5rem 0.8rem;font-family:var(--font-mono);font-size:0.85rem;font-weight:800;color:var(--gold);">
+                      {{ selectedOutbound()!.totalPieces | number }} pz
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /outbound-panel-body -->
+      }
+
+    </div><!-- /outbound-detail-panel -->
+  </div><!-- /outbound-workbench -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MODAL DE CONFIRMACIÓN DE DESPACHO (FONDO SÓLIDO)
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (showConfirmModal()) {
+    <div class="modal-overlay" (click)="closeConfirmModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <h3>
+            <span class="material-symbols-outlined" style="font-size:1.1rem;color:#9b7626;">local_shipping</span>
+            Confirmar Salida de Almacén
+          </h3>
+          <button type="button" class="modal-close-btn" (click)="closeConfirmModal()">
+            <span class="material-symbols-outlined" style="font-size:1.1rem;">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-summary-row">
+            <span class="label">Cliente</span>
+            <span class="value">{{ selectedClient()?.name }}</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="label">Destino</span>
+            <span class="value">{{ selectedDestination()?.name }}</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="label">Transportista</span>
+            <span class="value">{{ selectedCarrier()?.name }}</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="label">No. Sello</span>
+            <span class="value mono">{{ sealNumber() }}</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="label">Remisión</span>
+            <span class="value mono">{{ selectedBatch()?.remisionNo }}</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="label">Tarimas a Despachar</span>
+            <span class="value mono" style="color:#9b7626;font-size:0.9rem;font-weight:800;">{{ totalSelectedPallets() }} UA(s)</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="label">Total de Piezas</span>
+            <span class="value mono">{{ totalSelectedPieces() | number }} pzas</span>
+          </div>
+
+          <p style="margin-top:1rem;font-size:0.75rem;color:#64748b;font-style:italic;text-align:center;">
+            Esta acción descontará las tarimas del inventario y generará un folio oficial
+            <strong style="color:#9b7626;">SAL-2026-XXXXXX</strong>. ¿Deseas continuar?
+          </p>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeConfirmModal()" style="font-size:0.78rem;">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-primary-gold"
+            [disabled]="isExecuting()"
+            (click)="executeOutboundAction()"
+          >
+            <span class="material-symbols-outlined" style="font-size:0.95rem;">check_circle</span>
+            {{ isExecuting() ? 'Procesando...' : 'Registrar Salida' }}
+          </button>
+        </div>
+
       </div>
-
     </div>
-  </div>
+  }
 
-  <!-- Modal Impresión -->
-  <fg-print-dispatch-layout
-    *ngIf="showPrintModal() && selectedPrintDispatch()"
-    [dispatch]="selectedPrintDispatch()!"
-    (close)="closePrintModal()"
-  ></fg-print-dispatch-layout>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MODAL COMPROBANTE IMPRIMIBLE — SALIDA DE MERCANCÍA
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (showPrintModal() && selectedPrintOutbound()) {
+    <div class="print-modal-overlay" (click)="closePrintModal()">
+      <div class="print-modal-card" (click)="$event.stopPropagation()">
+
+        <div class="print-modal-header">
+          <h3>
+            <span class="material-symbols-outlined" style="font-size:1rem;color:#9b7626;">print</span>
+            Comprobante Oficial — Salida de Mercancía
+          </h3>
+          <div class="print-modal-actions">
+            <button type="button" class="btn-primary-gold" (click)="triggerBrowserPrint()">
+              <span class="material-symbols-outlined" style="font-size:0.9rem;">print</span>
+              Imprimir
+            </button>
+            <button type="button" class="btn-ghost" (click)="closePrintModal()">
+              <span class="material-symbols-outlined" style="font-size:0.9rem;">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="print-modal-body">
+          <div class="fg-print-outbound">
+
+            <!-- Encabezado Institucional -->
+            <div class="print-header">
+              <div class="print-logo-box">
+                <div class="print-brand">4GUARD WMS</div>
+                <div class="print-branch">Almacén Central — Bodega Principal</div>
+                <div class="print-branch">{{ selectedPrintOutbound()!.dispatchedAt }}</div>
+              </div>
+              <div class="print-folio-box">
+                <div class="print-doc-type">Salida de Mercancía</div>
+                <div class="print-folio">{{ selectedPrintOutbound()!.folio }}</div>
+                <div style="font-size:0.62rem;color:#208457;font-weight:700;margin-top:0.2rem;">✓ COMPLETADO</div>
+              </div>
+            </div>
+
+            <!-- Cliente y Destino -->
+            <div class="print-section">
+              <div class="print-section-title">Cliente y Destino</div>
+              <div class="print-fields-grid">
+                <div>
+                  <div class="print-field-label">Cliente Propietario</div>
+                  <div class="print-field-value">{{ selectedPrintOutbound()!.clientName }}</div>
+                </div>
+                <div style="grid-column:span 2;">
+                  <div class="print-field-label">Destino Físico</div>
+                  <div class="print-field-value">{{ selectedPrintOutbound()!.destinationName }}</div>
+                  @if (selectedPrintOutbound()!.destinationAddress) {
+                    <div style="font-size:0.7rem;color:#64748b;margin-top:0.1rem;">{{ selectedPrintOutbound()!.destinationAddress }}</div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Datos de Transporte -->
+            <div class="print-section">
+              <div class="print-section-title">Datos del Transporte</div>
+              <div class="print-fields-grid">
+                <div>
+                  <div class="print-field-label">Transportista</div>
+                  <div class="print-field-value">{{ selectedPrintOutbound()!.carrierName }}</div>
+                </div>
+                <div>
+                  <div class="print-field-label">Operador / Chofer</div>
+                  <div class="print-field-value">{{ selectedPrintOutbound()!.driverName }}</div>
+                </div>
+                <div>
+                  <div class="print-field-label">No. Económico</div>
+                  <div class="print-field-value mono">{{ selectedPrintOutbound()!.economicNumber }}</div>
+                </div>
+                <div>
+                  <div class="print-field-label">Placas Tractor</div>
+                  <div class="print-field-value mono">{{ selectedPrintOutbound()!.tractorPlates }}</div>
+                </div>
+                <div>
+                  <div class="print-field-label">Placas Caja</div>
+                  <div class="print-field-value mono">{{ selectedPrintOutbound()!.boxPlates }}</div>
+                </div>
+                <div>
+                  <div class="print-field-label">Tipo de Transporte</div>
+                  <div class="print-field-value">{{ getTransportLabel(selectedPrintOutbound()!.transportType) }}</div>
+                </div>
+                <div style="grid-column:span 3;">
+                  <div class="print-field-label">No. Sello / Cincho</div>
+                  <div class="print-field-value mono" style="font-size:1rem;color:#9b7626;">{{ selectedPrintOutbound()!.sealNumber }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detalle de Mercancía -->
+            <div class="print-section">
+              <div class="print-section-title">Mercancía Despachada — Remisión: {{ selectedPrintOutbound()!.remisionNo }}</div>
+              <table class="print-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>UA / SSCC</th>
+                    <th>SKU</th>
+                    <th>Descripción del Producto</th>
+                    <th>Lote</th>
+                    <th>Caducidad</th>
+                    <th style="text-align:right;">Piezas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of selectedPrintOutbound()!.items; track item.id; let i = $index) {
+                    <tr>
+                      <td>{{ i + 1 }}</td>
+                      <td class="mono">{{ item.palletCode }}</td>
+                      <td class="mono">{{ item.productId }}</td>
+                      <td>{{ item.description }}</td>
+                      <td class="mono">{{ item.lotNumber }}</td>
+                      <td class="mono">{{ item.expirationDate }}</td>
+                      <td style="text-align:right;" class="mono">{{ item.pieces | number }}</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="print-totals-row">
+                    <td colspan="6" style="text-align:right;padding:0.5rem 0.6rem;font-weight:700;">
+                      TOTALES — {{ selectedPrintOutbound()!.totalPallets }} Tarima(s) · {{ selectedPrintOutbound()!.distinctSkus }} SKU(s)
+                    </td>
+                    <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:800;padding:0.5rem 0.6rem;">
+                      {{ selectedPrintOutbound()!.totalPieces | number }} pz
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Bloques de Firma (4 firmas) -->
+            <div class="print-signatures">
+              <div class="signature-block">
+                <div class="signature-line"></div>
+                <div class="signature-label">Responsable de Salida<br/>{{ selectedPrintOutbound()!.dispatchedBy }}</div>
+              </div>
+              <div class="signature-block">
+                <div class="signature-line"></div>
+                <div class="signature-label">Operador / Montacarguista<br/>Maniobra Física</div>
+              </div>
+              <div class="signature-block">
+                <div class="signature-line"></div>
+                <div class="signature-label">Transportista / Chofer<br/>{{ selectedPrintOutbound()!.driverName }}</div>
+              </div>
+              <div class="signature-block">
+                <div class="signature-line"></div>
+                <div class="signature-label">Supervisor de Almacén<br/>Visto Bueno / Auditoría</div>
+              </div>
+            </div>
+
+          </div><!-- /fg-print-outbound -->
+        </div><!-- /print-modal-body -->
+
+      </div>
+    </div>
+  }
 
 </div>
