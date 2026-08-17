@@ -20,6 +20,7 @@ import {
   ClientItem,
   RampItem,
   ForkliftOperatorItem,
+  TRANSFER_REASONS,
 } from '../models/warehouse-movements.models';
 
 @Injectable({
@@ -100,6 +101,14 @@ export class WarehouseMovementsService {
   private readonly locationsSignal = signal<Record<string, LocationStockInfo>>({
     'A-14': {
       locationCode: 'A-14',
+      warehouseName: 'Bodega Principal A',
+      zone: 'Zona A - Alimentos Secos',
+      aisle: 'Pasillo 01',
+      rack: 'Rack 04',
+      level: 'Nivel 01 (Piso)',
+      capacity: 4,
+      occupancy: 4,
+      availableCapacity: 0,
       totalPallets: 4,
       totalPieces: 1920,
       pallets: [
@@ -144,12 +153,28 @@ export class WarehouseMovementsService {
     },
     'M-98': {
       locationCode: 'M-98',
+      warehouseName: 'Bodega M 98 - Pulmón',
+      zone: 'Zona M - Racks Altura',
+      aisle: 'Pasillo 09',
+      rack: 'Rack 08',
+      level: 'Nivel 02',
+      capacity: 4,
+      occupancy: 0,
+      availableCapacity: 4,
       totalPallets: 0,
       totalPieces: 0,
       pallets: [],
     },
     'B-02': {
       locationCode: 'B-02',
+      warehouseName: 'Bodega Principal B',
+      zone: 'Zona B - Bebidas y Café',
+      aisle: 'Pasillo 02',
+      rack: 'Rack 01',
+      level: 'Nivel 02',
+      capacity: 4,
+      occupancy: 2,
+      availableCapacity: 2,
       totalPallets: 2,
       totalPieces: 960,
       pallets: [
@@ -173,8 +198,72 @@ export class WarehouseMovementsService {
         },
       ],
     },
-    'C-10': {
-      locationCode: 'C-10',
+    'A-15': {
+      locationCode: 'A-15',
+      warehouseName: 'Bodega Principal A',
+      zone: 'Zona A - Alimentos Secos',
+      aisle: 'Pasillo 01',
+      rack: 'Rack 04',
+      level: 'Nivel 02',
+      capacity: 4,
+      occupancy: 0,
+      availableCapacity: 4,
+      totalPallets: 0,
+      totalPieces: 0,
+      pallets: [],
+    },
+    'C-08': {
+      locationCode: 'C-08',
+      warehouseName: 'Bodega C - Lácteos',
+      zone: 'Zona C - Lácteos Secos',
+      aisle: 'Pasillo 03',
+      rack: 'Rack 02',
+      level: 'Nivel 01',
+      capacity: 3,
+      occupancy: 3,
+      availableCapacity: 0,
+      totalPallets: 3,
+      totalPieces: 1440,
+      pallets: [
+        {
+          id: 'ua-301',
+          palletCode: 'UA-88301',
+          description: 'Coffee-Mate Original 400g',
+          productId: '12572733',
+          pieces: 480,
+          palletTypeId: 'MADERA_ESTANDAR',
+          palletTypeLabel: 'Madera Estándar',
+        },
+        {
+          id: 'ua-302',
+          palletCode: 'UA-88302',
+          description: 'Coffee-Mate Original 400g',
+          productId: '12572733',
+          pieces: 480,
+          palletTypeId: 'MADERA_ESTANDAR',
+          palletTypeLabel: 'Madera Estándar',
+        },
+        {
+          id: 'ua-303',
+          palletCode: 'UA-88303',
+          description: 'Coffee-Mate Original 400g',
+          productId: '12572733',
+          pieces: 480,
+          palletTypeId: 'MADERA_ESTANDAR',
+          palletTypeLabel: 'Madera Estándar',
+        },
+      ],
+    },
+    'D-01': {
+      locationCode: 'D-01',
+      warehouseName: 'Bodega D - Consolidación',
+      zone: 'Zona D - Alta Rotación',
+      aisle: 'Pasillo 04',
+      rack: 'Rack 01',
+      level: 'Nivel 01 (Piso)',
+      capacity: 4,
+      occupancy: 0,
+      availableCapacity: 4,
       totalPallets: 0,
       totalPieces: 0,
       pallets: [],
@@ -262,6 +351,17 @@ export class WarehouseMovementsService {
   readonly dispatches = this.dispatchesSignal.asReadonly();
   readonly locations = this.locationsSignal.asReadonly();
   readonly inventoryBatches = this.inventoryBatchesSignal.asReadonly();
+
+  // Bahías Ocupadas y Disponibles (Computadas)
+  readonly occupiedLocations = computed(() =>
+    Object.values(this.locationsSignal()).filter((loc) => loc.totalPallets > 0)
+  );
+
+  readonly availableLocations = computed(() =>
+    Object.values(this.locationsSignal()).filter((loc) => loc.totalPallets === 0 && !loc.isBlocked)
+  );
+
+  readonly transferReasons = TRANSFER_REASONS;
 
   // Simula la llegada de un nuevo registro desde Caseta de Seguridad
   simulateQuickCasetaArrival(): ReceptionHeader {
@@ -372,13 +472,22 @@ export class WarehouseMovementsService {
     // Traspaso inicial simulado
     this.transfersSignal.set([
       {
-        folio: 'TR-4080',
-        forkliftOperator: 'Roberto Gómez',
-        originLocation: 'B-01',
+        id: 'tr-init-1',
+        folio: 'CAM-2026-000001',
+        status: 'COMPLETED',
+        forkliftOperator: 'Pablo Hernández',
+        forkliftOperatorId: 'MC-101',
+        originLocation: 'RAMPA-04',
         destinationLocation: 'A-14',
+        reasonId: 'REUB_OPERATIVA',
+        reasonLabel: 'Reubicación operativa',
+        observations: 'Acomodo inicial desde andén de descarga a rack principal.',
         pallets: demoReception.pallets,
         totalPallets: 2,
         totalPieces: 960,
+        distinctSkus: 1,
+        clientName: 'Nestlé México',
+        timestamp: '11:30',
         transferredAt: '2026-08-10 11:30',
         transferredBy: 'Christian Durán',
       },
@@ -560,6 +669,14 @@ export class WarehouseMovementsService {
     }
     return {
       locationCode: code,
+      warehouseName: 'Bodega Central',
+      zone: 'Zona General',
+      aisle: 'Pasillo 01',
+      rack: 'Rack 01',
+      level: 'Nivel 01',
+      capacity: 4,
+      occupancy: 0,
+      availableCapacity: 4,
       totalPallets: 0,
       totalPieces: 0,
       pallets: [],
@@ -572,7 +689,104 @@ export class WarehouseMovementsService {
     return info.totalPallets === 0 && info.totalPieces === 0;
   }
 
-  // Procesa el Cambio de Almacén / Traspaso Interno
+  // Genera un Folio Consecutivo de Cambio de Almacén (ej. CAM-2026-000002)
+  generateNextTransferFolio(): string {
+    const num = this.nextTransferNumber();
+    const formatted = `CAM-2026-${num.toString().padStart(6, '0')}`;
+    this.nextTransferNumber.update((v) => v + 1);
+    return formatted;
+  }
+
+  // Procesa el Cambio de Almacén Transaccional Detallado (SDD 5 Pasos)
+  executeDetailedTransfer(dto: {
+    originLocationCode: string;
+    destinationLocationCode: string;
+    selectedPalletIds: string[];
+    forkliftOperator: string;
+    forkliftOperatorId?: string;
+    reasonId: string;
+    reasonLabel: string;
+    observations?: string;
+    transferredBy: string;
+  }): WarehouseTransfer {
+    const origin = dto.originLocationCode.toUpperCase().trim();
+    const destination = dto.destinationLocationCode.toUpperCase().trim();
+    const originInfo = this.getLocationInfo(origin);
+    const destInfo = this.getLocationInfo(destination);
+
+    if (originInfo.totalPallets === 0) {
+      throw new Error(`La bahía origen ${origin} no cuenta con inventario para trasladar.`);
+    }
+
+    const palletsToMove = originInfo.pallets.filter((p) => dto.selectedPalletIds.includes(p.id));
+    if (palletsToMove.length === 0) {
+      throw new Error('Debes seleccionar al menos una tarima para realizar el cambio de almacén.');
+    }
+
+    if (destInfo.isBlocked) {
+      throw new Error(`La bahía destino ${destination} se encuentra bloqueada.`);
+    }
+
+    if (destInfo.totalPallets > 0) {
+      throw new Error(`La bahía destino ${destination} contiene inventario previo. Por regla WMS debe estar completamente en ceros.`);
+    }
+
+    const folio = this.generateNextTransferFolio();
+    const remainingOriginPallets = originInfo.pallets.filter((p) => !dto.selectedPalletIds.includes(p.id));
+    const distinctSkusSet = new Set(palletsToMove.map((p) => p.productId));
+    const totalPiecesMoved = palletsToMove.reduce((acc, p) => acc + p.pieces, 0);
+
+    const newTransfer: WarehouseTransfer = {
+      id: 'tr-' + Date.now(),
+      folio,
+      status: 'COMPLETED',
+      forkliftOperator: dto.forkliftOperator,
+      forkliftOperatorId: dto.forkliftOperatorId || 'MC-101',
+      originLocation: origin,
+      destinationLocation: destination,
+      reasonId: dto.reasonId,
+      reasonLabel: dto.reasonLabel,
+      observations: dto.observations || '',
+      pallets: palletsToMove,
+      totalPallets: palletsToMove.length,
+      totalPieces: totalPiecesMoved,
+      distinctSkus: distinctSkusSet.size,
+      clientName: palletsToMove[0]?.supplierName || 'Nestlé México',
+      timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      transferredAt: new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }),
+      transferredBy: dto.transferredBy,
+    };
+
+    // Actualizar Estado de Bahías en locationsSignal
+    const locs = { ...this.locationsSignal() };
+    const originCap = originInfo.capacity ?? 4;
+    const destCap = destInfo.capacity ?? 4;
+
+    locs[origin] = {
+      ...originInfo,
+      totalPallets: remainingOriginPallets.length,
+      totalPieces: remainingOriginPallets.reduce((acc, p) => acc + p.pieces, 0),
+      occupancy: remainingOriginPallets.length,
+      availableCapacity: Math.max(0, originCap - remainingOriginPallets.length),
+      pallets: remainingOriginPallets,
+    };
+
+    locs[destination] = {
+      ...destInfo,
+      totalPallets: palletsToMove.length,
+      totalPieces: totalPiecesMoved,
+      occupancy: palletsToMove.length,
+      availableCapacity: Math.max(0, destCap - palletsToMove.length),
+      pallets: palletsToMove,
+    };
+
+    this.locationsSignal.set(locs);
+    this.transfersSignal.update((list) => [newTransfer, ...list]);
+
+    return newTransfer;
+  }
+
+  // Procesa el Cambio de Almacén / Traspaso Interno (Legacy simplificado)
   executeTransfer(
     origin: string,
     destination: string,
@@ -582,44 +796,16 @@ export class WarehouseMovementsService {
     const originInfo = this.getLocationInfo(origin);
     if (originInfo.totalPallets === 0) return null;
 
-    if (!this.isLocationEmpty(destination)) {
-      throw new Error(`La bahía destino ${destination} no está completamente en ceros.`);
-    }
-
-    const transferFolio = `TR-${this.nextTransferNumber()}`;
-    this.nextTransferNumber.update((v) => v + 1);
-
-    const newTransfer: WarehouseTransfer = {
-      folio: transferFolio,
+    return this.executeDetailedTransfer({
+      originLocationCode: origin,
+      destinationLocationCode: destination,
+      selectedPalletIds: originInfo.pallets.map((p) => p.id),
       forkliftOperator,
-      originLocation: origin.toUpperCase(),
-      destinationLocation: destination.toUpperCase(),
-      pallets: [...originInfo.pallets],
-      totalPallets: originInfo.totalPallets,
-      totalPieces: originInfo.totalPieces,
-      transferredAt: new Date().toLocaleString('es-MX'),
+      reasonId: 'REUB_OPERATIVA',
+      reasonLabel: 'Reubicación operativa',
+      observations: 'Traspaso rápido de bahía completa.',
       transferredBy,
-    };
-
-    // Actualizar Estado de Bahías
-    const locs = { ...this.locationsSignal() };
-    locs[origin.toUpperCase()] = {
-      locationCode: origin.toUpperCase(),
-      totalPallets: 0,
-      totalPieces: 0,
-      pallets: [],
-    };
-    locs[destination.toUpperCase()] = {
-      locationCode: destination.toUpperCase(),
-      totalPallets: newTransfer.totalPallets,
-      totalPieces: newTransfer.totalPieces,
-      pallets: newTransfer.pallets,
-    };
-
-    this.locationsSignal.set(locs);
-    this.transfersSignal.update((list) => [newTransfer, ...list]);
-
-    return newTransfer;
+    });
   }
 
   // Procesa Despacho Outbound

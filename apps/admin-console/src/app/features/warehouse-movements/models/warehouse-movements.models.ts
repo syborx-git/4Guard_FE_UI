@@ -101,20 +101,56 @@ export interface ReceptionHeader {
   leaderAuthorizedBy?: string; // Nombre del líder que autorizó
 }
 
+export interface TransferReasonItem {
+  id: string;
+  label: string;
+  description: string;
+  requiresObservation?: boolean;
+}
+
+export const TRANSFER_REASONS: TransferReasonItem[] = [
+  { id: 'OPT_ESPACIO', label: 'Optimización de espacio', description: 'Reorganización de ubicaciones para mejorar el aprovechamiento volumétrico.' },
+  { id: 'REUB_OPERATIVA', label: 'Reubicación operativa', description: 'Movimiento preventivo o preparativo para surtido y despacho.' },
+  { id: 'LIB_BAHIA', label: 'Liberación de bahía', description: 'Desocupación de bahía para recepción, auditoría o mantenimiento.' },
+  { id: 'CONSOLIDACION', label: 'Consolidación de inventario', description: 'Agrupación de lotes y UAs compatibles en una sola posición.' },
+  { id: 'SOL_CLIENTE', label: 'Solicitud del cliente', description: 'Instrucción directa del cliente para segregar o trasladar mercancía.' },
+  { id: 'INCIDENCIA', label: 'Incidencia / Desvío de calidad', description: 'Aislamiento temporal de tarimas por inspección de calidad QM.' },
+  { id: 'OTRO', label: 'Otro motivo (especificar)', description: 'Motivo extraordinario no catalogado.', requiresObservation: true },
+];
+
 export interface WarehouseTransfer {
-  folio: string;             // ej. TR-4081
-  forkliftOperator: string;  // Montacarguista
+  id?: string;
+  folio: string;             // ej. CAM-2026-000001
+  status?: 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  forkliftOperator: string;  // Montacarguista responsable
+  forkliftOperatorId?: string;
   originLocation: string;    // ej. A-14
   destinationLocation: string; // ej. M-98
+  reasonId?: string;
+  reasonLabel?: string;
+  observations?: string;
   pallets: ReceptionPalletItem[];
   totalPallets: number;
   totalPieces: number;
+  distinctSkus?: number;
+  timestamp?: string;
   transferredAt: string;
   transferredBy: string;
+  clientName?: string;
 }
 
 export interface LocationStockInfo {
   locationCode: string;
+  warehouseName?: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  level?: string;
+  capacity?: number;
+  occupancy?: number;
+  availableCapacity?: number;
+  isBlocked?: boolean;
+  blockReason?: string;
   totalPallets: number;
   totalPieces: number;
   pallets: ReceptionPalletItem[];
