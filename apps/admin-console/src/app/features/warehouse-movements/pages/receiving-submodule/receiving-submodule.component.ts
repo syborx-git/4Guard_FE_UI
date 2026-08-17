@@ -1,13 +1,8 @@
-/**
- * @file receiving-submodule.component.ts
- * @description Submódulo 1: Recepción de Mercancía — Workbench Unificado (Master-Detail).
- * Integra Búsqueda, Alta, Cancelación, Cambio de Remisión y Consulta en una sola experiencia transaccional.
- */
-
 import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
@@ -38,6 +33,7 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
   styleUrl: './receiving-submodule.component.css',
 })
 export class ReceivingSubmoduleComponent implements OnInit {
+  protected readonly authState = inject(AuthState);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
@@ -57,6 +53,19 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Banner colapsable / expandible de la cola de notificaciones
   isQueueBannerExpanded = signal(true);
+
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
+
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
 
   // Modales del Workbench
   showCheckInModal = signal(false);
@@ -422,10 +431,64 @@ export class ReceivingSubmoduleComponent implements OnInit {
   openCancelModal(): void {
     const rec = this.selectedReception();
     if (!rec) return;
-    this.cancellationJustification.set('');
-    this.leaderModalTitle.set(`Autorizar Cancelación de Recepción #${rec.folio}`);
-    this.leaderAction.set('CANCEL');
-    this.showLeaderModal.set(true);
+    this.cancelReason.set('');
+    this.cancelAdminUser.set(this.authState.currentUser()?.email || this.authState.userFullName() || 'admin@4guard.com');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelErrorMessage.set(null);
+  }
+
+  confirmCancelReception(): void {
+    const rec = this.selectedReception();
+    if (!rec) return;
+
+    const reason = this.cancelReason().trim();
+    const user = this.cancelAdminUser().trim();
+    const password = this.cancelAdminPassword().trim();
+
+    if (!reason || reason.length < 5) {
+      this.cancelErrorMessage.set('Por favor ingresa un motivo detallado de cancelación (mínimo 5 caracteres).');
+      return;
+    }
+
+    if (!user) {
+      this.cancelErrorMessage.set('Por favor ingresa el usuario administrador.');
+      return;
+    }
+
+    if (!password) {
+      this.cancelErrorMessage.set('Por favor ingresa tu contraseña de administrador para autorizar la revocación.');
+      return;
+    }
+
+    this.isCancelling.set(true);
+    this.cancelErrorMessage.set(null);
+
+    const adminLabel = this.authState.userFullName() ? `${this.authState.userFullName()} (${user})` : user;
+    const cancelled = this.movementsService.cancelReception(
+      rec.folio,
+      reason,
+      adminLabel
+    );
+
+    this.isCancelling.set(false);
+    this.showCancelModal.set(false);
+
+    if (cancelled) {
+      this.selectReception(cancelled);
+      this.selectedPrintReception.set(cancelled);
+      this.printType.set('CANCELLATION');
+      this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
+      this.showPrintModal.set(true);
+    } else {
+      this.toast.error('No se pudo procesar la cancelación de la recepción.');
+    }
   }
 
   initiateCompleteReception(): void {

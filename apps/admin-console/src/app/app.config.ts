@@ -12,6 +12,7 @@ import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import {
   provideRouter,
   withComponentInputBinding,
+  withRouterConfig,
   withViewTransitions,
 } from '@angular/router';
 import {
@@ -30,6 +31,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       adminRoutes,
       withComponentInputBinding(),
+      withRouterConfig({
+        onSameUrlNavigation: 'reload',
+      }),
       withViewTransitions({
         onViewTransitionCreated: (info) => {
           info.transition.finished.catch(() => {

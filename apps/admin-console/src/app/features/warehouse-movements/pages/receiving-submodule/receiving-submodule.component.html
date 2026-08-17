@@ -3,101 +3,7 @@
      ════════════════════════════════════════════════════════════════ -->
 <div class="receiving-workbench space-y-5">
 
-  <!-- ── 0. COLA DE PRE-RECEPCIONES EN ESPERA (ADMINISTRADOR NIVEL 7) ── -->
-  @if (pendingReceptionsCount() > 0) {
-    <div class="notification-banner p-4 shadow-2xl space-y-3 animate-fade-up">
-      <!-- Header de la Cola de Notificaciones -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gold/20 pb-2.5">
-        <div class="flex items-center gap-3">
-          <div class="notification-banner__icon-wrap p-2 flex items-center justify-center animate-pulse">
-            <span class="material-symbols-outlined text-xl font-bold">notifications_active</span>
-          </div>
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="notification-banner__title text-xs font-black uppercase">COLA DE PRE-RECEPCIONES REGISTRADAS EN CASETA</span>
-              <span class="notification-banner__badge font-mono text-xs px-2.5 py-0.5 rounded-lg">
-                {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'Folio en espera' : 'Folios en espera' }}
-              </span>
-            </div>
-            <p class="text-[11px] text-slate-300 mt-0.5">
-              Permanecen en fila hasta que inicies o completes su proceso de descarga en andén.
-            </p>
-          </div>
-        </div>
 
-        <!-- Botones de Acción de la Cola -->
-        <div class="flex items-center gap-2 self-end sm:self-center">
-          <button
-            type="button"
-            (click)="simulateQuickArrival()"
-            class="btn-secondary-outline text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 hover:scale-105 transition-all text-amber-300 border-amber-500/40 bg-amber-500/10"
-            title="Simular un nuevo registro de entrada desde Caseta"
-          >
-            <span class="material-symbols-outlined text-sm">bolt</span>
-            <span>+ Simular Llegada Caseta</span>
-          </button>
-          <button
-            type="button"
-            (click)="toggleQueueBanner()"
-            class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
-            [title]="isQueueBannerExpanded() ? 'Minimizar fila' : 'Expandir fila'"
-          >
-            <span class="material-symbols-outlined text-base">
-              {{ isQueueBannerExpanded() ? 'expand_less' : 'expand_more' }}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Fila / Grid de Notificaciones en Espera -->
-      @if (isQueueBannerExpanded()) {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
-          @for (item of pendingReceptions(); track item.folio) {
-            <div
-              class="p-3 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:border-gold/60 transition-all flex flex-col justify-between gap-2.5 shadow-md"
-              [class.ring-2]="selectedReception()?.folio === item.folio"
-              [class.ring-amber-400]="selectedReception()?.folio === item.folio"
-            >
-              <div class="space-y-1">
-                <div class="flex items-center justify-between gap-1">
-                  <span class="font-mono text-xs font-black text-amber-300">FOLIO #{{ item.folio }}</span>
-                  <span class="text-[10px] font-mono text-slate-400">Rampa {{ item.checkIn.rampNumber }} · {{ item.checkIn.receptionTime }}</span>
-                </div>
-                <div class="font-bold text-xs text-white truncate">{{ item.checkIn.client }}</div>
-                <p class="text-[11px] text-slate-400 truncate">
-                  Rem: <span class="font-mono text-slate-200 font-bold">{{ item.checkIn.docNumber }}</span> · {{ item.checkIn.carrierLine }}
-                </p>
-              </div>
-
-              <div class="flex items-center justify-between pt-1 border-t border-slate-800">
-                <span class="text-[10px] text-amber-400/90 font-mono truncate max-w-[130px]">Chofer: {{ item.checkIn.driverName }}</span>
-                <button
-                  type="button"
-                  (click)="loadFromNotification(item.folio)"
-                  class="btn-primary-gold text-[10px] font-black px-3 py-1 rounded-lg flex items-center gap-1 shadow-sm hover:scale-105 transition-transform"
-                >
-                  <span class="material-symbols-outlined text-xs">visibility</span>
-                  <span>Atender Folio</span>
-                </button>
-              </div>
-            </div>
-          }
-        </div>
-      }
-    </div>
-  } @else {
-    <!-- Botón de simulación cuando no hay folios en espera -->
-    <div class="flex justify-end">
-      <button
-        type="button"
-        (click)="simulateQuickArrival()"
-        class="text-xs text-secondary hover:text-gold flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-subtle hover:border-gold transition-colors"
-      >
-        <span class="material-symbols-outlined text-sm">bolt</span>
-        <span>+ Simular Llegada de Caseta (Probar Notificación)</span>
-      </button>
-    </div>
-  }
 
   <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON TRANSPORTISTAS) ── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -312,7 +218,7 @@
           </div>
 
           <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO -->
-          @if (rec.status !== 'CANCELLED') {
+          @if (rec.status === 'REGISTERED') {
             <form [formGroup]="altaForm" class="space-y-3.5 pt-1">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined">inventory_2</span>
@@ -386,8 +292,74 @@
                 </div>
               </div>
             </form>
+          } @else if (rec.status === 'COMPLETED') {
+            <!-- Vista de Parámetros en Solo Lectura cuando ya está COMPLETADO -->
+            <div class="space-y-3.5 pt-1">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span>PARÁMETROS DE LA RECEPCIÓN (REGISTRO FINALIZADO)</span>
+              </div>
 
-            <!-- 4. SECCIÓN 3: CAPTURA DE TARIMAS (UA) -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-subtle p-4 rounded-xl border border-subtle">
+                <div class="fg-field">
+                  <label class="fg-label">Lote de Recepción</label>
+                  <span class="font-mono font-bold text-primary text-xs">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
+                </div>
+                <div class="fg-field">
+                  <label class="fg-label">Fecha de Caducidad</label>
+                  <span class="font-mono font-medium text-primary text-xs">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
+                </div>
+                <div class="fg-field">
+                  <label class="fg-label">Montacarguista</label>
+                  <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn.forkliftOperator }}</span>
+                </div>
+                <div class="fg-field">
+                  <label class="fg-label">Rampa de Recepción</label>
+                  <span class="text-primary text-xs font-bold">Rampa {{ rec.checkIn.rampNumber }}</span>
+                </div>
+
+                <div class="fg-field sm:col-span-2">
+                  <label class="fg-label">Producto / SKU</label>
+                  <span class="text-primary text-xs font-bold truncate">{{ rec.productId }} — {{ rec.productName }}</span>
+                </div>
+                <div class="fg-field">
+                  <label class="fg-label">Piezas x Tarima</label>
+                  <span class="font-mono text-emerald-600 font-bold text-xs">{{ rec.piecesPerPallet }} PZAS</span>
+                </div>
+                <div class="fg-field">
+                  <label class="fg-label">Tipo de Tarima</label>
+                  <span class="text-primary text-xs font-medium">{{ rec.selectedPalletType }}</span>
+                </div>
+
+                <div class="fg-field sm:col-span-2">
+                  <label class="fg-label">Proveedor</label>
+                  <span class="text-primary text-xs font-medium truncate">{{ rec.supplierName }}</span>
+                </div>
+                <div class="fg-field sm:col-span-2">
+                  <label class="fg-label">Observaciones</label>
+                  <span class="text-secondary text-xs italic truncate">{{ rec.observations || 'Sin incidentes registrados en andén.' }}</span>
+                </div>
+              </div>
+            </div>
+          } @else if (rec.status === 'CANCELLED') {
+            <!-- Banner de Auditoría de Cancelación -->
+            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
+              <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                <span class="material-symbols-outlined text-lg">cancel</span>
+                <span class="uppercase">FOLIO CANCELADO Y REVOCADO DE INVENTARIO</span>
+              </div>
+              <p class="text-xs text-rose-300 font-medium">
+                Motivo: "{{ rec.cancellationReason || 'Cancelado por el administrador.' }}"
+              </p>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
+                <span>Autorizado por: <strong class="text-slate-200">{{ rec.leaderAuthorizedBy || 'Admin' }}</strong></span>
+                <span>Fecha: {{ rec.cancelledAt || 'Registrado' }}</span>
+              </div>
+            </div>
+          }
+
+          <!-- 4. SECCIÓN 3: CAPTURA DE TARIMAS (UA) - SOLO SI ESTÁ EN ESPERA / REGISTERED -->
+          @if (rec.status === 'REGISTERED') {
             <div class="space-y-3 pt-1">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined">qr_code_scanner</span>
@@ -425,6 +397,23 @@
                 </button>
               </div>
             </div>
+          } @else if (rec.status === 'COMPLETED') {
+            <!-- Banner Informativo de Folio Finalizado -->
+            <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-xl text-emerald-500 shrink-0">check_circle</span>
+                <span>
+                  <strong>Recepción Finalizada y Cerrada</strong> — Las <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> fueron registradas en almacén. Operación completada; sólo puedes consultar e imprimir el comprobante oficial.
+                </span>
+              </div>
+              <button
+                type="button"
+                (click)="openPrintPreview(rec)"
+                class="btn-primary-gold text-[11px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-900 shadow-sm shrink-0 self-end sm:self-auto"
+              >
+                Imprimir Documento
+              </button>
+            </div>
           }
 
           <!-- 5. SECCIÓN 4: RESUMEN Y DETALLE DE TARIMAS DESCARGADAS -->
@@ -451,7 +440,7 @@
             </div>
           </div>
 
-          <!-- 6. TABLA DE TARIMAS DESCARGADAS (CON EDITAR Y ELIMINAR PARA ADMIN) -->
+          <!-- 6. TABLA DE TARIMAS DESCARGADAS -->
           <div class="overflow-x-auto border border-subtle rounded-xl shadow-sm">
             <table class="w-full text-xs text-left">
               <thead class="bg-surface-subtle text-slate-700 dark:text-slate-300 uppercase text-[11px] font-black border-b border-subtle">
@@ -464,7 +453,7 @@
                   <th class="p-3">Tipo Tarima</th>
                   <th class="p-3 text-right">Cant x Tarima</th>
                   <th class="p-3">Observaciones</th>
-                  @if (rec.status !== 'CANCELLED') {
+                  @if (rec.status === 'REGISTERED') {
                     <th class="p-3 text-center w-24">Acciones</th>
                   }
                 </tr>
@@ -480,7 +469,7 @@
                     <td class="p-3 text-slate-700 dark:text-slate-300 font-sans">{{ pallet.palletTypeLabel }}</td>
                     <td class="p-3 text-right font-black text-emerald-600 dark:text-emerald-400">{{ pallet.pieces }} PZAS</td>
                     <td class="p-3 text-slate-600 dark:text-slate-400 italic font-sans">{{ pallet.observations || '-' }}</td>
-                    @if (rec.status !== 'CANCELLED') {
+                    @if (rec.status === 'REGISTERED') {
                       <td class="p-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
@@ -516,8 +505,8 @@
             </table>
           </div>
 
-          <!-- 7. FOOTER CON ACCIONES DE GUARDADO Y AUTORIZACIÓN -->
-          @if (rec.status !== 'CANCELLED' && rec.status !== 'COMPLETED') {
+          <!-- 7. FOOTER CON ACCIONES DE GUARDADO Y AUTORIZACIÓN (SOLO EN ESPERA) -->
+          @if (rec.status === 'REGISTERED') {
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
               <button
                 type="button"
@@ -843,13 +832,140 @@
     </div>
   }
 
-  <!-- ── 6. MODALES DE SISTEMA (LÍDER & IMPRESIÓN) ── -->
-  @if (showLeaderModal()) {
-    <fg-leader-auth-modal
-      [title]="leaderModalTitle()"
-      (validated)="onLeaderValidated($event)"
-      (cancelled)="showLeaderModal.set(false)"
-    ></fg-leader-auth-modal>
+  <!-- ── 6. MODAL DE CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ── -->
+  @if (showCancelModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+      <div class="w-full max-w-lg bg-slate-900 border border-rose-500/40 rounded-2xl shadow-2xl overflow-hidden text-slate-100 animate-scale-up">
+        
+        <!-- Header del Modal -->
+        <div class="px-6 py-4 bg-gradient-to-r from-rose-950/60 via-slate-900 to-slate-900 border-b border-rose-500/30 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/40 flex items-center justify-center text-rose-400">
+              <span class="material-symbols-outlined text-2xl">cancel</span>
+            </div>
+            <div>
+              <h3 class="font-black text-slate-100 text-base leading-tight">Cancelar Recepción #{{ selectedReception()?.folio }}</h3>
+              <p class="text-xs text-rose-400 font-medium">Revocación de inventario con autorización Admin</p>
+            </div>
+          </div>
+          <button (click)="closeCancelModal()" type="button" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg transition-colors">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal -->
+        <div class="p-6 space-y-4 text-xs">
+          <!-- Resumen de lo que se cancelará -->
+          <div class="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 grid grid-cols-2 gap-2 text-slate-300">
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase font-bold">Cliente:</span>
+              <strong class="text-slate-100 truncate block">{{ selectedReception()?.checkIn?.client }}</strong>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase font-bold">Remisión:</span>
+              <strong class="text-slate-100 font-mono">{{ selectedReception()?.checkIn?.docNumber }}</strong>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase font-bold">Total Tarimas:</span>
+              <strong class="text-amber-400 font-mono">{{ totalTarimas() }} Tarimas</strong>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase font-bold">Piezas Totales:</span>
+              <strong class="text-emerald-400 font-mono">{{ totalPiezas() }} Piezas</strong>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (cancelErrorMessage()) {
+            <div class="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-400 shrink-0">error</span>
+              <span>{{ cancelErrorMessage() }}</span>
+            </div>
+          }
+
+          <!-- Motivo de cancelación obligatorio -->
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-slate-200">
+              Motivo o Justificación Obligatoria de Cancelación <span class="text-rose-400">*</span>
+            </label>
+            <textarea
+              [ngModel]="cancelReason()"
+              (ngModelChange)="cancelReason.set($event)"
+              rows="3"
+              placeholder="Describe detalladamente el motivo de la revocación (ej. Error en remisión, daño de mercancía, orden duplicada)..."
+              class="w-full bg-slate-800 border border-slate-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 outline-none resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Credenciales del ADMIN (Login actual) -->
+          <div class="pt-2 border-t border-slate-800 space-y-3">
+            <div class="flex items-center gap-2 text-slate-200 font-bold text-xs">
+              <span class="material-symbols-outlined text-amber-400 text-base">lock_person</span>
+              <span>Validación de Credenciales de Administrador (Usuario en Sesión)</span>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Usuario / Correo Admin</label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">person</span>
+                <input
+                  type="text"
+                  [ngModel]="cancelAdminUser()"
+                  (ngModelChange)="cancelAdminUser.set($event)"
+                  placeholder="admin@4guard.com"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Contraseña de Administrador <span class="text-rose-400">*</span></label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">lock</span>
+                <input
+                  [type]="showCancelPassword() ? 'text' : 'password'"
+                  [ngModel]="cancelAdminPassword()"
+                  (ngModelChange)="cancelAdminPassword.set($event)"
+                  (keyup.enter)="confirmCancelReception()"
+                  placeholder="Ingresa tu contraseña de acceso"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-10 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowCancelPassword()"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showCancelPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="px-6 py-4 bg-slate-950/60 border-t border-slate-800 flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeCancelModal()"
+            class="btn-ghost text-xs px-4 py-2 rounded-xl"
+          >
+            Regresar
+          </button>
+          <button
+            type="button"
+            (click)="confirmCancelReception()"
+            [disabled]="isCancelling()"
+            class="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-1.5"
+          >
+            <span class="material-symbols-outlined text-base">security_update_warning</span>
+            <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
   }
 
   @if (showPrintModal() && selectedPrintReception(); as printRec) {

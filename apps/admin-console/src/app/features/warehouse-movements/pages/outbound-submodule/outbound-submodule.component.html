@@ -770,10 +770,13 @@
 
             <!-- Encabezado Institucional -->
             <div class="print-header">
-              <div class="print-logo-box">
-                <div class="print-brand">4GUARD WMS</div>
-                <div class="print-branch">Almacén Central — Bodega Principal</div>
-                <div class="print-branch">{{ selectedPrintOutbound()!.dispatchedAt }}</div>
+              <div class="print-logo-box flex items-center gap-3">
+                <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-14 w-auto max-w-[60px] object-contain rounded" />
+                <div>
+                  <div class="print-brand">4GUARD WMS</div>
+                  <div class="print-branch">Almacén Central — Bodega Principal</div>
+                  <div class="print-branch">{{ selectedPrintOutbound()!.dispatchedAt }}</div>
+                </div>
               </div>
               <div class="print-folio-box">
                 <div class="print-doc-type">Salida de Mercancía</div>

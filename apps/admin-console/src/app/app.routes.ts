@@ -337,6 +337,6 @@ export const adminRoutes: Routes = [
     ],
   },
 
-  // Catch-all: redirigir a dashboard o login
-  { path: '**', redirectTo: 'dashboard' },
+  // Catch-all: redirigir a login (el authGuard en '/' llevará al dashboard si hay sesión activa)
+  { path: '**', redirectTo: 'login' },
 ];
