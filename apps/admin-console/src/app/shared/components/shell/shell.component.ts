@@ -47,12 +47,19 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
   return null;
 }
 
-interface NavItem {
+export interface SubNavItem {
+  label: string;
+  route: string;
+  icon: string;
+}
+
+export interface NavItem {
   label: string;
   route: string;
   icon: string;   // Material Symbols name
   module: string;
   badge?: () => number;
+  children?: SubNavItem[];
 }
 
 import { PasswordCollapseComponent } from '../password-collapse/password-collapse.component';
@@ -60,6 +67,7 @@ import { QuickOperatorSwitchModalComponent } from './quick-operator-switch-modal
 import { ForbotTriggerButtonComponent } from '../forbot/forbot-trigger-button/forbot-trigger-button.component';
 import { ForbotChatDrawerComponent } from '../forbot/forbot-chat-drawer/forbot-chat-drawer.component';
 import { ForbotEngineService } from '../../../core/forbot/services/forbot-engine.service';
+import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 
 @Component({
   selector: 'fg-admin-shell',
@@ -81,9 +89,27 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
   protected readonly forbotEngine = inject(ForbotEngineService);
+  private readonly movementsService = inject(WarehouseMovementsService);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+
+  // ── Pre-Recepciones en Cola de Notificaciones ──
+  protected readonly pendingReceptions = this.movementsService.pendingReceptions;
+  protected readonly pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
+  protected readonly showReceptionAlertsDropdown = signal(false);
+
+  protected toggleReceptionAlerts(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showProfileMenu.set(false);
+    this.showWaffleMenu.set(false);
+    this.showReceptionAlertsDropdown.update((v) => !v);
+  }
+
+  protected openReceptionFromAlert(folio: string): void {
+    this.showReceptionAlertsDropdown.set(false);
+    this.router.navigate(['/warehouse-movements/receiving'], { queryParams: { folio } });
+  }
 
   /** Listener global para abrir/cerrar ForBot con Ctrl + K */
   @HostListener('window:keydown', ['$event'])
@@ -312,7 +338,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     });
   });
 
-  /** Cierra el menú de perfil y Waffle menu al hacer click fuera */
+  /** Cierra el menú de perfil, Waffle menu y dropdown de recepciones al hacer click fuera */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
@@ -321,6 +347,9 @@ export class ShellComponent implements OnInit, OnDestroy {
     }
     if (!target.closest('.shell__waffle-container')) {
       this.showWaffleMenu.set(false);
+    }
+    if (!target.closest('.shell__reception-pill-container')) {
+      this.showReceptionAlertsDropdown.set(false);
     }
   }
 
@@ -433,11 +462,52 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
   ];
 
-
   /** Filtra los nav items segun el rol del usuario */
   protected readonly visibleNavItems = computed(() =>
     this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
   );
+
+  protected readonly expandedSubmenus = signal<Set<string>>(new Set<string>(['warehouse-movements']));
+
+  protected isSubmenuExpanded(module: string): boolean {
+    return this.expandedSubmenus().has(module);
+  }
+
+  protected toggleSubmenu(module: string, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedSubmenus.update((set) => {
+      const next = new Set(set);
+      if (next.has(module)) {
+        next.delete(module);
+      } else {
+        next.add(module);
+      }
+      return next;
+    });
+  }
+
+  protected isItemActive(item: NavItem): boolean {
+    const currentUrl = this.router.url;
+    if (currentUrl.startsWith(item.route)) return true;
+    if (item.children && item.children.some((c) => currentUrl.startsWith(c.route))) return true;
+    return false;
+  }
+
+  protected onParentNavClick(item: NavItem): void {
+    if (this.isSidebarCollapsed()) {
+      this.isSidebarCollapsed.set(false);
+    }
+    this.expandedSubmenus.update((set) => {
+      const next = new Set(set);
+      next.add(item.module);
+      return next;
+    });
+    if (!this.isItemActive(item)) {
+      this.router.navigateByUrl(item.route);
+    }
+  }
 
   protected readonly resumedProcessNotice = signal<string | null>(null);
 

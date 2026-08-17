@@ -1,312 +1,918 @@
-<!-- Contenedor Submódulo Cambio de Almacén -->
-<div class="space-y-6">
+<!--
+  transfer-submodule.component.html
+  Submódulo 2: Cambio de Almacén (Reubicación de Inventario / Putaway) — 4GUARD WMS
+  Arquitectura Master-Detail unificada (Homologada con Recepción de Mercancía)
+-->
 
-  <!-- Header Submódulo + Navigation Tabs -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-        <span class="material-symbols-outlined text-2xl">compare_arrows</span>
+<div class="space-y-5">
+
+  <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON RECEPCIÓN Y TRANSPORTISTAS) ── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Total Traspasos -->
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white">
+        <span class="material-symbols-outlined">swap_horiz</span>
       </div>
-      <div>
-        <h2 class="text-xl font-bold text-slate-100 tracking-tight">Cambio de Almacén (Traspasos Internos)</h2>
-        <p class="text-xs text-slate-400">Reubicación de UAs entre bahías con regla estricta de validación en ceros</p>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value">{{ kpiTotalTransfers() }}</span>
+        <span class="kpi-card__label">Total Traspasos</span>
       </div>
+      <div class="kpi-card__bar bg-slate-800 dark:bg-slate-300"></div>
     </div>
 
-    <!-- Sub-tabs bar -->
-    <div class="flex gap-2 border-b border-slate-800 pb-3 text-xs font-semibold">
-      <button
-        type="button"
-        (click)="activeTab.set('alta-cambio')"
-        [ngClass]="activeTab() === 'alta-cambio' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'text-slate-300 border-slate-800 hover:bg-slate-800'"
-        class="px-4 py-2.5 rounded-lg border transition-colors flex items-center gap-2"
-      >
-        <span class="material-symbols-outlined text-base">swap_horiz</span>
-        1. Alta de Cambio de Almacén
-      </button>
+    <!-- Bahías Ocupadas -->
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-amber-500/15 text-amber-600 dark:text-amber-400">
+        <span class="material-symbols-outlined">warehouse</span>
+      </div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value text-amber-600 dark:text-amber-400">{{ kpiOccupiedLocations() }}</span>
+        <span class="kpi-card__label">Bahías con Stock</span>
+      </div>
+      <div class="kpi-card__bar bg-amber-500"></div>
+    </div>
 
-      <button
-        type="button"
-        (click)="activeTab.set('consulta-cambios')"
-        [ngClass]="activeTab() === 'consulta-cambios' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'text-slate-300 border-slate-800 hover:bg-slate-800'"
-        class="px-4 py-2.5 rounded-lg border transition-colors flex items-center gap-2"
-      >
-        <span class="material-symbols-outlined text-base">manage_search</span>
-        2. Consulta de Cambios (Buscador por Folio)
-      </button>
+    <!-- Bahías Disponibles (En Ceros) -->
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">{{ kpiAvailableLocations() }}</span>
+        <span class="kpi-card__label">Bahías en Ceros</span>
+      </div>
+      <div class="kpi-card__bar bg-emerald-500"></div>
+    </div>
+
+    <!-- UAs Reubicadas -->
+    <div class="kpi-card">
+      <div class="kpi-card__icon-wrap bg-blue-500/15 text-blue-600 dark:text-blue-400">
+        <span class="material-symbols-outlined">move_to_inbox</span>
+      </div>
+      <div class="kpi-card__body">
+        <span class="kpi-card__value text-blue-600 dark:text-blue-400">{{ kpiTotalPalletsMoved() }}</span>
+        <span class="kpi-card__label">UAs Reubicadas</span>
+      </div>
+      <div class="kpi-card__bar bg-blue-500"></div>
     </div>
   </div>
 
-  <!-- PESTAÑA 1: ALTA DE CAMBIO DE ALMACÉN -->
-  <div *ngIf="activeTab() === 'alta-cambio'" class="space-y-6">
+  <!-- ── 2. MAIN WORKBENCH GRID (MASTER-DETAIL EN UNA SOLA PANTALLA) ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-    <!-- Configuración del Montacarguista -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-amber-400 text-xl">forklift</span>
-        <label class="text-xs font-bold text-slate-200">Montacarguista Asignado *</label>
-      </div>
-      <select
-        [ngModel]="selectedForkliftOperator()"
-        (ngModelChange)="selectedForkliftOperator.set($event)"
-        class="fg-input sm:w-80"
-      >
-        <option value="Roberto Gómez">Roberto Gómez (Montacarguista Andén A)</option>
-        <option value="Pablo Hernández">Pablo Hernández (Montacarguista Senior)</option>
-        <option value="José Luis Morales">José Luis Morales (Montacarguista Racks)</option>
-      </select>
-    </div>
-
-    <!-- PANELES COMPARATIVOS: ORIGEN VS DESTINO -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-      <!-- PANEL ORIGEN -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <span class="material-symbols-outlined text-slate-400">output</span>
-            Panel Origen (Ubicación A Vaciar)
-          </h3>
-          <span class="px-2.5 py-1 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-            {{ originStock().totalPallets }} Tarimas Almacenadas
-          </span>
-        </div>
-
+    <!-- ── 2A. LEFT PANEL: DIRECTORIO MASTER DE TRASPASOS (col-span-4) ── -->
+    <div class="lg:col-span-4 synexia-card p-4 space-y-4 shadow-sm border border-subtle">
+      
+      <!-- Header de Lista & Botón [+ Nuevo Traspaso] -->
+      <div class="flex items-center justify-between gap-2 border-b border-subtle pb-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Bahía Origen *</label>
-          <input
-            type="text"
-            [ngModel]="originLocationCode()"
-            (ngModelChange)="originLocationCode.set($event)"
-            placeholder="ej. A-14"
-            class="fg-input font-mono font-bold text-base text-slate-100"
-          />
+          <h3 class="font-bold text-xs text-primary uppercase tracking-wide">DIRECTORIO DE TRASPASOS</h3>
+          <p class="text-[11px] text-secondary">Control de movimientos y reubicaciones</p>
         </div>
-
-        <!-- Tabla de Tarimas en Origen -->
-        <div class="border border-slate-800 rounded-lg overflow-hidden text-xs">
-          <table class="w-full text-left">
-            <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
-              <tr>
-                <th class="p-2.5">Código UA</th>
-                <th class="p-2.5">Descripción SKU</th>
-                <th class="p-2.5 text-right">Pzas</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800 bg-slate-950/40">
-              <tr *ngFor="let p of originStock().pallets">
-                <td class="p-2.5 font-mono font-bold text-amber-300">{{ p.palletCode }}</td>
-                <td class="p-2.5 text-slate-300">{{ p.description }}</td>
-                <td class="p-2.5 text-right font-mono font-bold text-slate-100">{{ p.pieces }}</td>
-              </tr>
-              <tr *ngIf="originStock().totalPallets === 0">
-                <td colspan="3" class="p-6 text-center text-slate-500 italic">
-                  La bahía origen especificada no contiene stock.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <button
+          type="button"
+          (click)="startNewTransfer()"
+          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md transition-transform hover:scale-105"
+        >
+          <span class="material-symbols-outlined text-sm">add</span>
+          <span>Nuevo Traspaso</span>
+        </button>
       </div>
 
-      <!-- PANEL DESTINO (REGLA DE CEROS) -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <span class="material-symbols-outlined text-emerald-400">input</span>
-            Panel Destino (Validación En Ceros)
-          </h3>
-          
-          <span
-            [ngClass]="isDestinationEmpty() ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'"
-            class="px-2.5 py-1 rounded text-[10px] font-bold border"
+      <!-- Buscador -->
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary text-sm">search</span>
+        <input
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Buscar por Folio, Bahía, Montacarguista..."
+          class="fg-input pl-9 text-xs w-full"
+        />
+      </div>
+
+      <!-- Lista Scrollable de Traspasos -->
+      <div class="receptions-master-list space-y-2 max-h-[620px] overflow-y-auto pr-1">
+        @for (transfer of filteredTransfers(); track transfer.folio) {
+          <div
+            (click)="selectTransferItem(transfer)"
+            [class.selected-item]="formMode() === 'detail' && selectedTransfer()?.folio === transfer.folio"
+            class="reception-item-card p-3 rounded-xl border border-subtle cursor-pointer transition-all hover:border-gold"
           >
-            {{ isDestinationEmpty() ? 'BAHÍA VACÍA (0 PIEZAS)' : 'OCUPADA (' + destinationStock().totalPieces + ' Pzas)' }}
-          </span>
-        </div>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-mono text-xs font-bold text-gold">#{{ transfer.folio }}</span>
+              <span class="status-badge status-badge--completed text-[10px]">
+                COMPLETADO
+              </span>
+            </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Bahía Destino *</label>
-          <input
-            type="text"
-            [ngModel]="destinationLocationCode()"
-            (ngModelChange)="destinationLocationCode.set($event)"
-            placeholder="ej. M-98"
-            class="fg-input font-mono font-bold text-base text-emerald-300"
-          />
-        </div>
+            <div class="flex items-center justify-between text-xs my-1 font-mono">
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-primary">{{ transfer.originLocation }}</span>
+                <span class="text-secondary text-[11px]">➔</span>
+                <span class="font-bold text-emerald-600">{{ transfer.destinationLocation }}</span>
+              </div>
+              <span class="font-mono text-gold font-bold text-[11px]">
+                {{ transfer.totalPallets }} Tarima(s)
+              </span>
+            </div>
 
-        <!-- CORRECCIÓN 5: ALERTA VISUAL EN BANNER ROSE/ROJO SI LA BAHÍA NO ESTÁ VACÍA -->
-        <div *ngIf="!isDestinationEmpty()" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-3 animate-pulse">
-          <span class="material-symbols-outlined text-xl text-rose-500">warning</span>
-          <div>
-            <strong class="block font-bold">Bahía Destino Ocupada</strong>
-            <span>Esta ubicación contiene stock ({{ destinationStock().totalPallets }} tarimas / {{ destinationStock().totalPieces }} pzas) y no permite traspasos.</span>
+            <div class="flex items-center justify-between text-[11px] text-secondary pt-1 border-t border-subtle mt-1">
+              <span class="truncate max-w-[170px]">{{ transfer.forkliftOperator }}</span>
+              <span class="text-[10px]">{{ transfer.timestamp || transfer.transferredAt }}</span>
+            </div>
           </div>
-        </div>
-
-        <div *ngIf="isDestinationEmpty()" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-3">
-          <span class="material-symbols-outlined text-xl">verified</span>
-          <div>
-            <strong class="block font-bold">Bahía Validada Exitosamente</strong>
-            <span>La ubicación {{ destinationLocationCode() }} está completamente en ceros y lista para recibir la reubicación.</span>
+        } @empty {
+          <div class="text-center py-8 text-secondary">
+            <span class="material-symbols-outlined text-3xl opacity-40 mb-1">search_off</span>
+            <p class="text-xs font-medium">No se encontraron traspasos</p>
           </div>
-        </div>
-
-        <!-- Resumen de Destino -->
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs space-y-2">
-          <div class="flex justify-between">
-            <span class="text-slate-400">Total Tarimas A Recibir:</span>
-            <span class="font-mono font-bold text-slate-100">{{ originStock().totalPallets }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Total Piezas A Recibir:</span>
-            <span class="font-mono font-bold text-emerald-400">{{ originStock().totalPieces }}</span>
-          </div>
-        </div>
-
+        }
       </div>
 
     </div>
 
-    <!-- BOTÓN DE CONFIRMACIÓN CON BLOQUEO REACTIVO (CORRECCIÓN 5) -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-end shadow-xl">
-      <button
-        type="button"
-        (click)="confirmTransfer()"
-        [disabled]="!canExecuteTransfer()"
-        class="px-6 py-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs rounded-xl shadow-xl flex items-center gap-2 transition-colors"
-      >
-        <span class="material-symbols-outlined text-lg">sync_alt</span>
-        <span>Confirmar Cambio de Almacén</span>
-      </button>
-    </div>
+    <!-- ── 2B. RIGHT PANEL: DETALLE / ALTA DE CAMBIO DE ALMACÉN (col-span-8) ── -->
+    <div class="lg:col-span-8 space-y-4">
 
-  </div>
-
-  <!-- PESTAÑA 2: CONSULTA DE CAMBIOS DE ALMACÉN -->
-  <div *ngIf="activeTab() === 'consulta-cambios'" class="space-y-6">
-    
-    <!-- CORRECCIÓN 4: BUSCADOR PRIORITARIO DESTACADO POR FOLIO DE TRASPASO -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-      <div class="border-b border-slate-800 pb-3">
-        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-          <span class="material-symbols-outlined text-base">search</span>
-          Buscador Avanzado de Cambio de Almacén
-        </h3>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- CAMPO PRIORITARIO PRINCIPAL -->
-        <div class="sm:col-span-3 bg-slate-950 p-4 rounded-xl border border-amber-500/40">
-          <label class="block text-xs font-bold text-amber-400 mb-1 flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-base">tag</span>
-            Buscador Prioritario por Folio de Traspaso (Búsqueda Directa) *
-          </label>
-          <input
-            type="text"
-            [ngModel]="searchFolio()"
-            (ngModelChange)="searchFolio.set($event)"
-            placeholder="Escribe Folio exacto o parcial (ej. TR-4080)..."
-            class="fg-input font-mono font-bold text-amber-300 text-sm border-amber-500/50"
-          />
+      @if (formMode() === 'idle') {
+        <!-- ── ESTADO INICIAL: SIN SELECCIÓN (ESTILO WMS) ── -->
+        <div class="transfers-empty-state shadow-sm">
+          <div class="transfers-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined transfers-empty-state__icon">swap_horiz</span>
+          </div>
+          <h2 class="transfers-empty-state__title">Sin selección</h2>
+          <p class="transfers-empty-state__desc">
+            Selecciona un traspaso de la lista para consultar su información, o realiza un nuevo cambio de almacén.
+          </p>
+          <button
+            class="branches-btn--primary"
+            type="button"
+            (click)="startNewTransfer()"
+            aria-label="Registrar nuevo cambio de almacén"
+          >
+            <span class="material-symbols-outlined">add</span>
+            <span>Nuevo cambio de almacén</span>
+          </button>
         </div>
+      } @else {
 
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Bahía Origen</label>
-          <input
-            type="text"
-            [ngModel]="searchOrigin()"
-            (ngModelChange)="searchOrigin.set($event)"
-            placeholder="ej. A-14"
-            class="fg-input font-mono"
-          />
-        </div>
+        <!-- ── CABECERA BREADCRUMB ESTILO WMS (HOMOLOGADA CON RECEPCIÓN) ── -->
+        <div class="synexia-card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 shadow-sm border border-subtle">
+          
+          <!-- Breadcrumb y Folio -->
+          <div class="flex items-center gap-2 flex-wrap text-xs">
+            <span class="material-symbols-outlined text-base text-secondary">compare_arrows</span>
+            <span class="text-secondary font-medium">Movimientos</span>
+            <span class="material-symbols-outlined text-xs text-muted">chevron_right</span>
+            <strong class="text-primary font-bold text-sm">
+              {{ formMode() === 'create' ? 'Nueva Reubicación de Inventario' : (selectedTransfer()!.originLocation + ' ➔ ' + selectedTransfer()!.destinationLocation) }}
+            </strong>
+            <span class="font-mono text-xs font-bold text-gold px-2.5 py-0.5 rounded-md bg-gold/10 border border-gold/30">
+              {{ formMode() === 'create' ? 'EN PROCESO' : ('FOLIO #' + selectedTransfer()!.folio) }}
+            </span>
+            <span
+              class="transportistas-status-badge font-bold"
+              [class.transportistas-status-badge--registered]="formMode() === 'create'"
+              [class.transportistas-status-badge--active]="formMode() === 'detail' && selectedTransfer()?.status !== 'CANCELLED'"
+              [class.transportistas-status-badge--cancelled]="selectedTransfer()?.status === 'CANCELLED'"
+            >
+              {{ formMode() === 'create' ? 'Modo Captura' : (selectedTransfer()?.status === 'CANCELLED' ? 'Cancelado' : 'Completado') }}
+            </span>
+          </div>
 
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Bahía Destino</label>
-          <input
-            type="text"
-            [ngModel]="searchDestination()"
-            (ngModelChange)="searchDestination.set($event)"
-            placeholder="ej. M-98"
-            class="fg-input font-mono"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabla Histórica -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-      <table class="w-full text-left text-xs text-slate-300">
-        <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
-          <tr>
-            <th class="p-3">Folio</th>
-            <th class="p-3">Fecha</th>
-            <th class="p-3">Montacarguista</th>
-            <th class="p-3 text-center">Origen</th>
-            <th class="p-3 text-center">Destino</th>
-            <th class="p-3 text-center">Tarimas</th>
-            <th class="p-3 text-right">Piezas</th>
-            <th class="p-3 text-center">Acción</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800">
-          <tr *ngFor="let t of filteredTransfers()" class="hover:bg-slate-800/40">
-            <td class="p-3 font-mono font-bold text-amber-400">#{{ t.folio }}</td>
-            <td class="p-3 text-slate-400">{{ t.transferredAt }}</td>
-            <td class="p-3 font-medium text-slate-200">{{ t.forkliftOperator }}</td>
-            <td class="p-3 text-center font-mono font-bold text-slate-300">{{ t.originLocation }}</td>
-            <td class="p-3 text-center font-mono font-bold text-emerald-400">{{ t.destinationLocation }}</td>
-            <td class="p-3 text-center font-mono font-bold">{{ t.totalPallets }}</td>
-            <td class="p-3 text-right font-mono font-bold text-slate-100">{{ t.totalPieces }}</td>
-            <td class="p-3 text-center">
+          <!-- Badges y Acciones Rápidas -->
+          <div class="flex items-center gap-2">
+            @if (formMode() === 'create') {
               <button
-                (click)="openPrintPreview(t)"
-                class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded border border-slate-700 text-xs font-semibold flex items-center gap-1 mx-auto"
+                type="button"
+                (click)="resetToIdle()"
+                class="btn-secondary-outline px-3.5 py-1.5 rounded-lg text-xs font-bold"
+              >
+                Cancelar
+              </button>
+            } @else {
+              @if (selectedTransfer()?.status !== 'CANCELLED') {
+                <button
+                  type="button"
+                  (click)="openCancelModal()"
+                  class="btn-danger-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
+                >
+                  <span class="material-symbols-outlined text-sm">cancel</span>
+                  <span>Cancelar</span>
+                </button>
+              }
+              <button
+                type="button"
+                (click)="openPrintPreview(selectedTransfer()!)"
+                class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm text-slate-900"
+                title="Imprimir Comprobante Oficial"
               >
                 <span class="material-symbols-outlined text-sm">print</span>
-                <span>Ticket</span>
+                <span>Imprimir Comprobante</span>
               </button>
-            </td>
-          </tr>
-          <tr *ngIf="filteredTransfers().length === 0">
-            <td colspan="8" class="p-8 text-center text-slate-500 italic">
-              No se encontraron traspasos con el criterio especificado.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            }
+          </div>
+
+        </div>
+
+        <!-- ── CONTENEDOR PRINCIPAL DEL FORMULARIO / DETALLE ── -->
+        <div class="synexia-card p-5 sm:p-7 space-y-6 shadow-sm border border-subtle">
+
+        @if (formMode() === 'create') {
+          <!-- ══════════════════════════════════════════════════
+               MODO CAPTURA: ALTA DE CAMBIO DE ALMACÉN (5 PASOS)
+               ══════════════════════════════════════════════════ -->
+
+          <!-- ── 1. ASIGNACIÓN DE MONTACARGUISTA ── -->
+          <div class="space-y-3">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">engineering</span>
+              <span>1. ASIGNACIÓN DE MONTACARGUISTA CERTIFICADO</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-surface-subtle p-3.5 rounded-xl border border-subtle items-center">
+              <div class="md:col-span-6 space-y-1">
+                <label class="fg-label fg-label--required">Montacarguista Responsable de Maniobra</label>
+                <select
+                  [ngModel]="selectedOperatorId()"
+                  (ngModelChange)="selectedOperatorId.set($event)"
+                  class="fg-input font-bold"
+                >
+                  @for (op of forkliftOperators; track op.id) {
+                    <option [value]="op.id">{{ op.name }} ({{ op.badge }})</option>
+                  }
+                </select>
+              </div>
+
+              <div class="md:col-span-6 flex flex-wrap items-center gap-3 text-xs">
+                <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs flex-1">
+                  <span class="text-secondary block text-[10px] uppercase font-bold">Turno:</span>
+                  <span class="font-bold text-primary truncate block">{{ selectedOperator().shift }}</span>
+                </div>
+                <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs">
+                  <span class="text-secondary block text-[10px] uppercase font-bold">Estatus:</span>
+                  <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {{ selectedOperator().status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 2 Y 3. COMPARATIVA ORIGEN VS DESTINO ── -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+            <!-- ── PANEL ORIGEN (COL-SPAN-7) ── -->
+            <div class="lg:col-span-7 space-y-3 bg-card p-4 rounded-xl border border-subtle shadow-xs">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">output</span>
+                <span>2. BAHÍA ORIGEN E INVENTARIO</span>
+              </div>
+
+              <!-- Selector de Bahía Origen -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div class="space-y-1">
+                  <label class="fg-label fg-label--required">Seleccionar Bahía con Stock</label>
+                  <select
+                    [ngModel]="selectedOriginCode()"
+                    (ngModelChange)="selectOriginLocation($event)"
+                    class="fg-input font-mono font-bold text-amber-600 dark:text-amber-400"
+                  >
+                    @for (loc of occupiedLocations(); track loc.locationCode) {
+                      <option [value]="loc.locationCode">
+                        Bahía {{ loc.locationCode }} ({{ loc.totalPallets }} Tarimas)
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                <!-- Metadata de Bahía Origen -->
+                <div class="bg-surface-subtle p-2.5 rounded-lg border border-subtle text-xs space-y-0.5">
+                  <div class="flex justify-between">
+                    <span class="text-secondary">Ubicación:</span>
+                    <span class="font-bold text-primary truncate">{{ originStock().zone || 'Zona A' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-secondary">Posición:</span>
+                    <span class="font-bold text-primary">{{ originStock().rack || 'Rack 01' }} · {{ originStock().level || 'N1' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-secondary">Stock:</span>
+                    <span class="font-mono font-bold text-amber-600">{{ originStock().totalPallets }} de {{ originStock().capacity }} UAs</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tabla de Tarimas con Checkboxes -->
+              <div class="space-y-1.5 pt-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-primary uppercase">
+                    Tarimas en Bahía (Selecciona UAs a mover):
+                  </span>
+                  <button
+                    type="button"
+                    (click)="toggleSelectAllPallets()"
+                    class="text-[11px] font-bold text-gold hover:underline"
+                  >
+                    {{ selectedPalletIds().length === originStock().pallets.length ? 'Deseleccionar todas' : 'Seleccionar todas' }}
+                  </button>
+                </div>
+
+                <div class="overflow-x-auto border border-subtle rounded-xl max-h-48 overflow-y-auto">
+                  <table class="w-full text-xs text-left">
+                    <thead class="bg-surface-subtle text-slate-700 dark:text-slate-300 uppercase text-[10px] font-black border-b border-subtle sticky top-0">
+                      <tr>
+                        <th class="p-2 text-center w-8">Sel.</th>
+                        <th class="p-2">Código UA</th>
+                        <th class="p-2">SKU / Producto</th>
+                        <th class="p-2 text-right">Piezas</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-subtle font-medium">
+                      @for (pallet of originStock().pallets; track pallet.id) {
+                        <tr
+                          (click)="togglePalletSelection(pallet.id)"
+                          class="hover:bg-surface-subtle/70 cursor-pointer transition-colors"
+                          [ngClass]="selectedPalletIds().includes(pallet.id) ? 'bg-amber-500/10' : ''"
+                        >
+                          <td class="p-2 text-center" (click)="$event.stopPropagation()">
+                            <input
+                              type="checkbox"
+                              [checked]="selectedPalletIds().includes(pallet.id)"
+                              (change)="togglePalletSelection(pallet.id)"
+                              class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                            />
+                          </td>
+                          <td class="p-2 font-mono font-bold text-amber-600 dark:text-amber-400">
+                            {{ pallet.palletCode }}
+                          </td>
+                          <td class="p-2">
+                            <div class="font-bold text-primary leading-tight">{{ pallet.productId }}</div>
+                            <div class="text-[10px] text-secondary truncate max-w-[140px]">{{ pallet.description }}</div>
+                          </td>
+                          <td class="p-2 text-right font-mono font-bold text-emerald-600">
+                            {{ pallet.pieces }} PZAS
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="4" class="p-4 text-center text-secondary italic">
+                            No hay tarimas disponibles en esta bahía.
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Totalizador de Selección -->
+                <div class="flex items-center justify-between bg-surface-subtle p-2 rounded-lg border border-subtle text-[11px]">
+                  <span class="text-secondary font-medium">Seleccionadas:</span>
+                  <div class="flex items-center gap-2 font-mono">
+                    <span class="font-bold text-gold">{{ selectedTotalPallets() }} Tarima(s)</span>
+                    <span class="text-slate-400">·</span>
+                    <span class="font-bold text-emerald-600">{{ selectedTotalPieces() }} Pzas</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── PANEL DESTINO (COL-SPAN-5) ── -->
+            <div class="lg:col-span-5 space-y-3 bg-card p-4 rounded-xl border border-subtle shadow-xs">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">input</span>
+                <span>3. BAHÍA DESTINO (EN CEROS)</span>
+              </div>
+
+              <!-- Selector de Bahía Destino -->
+              <div class="space-y-1">
+                <label class="fg-label fg-label--required">Seleccionar Bahía Destino Disponible</label>
+                <select
+                  [ngModel]="selectedDestinationCode()"
+                  (ngModelChange)="selectDestinationLocation($event)"
+                  class="fg-input font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                >
+                  @for (loc of availableLocations(); track loc.locationCode) {
+                    <option [value]="loc.locationCode">
+                      Bahía {{ loc.locationCode }} (Capacidad: {{ loc.capacity }} UAs)
+                    </option>
+                  }
+                </select>
+              </div>
+
+              <!-- Badge de Estatus de Bahía Destino -->
+              <div class="p-3 rounded-xl border flex items-center gap-2.5"
+                [ngClass]="isDestinationEmpty() ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-700'"
+              >
+                <span class="material-symbols-outlined text-xl">
+                  {{ isDestinationEmpty() ? 'verified' : 'cancel' }}
+                </span>
+                <div class="text-xs">
+                  <span class="font-bold block">
+                    {{ isDestinationEmpty() ? 'Bahía Destino Disponible' : 'Bahía Ocupada' }}
+                  </span>
+                  <span class="text-[11px] opacity-90 block">
+                    {{ isDestinationEmpty() ? 'La bahía ' + selectedDestinationCode() + ' está completamente en ceros (0 UAs).' : 'Ubicación con existencias previas.' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Metadata Destino -->
+              <div class="bg-surface-subtle p-2.5 rounded-lg border border-subtle text-xs space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-secondary">Almacén:</span>
+                  <span class="font-bold text-primary truncate">{{ destStock().warehouseName || 'Bodega M 98' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-secondary">Zona Física:</span>
+                  <span class="font-bold text-primary truncate">{{ destStock().zone || 'Zona M' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-secondary">Capacidad Máxima:</span>
+                  <span class="font-mono font-bold text-primary">{{ destStock().capacity }} Tarimas</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- ── 4. MOTIVO Y OBSERVACIONES ── -->
+          <div class="space-y-3 pt-1">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">description</span>
+              <span>4. MOTIVO Y OBSERVACIONES DE LA REUBICACIÓN</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+              <div class="md:col-span-5 space-y-1">
+                <label class="fg-label fg-label--required">Catálogo de Motivos WMS</label>
+                <select
+                  [ngModel]="selectedReasonId()"
+                  (ngModelChange)="selectedReasonId.set($event)"
+                  class="fg-input font-bold"
+                >
+                  @for (r of transferReasons; track r.id) {
+                    <option [value]="r.id">{{ r.label }}</option>
+                  }
+                </select>
+                <span class="text-[11px] text-secondary block pt-0.5 italic">
+                  {{ selectedReason().description }}
+                </span>
+              </div>
+
+              <div class="md:col-span-7 space-y-1">
+                <label class="fg-label">Observaciones y Justificación</label>
+                <textarea
+                  [ngModel]="observations()"
+                  (ngModelChange)="observations.set($event)"
+                  rows="2"
+                  placeholder="Detalles adicionales sobre la maniobra o reubicación física..."
+                  class="fg-input text-xs"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 5. RESUMEN Y TOTALIZADORES EN VIVO ── -->
+          <div class="space-y-3 pt-1">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">analytics</span>
+              <span>5. RESUMEN Y TOTALIZADORES EN VIVO</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 bg-surface-subtle p-3.5 rounded-xl text-center border border-subtle">
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Total Tarimas</span>
+                <span class="font-mono text-lg sm:text-xl font-bold text-gold">{{ selectedTotalPallets() }}</span>
+              </div>
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">SKUs Distintos</span>
+                <span class="font-mono text-lg sm:text-xl font-bold text-primary">{{ selectedDistinctSkus() }}</span>
+              </div>
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Piezas Totales</span>
+                <span class="font-mono text-lg sm:text-xl font-bold text-emerald-600">{{ selectedTotalPieces() }} PZAS</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── FOOTER DE ACCIÓN Y CONFIRMACIÓN ── -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-subtle">
+            <div class="text-xs text-center sm:text-left">
+              <span class="text-secondary">
+                Reubicar <strong class="text-gold font-mono">{{ selectedTotalPallets() }} tarimas</strong> de <strong class="text-primary font-mono">{{ selectedOriginCode() }}</strong> ➔ <strong class="text-emerald-600 font-mono">{{ selectedDestinationCode() }}</strong>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              (click)="openConfirmModal()"
+              [disabled]="!canProceedToConfirm()"
+              class="btn-primary-gold px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+            >
+              <span class="material-symbols-outlined text-base">check_circle</span>
+              <span>Confirmar Cambio de Almacén</span>
+            </button>
+          </div>
+
+        } @else if (selectedTransfer()) {
+
+          <!-- ══════════════════════════════════════════════════
+               MODO DETALLE: CONSULTA HISTÓRICA DE TRASPASO
+               ══════════════════════════════════════════════════ -->
+
+          <div class="space-y-5">
+            
+            @if (selectedTransfer()?.status === 'CANCELLED') {
+              <!-- Banner de Auditoría de Cancelación -->
+              <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
+                <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                  <span class="material-symbols-outlined text-lg">cancel</span>
+                  <span class="uppercase">TRASPASO CANCELADO Y REVOCADO DE AUDITORÍA</span>
+                </div>
+                <p class="text-xs text-rose-300 font-medium">
+                  Motivo: "{{ selectedTransfer()!.cancellationReason || 'Cancelado por el administrador.' }}"
+                </p>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
+                  <span>Autorizado por: <strong class="text-slate-200">{{ selectedTransfer()!.cancelledBy || 'Admin' }}</strong></span>
+                  <span>Fecha: {{ selectedTransfer()!.cancelledAt || 'Registrado' }}</span>
+                </div>
+              </div>
+            }
+
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">visibility</span>
+              <span>DETALLE DEL MOVIMIENTO EJECUTADO (SOLO LECTURA)</span>
+            </div>
+
+            <!-- Ficha de Información General -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-subtle p-3.5 rounded-xl border border-subtle">
+              <div class="fg-field">
+                <label class="fg-label">No. Folio</label>
+                <span class="font-mono font-bold text-gold text-xs">{{ selectedTransfer()!.folio }}</span>
+              </div>
+              <div class="fg-field">
+                <label class="fg-label">Fecha y Hora</label>
+                <span class="font-mono font-medium text-primary text-xs">{{ selectedTransfer()!.transferredAt }}</span>
+              </div>
+              <div class="fg-field">
+                <label class="fg-label">Montacarguista</label>
+                <span class="text-primary text-xs font-bold truncate">{{ selectedTransfer()!.forkliftOperator }}</span>
+              </div>
+              <div class="fg-field">
+                <label class="fg-label">Registrado por</label>
+                <span class="text-primary text-xs font-medium truncate">{{ selectedTransfer()!.transferredBy }}</span>
+              </div>
+            </div>
+
+            <!-- Matriz Visual Origen -> Destino -->
+            <div class="grid grid-cols-2 gap-4 text-center">
+              <div class="bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/30">
+                <span class="text-amber-800 dark:text-amber-300 block text-[10px] uppercase font-bold">Bahía Origen (Desocupada)</span>
+                <span class="font-mono text-2xl font-black text-amber-900 dark:text-amber-200">{{ selectedTransfer()!.originLocation }}</span>
+              </div>
+              <div class="bg-emerald-500/10 p-3.5 rounded-xl border border-emerald-500/30">
+                <span class="text-emerald-800 dark:text-emerald-300 block text-[10px] uppercase font-bold">Bahía Destino (Ubicación Actual)</span>
+                <span class="font-mono text-2xl font-black text-emerald-900 dark:text-emerald-200">{{ selectedTransfer()!.destinationLocation }}</span>
+              </div>
+            </div>
+
+            <!-- Motivo y Observaciones -->
+            <div class="bg-surface-subtle p-3 rounded-xl border border-subtle text-xs space-y-1">
+              <div>
+                <span class="text-secondary font-bold">Motivo: </span>
+                <span class="font-bold text-gold">{{ selectedTransfer()!.reasonLabel || 'Reubicación operativa' }}</span>
+              </div>
+              @if (selectedTransfer()!.observations) {
+                <div>
+                  <span class="text-secondary font-bold">Observaciones: </span>
+                  <span class="text-primary italic">{{ selectedTransfer()!.observations }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Tabla de Tarimas Reubicadas -->
+            <div class="overflow-x-auto border border-subtle rounded-xl shadow-xs">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-surface-subtle text-slate-700 dark:text-slate-300 uppercase text-[10px] font-black border-b border-subtle">
+                  <tr>
+                    <th class="p-2.5">Código UA (Tarima)</th>
+                    <th class="p-2.5">SKU</th>
+                    <th class="p-2.5">Descripción de Producto</th>
+                    <th class="p-2.5">Tipo Tarima</th>
+                    <th class="p-2.5 text-right">Piezas</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-subtle font-medium">
+                  @for (pallet of selectedTransfer()!.pallets; track pallet.id) {
+                    <tr>
+                      <td class="p-2.5 font-mono font-bold text-amber-600 dark:text-amber-400">{{ pallet.palletCode }}</td>
+                      <td class="p-2.5 font-mono font-bold text-primary">{{ pallet.productId }}</td>
+                      <td class="p-2.5 text-secondary">{{ pallet.description }}</td>
+                      <td class="p-2.5 text-secondary">{{ pallet.palletTypeLabel }}</td>
+                      <td class="p-2.5 text-right font-mono font-bold text-emerald-600">{{ pallet.pieces }} PZAS</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Totalizadores de la Operación -->
+            <div class="grid grid-cols-3 gap-3 bg-surface-subtle p-3.5 rounded-xl text-center border border-subtle">
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Total Tarimas</span>
+                <span class="font-mono text-lg font-bold text-gold">{{ selectedTransfer()!.totalPallets }}</span>
+              </div>
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">SKUs Distintos</span>
+                <span class="font-mono text-lg font-bold text-primary">{{ selectedTransfer()!.distinctSkus || 1 }}</span>
+              </div>
+              <div>
+                <span class="text-secondary block text-[11px] uppercase font-bold">Piezas Totales</span>
+                <span class="font-mono text-lg font-bold text-emerald-600">{{ selectedTransfer()!.totalPieces }} PZAS</span>
+              </div>
+            </div>
+
+            <!-- Footer de Acciones para Detalle -->
+            <div class="flex items-center justify-between pt-3 border-t border-subtle">
+              <button
+                type="button"
+                (click)="startNewTransfer()"
+                class="btn-secondary-outline px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
+              >
+                <span class="material-symbols-outlined text-sm">add</span>
+                <span>Registrar Nuevo Cambio</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openPrintPreview(selectedTransfer()!)"
+                class="btn-primary-gold px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md"
+              >
+                <span class="material-symbols-outlined text-sm">print</span>
+                <span>Imprimir Comprobante Oficial</span>
+              </button>
+            </div>
+
+          </div>
+
+        }
+
+      </div>
+      }
+
     </div>
 
   </div>
 
-</div>
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 1: CONFIRMACIÓN TRANSACCIONAL (SDD PASO 5)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showConfirmModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-xl w-full shadow-2xl">
+        
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-2xl">verified_user</span>
+            </div>
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white uppercase tracking-wide">Confirmar Cambio de Almacén</h3>
+              <p class="text-xs text-slate-600 dark:text-slate-400">Verifica los datos antes de ejecutar la transacción</p>
+            </div>
+          </div>
+          <button (click)="closeConfirmModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
 
-<!-- MODAL IMPRESIÓN CAMBIO DE ALMACÉN -->
-<div *ngIf="showPrintModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-  <div class="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-    <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-      <div class="flex items-center gap-2 text-slate-100 font-bold text-sm">
-        <span class="material-symbols-outlined text-amber-400">print</span>
-        <span>Ticket de Cambio de Almacén para Montacarguista</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <button (click)="triggerBrowserPrint()" type="button" class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1.5 shadow">
-          <span class="material-symbols-outlined text-base">print</span>
-          <span>Imprimir Ahora</span>
-        </button>
-        <button (click)="closePrintModal()" type="button" class="text-slate-400 hover:text-slate-200">
-          <span class="material-symbols-outlined text-xl">close</span>
-        </button>
+        <!-- Resumen del Movimiento -->
+        <div class="modal-body space-y-4 text-xs">
+          
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="bg-surface-subtle p-3 rounded-xl border border-subtle">
+              <span class="text-secondary block text-[10px] uppercase font-bold">Origen (A Vaciar)</span>
+              <span class="font-mono text-xl font-black text-amber-600">{{ selectedOriginCode() }}</span>
+            </div>
+            <div class="bg-surface-subtle p-3 rounded-xl border border-subtle">
+              <span class="text-secondary block text-[10px] uppercase font-bold">Destino (En Ceros)</span>
+              <span class="font-mono text-xl font-black text-emerald-600">{{ selectedDestinationCode() }}</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-subtle p-3.5 rounded-xl border border-subtle space-y-2">
+            <div class="flex justify-between">
+              <span class="text-secondary font-medium">Montacarguista:</span>
+              <span class="font-bold text-primary">{{ selectedOperator().name }} ({{ selectedOperator().badge }})</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-secondary font-medium">Motivo:</span>
+              <span class="font-bold text-gold">{{ selectedReason().label }}</span>
+            </div>
+            @if (observations()) {
+              <div class="flex justify-between">
+                <span class="text-secondary font-medium">Observaciones:</span>
+                <span class="text-primary italic">{{ observations() }}</span>
+              </div>
+            }
+            <div class="flex justify-between pt-2 border-t border-subtle">
+              <span class="text-secondary font-bold">Total Tarimas / Piezas:</span>
+              <span class="font-mono font-bold text-emerald-600 text-sm">
+                {{ selectedTotalPallets() }} Tarimas ({{ selectedTotalPieces() }} Pzas)
+              </span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-800 dark:text-amber-300 text-[11px] flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-amber-600">lock</span>
+            <span>Esta operación actualizará la ubicación del inventario en tiempo real y generará un folio de auditoría oficial.</span>
+          </div>
+
+        </div>
+
+        <div class="modal-footer flex items-center justify-end gap-3">
+          <button
+            type="button"
+            (click)="closeConfirmModal()"
+            [disabled]="isExecuting()"
+            class="btn-secondary-outline px-4 py-2 rounded-xl text-xs font-bold"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="executeTransferAction()"
+            [disabled]="isExecuting()"
+            class="btn-primary-gold px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md"
+          >
+            <span class="material-symbols-outlined text-sm">swap_horiz</span>
+            <span>{{ isExecuting() ? 'Ejecutando Transacción...' : 'Ejecutar Reubicación' }}</span>
+          </button>
+        </div>
+
       </div>
     </div>
+  }
 
-    <div class="p-6 overflow-y-auto bg-slate-200 text-slate-900">
-      <fg-print-transfer-layout
-        *ngIf="selectedPrintTransfer()"
-        [transfer]="selectedPrintTransfer()!"
-      ></fg-print-transfer-layout>
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 2: COMPROBANTE OFICIAL IMPRIMIBLE
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showPrintModal() && selectedPrintTransfer()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-4xl w-full shadow-2xl">
+        
+        <!-- Header del Modal -->
+        <div class="modal-header flex items-center justify-between print:hidden">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-gold">print</span>
+            <span class="font-bold text-primary text-sm">Vista Previa de Impresión Oficial</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="triggerBrowserPrint()"
+              class="btn-primary-gold px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir Comprobante</span>
+            </button>
+            <button
+              type="button"
+              (click)="closePrintModal()"
+              class="btn-secondary-outline px-3 py-2 rounded-xl text-xs font-bold"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido Imprimible -->
+        <div class="modal-body">
+          <fg-print-transfer-layout [transfer]="selectedPrintTransfer()!"></fg-print-transfer-layout>
+        </div>
+
+      </div>
     </div>
-  </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 3: CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR (WMS)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showCancelModal()) {
+    <div class="modal-overlay" (click)="closeCancelModal()">
+      <div class="modal-card max-w-lg w-full shadow-2xl animate-fade-up border-rose-500/40" (click)="$event.stopPropagation()">
+        
+        <!-- Header de Cancelación -->
+        <div class="modal-header flex items-center justify-between border-b border-rose-500/20 bg-rose-950/20">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/40">
+              <span class="material-symbols-outlined text-2xl">gavel</span>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-base text-rose-400 uppercase tracking-wide">Cancelar Traspaso de Almacén</h3>
+              <p class="text-xs text-slate-400 font-medium">Autorización requerida del Administrador</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeCancelModal()" class="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body con Motivo y Credenciales -->
+        <div class="modal-body space-y-4 text-xs">
+          <!-- Alerta de Advertencia -->
+          <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+            <p class="font-bold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">warning</span>
+              Acción crítica irreversible
+            </p>
+            <p class="mt-1 text-[11px] text-slate-300">
+              Esta acción revocará el folio <strong>{{ selectedTransfer()?.folio }}</strong>. Para continuar, ingresa el motivo y tus credenciales de Administrador.
+            </p>
+          </div>
+
+          @if (cancelErrorMessage()) {
+            <div class="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500 text-rose-200 text-xs font-medium">
+              {{ cancelErrorMessage() }}
+            </div>
+          }
+
+          <!-- Motivo Obligatorio -->
+          <div class="space-y-1">
+            <label class="font-bold uppercase text-[11px] text-slate-300 block">
+              Motivo de Cancelación <span class="text-rose-400">*</span>
+            </label>
+            <textarea
+              [ngModel]="cancelReason()"
+              (ngModelChange)="cancelReason.set($event)"
+              rows="3"
+              class="fg-input w-full text-xs"
+              placeholder="Describe detalladamente el motivo de la cancelación..."
+            ></textarea>
+          </div>
+
+          <!-- Credenciales ADMIN -->
+          <div class="space-y-3 pt-2 border-t border-slate-800">
+            <h4 class="font-bold text-amber-400 uppercase text-[11px] tracking-wider">Credenciales del Administrador</h4>
+            
+            <div class="space-y-1">
+              <label class="font-bold uppercase text-[11px] text-slate-300 block">Usuario / Correo Admin</label>
+              <input
+                type="text"
+                [ngModel]="cancelAdminUser()"
+                (ngModelChange)="cancelAdminUser.set($event)"
+                class="fg-input w-full font-mono text-xs"
+                placeholder="admin@4guard.com"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="font-bold uppercase text-[11px] text-slate-300 block">Contraseña de Administrador</label>
+              <div class="relative">
+                <input
+                  [type]="showCancelPassword() ? 'text' : 'password'"
+                  [ngModel]="cancelAdminPassword()"
+                  (ngModelChange)="cancelAdminPassword.set($event)"
+                  (keyup.enter)="confirmCancelTransfer()"
+                  class="fg-input w-full font-mono text-xs pr-10"
+                  placeholder="••••••••••••"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowCancelPassword()"
+                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showCancelPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer flex items-center justify-end gap-3 border-t border-slate-800">
+          <button type="button" (click)="closeCancelModal()" class="btn-secondary-outline text-xs px-4 py-2 rounded-xl font-bold">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="confirmCancelTransfer()"
+            [disabled]="isCancelling()"
+            class="btn-danger text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+          >
+            <span class="material-symbols-outlined text-base">verified_user</span>
+            <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

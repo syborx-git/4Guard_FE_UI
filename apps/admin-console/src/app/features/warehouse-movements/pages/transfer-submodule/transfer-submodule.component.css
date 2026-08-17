@@ -1,6 +1,7 @@
 /**
  * transfer-submodule.component.css
- * Estilos Light Theme "Blanquito" (Captura 2) para Cambio de Almacén.
+ * Estilos BEM & Synexia Theme Engine para Cambio de Almacén (Reubicación de Inventario).
+ * 100% Homologado con Recepción de Mercancía y Carrier Management.
  */
 
 :host {
@@ -9,96 +10,457 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   ESTILO LIGHT THEME "BLANQUITO" (CAPTURA 2)
+   VARIABLES LOCALES DEL COMPONENTE (HOMOLOGADAS CON RECEPCIÓN)
    ───────────────────────────────────────────────────────────── */
+:host {
+  --navy:           #172033;
+  --navy-mid:       #25324a;
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+  --gold-subtle:    rgba(197, 168, 107, 0.08);
 
-.bg-slate-900,
-.bg-slate-950,
-.bg-slate-950\/80,
-.bg-slate-950\/90,
-.bg-slate-950\/50,
-.bg-slate-950\/40,
-.wizard-card {
-  background-color: #FFFFFF !important;
-  border-color: rgba(197, 168, 107, 0.25) !important;
-  box-shadow: 0 10px 30px rgba(53, 47, 36, 0.05) !important;
-  color: #202633 !important;
+  --bg-page:        #f5f4f0;
+  --bg-card:        rgba(255, 255, 255, 0.95);
+  --bg-subtle:      rgba(23, 32, 51, 0.025);
+  --border-subtle:  rgba(76, 86, 105, 0.12);
+  --border-card:    rgba(76, 86, 105, 0.12);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255,255,255,0.85);
+
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
+
+  --c-success:      #208457;
+  --c-success-bg:   rgba(32, 132, 87, 0.10);
+  --c-success-bdr:  rgba(32, 132, 87, 0.22);
+  --c-danger:       #c84949;
+  --c-danger-bg:    rgba(200, 73, 73, 0.09);
+  --c-danger-bdr:   rgba(200, 73, 73, 0.20);
+
+  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:      'Inter', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-card:    18px;
+  --radius-input:   10px;
+  --radius-badge:   99px;
+  --radius-btn:     10px;
 }
 
-.text-slate-100,
-.text-slate-200,
-.text-white {
-  color: #202633 !important;
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --navy:           #0b1119;
+  --navy-mid:       #172033;
+  --gold:           #e0c87a;
+  --gold-light:     #f5e2a2;
+  --gold-bg:        rgba(224, 200, 122, 0.12);
+  --gold-border:    rgba(224, 200, 122, 0.28);
+  --gold-subtle:    rgba(224, 200, 122, 0.10);
+
+  --bg-page:        #070d14;
+  --bg-card:        rgba(15, 23, 42, 0.95);
+  --bg-subtle:      rgba(255, 255, 255, 0.04);
+  --border-subtle:  rgba(255, 255, 255, 0.1);
+  --border-card:    rgba(255, 255, 255, 0.12);
+  --shadow-card:    0 12px 32px rgba(0, 0, 0, 0.4);
+
+  --text-primary:   #eef1f6;
+  --text-secondary: #9ca7b8;
+  --text-muted:     #6b778c;
+  --text-gold:      #e0c87a;
+
+  --c-success:      #34d399;
+  --c-success-bg:   rgba(52, 211, 153, 0.12);
+  --c-success-bdr:  rgba(52, 211, 153, 0.25);
+  --c-danger:       #f87171;
+  --c-danger-bg:    rgba(248, 113, 113, 0.12);
+  --c-danger-bdr:   rgba(248, 113, 113, 0.25);
 }
 
-.text-slate-300,
-.text-slate-400,
-.text-slate-500 {
-  color: #747985 !important;
+/* ─────────────────────────────────────────────────────────────
+   ESTILOS DE SECCIÓN & LEGEND HOMOLOGADOS
+   ───────────────────────────────────────────────────────────── */
+.form-section__legend {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-gold);
+  margin-bottom: 0.85rem;
+  width: 100%;
 }
 
-.border-slate-800,
-.border-slate-700 {
-  border-color: #E2E8F0 !important;
+.form-section__legend .material-symbols-outlined {
+  font-size: 17px;
+  color: var(--text-gold);
 }
 
-input,
-select,
-textarea,
-.fg-input,
-.field__input {
-  background-color: #F8FAFC !important;
-  border: 1px solid #CBD5E1 !important;
-  color: #0F172A !important;
-  border-radius: 0.6rem !important;
-  font-family: inherit !important;
+.fg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-input:focus,
-select:focus,
-textarea:focus,
-.fg-input:focus,
-.field__input:focus {
-  background-color: #FFFFFF !important;
-  border-color: #EAB308 !important;
-  box-shadow: 0 0 0 3px rgba(234, 195, 73, 0.2) !important;
+.fg-label {
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
 }
 
-.field__label,
-label {
-  display: block !important;
-  font-size: 0.72rem !important;
-  font-weight: 700 !important;
-  color: #334155 !important;
-  margin-bottom: 0.35rem !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
+.fg-label--required::after {
+  content: ' *';
+  color: var(--c-danger);
+  font-weight: 700;
 }
 
-.hover\:bg-slate-800:hover {
-  background-color: #E2E8F0 !important;
-  color: #0F172A !important;
+.fg-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(88, 98, 116, 0.18);
+  border-radius: var(--radius-input);
+  font-family: var(--font-body);
+  font-size: 0.83rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
-.text-amber-400 {
-  color: #B45309 !important;
+.fg-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px var(--gold-border);
 }
 
-.bg-amber-500\/10 {
-  background-color: rgba(234, 195, 73, 0.12) !important;
+/* ─────────────────────────────────────────────────────────────
+   STATUS BADGES
+   ───────────────────────────────────────────────────────────── */
+.transportistas-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-badge);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
-.border-amber-500\/30,
-.border-amber-500\/40 {
-  border-color: rgba(234, 195, 73, 0.35) !important;
+.transportistas-status-badge--active {
+  background: var(--c-success-bg);
+  color: var(--c-success);
+  border: 1px solid var(--c-success-bdr);
 }
 
-.bg-amber-500\/15 {
-  background-color: rgba(234, 195, 73, 0.18) !important;
-  color: #B45309 !important;
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.bg-slate-800 {
-  background-color: #F1F5F9 !important;
-  color: #334155 !important;
+.status-badge--completed {
+  background: var(--c-success-bg);
+  color: var(--c-success);
+  border: 1px solid var(--c-success-bdr);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CARDS Y CONTENEDORES SYNEXIA
+   ───────────────────────────────────────────────────────────── */
+.synexia-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+.bg-surface-subtle {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+}
+
+.border-subtle {
+  border-color: var(--border-subtle);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-gold {
+  color: var(--gold);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   KPI CARDS GRID (ESTILO HOMOLOGADO WMS / CARRIER MANAGEMENT)
+   ───────────────────────────────────────────────────────────── */
+.kpi-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.95rem;
+  padding: 0.95rem 1.15rem;
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 11px;
+  flex-shrink: 0;
+}
+
+.kpi-card__icon-wrap .material-symbols-outlined {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  display: block;
+}
+
+.kpi-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.kpi-card__value {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+}
+
+.kpi-card__label {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kpi-card__bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ITEMS Y LISTA MASTER DE TRASPASOS
+   ───────────────────────────────────────────────────────────── */
+.reception-item-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.15s ease;
+}
+
+.reception-item-card:hover {
+  border-color: var(--gold);
+  background: var(--gold-subtle);
+}
+
+.reception-item-card.selected-item {
+  border-color: var(--gold);
+  background: var(--gold-subtle);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BOTONES INSTITUCIONALES (ESTILO RECEPCIÓN & TRANSPORTISTAS)
+   ───────────────────────────────────────────────────────────── */
+.btn-primary-gold {
+  background: linear-gradient(135deg, #d4af37 0%, #b58b37 100%);
+  color: #172033;
+  border: 1px solid rgba(181, 139, 55, 0.4);
+  font-family: var(--font-body);
+  transition: all 0.18s ease;
+}
+
+.btn-primary-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e5c158 0%, #c4993f 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(181, 139, 55, 0.28);
+}
+
+.btn-secondary-outline {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
+  font-family: var(--font-body);
+  transition: all 0.15s ease;
+}
+
+.btn-secondary-outline:hover:not(:disabled) {
+  background: var(--bg-subtle);
+  border-color: var(--gold);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ESTADO VACÍO / SIN SELECCIÓN (ESTILO OFICIAL WMS)
+   ───────────────────────────────────────────────────────────── */
+.transfers-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 5rem 2rem;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  min-height: 480px;
+}
+
+.transfers-empty-state__graphic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(181, 139, 55, 0.14), rgba(181, 139, 55, 0.05));
+  border: 1px solid var(--gold-border);
+  box-shadow: 0 4px 16px rgba(181, 139, 55, 0.1);
+}
+
+.transfers-empty-state__icon {
+  font-size: 36px;
+  color: var(--gold);
+}
+
+.transfers-empty-state__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.transfers-empty-state__desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  max-width: 360px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.branches-btn--primary {
+  background: #172033;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.25);
+  transition: all 0.18s ease;
+}
+
+.branches-btn--primary:hover {
+  background: #222f49;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(23, 32, 51, 0.35);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MODALES Y OVERLAYS (FONDO 100% SÓLIDO, ALTO CONTRASTE)
+   ───────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(11, 17, 25, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.modal-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(88, 98, 116, 0.2);
+  border-radius: 20px;
+  color: var(--text-primary);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+}
+
+:host-context(.dark) .modal-card,
+:host-context(.theme-dark) .modal-card {
+  background: #172033 !important;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.modal-header {
+  flex-shrink: 0;
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: inherit;
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  background: inherit;
 }

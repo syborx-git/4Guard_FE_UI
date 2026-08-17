@@ -14,7 +14,7 @@ export const catalogsRoutes: Routes = [
         (m) => m.CatalogsShellComponent
       ),
     children: [
-      { path: '', redirectTo: 'users', pathMatch: 'full' },
+      { path: '', redirectTo: 'warehouse', pathMatch: 'full' },
       {
         path: 'users',
         loadComponent: () =>
@@ -46,14 +46,6 @@ export const catalogsRoutes: Routes = [
             (m) => m.WarehouseCatalogComponent
           ),
         title: '4GUARD WMS — Catálogo de Almacén y Topología',
-      },
-      {
-        path: 'forklift-operators',
-        loadComponent: () =>
-          import('./pages/forklift-catalog/forklift-catalog.component').then(
-            (m) => m.ForkliftCatalogComponent
-          ),
-        title: '4GUARD WMS — Catálogo de Montacarguistas',
       },
     ],
   },

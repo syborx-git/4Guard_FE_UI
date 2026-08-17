@@ -46,34 +46,10 @@ export class CatalogsShellComponent {
 
   protected readonly tabs: CatalogTabItem[] = [
     {
-      label: 'Usuarios',
-      route: '/catalogs/users',
-      icon: 'manage_accounts',
-      description: 'Gestión de credenciales y roles',
-    },
-    {
-      label: 'Clientes',
-      route: '/catalogs/clients',
-      icon: 'business',
-      description: 'Cuentas y destinos físicos',
-    },
-    {
-      label: 'Productos / SKUs',
-      route: '/catalogs/products',
-      icon: 'inventory_2',
-      description: 'Maestro SKUs y NOM-251',
-    },
-    {
       label: 'Almacén / Topología',
       route: '/catalogs/warehouse',
       icon: 'warehouse',
       description: 'Layout y 6 bodegas reales',
-    },
-    {
-      label: 'Montacarguistas',
-      route: '/catalogs/forklift-operators',
-      icon: 'engineering',
-      description: 'Operadores y scorecard',
     },
   ];
 }

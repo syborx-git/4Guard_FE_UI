@@ -1,12 +1,8 @@
-/**
- * @file receiving-submodule.component.ts
- * @description Submódulo 1: Recepción de Mercancía — Workbench Unificado (Master-Detail).
- * Integra Búsqueda, Alta, Cancelación, Cambio de Remisión y Consulta en una sola experiencia transaccional.
- */
-
-import { Component, ElementRef, ViewChild, inject, signal, computed } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
@@ -36,67 +32,70 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
   templateUrl: './receiving-submodule.component.html',
   styleUrl: './receiving-submodule.component.css',
 })
-export class ReceivingSubmoduleComponent {
+export class ReceivingSubmoduleComponent implements OnInit {
+  protected readonly authState = inject(AuthState);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
 
   // Auto-foco en escáner de UAs
   @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;
-
   // ── ESTADO DEL WORKBENCH ──
+  formMode = signal<'idle' | 'create' | 'detail'>('idle');
   searchQuery = signal('');
   statusFilter = signal<string>('ALL');
   selectedReception = signal<ReceptionHeader | null>(null);
-  detailSubTab = signal<ReceptionDetailSubTab>('descarga');
+
+  // Cola Reactiva de Pre-Recepciones Pendientes (Caseta)
+  pendingReceptions = this.movementsService.pendingReceptions;
+  pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
+
+  // Banner colapsable / expandible de la cola de notificaciones
+  isQueueBannerExpanded = signal(true);
+
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
+
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
 
   // Modales del Workbench
   showCheckInModal = signal(false);
   showChangeRemisionModal = signal(false);
-  showLeaderModal = signal(false);
+  showEditPalletModal = signal(false);
+  showQuickAddModal = signal(false);
   showPrintModal = signal(false);
+  showLeaderModal = signal(false);
 
-  // Catálogos Reactivos desde Servicio
+  quickAddType = signal<'CARRIER' | 'RAMP'>('CARRIER');
+  quickAddCodeInput = signal('');
+  quickAddNameInput = signal('');
+  quickAddRampNumInput = signal<number>(13);
+
+  // ── ESTADO DE EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
+  editingPallet = signal<ReceptionPalletItem | null>(null);
   palletTypes = Object.entries(PALLET_TYPE_LABELS) as [PalletType, string][];
+
+  // ── STREAM REACTIVO DE TARIMAS (UA) ──
+  palletStream = signal<ReceptionPalletItem[]>([]);
+  uaCodeInput = signal('');
+  uaObsInput = signal('');
+  generatedFolio = signal('');
+
+  // ── CATÁLOGOS BASE REACTIVOS ──
   carrierLines = this.movementsService.carrierLines;
   clients = this.movementsService.clients;
   ramps = this.movementsService.ramps;
   forkliftOperators = this.movementsService.forkliftOperators;
 
-  // ── FORMULARIO: Captura de Caseta (CheckIn F01-PO-CP-7.1.3-03) ──
-  checkInForm = this.fb.group({
-    carrierLineCode: ['TR-01'],
-    carrierLine: ['Transportes Castores', [Validators.required]],
-    receptionTime: ['09:15', [Validators.required]],
-    docNumber: ['REM-2026-901', [Validators.required]],
-    elaborationDate: ['2026-01-15'],
-    expirationDate: ['2026-12-30'],
-    lotNumber: ['LOT-2026-N1'],
-    docDate: ['2026-08-11', [Validators.required]],
-    clientCode: ['CLI-001'],
-    client: ['Nestlé México', [Validators.required]],
-    rampCode: ['R-04'],
-    rampNumber: [4, [Validators.required, Validators.min(1), Validators.max(12)]],
-    forkliftOperatorCode: ['MC-102'],
-    forkliftOperator: ['Pablo Hernández', [Validators.required]],
-    driverName: ['Carlos Ruiz', [Validators.required]],
-    tractorPlates: ['77-AB-99', [Validators.required]],
-    boxPlates: ['55-XX-11', [Validators.required]],
-    sealNumber: ['SL-90812'],
-  });
-
-  sealList = signal<string[]>(['SL-90812']);
-  tempSealInput = signal('');
-  generatedFolio = signal<string | null>(null);
-
-  // Modal Alta Rápida de Entidades [+]
-  showQuickAddModal = signal(false);
-  quickAddType = signal<'CARRIER' | 'RAMP' | null>(null);
-  quickAddCodeInput = signal('');
-  quickAddNameInput = signal('');
-  quickAddRampNumInput = signal<number>(13);
-
-  // Catálogos del Paso 2 (Andén / Descarga)
   suppliers = signal([
     { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
     { code: 'SUP-02', name: 'NESTLE MEXICO S.A DE C.V PLANTA TOLUCA' },
@@ -104,30 +103,65 @@ export class ReceivingSubmoduleComponent {
   ]);
 
   products = signal([
-    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 40 },
+    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 480 },
+    { id: 'SKU-NES-680', name: 'Cereal Nestlé Nesquik 680g', defaultPieces: 480 },
     { id: '90811224', name: 'NESCAFE CLASICO 200G FRASCO', defaultPieces: 48 },
     { id: '77012399', name: 'CARNATION CLAVEL 360G LATA', defaultPieces: 24 },
     { id: '55409811', name: 'NESQUIK CHOCOLATE 500G', defaultPieces: 36 },
   ]);
 
-  // ── FORMULARIO: Alta de Descarga en Andén (Paso 2) ──
+  // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
+  checkInForm = this.fb.group({
+    carrierLineCode: ['TRANS-CAST'],
+    carrierLine: ['Transportes Castores', [Validators.required]],
+    receptionTime: ['09:15', [Validators.required]],
+    docNumber: ['REM-88102', [Validators.required]],
+    docDate: ['2026-08-10', [Validators.required]],
+    elaborationDate: ['2026-01-01'],
+    expirationDate: ['2026-11-15'],
+    lotNumber: ['LOT-2026-A1'],
+    clientCode: ['CLI-001'],
+    client: ['Nestlé México', [Validators.required]],
+    rampCode: ['R-04'],
+    rampNumber: [4, [Validators.required]],
+    forkliftOperatorCode: ['MC-101'],
+    forkliftOperator: ['Pablo Hernández', [Validators.required]],
+    driverName: ['Carlos Ruiz', [Validators.required]],
+    tractorPlates: ['77-AB-99', [Validators.required]],
+    boxPlates: ['55-XX-11', [Validators.required]],
+    sealNumber: ['SL-99412'],
+  });
+
+  // Lista Reactiva de Cinchos/Sellos
+  sealList = signal<string[]>(['SL-99412']);
+  tempSealInput = signal('');
+
+  // ── FORMULARIO: ALTA / EDICIÓN DE RECEPCIÓN (Detalle Producto) ──
   altaForm = this.fb.group({
-    lotNumber: ['01.07.2026', [Validators.required]],
-    expirationDate: ['2028-07-31', [Validators.required]],
-    forkliftOperator: ['ALAN HUERTA PEREZ', [Validators.required]],
-    rampNumber: [11, [Validators.required]],
+    lotNumber: ['LOT-2026-A1', [Validators.required]],
+    expirationDate: ['2026-11-15', [Validators.required]],
+    forkliftOperator: ['Pablo Hernández', [Validators.required]],
+    rampNumber: [4, [Validators.required]],
     productId: ['12572733', [Validators.required]],
     productName: ['FFEE-MATE ORIGINAL BOTELLA 12X400G N1', [Validators.required]],
     supplierName: ['LE MEXICO S.A DE C.V', [Validators.required]],
-    piecesPerPallet: [40, [Validators.required, Validators.min(1)]],
-    selectedPalletType: ['TARIMA_CHEP' as PalletType, [Validators.required]],
-    observations: [''],
+    piecesPerPallet: [480, [Validators.required, Validators.min(1)]],
+    selectedPalletType: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
+    observations: ['Ingreso directo andén 4 sin incidentes.'],
   });
 
-  // Stream de Escaneo Carga Rápida (UAs)
-  palletStream = signal<ReceptionPalletItem[]>([]);
-  uaCodeInput = signal('');
-  uaObsInput = signal('');
+  // ── FORMULARIO: EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
+  editPalletForm = this.fb.group({
+    id: [''],
+    palletNumber: [1],
+    palletCode: ['', [Validators.required]],
+    productId: ['', [Validators.required]],
+    description: ['', [Validators.required]],
+    supplierName: [''],
+    palletTypeId: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
+    pieces: [480, [Validators.required, Validators.min(1)]],
+    observations: [''],
+  });
 
   // ── FORMULARIO: Cambio de Remisión ──
   newRemisionInput = signal('');
@@ -173,30 +207,78 @@ export class ReceivingSubmoduleComponent {
   totalPiezas = computed(() => this.palletStream().reduce((acc, p) => acc + p.pieces, 0));
 
   constructor() {
-    // Al iniciar, seleccionar la primera recepción existente si hay alguna
-    const list = this.movementsService.receptions();
-    if (list.length > 0) {
-      this.selectReception(list[0]);
-    }
+    // Estado inicial: Siempre iniciar en Sin selección (Empty State WMS)
+    this.formMode.set('idle');
+    this.selectedReception.set(null);
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe((params) => {
+      const folio = params['folio'];
+      if (folio) {
+        this.searchQuery.set(folio);
+        const rec = this.movementsService.findReceptionByFolio(folio);
+        if (rec) {
+          this.selectReception(rec);
+        }
+      }
+    });
+  }
+
+  // Iniciar registro de nueva pre-recepción en el panel (sin modal)
+  startNewReception(): void {
+    this.formMode.set('create');
+    this.selectedReception.set(null);
+    localStorage.removeItem('4g_active_reception_folio');
+    this.resetCheckInForm();
+  }
+
+  // Restablecer a estado inicial (Sin selección)
+  resetToIdle(): void {
+    this.formMode.set('idle');
+    this.selectedReception.set(null);
+    localStorage.removeItem('4g_active_reception_folio');
   }
 
   // ── OPERACIONES DEL WORKBENCH ──
 
   selectReception(rec: ReceptionHeader): void {
+    this.formMode.set('detail');
     this.selectedReception.set(rec);
+    localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
     this.altaForm.patchValue({
-      lotNumber: rec.lotNumber || '01.07.2026',
-      expirationDate: rec.expirationDate || '2028-07-31',
-      forkliftOperator: rec.checkIn.forkliftOperator || 'ALAN HUERTA PEREZ',
-      rampNumber: rec.checkIn.rampNumber || 11,
+      lotNumber: rec.lotNumber || rec.checkIn.lotNumber || 'LOT-2026-A1',
+      expirationDate: rec.expirationDate || rec.checkIn.expirationDate || '2026-11-15',
+      forkliftOperator: rec.checkIn.forkliftOperator || 'Pablo Hernández',
+      rampNumber: rec.checkIn.rampNumber || 4,
       productId: rec.productId || '12572733',
       productName: rec.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
       supplierName: rec.supplierName || 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: rec.piecesPerPallet || 40,
-      selectedPalletType: rec.selectedPalletType || 'TARIMA_CHEP',
-      observations: rec.observations || '',
+      piecesPerPallet: rec.piecesPerPallet || 480,
+      selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
+      observations: rec.observations || 'Ingreso directo andén 4 sin incidentes.',
     });
+  }
+
+  // Notificación Simulada & Navegación Directa por Folio
+  loadFromNotification(folio: string): void {
+    this.searchQuery.set(folio);
+    const rec = this.movementsService.findReceptionByFolio(folio);
+    if (rec) {
+      this.selectReception(rec);
+      this.toast.info(`Cargando información completa del Folio #${folio}`);
+    }
+  }
+
+  toggleQueueBanner(): void {
+    this.isQueueBannerExpanded.update((v) => !v);
+  }
+
+  // Botón de prueba rápida para simular múltiples llegadas desde Caseta
+  simulateQuickArrival(): void {
+    const newRec = this.movementsService.simulateQuickCasetaArrival();
+    this.toast.success(`⚡ Nueva Pre-Recepción Folio #${newRec.folio} en espera de atención`);
   }
 
   openNewReceptionModal(): void {
@@ -227,8 +309,95 @@ export class ReceivingSubmoduleComponent {
     const newRec = this.movementsService.saveCheckIn(formData, folio);
     this.showCheckInModal.set(false);
     this.selectReception(newRec);
-    this.detailSubTab.set('descarga');
-    this.toast.success(`Pre-Recepción #${folio} creada exitosamente`);
+
+    this.toast.success(`Pre-Recepción #${folio} registrada exitosamente.`);
+  }
+
+  // Guardar Cambios Parciales / Avance de Descarga
+  saveDraftReception(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+
+    const formVals = this.altaForm.value;
+    const currentStream = [...this.palletStream()];
+
+    const updated = this.movementsService.updateReception(current.folio, {
+      lotNumber: formVals.lotNumber || 'LOT-2026-A1',
+      expirationDate: formVals.expirationDate || '2026-11-15',
+      productId: formVals.productId || '12572733',
+      productName: formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+      supplierName: formVals.supplierName || 'LE MEXICO S.A DE C.V',
+      piecesPerPallet: formVals.piecesPerPallet || 480,
+      selectedPalletType: (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
+      observations: formVals.observations || '',
+      pallets: currentStream,
+    });
+
+    if (updated) {
+      this.selectedReception.set(updated);
+      this.toast.success(`Avance de Folio #${current.folio} guardado correctamente.`);
+    }
+  }
+
+  // ── EDICIÓN Y ELIMINACIÓN DE TARIMAS (ROL ADMINISTRADOR) ──
+  openEditPalletModal(pallet: ReceptionPalletItem): void {
+    this.editPalletForm.setValue({
+      id: pallet.id,
+      palletNumber: pallet.palletNumber || 1,
+      palletCode: pallet.palletCode,
+      productId: pallet.productId,
+      description: pallet.description,
+      supplierName: pallet.supplierName || this.altaForm.value.supplierName || 'LE MEXICO S.A DE C.V',
+      palletTypeId: pallet.palletTypeId,
+      pieces: pallet.pieces,
+      observations: pallet.observations || '',
+    });
+    this.showEditPalletModal.set(true);
+  }
+
+  closeEditPalletModal(): void {
+    this.showEditPalletModal.set(false);
+  }
+
+  saveEditedPallet(): void {
+    if (this.editPalletForm.invalid) {
+      this.editPalletForm.markAllAsTouched();
+      this.toast.warning('Completa los campos obligatorios de la tarima.');
+      return;
+    }
+
+    const formVals = this.editPalletForm.value;
+    const pType = (formVals.palletTypeId as PalletType) || 'MADERA_ESTANDAR';
+
+    this.palletStream.update((list) =>
+      list.map((item) => {
+        if (item.id === formVals.id) {
+          return {
+            ...item,
+            palletCode: (formVals.palletCode || item.palletCode).toUpperCase(),
+            productId: formVals.productId || item.productId,
+            description: formVals.description || item.description,
+            supplierName: formVals.supplierName || item.supplierName,
+            palletTypeId: pType,
+            palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+            pieces: Number(formVals.pieces) || item.pieces,
+            observations: formVals.observations || undefined,
+          };
+        }
+        return item;
+      })
+    );
+
+    this.showEditPalletModal.set(false);
+    this.toast.success(`Tarima ${formVals.palletCode} actualizada correctamente`);
+  }
+
+  removePalletFromStream(id: string): void {
+    this.palletStream.update((list) => {
+      const filtered = list.filter((item) => item.id !== id);
+      return filtered.map((item, idx) => ({ ...item, palletNumber: idx + 1 }));
+    });
+    this.toast.info('Tarima eliminada de la lista de descarga');
   }
 
   openChangeRemisionModal(): void {
@@ -270,10 +439,64 @@ export class ReceivingSubmoduleComponent {
   openCancelModal(): void {
     const rec = this.selectedReception();
     if (!rec) return;
-    this.cancellationJustification.set('');
-    this.leaderModalTitle.set(`Autorizar Cancelación de Recepción #${rec.folio}`);
-    this.leaderAction.set('CANCEL');
-    this.showLeaderModal.set(true);
+    this.cancelReason.set('');
+    this.cancelAdminUser.set(this.authState.currentUser()?.email || this.authState.userFullName() || 'admin@4guard.com');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelErrorMessage.set(null);
+  }
+
+  confirmCancelReception(): void {
+    const rec = this.selectedReception();
+    if (!rec) return;
+
+    const reason = this.cancelReason().trim();
+    const user = this.cancelAdminUser().trim();
+    const password = this.cancelAdminPassword().trim();
+
+    if (!reason || reason.length < 5) {
+      this.cancelErrorMessage.set('Por favor ingresa un motivo detallado de cancelación (mínimo 5 caracteres).');
+      return;
+    }
+
+    if (!user) {
+      this.cancelErrorMessage.set('Por favor ingresa el usuario administrador.');
+      return;
+    }
+
+    if (!password) {
+      this.cancelErrorMessage.set('Por favor ingresa tu contraseña de administrador para autorizar la revocación.');
+      return;
+    }
+
+    this.isCancelling.set(true);
+    this.cancelErrorMessage.set(null);
+
+    const adminLabel = this.authState.userFullName() ? `${this.authState.userFullName()} (${user})` : user;
+    const cancelled = this.movementsService.cancelReception(
+      rec.folio,
+      reason,
+      adminLabel
+    );
+
+    this.isCancelling.set(false);
+    this.showCancelModal.set(false);
+
+    if (cancelled) {
+      this.selectReception(cancelled);
+      this.selectedPrintReception.set(cancelled);
+      this.printType.set('CANCELLATION');
+      this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
+      this.showPrintModal.set(true);
+    } else {
+      this.toast.error('No se pudo procesar la cancelación de la recepción.');
+    }
   }
 
   initiateCompleteReception(): void {
@@ -297,8 +520,8 @@ export class ReceivingSubmoduleComponent {
       formVals.expirationDate || '2028-07-31',
       formVals.productId || '12572733',
       formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      formVals.piecesPerPallet || 40,
-      (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP',
+      formVals.piecesPerPallet || 480,
+      (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
       currentStream,
       formVals.observations || undefined,
       'Christian Durán',
@@ -399,8 +622,8 @@ export class ReceivingSubmoduleComponent {
       code = `03761304${Date.now().toString().slice(-10)}`;
     }
 
-    const pzas = this.altaForm.value.piecesPerPallet || 40;
-    const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP';
+    const pzas = this.altaForm.value.piecesPerPallet || 480;
+    const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
     const prodId = this.altaForm.value.productId || '12572733';
     const prodName = this.altaForm.value.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1';
     const suppName = this.altaForm.value.supplierName || 'LE MEXICO S.A DE C.V';
@@ -416,7 +639,7 @@ export class ReceivingSubmoduleComponent {
       pieces: pzas,
       observations: this.uaObsInput().trim() || undefined,
       palletTypeId: pType,
-      palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP',
+      palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
     };
 
     this.palletStream.update((list) => [...list, newItem]);
@@ -428,14 +651,6 @@ export class ReceivingSubmoduleComponent {
         this.uaInput.nativeElement.focus();
       }
     }, 10);
-  }
-
-  removePalletFromStream(id: string): void {
-    this.palletStream.update((list) => {
-      const filtered = list.filter((item) => item.id !== id);
-      // Re-indexar números consecutivos
-      return filtered.map((item, idx) => ({ ...item, palletNumber: idx + 1 }));
-    });
   }
 
   // ── AUXILIARES Y CATÁLOGOS ──
@@ -491,11 +706,11 @@ export class ReceivingSubmoduleComponent {
 
     if (type === 'CARRIER') {
       this.movementsService.addCarrierLine({ code, name });
-      this.checkInForm.patchValue({ carrierLineCode: code, carrierLine: name });
+      this.checkInForm.patchValue({ carrierLine: code });
     } else if (type === 'RAMP') {
       const rNum = this.quickAddRampNumInput();
       this.movementsService.addRamp({ code, rampNumber: rNum, name });
-      this.checkInForm.patchValue({ rampCode: code, rampNumber: rNum });
+      this.checkInForm.patchValue({ rampNumber: rNum });
     }
 
     this.showQuickAddModal.set(false);
@@ -515,26 +730,22 @@ export class ReceivingSubmoduleComponent {
 
   resetCheckInForm(): void {
     this.checkInForm.reset({
-      carrierLineCode: 'TR-01',
-      carrierLine: 'Transportes Castores',
+      carrierLine: 'TRANS-CAST',
       receptionTime: '09:15',
-      docNumber: 'REM-2026-901',
-      elaborationDate: '2026-01-15',
-      expirationDate: '2026-12-30',
-      lotNumber: 'LOT-2026-N1',
-      docDate: '2026-08-11',
-      clientCode: 'CLI-001',
-      client: 'Nestlé México',
-      rampCode: 'R-04',
+      docNumber: 'REM-88102',
+      docDate: '2026-08-10',
+      elaborationDate: '2026-01-01',
+      expirationDate: '2026-11-15',
+      lotNumber: 'LOT-2026-A1',
+      client: 'CLI-001',
       rampNumber: 4,
-      forkliftOperatorCode: 'MC-102',
-      forkliftOperator: 'Pablo Hernández',
+      forkliftOperator: 'MC-101',
       driverName: 'Carlos Ruiz',
       tractorPlates: '77-AB-99',
       boxPlates: '55-XX-11',
-      sealNumber: 'SL-90812',
+      sealNumber: 'SL-99412',
     });
-    this.sealList.set(['SL-90812']);
+    this.sealList.set(['SL-99412']);
   }
 
   openPrintPreview(rec: ReceptionHeader): void {

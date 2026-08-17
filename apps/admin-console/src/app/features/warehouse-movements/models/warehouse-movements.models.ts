@@ -101,20 +101,59 @@ export interface ReceptionHeader {
   leaderAuthorizedBy?: string; // Nombre del líder que autorizó
 }
 
+export interface TransferReasonItem {
+  id: string;
+  label: string;
+  description: string;
+  requiresObservation?: boolean;
+}
+
+export const TRANSFER_REASONS: TransferReasonItem[] = [
+  { id: 'OPT_ESPACIO', label: 'Optimización de espacio', description: 'Reorganización de ubicaciones para mejorar el aprovechamiento volumétrico.' },
+  { id: 'REUB_OPERATIVA', label: 'Reubicación operativa', description: 'Movimiento preventivo o preparativo para surtido y despacho.' },
+  { id: 'LIB_BAHIA', label: 'Liberación de bahía', description: 'Desocupación de bahía para recepción, auditoría o mantenimiento.' },
+  { id: 'CONSOLIDACION', label: 'Consolidación de inventario', description: 'Agrupación de lotes y UAs compatibles en una sola posición.' },
+  { id: 'SOL_CLIENTE', label: 'Solicitud del cliente', description: 'Instrucción directa del cliente para segregar o trasladar mercancía.' },
+  { id: 'INCIDENCIA', label: 'Incidencia / Desvío de calidad', description: 'Aislamiento temporal de tarimas por inspección de calidad QM.' },
+  { id: 'OTRO', label: 'Otro motivo (especificar)', description: 'Motivo extraordinario no catalogado.', requiresObservation: true },
+];
+
 export interface WarehouseTransfer {
-  folio: string;             // ej. TR-4081
-  forkliftOperator: string;  // Montacarguista
+  id?: string;
+  folio: string;             // ej. CAM-2026-000001
+  status?: 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  forkliftOperator: string;  // Montacarguista responsable
+  forkliftOperatorId?: string;
   originLocation: string;    // ej. A-14
   destinationLocation: string; // ej. M-98
+  reasonId?: string;
+  reasonLabel?: string;
+  observations?: string;
   pallets: ReceptionPalletItem[];
   totalPallets: number;
   totalPieces: number;
+  distinctSkus?: number;
+  timestamp?: string;
   transferredAt: string;
   transferredBy: string;
+  clientName?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
 }
 
 export interface LocationStockInfo {
   locationCode: string;
+  warehouseName?: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  level?: string;
+  capacity?: number;
+  occupancy?: number;
+  availableCapacity?: number;
+  isBlocked?: boolean;
+  blockReason?: string;
   totalPallets: number;
   totalPieces: number;
   pallets: ReceptionPalletItem[];
@@ -155,3 +194,91 @@ export interface OutboundDispatch {
   dispatchedAt: string;
   dispatchedBy: string;
 }
+
+// ─── SALIDA DE ALMACÉN (OUTBOUND MVP1) ────────────────────────────────────────
+
+export type OutboundStatus = 'COMPLETED' | 'CANCELLED';
+export type TransportType = 'CAMION' | 'TORTON' | 'TRAILER';
+
+export interface OutboundItem {
+  id: string;
+  palletCode: string;        // Código UA / SSCC (ej. 'UA-8810-1')
+  productId: string;         // SKU
+  description: string;       // Descripción del producto
+  lotNumber: string;         // Lote de fabricación
+  expirationDate: string;    // Fecha de caducidad
+  pieces: number;            // Piezas en la tarima
+  palletTypeId: string;      // Tipo de tarima
+  palletTypeLabel: string;
+  locationCode?: string;     // Bahía de origen
+}
+
+export interface WarehouseOutbound {
+  id: string;
+  folio: string;             // 'SAL-YYYY-XXXXXX'
+  status: OutboundStatus;
+
+  // Cliente / Destino (Snapshot)
+  clientCode: string;
+  clientName: string;
+  destinationId: string;
+  destinationName: string;
+  destinationAddress?: string;
+
+  // Transportista / Vehículo (Snapshot)
+  carrierCode: string;
+  carrierName: string;
+  driverName: string;
+  economicNumber: string;
+  tractorPlates: string;
+  boxPlates: string;
+  transportType: TransportType;
+  sealNumber: string;
+
+  // Mercancía
+  remisionNo: string;
+  items: OutboundItem[];
+  totalPallets: number;
+  totalPieces: number;
+  distinctSkus: number;
+
+  // Auditoría
+  dispatchedAt: string;
+  dispatchedBy: string;
+  timestamp: string;         // HH:mm para tarjeta del directorio
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+}
+
+export interface ClientDestination {
+  id: string;
+  clientCode: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  contactName?: string;
+  contactPhone?: string;
+  status: 'ACTIVO' | 'INACTIVO';
+}
+
+export const TRANSPORT_TYPES: { id: TransportType; label: string }[] = [
+  { id: 'CAMION',  label: 'Camión' },
+  { id: 'TORTON',  label: 'Tórtón' },
+  { id: 'TRAILER', label: 'Tráiler' },
+];
+
+export const CLIENT_DESTINATIONS: ClientDestination[] = [
+  // Nestlé México (CLI-001)
+  { id: 'DEST-CLI001-TOLUCA', clientCode: 'CLI-001', name: 'CEDIS Toluca',      address: 'Blvd. Aeropuerto 2112', city: 'Toluca',            state: 'Estado de México', status: 'ACTIVO' },
+  { id: 'DEST-CLI001-MTY',    clientCode: 'CLI-001', name: 'CEDIS Monterrey',   address: 'Av. Industrial 450',    city: 'Monterrey',         state: 'Nuevo León',      status: 'ACTIVO' },
+  { id: 'DEST-CLI001-GDL',    clientCode: 'CLI-001', name: 'CEDIS Guadalajara', address: 'Carr. Zapopan 1800',    city: 'Guadalajara',       state: 'Jalisco',         status: 'ACTIVO' },
+  { id: 'DEST-CLI001-CDMX',   clientCode: 'CLI-001', name: 'CEDIS CDMX Norte',  address: 'Av. Insurgentes 5500',  city: 'Ciudad de México',  state: 'CDMX',            status: 'ACTIVO' },
+  // Nestlé Planta Toluca (CLI-002)
+  { id: 'DEST-CLI002-TOLUCA', clientCode: 'CLI-002', name: 'Planta Toluca',     address: 'Blvd. Toluca Industrial 90', city: 'Toluca',       state: 'Estado de México', status: 'ACTIVO' },
+  // Nestlé Planta Querétaro (CLI-003)
+  { id: 'DEST-CLI003-QRO',    clientCode: 'CLI-003', name: 'Planta Querétaro',  address: 'Parque Industrial Querétaro', city: 'Querétaro',   state: 'Querétaro',       status: 'ACTIVO' },
+  // Nestlé Planta Veracruz (CLI-004)
+  { id: 'DEST-CLI004-VER',    clientCode: 'CLI-004', name: 'Planta Veracruz',   address: 'Km. 4.5 Carr. Veracruz-Xalapa', city: 'Veracruz',  state: 'Veracruz',        status: 'ACTIVO' },
+];

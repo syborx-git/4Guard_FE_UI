@@ -17,9 +17,7 @@ import { ReceptionHeader } from '../../models/warehouse-movements.models';
       <!-- Top Header & Logo -->
       <div class="flex justify-between items-start mb-3 pb-2 border-b border-black">
         <div class="flex items-center gap-3">
-          <div class="w-14 h-14 bg-navy text-gold font-black flex items-center justify-center rounded border border-gold text-lg">
-            4G
-          </div>
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-14 w-auto max-w-[60px] object-contain rounded" />
           <div>
             <h1 class="text-xl font-extrabold tracking-tight text-black">4-GUARD</h1>
             <p class="text-[10px] text-slate-700 font-semibold uppercase">Industria Automotriz 128, Delegación Santa María Totoltepec, 50200 Toluca de Lerdo, Méx</p>

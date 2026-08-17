@@ -15,9 +15,14 @@ import { ReceptionHeader } from '../../models/warehouse-movements.models';
     <div *ngIf="reception" class="print-container bg-white text-slate-900 p-8 max-w-3xl mx-auto font-sans border-4 border-rose-600 rounded-lg">
       
       <!-- Header Advertencia -->
-      <div class="bg-rose-600 text-white p-4 rounded mb-6 text-center">
-        <h1 class="text-2xl font-black tracking-wider uppercase">HOJA DE CANCELACIÓN DE RECEPCIÓN</h1>
-        <p class="text-xs font-semibold">Compuerta de Seguridad / Revocación de Inventario</p>
+      <div class="bg-rose-600 text-white p-4 rounded mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-14 w-auto max-w-[60px] object-contain rounded bg-white p-1" />
+          <div>
+            <h1 class="text-xl font-black tracking-wider uppercase">HOJA DE CANCELACIÓN DE RECEPCIÓN</h1>
+            <p class="text-xs font-semibold">Compuerta de Seguridad / Revocación de Inventario</p>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4 text-xs mb-6 bg-rose-50 p-4 border border-rose-200 rounded">
