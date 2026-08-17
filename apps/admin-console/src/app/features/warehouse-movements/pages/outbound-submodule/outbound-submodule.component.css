@@ -438,33 +438,76 @@
   color: var(--text-primary);
 }
 
-.outbound-empty-state__subtitle {
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  max-width: 320px;
-  line-height: 1.55;
+/* ─────────────────────────────────────────────────────────────
+   ESTADO VACÍO / SIN SELECCIÓN (ESTILO OFICIAL WMS)
+   ───────────────────────────────────────────────────────────── */
+.transfers-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 5rem 2rem;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  min-height: 480px;
 }
 
-.outbound-empty-state__btn {
-  display: inline-flex;
+.transfers-empty-state__graphic {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.4rem;
-  background: var(--gold);
-  color: var(--navy);
-  border: none;
-  border-radius: var(--radius-btn);
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(181, 139, 55, 0.14), rgba(181, 139, 55, 0.05));
+  border: 1px solid var(--gold-border);
+  box-shadow: 0 4px 16px rgba(181, 139, 55, 0.1);
+}
+
+.transfers-empty-state__icon {
+  font-size: 36px;
+  color: var(--gold);
+}
+
+.transfers-empty-state__title {
   font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.transfers-empty-state__desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  max-width: 360px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.branches-btn--primary {
+  background: #172033;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.65rem 1.4rem;
   font-size: 0.82rem;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.25);
+  transition: all 0.18s ease;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
 }
 
-.outbound-empty-state__btn:hover {
-  background: var(--gold-light);
-  transform: translateY(-2px);
+.branches-btn--primary:hover {
+  background: #222f49;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(23, 32, 51, 0.35);
 }
 
 /* ─────────────────────────────────────────────────────────────

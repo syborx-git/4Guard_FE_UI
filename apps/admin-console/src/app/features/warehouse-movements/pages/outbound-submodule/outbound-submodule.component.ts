@@ -1,15 +1,8 @@
-/**
- * @file outbound-submodule.component.ts
- * @description Submódulo 3: Salida de Almacén (Despacho / Outbound MVP1).
- * Arquitectura Master-Detail Workbench homologada con Recepción de Mercancía
- * y Cambio de Almacén. Folio institucional SAL-YYYY-XXXXXX.
- * Estrategia de persistencia: LocalStorage ('4guard_active_outbound_folio').
- */
-
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
   WarehouseOutbound,
@@ -21,22 +14,37 @@ import {
   ClientDestination,
   InventoryBatch,
 } from '../../models/warehouse-movements.models';
+import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
 
 @Component({
   selector: 'fg-outbound-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrintDispatchLayoutComponent],
   templateUrl: './outbound-submodule.component.html',
   styleUrl: './outbound-submodule.component.css',
 })
 export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
   private readonly toast = inject(ToastService);
+  private readonly authState = inject(AuthState);
 
   // ── MODO DEL WORKBENCH ─────────────────────────────────────────────────────
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedOutbound = signal<WarehouseOutbound | null>(null);
   searchQuery = signal('');
+
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
+
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
 
   // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────
   currentStep = signal<1 | 2>(1);
@@ -161,21 +169,8 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // ── LIFECYCLE ──────────────────────────────────────────────────────────────
   ngOnInit(): void {
-    // Restaurar selección persistente
-    const savedFolio = localStorage.getItem('4guard_active_outbound_folio');
-    if (savedFolio) {
-      const found = this.outboundsList().find((o) => o.folio === savedFolio);
-      if (found) {
-        this.selectOutboundItem(found);
-        return;
-      }
-    }
     this.formMode.set('idle');
-    // Pre-seleccionar primer batch disponible
-    const batches = this.availableBatches();
-    if (batches.length > 0) {
-      this.pickBatch(batches[0]);
-    }
+    this.selectedOutbound.set(null);
   }
 
   // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
@@ -356,5 +351,64 @@ export class OutboundSubmoduleComponent implements OnInit {
   // ── HELPERS ───────────────────────────────────────────────────────────────
   getTransportLabel(type: TransportType): string {
     return TRANSPORT_TYPES.find((t) => t.id === type)?.label || type;
+  }
+
+  // ── CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ──
+  openCancelModal(): void {
+    const user = this.authState.currentUser();
+    this.cancelReason.set('');
+    this.cancelAdminUser.set(user ? user.username || user.email : 'admin@4guard.com');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelErrorMessage.set(null);
+  }
+
+  confirmCancelOutbound(): void {
+    const reason = this.cancelReason().trim();
+    if (!reason || reason.length < 5) {
+      this.cancelErrorMessage.set('Debes ingresar un motivo de cancelación detallado (mínimo 5 caracteres).');
+      return;
+    }
+
+    const username = this.cancelAdminUser().trim();
+    const password = this.cancelAdminPassword().trim();
+
+    if (!username || !password) {
+      this.cancelErrorMessage.set('Debes ingresar las credenciales del Administrador.');
+      return;
+    }
+
+    const current = this.selectedOutbound();
+    if (!current) return;
+
+    this.isCancelling.set(true);
+    this.cancelErrorMessage.set(null);
+
+    try {
+      const updated = this.svc.cancelOutbound(
+        current.folio,
+        reason,
+        username
+      );
+
+      this.isCancelling.set(false);
+
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.showCancelModal.set(false);
+        this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
+      } else {
+        this.cancelErrorMessage.set('No se pudo cancelar la salida. Folio no encontrado.');
+      }
+    } catch (err: any) {
+      this.isCancelling.set(false);
+      this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
+    }
   }
 }

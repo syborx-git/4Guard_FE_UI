@@ -41,8 +41,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Auto-foco en escáner de UAs
   @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;
-
   // ── ESTADO DEL WORKBENCH ──
+  formMode = signal<'idle' | 'create' | 'detail'>('idle');
   searchQuery = signal('');
   statusFilter = signal<string>('ALL');
   selectedReception = signal<ReceptionHeader | null>(null);
@@ -70,51 +70,32 @@ export class ReceivingSubmoduleComponent implements OnInit {
   // Modales del Workbench
   showCheckInModal = signal(false);
   showChangeRemisionModal = signal(false);
-  showLeaderModal = signal(false);
-  showPrintModal = signal(false);
   showEditPalletModal = signal(false);
+  showQuickAddModal = signal(false);
+  showPrintModal = signal(false);
+  showLeaderModal = signal(false);
 
-  // Catálogos Reactivos desde Servicio
+  quickAddType = signal<'CARRIER' | 'RAMP'>('CARRIER');
+  quickAddCodeInput = signal('');
+  quickAddNameInput = signal('');
+  quickAddRampNumInput = signal<number>(13);
+
+  // ── ESTADO DE EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
+  editingPallet = signal<ReceptionPalletItem | null>(null);
   palletTypes = Object.entries(PALLET_TYPE_LABELS) as [PalletType, string][];
+
+  // ── STREAM REACTIVO DE TARIMAS (UA) ──
+  palletStream = signal<ReceptionPalletItem[]>([]);
+  uaCodeInput = signal('');
+  uaObsInput = signal('');
+  generatedFolio = signal('');
+
+  // ── CATÁLOGOS BASE REACTIVOS ──
   carrierLines = this.movementsService.carrierLines;
   clients = this.movementsService.clients;
   ramps = this.movementsService.ramps;
   forkliftOperators = this.movementsService.forkliftOperators;
 
-  // ── FORMULARIO: Captura de Caseta (CheckIn F01-PO-CP-7.1.3-03) ──
-  checkInForm = this.fb.group({
-    carrierLineCode: ['TR-01'],
-    carrierLine: ['Transportes Castores', [Validators.required]],
-    receptionTime: ['09:15', [Validators.required]],
-    docNumber: ['REM-2026-901', [Validators.required]],
-    elaborationDate: ['2026-01-15'],
-    expirationDate: ['2026-12-30'],
-    lotNumber: ['LOT-2026-N1'],
-    docDate: ['2026-08-11', [Validators.required]],
-    clientCode: ['CLI-001'],
-    client: ['Nestlé México', [Validators.required]],
-    rampCode: ['R-04'],
-    rampNumber: [4, [Validators.required, Validators.min(1), Validators.max(12)]],
-    forkliftOperatorCode: ['MC-102'],
-    forkliftOperator: ['Pablo Hernández', [Validators.required]],
-    driverName: ['Carlos Ruiz', [Validators.required]],
-    tractorPlates: ['77-AB-99', [Validators.required]],
-    boxPlates: ['55-XX-11', [Validators.required]],
-    sealNumber: ['SL-90812'],
-  });
-
-  sealList = signal<string[]>(['SL-90812']);
-  tempSealInput = signal('');
-  generatedFolio = signal<string | null>(null);
-
-  // Modal Alta Rápida de Entidades [+]
-  showQuickAddModal = signal(false);
-  quickAddType = signal<'CARRIER' | 'RAMP' | null>(null);
-  quickAddCodeInput = signal('');
-  quickAddNameInput = signal('');
-  quickAddRampNumInput = signal<number>(13);
-
-  // Catálogos del Paso 2 (Andén / Descarga)
   suppliers = signal([
     { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
     { code: 'SUP-02', name: 'NESTLE MEXICO S.A DE C.V PLANTA TOLUCA' },
@@ -129,7 +110,33 @@ export class ReceivingSubmoduleComponent implements OnInit {
     { id: '55409811', name: 'NESQUIK CHOCOLATE 500G', defaultPieces: 36 },
   ]);
 
-  // ── FORMULARIO: Parámetros de Recepción y Producto (Paso 2 / Andén) ──
+  // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
+  checkInForm = this.fb.group({
+    carrierLineCode: ['TRANS-CAST'],
+    carrierLine: ['Transportes Castores', [Validators.required]],
+    receptionTime: ['09:15', [Validators.required]],
+    docNumber: ['REM-88102', [Validators.required]],
+    docDate: ['2026-08-10', [Validators.required]],
+    elaborationDate: ['2026-01-01'],
+    expirationDate: ['2026-11-15'],
+    lotNumber: ['LOT-2026-A1'],
+    clientCode: ['CLI-001'],
+    client: ['Nestlé México', [Validators.required]],
+    rampCode: ['R-04'],
+    rampNumber: [4, [Validators.required]],
+    forkliftOperatorCode: ['MC-101'],
+    forkliftOperator: ['Pablo Hernández', [Validators.required]],
+    driverName: ['Carlos Ruiz', [Validators.required]],
+    tractorPlates: ['77-AB-99', [Validators.required]],
+    boxPlates: ['55-XX-11', [Validators.required]],
+    sealNumber: ['SL-99412'],
+  });
+
+  // Lista Reactiva de Cinchos/Sellos
+  sealList = signal<string[]>(['SL-99412']);
+  tempSealInput = signal('');
+
+  // ── FORMULARIO: ALTA / EDICIÓN DE RECEPCIÓN (Detalle Producto) ──
   altaForm = this.fb.group({
     lotNumber: ['LOT-2026-A1', [Validators.required]],
     expirationDate: ['2026-11-15', [Validators.required]],
@@ -143,12 +150,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     observations: ['Ingreso directo andén 4 sin incidentes.'],
   });
 
-  // Stream de Escaneo Carga Rápida (UAs)
-  palletStream = signal<ReceptionPalletItem[]>([]);
-  uaCodeInput = signal('');
-  uaObsInput = signal('');
-
-  // ── FORMULARIO: Edición de Tarima Individual (Rol Administrador) ──
+  // ── FORMULARIO: EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
   editPalletForm = this.fb.group({
     id: [''],
     palletNumber: [1],
@@ -205,19 +207,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
   totalPiezas = computed(() => this.palletStream().reduce((acc, p) => acc + p.pieces, 0));
 
   constructor() {
-    // Restaurar folio activo previo o seleccionar el primero
-    const savedFolio = localStorage.getItem('4g_active_reception_folio');
-    const list = this.movementsService.receptions();
-    if (savedFolio) {
-      const rec = this.movementsService.findReceptionByFolio(savedFolio);
-      if (rec) {
-        this.selectReception(rec);
-        return;
-      }
-    }
-    if (list.length > 0) {
-      this.selectReception(list[0]);
-    }
+    // Estado inicial: Siempre iniciar en Sin selección (Empty State WMS)
+    this.formMode.set('idle');
+    this.selectedReception.set(null);
   }
 
   ngOnInit(): void {
@@ -233,9 +225,25 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
   }
 
+  // Iniciar registro de nueva pre-recepción en el panel (sin modal)
+  startNewReception(): void {
+    this.formMode.set('create');
+    this.selectedReception.set(null);
+    localStorage.removeItem('4g_active_reception_folio');
+    this.resetCheckInForm();
+  }
+
+  // Restablecer a estado inicial (Sin selección)
+  resetToIdle(): void {
+    this.formMode.set('idle');
+    this.selectedReception.set(null);
+    localStorage.removeItem('4g_active_reception_folio');
+  }
+
   // ── OPERACIONES DEL WORKBENCH ──
 
   selectReception(rec: ReceptionHeader): void {
+    this.formMode.set('detail');
     this.selectedReception.set(rec);
     localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
@@ -698,11 +706,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
     if (type === 'CARRIER') {
       this.movementsService.addCarrierLine({ code, name });
-      this.checkInForm.patchValue({ carrierLineCode: code, carrierLine: name });
+      this.checkInForm.patchValue({ carrierLine: code });
     } else if (type === 'RAMP') {
       const rNum = this.quickAddRampNumInput();
       this.movementsService.addRamp({ code, rampNumber: rNum, name });
-      this.checkInForm.patchValue({ rampCode: code, rampNumber: rNum });
+      this.checkInForm.patchValue({ rampNumber: rNum });
     }
 
     this.showQuickAddModal.set(false);
@@ -722,26 +730,22 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   resetCheckInForm(): void {
     this.checkInForm.reset({
-      carrierLineCode: 'TR-01',
-      carrierLine: 'Transportes Castores',
+      carrierLine: 'TRANS-CAST',
       receptionTime: '09:15',
-      docNumber: 'REM-2026-901',
-      elaborationDate: '2026-01-15',
-      expirationDate: '2026-12-30',
-      lotNumber: 'LOT-2026-N1',
-      docDate: '2026-08-11',
-      clientCode: 'CLI-001',
-      client: 'Nestlé México',
-      rampCode: 'R-04',
+      docNumber: 'REM-88102',
+      docDate: '2026-08-10',
+      elaborationDate: '2026-01-01',
+      expirationDate: '2026-11-15',
+      lotNumber: 'LOT-2026-A1',
+      client: 'CLI-001',
       rampNumber: 4,
-      forkliftOperatorCode: 'MC-102',
-      forkliftOperator: 'Pablo Hernández',
+      forkliftOperator: 'MC-101',
       driverName: 'Carlos Ruiz',
       tractorPlates: '77-AB-99',
       boxPlates: '55-XX-11',
-      sealNumber: 'SL-90812',
+      sealNumber: 'SL-99412',
     });
-    this.sealList.set(['SL-90812']);
+    this.sealList.set(['SL-99412']);
   }
 
   openPrintPreview(rec: ReceptionHeader): void {

@@ -120,20 +120,24 @@
     <!-- ── PANEL DERECHO: WORKBENCH TRI-ESTADO ── -->
     <div class="outbound-detail-panel">
 
-      <!-- ─────────────── MODO IDLE: SIN SELECCIÓN ─────────────── -->
+      <!-- ─────────────── MODO IDLE: SIN SELECCIÓN (ESTILO OFICIAL WMS) ─────────────── -->
       @if (formMode() === 'idle') {
-        <div class="outbound-empty-state">
-          <div class="outbound-empty-state__icon-wrap">
-            <span class="material-symbols-outlined">local_shipping</span>
+        <div class="transfers-empty-state shadow-sm">
+          <div class="transfers-empty-state__graphic" aria-hidden="true">
+            <span class="material-symbols-outlined transfers-empty-state__icon">local_shipping</span>
           </div>
-          <div class="outbound-empty-state__title">Sin selección</div>
-          <div class="outbound-empty-state__subtitle">
-            Selecciona una salida del directorio para ver su detalle,
-            o inicia una nueva operación de despacho.
-          </div>
-          <button type="button" class="outbound-empty-state__btn" (click)="startNewOutbound()">
-            <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
-            Nueva Salida de Almacén
+          <h2 class="transfers-empty-state__title">Sin selección</h2>
+          <p class="transfers-empty-state__desc">
+            Selecciona una salida del directorio para consultar su información, o inicia una nueva operación de despacho.
+          </p>
+          <button
+            class="branches-btn--primary"
+            type="button"
+            (click)="startNewOutbound()"
+            aria-label="Registrar nueva salida de almacén"
+          >
+            <span class="material-symbols-outlined">add</span>
+            <span>Nueva salida de almacén</span>
           </button>
         </div>
       }
@@ -529,18 +533,49 @@
             <span class="breadcrumb-sep">›</span>
             <span class="breadcrumb-active">{{ selectedOutbound()!.folio }}</span>
             <span style="margin-left:0.5rem;">
-              <span class="status-badge--completed">Completado</span>
+              @if (selectedOutbound()?.status === 'CANCELLED') {
+                <span class="status-badge--cancelled">Cancelado</span>
+              } @else {
+                <span class="status-badge--completed">Completado</span>
+              }
             </span>
           </div>
           <div class="outbound-breadcrumb-bar__actions">
-            <button type="button" class="btn-ghost" (click)="openPrintPreview(selectedOutbound()!)">
+            @if (selectedOutbound()?.status !== 'CANCELLED') {
+              <button
+                type="button"
+                (click)="openCancelModal()"
+                class="btn-danger-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
+              >
+                <span class="material-symbols-outlined text-sm">cancel</span>
+                <span>Cancelar</span>
+              </button>
+            }
+            <button type="button" class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm text-slate-900" (click)="openPrintPreview(selectedOutbound()!)">
               <span class="material-symbols-outlined" style="font-size:0.85rem;">print</span>
-              Imprimir Salida
+              <span>Imprimir Salida</span>
             </button>
           </div>
         </div>
 
         <div class="outbound-panel-body">
+
+          @if (selectedOutbound()?.status === 'CANCELLED') {
+            <!-- Banner de Auditoría de Cancelación -->
+            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 mb-4">
+              <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                <span class="material-symbols-outlined text-lg">cancel</span>
+                <span class="uppercase">SALIDA CANCELADA Y REVOCADA DE INVENTARIO</span>
+              </div>
+              <p class="text-xs text-rose-300 font-medium">
+                Motivo: "{{ selectedOutbound()!.cancellationReason || 'Cancelado por el administrador.' }}"
+              </p>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
+                <span>Autorizado por: <strong class="text-slate-200">{{ selectedOutbound()!.cancelledBy || 'Admin' }}</strong></span>
+                <span>Fecha: {{ selectedOutbound()!.cancelledAt || 'Registrado' }}</span>
+              </div>
+            </div>
+          }
 
           <!-- Información General -->
           <div class="form-section">
@@ -902,6 +937,121 @@
           </div><!-- /fg-print-outbound -->
         </div><!-- /print-modal-body -->
 
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR (WMS)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showCancelModal()) {
+    <div class="modal-overlay" (click)="closeCancelModal()">
+      <div class="modal-card max-w-lg w-full shadow-2xl animate-fade-up border-rose-500/40" (click)="$event.stopPropagation()">
+        
+        <!-- Header de Cancelación -->
+        <div class="modal-header flex items-center justify-between border-b border-rose-500/20 bg-rose-950/20">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/40">
+              <span class="material-symbols-outlined text-2xl">gavel</span>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-base text-rose-400 uppercase tracking-wide">Cancelar Salida de Almacén</h3>
+              <p class="text-xs text-slate-400 font-medium">Autorización requerida del Administrador</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeCancelModal()" class="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body con Motivo y Credenciales -->
+        <div class="modal-body space-y-4 text-xs">
+          <!-- Alerta de Advertencia -->
+          <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+            <p class="font-bold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">warning</span>
+              Acción crítica irreversible
+            </p>
+            <p class="mt-1 text-[11px] text-slate-300">
+              Esta acción revocará el folio <strong>{{ selectedOutbound()?.folio }}</strong> y reintegrará las tarimas despachadas. Para continuar, ingresa el motivo y tus credenciales de Administrador.
+            </p>
+          </div>
+
+          @if (cancelErrorMessage()) {
+            <div class="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500 text-rose-200 text-xs font-medium">
+              {{ cancelErrorMessage() }}
+            </div>
+          }
+
+          <!-- Motivo Obligatorio -->
+          <div class="space-y-1">
+            <label class="font-bold uppercase text-[11px] text-slate-300 block">
+              Motivo de Cancelación <span class="text-rose-400">*</span>
+            </label>
+            <textarea
+              [ngModel]="cancelReason()"
+              (ngModelChange)="cancelReason.set($event)"
+              rows="3"
+              class="fg-input w-full text-xs"
+              placeholder="Describe detalladamente el motivo de la cancelación..."
+            ></textarea>
+          </div>
+
+          <!-- Credenciales ADMIN -->
+          <div class="space-y-3 pt-2 border-t border-slate-800">
+            <h4 class="font-bold text-amber-400 uppercase text-[11px] tracking-wider">Credenciales del Administrador</h4>
+            
+            <div class="space-y-1">
+              <label class="font-bold uppercase text-[11px] text-slate-300 block">Usuario / Correo Admin</label>
+              <input
+                type="text"
+                [ngModel]="cancelAdminUser()"
+                (ngModelChange)="cancelAdminUser.set($event)"
+                class="fg-input w-full font-mono text-xs"
+                placeholder="admin@4guard.com"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="font-bold uppercase text-[11px] text-slate-300 block">Contraseña de Administrador</label>
+              <div class="relative">
+                <input
+                  [type]="showCancelPassword() ? 'text' : 'password'"
+                  [ngModel]="cancelAdminPassword()"
+                  (ngModelChange)="cancelAdminPassword.set($event)"
+                  (keyup.enter)="confirmCancelOutbound()"
+                  class="fg-input w-full font-mono text-xs pr-10"
+                  placeholder="••••••••••••"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowCancelPassword()"
+                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showCancelPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer flex items-center justify-end gap-3 border-t border-slate-800">
+          <button type="button" (click)="closeCancelModal()" class="btn-secondary-outline text-xs px-4 py-2 rounded-xl font-bold">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="confirmCancelOutbound()"
+            [disabled]="isCancelling()"
+            class="btn-danger text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+          >
+            <span class="material-symbols-outlined text-base">verified_user</span>
+            <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
       </div>
     </div>
   }

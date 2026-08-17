@@ -137,6 +137,9 @@ export interface WarehouseTransfer {
   transferredAt: string;
   transferredBy: string;
   clientName?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
 }
 
 export interface LocationStockInfo {
@@ -243,6 +246,9 @@ export interface WarehouseOutbound {
   dispatchedAt: string;
   dispatchedBy: string;
   timestamp: string;         // HH:mm para tarjeta del directorio
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
 }
 
 export interface ClientDestination {

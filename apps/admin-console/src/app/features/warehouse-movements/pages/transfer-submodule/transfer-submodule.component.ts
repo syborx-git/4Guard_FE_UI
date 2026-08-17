@@ -1,13 +1,8 @@
-/**
- * @file transfer-submodule.component.ts
- * @description Submódulo 2: Cambio de Almacén (Reubicación de Inventario / Putaway).
- * Homologado con Recepción de Mercancía en una sola pantalla unificada (Master-Detail Workbench).
- */
-
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
   LocationStockInfo,
@@ -35,11 +30,25 @@ export interface ForkliftOperatorOption {
 export class TransferSubmoduleComponent implements OnInit {
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly toast = inject(ToastService);
+  private readonly authState = inject(AuthState);
 
   // ── ESTADO DEL WORKBENCH UNIFICADO (MASTER-DETAIL) ──
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedTransfer = signal<WarehouseTransfer | null>(null);
   searchQuery = signal<string>('');
+
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
+
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
 
   // Catálogo de Montacarguistas Certificados
   forkliftOperators: ForkliftOperatorOption[] = [
@@ -288,5 +297,64 @@ export class TransferSubmoduleComponent implements OnInit {
 
   triggerBrowserPrint(): void {
     window.print();
+  }
+
+  // ── CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ──
+  openCancelModal(): void {
+    const user = this.authState.currentUser();
+    this.cancelReason.set('');
+    this.cancelAdminUser.set(user ? user.username || user.email : 'admin@4guard.com');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelErrorMessage.set(null);
+  }
+
+  confirmCancelTransfer(): void {
+    const reason = this.cancelReason().trim();
+    if (!reason || reason.length < 5) {
+      this.cancelErrorMessage.set('Debes ingresar un motivo de cancelación detallado (mínimo 5 caracteres).');
+      return;
+    }
+
+    const username = this.cancelAdminUser().trim();
+    const password = this.cancelAdminPassword().trim();
+
+    if (!username || !password) {
+      this.cancelErrorMessage.set('Debes ingresar las credenciales del Administrador.');
+      return;
+    }
+
+    const current = this.selectedTransfer();
+    if (!current) return;
+
+    this.isCancelling.set(true);
+    this.cancelErrorMessage.set(null);
+
+    try {
+      const updated = this.movementsService.cancelTransfer(
+        current.folio,
+        reason,
+        username
+      );
+
+      this.isCancelling.set(false);
+
+      if (updated) {
+        this.selectedTransfer.set(updated);
+        this.showCancelModal.set(false);
+        this.toast.success(`Cambio de Almacén #${current.folio} ha sido cancelado.`);
+      } else {
+        this.cancelErrorMessage.set('No se pudo cancelar el traspaso. Folio no encontrado.');
+      }
+    } catch (err: any) {
+      this.isCancelling.set(false);
+      this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
+    }
   }
 }

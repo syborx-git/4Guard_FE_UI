@@ -989,4 +989,44 @@ export class WarehouseMovementsService {
 
     return fullDispatch;
   }
+
+  // Cancela Traspaso (Cambio de Almacén)
+  cancelTransfer(folio: string, justification: string, adminName: string): WarehouseTransfer | null {
+    const list = this.transfersSignal();
+    const index = list.findIndex((t) => t.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseTransfer = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.transfersSignal.set(newArr);
+    return updated;
+  }
+
+  // Cancela Salida de Almacén (Outbound)
+  cancelOutbound(folio: string, justification: string, adminName: string): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const index = list.findIndex((o) => o.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseOutbound = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.outboundsSignal.set(newArr);
+    return updated;
+  }
 }

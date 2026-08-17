@@ -143,12 +143,230 @@
 
     <!-- ── 2B. RIGHT PANEL: PANTALLA UNIFICADA DE RECEPCIÓN Y DESCARGA (col-span-8) ── -->
     <div class="lg:col-span-8 space-y-4">
-      @if (selectedReception(); as rec) {
-        
-        <!-- PANTALLA INTEGRADA EN UN SOLO FORM / CONTENEDOR HOMOLOGADO CON TRANSPORTISTAS -->
-        <div class="synexia-card p-5 space-y-6">
+      
+      <!-- ESTADO 1: FORMULARIO DE ALTA EN PANEL (NUEVA PRE-RECEPCIÓN / CASETA) -->
+      @if (formMode() === 'create') {
+        <div class="synexia-card p-6 space-y-6 animate-fade-up">
+          <!-- Header del Formulario en Body -->
+          <div class="flex items-center justify-between border-b border-subtle pb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <span class="material-symbols-outlined text-2xl">assignment</span>
+              </div>
+              <div>
+                <h2 class="font-extrabold text-lg text-slate-900 dark:text-slate-100 uppercase tracking-wide">Nueva Pre-Recepción (Caseta de Seguridad)</h2>
+                <p class="text-xs text-slate-600 dark:text-slate-400 font-medium">Registro de arribo de transporte, documentación y asignación inicial de andén</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="resetToIdle()"
+              class="btn-secondary-outline text-xs px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              <span>Volver a Selección</span>
+            </button>
+          </div>
+
+          <!-- Formulario de Caseta -->
+          <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="space-y-6 text-xs">
+            <!-- SECCIÓN 1: DOCUMENTACIÓN Y FACTURA -->
+            <div class="space-y-3">
+              <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-subtle pb-1.5">
+                <span class="material-symbols-outlined text-base">description</span>
+                <span>1. DOCUMENTACIÓN Y FACTURA</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Línea Transportadora <span class="text-amber-500">*</span>
+                  </label>
+                  <div class="flex gap-1.5">
+                    <select (change)="onCarrierLineSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                      @for (tr of carrierLines(); track tr.code) {
+                        <option [value]="tr.code">{{ tr.name }}</option>
+                      }
+                    </select>
+                    <button type="button" (click)="openQuickAddModal('CARRIER')" class="fg-btn-icon" title="Agregar Transportista">+</button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Hora de Recepción <span class="text-amber-500">*</span>
+                  </label>
+                  <input type="text" formControlName="receptionTime" class="fg-input w-full font-mono" placeholder="Ej. 09:15" />
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    No. Documento (Remisión / Factura) <span class="text-amber-500">*</span>
+                  </label>
+                  <input type="text" formControlName="docNumber" class="fg-input uppercase font-mono w-full" placeholder="REM-12345" />
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Fecha del Documento <span class="text-amber-500">*</span>
+                  </label>
+                  <input type="date" formControlName="docDate" class="fg-input w-full" />
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Fecha de Elaboración <span class="text-slate-400 font-normal lowercase">(opcional)</span>
+                  </label>
+                  <input type="date" formControlName="elaborationDate" class="fg-input w-full" />
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Fecha de Caducidad <span class="text-slate-400 font-normal lowercase">(opcional)</span>
+                  </label>
+                  <input type="date" formControlName="expirationDate" class="fg-input w-full" />
+                </div>
+
+                <div class="lg:col-span-2">
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Lote de Recepción <span class="text-slate-400 font-normal lowercase">(opcional)</span>
+                  </label>
+                  <input type="text" formControlName="lotNumber" class="fg-input uppercase font-mono w-full" placeholder="LOT-2026-N1" />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 2: CLIENTE Y ASIGNACIÓN EN ANDÉN -->
+            <div class="space-y-3">
+              <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-subtle pb-1.5">
+                <span class="material-symbols-outlined text-base">forklift</span>
+                <span>2. ASIGNACIÓN EN ANDÉN</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Cliente <span class="text-amber-500">*</span>
+                  </label>
+                  <select (change)="onClientSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                    @for (c of clients(); track c.code) {
+                      <option [value]="c.code">{{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Rampa de Asignación <span class="text-amber-500">*</span>
+                  </label>
+                  <div class="flex gap-1.5">
+                    <select (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                      @for (rm of ramps(); track rm.code) {
+                        <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
+                      }
+                    </select>
+                    <button type="button" (click)="openQuickAddModal('RAMP')" class="fg-btn-icon" title="Agregar Rampa">+</button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Montacarguista <span class="text-amber-500">*</span>
+                  </label>
+                  <select (change)="onForkliftOperatorSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                    @for (op of forkliftOperators(); track op.code) {
+                      <option [value]="op.code">{{ op.name }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 3: TRANSPORTE Y NO. SELLO -->
+            <div class="space-y-3">
+              <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-subtle pb-1.5">
+                <span class="material-symbols-outlined text-base">local_shipping</span>
+                <span>3. TRANSPORTE Y CINCHOS / SELLOS</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Operador / Chofer <span class="text-amber-500">*</span>
+                  </label>
+                  <input type="text" formControlName="driverName" class="fg-input w-full" placeholder="Nombre completo" />
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Placas Tracto <span class="text-amber-500">*</span>
+                  </label>
+                  <input type="text" formControlName="tractorPlates" class="fg-input uppercase font-mono w-full" placeholder="77-AB-99" />
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Placas Caja <span class="text-amber-500">*</span>
+                  </label>
+                  <input type="text" formControlName="boxPlates" class="fg-input uppercase font-mono w-full" placeholder="55-XX-11" />
+                </div>
+              </div>
+
+              <!-- Registro Interactivo de Cinchos/Sellos -->
+              <div class="space-y-2 pt-1">
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block">
+                  Sellos / Cinchos de Seguridad
+                </label>
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    [ngModel]="tempSealInput()"
+                    (ngModelChange)="tempSealInput.set($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    (keyup.enter)="addSeal()"
+                    placeholder="Ingresar número de sello..."
+                    class="fg-input font-mono uppercase text-xs flex-1"
+                  />
+                  <button
+                    type="button"
+                    (click)="addSeal()"
+                    class="btn-secondary-outline px-4 py-2 text-xs font-bold rounded-xl"
+                  >
+                    AGREGAR
+                  </button>
+                </div>
+
+                <!-- Badges de Sellos Adicionados -->
+                <div class="flex flex-wrap gap-1.5 p-2.5 bg-surface-subtle border border-subtle rounded-xl min-h-[42px] items-center">
+                  @for (seal of sealList(); track $index) {
+                    <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold px-3 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                      <span>{{ seal }}</span>
+                      <button type="button" (click)="removeSeal($index)" class="hover:text-rose-600 font-bold ml-1 text-sm leading-none">×</button>
+                    </span>
+                  } @empty {
+                    <span class="text-secondary text-xs italic">No se han registrado sellos.</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer de Guardado -->
+            <div class="flex items-center justify-between gap-3 pt-4 border-t border-subtle">
+              <button type="button" (click)="resetToIdle()" class="btn-secondary-outline text-xs px-5 py-2.5 rounded-xl font-bold">Cancelar</button>
+              <button type="submit" class="btn-primary-gold text-xs px-7 py-2.5 rounded-xl font-bold shadow-md text-slate-900 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">check_circle</span>
+                <span>Registrar Pre-Recepción</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+      } @else if (formMode() === 'detail') {
+        @if (selectedReception(); as rec) {
+          <!-- ESTADO 2: WORKBENCH DETALLE DE LA RECEPCIÓN SELECCIONADA -->
+          <div class="synexia-card p-5 space-y-6">
           
-          <!-- 1. CABECERA BREADCRUMB & ACCIONES (ESTILO TRANSPORTISTAS) -->
+          <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
             <div class="flex items-center gap-2 flex-wrap text-xs">
               <span class="material-symbols-outlined text-base text-secondary">local_shipping</span>
@@ -528,200 +746,31 @@
             </div>
           }
         </div>
-      } @else {
-        <!-- State Vacío cuando no hay recepción seleccionada -->
-        <div class="synexia-card p-12 text-center space-y-3">
-          <span class="material-symbols-outlined text-5xl text-gold opacity-50">move_to_inbox</span>
-          <h3 class="text-base font-bold text-primary">Selecciona una Recepción del Directorio</h3>
-          <p class="text-xs text-secondary max-w-sm mx-auto">
-            Elige un folio de la lista izquierda para consultar su detalle, descargar tarimas o autorizar el cierre oficial.
-          </p>
-          <button
-            type="button"
-            (click)="openNewReceptionModal()"
-            class="btn-primary-gold text-xs font-bold px-4 py-2.5 rounded-xl shadow-md inline-flex items-center gap-1.5"
-          >
-            <span class="material-symbols-outlined text-sm">add</span>
-            <span>Nueva Pre-Recepción (Caseta)</span>
-          </button>
-        </div>
       }
+
+    } @else {
+      <!-- ── ESTADO INICIAL: SIN SELECCIÓN (ESTILO OFICIAL WMS) ── -->
+      <div class="transfers-empty-state shadow-sm">
+        <div class="transfers-empty-state__graphic" aria-hidden="true">
+          <span class="material-symbols-outlined transfers-empty-state__icon">move_to_inbox</span>
+        </div>
+        <h2 class="transfers-empty-state__title">Sin selección</h2>
+        <p class="transfers-empty-state__desc">
+          Selecciona una recepción de la lista para consultar su información, o registra una nueva pre-recepción en caseta.
+        </p>
+        <button
+          class="branches-btn--primary"
+          type="button"
+          (click)="startNewReception()"
+          aria-label="Registrar nueva pre-recepción"
+        >
+          <span class="material-symbols-outlined">add</span>
+          <span>Nueva pre-recepción</span>
+        </button>
+      </div>
+    }
     </div>
   </div>
-
-  <!-- ── 3. MODAL: CAPTURA DE CASETA (NUEVA PRE-RECEPCIÓN) ── -->
-  @if (showCheckInModal()) {
-    <div class="modal-overlay">
-      <div class="modal-card max-w-3xl w-full shadow-2xl animate-fade-up">
-        
-        <!-- Header Fijo Superior -->
-        <div class="modal-header flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-gold">assignment</span>
-            <h3 class="font-bold text-base text-primary uppercase">NUEVA PRE-RECEPCIÓN (CASETA DE SEGURIDAD)</h3>
-          </div>
-          <button type="button" (click)="closeNewReceptionModal()" class="text-secondary hover:text-primary">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <!-- Form & Body Scrollable -->
-        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="flex flex-col flex-1 min-h-0 overflow-hidden">
-          
-          <div class="modal-body space-y-5 text-xs">
-            <!-- SECCIÓN 1: DOCUMENTACIÓN Y REGISTRO (F01-PO-CP-7.1.3-03) -->
-            <div class="space-y-3">
-              <h4 class="font-bold text-gold uppercase text-[11px] tracking-wider border-b border-subtle pb-1">1. DOCUMENTACIÓN Y FACTURA</h4>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">LINEA TRANSPORTADORA:</label>
-                  <div class="flex gap-1">
-                    <select (change)="onCarrierLineSelect($any($event.target).value)" class="fg-input w-full font-bold">
-                      @for (tr of carrierLines(); track tr.code) {
-                        <option [value]="tr.code">{{ tr.name }}</option>
-                      }
-                    </select>
-                    <button type="button" (click)="openQuickAddModal('CARRIER')" class="fg-btn-icon" title="Agregar Transportista">+</button>
-                  </div>
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">HORA RECEPCION:</label>
-                  <input type="text" formControlName="receptionTime" class="fg-input w-full font-mono" placeholder="Ej. 09:15" />
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">DOC. NO. (REMISIÓN / FACTURA):</label>
-                  <input type="text" formControlName="docNumber" class="fg-input uppercase font-mono w-full" placeholder="REM-12345" />
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">FECHA DOC:</label>
-                  <input type="date" formControlName="docDate" class="fg-input w-full" />
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">F. ELABORACIÓN <span class="text-tertiary font-normal">(Opcional caseta)</span>:</label>
-                  <input type="date" formControlName="elaborationDate" class="fg-input w-full" />
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">CADUCIDAD <span class="text-tertiary font-normal">(Opcional caseta)</span>:</label>
-                  <input type="date" formControlName="expirationDate" class="fg-input w-full" />
-                </div>
-
-                <div class="md:col-span-2">
-                  <label class="font-bold text-secondary uppercase block mb-1">LOTE DE RECEPCIÓN <span class="text-tertiary font-normal">(Opcional caseta)</span>:</label>
-                  <input type="text" formControlName="lotNumber" class="fg-input uppercase font-mono w-full" placeholder="LOT-2026-N1" />
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 2: CLIENTE Y ASIGNACIÓN EN ANDÉN -->
-            <div class="space-y-3">
-              <h4 class="font-bold text-gold uppercase text-[11px] tracking-wider border-b border-subtle pb-1">2. ASIGNACIÓN EN ANDÉN</h4>
-              
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">CLIENTE:</label>
-                  <select (change)="onClientSelect($any($event.target).value)" class="fg-input w-full font-bold">
-                    @for (c of clients(); track c.code) {
-                      <option [value]="c.code">{{ c.name }}</option>
-                    }
-                  </select>
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">RAMPA NO:</label>
-                  <div class="flex gap-1">
-                    <select (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
-                      @for (rm of ramps(); track rm.code) {
-                        <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
-                      }
-                    </select>
-                    <button type="button" (click)="openQuickAddModal('RAMP')" class="fg-btn-icon" title="Agregar Rampa">+</button>
-                  </div>
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">MONTACARGUISTA:</label>
-                  <select (change)="onForkliftOperatorSelect($any($event.target).value)" class="fg-input w-full font-bold">
-                    @for (op of forkliftOperators(); track op.code) {
-                      <option [value]="op.code">{{ op.name }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 3: TRANSPORTE Y NO. SELLO -->
-            <div class="space-y-3">
-              <h4 class="font-bold text-gold uppercase text-[11px] tracking-wider border-b border-subtle pb-1">3. TRANSPORTE Y CINCHOS / SELLOS</h4>
-              
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">OPERADOR (CHOFER):</label>
-                  <input type="text" formControlName="driverName" class="fg-input w-full" placeholder="Nombre completo" />
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">PLACAS TRACTO:</label>
-                  <input type="text" formControlName="tractorPlates" class="fg-input uppercase font-mono w-full" placeholder="77-AB-99" />
-                </div>
-
-                <div>
-                  <label class="font-bold text-secondary uppercase block mb-1">PLACAS CAJA:</label>
-                  <input type="text" formControlName="boxPlates" class="fg-input uppercase font-mono w-full" placeholder="55-XX-11" />
-                </div>
-              </div>
-
-              <!-- Registro Interactivo de Cinchos/Sellos -->
-              <div>
-                <label class="font-bold text-secondary uppercase block mb-1">NO. SELLO / CINCHO:</label>
-                <div class="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    [ngModel]="tempSealInput()"
-                    (ngModelChange)="tempSealInput.set($event)"
-                    [ngModelOptions]="{ standalone: true }"
-                    (keyup.enter)="addSeal()"
-                    placeholder="Ingresar número de sello..."
-                    class="fg-input font-mono uppercase text-xs flex-1"
-                  />
-                  <button
-                    type="button"
-                    (click)="addSeal()"
-                    class="btn-secondary-outline px-4 py-2 text-xs font-bold rounded-xl"
-                  >
-                    AGREGAR
-                  </button>
-                </div>
-
-                <!-- Badges de Sellos Adicionados -->
-                <div class="flex flex-wrap gap-1.5 p-2 bg-surface-subtle border border-subtle rounded-xl min-h-[42px] items-center">
-                  @for (seal of sealList(); track $index) {
-                    <span class="inline-flex items-center gap-1 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gold-subtle text-gold border border-gold-border">
-                      <span>{{ seal }}</span>
-                      <button type="button" (click)="removeSeal($index)" class="hover:text-rose-600 ml-1">×</button>
-                    </span>
-                  } @empty {
-                    <span class="text-tertiary text-[11px] italic">No se han registrado sellos.</span>
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer Fijo Inferior -->
-          <div class="modal-footer flex items-center justify-end gap-3">
-            <button type="button" (click)="closeNewReceptionModal()" class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold">Cancelar</button>
-            <button type="submit" class="btn-save text-xs px-5 py-2 rounded-xl font-bold shadow-md">Registrar Pre-Recepción</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  }
 
   <!-- ── 4. MODAL: EDICIÓN DE TARIMA INDIVIDUAL (ADMINISTRADOR) ── -->
   @if (showEditPalletModal()) {
