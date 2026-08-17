@@ -47,12 +47,19 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
   return null;
 }
 
-interface NavItem {
+export interface SubNavItem {
+  label: string;
+  route: string;
+  icon: string;
+}
+
+export interface NavItem {
   label: string;
   route: string;
   icon: string;   // Material Symbols name
   module: string;
   badge?: () => number;
+  children?: SubNavItem[];
 }
 
 import { PasswordCollapseComponent } from '../password-collapse/password-collapse.component';
@@ -445,21 +452,71 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
     { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
-    { label: 'Recepción', route: '/warehouse-movements/receiving', icon: 'move_to_inbox', module: 'warehouse-movements' },
+    {
+      label: 'Recepción',
+      route: '/warehouse-movements/receiving',
+      icon: 'move_to_inbox',
+      module: 'warehouse-movements',
+      children: [
+        { label: 'Recepción de Mercancía', route: '/warehouse-movements/receiving', icon: 'move_to_inbox' },
+        { label: 'Cambio de Almacén', route: '/warehouse-movements/transfers', icon: 'swap_horiz' },
+        { label: 'Salidas de Almacén', route: '/warehouse-movements/outbound', icon: 'local_shipping' },
+      ],
+    },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    { label: 'Movimientos de Almacén', route: '/warehouse-movements/receiving', icon: 'swap_horiz', module: 'warehouse-movements' },
     { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },
     { label: 'Consulta Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
   ];
-
 
   /** Filtra los nav items segun el rol del usuario */
   protected readonly visibleNavItems = computed(() =>
     this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
   );
+
+  protected readonly expandedSubmenus = signal<Set<string>>(new Set<string>(['warehouse-movements']));
+
+  protected isSubmenuExpanded(module: string): boolean {
+    return this.expandedSubmenus().has(module);
+  }
+
+  protected toggleSubmenu(module: string, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedSubmenus.update((set) => {
+      const next = new Set(set);
+      if (next.has(module)) {
+        next.delete(module);
+      } else {
+        next.add(module);
+      }
+      return next;
+    });
+  }
+
+  protected isItemActive(item: NavItem): boolean {
+    const currentUrl = this.router.url;
+    if (currentUrl.startsWith(item.route)) return true;
+    if (item.children && item.children.some((c) => currentUrl.startsWith(c.route))) return true;
+    return false;
+  }
+
+  protected onParentNavClick(item: NavItem): void {
+    if (this.isSidebarCollapsed()) {
+      this.isSidebarCollapsed.set(false);
+    }
+    this.expandedSubmenus.update((set) => {
+      const next = new Set(set);
+      next.add(item.module);
+      return next;
+    });
+    if (!this.isItemActive(item)) {
+      this.router.navigateByUrl(item.route);
+    }
+  }
 
   protected readonly resumedProcessNotice = signal<string | null>(null);
 

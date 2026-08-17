@@ -16,9 +16,12 @@ import { OutboundDispatch } from '../../models/warehouse-movements.models';
       
       <!-- Header -->
       <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-6">
-        <div>
-          <h1 class="text-2xl font-black tracking-tight">4GUARD WMS</h1>
-          <p class="text-xs uppercase font-semibold text-slate-600">Despacho Outbound / Embarke</p>
+        <div class="flex items-center gap-3">
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-14 w-auto max-w-[60px] object-contain rounded" />
+          <div>
+            <h1 class="text-2xl font-black tracking-tight">4GUARD WMS</h1>
+            <p class="text-xs uppercase font-semibold text-slate-600">Despacho Outbound / Embarque</p>
+          </div>
         </div>
         <div class="text-right">
           <h2 class="text-lg font-bold">SALIDA DE MERCANCÍA</h2>

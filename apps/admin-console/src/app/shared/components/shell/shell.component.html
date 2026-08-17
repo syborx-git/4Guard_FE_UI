@@ -8,7 +8,7 @@
     <div class="sidebar__logo-block">
       <div class="sidebar__logo">
         <div class="sidebar__logo-mark">
-          <img src="assets/logo-4guard.svg" alt="4GUARD Logo" class="sidebar__logo-img" />
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="sidebar__logo-img" />
         </div>
         @if (!isSidebarCollapsed()) {
           <div class="sidebar__logo-text">
@@ -32,23 +32,71 @@
     <!-- Navegacion -->
     <nav class="sidebar__nav" aria-label="Navegacion principal">
       <ul class="sidebar__nav-list" role="list">
-        @for (item of visibleNavItems(); track item.route) {
-          <li class="sidebar__nav-item">
-            <a
-              [routerLink]="item.route"
-              routerLinkActive="sidebar__nav-link--active"
-              [routerLinkActiveOptions]="{ exact: item.route === '/' }"
-              class="sidebar__nav-link"
-              [attr.aria-label]="item.label"
-              [attr.title]="isSidebarCollapsed() ? item.label : null">
-              <span class="material-symbols-outlined sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
-              @if (!isSidebarCollapsed()) {
-                <span class="sidebar__nav-label">{{ item.label }}</span>
+        @for (item of visibleNavItems(); track item.module) {
+          <li class="sidebar__nav-item" [class.sidebar__nav-item--has-children]="item.children && item.children.length > 0">
+            @if (!item.children || item.children.length === 0) {
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="sidebar__nav-link--active"
+                [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+                class="sidebar__nav-link"
+                [attr.aria-label]="item.label"
+                [attr.title]="isSidebarCollapsed() ? item.label : null">
+                <span class="material-symbols-outlined sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+                @if (!isSidebarCollapsed()) {
+                  <span class="sidebar__nav-label">{{ item.label }}</span>
+                }
+                @if (item.badge && item.badge() > 0 && !isSidebarCollapsed()) {
+                  <span class="sidebar__nav-badge">{{ item.badge() }}</span>
+                }
+              </a>
+            } @else {
+              <!-- Parent Item con Submenú -->
+              <div
+                class="sidebar__nav-link sidebar__nav-link--parent cursor-pointer"
+                [class.sidebar__nav-link--active]="isItemActive(item)"
+                (click)="onParentNavClick(item)"
+                [attr.aria-label]="item.label"
+                [attr.title]="isSidebarCollapsed() ? item.label : null"
+              >
+                <span class="material-symbols-outlined sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+                @if (!isSidebarCollapsed()) {
+                  <span class="sidebar__nav-label flex-1">{{ item.label }}</span>
+                  <button
+                    type="button"
+                    class="sidebar__nav-chevron-btn"
+                    (click)="toggleSubmenu(item.module, $event)"
+                    aria-label="Desplegar submenú"
+                  >
+                    <span
+                      class="material-symbols-outlined sidebar__nav-chevron"
+                      [class.sidebar__nav-chevron--expanded]="isSubmenuExpanded(item.module)"
+                    >
+                      expand_more
+                    </span>
+                  </button>
+                }
+              </div>
+
+              <!-- Lista de Submenú -->
+              @if (!isSidebarCollapsed() && isSubmenuExpanded(item.module)) {
+                <ul class="sidebar__subnav-list animate-fade-in" role="list">
+                  @for (sub of item.children; track sub.route) {
+                    <li class="sidebar__subnav-item">
+                      <a
+                        [routerLink]="sub.route"
+                        routerLinkActive="sidebar__subnav-link--active"
+                        class="sidebar__subnav-link"
+                        [attr.aria-label]="sub.label"
+                      >
+                        <span class="material-symbols-outlined sidebar__subnav-icon" aria-hidden="true">{{ sub.icon }}</span>
+                        <span class="sidebar__subnav-label">{{ sub.label }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
               }
-              @if (item.badge && item.badge() > 0 && !isSidebarCollapsed()) {
-                <span class="sidebar__nav-badge">{{ item.badge() }}</span>
-              }
-            </a>
+            }
           </li>
         }
       </ul>
@@ -224,36 +272,59 @@
 
             <!-- Dropdown flotante con la cola de notificaciones en fila -->
             @if (showReceptionAlertsDropdown()) {
-              <div class="shell__reception-dropdown animate-fade-up">
-                <div class="flex items-center justify-between border-b border-subtle pb-2.5 mb-2.5">
-                  <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gold text-base">notifications_active</span>
-                    <h4 class="font-bold text-[11px] text-primary uppercase tracking-wider">PRE-RECEPCIONES EN ESPERA</h4>
+              <div class="shell__reception-dropdown shadow-2xl animate-fade-up">
+                <!-- Header del Dropdown -->
+                <div class="reception-dropdown__header">
+                  <div class="reception-dropdown__title-box">
+                    <div class="reception-dropdown__icon-wrap">
+                      <span class="material-symbols-outlined">notifications_active</span>
+                    </div>
+                    <div>
+                      <h4 class="reception-dropdown__title">Pre-Recepciones en Caseta</h4>
+                      <p class="reception-dropdown__subtitle">Unidades en espera de descarga</p>
+                    </div>
                   </div>
-                  <span class="font-mono text-[10px] font-bold text-gold bg-gold/10 px-2 py-0.5 rounded-md border border-gold/30">
-                    {{ pendingReceptionsCount() }} en cola
+                  <span class="reception-dropdown__badge">
+                    {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'en fila' : 'en fila' }}
                   </span>
                 </div>
 
-                <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <!-- Lista de Notificaciones -->
+                <div class="reception-dropdown__list">
                   @for (rec of pendingReceptions(); track rec.folio) {
-                    <div class="p-2.5 rounded-xl border border-subtle bg-surface-subtle hover:border-gold transition-colors flex items-center justify-between gap-3 text-xs">
-                      <div>
-                        <div class="flex items-center gap-1.5">
-                          <span class="font-mono text-xs font-bold text-gold">#{{ rec.folio }}</span>
-                          <span class="font-bold text-primary truncate max-w-[140px]">{{ rec.checkIn.client }}</span>
+                    <div class="reception-dropdown__card">
+                      <!-- Top bar de la tarjeta -->
+                      <div class="reception-dropdown__card-top">
+                        <span class="reception-dropdown__folio">FOLIO #{{ rec.folio }}</span>
+                        <div class="reception-dropdown__card-meta">
+                          <span class="reception-dropdown__ramp-badge">Rampa {{ rec.checkIn.rampNumber }}</span>
+                          <span class="reception-dropdown__time">{{ rec.checkIn.receptionTime }}</span>
                         </div>
-                        <p class="text-[10px] text-secondary mt-0.5 font-mono">
-                          Rem: {{ rec.checkIn.docNumber }} · Rampa {{ rec.checkIn.rampNumber }} · {{ rec.checkIn.receptionTime }}
-                        </p>
                       </div>
-                      <button
-                        type="button"
-                        (click)="openReceptionFromAlert(rec.folio)"
-                        class="btn-primary-gold text-[10px] font-bold px-2.5 py-1 rounded-lg whitespace-nowrap"
-                      >
-                        Atender
-                      </button>
+
+                      <!-- Información del cliente y remisión -->
+                      <div class="reception-dropdown__client-name">{{ rec.checkIn.client }}</div>
+                      <div class="reception-dropdown__details">
+                        <span class="reception-dropdown__doc">Rem: <strong>{{ rec.checkIn.docNumber }}</strong></span>
+                        <span class="reception-dropdown__dot">·</span>
+                        <span class="reception-dropdown__carrier">{{ rec.checkIn.carrierLine }}</span>
+                      </div>
+
+                      <!-- Footer con chofer y acción -->
+                      <div class="reception-dropdown__card-footer">
+                        <span class="reception-dropdown__driver">
+                          <span class="material-symbols-outlined text-[13px]">badge</span>
+                          {{ rec.checkIn.driverName }}
+                        </span>
+                        <button
+                          type="button"
+                          (click)="openReceptionFromAlert(rec.folio)"
+                          class="reception-dropdown__action-btn"
+                        >
+                          <span>Atender Folio</span>
+                          <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </button>
+                      </div>
                     </div>
                   }
                 </div>

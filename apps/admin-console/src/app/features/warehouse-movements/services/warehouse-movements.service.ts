@@ -21,6 +21,12 @@ import {
   RampItem,
   ForkliftOperatorItem,
   TRANSFER_REASONS,
+  WarehouseOutbound,
+  OutboundItem,
+  OutboundStatus,
+  TransportType,
+  CLIENT_DESTINATIONS,
+  ClientDestination,
 } from '../models/warehouse-movements.models';
 
 @Injectable({
@@ -32,6 +38,7 @@ export class WarehouseMovementsService {
   private nextFolioNumber = signal(26510);
   private nextTransferNumber = signal(4081);
   private nextDispatchNumber = signal(8821);
+  private nextOutboundNumber = signal(1);  // SAL-2026-000001
 
   // Catálogos Reactivos
   private readonly carrierLinesSignal = signal<CarrierLineItem[]>([
@@ -96,6 +103,7 @@ export class WarehouseMovementsService {
   private readonly receptionsSignal = signal<ReceptionHeader[]>([]);
   private readonly transfersSignal = signal<WarehouseTransfer[]>([]);
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
+  private readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
 
   // Bahías y su stock inicial simulado
   private readonly locationsSignal = signal<Record<string, LocationStockInfo>>({
@@ -349,8 +357,29 @@ export class WarehouseMovementsService {
   readonly pendingReceptionsCount = computed(() => this.pendingReceptions().length);
   readonly transfers = this.transfersSignal.asReadonly();
   readonly dispatches = this.dispatchesSignal.asReadonly();
+  readonly outbounds = this.outboundsSignal.asReadonly();
   readonly locations = this.locationsSignal.asReadonly();
   readonly inventoryBatches = this.inventoryBatchesSignal.asReadonly();
+
+  // KPIs de Salidas de Almacén (Outbound)
+  readonly kpiTotalOutbounds = computed(() => this.outboundsSignal().length);
+  readonly kpiTotalPalletsDispatched = computed(() =>
+    this.outboundsSignal().reduce((acc, o) => acc + o.totalPallets, 0)
+  );
+  readonly kpiTotalPiecesDispatched = computed(() =>
+    this.outboundsSignal().reduce((acc, o) => acc + o.totalPieces, 0)
+  );
+  readonly kpiDistinctClientsServed = computed(() =>
+    new Set(this.outboundsSignal().map((o) => o.clientCode)).size
+  );
+
+  // Catálogo de Destinos por Cliente
+  readonly clientDestinations = CLIENT_DESTINATIONS;
+  getDestinationsForClient(clientCode: string): ClientDestination[] {
+    return CLIENT_DESTINATIONS.filter(
+      (d) => d.clientCode === clientCode && d.status === 'ACTIVO'
+    );
+  }
 
   // Bahías Ocupadas y Disponibles (Computadas)
   readonly occupiedLocations = computed(() =>
@@ -493,7 +522,7 @@ export class WarehouseMovementsService {
       },
     ]);
 
-    // Salida inicial simulada
+    // Salida inicial simulada (legado)
     this.dispatchesSignal.set([
       {
         folio: 'DESP-8820',
@@ -516,6 +545,41 @@ export class WarehouseMovementsService {
         dispatchedBy: 'Christian Durán',
       },
     ]);
+
+    // Salidas Outbound MVP1 con folio SAL-2026-XXXXXX (seed data)
+    const seedOutboundItems: OutboundItem[] = [
+      { id: 'oi-s1-1', palletCode: 'UA-8810-1', productId: 'SKU-NES-680', description: 'Cereal Nestlé Nesquik 680g', lotNumber: 'LOT-2026-A1', expirationDate: '2026-11-15', pieces: 480, palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', locationCode: 'A-14' },
+      { id: 'oi-s1-2', palletCode: 'UA-8810-2', productId: 'SKU-NES-680', description: 'Cereal Nestlé Nesquik 680g', lotNumber: 'LOT-2026-A1', expirationDate: '2026-11-15', pieces: 480, palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', locationCode: 'A-14' },
+      { id: 'oi-s1-3', palletCode: 'UA-8810-3', productId: 'SKU-NES-680', description: 'Cereal Nestlé Nesquik 680g', lotNumber: 'LOT-2026-A1', expirationDate: '2026-11-15', pieces: 480, palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', locationCode: 'A-14' },
+    ];
+    const seedOutbound: WarehouseOutbound = {
+      id: 'out-seed-1',
+      folio: 'SAL-2026-000001',
+      status: 'COMPLETED',
+      clientCode: 'CLI-001',
+      clientName: 'Nestlé México',
+      destinationId: 'DEST-CLI001-TOLUCA',
+      destinationName: 'CEDIS Toluca',
+      destinationAddress: 'Blvd. Aeropuerto 2112, Toluca, Edo. de México',
+      carrierCode: 'TR-01',
+      carrierName: 'Transportes Castores',
+      driverName: 'Juan Pérez',
+      economicNumber: 'ECO-901',
+      tractorPlates: '12-AA-34',
+      boxPlates: '78-BB-90',
+      transportType: 'TRAILER',
+      sealNumber: 'SL-88401',
+      remisionNo: 'REM-88102',
+      items: seedOutboundItems,
+      totalPallets: 3,
+      totalPieces: 1440,
+      distinctSkus: 1,
+      dispatchedAt: '2026-08-10 14:20',
+      dispatchedBy: 'Christian Durán',
+      timestamp: '14:20',
+    };
+    this.outboundsSignal.set([seedOutbound]);
+    this.nextOutboundNumber.set(2);
   }
 
   // Genera un Folio Consecutivo de Recepción (ej. 26510)
@@ -786,6 +850,89 @@ export class WarehouseMovementsService {
     return newTransfer;
   }
 
+  // Genera Folio Salida de Almacén (SAL-2026-XXXXXX)
+  private generateNextOutboundFolio(): string {
+    const year = new Date().getFullYear();
+    const seq = String(this.nextOutboundNumber()).padStart(6, '0');
+    this.nextOutboundNumber.update((v) => v + 1);
+    return `SAL-${year}-${seq}`;
+  }
+
+  // Ejecuta Salida de Almacén (Outbound MVP1) — Transacción Atómica
+  executeOutbound(dto: {
+    clientCode: string;
+    clientName: string;
+    destinationId: string;
+    destinationName: string;
+    destinationAddress?: string;
+    carrierCode: string;
+    carrierName: string;
+    driverName: string;
+    economicNumber: string;
+    tractorPlates: string;
+    boxPlates: string;
+    transportType: TransportType;
+    sealNumber: string;
+    remisionNo: string;
+    selectedPallets: OutboundItem[];
+    dispatchedBy: string;
+  }): WarehouseOutbound {
+    if (!dto.clientCode) throw new Error('El cliente es obligatorio.');
+    if (!dto.destinationId) throw new Error('El destino es obligatorio.');
+    if (!dto.carrierCode) throw new Error('El transportista es obligatorio.');
+    if (!dto.sealNumber.trim()) throw new Error('El número de sello es obligatorio.');
+    if (dto.selectedPallets.length === 0) throw new Error('Selecciona al menos una tarima para registrar la salida.');
+
+    const folio = this.generateNextOutboundFolio();
+    const distinctSkus = new Set(dto.selectedPallets.map((p) => p.productId)).size;
+    const totalPieces = dto.selectedPallets.reduce((acc, p) => acc + p.pieces, 0);
+
+    const newOutbound: WarehouseOutbound = {
+      id: 'out-' + Date.now(),
+      folio,
+      status: 'COMPLETED',
+      clientCode: dto.clientCode,
+      clientName: dto.clientName,
+      destinationId: dto.destinationId,
+      destinationName: dto.destinationName,
+      destinationAddress: dto.destinationAddress,
+      carrierCode: dto.carrierCode,
+      carrierName: dto.carrierName,
+      driverName: dto.driverName,
+      economicNumber: dto.economicNumber,
+      tractorPlates: dto.tractorPlates,
+      boxPlates: dto.boxPlates,
+      transportType: dto.transportType,
+      sealNumber: dto.sealNumber,
+      remisionNo: dto.remisionNo,
+      items: dto.selectedPallets,
+      totalPallets: dto.selectedPallets.length,
+      totalPieces,
+      distinctSkus,
+      dispatchedAt: new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }),
+      dispatchedBy: dto.dispatchedBy,
+      timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    // Descontar UAs seleccionadas del lote/bahía de inventario
+    const selectedIds = new Set(dto.selectedPallets.map((p) => p.id));
+    this.inventoryBatchesSignal.update((batches) =>
+      batches.map((batch) => {
+        const remaining = batch.pallets.filter((p) => !selectedIds.has(p.id));
+        if (remaining.length === batch.pallets.length) return batch;
+        return {
+          ...batch,
+          availablePallets: remaining.length,
+          totalPieces: remaining.reduce((acc, p) => acc + p.pieces, 0),
+          pallets: remaining,
+        };
+      })
+    );
+
+    this.outboundsSignal.update((list) => [newOutbound, ...list]);
+    return newOutbound;
+  }
+
   // Procesa el Cambio de Almacén / Traspaso Interno (Legacy simplificado)
   executeTransfer(
     origin: string,
@@ -841,5 +988,45 @@ export class WarehouseMovementsService {
     );
 
     return fullDispatch;
+  }
+
+  // Cancela Traspaso (Cambio de Almacén)
+  cancelTransfer(folio: string, justification: string, adminName: string): WarehouseTransfer | null {
+    const list = this.transfersSignal();
+    const index = list.findIndex((t) => t.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseTransfer = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.transfersSignal.set(newArr);
+    return updated;
+  }
+
+  // Cancela Salida de Almacén (Outbound)
+  cancelOutbound(folio: string, justification: string, adminName: string): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const index = list.findIndex((o) => o.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseOutbound = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.outboundsSignal.set(newArr);
+    return updated;
   }
 }

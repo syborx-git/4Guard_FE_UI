@@ -17,9 +17,7 @@ import { WarehouseTransfer } from '../../models/warehouse-movements.models';
       <!-- Header Oficial WMS -->
       <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-5">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-slate-900 text-amber-400 rounded-xl flex items-center justify-center font-black text-2xl font-mono shadow-sm">
-            4G
-          </div>
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-14 w-auto max-w-[60px] object-contain rounded" />
           <div>
             <h1 class="text-2xl font-black tracking-tight text-slate-900 leading-none">4GUARD WMS</h1>
             <p class="text-[11px] uppercase font-bold text-amber-700 tracking-wider mt-1">COMPROBANTE OFICIAL DE CAMBIO DE ALMACÉN</p>

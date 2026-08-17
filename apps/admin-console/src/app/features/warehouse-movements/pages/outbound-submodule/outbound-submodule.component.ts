@@ -1,201 +1,414 @@
-/**
- * @file outbound-submodule.component.ts
- * @description Submódulo 3: Salidas de Almacén (Despacho / Outbound).
- * Incluye Algoritmo Sugerido FIFO/FEFO y Selección Granular de UAs por checkbox.
- */
-
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import {
+  WarehouseOutbound,
+  OutboundItem,
+  TransportType,
+  TRANSPORT_TYPES,
+  CarrierLineItem,
+  ClientItem,
+  ClientDestination,
   InventoryBatch,
-  OutboundDispatch,
-  ReceptionPalletItem,
 } from '../../models/warehouse-movements.models';
 import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
-
-type OutboundTab = 'alta-salidas' | 'consulta-salidas';
 
 @Component({
   selector: 'fg-outbound-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PrintDispatchLayoutComponent],
+  imports: [CommonModule, FormsModule, PrintDispatchLayoutComponent],
   templateUrl: './outbound-submodule.component.html',
   styleUrl: './outbound-submodule.component.css',
 })
-export class OutboundSubmoduleComponent {
-  private readonly movementsService = inject(WarehouseMovementsService);
-  private readonly fb = inject(FormBuilder);
+export class OutboundSubmoduleComponent implements OnInit {
+  private readonly svc = inject(WarehouseMovementsService);
   private readonly toast = inject(ToastService);
+  private readonly authState = inject(AuthState);
 
-  activeTab = signal<OutboundTab>('alta-salidas');
+  // ── MODO DEL WORKBENCH ─────────────────────────────────────────────────────
+  formMode = signal<'idle' | 'create' | 'detail'>('idle');
+  selectedOutbound = signal<WarehouseOutbound | null>(null);
+  searchQuery = signal('');
 
-  // Plantas físicas destino de Nestlé / Clientes
-  destinationPlants = [
-    'Nestlé Planta Toluca',
-    'Nestlé Querétaro',
-    'Nestlé Lagos de Moreno',
-    'Unilever Planta CIVAC',
-    'Walmart CEDIS Chalco',
-  ];
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
 
-  transportTypes = ['Camioneta', 'Torton', 'Tráiler'] as const;
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
 
-  // Formulario Transporte / Destino
-  outboundForm = this.fb.group({
-    client: ['Nestlé México', [Validators.required]],
-    destinationPlant: ['Nestlé Planta Toluca', [Validators.required]],
-    sealNumber: ['SL-88401', [Validators.required]],
-    carrierName: ['Transportes Castores', [Validators.required]],
-    driverName: ['Juan Pérez', [Validators.required]],
-    economicNumber: ['ECO-901', [Validators.required]],
-    tractorPlates: ['12-AA-34', [Validators.required]],
-    boxPlates: ['78-BB-90', [Validators.required]],
-    transportType: ['Tráiler' as 'Camioneta' | 'Torton' | 'Tráiler', [Validators.required]],
-    forkliftOperator: ['Pablo Hernández', [Validators.required]],
-    productId: ['SKU-NES-680', [Validators.required]],
-  });
+  // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────
+  currentStep = signal<1 | 2>(1);
 
-  // Lotes disponibles filtrados por SKU
-  selectedBatch = signal<InventoryBatch | null>(null);
+  // Catálogos
+  readonly carriers = this.svc.carrierLines;
+  readonly clients = this.svc.clients;
+  readonly transportTypes = TRANSPORT_TYPES;
+  readonly allBatches = this.svc.inventoryBatches;
 
-  availableBatches = computed(() => {
-    const batches = this.movementsService.inventoryBatches();
-    const prodId = this.outboundForm.value.productId || 'SKU-NES-680';
-    return batches.filter((b) => b.productId === prodId);
-  });
+  // Selecciones Paso 1
+  selectedClientCode = signal('CLI-001');
+  selectedDestinationId = signal('DEST-CLI001-TOLUCA');
+  selectedCarrierCode = signal('TR-01');
+  driverName = signal('Juan Pérez');
+  economicNumber = signal('ECO-901');
+  tractorPlates = signal('12-AA-34');
+  boxPlates = signal('78-BB-90');
+  selectedTransportType = signal<TransportType>('TRAILER');
+  sealNumber = signal('SL-88401');
 
-  // UAs seleccionadas de forma granular por Checkbox
-  selectedPalletsMap = signal<Record<string, boolean>>({});
-
-  selectedPalletsList = computed<ReceptionPalletItem[]>(() => {
-    const batch = this.selectedBatch();
-    if (!batch) return [];
-    const map = this.selectedPalletsMap();
-    return batch.pallets.filter((p) => !!map[p.id]);
-  });
-
-  totalSelectedPallets = computed(() => this.selectedPalletsList().length);
-  totalSelectedPieces = computed(() =>
-    this.selectedPalletsList().reduce((acc, p) => acc + p.pieces, 0)
+  // Computed: Cliente seleccionado
+  selectedClient = computed(() =>
+    this.clients().find((c) => c.code === this.selectedClientCode()) || this.clients()[0]
   );
 
-  // Modal Impresión
-  showPrintModal = signal(false);
-  selectedPrintDispatch = signal<OutboundDispatch | null>(null);
+  // Computed: Destinos del cliente activo
+  destinationsForClient = computed(() =>
+    this.svc.getDestinationsForClient(this.selectedClientCode())
+  );
 
-  // ── PESTAÑA CONSULTA ──
-  searchClient = signal('');
-  searchCarrier = signal('');
-  searchFolio = signal('');
+  // Computed: Destino seleccionado
+  selectedDestination = computed(() =>
+    this.destinationsForClient().find((d) => d.id === this.selectedDestinationId()) ||
+    this.destinationsForClient()[0]
+  );
 
-  filteredDispatches = computed(() => {
-    const list = this.movementsService.dispatches();
-    const c = this.searchClient().toLowerCase().trim();
-    const carr = this.searchCarrier().toLowerCase().trim();
-    const f = this.searchFolio().toLowerCase().trim();
+  // Computed: Transportista seleccionado
+  selectedCarrier = computed(() =>
+    this.carriers().find((c) => c.code === this.selectedCarrierCode()) || this.carriers()[0]
+  );
 
-    return list.filter((d) => {
-      const matchC = !c || d.client.toLowerCase().includes(c);
-      const matchCarr = !carr || d.carrierName.toLowerCase().includes(carr);
-      const matchF = !f || d.folio.toLowerCase().includes(f);
-      return matchC && matchCarr && matchF;
-    });
+  // Validación Paso 1
+  isStep1Valid = computed(() =>
+    !!this.selectedClientCode() &&
+    !!this.selectedDestinationId() &&
+    !!this.selectedCarrierCode() &&
+    !!this.driverName().trim() &&
+    !!this.sealNumber().trim()
+  );
+
+  // ── PASO 2: SELECCIÓN DE MERCANCÍA ────────────────────────────────────────
+
+  // Lotes disponibles para el cliente seleccionado (simulado: todos los disponibles)
+  availableBatches = computed(() => {
+    const client = this.selectedClient();
+    return this.allBatches().filter((b) => b.availablePallets > 0);
   });
 
-  constructor() {
-    // Al iniciar, seleccionar el lote por defecto
-    const b = this.availableBatches();
-    if (b.length > 0) {
-      this.selectBatch(b[0]);
+  selectedBatch = signal<InventoryBatch | null>(null);
+  selectedPalletIds = signal<string[]>([]);
+
+  // Convierte los pallets del batch seleccionado a OutboundItems
+  selectedPalletItems = computed<OutboundItem[]>(() => {
+    const batch = this.selectedBatch();
+    if (!batch) return [];
+    const ids = this.selectedPalletIds();
+    return batch.pallets
+      .filter((p) => ids.includes(p.id))
+      .map((p) => ({
+        id: p.id,
+        palletCode: p.palletCode,
+        productId: p.productId,
+        description: p.description,
+        lotNumber: batch.lotNumber,
+        expirationDate: batch.expirationDate,
+        pieces: p.pieces,
+        palletTypeId: p.palletTypeId,
+        palletTypeLabel: p.palletTypeLabel,
+        locationCode: batch.locationCode,
+      }));
+  });
+
+  totalSelectedPallets = computed(() => this.selectedPalletItems().length);
+  totalSelectedPieces = computed(() =>
+    this.selectedPalletItems().reduce((acc, p) => acc + p.pieces, 0)
+  );
+  totalSelectedSkus = computed(() =>
+    new Set(this.selectedPalletItems().map((p) => p.productId)).size
+  );
+
+  isStep2Valid = computed(() => this.selectedPalletItems().length > 0);
+
+  canConfirm = computed(() => this.isStep1Valid() && this.isStep2Valid());
+
+  // ── KPI SIGNALS ────────────────────────────────────────────────────────────
+  kpiTotalOutbounds = this.svc.kpiTotalOutbounds;
+  kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
+  kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
+  kpiClients = this.svc.kpiDistinctClientsServed;
+
+  // ── DIRECTORIO (LISTA IZQUIERDA) ──────────────────────────────────────────
+  outboundsList = this.svc.outbounds;
+  filteredOutbounds = computed(() => {
+    const list = this.outboundsList();
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((o) =>
+      o.folio.toLowerCase().includes(q) ||
+      o.clientName.toLowerCase().includes(q) ||
+      o.carrierName.toLowerCase().includes(q) ||
+      o.sealNumber.toLowerCase().includes(q) ||
+      o.destinationName.toLowerCase().includes(q)
+    );
+  });
+
+  // ── MODALES ────────────────────────────────────────────────────────────────
+  showConfirmModal = signal(false);
+  isExecuting = signal(false);
+  showPrintModal = signal(false);
+  selectedPrintOutbound = signal<WarehouseOutbound | null>(null);
+
+  // ── LIFECYCLE ──────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.formMode.set('idle');
+    this.selectedOutbound.set(null);
+  }
+
+  // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
+  startNewOutbound(): void {
+    this.formMode.set('create');
+    this.selectedOutbound.set(null);
+    this.currentStep.set(1);
+    localStorage.removeItem('4guard_active_outbound_folio');
+
+    // Resetear selecciones
+    this.selectedClientCode.set('CLI-001');
+    this.selectedDestinationId.set('DEST-CLI001-TOLUCA');
+    this.selectedCarrierCode.set('TR-01');
+    this.driverName.set('Juan Pérez');
+    this.economicNumber.set('ECO-901');
+    this.tractorPlates.set('12-AA-34');
+    this.boxPlates.set('78-BB-90');
+    this.selectedTransportType.set('TRAILER');
+    this.sealNumber.set('');
+    this.selectedPalletIds.set([]);
+
+    const batches = this.availableBatches();
+    if (batches.length > 0) {
+      this.pickBatch(batches[0]);
+    } else {
+      this.selectedBatch.set(null);
     }
   }
 
-  selectBatch(batch: InventoryBatch): void {
+  resetToIdle(): void {
+    this.formMode.set('idle');
+    this.selectedOutbound.set(null);
+    localStorage.removeItem('4guard_active_outbound_folio');
+    this.currentStep.set(1);
+  }
+
+  selectOutboundItem(outbound: WarehouseOutbound): void {
+    this.formMode.set('detail');
+    this.selectedOutbound.set(outbound);
+    localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
+  }
+
+  // ── PASO 1 → PASO 2 ───────────────────────────────────────────────────────
+  goToStep2(): void {
+    if (!this.isStep1Valid()) {
+      this.toast.warning('Completa los datos de transporte y destino para continuar.');
+      return;
+    }
+    this.currentStep.set(2);
+  }
+
+  goBackToStep1(): void {
+    this.currentStep.set(1);
+  }
+
+  // ── CLIENTE / DESTINO / CARRIER ────────────────────────────────────────────
+  onClientChange(code: string): void {
+    this.selectedClientCode.set(code);
+    // Auto-seleccionar primer destino del nuevo cliente
+    const dests = this.svc.getDestinationsForClient(code);
+    if (dests.length > 0) {
+      this.selectedDestinationId.set(dests[0].id);
+    } else {
+      this.selectedDestinationId.set('');
+    }
+  }
+
+  onCarrierChange(code: string): void {
+    this.selectedCarrierCode.set(code);
+    // Precargar nombre del transportista (snapshot)
+  }
+
+  // ── SELECCIÓN DE BATCH Y TARIMAS ─────────────────────────────────────────
+  pickBatch(batch: InventoryBatch): void {
     this.selectedBatch.set(batch);
-    // Pre-seleccionar todas las UAs por defecto para facilidad de usuario
-    const initialMap: Record<string, boolean> = {};
-    batch.pallets.forEach((p) => {
-      initialMap[p.id] = true;
-    });
-    this.selectedPalletsMap.set(initialMap);
+    // Pre-seleccionar todas las tarimas disponibles
+    this.selectedPalletIds.set(batch.pallets.map((p) => p.id));
   }
 
-  togglePalletSelection(palletId: string, event?: Event): void {
-    const checked = event ? (event.target as HTMLInputElement).checked : !this.selectedPalletsMap()[palletId];
-    this.selectedPalletsMap.update((map) => ({
-      ...map,
-      [palletId]: checked,
-    }));
+  togglePallet(id: string): void {
+    this.selectedPalletIds.update((ids) =>
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+    );
   }
 
-  confirmOutbound(): void {
-    this.executeDispatch();
-  }
-
-  toggleAllPallets(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  toggleAllPallets(): void {
     const batch = this.selectedBatch();
     if (!batch) return;
-
-    const newMap: Record<string, boolean> = {};
-    batch.pallets.forEach((p) => {
-      newMap[p.id] = checked;
-    });
-    this.selectedPalletsMap.set(newMap);
+    if (this.selectedPalletIds().length === batch.pallets.length) {
+      this.selectedPalletIds.set([]);
+    } else {
+      this.selectedPalletIds.set(batch.pallets.map((p) => p.id));
+    }
   }
 
-  executeDispatch(): void {
-    if (this.outboundForm.invalid) {
-      this.toast.warning('Por favor completa los datos obligatorios del transporte.');
-      return;
-    }
-    if (this.totalSelectedPallets() === 0) {
-      this.toast.warning('Debes seleccionar al menos 1 Tarima/UA para autorizar la salida.');
-      return;
-    }
+  isPalletSelected(id: string): boolean {
+    return this.selectedPalletIds().includes(id);
+  }
 
+  areAllPalletsSelected(): boolean {
     const batch = this.selectedBatch();
-    if (!batch) return;
+    if (!batch || batch.pallets.length === 0) return false;
+    return this.selectedPalletIds().length === batch.pallets.length;
+  }
 
-    const dispatchData = {
-      client: this.outboundForm.value.client || 'Cliente General',
-      destinationPlant: this.outboundForm.value.destinationPlant || 'Nestlé Toluca',
-      sealNumber: this.outboundForm.value.sealNumber || 'SL-000',
-      carrierName: this.outboundForm.value.carrierName || 'Transportista',
-      driverName: this.outboundForm.value.driverName || 'Chofer',
-      economicNumber: this.outboundForm.value.economicNumber || 'ECO-1',
-      tractorPlates: this.outboundForm.value.tractorPlates || '00-XX-00',
-      boxPlates: this.outboundForm.value.boxPlates || '00-YY-00',
-      transportType: (this.outboundForm.value.transportType as any) || 'Tráiler',
-      forkliftOperator: this.outboundForm.value.forkliftOperator || 'Montacarguista',
-      productId: batch.productId,
-      productName: batch.productName,
-      selectedPallets: this.selectedPalletsList(),
-      totalPallets: this.totalSelectedPallets(),
-      totalPieces: this.totalSelectedPieces(),
-      dispatchedBy: 'Christian Durán',
-    };
+  // ── CONFIRMACIÓN Y EJECUCIÓN ──────────────────────────────────────────────
+  openConfirmModal(): void {
+    if (!this.canConfirm()) {
+      this.toast.warning('Completa todos los campos obligatorios antes de confirmar.');
+      return;
+    }
+    this.showConfirmModal.set(true);
+  }
 
-    const result = this.movementsService.executeDispatch(dispatchData);
-    this.toast.success(`Despacho #${result.folio} autorizado y listo para salida`);
-    this.selectedPrintDispatch.set(result);
+  closeConfirmModal(): void {
+    this.showConfirmModal.set(false);
+  }
+
+  executeOutboundAction(): void {
+    if (!this.canConfirm()) return;
+    this.isExecuting.set(true);
+
+    try {
+      const batch = this.selectedBatch();
+      const carrier = this.selectedCarrier();
+      const client = this.selectedClient();
+      const dest = this.selectedDestination();
+
+      const result = this.svc.executeOutbound({
+        clientCode: this.selectedClientCode(),
+        clientName: client?.name || '',
+        destinationId: this.selectedDestinationId(),
+        destinationName: dest?.name || '',
+        destinationAddress: dest ? `${dest.address}, ${dest.city}, ${dest.state}` : '',
+        carrierCode: this.selectedCarrierCode(),
+        carrierName: carrier?.name || '',
+        driverName: this.driverName(),
+        economicNumber: this.economicNumber(),
+        tractorPlates: this.tractorPlates(),
+        boxPlates: this.boxPlates(),
+        transportType: this.selectedTransportType(),
+        sealNumber: this.sealNumber(),
+        remisionNo: batch?.remisionNo || 'REM-SIN-ASIGNAR',
+        selectedPallets: this.selectedPalletItems(),
+        dispatchedBy: 'Christian Durán (Admin)',
+      });
+
+      this.isExecuting.set(false);
+      this.showConfirmModal.set(false);
+      this.toast.success(`Salida ${result.folio} registrada y lista para despacho.`);
+
+      // Abrir en modo detalle + mostrar comprobante
+      this.selectedOutbound.set(result);
+      this.formMode.set('detail');
+      this.selectedPrintOutbound.set(result);
+      this.showPrintModal.set(true);
+    } catch (err: any) {
+      this.isExecuting.set(false);
+      this.toast.error(err.message || 'Error al registrar la salida de almacén.');
+    }
+  }
+
+  // ── IMPRESIÓN ─────────────────────────────────────────────────────────────
+  openPrintPreview(outbound: WarehouseOutbound): void {
+    this.selectedPrintOutbound.set(outbound);
     this.showPrintModal.set(true);
   }
 
-  openPrintPreview(dispatch: OutboundDispatch): void {
-    this.selectedPrintDispatch.set(dispatch);
-    this.showPrintModal.set(true);
+  closePrintModal(): void {
+    this.showPrintModal.set(false);
+    this.selectedPrintOutbound.set(null);
   }
 
   triggerBrowserPrint(): void {
     window.print();
   }
 
-  closePrintModal(): void {
-    this.showPrintModal.set(false);
-    this.selectedPrintDispatch.set(null);
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  getTransportLabel(type: TransportType): string {
+    return TRANSPORT_TYPES.find((t) => t.id === type)?.label || type;
+  }
+
+  // ── CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ──
+  openCancelModal(): void {
+    const user = this.authState.currentUser();
+    this.cancelReason.set('');
+    this.cancelAdminUser.set(user ? user.username || user.email : 'admin@4guard.com');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelErrorMessage.set(null);
+  }
+
+  confirmCancelOutbound(): void {
+    const reason = this.cancelReason().trim();
+    if (!reason || reason.length < 5) {
+      this.cancelErrorMessage.set('Debes ingresar un motivo de cancelación detallado (mínimo 5 caracteres).');
+      return;
+    }
+
+    const username = this.cancelAdminUser().trim();
+    const password = this.cancelAdminPassword().trim();
+
+    if (!username || !password) {
+      this.cancelErrorMessage.set('Debes ingresar las credenciales del Administrador.');
+      return;
+    }
+
+    const current = this.selectedOutbound();
+    if (!current) return;
+
+    this.isCancelling.set(true);
+    this.cancelErrorMessage.set(null);
+
+    try {
+      const updated = this.svc.cancelOutbound(
+        current.folio,
+        reason,
+        username
+      );
+
+      this.isCancelling.set(false);
+
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.showCancelModal.set(false);
+        this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
+      } else {
+        this.cancelErrorMessage.set('No se pudo cancelar la salida. Folio no encontrado.');
+      }
+    } catch (err: any) {
+      this.isCancelling.set(false);
+      this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
+    }
   }
 }
