@@ -422,15 +422,15 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
-    { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
+    { label: 'Catálogos', route: '/catalogs', icon: 'style', module: 'catalogs' },
+    { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
+    { label: 'Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
     { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    { label: 'Movimientos de Almacén', route: '/warehouse-movements', icon: 'swap_horiz', module: 'warehouse-movements' },
-    { label: 'Catálogos', route: '/catalogs', icon: 'style', module: 'catalogs' },
-    { label: 'Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
+    { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
   ];
 
 

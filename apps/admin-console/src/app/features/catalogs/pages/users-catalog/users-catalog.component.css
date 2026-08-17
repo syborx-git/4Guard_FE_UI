@@ -57,12 +57,13 @@
 }
 
 .catalog-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #0F172A;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
+  font-size: clamp(1.5rem, 2vw, 1.9rem) !important;
+  font-weight: 350 !important;
+  letter-spacing: -0.045em !important;
+  color: #0F172A !important;
   margin: 0;
-  letter-spacing: -0.02em;
+  line-height: 1.08;
 }
 
 .catalog-subtitle {

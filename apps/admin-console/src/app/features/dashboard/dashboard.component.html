@@ -31,7 +31,7 @@
   <div class="dashboard__grid">
 
     <!-- ─ 1. Risk Gauge ───────────────────────────── -->
-    <div class="dash-card dash-card--gauge" id="risk-gauge-card">
+    <div class="dash-card dash-card--gauge" id="risk-gauge-card" fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           crisis_alert
@@ -64,7 +64,7 @@
 
     <!-- ─ 2. Saturación del Almacén ──────────────── -->
     <div class="dash-card dash-card--saturation" id="saturation-card" (click)="navigateToMap()" role="button"
-      tabindex="0" (keydown.enter)="navigateToMap()" aria-label="Ver mapa 2D de saturación del almacén">
+      tabindex="0" (keydown.enter)="navigateToMap()" aria-label="Ver mapa 2D de saturación del almacén" fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           warehouse
@@ -112,7 +112,7 @@
 
     <!-- ─ 3. KPI Cards ────────────────────────────── -->
     @for (card of kpiCards(); track card.id) {
-    <div class="dash-card dash-card--kpi" [id]="card.id">
+    <div class="dash-card dash-card--kpi" [id]="card.id" fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           @switch (card.id) {
@@ -160,7 +160,7 @@
     }
 
     <!-- ─ 4. Panel de Alertas Críticas ───────────── -->
-    <div class="dash-card dash-card--alerts" id="alerts-panel">
+    <div class="dash-card dash-card--alerts" id="alerts-panel" fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           notifications

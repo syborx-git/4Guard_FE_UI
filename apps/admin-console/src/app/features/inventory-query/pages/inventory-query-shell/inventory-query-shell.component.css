@@ -35,12 +35,13 @@
 }
 
 .module-header-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #202633;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
+  font-size: clamp(1.8rem, 2.4vw, 2.3rem) !important;
+  font-weight: 350 !important;
+  letter-spacing: -0.045em !important;
+  color: #202633 !important;
   margin: 0;
-  letter-spacing: -0.03em;
+  line-height: 1.08;
 }
 
 .module-header-badge {

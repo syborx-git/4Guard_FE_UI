@@ -73,8 +73,13 @@
 }
 
 .hero-header__title {
-  font-family: 'Outfit', 'DM Sans', sans-serif;
-  color: var(--text-primary, #17243d);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
+  font-size: clamp(1.8rem, 2.4vw, 2.3rem) !important;
+  font-weight: 350 !important;
+  letter-spacing: -0.045em !important;
+  color: var(--text-primary, #17243d) !important;
+  margin: 0;
+  line-height: 1.08;
 }
 
 .hero-header__subtitle {

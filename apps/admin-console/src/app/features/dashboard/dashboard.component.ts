@@ -16,6 +16,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { InventoryState, InventoryStatus, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
+import { SpecularGlowDirective } from '../../shared/directives/specular-glow.directive';
 
 interface KpiCard {
   id: string;
@@ -39,7 +40,7 @@ interface Alert {
 @Component({
   selector: 'fg-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SpecularGlowDirective],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })

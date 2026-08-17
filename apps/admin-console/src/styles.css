@@ -561,3 +561,28 @@ img, svg {
 .empty-state__icon { font-size: 32px; opacity: 0.5; }
 .empty-state__text { font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
+/* ── Homologación Global de Títulos de Página (DM Sans 350 / -0.045em) ──── */
+h1.page-title,
+h2.page-title,
+.page-title,
+.dashboard__title,
+.rc-hero__title,
+.quality-header__title,
+.shipping-header__title,
+.shipping-card__title,
+.kpi-hero__title,
+.perf-header__title,
+.hero-header__title,
+.wm-submodule__title,
+.admin-hero__title,
+.admin-header__title,
+.catalog-header__title,
+.catalog-title,
+.iq-header__title,
+.module-header-title,
+.filter-modal__title {
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
+  font-weight: 350 !important;
+  letter-spacing: -0.045em !important;
+}
+
