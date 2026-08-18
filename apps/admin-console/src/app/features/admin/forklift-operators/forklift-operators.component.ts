@@ -47,6 +47,14 @@ export class ForkliftOperatorsComponent implements OnInit {
   protected readonly searchTerm    = signal<string>('');
   protected readonly licenseFilter = signal<string>('ALL');
 
+  // ─── Estado de Carga y Vacío ────────────────────────────────────────────────
+  protected readonly isLoading   = this.forkliftService.loading;
+  protected readonly loadError   = this.forkliftService.error;
+  protected readonly isListEmpty = computed(() => !this.isLoading() && this.forkliftService.operators().length === 0);
+  protected readonly hasNoResults = computed(
+    () => !this.isLoading() && this.forkliftService.operators().length > 0 && this.filteredOperators().length === 0
+  );
+
   // ─── Toast ──────────────────────────────────────────────────────────────────
   protected readonly toastMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -125,10 +133,13 @@ export class ForkliftOperatorsComponent implements OnInit {
       console.warn('Cargando turnos desde respaldo local:', e);
     }
 
-    // Load forklift operators from backend
+    this.reloadOperators();
+  }
+
+  reloadOperators(): void {
     this.forkliftService.loadOperators(DEFAULT_ORG_ID).subscribe({
       next: (list) => {
-        if (list.length > 0) {
+        if (list.length > 0 && !this.selectedOperatorId()) {
           this.selectOperator(list[0]);
         }
       },
