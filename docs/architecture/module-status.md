@@ -27,7 +27,7 @@
 | **Dashboard / Torre de Control** | `/dashboard` | 🔶 | `dashboard` | KPIs en tiempo real |
 | **Proveedores** | `/suppliers` | 🔶 | (verificar) | HU-125, con paginación BE |
 | **Organizaciones** | `/organizations` | ⬜ | — | Multi-tenant admin |
-| **Clientes** | `/clients` | 🔶 | (verificar) | Dueños de inventario |
+| **Clientes** | `/clients` | 🔧 | `client-management` | SDD v2.0 adaptado: [`clients-management.sdd.md`](../sdd/clients-management.sdd.md) (Multi-bodega y contactos) |
 | **Roles y Permisos** | `/roles` | 🔶 | (verificar) | RBAC admin |
 | **SKUs / Catálogo** | `/product-skus` | ⬜ | — | Catálogo de productos |
 | **Secciones de Almacén** | `/sections` | ⬜ | — | Áreas del almacén |

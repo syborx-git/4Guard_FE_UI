@@ -1,6 +1,7 @@
 /**
  * @file client.model.ts
  * @description Interfaces y tipos para la Gestión de Clientes (Depositantes / Owners 3PL) — 4GUARD WMS.
+ * Soporta Matriz de Contactos Corporativos y Múltiples Direcciones de Destino Físico (Multi-Bodega / Plantas).
  */
 
 export type ClientStatus = 'ACTIVE' | 'INACTIVE';
@@ -10,16 +11,44 @@ export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
   INACTIVE: 'INACTIVA',
 };
 
+export interface ClientContact {
+  id?: string;
+  clientId?: string;
+  name: string;             // Nombre del contacto (ej. "Ing. Carlos Fuentes")
+  department: string;       // Departamento / Área (ej. "Logística y Abasto")
+  phone: string;            // Teléfono directo / móvil
+  email: string;            // Correo electrónico corporativo
+  isPrimary?: boolean;      // Indica si es el contacto principal
+}
+
+export interface PhysicalDestination {
+  id?: string;
+  clientId?: string;
+  destinationCode: string;  // Código de destino (ej. "DEST-TOL-01")
+  plantName: string;        // Nombre de la planta o bodega (ej. "Planta Toluca (Café y Cacao)")
+  fullAddress: string;      // Dirección completa de entrega
+  contactPerson: string;    // Responsable o contacto en sitio (ej. "Ing. Fernando Ruiz")
+  phone: string;            // Teléfono directo de la planta (ej. "722 279 1000")
+  status: 'ACTIVO' | 'INACTIVO';
+  notes?: string;           // Indicaciones especiales de acceso o descarga
+}
+
 export interface Client {
   id: string;
   orgId: string;
   orgName: string;
   name: string;
-  externalId: string; // Código ERP/SAP/RFC (max 50 chars)
+  externalId: string;       // Código ERP/SAP/RFC (max 50 chars)
+  address: string;          // Dirección Fiscal / Corporativa principal
+  phone: string;            // Teléfono corporativo principal
+  email?: string;           // Correo general
+  webPortalPassword?: string; // Contraseña Portal Autoservicio
   status: ClientStatus;
+  contacts: ClientContact[];
+  destinations: PhysicalDestination[];
   version: number;
-  createdAt: string;  // ISO 8601
-  updatedAt: string;  // ISO 8601
+  createdAt: string;        // ISO 8601
+  updatedAt: string;        // ISO 8601
 }
 
 export interface ClientResponse {
@@ -28,7 +57,13 @@ export interface ClientResponse {
   organizationName: string;
   name: string;
   externalId: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  webPortalPassword?: string | null;
   status: string;
+  contacts?: ClientContact[];
+  destinations?: PhysicalDestination[];
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -39,7 +74,13 @@ export interface CreateClientRequest {
   organizationName?: string;
   name: string;
   externalId?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  webPortalPassword?: string;
   status?: string;
+  contacts?: ClientContact[];
+  destinations?: PhysicalDestination[];
   version?: number;
 }
 
@@ -49,7 +90,13 @@ export interface UpdateClientRequest {
   organizationName?: string;
   name: string;
   externalId?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  webPortalPassword?: string;
   status?: string;
+  contacts?: ClientContact[];
+  destinations?: PhysicalDestination[];
   version?: number;
 }
 
