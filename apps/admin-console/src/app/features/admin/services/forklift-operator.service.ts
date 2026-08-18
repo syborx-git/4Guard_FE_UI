@@ -68,20 +68,49 @@ export class ForkliftOperatorAdminService {
     }))
   );
 
+  // ─── Obtener organizationId de la sesión activa ──────────────────────────────
+
+  getSessionOrg(): { organizationId: string; organizationName: string } {
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session?.user?.organizationId) {
+          return {
+            organizationId: session.user.organizationId,
+            organizationName: session.user.organizationName || ''
+          };
+        }
+      }
+    } catch {
+      // Fallback silencioso
+    }
+    return {
+      organizationId: DEFAULT_ORG_ID,
+      organizationName: '4GUARD LOGISTICS CORP'
+    };
+  }
+
+  getSessionOrgId(): string {
+    return this.getSessionOrg().organizationId;
+  }
+
   // ─── LOAD LIST ─────────────────────────────────────────────────────────────
 
   /**
-   * Loads the full operator list for the given organization.
+   * Loads the full operator list for the active session organization.
    * Updates the global `operators` signal on success.
    */
   loadOperators(
-    organizationId: string = DEFAULT_ORG_ID,
+    organizationId?: string,
     options?: { branchId?: string; status?: string; licenseStatus?: string; search?: string }
   ): Observable<ForkliftOperator[]> {
     this.loading.set(true);
     this.error.set(null);
 
-    let params = new HttpParams().set('organizationId', organizationId);
+    const orgId = organizationId !== undefined ? organizationId : this.getSessionOrgId();
+    let params = new HttpParams();
+    if (orgId)                  params = params.set('organizationId', orgId);
     if (options?.branchId)      params = params.set('branchId',      options.branchId);
     if (options?.status)        params = params.set('status',        options.status);
     if (options?.licenseStatus) params = params.set('licenseStatus', options.licenseStatus);
@@ -104,8 +133,12 @@ export class ForkliftOperatorAdminService {
   // ─── CREATE ────────────────────────────────────────────────────────────────
 
   createOperator(request: CreateForkliftOperatorRequest): Observable<ForkliftOperator> {
+    const payload: CreateForkliftOperatorRequest = {
+      ...request,
+      organizationId: request.organizationId || this.getSessionOrgId()
+    };
     this.saving.set(true);
-    return this.http.post<ApiResponse<ForkliftOperator>>(this.BASE_URL, request).pipe(
+    return this.http.post<ApiResponse<ForkliftOperator>>(this.BASE_URL, payload).pipe(
       map((res) => this.normalize(res.data)),
       tap((created) => {
         this.operatorsSignal.update((list) => [created, ...list]);

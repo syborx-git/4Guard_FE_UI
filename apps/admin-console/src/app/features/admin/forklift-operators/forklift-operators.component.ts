@@ -141,7 +141,8 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   reloadOperators(): void {
-    this.forkliftService.loadOperators(DEFAULT_ORG_ID).subscribe({
+    const orgId = this.forkliftService.getSessionOrgId();
+    this.forkliftService.loadOperators(orgId).subscribe({
       next: (list) => {
         if (list.length > 0 && !this.selectedOperatorId()) {
           this.selectOperator(list[0]);
@@ -250,12 +251,13 @@ export class ForkliftOperatorsComponent implements OnInit {
     const val        = this.operatorForm.value;
     const selectedId = this.selectedOperatorId();
     const mode       = this.formMode();
+    const orgId      = this.forkliftService.getSessionOrgId();
 
     if (mode === 'edit' && selectedId) {
       const currentOp = this.selectedOperator();
       const request: UpdateForkliftOperatorRequest = {
         id:                    selectedId,
-        organizationId:        DEFAULT_ORG_ID,
+        organizationId:        currentOp?.organizationId || orgId,
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
         lastNameMaternal:      val.lastNameMaternal!,
@@ -279,7 +281,7 @@ export class ForkliftOperatorsComponent implements OnInit {
       });
     } else {
       const request: CreateForkliftOperatorRequest = {
-        organizationId:        DEFAULT_ORG_ID,
+        organizationId:        orgId,
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
         lastNameMaternal:      val.lastNameMaternal!,
