@@ -194,7 +194,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
 
   addContactField(contact?: Partial<ClientContact>): void {
     const group = this.fb.group({
-      id: [contact?.id || `CT-${Date.now()}`],
+      id: [contact?.id || null],
       name: [contact?.name || '', [Validators.required, noWhitespaceValidator]],
       department: [contact?.department || '', [Validators.required]],
       phone: [contact?.phone || '', [Validators.required, noWhitespaceValidator]],
@@ -212,7 +212,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
 
   addDestinationField(destination?: Partial<PhysicalDestination>): void {
     const group = this.fb.group({
-      id: [destination?.id || `DEST-${Date.now()}`],
+      id: [destination?.id || null],
       destinationCode: [destination?.destinationCode || `DEST-${Math.floor(100 + Math.random() * 900)}`],
       plantName: [destination?.plantName || '', [Validators.required, noWhitespaceValidator]],
       fullAddress: [destination?.fullAddress || '', [Validators.required, noWhitespaceValidator]],

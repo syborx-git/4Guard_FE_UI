@@ -129,6 +129,26 @@ export class ClientService {
     );
   }
 
+  // ─── Helpers de Sanitización UUID ───────────────────────────────────────────
+
+  private isUuid(val?: string | null): boolean {
+    return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  }
+
+  private sanitizeContact(c: ClientContact): ClientContact {
+    return {
+      ...c,
+      id: this.isUuid(c.id) ? c.id : undefined,
+    };
+  }
+
+  private sanitizeDestination(d: PhysicalDestination): PhysicalDestination {
+    return {
+      ...d,
+      id: this.isUuid(d.id) ? d.id : undefined,
+    };
+  }
+
   // ─── Crear Cliente ───────────────────────────────────────────────────────────
 
   create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'version'>): Observable<ApiResponse<ClientResponse>> {
@@ -146,8 +166,8 @@ export class ClientService {
       email: client.email || undefined,
       webPortalPassword: client.webPortalPassword || undefined,
       status: client.status || 'ACTIVE',
-      contacts: client.contacts || [],
-      destinations: client.destinations || [],
+      contacts: (client.contacts || []).map(c => this.sanitizeContact(c)),
+      destinations: (client.destinations || []).map(d => this.sanitizeDestination(d)),
     };
 
     return this.http.post<ApiResponse<ClientResponse>>(this.BASE_URL, payload).pipe(
@@ -172,6 +192,9 @@ export class ClientService {
     this.saving.set(true);
     const existing = this.items().find(c => c.id === id);
 
+    const rawContacts = updatedFields.contacts !== undefined ? updatedFields.contacts : (existing?.contacts || []);
+    const rawDestinations = updatedFields.destinations !== undefined ? updatedFields.destinations : (existing?.destinations || []);
+
     const payload: UpdateClientRequest = {
       id,
       organizationId: updatedFields.orgId || existing?.orgId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
@@ -184,8 +207,8 @@ export class ClientService {
       email: updatedFields.email !== undefined ? updatedFields.email : existing?.email,
       webPortalPassword: updatedFields.webPortalPassword !== undefined ? updatedFields.webPortalPassword : existing?.webPortalPassword,
       status: updatedFields.status || existing?.status || 'ACTIVE',
-      contacts: updatedFields.contacts !== undefined ? updatedFields.contacts : (existing?.contacts || []),
-      destinations: updatedFields.destinations !== undefined ? updatedFields.destinations : (existing?.destinations || []),
+      contacts: rawContacts.map(c => this.sanitizeContact(c)),
+      destinations: rawDestinations.map(d => this.sanitizeDestination(d)),
       version: (existing?.version || 1) + 1
     };
 
@@ -245,8 +268,9 @@ export class ClientService {
 
   addDestination(clientId: string, destination: PhysicalDestination): Observable<ApiResponse<PhysicalDestination>> {
     this.saving.set(true);
+    const payload = this.sanitizeDestination(destination);
     return this.http.post<ApiResponse<PhysicalDestination>>(
-      `${this.BASE_URL}/${clientId}/destinations`, destination
+      `${this.BASE_URL}/${clientId}/destinations`, payload
     ).pipe(
       tap(response => {
         this.saving.set(false);
