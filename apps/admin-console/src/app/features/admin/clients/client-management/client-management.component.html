@@ -774,18 +774,6 @@
                       Activar
                     </button>
                   }
-
-                  @if (canDelete()) {
-                    <button
-                      class="clients-btn clients-btn--danger"
-                      type="button"
-                      [disabled]="isSaving"
-                      (click)="openStatusDialog('delete')"
-                      aria-label="Desactivar o eliminar este cliente">
-                      <span class="material-symbols-outlined">block</span>
-                      Desactivar
-                    </button>
-                  }
                 </div>
               }
 
