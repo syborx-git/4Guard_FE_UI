@@ -1,7 +1,10 @@
 /**
  * @file forklift-operators.component.ts
- * @description Componente de Administración de Montacarguistas (Administrar -> Montacarguistas).
- * Homologado al 100% con la arquitectura, Split-View (Master/Detail), tokens y KPIs de Transportistas (carriers).
+ * @description Componente de Gestión de Montacarguistas (HU-142) — 4GUARD WMS.
+ *
+ * MIGRADO: Consume el Backend real mediante ForkliftOperatorAdminService (HTTP).
+ * Elimina dependencia de localStorage y semillas mock. ADR-007: Cero Mocks.
+ * Homologado al 100% con la arquitectura Split-View (Master/Detail) de Transportistas.
  */
 
 import { Component, inject, signal, computed, ViewChild, ElementRef, OnInit } from '@angular/core';
@@ -9,8 +12,15 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ForkliftOperatorAdminService } from '../services/forklift-operator.service';
-import { ForkliftOperator, LicenseStatus } from '../models/forklift-operator.models';
+import {
+  ForkliftOperator,
+  CreateForkliftOperatorRequest,
+  UpdateForkliftOperatorRequest,
+} from '../models/forklift-operator.models';
 import { ShiftService } from '../shifts/services/shift.service';
+
+/** Default organization ID — resolved from the active user session context. */
+const DEFAULT_ORG_ID = 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
 
 export type FormMode = 'idle' | 'create' | 'edit';
 
@@ -23,34 +33,36 @@ export type FormMode = 'idle' | 'create' | 'edit';
 })
 export class ForkliftOperatorsComponent implements OnInit {
   protected readonly forkliftService = inject(ForkliftOperatorAdminService);
-  protected readonly shiftService = inject(ShiftService);
-  private readonly fb = inject(FormBuilder);
+  protected readonly shiftService    = inject(ShiftService);
+  private readonly fb                = inject(FormBuilder);
 
   @ViewChild('formSection') formSection!: ElementRef<HTMLElement>;
 
-  // Selección y Modos
-  protected readonly selectedOperatorId = signal<string | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  // ─── Selección y Modos ──────────────────────────────────────────────────────
+  protected readonly selectedOperatorId      = signal<string | null>(null);
+  protected readonly formMode                = signal<FormMode>('idle');
   protected readonly selectedOperatorForDelete = signal<ForkliftOperator | null>(null);
 
-  // Búsqueda y Filtros
-  protected readonly searchTerm = signal<string>('');
+  // ─── Búsqueda y Filtros ─────────────────────────────────────────────────────
+  protected readonly searchTerm    = signal<string>('');
   protected readonly licenseFilter = signal<string>('ALL');
 
-  // Mensaje Toast
+  // ─── Toast ──────────────────────────────────────────────────────────────────
   protected readonly toastMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // KPI Computeds (Idénticos a Carriers Header)
-  protected readonly totalOperators = computed(() => this.forkliftService.operators().length);
+  // ─── KPI Computeds ──────────────────────────────────────────────────────────
+  protected readonly totalOperators       = computed(() => this.forkliftService.operators().length);
   protected readonly activeOperatorsCount = computed(() => this.forkliftService.activeOperators().length);
-  protected readonly validLicensesCount = computed(() =>
+  protected readonly validLicensesCount   = computed(() =>
     this.forkliftService.operators().filter((op) => op.licenseStatus === 'VIGENTE').length
   );
   protected readonly alertLicensesCount = computed(() =>
-    this.forkliftService.operators().filter((op) => op.licenseStatus === 'POR_VENCER' || op.licenseStatus === 'VENCIDA').length
+    this.forkliftService.operators().filter(
+      (op) => op.licenseStatus === 'POR_VENCER' || op.licenseStatus === 'VENCIDA'
+    ).length
   );
 
-  // Turnos dinámicos del Catálogo Maestro de Turnos y Horarios
+  // ─── Turnos del Catálogo Maestro ────────────────────────────────────────────
   protected readonly availableShifts = computed(() => {
     const catalogShifts = this.shiftService.shifts();
     if (catalogShifts && catalogShifts.length > 0) {
@@ -60,28 +72,29 @@ export class ForkliftOperatorsComponent implements OnInit {
         displayName: `${s.name} (${s.startTime?.substring(0, 5) || '06:00'} - ${s.endTime?.substring(0, 5) || '14:00'})`,
       }));
     }
+    // Fallback visual mientras el catálogo de turnos carga
     return [
-      { id: 'shift-1', name: 'Turno 1 - Matutino', displayName: 'Turno 1 - Matutino (06:00 - 14:00)' },
-      { id: 'shift-2', name: 'Turno 2 - Vespertino', displayName: 'Turno 2 - Vespertino (14:00 - 22:00)' },
-      { id: 'shift-3', name: 'Turno 3 - Nocturno', displayName: 'Turno 3 - Nocturno (22:00 - 06:00)' },
+      { id: 'shift-1', name: 'Turno 1 - Matutino',   displayName: 'Turno 1 - Matutino (06:00 - 14:00)' },
+      { id: 'shift-2', name: 'Turno 2 - Vespertino',  displayName: 'Turno 2 - Vespertino (14:00 - 22:00)' },
+      { id: 'shift-3', name: 'Turno 3 - Nocturno',    displayName: 'Turno 3 - Nocturno (22:00 - 06:00)' },
     ];
   });
 
-  // Operador Seleccionado
+  // ─── Operador Seleccionado ──────────────────────────────────────────────────
   protected readonly selectedOperator = computed(() => {
     const id = this.selectedOperatorId();
     if (!id) return null;
     return this.forkliftService.operators().find((op) => op.id === id) || null;
   });
 
-  // Lista Filtrada Computada
+  // ─── Lista Filtrada Computada ───────────────────────────────────────────────
   protected readonly filteredOperators = computed(() => {
-    const list = this.forkliftService.operators();
-    const query = this.searchTerm().toLowerCase().trim();
+    const list    = this.forkliftService.operators();
+    const query   = this.searchTerm().toLowerCase().trim();
     const lFilter = this.licenseFilter();
 
     return list.filter((op) => {
-      const matchesLic = lFilter === 'ALL' || op.licenseStatus === lFilter;
+      const matchesLic   = lFilter === 'ALL' || op.licenseStatus === lFilter;
       const matchesQuery =
         !query ||
         op.fullName.toLowerCase().includes(query) ||
@@ -92,28 +105,41 @@ export class ForkliftOperatorsComponent implements OnInit {
     });
   });
 
-  // Formulario Reactivo (Los 6 Campos del Cliente)
+  // ─── Formulario Reactivo ────────────────────────────────────────────────────
   protected readonly operatorForm = this.fb.group({
-    firstName: ['', [Validators.required, Validators.minLength(2)]],
-    lastNamePaternal: ['', [Validators.required, Validators.minLength(2)]],
-    lastNameMaternal: ['', [Validators.required, Validators.minLength(2)]],
-    licenseNumberDc3: ['', [Validators.required]],
+    firstName:             ['', [Validators.required, Validators.minLength(2)]],
+    lastNamePaternal:      ['', [Validators.required, Validators.minLength(2)]],
+    lastNameMaternal:      ['', [Validators.required, Validators.minLength(2)]],
+    licenseNumberDc3:      ['', [Validators.required]],
     licenseExpirationDate: ['', [Validators.required]],
-    shift: ['Turno 1 - Matutino (06:00 - 14:00)', [Validators.required]],
+    shift:                 ['', [Validators.required]], // stores the shift UUID (shiftId)
   });
 
+  // ─── Lifecycle ─────────────────────────────────────────────────────────────
+
   ngOnInit(): void {
+    // Load shifts catalog from backend
     try {
       this.shiftService.loadShifts();
     } catch (e) {
       console.warn('Cargando turnos desde respaldo local:', e);
     }
 
-    const first = this.filteredOperators()[0];
-    if (first) {
-      this.selectOperator(first);
-    }
+    // Load forklift operators from backend
+    this.forkliftService.loadOperators(DEFAULT_ORG_ID).subscribe({
+      next: (list) => {
+        if (list.length > 0) {
+          this.selectOperator(list[0]);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading forklift operators:', err);
+        this.showToast('error', 'No se pudo cargar el catálogo de montacarguistas. Verifique la conexión con el servidor.');
+      },
+    });
   }
+
+  // ─── Selección y Navegación ─────────────────────────────────────────────────
 
   selectOperator(op: ForkliftOperator): void {
     this.selectedOperatorId.set(op.id);
@@ -137,15 +163,19 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   private populateForm(op: ForkliftOperator): void {
+    // Use shiftId for the form control; fall back to shiftId if available
+    const shiftValue = op.shiftId || op.shift || '';
     this.operatorForm.patchValue({
-      firstName: op.firstName,
-      lastNamePaternal: op.lastNamePaternal,
-      lastNameMaternal: op.lastNameMaternal,
-      licenseNumberDc3: op.licenseNumberDc3,
+      firstName:             op.firstName,
+      lastNamePaternal:      op.lastNamePaternal,
+      lastNameMaternal:      op.lastNameMaternal,
+      licenseNumberDc3:      op.licenseNumberDc3,
       licenseExpirationDate: op.licenseExpirationDate,
-      shift: op.shift,
+      shift:                 shiftValue,
     });
   }
+
+  // ─── Envío del Formulario ───────────────────────────────────────────────────
 
   onSubmitOperator(): void {
     if (this.operatorForm.invalid) {
@@ -153,35 +183,61 @@ export class ForkliftOperatorsComponent implements OnInit {
       return;
     }
 
-    const val = this.operatorForm.value;
+    const val        = this.operatorForm.value;
     const selectedId = this.selectedOperatorId();
-    const mode = this.formMode();
+    const mode       = this.formMode();
 
     if (mode === 'edit' && selectedId) {
-      this.forkliftService.updateOperator(selectedId, {
-        firstName: val.firstName!,
-        lastNamePaternal: val.lastNamePaternal!,
-        lastNameMaternal: val.lastNameMaternal!,
-        licenseNumberDc3: val.licenseNumberDc3!,
+      const currentOp = this.selectedOperator();
+      const request: UpdateForkliftOperatorRequest = {
+        id:                    selectedId,
+        organizationId:        DEFAULT_ORG_ID,
+        firstName:             val.firstName!,
+        lastNamePaternal:      val.lastNamePaternal!,
+        lastNameMaternal:      val.lastNameMaternal!,
+        licenseNumberDc3:      val.licenseNumberDc3!,
         licenseExpirationDate: val.licenseExpirationDate!,
-        shift: val.shift!,
+        shiftId:               val.shift || undefined,
+        version:               currentOp?.version,
+      };
+
+      this.forkliftService.updateOperator(request).subscribe({
+        next: (updated) => {
+          this.showToast('success', `Montacarguista ${updated.fullName} actualizado correctamente.`);
+          this.selectedOperatorId.set(updated.id);
+          this.formMode.set('idle');
+        },
+        error: (err) => {
+          const msg = err?.error?.message || 'Error al actualizar el montacarguista. Intente de nuevo.';
+          this.showToast('error', msg);
+        },
       });
-      this.showToast('success', `Montacarguista ${val.firstName} ${val.lastNamePaternal} actualizado correctamente.`);
-      this.formMode.set('idle');
     } else {
-      const created = this.forkliftService.createOperator({
-        firstName: val.firstName!,
-        lastNamePaternal: val.lastNamePaternal!,
-        lastNameMaternal: val.lastNameMaternal!,
-        licenseNumberDc3: val.licenseNumberDc3!,
+      const request: CreateForkliftOperatorRequest = {
+        organizationId:        DEFAULT_ORG_ID,
+        firstName:             val.firstName!,
+        lastNamePaternal:      val.lastNamePaternal!,
+        lastNameMaternal:      val.lastNameMaternal!,
+        licenseNumberDc3:      val.licenseNumberDc3!,
         licenseExpirationDate: val.licenseExpirationDate!,
-        shift: val.shift!,
+        shiftId:               val.shift || undefined,
+      };
+
+      this.forkliftService.createOperator(request).subscribe({
+        next: (created) => {
+          this.showToast('success', `Montacarguista ${created.fullName} (${created.code}) registrado correctamente.`);
+          this.selectedOperatorId.set(created.id);
+          this.formMode.set('idle');
+        },
+        error: (err) => {
+          const msg = err?.error?.message || 'Error al registrar el montacarguista. Intente de nuevo.';
+          this.showToast('error', msg);
+        },
       });
-      this.showToast('success', `Montacarguista ${created.fullName} (${created.code}) registrado correctamente.`);
-      this.selectedOperatorId.set(created.id);
-      this.formMode.set('idle');
     }
   }
+
+  // ─── Acciones del Formulario ────────────────────────────────────────────────
 
   cancelForm(): void {
     this.formMode.set('idle');
@@ -192,17 +248,27 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.operatorForm.reset({
-      shift: 'Turno 1 - Matutino (06:00 - 14:00)',
-    });
+    this.operatorForm.reset({ shift: '' });
   }
+
+  // ─── Toggle Estatus ─────────────────────────────────────────────────────────
 
   toggleOperatorStatus(op: ForkliftOperator, event?: Event): void {
     event?.stopPropagation();
-    this.forkliftService.toggleStatus(op.id);
     const newStatus = op.status === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
-    this.showToast('success', `Estatus de ${op.fullName} cambiado a ${newStatus}.`);
+
+    this.forkliftService.toggleStatus(op.id).subscribe({
+      next: () => {
+        this.showToast('success', `Estatus de ${op.fullName} cambiado a ${newStatus}.`);
+      },
+      error: (err) => {
+        const msg = err?.error?.message || 'Error al cambiar el estatus. Intente de nuevo.';
+        this.showToast('error', msg);
+      },
+    });
   }
+
+  // ─── Modal de Confirmación de Baja ─────────────────────────────────────────
 
   openDeleteModal(op: ForkliftOperator, event?: Event): void {
     event?.stopPropagation();
@@ -217,19 +283,29 @@ export class ForkliftOperatorsComponent implements OnInit {
     const op = this.selectedOperatorForDelete();
     if (!op) return;
 
-    this.forkliftService.deleteOperator(op.id);
-    this.showToast('success', `Operador ${op.fullName} (${op.code}) ELIMINADO FÍSICAMENTE de la base de datos.`);
-    this.closeDeleteModal();
+    this.forkliftService.deleteOperator(op.id).subscribe({
+      next: () => {
+        this.showToast('success', `Operador ${op.fullName} (${op.code}) eliminado del catálogo.`);
+        this.closeDeleteModal();
 
-    if (this.selectedOperatorId() === op.id) {
-      const remaining = this.filteredOperators();
-      if (remaining.length > 0) {
-        this.selectOperator(remaining[0]);
-      } else {
-        this.selectedOperatorId.set(null);
-      }
-    }
+        if (this.selectedOperatorId() === op.id) {
+          const remaining = this.filteredOperators();
+          if (remaining.length > 0) {
+            this.selectOperator(remaining[0]);
+          } else {
+            this.selectedOperatorId.set(null);
+          }
+        }
+      },
+      error: (err) => {
+        const msg = err?.error?.message || 'Error al eliminar el montacarguista. Intente de nuevo.';
+        this.showToast('error', msg);
+        this.closeDeleteModal();
+      },
+    });
   }
+
+  // ─── Utilidades ─────────────────────────────────────────────────────────────
 
   scrollToForm(): void {
     if (this.formSection) {
@@ -246,6 +322,6 @@ export class ForkliftOperatorsComponent implements OnInit {
 
   private showToast(type: 'success' | 'error', text: string): void {
     this.toastMessage.set({ type, text });
-    setTimeout(() => this.toastMessage.set(null), 4000);
+    setTimeout(() => this.toastMessage.set(null), 4500);
   }
 }
