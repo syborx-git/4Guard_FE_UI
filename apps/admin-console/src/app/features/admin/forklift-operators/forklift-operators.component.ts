@@ -58,6 +58,10 @@ export class ForkliftOperatorsComponent implements OnInit {
   // ─── Toast ──────────────────────────────────────────────────────────────────
   protected readonly toastMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // ─── Auditoría en Tiempo Real ───────────────────────────────────────────────
+  protected readonly auditEntries  = signal<any[]>([]);
+  protected readonly isLoadingAudit = signal<boolean>(false);
+
   // ─── KPI Computeds ──────────────────────────────────────────────────────────
   protected readonly totalOperators       = computed(() => this.forkliftService.operators().length);
   protected readonly activeOperatorsCount = computed(() => this.forkliftService.activeOperators().length);
@@ -154,13 +158,62 @@ export class ForkliftOperatorsComponent implements OnInit {
 
   selectOperator(op: ForkliftOperator): void {
     this.selectedOperatorId.set(op.id);
+    this.loadAuditLogs(op.id);
     if (this.formMode() === 'edit') {
       this.populateForm(op);
     }
   }
 
+  loadAuditLogs(id: string): void {
+    this.isLoadingAudit.set(true);
+    this.forkliftService.getAuditLogs(id).subscribe({
+      next: (logs) => {
+        this.auditEntries.set(logs || []);
+        this.isLoadingAudit.set(false);
+      },
+      error: (err) => {
+        console.warn('Error loading audit logs:', err);
+        this.auditEntries.set([]);
+        this.isLoadingAudit.set(false);
+      },
+    });
+  }
+
+  // ─── Audit Helpers ─────────────────────────────────────────────────────────
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'FORKLIFT_OPERATOR_CREATED':        return 'person_add';
+      case 'FORKLIFT_OPERATOR_UPDATED':        return 'edit_note';
+      case 'FORKLIFT_OPERATOR_STATUS_CHANGED': return 'swap_horiz';
+      case 'FORKLIFT_OPERATOR_DELETED':        return 'delete_forever';
+      default:                                 return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'FORKLIFT_OPERATOR_CREATED':        return 'carriers-tl-node--emerald';
+      case 'FORKLIFT_OPERATOR_UPDATED':        return 'carriers-tl-node--blue';
+      case 'FORKLIFT_OPERATOR_STATUS_CHANGED': return 'carriers-tl-node--amber';
+      case 'FORKLIFT_OPERATOR_DELETED':        return 'carriers-tl-node--red';
+      default:                                 return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'FORKLIFT_OPERATOR_CREATED':        return 'Montacarguista Registrado en Catálogo';
+      case 'FORKLIFT_OPERATOR_UPDATED':        return 'Actualización de Datos Operativos';
+      case 'FORKLIFT_OPERATOR_STATUS_CHANGED': return 'Cambio de Estatus Operativo';
+      case 'FORKLIFT_OPERATOR_DELETED':        return 'Baja Lógica del Operador';
+      default:                                 return action;
+    }
+  }
+
   startNewOperator(): void {
     this.selectedOperatorId.set(null);
+    this.auditEntries.set([]);
     this.formMode.set('create');
     this.resetForm();
     this.scrollToForm();
@@ -216,6 +269,7 @@ export class ForkliftOperatorsComponent implements OnInit {
         next: (updated) => {
           this.showToast('success', `Montacarguista ${updated.fullName} actualizado correctamente.`);
           this.selectedOperatorId.set(updated.id);
+          this.loadAuditLogs(updated.id);
           this.formMode.set('idle');
         },
         error: (err) => {
@@ -238,6 +292,7 @@ export class ForkliftOperatorsComponent implements OnInit {
         next: (created) => {
           this.showToast('success', `Montacarguista ${created.fullName} (${created.code}) registrado correctamente.`);
           this.selectedOperatorId.set(created.id);
+          this.loadAuditLogs(created.id);
           this.formMode.set('idle');
         },
         error: (err) => {
@@ -271,6 +326,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     this.forkliftService.toggleStatus(op.id).subscribe({
       next: () => {
         this.showToast('success', `Estatus de ${op.fullName} cambiado a ${newStatus}.`);
+        this.loadAuditLogs(op.id);
       },
       error: (err) => {
         const msg = err?.error?.message || 'Error al cambiar el estatus. Intente de nuevo.';

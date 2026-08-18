@@ -526,6 +526,97 @@
               </div>
             </fieldset>
 
+            <!-- SECCIÓN 3 — Control & Auditoría en Tiempo Real (WMS SSOT) -->
+            @if (selectedOperator() && formMode() !== 'create') {
+              <fieldset class="carriers-form-section carriers-form-section--readonly">
+                <legend class="carriers-form-section__legend">
+                  <span class="material-symbols-outlined">history</span>
+                  Información de Control & Auditoría
+                </legend>
+
+                <div class="carriers-readonly-grid">
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Código Operativo</span>
+                    <span class="carriers-readonly-field__value font-mono font-bold text-amber-600">{{ selectedOperator()?.code }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Organización</span>
+                    <span class="carriers-readonly-field__value">{{ selectedOperator()?.organizationName || '4GUARD LOGISTICS CORP' }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Registrado Por</span>
+                    <span class="carriers-readonly-field__value font-mono">&#64;{{ selectedOperator()?.createdBy || 'system' }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Fecha de Registro</span>
+                    <span class="carriers-readonly-field__value">{{ selectedOperator()?.createdAt ? (selectedOperator()?.createdAt | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+                  </div>
+                </div>
+
+                <!-- ── Bitácora Transaccional en Tiempo Real (GET /api/v1/forklift-operators/{id}/audit) ── -->
+                <div class="carriers-timeline-preview">
+                  <div class="carriers-timeline-preview__header">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined">timeline</span>
+                      <span>Historial de Auditoría Transaccional (WMS Backend)</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="carriers-btn-icon"
+                      (click)="loadAuditLogs(selectedOperator()!.id)"
+                      title="Actualizar bitácora">
+                      <span class="material-symbols-outlined" [class.spin]="isLoadingAudit()">refresh</span>
+                    </button>
+                  </div>
+
+                  @if (isLoadingAudit()) {
+                    <div class="carriers-timeline-preview__loading">
+                      <span class="material-symbols-outlined spin">sync</span>
+                      <span>Consultando bitácora de auditoría desde el servidor…</span>
+                    </div>
+                  } @else if (auditEntries().length === 0) {
+                    <p class="carriers-timeline-preview__empty">
+                      No se encontraron registros de auditoría para este operador.
+                    </p>
+                  } @else {
+                    <div class="carriers-timeline-preview__nodes">
+                      @for (entry of auditEntries(); track entry.logId; let last = $last) {
+                        <div class="carriers-tl-node {{ getAuditColorClass(entry.action) }}">
+                          <div class="carriers-tl-node__dot">
+                            <span class="material-symbols-outlined">{{ getAuditIcon(entry.action) }}</span>
+                          </div>
+                          <div class="carriers-tl-node__line" [class.carriers-tl-node__line--last]="last"></div>
+                          <div class="carriers-tl-node__content">
+                            <div class="carriers-tl-node__header">
+                              <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
+                              <span class="carriers-tl-node__tag">{{ entry.action }}</span>
+                            </div>
+
+                            @if (entry.details && entry.details.length > 0) {
+                              <div class="carriers-tl-node__diffs">
+                                @for (det of entry.details; track det.fieldName) {
+                                  <div class="carriers-tl-diff">
+                                    <span class="carriers-tl-diff__field">{{ det.fieldName }}:</span>
+                                    <span class="carriers-tl-diff__old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                    <span class="material-symbols-outlined carriers-tl-diff__arrow">arrow_forward</span>
+                                    <span class="carriers-tl-diff__new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                  </div>
+                                }
+                              </div>
+                            }
+
+                            <div class="carriers-tl-node__meta">
+                              Ejecutado por <strong>&#64;{{ entry.username }}</strong> · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </fieldset>
+            }
+
             <!-- ── Acciones del Formulario ── -->
             <div class="carriers-form-actions">
               @if (selectedOperator() && formMode() !== 'create') {
