@@ -1,10 +1,11 @@
 # SDD: Gestión de Montacarguistas — Frontend
 
-> **Módulo:** Admin → Montacarguistas
-> **HU:** HU-142 — Gestión de Montacarguistas
-> **Versión:** 2.0.0 (Migrado a HTTP Real — ADR-007: Cero Mocks)
-> **Estado:** ✅ Implementado
-> **Rama:** `catalogo-montacarga-UI`
+> **Módulo:** Admin → Montacarguistas  
+> **HU:** HU-142 — Gestión de Montacarguistas  
+> **Versión:** 2.1.0 (Migrado a HTTP Real — ADR-007: Cero Mocks)  
+> **Estado:** 🏁 CERRADO / LISTO PARA PR  
+> **Fecha de Cierre:** 2026-08-18  
+> **Rama:** `catalogo-montacarga-UI`  
 
 ---
 
