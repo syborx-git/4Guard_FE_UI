@@ -146,6 +146,11 @@ export class ForkliftOperatorsComponent implements OnInit {
       next: (list) => {
         if (list.length > 0 && !this.selectedOperatorId()) {
           this.selectOperator(list[0]);
+        } else if (this.selectedOperatorId()) {
+          const current = list.find((op) => op.id === this.selectedOperatorId());
+          if (current) {
+            this.populateForm(current);
+          }
         }
       },
       error: (err) => {
@@ -159,10 +164,9 @@ export class ForkliftOperatorsComponent implements OnInit {
 
   selectOperator(op: ForkliftOperator): void {
     this.selectedOperatorId.set(op.id);
+    this.formMode.set('edit');
+    this.populateForm(op);
     this.loadAuditLogs(op.id);
-    if (this.formMode() === 'edit') {
-      this.populateForm(op);
-    }
   }
 
   loadAuditLogs(id: string): void {
@@ -221,9 +225,7 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   editOperator(op: ForkliftOperator): void {
-    this.selectedOperatorId.set(op.id);
-    this.formMode.set('edit');
-    this.populateForm(op);
+    this.selectOperator(op);
     this.scrollToForm();
   }
 
@@ -271,8 +273,9 @@ export class ForkliftOperatorsComponent implements OnInit {
         next: (updated) => {
           this.showToast('success', `Montacarguista ${updated.fullName} actualizado correctamente.`);
           this.selectedOperatorId.set(updated.id);
+          this.formMode.set('edit');
+          this.populateForm(updated);
           this.loadAuditLogs(updated.id);
-          this.formMode.set('idle');
         },
         error: (err) => {
           const msg = err?.error?.message || 'Error al actualizar el montacarguista. Intente de nuevo.';
@@ -294,8 +297,9 @@ export class ForkliftOperatorsComponent implements OnInit {
         next: (created) => {
           this.showToast('success', `Montacarguista ${created.fullName} (${created.code}) registrado correctamente.`);
           this.selectedOperatorId.set(created.id);
+          this.formMode.set('edit');
+          this.populateForm(created);
           this.loadAuditLogs(created.id);
-          this.formMode.set('idle');
         },
         error: (err) => {
           const msg = err?.error?.message || 'Error al registrar el montacarguista. Intente de nuevo.';
@@ -308,10 +312,14 @@ export class ForkliftOperatorsComponent implements OnInit {
   // ─── Acciones del Formulario ────────────────────────────────────────────────
 
   cancelForm(): void {
-    this.formMode.set('idle');
     const selected = this.selectedOperator();
-    if (!selected && this.filteredOperators().length > 0) {
+    if (selected) {
+      this.populateForm(selected);
+    } else if (this.filteredOperators().length > 0) {
       this.selectOperator(this.filteredOperators()[0]);
+    } else {
+      this.formMode.set('idle');
+      this.resetForm();
     }
   }
 

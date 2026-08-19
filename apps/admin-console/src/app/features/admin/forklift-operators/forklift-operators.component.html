@@ -372,15 +372,8 @@
               }
             </div>
 
-            @if (selectedOperator() && formMode() === 'idle') {
+            @if (selectedOperator() && formMode() !== 'create') {
               <div class="flex items-center gap-2">
-                <button
-                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
-                  type="button"
-                  (click)="editOperator(selectedOperator()!)">
-                  <span class="material-symbols-outlined text-sm">edit</span>
-                  Editar
-                </button>
                 <button
                   class="carriers-btn carriers-btn--ghost carriers-btn--sm"
                   style="color: var(--c-danger);"
