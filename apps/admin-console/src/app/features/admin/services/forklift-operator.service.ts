@@ -1,25 +1,61 @@
 /**
  * @file forklift-operator.service.ts
- * @description Servicio reactivo basado en Angular Signals con persistencia en localStorage para Montacarguistas.
- * Utilizado en la sección Administrar -> Montacarguistas y sincronizado con Movimientos de Almacén.
+ * @description Servicio HTTP de Gestión de Montacarguistas (HU-142) — 4GUARD WMS.
+ *
+ * MIGRADO: Elimina persistencia localStorage / semillas mock.
+ * Consume el API REST de Spring Boot (/api/v1/forklift-operators).
+ * ADR-007: Cero Mocks en producción. Signals reactivos para estado global.
+ *
+ * Endpoints Backend:
+ *   POST   /api/v1/forklift-operators                  — Registrar montacarguista
+ *   PUT    /api/v1/forklift-operators/{id}              — Actualizar montacarguista
+ *   GET    /api/v1/forklift-operators/{id}              — Obtener por ID
+ *   GET    /api/v1/forklift-operators?organizationId=   — Listar con filtros
+ *   DELETE /api/v1/forklift-operators/{id}              — Baja lógica
+ *   PATCH  /api/v1/forklift-operators/{id}/status       — Toggle ACTIVO/INACTIVO
+ *   GET    /api/v1/forklift-operators/{id}/audit        — Historial de auditoría
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, tap, map } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
 import {
   ForkliftOperator,
-  CreateForkliftOperatorDto,
+  CreateForkliftOperatorRequest,
+  UpdateForkliftOperatorRequest,
+  UpdateForkliftOperatorStatusRequest,
+  ForkliftOperatorAuditEntry,
   calculateLicenseStatus,
 } from '../models/forklift-operator.models';
 
-const STORAGE_KEY = '4guard_forklift_operators';
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp?: string;
+}
+
+/** Default organization ID — resolved from the active user session context. */
+const DEFAULT_ORG_ID = 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ForkliftOperatorAdminService {
-  private readonly operatorsSignal = signal<ForkliftOperator[]>(this.loadOperatorsFromStorage());
+  private readonly http = inject(HttpClient);
+  private readonly BASE_URL = `${environment.apiBaseUrl}/api/v1/forklift-operators`;
+
+  // ─── Estado Reactivo (Angular Signals) ─────────────────────────────────────
+
+  private readonly operatorsSignal = signal<ForkliftOperator[]>([]);
 
   readonly operators = this.operatorsSignal.asReadonly();
+
+  readonly loading = signal<boolean>(false);
+  readonly saving  = signal<boolean>(false);
+  readonly error   = signal<string | null>(null);
 
   readonly activeOperators = computed(() =>
     this.operatorsSignal().filter((op) => op.status === 'ACTIVO')
@@ -32,252 +68,187 @@ export class ForkliftOperatorAdminService {
     }))
   );
 
-  private loadOperatorsFromStorage(): ForkliftOperator[] {
+  // ─── Obtener organizationId de la sesión activa ──────────────────────────────
+
+  getSessionOrg(): { organizationId: string; organizationName: string } {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed: ForkliftOperator[] = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Re-calcular estatus de licencias al cargar
-          return parsed.map((op) => ({
-            ...op,
-            licenseStatus: calculateLicenseStatus(op.licenseExpirationDate),
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn('Error al leer montacarguistas de localStorage:', e);
-    }
-    const initial = this.getInitialSeedOperators();
-    this.saveToStorage(initial);
-    return initial;
-  }
-
-  private saveToStorage(list: ForkliftOperator[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    } catch (e) {
-      console.error('Error al guardar montacarguistas en localStorage:', e);
-    }
-  }
-
-  createOperator(dto: CreateForkliftOperatorDto): ForkliftOperator {
-    const list = this.operatorsSignal();
-    const nextNum = list.length + 101;
-    const code = `MC-${nextNum}`;
-    const fullName = `${dto.firstName.trim()} ${dto.lastNamePaternal.trim()} ${dto.lastNameMaternal.trim()}`.trim();
-    const licStatus = calculateLicenseStatus(dto.licenseExpirationDate);
-
-    const newOperator: ForkliftOperator = {
-      id: `MC-ID-${Date.now()}`,
-      code,
-      firstName: dto.firstName.trim(),
-      lastNamePaternal: dto.lastNamePaternal.trim(),
-      lastNameMaternal: dto.lastNameMaternal.trim(),
-      fullName,
-      licenseNumberDc3: dto.licenseNumberDc3.toUpperCase().trim(),
-      licenseExpirationDate: dto.licenseExpirationDate,
-      licenseStatus: licStatus,
-      shift: dto.shift,
-      status: 'ACTIVO',
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
-    const updated = [newOperator, ...list];
-    this.operatorsSignal.set(updated);
-    this.saveToStorage(updated);
-    return newOperator;
-  }
-
-  updateOperator(id: string, dto: Partial<CreateForkliftOperatorDto>): void {
-    this.operatorsSignal.update((list) => {
-      const updatedList = list.map((op) => {
-        if (op.id === id) {
-          const fn = dto.firstName !== undefined ? dto.firstName.trim() : op.firstName;
-          const lp = dto.lastNamePaternal !== undefined ? dto.lastNamePaternal.trim() : op.lastNamePaternal;
-          const lm = dto.lastNameMaternal !== undefined ? dto.lastNameMaternal.trim() : op.lastNameMaternal;
-          const fullName = `${fn} ${lp} ${lm}`.trim();
-          const expDate = dto.licenseExpirationDate || op.licenseExpirationDate;
-
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session?.user?.organizationId) {
           return {
-            ...op,
-            firstName: fn,
-            lastNamePaternal: lp,
-            lastNameMaternal: lm,
-            fullName,
-            licenseNumberDc3: dto.licenseNumberDc3 !== undefined ? dto.licenseNumberDc3.toUpperCase().trim() : op.licenseNumberDc3,
-            licenseExpirationDate: expDate,
-            licenseStatus: calculateLicenseStatus(expDate),
-            shift: dto.shift !== undefined ? dto.shift : op.shift,
+            organizationId: session.user.organizationId,
+            organizationName: session.user.organizationName || ''
           };
         }
-        return op;
-      });
-      this.saveToStorage(updatedList);
-      return updatedList;
-    });
+      }
+    } catch {
+      // Fallback silencioso
+    }
+    return {
+      organizationId: DEFAULT_ORG_ID,
+      organizationName: '4GUARD LOGISTICS CORP'
+    };
   }
 
-  deleteOperator(id: string): void {
-    this.operatorsSignal.update((list) => {
-      const filtered = list.filter((op) => op.id !== id);
-      this.saveToStorage(filtered);
-      return filtered;
-    });
+  getSessionOrgId(): string {
+    return this.getSessionOrg().organizationId;
   }
 
-  toggleStatus(id: string): void {
-    this.operatorsSignal.update((list) => {
-      const updated = list.map((op) =>
-        op.id === id ? { ...op, status: op.status === 'ACTIVO' ? ('INACTIVO' as const) : ('ACTIVO' as const) } : op
-      );
-      this.saveToStorage(updated);
-      return updated;
-    });
+  // ─── LOAD LIST ─────────────────────────────────────────────────────────────
+
+  /**
+   * Loads the full operator list for the active session organization.
+   * Updates the global `operators` signal on success.
+   */
+  loadOperators(
+    organizationId?: string,
+    options?: { branchId?: string; status?: string; licenseStatus?: string; search?: string }
+  ): Observable<ForkliftOperator[]> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    const orgId = organizationId !== undefined ? organizationId : this.getSessionOrgId();
+    let params = new HttpParams();
+    if (orgId)                  params = params.set('organizationId', orgId);
+    if (options?.branchId)      params = params.set('branchId',      options.branchId);
+    if (options?.status)        params = params.set('status',        options.status);
+    if (options?.licenseStatus) params = params.set('licenseStatus', options.licenseStatus);
+    if (options?.search)        params = params.set('search',        options.search);
+
+    return this.http.get<ApiResponse<ForkliftOperator[]>>(this.BASE_URL, { params }).pipe(
+      map((res) => this.normalizeList(res.data)),
+      tap((list) => {
+        this.operatorsSignal.set(list);
+        this.loading.set(false);
+      }),
+      catchError((err) => {
+        this.loading.set(false);
+        this.error.set(this.extractErrorMessage(err));
+        return throwError(() => err);
+      })
+    );
   }
 
-  private getInitialSeedOperators(): ForkliftOperator[] {
-    return [
-      {
-        id: 'MC-ID-101',
-        code: 'MC-101',
-        firstName: 'Alan',
-        lastNamePaternal: 'Huerta',
-        lastNameMaternal: 'Pérez',
-        fullName: 'Alan Huerta Pérez',
-        licenseNumberDc3: 'LIC-MC-9901',
-        licenseExpirationDate: '2027-12-31',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 1 - Matutino (06:00 - 14:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-01-15',
-      },
-      {
-        id: 'MC-ID-102',
-        code: 'MC-102',
-        firstName: 'Pablo',
-        lastNamePaternal: 'Hernández',
-        lastNameMaternal: 'Ramos',
-        fullName: 'Pablo Hernández Ramos',
-        licenseNumberDc3: 'LIC-MC-9902',
-        licenseExpirationDate: '2027-12-31',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 1 - Matutino (06:00 - 14:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-01-15',
-      },
-      {
-        id: 'MC-ID-103',
-        code: 'MC-103',
-        firstName: 'Alejandro',
-        lastNamePaternal: 'Martínez',
-        lastNameMaternal: 'Solís',
-        fullName: 'Alejandro Martínez Solís',
-        licenseNumberDc3: 'LIC-MC-9903',
-        licenseExpirationDate: '2027-10-15',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 2 - Vespertino (14:00 - 22:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-02-01',
-      },
-      {
-        id: 'MC-ID-104',
-        code: 'MC-104',
-        firstName: 'Gerardo',
-        lastNamePaternal: 'González',
-        lastNameMaternal: 'Carbajal',
-        fullName: 'Gerardo González Carbajal',
-        licenseNumberDc3: 'LIC-MC-9904',
-        licenseExpirationDate: '2026-09-10',
-        licenseStatus: 'POR_VENCER',
-        shift: 'Turno 2 - Vespertino (14:00 - 22:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-02-10',
-      },
-      {
-        id: 'MC-ID-105',
-        code: 'MC-105',
-        firstName: 'Saul',
-        lastNamePaternal: 'Reyes',
-        lastNameMaternal: 'Trejo',
-        fullName: 'Saul Reyes Trejo',
-        licenseNumberDc3: 'LIC-MC-9905',
-        licenseExpirationDate: '2027-08-10',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 3 - Nocturno (22:00 - 06:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-03-01',
-      },
-      {
-        id: 'MC-ID-106',
-        code: 'MC-106',
-        firstName: 'Carlos',
-        lastNamePaternal: 'Ruiz',
-        lastNameMaternal: 'Mendoza',
-        fullName: 'Carlos Ruiz Mendoza',
-        licenseNumberDc3: 'LIC-MC-9906',
-        licenseExpirationDate: '2027-06-30',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 1 - Matutino (06:00 - 14:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-03-15',
-      },
-      {
-        id: 'MC-ID-107',
-        code: 'MC-107',
-        firstName: 'Juan Manuel',
-        lastNamePaternal: 'López',
-        lastNameMaternal: 'García',
-        fullName: 'Juan Manuel López García',
-        licenseNumberDc3: 'LIC-MC-9907',
-        licenseExpirationDate: '2026-09-01',
-        licenseStatus: 'POR_VENCER',
-        shift: 'Turno 2 - Vespertino (14:00 - 22:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-04-01',
-      },
-      {
-        id: 'MC-ID-108',
-        code: 'MC-108',
-        firstName: 'Héctor',
-        lastNamePaternal: 'Villalvo',
-        lastNameMaternal: 'Chávez',
-        fullName: 'Héctor Villalvo Chávez',
-        licenseNumberDc3: 'LIC-MC-9908',
-        licenseExpirationDate: '2027-04-12',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 1 - Matutino (06:00 - 14:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-04-10',
-      },
-      {
-        id: 'MC-ID-109',
-        code: 'MC-109',
-        firstName: 'Roberto',
-        lastNamePaternal: 'Carmona',
-        lastNameMaternal: 'Juárez',
-        fullName: 'Roberto Carmona Juárez',
-        licenseNumberDc3: 'LIC-MC-9909',
-        licenseExpirationDate: '2027-01-15',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 3 - Nocturno (22:00 - 06:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-05-01',
-      },
-      {
-        id: 'MC-ID-110',
-        code: 'MC-110',
-        firstName: 'Miguel Ángel',
-        lastNamePaternal: 'Soria',
-        lastNameMaternal: 'Torres',
-        fullName: 'Miguel Ángel Soria Torres',
-        licenseNumberDc3: 'LIC-MC-9910',
-        licenseExpirationDate: '2027-09-18',
-        licenseStatus: 'VIGENTE',
-        shift: 'Turno 2 - Vespertino (14:00 - 22:00)',
-        status: 'ACTIVO',
-        createdAt: '2026-05-15',
-      },
-    ];
+  // ─── CREATE ────────────────────────────────────────────────────────────────
+
+  createOperator(request: CreateForkliftOperatorRequest): Observable<ForkliftOperator> {
+    const payload: CreateForkliftOperatorRequest = {
+      ...request,
+      organizationId: request.organizationId || this.getSessionOrgId()
+    };
+    this.saving.set(true);
+    return this.http.post<ApiResponse<ForkliftOperator>>(this.BASE_URL, payload).pipe(
+      map((res) => this.normalize(res.data)),
+      tap((created) => {
+        this.operatorsSignal.update((list) => [created, ...list]);
+        this.saving.set(false);
+      }),
+      catchError((err) => {
+        this.saving.set(false);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  // ─── UPDATE ────────────────────────────────────────────────────────────────
+
+  updateOperator(request: UpdateForkliftOperatorRequest): Observable<ForkliftOperator> {
+    this.saving.set(true);
+    return this.http.put<ApiResponse<ForkliftOperator>>(`${this.BASE_URL}/${request.id}`, request).pipe(
+      map((res) => this.normalize(res.data)),
+      tap((updated) => {
+        this.operatorsSignal.update((list) =>
+          list.map((op) => (op.id === updated.id ? updated : op))
+        );
+        this.saving.set(false);
+      }),
+      catchError((err) => {
+        this.saving.set(false);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  // ─── GET BY ID ─────────────────────────────────────────────────────────────
+
+  getOperatorById(id: string): Observable<ForkliftOperator> {
+    return this.http.get<ApiResponse<ForkliftOperator>>(`${this.BASE_URL}/${id}`).pipe(
+      map((res) => this.normalize(res.data)),
+      catchError((err) => throwError(() => err))
+    );
+  }
+
+  // ─── DELETE ────────────────────────────────────────────────────────────────
+
+  deleteOperator(id: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.BASE_URL}/${id}`).pipe(
+      tap(() => {
+        this.operatorsSignal.update((list) => list.filter((op) => op.id !== id));
+      }),
+      map(() => void 0),
+      catchError((err) => throwError(() => err))
+    );
+  }
+
+  // ─── STATUS CHANGE ─────────────────────────────────────────────────────────
+
+  toggleStatus(id: string, reason?: string): Observable<ForkliftOperator> {
+    const current = this.operatorsSignal().find((op) => op.id === id);
+    const newStatus = current?.status === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
+
+    const body: UpdateForkliftOperatorStatusRequest = {
+      status: newStatus as 'ACTIVO' | 'INACTIVO',
+      reason,
+    };
+
+    return this.http.patch<ApiResponse<ForkliftOperator>>(`${this.BASE_URL}/${id}/status`, body).pipe(
+      map((res) => this.normalize(res.data)),
+      tap((updated) => {
+        this.operatorsSignal.update((list) =>
+          list.map((op) => (op.id === updated.id ? updated : op))
+        );
+      }),
+      catchError((err) => throwError(() => err))
+    );
+  }
+
+  // ─── AUDIT HISTORY ─────────────────────────────────────────────────────────
+
+  getAuditLogs(id: string): Observable<ForkliftOperatorAuditEntry[]> {
+    return this.http.get<ApiResponse<ForkliftOperatorAuditEntry[]>>(`${this.BASE_URL}/${id}/audit`).pipe(
+      map((res) => res.data),
+      catchError((err) => throwError(() => err))
+    );
+  }
+
+  // ─── NORMALIZATION ─────────────────────────────────────────────────────────
+
+  /**
+   * Normalizes a single operator: ensures `shift` display field is populated
+   * from `shiftName` for template compatibility.
+   */
+  private normalize(op: ForkliftOperator): ForkliftOperator {
+    return {
+      ...op,
+      shift: op.shift || (op as any).shiftName || '',
+      // Recompute on the client as a safety net (authoritative value comes from BE)
+      licenseStatus: op.licenseStatus || calculateLicenseStatus(op.licenseExpirationDate),
+    };
+  }
+
+  private normalizeList(list: ForkliftOperator[]): ForkliftOperator[] {
+    return (list || []).map((op) => this.normalize(op));
+  }
+
+  // ─── ERROR HANDLING ────────────────────────────────────────────────────────
+
+  private extractErrorMessage(err: HttpErrorResponse): string {
+    if (err.error?.message) return err.error.message;
+    if (err.status === 0)   return 'No se puede conectar con el servidor. Verifique su conexión.';
+    if (err.status === 401) return 'Sesión expirada. Por favor, inicie sesión nuevamente.';
+    if (err.status === 403) return 'No tiene permisos para realizar esta acción.';
+    if (err.status === 404) return 'El montacarguista solicitado no fue encontrado.';
+    return `Error del servidor (${err.status}). Intente de nuevo.`;
   }
 }
