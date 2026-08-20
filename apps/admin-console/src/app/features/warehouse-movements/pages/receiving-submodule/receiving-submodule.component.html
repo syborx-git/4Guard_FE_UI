@@ -286,7 +286,12 @@
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Cliente <span class="text-amber-500">*</span>
                   </label>
-                  <select (change)="onClientSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                  <select
+                    [value]="checkInForm.get('clientCode')?.value"
+                    (change)="onClientSelect($any($event.target).value)"
+                    class="fg-input w-full font-bold"
+                  >
+                    <option value="">-- Selecciona cliente --</option>
                     @for (c of clients(); track c.code) {
                       <option [value]="c.code">{{ c.name }}</option>
                     }
@@ -298,7 +303,12 @@
                     Rampa de Asignación <span class="text-amber-500">*</span>
                   </label>
                   <div class="flex gap-1.5">
-                    <select (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                    <select
+                      [value]="checkInForm.get('rampCode')?.value"
+                      (change)="onRampSelect($any($event.target).value)"
+                      class="fg-input w-full font-bold"
+                    >
+                      <option value="">-- Selecciona rampa --</option>
                       @for (rm of ramps(); track rm.code) {
                         <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
                       }
@@ -311,7 +321,12 @@
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Montacarguista <span class="text-amber-500">*</span>
                   </label>
-                  <select (change)="onForkliftOperatorSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                  <select
+                    [value]="checkInForm.get('forkliftOperatorCode')?.value"
+                    (change)="onForkliftOperatorSelect($any($event.target).value)"
+                    class="fg-input w-full font-bold"
+                  >
+                    <option value="">-- Selecciona montacarguista --</option>
                     @for (op of forkliftOperators(); track op.code) {
                       <option [value]="op.code">{{ op.name }}</option>
                     }
@@ -391,9 +406,18 @@
             <!-- Footer de Guardado -->
             <div class="flex items-center justify-between gap-3 pt-4 border-t border-subtle">
               <button type="button" (click)="resetToIdle()" class="btn-secondary-outline text-xs px-5 py-2.5 rounded-xl font-bold">Cancelar</button>
-              <button type="submit" class="btn-primary-gold text-xs px-7 py-2.5 rounded-xl font-bold shadow-md text-slate-900 flex items-center gap-2">
-                <span class="material-symbols-outlined text-base">check_circle</span>
-                <span>Registrar Pre-Recepción</span>
+              <button
+                type="submit"
+                [disabled]="isSubmitting()"
+                class="btn-primary-gold text-xs px-7 py-2.5 rounded-xl font-bold shadow-md text-slate-900 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                @if (isSubmitting()) {
+                  <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                  <span>Registrando en Servidor...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-base">check_circle</span>
+                  <span>Registrar Pre-Recepción</span>
+                }
               </button>
             </div>
           </form>
@@ -512,9 +536,14 @@
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required">Producto (SKU)</label>
-                  <select (change)="onProductSelect($any($event.target).value)" class="fg-input">
+                  <select
+                    [value]="altaForm.get('productId')?.value"
+                    (change)="onProductSelect($any($event.target).value)"
+                    class="fg-input"
+                  >
+                    <option value="">-- Selecciona producto / SKU --</option>
                     @for (p of products(); track p.id) {
-                      <option [value]="p.id" [selected]="p.id === altaForm.value.productId">{{ p.id }} - {{ p.name }}</option>
+                      <option [value]="p.id">{{ p.id }} - {{ p.name }}</option>
                     }
                   </select>
                 </div>
@@ -536,6 +565,7 @@
                 <div class="fg-field">
                   <label class="fg-label fg-label--required">Proveedor</label>
                   <select formControlName="supplierName" class="fg-input">
+                    <option value="">-- Selecciona proveedor --</option>
                     @for (sup of suppliers(); track sup.code) {
                       <option [value]="sup.name">{{ sup.name }}</option>
                     }
@@ -567,11 +597,11 @@
                 </div>
                 <div class="fg-field">
                   <label class="fg-label">Montacarguista</label>
-                  <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn.forkliftOperator }}</span>
+                  <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn?.forkliftOperator || altaForm.value.forkliftOperator }}</span>
                 </div>
                 <div class="fg-field">
                   <label class="fg-label">Rampa de Recepción</label>
-                  <span class="text-primary text-xs font-bold">Rampa {{ rec.checkIn.rampNumber }}</span>
+                  <span class="text-primary text-xs font-bold">Rampa {{ rec.checkIn?.rampNumber || altaForm.value.rampNumber || 4 }}</span>
                 </div>
 
                 <div class="fg-field sm:col-span-2">
@@ -857,20 +887,32 @@
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
               <button
                 type="button"
+                [disabled]="isSavingDraft()"
                 (click)="saveDraftReception()"
-                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center"
+                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span class="material-symbols-outlined text-sm">save</span>
-                <span>Guardar Avance de Descarga</span>
+                @if (isSavingDraft()) {
+                  <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                  <span>Guardando en Servidor...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-sm">save</span>
+                  <span>Guardar Avance de Descarga</span>
+                }
               </button>
 
               <button
                 type="button"
+                [disabled]="isCompleting() || isSavingDraft()"
                 (click)="initiateCompleteReception()"
-                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900"
+                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span class="material-symbols-outlined text-base">print</span>
-                <span>Autorizar y Generar Formato de Impresión Oficial</span>
+                @if (isCompleting()) {
+                  <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                  <span>Autorizando en Servidor...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-base">print</span>
+                  <span>Autorizar y Generar Formato de Impresión Oficial</span>
+                }
               </button>
             </div>
           }

@@ -262,8 +262,13 @@ export class WarehouseMovementsApiService {
 
   getSuppliers(orgId?: string): Observable<any[]> {
     const id = orgId || this.getSessionOrgId();
-    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/suppliers?organizationId=${id}&status=ACTIVE`).pipe(
-      map((res) => res.data || [])
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/api/v1/suppliers?organizationId=${id}&page=0&size=1000&sortBy=updatedAt&sortDir=DESC`).pipe(
+      map((res) => {
+        if (!res || !res.data) return [];
+        if (Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res.data.content)) return res.data.content;
+        return [];
+      })
     );
   }
 }
