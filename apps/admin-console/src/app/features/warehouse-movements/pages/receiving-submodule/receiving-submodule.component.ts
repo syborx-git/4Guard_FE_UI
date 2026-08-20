@@ -1,7 +1,7 @@
 import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
@@ -11,6 +11,7 @@ import {
   ReceptionPalletItem,
   PalletType,
   PALLET_TYPE_LABELS,
+  MovementAuditEntry,
 } from '../../models/warehouse-movements.models';
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
@@ -38,6 +39,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  goToManageCarriers(): void {
+    this.router.navigate(['/admin/carriers']);
+  }
 
   // Auto-foco en escáner de UAs
   @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;
@@ -46,6 +52,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   searchQuery = signal('');
   statusFilter = signal<string>('ALL');
   selectedReception = signal<ReceptionHeader | null>(null);
+  auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Cola Reactiva de Pre-Recepciones Pendientes (Caseta)
   pendingReceptions = this.movementsService.pendingReceptions;
@@ -65,6 +72,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   toggleShowCancelPassword(): void {
     this.showCancelPassword.update((v) => !v);
+  }
+
+  getInitials(name?: string): string {
+    if (!name) return 'RC';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   }
 
   // Modales del Workbench
@@ -96,58 +112,47 @@ export class ReceivingSubmoduleComponent implements OnInit {
   ramps = this.movementsService.ramps;
   forkliftOperators = this.movementsService.forkliftOperators;
 
-  suppliers = signal([
-    { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
-    { code: 'SUP-02', name: 'NESTLE MEXICO S.A DE C.V PLANTA TOLUCA' },
-    { code: 'SUP-03', name: 'DISTRIBUIDORA AUTOMOTRIZ S.A.' },
-  ]);
-
-  products = signal([
-    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 480 },
-    { id: 'SKU-NES-680', name: 'Cereal Nestlé Nesquik 680g', defaultPieces: 480 },
-    { id: '90811224', name: 'NESCAFE CLASICO 200G FRASCO', defaultPieces: 48 },
-    { id: '77012399', name: 'CARNATION CLAVEL 360G LATA', defaultPieces: 24 },
-    { id: '55409811', name: 'NESQUIK CHOCOLATE 500G', defaultPieces: 36 },
-  ]);
+  suppliers = signal<{ code: string; name: string }[]>([]);
+  products = signal<{ id: string; name: string; defaultPieces: number }[]>([]);
 
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
   checkInForm = this.fb.group({
-    carrierLineCode: ['TRANS-CAST'],
-    carrierLine: ['Transportes Castores', [Validators.required]],
-    receptionTime: ['09:15', [Validators.required]],
-    docNumber: ['REM-88102', [Validators.required]],
-    docDate: ['2026-08-10', [Validators.required]],
-    elaborationDate: ['2026-01-01'],
-    expirationDate: ['2026-11-15'],
-    lotNumber: ['LOT-2026-A1'],
-    clientCode: ['CLI-001'],
-    client: ['Nestlé México', [Validators.required]],
-    rampCode: ['R-04'],
-    rampNumber: [4, [Validators.required]],
-    forkliftOperatorCode: ['MC-101'],
-    forkliftOperator: ['Pablo Hernández', [Validators.required]],
-    driverName: ['Carlos Ruiz', [Validators.required]],
-    tractorPlates: ['77-AB-99', [Validators.required]],
-    boxPlates: ['55-XX-11', [Validators.required]],
-    sealNumber: ['SL-99412'],
+    carrierLineCode: [''],
+    carrierLine: ['', [Validators.required]],
+    receptionTime: [new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }), [Validators.required]],
+    docNumber: ['', [Validators.required]],
+    docDate: [new Date().toISOString().slice(0, 10), [Validators.required]],
+    elaborationDate: [''],
+    expirationDate: [''],
+    lotNumber: [''],
+    clientCode: [''],
+    client: ['', [Validators.required]],
+    rampCode: ['R-01'],
+    rampNumber: [1, [Validators.required]],
+    forkliftOperatorCode: [''],
+    forkliftOperator: ['', [Validators.required]],
+    driverName: ['', [Validators.required]],
+    tractorPlates: ['', [Validators.required]],
+    boxPlates: ['', [Validators.required]],
+    sealNumber: [''],
   });
 
   // Lista Reactiva de Cinchos/Sellos
-  sealList = signal<string[]>(['SL-99412']);
+  sealList = signal<string[]>([]);
   tempSealInput = signal('');
 
   // ── FORMULARIO: ALTA / EDICIÓN DE RECEPCIÓN (Detalle Producto) ──
   altaForm = this.fb.group({
-    lotNumber: ['LOT-2026-A1', [Validators.required]],
-    expirationDate: ['2026-11-15', [Validators.required]],
-    forkliftOperator: ['Pablo Hernández', [Validators.required]],
-    rampNumber: [4, [Validators.required]],
-    productId: ['12572733', [Validators.required]],
-    productName: ['FFEE-MATE ORIGINAL BOTELLA 12X400G N1', [Validators.required]],
-    supplierName: ['LE MEXICO S.A DE C.V', [Validators.required]],
-    piecesPerPallet: [480, [Validators.required, Validators.min(1)]],
+    lotNumber: ['', [Validators.required]],
+    expirationDate: ['', [Validators.required]],
+    forkliftOperator: ['', [Validators.required]],
+    rampNumber: [1, [Validators.required]],
+    productId: ['', [Validators.required]],
+    productName: ['', [Validators.required]],
+    supplierName: ['', [Validators.required]],
+    piecesPerPallet: [0, [Validators.required, Validators.min(1)]],
     selectedPalletType: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
-    observations: ['Ingreso directo andén 4 sin incidentes.'],
+    observations: [''],
   });
 
   // ── FORMULARIO: EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
@@ -213,6 +218,26 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.movementsService.loadInitialBackendData();
+
+    this.movementsService.movementsApi.getSuppliers().subscribe({
+      next: (sups) => {
+        if (sups && sups.length > 0) {
+          this.suppliers.set(sups.map((s) => ({ code: s.id || s.code, name: s.commercialName || s.tradeName || s.name })));
+        }
+      },
+      error: () => {},
+    });
+
+    this.movementsService.movementsApi.getProductSkus().subscribe({
+      next: (prods) => {
+        if (prods && prods.length > 0) {
+          this.products.set(prods.map((p) => ({ id: p.id || p.code, name: p.name || p.description, defaultPieces: p.piecesPerPallet || 480 })));
+        }
+      },
+      error: () => {},
+    });
+
     this.route.queryParams.subscribe((params) => {
       const folio = params['folio'];
       if (folio) {
@@ -225,8 +250,34 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
   }
 
+  resetCheckInForm(): void {
+    const firstCarrier = this.carrierLines()[0];
+    this.checkInForm.reset({
+      carrierLineCode: firstCarrier ? firstCarrier.code : '',
+      carrierLine: firstCarrier ? firstCarrier.name : '',
+      receptionTime: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      docNumber: '',
+      docDate: new Date().toISOString().slice(0, 10),
+      elaborationDate: '',
+      expirationDate: '',
+      lotNumber: '',
+      clientCode: '',
+      client: '',
+      rampCode: 'R-01',
+      rampNumber: 1,
+      forkliftOperatorCode: '',
+      forkliftOperator: '',
+      driverName: '',
+      tractorPlates: '',
+      boxPlates: '',
+      sealNumber: '',
+    });
+    this.sealList.set([]);
+  }
+
   // Iniciar registro de nueva pre-recepción en el panel (sin modal)
   startNewReception(): void {
+    this.movementsService.reloadCarriers();
     this.formMode.set('create');
     this.selectedReception.set(null);
     localStorage.removeItem('4g_active_reception_folio');
@@ -247,18 +298,57 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.selectedReception.set(rec);
     localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
+    this.loadAuditLogs(rec.folio);
     this.altaForm.patchValue({
-      lotNumber: rec.lotNumber || rec.checkIn.lotNumber || 'LOT-2026-A1',
-      expirationDate: rec.expirationDate || rec.checkIn.expirationDate || '2026-11-15',
-      forkliftOperator: rec.checkIn.forkliftOperator || 'Pablo Hernández',
-      rampNumber: rec.checkIn.rampNumber || 4,
-      productId: rec.productId || '12572733',
-      productName: rec.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: rec.supplierName || 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: rec.piecesPerPallet || 480,
+      lotNumber: rec.lotNumber || rec.checkIn.lotNumber || '',
+      expirationDate: rec.expirationDate || rec.checkIn.expirationDate || '',
+      forkliftOperator: rec.checkIn.forkliftOperator || '',
+      rampNumber: rec.checkIn.rampNumber || 1,
+      productId: rec.productId || '',
+      productName: rec.productName || '',
+      supplierName: rec.supplierName || '',
+      piecesPerPallet: rec.piecesPerPallet || 0,
       selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
-      observations: rec.observations || 'Ingreso directo andén 4 sin incidentes.',
+      observations: rec.observations || '',
     });
+  }
+
+  loadAuditLogs(folio: string): void {
+    const logs = this.movementsService.getReceptionAuditLogs(folio);
+    this.auditEntries.set(logs || []);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'add_circle';
+      case 'RECEPCION_COMPLETADA': return 'check_circle';
+      case 'TARIMA_EDITADA':       return 'edit_note';
+      case 'RECEPCION_ACTUALIZADA':return 'edit';
+      case 'RECEPCION_CANCELADA':  return 'cancel';
+      default:                     return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'carriers-tl-node--emerald';
+      case 'RECEPCION_COMPLETADA': return 'carriers-tl-node--blue';
+      case 'TARIMA_EDITADA':
+      case 'RECEPCION_ACTUALIZADA':return 'carriers-tl-node--amber';
+      case 'RECEPCION_CANCELADA':  return 'carriers-tl-node--red';
+      default:                     return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
+      case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cerrada en WMS';
+      case 'TARIMA_EDITADA':       return 'Modificación Manual de Tarima/UA';
+      case 'RECEPCION_ACTUALIZADA':return 'Actualización de Datos de Recepción';
+      case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria de Recepción';
+      default:                     return action;
+    }
   }
 
   // Notificación Simulada & Navegación Directa por Folio
@@ -726,26 +816,6 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   removeSeal(index: number): void {
     this.sealList.update((list) => list.filter((_, i) => i !== index));
-  }
-
-  resetCheckInForm(): void {
-    this.checkInForm.reset({
-      carrierLine: 'TRANS-CAST',
-      receptionTime: '09:15',
-      docNumber: 'REM-88102',
-      docDate: '2026-08-10',
-      elaborationDate: '2026-01-01',
-      expirationDate: '2026-11-15',
-      lotNumber: 'LOT-2026-A1',
-      client: 'CLI-001',
-      rampNumber: 4,
-      forkliftOperator: 'MC-101',
-      driverName: 'Carlos Ruiz',
-      tractorPlates: '77-AB-99',
-      boxPlates: '55-XX-11',
-      sealNumber: 'SL-99412',
-    });
-    this.sealList.set(['SL-99412']);
   }
 
   openPrintPreview(rec: ReceptionHeader): void {

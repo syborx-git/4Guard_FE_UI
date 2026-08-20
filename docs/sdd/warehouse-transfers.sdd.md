@@ -195,7 +195,20 @@ El formato impreso cumple con la directriz institucional de 4GUARD WMS:
 
 ---
 
-## 7. Criterios de Aceptación (CA)
+---
+
+## 8. Control y Auditoría Homologada
+
+En el modo detalle (`formMode === 'detail'`), se despliega la sección **"Información de Control & Auditoría"** homologada con el estándar WMS:
+1. **Metadatos Rápidos:** Grid de 4 columnas con Folio de Movimiento, Organización (`4GUARD LOGISTICS CORP`), Registrado Por (`@usuario`), Fecha de Operación.
+2. **Línea de Tiempo Interactiva:** Registro cronológico de eventos con nodos codificados por color:
+   * `TRASPASO_REGISTRADO` (Verde Esmeralda `.carriers-tl-node--emerald`): Registro de reubicación con origen, destino, montacarguista y total de UAs/piezas.
+   * `TRASPASO_COMPLETADO` (Azul `.carriers-tl-node--blue`): Confirmación de acomodo físico.
+   * `TRASPASO_CANCELADO` (Rojo `.carriers-tl-node--red`): Revocación con motivo y autorizador.
+
+---
+
+## 9. Criterios de Aceptación (CA)
 
 | Código | Criterio de Aceptación | Estado |
 | :--- | :--- | :---: |
@@ -211,6 +224,20 @@ El formato impreso cumple con la directriz institucional de 4GUARD WMS:
 | **CA-010** | El modal de confirmación tiene fondo sólido opaco y alto contraste. | ✅ Cumplido |
 | **CA-011** | La ejecución descuenta el stock de origen, suma en destino y genera folio `CAM-2026-XXXXXX`. | ✅ Cumplido |
 | **CA-012** | Tras la confirmación, se abre automáticamente el comprobante imprimible oficial con 3 firmas. | ✅ Cumplido |
-| **CA-013** | Al seleccionar un registro del directorio izquierdo, se abre la vista detalle de solo lectura. | ✅ Cumplido |
+| **CA-013** | Al seleccionar un registro del directorio izquierdo, se abre la vista detalle de solo lectura con sección de Auditoría. | ✅ Cumplido |
 | **CA-014** | La barra de breadcrumb no contiene botones redundantes y se homologa 1:1 con Recepción. | ✅ Cumplido |
-| **CA-015** | La tipografía utiliza `Outfit`, `Inter` y `JetBrains Mono` con colores Midnight Navy & Prestige Gold. | ✅ Cumplido |
+| **CA-015** | La tipografía utiliza `Outfit`, `Inter` y `JetBrains Mono` con colores Midnight Navy & Prestige Gold y soporte Dark Mode. | ✅ Cumplido |
+
+---
+
+## 10. Contratos Backend REST (Spring Boot — `/api/v1/warehouse-transfers`)
+
+| Método | Endpoint | DTO / Payload | Descripción |
+|---|---|---|---|
+| `POST` | `/` | `CreateTransferRequest` | Registrar cambio de almacén y reubicación de UAs |
+| `GET` | `/{id}` | N/A | Consulta de detalle con tarimas reubicadas |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
+| `POST` | `/{id}/cancel` | `CancelTransferRequest` | Cancelación de traspaso con compensación |
+| `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
+
+

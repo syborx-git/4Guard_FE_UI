@@ -27,12 +27,16 @@ import {
   TransportType,
   CLIENT_DESTINATIONS,
   ClientDestination,
+  MovementAuditEntry,
+  MovementAuditDetail,
 } from '../models/warehouse-movements.models';
+import { WarehouseMovementsApiService } from './warehouse-movements-api.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class WarehouseMovementsService {
+  public readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
   // Consecutivo base de recepción
   private nextFolioNumber = signal(26510);
@@ -40,20 +44,14 @@ export class WarehouseMovementsService {
   private nextDispatchNumber = signal(8821);
   private nextOutboundNumber = signal(1);  // SAL-2026-000001
 
-  // Catálogos Reactivos
-  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([
-    { code: 'TR-01', name: 'Transportes Castores' },
-    { code: 'TR-02', name: 'Fletes Directos de Puebla' },
-    { code: 'TR-03', name: 'TMS (Transportes y Maniobras del Sur)' },
-    { code: 'TR-04', name: 'Express Tresguerras' },
-  ]);
+  // Mapas de Auditoría por Folio
+  private readonly receptionAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
+  private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
+  private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
-  private readonly clientsSignal = signal<ClientItem[]>([
-    { code: 'CLI-001', name: 'Nestlé México' },
-    { code: 'CLI-002', name: 'Nestlé Planta Toluca' },
-    { code: 'CLI-003', name: 'Nestlé Planta Querétaro' },
-    { code: 'CLI-004', name: 'Nestlé Planta Veracruz' },
-  ]);
+  // Catálogos Reactivos (inician vacíos hasta cargar del BE)
+  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([]);
+  private readonly clientsSignal = signal<ClientItem[]>([]);
 
   private readonly rampsSignal = signal<RampItem[]>([
     { code: 'R-01', rampNumber: 1, name: 'Rampa 01' },
@@ -70,18 +68,7 @@ export class WarehouseMovementsService {
     { code: 'R-12', rampNumber: 12, name: 'Rampa 12' },
   ]);
 
-  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([
-    { code: 'MC-101', name: 'Alan Huerta Pérez' },
-    { code: 'MC-102', name: 'Pablo Hernández' },
-    { code: 'MC-103', name: 'Alejandro Martínez' },
-    { code: 'MC-104', name: 'Gerardo González Carbajal' },
-    { code: 'MC-105', name: 'Saul Reyes Trejo' },
-    { code: 'MC-106', name: 'Carlos Ruiz' },
-    { code: 'MC-107', name: 'Juan Manuel López' },
-    { code: 'MC-108', name: 'Héctor Villalvo' },
-    { code: 'MC-109', name: 'Roberto Carmona' },
-    { code: 'MC-110', name: 'Miguel Ángel Soria' },
-  ]);
+  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
 
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();
@@ -99,255 +86,17 @@ export class WarehouseMovementsService {
     this.rampsSignal.update((list) => [...list, item]);
   }
 
-  // Almacenamiento Reactivo de datos (Signals)
+  // Almacenamiento Reactivo de datos (Signals) — Inician vacíos
   private readonly receptionsSignal = signal<ReceptionHeader[]>([]);
   private readonly transfersSignal = signal<WarehouseTransfer[]>([]);
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
   private readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
 
-  // Bahías y su stock inicial simulado
-  private readonly locationsSignal = signal<Record<string, LocationStockInfo>>({
-    'A-14': {
-      locationCode: 'A-14',
-      warehouseName: 'Bodega Principal A',
-      zone: 'Zona A - Alimentos Secos',
-      aisle: 'Pasillo 01',
-      rack: 'Rack 04',
-      level: 'Nivel 01 (Piso)',
-      capacity: 4,
-      occupancy: 4,
-      availableCapacity: 0,
-      totalPallets: 4,
-      totalPieces: 1920,
-      pallets: [
-        {
-          id: 'ua-101',
-          palletCode: 'UA-90821',
-          description: 'Cereal Nestlé Nesquik 680g',
-          productId: 'SKU-NES-680',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-          observations: 'Buen estado',
-        },
-        {
-          id: 'ua-102',
-          palletCode: 'UA-90822',
-          description: 'Cereal Nestlé Nesquik 680g',
-          productId: 'SKU-NES-680',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-        {
-          id: 'ua-103',
-          palletCode: 'UA-90823',
-          description: 'Cereal Nestlé Nesquik 680g',
-          productId: 'SKU-NES-680',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-        {
-          id: 'ua-104',
-          palletCode: 'UA-90824',
-          description: 'Cereal Nestlé Nesquik 680g',
-          productId: 'SKU-NES-680',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-      ],
-    },
-    'M-98': {
-      locationCode: 'M-98',
-      warehouseName: 'Bodega M 98 - Pulmón',
-      zone: 'Zona M - Racks Altura',
-      aisle: 'Pasillo 09',
-      rack: 'Rack 08',
-      level: 'Nivel 02',
-      capacity: 4,
-      occupancy: 0,
-      availableCapacity: 4,
-      totalPallets: 0,
-      totalPieces: 0,
-      pallets: [],
-    },
-    'B-02': {
-      locationCode: 'B-02',
-      warehouseName: 'Bodega Principal B',
-      zone: 'Zona B - Bebidas y Café',
-      aisle: 'Pasillo 02',
-      rack: 'Rack 01',
-      level: 'Nivel 02',
-      capacity: 4,
-      occupancy: 2,
-      availableCapacity: 2,
-      totalPallets: 2,
-      totalPieces: 960,
-      pallets: [
-        {
-          id: 'ua-201',
-          palletCode: 'UA-77101',
-          description: 'Café Nescafé Clásico 200g',
-          productId: 'SKU-NESCAF-200',
-          pieces: 480,
-          palletTypeId: 'TARIMA_CHEP',
-          palletTypeLabel: 'Tarima CHEP',
-        },
-        {
-          id: 'ua-202',
-          palletCode: 'UA-77102',
-          description: 'Café Nescafé Clásico 200g',
-          productId: 'SKU-NESCAF-200',
-          pieces: 480,
-          palletTypeId: 'TARIMA_CHEP',
-          palletTypeLabel: 'Tarima CHEP',
-        },
-      ],
-    },
-    'A-15': {
-      locationCode: 'A-15',
-      warehouseName: 'Bodega Principal A',
-      zone: 'Zona A - Alimentos Secos',
-      aisle: 'Pasillo 01',
-      rack: 'Rack 04',
-      level: 'Nivel 02',
-      capacity: 4,
-      occupancy: 0,
-      availableCapacity: 4,
-      totalPallets: 0,
-      totalPieces: 0,
-      pallets: [],
-    },
-    'C-08': {
-      locationCode: 'C-08',
-      warehouseName: 'Bodega C - Lácteos',
-      zone: 'Zona C - Lácteos Secos',
-      aisle: 'Pasillo 03',
-      rack: 'Rack 02',
-      level: 'Nivel 01',
-      capacity: 3,
-      occupancy: 3,
-      availableCapacity: 0,
-      totalPallets: 3,
-      totalPieces: 1440,
-      pallets: [
-        {
-          id: 'ua-301',
-          palletCode: 'UA-88301',
-          description: 'Coffee-Mate Original 400g',
-          productId: '12572733',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-        {
-          id: 'ua-302',
-          palletCode: 'UA-88302',
-          description: 'Coffee-Mate Original 400g',
-          productId: '12572733',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-        {
-          id: 'ua-303',
-          palletCode: 'UA-88303',
-          description: 'Coffee-Mate Original 400g',
-          productId: '12572733',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-      ],
-    },
-    'D-01': {
-      locationCode: 'D-01',
-      warehouseName: 'Bodega D - Consolidación',
-      zone: 'Zona D - Alta Rotación',
-      aisle: 'Pasillo 04',
-      rack: 'Rack 01',
-      level: 'Nivel 01 (Piso)',
-      capacity: 4,
-      occupancy: 0,
-      availableCapacity: 4,
-      totalPallets: 0,
-      totalPieces: 0,
-      pallets: [],
-    },
-  });
+  // Bahías y su stock
+  private readonly locationsSignal = signal<Record<string, LocationStockInfo>>({});
 
-  // Lotes disponibles para salidas FIFO/FEFO
-  private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([
-    {
-      remisionNo: 'REM-88102',
-      client: 'Nestlé México',
-      productId: 'SKU-NES-680',
-      productName: 'Cereal Nestlé Nesquik 680g',
-      lotNumber: 'LOT-2026-A1',
-      elaborationDate: '2026-01-10',
-      expirationDate: '2026-11-15',
-      availablePallets: 5,
-      totalPieces: 2400,
-      locationCode: 'A-14',
-      isFifoSuggested: true, // El más antiguo (sugerido FEFO)
-      pallets: Array.from({ length: 5 }, (_, i) => ({
-        id: `ua-fifo-${i + 1}`,
-        palletCode: `UA-8810-${i + 1}`,
-        description: 'Cereal Nestlé Nesquik 680g',
-        productId: 'SKU-NES-680',
-        pieces: 480,
-        palletTypeId: 'MADERA_ESTANDAR',
-        palletTypeLabel: 'Madera Estándar',
-        observations: 'Lote prioritario FIFO',
-      })),
-    },
-    {
-      remisionNo: 'REM-99420',
-      client: 'Nestlé México',
-      productId: 'SKU-NES-680',
-      productName: 'Cereal Nestlé Nesquik 680g',
-      lotNumber: 'LOT-2026-B4',
-      elaborationDate: '2026-03-01',
-      expirationDate: '2027-04-20',
-      availablePallets: 8,
-      totalPieces: 3840,
-      locationCode: 'A-18',
-      isFifoSuggested: false,
-      pallets: Array.from({ length: 8 }, (_, i) => ({
-        id: `ua-fifo2-${i + 1}`,
-        palletCode: `UA-9942-${i + 1}`,
-        description: 'Cereal Nestlé Nesquik 680g',
-        productId: 'SKU-NES-680',
-        pieces: 480,
-        palletTypeId: 'PLASTICO',
-        palletTypeLabel: 'Plástico',
-      })),
-    },
-    {
-      remisionNo: 'REM-44120',
-      client: 'Unilever México',
-      productId: 'SKU-KNORR-1K',
-      productName: 'Caldo Knorr Polvo 1Kg',
-      lotNumber: 'LOT-UNI-009',
-      elaborationDate: '2026-02-14',
-      expirationDate: '2027-01-30',
-      availablePallets: 6,
-      totalPieces: 2880,
-      locationCode: 'B-04',
-      isFifoSuggested: true,
-      pallets: Array.from({ length: 6 }, (_, i) => ({
-        id: `ua-knorr-${i + 1}`,
-        palletCode: `UA-4412-${i + 1}`,
-        description: 'Caldo Knorr Polvo 1Kg',
-        productId: 'SKU-KNORR-1K',
-        pieces: 480,
-        palletTypeId: 'TARIMA_CHEP',
-        palletTypeLabel: 'Tarima CHEP',
-      })),
-    },
-  ]);
+  // Lotes de inventario (FIFO/FEFO)
+  private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
 
   // Readonly Computed Public Exposures
   readonly receptions = this.receptionsSignal.asReadonly();
@@ -440,146 +189,261 @@ export class WarehouseMovementsService {
   }
 
   constructor() {
-    this.seedInitialData();
+    this.loadInitialBackendData();
   }
 
-  private seedInitialData(): void {
-    const demoCheckIn: CheckInCasetaData = {
-      carrierLine: 'Transportes Castores',
-      receptionTime: '08:30',
-      docNumber: 'REM-88102',
-      docDate: '2026-08-10',
-      client: 'Nestlé México',
-      rampNumber: 4,
-      forkliftOperator: 'Pablo Hernández',
-      driverName: 'Carlos Ruiz',
-      tractorPlates: '77-AB-99',
-      boxPlates: '55-XX-11',
-      sealNumber: 'SL-99412',
-    };
-
-    const demoReception: ReceptionHeader = {
-      folio: '26509',
-      status: 'COMPLETED',
-      checkIn: demoCheckIn,
-      lotNumber: 'LOT-2026-A1',
-      elaborationDate: '2026-01-10',
-      expirationDate: '2026-11-15',
-      productId: 'SKU-NES-680',
-      productName: 'Cereal Nestlé Nesquik 680g',
-      piecesPerPallet: 480,
-      selectedPalletType: 'MADERA_ESTANDAR',
-      observations: 'Ingreso directo andén 4 sin incidentes.',
-      pallets: [
-        {
-          id: 'p1',
-          palletCode: 'UA-90821',
-          description: 'Cereal Nestlé Nesquik 680g',
-          productId: 'SKU-NES-680',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-        {
-          id: 'p2',
-          palletCode: 'UA-90822',
-          description: 'Cereal Nestlé Nesquik 680g',
-          productId: 'SKU-NES-680',
-          pieces: 480,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-        },
-      ],
-      createdAt: '2026-08-10 09:15',
-      completedAt: '2026-08-10 10:00',
-      capturedBy: 'Christian Durán',
-      leaderAuthorizedBy: 'Pablo Hernández',
-    };
-
-    this.receptionsSignal.set([demoReception]);
-
-    // Traspaso inicial simulado
-    this.transfersSignal.set([
-      {
-        id: 'tr-init-1',
-        folio: 'CAM-2026-000001',
-        status: 'COMPLETED',
-        forkliftOperator: 'Pablo Hernández',
-        forkliftOperatorId: 'MC-101',
-        originLocation: 'RAMPA-04',
-        destinationLocation: 'A-14',
-        reasonId: 'REUB_OPERATIVA',
-        reasonLabel: 'Reubicación operativa',
-        observations: 'Acomodo inicial desde andén de descarga a rack principal.',
-        pallets: demoReception.pallets,
-        totalPallets: 2,
-        totalPieces: 960,
-        distinctSkus: 1,
-        clientName: 'Nestlé México',
-        timestamp: '11:30',
-        transferredAt: '2026-08-10 11:30',
-        transferredBy: 'Christian Durán',
+  public loadInitialBackendData(): void {
+    // 1. Clientes
+    this.movementsApi.getClients().subscribe({
+      next: (clients) => {
+        this.clientsSignal.set(
+          (clients || []).map((c) => ({
+            code: c.id || c.code || 'CLI',
+            name: c.name || c.tradeName || 'Cliente',
+          }))
+        );
       },
-    ]);
+      error: () => {},
+    });
 
-    // Salida inicial simulada (legado)
-    this.dispatchesSignal.set([
-      {
-        folio: 'DESP-8820',
-        client: 'Nestlé México',
-        destinationPlant: 'Nestlé Planta Toluca',
-        sealNumber: 'SL-88401',
-        carrierName: 'Transportes Castores',
-        driverName: 'Juan Pérez',
-        economicNumber: 'ECO-901',
-        tractorPlates: '12-AA-34',
-        boxPlates: '78-BB-90',
-        transportType: 'Tráiler',
-        forkliftOperator: 'Pablo Hernández',
-        productId: 'SKU-NES-680',
-        productName: 'Cereal Nestlé Nesquik 680g',
-        selectedPallets: [demoReception.pallets[0]],
-        totalPallets: 1,
-        totalPieces: 480,
-        dispatchedAt: '2026-08-10 14:20',
-        dispatchedBy: 'Christian Durán',
+    // 2. Transportistas
+    this.reloadCarriers();
+
+    // 3. Montacarguistas
+    this.movementsApi.getForkliftOperators().subscribe({
+      next: (ops) => {
+        if (ops && ops.length > 0) {
+          this.forkliftOperatorsSignal.set(
+            ops.map((o) => ({
+              code: o.id || o.code,
+              name: o.fullName || `${o.firstName || ''} ${o.lastNamePaternal || o.lastName || ''} ${o.lastNameMaternal || ''}`.trim() || o.name || 'Montacarguista',
+            }))
+          );
+        }
       },
-    ]);
+      error: () => {},
+    });
 
-    // Salidas Outbound MVP1 con folio SAL-2026-XXXXXX (seed data)
-    const seedOutboundItems: OutboundItem[] = [
-      { id: 'oi-s1-1', palletCode: 'UA-8810-1', productId: 'SKU-NES-680', description: 'Cereal Nestlé Nesquik 680g', lotNumber: 'LOT-2026-A1', expirationDate: '2026-11-15', pieces: 480, palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', locationCode: 'A-14' },
-      { id: 'oi-s1-2', palletCode: 'UA-8810-2', productId: 'SKU-NES-680', description: 'Cereal Nestlé Nesquik 680g', lotNumber: 'LOT-2026-A1', expirationDate: '2026-11-15', pieces: 480, palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', locationCode: 'A-14' },
-      { id: 'oi-s1-3', palletCode: 'UA-8810-3', productId: 'SKU-NES-680', description: 'Cereal Nestlé Nesquik 680g', lotNumber: 'LOT-2026-A1', expirationDate: '2026-11-15', pieces: 480, palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', locationCode: 'A-14' },
+    // 4. Ubicaciones / Bahías
+    this.movementsApi.getLocations().subscribe({
+      next: (locs) => {
+        if (locs && locs.length > 0) {
+          const locMap: Record<string, LocationStockInfo> = {};
+          locs.forEach((l) => {
+            const code = l.code || l.locationCode || 'LOC';
+            locMap[code] = {
+              locationCode: code,
+              warehouseName: l.warehouseName || 'Almacén Principal',
+              zone: l.zoneName || 'General',
+              aisle: l.aisle || '',
+              rack: l.rack || '',
+              level: l.level || '',
+              capacity: l.capacity || 4,
+              occupancy: 0,
+              availableCapacity: l.capacity || 4,
+              totalPallets: 0,
+              totalPieces: 0,
+              pallets: [],
+            };
+          });
+          this.locationsSignal.set(locMap);
+        }
+      },
+      error: () => {},
+    });
+
+    // 5. Lotes de inventario (FIFO/FEFO)
+    this.movementsApi.getInventoryBatches().subscribe({
+      next: (batches) => {
+        this.inventoryBatchesSignal.set(batches || []);
+      },
+      error: () => {},
+    });
+
+    // 6. Recepciones
+    this.movementsApi.getReceptions().subscribe({
+      next: (receptions) => {
+        this.receptionsSignal.set(
+          (receptions || []).map((r: any) => ({
+            id: r.id,
+            folio: r.folio,
+            status: r.status,
+            checkIn: {
+              carrierLine: r.carrierName || '',
+              receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : '',
+              docNumber: r.docNumber || '',
+              docDate: r.docDate || '',
+              client: r.clientName || '',
+              rampNumber: 4,
+              forkliftOperator: '',
+              driverName: r.driverName || '',
+              tractorPlates: r.tractorPlates || '',
+              boxPlates: r.boxPlates || '',
+              sealNumber: '',
+            },
+            lotNumber: r.lotNumber || '',
+            elaborationDate: '',
+            expirationDate: '',
+            productId: r.skuCode || '',
+            productName: r.productName || '',
+            supplierName: '',
+            piecesPerPallet: r.piecesPerPallet || 0,
+            selectedPalletType: 'MADERA_ESTANDAR',
+            pallets: [],
+            createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : '',
+            completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
+            cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
+            capturedBy: r.capturedBy || '',
+          }))
+        );
+      },
+      error: () => {},
+    });
+
+    // 7. Traspasos
+    this.movementsApi.getTransfers().subscribe({
+      next: (transfers) => {
+        this.transfersSignal.set(
+          (transfers || []).map((t: any) => ({
+            id: t.id,
+            folio: t.folio,
+            status: t.status,
+            forkliftOperator: t.forkliftOperatorName || '',
+            forkliftOperatorId: t.forkliftOperatorId,
+            originLocation: t.originLocationCode || '',
+            destinationLocation: t.destinationLocationCode || '',
+            reasonId: t.reasonCode,
+            reasonLabel: t.reasonLabel || t.reasonCode,
+            pallets: [],
+            totalPallets: t.totalPallets || 0,
+            totalPieces: t.totalPieces || 0,
+            distinctSkus: t.distinctSkus || 0,
+            transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
+            transferredBy: t.createdBy || '',
+          }))
+        );
+      },
+      error: () => {},
+    });
+
+    // 8. Salidas
+    this.movementsApi.getOutbounds().subscribe({
+      next: (outbounds) => {
+        this.outboundsSignal.set(
+          (outbounds || []).map((o: any) => ({
+            id: o.id,
+            folio: o.folio,
+            status: o.status,
+            clientCode: o.clientId || '',
+            clientName: o.clientName || '',
+            destinationId: o.destinationId || '',
+            destinationName: o.destinationName || '',
+            destinationAddress: '',
+            carrierCode: o.carrierId || '',
+            carrierName: o.carrierName || '',
+            driverName: o.driverName || '',
+            economicNumber: '',
+            tractorPlates: o.tractorPlates || '',
+            boxPlates: o.boxPlates || '',
+            transportType: o.transportType || 'TRAILER',
+            sealNumber: o.sealNumber || '',
+            remisionNo: o.remisionNo || '',
+            items: [],
+            totalPallets: o.totalPallets || 0,
+            totalPieces: o.totalPieces || 0,
+            distinctSkus: o.distinctSkus || 0,
+            dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+            dispatchedBy: o.createdBy || '',
+            timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
+          }))
+        );
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadCarriers(): void {
+    this.movementsApi.getCarriers().subscribe({
+      next: (carriers) => {
+        if (carriers) {
+          this.carrierLinesSignal.set(
+            carriers.map((c) => ({
+              code: c.id || c.code || c.taxId || 'TR',
+              name: c.tradeName && c.tradeName !== c.name ? `${c.tradeName} (${c.name})` : (c.name || c.tradeName || 'Transportista'),
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  // ─── MÉTODOS DE AUDITORÍA ───────────────────────────────────────────────────
+
+  getReceptionAuditLogs(folio: string): MovementAuditEntry[] {
+    const map = this.receptionAuditMap();
+    return map[folio.trim()] || [
+      {
+        id: `aud-default-${folio}`,
+        action: 'RECEPCION_CREADA',
+        actionLabel: 'Registro de Movimiento en WMS',
+        username: 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [{ fieldName: 'Folio', newValue: folio }],
+      },
     ];
-    const seedOutbound: WarehouseOutbound = {
-      id: 'out-seed-1',
-      folio: 'SAL-2026-000001',
-      status: 'COMPLETED',
-      clientCode: 'CLI-001',
-      clientName: 'Nestlé México',
-      destinationId: 'DEST-CLI001-TOLUCA',
-      destinationName: 'CEDIS Toluca',
-      destinationAddress: 'Blvd. Aeropuerto 2112, Toluca, Edo. de México',
-      carrierCode: 'TR-01',
-      carrierName: 'Transportes Castores',
-      driverName: 'Juan Pérez',
-      economicNumber: 'ECO-901',
-      tractorPlates: '12-AA-34',
-      boxPlates: '78-BB-90',
-      transportType: 'TRAILER',
-      sealNumber: 'SL-88401',
-      remisionNo: 'REM-88102',
-      items: seedOutboundItems,
-      totalPallets: 3,
-      totalPieces: 1440,
-      distinctSkus: 1,
-      dispatchedAt: '2026-08-10 14:20',
-      dispatchedBy: 'Christian Durán',
-      timestamp: '14:20',
-    };
-    this.outboundsSignal.set([seedOutbound]);
-    this.nextOutboundNumber.set(2);
+  }
+
+  addReceptionAudit(folio: string, entry: MovementAuditEntry): void {
+    this.receptionAuditMap.update((map) => {
+      const key = folio.trim();
+      const current = map[key] || [];
+      return { ...map, [key]: [entry, ...current] };
+    });
+  }
+
+  getTransferAuditLogs(folio: string): MovementAuditEntry[] {
+    const map = this.transferAuditMap();
+    return map[folio.trim()] || [
+      {
+        id: `aud-default-${folio}`,
+        action: 'TRASPASO_REGISTRADO',
+        actionLabel: 'Reubicación Registrada en Catálogo',
+        username: 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [{ fieldName: 'Folio', newValue: folio }],
+      },
+    ];
+  }
+
+  addTransferAudit(folio: string, entry: MovementAuditEntry): void {
+    this.transferAuditMap.update((map) => {
+      const key = folio.trim();
+      const current = map[key] || [];
+      return { ...map, [key]: [entry, ...current] };
+    });
+  }
+
+  getOutboundAuditLogs(folio: string): MovementAuditEntry[] {
+    const map = this.outboundAuditMap();
+    return map[folio.trim()] || [
+      {
+        id: `aud-default-${folio}`,
+        action: 'SALIDA_REGISTRADA',
+        actionLabel: 'Despacho Registrado en WMS',
+        username: 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [{ fieldName: 'Folio', newValue: folio }],
+      },
+    ];
+  }
+
+  addOutboundAudit(folio: string, entry: MovementAuditEntry): void {
+    this.outboundAuditMap.update((map) => {
+      const key = folio.trim();
+      const current = map[key] || [];
+      return { ...map, [key]: [entry, ...current] };
+    });
   }
 
   // Genera un Folio Consecutivo de Recepción (ej. 26510)
@@ -610,6 +474,20 @@ export class WarehouseMovementsService {
     };
 
     this.receptionsSignal.update((list) => [newHeader, ...list]);
+
+    this.addReceptionAudit(assignedFolio, {
+      id: `aud-rec-reg-${Date.now()}`,
+      action: 'RECEPCION_CREADA',
+      actionLabel: 'Pre-Recepción Registrada en Caseta',
+      username: 'Caseta de Seguridad',
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Línea Transportadora', newValue: data.carrierLine },
+        { fieldName: 'Rampa', newValue: `Rampa ${data.rampNumber}` },
+        { fieldName: 'Placas Tracto / Caja', newValue: `${data.tractorPlates} / ${data.boxPlates}` },
+      ],
+    });
+
     return newHeader;
   }
 
@@ -627,6 +505,19 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-upd-${Date.now()}`,
+      action: 'RECEPCION_ACTUALIZADA',
+      actionLabel: 'Actualización de Datos de Recepción',
+      username: partial.capturedBy || 'Operador WMS',
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Lugar de Almacenaje', newValue: partial.storageLocation || '' },
+        { fieldName: 'Total Tarimas', newValue: partial.pallets?.length.toString() || '0' },
+      ],
+    });
+
     return updated;
   }
 
@@ -676,6 +567,23 @@ export class WarehouseMovementsService {
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
 
+    const totalPieces = pallets.reduce((sum, p) => sum + p.pieces, 0);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-comp-${Date.now()}`,
+      action: 'RECEPCION_COMPLETADA',
+      actionLabel: 'Descarga y Cierre de Recepción F01',
+      username: capturedBy,
+      authorizedBy: leaderName,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Lote de Fabricación', newValue: lotNumber },
+        { fieldName: 'SKU / Producto', newValue: `${productId} - ${productName}` },
+        { fieldName: 'Tarimas Descargadas', newValue: pallets.length.toString() },
+        { fieldName: 'Piezas Totales', newValue: totalPieces.toLocaleString() },
+      ],
+    });
+
     return updated;
   }
 
@@ -697,6 +605,90 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-canc-${Date.now()}`,
+      action: 'RECEPCION_CANCELADA',
+      actionLabel: 'Cancelación Extraordinaria con Autorización',
+      username: leaderName,
+      authorizedBy: leaderName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
+        { fieldName: 'Motivo de Cancelación', newValue: justification },
+      ],
+    });
+
+    return updated;
+  }
+
+  // Cancela Traspaso (Cambio de Almacén)
+  cancelTransfer(folio: string, justification: string, adminName: string): WarehouseTransfer | null {
+    const list = this.transfersSignal();
+    const index = list.findIndex((t) => t.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseTransfer = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.transfersSignal.set(newArr);
+
+    this.addTransferAudit(folio, {
+      id: `aud-tr-canc-${Date.now()}`,
+      action: 'TRASPASO_CANCELADO',
+      actionLabel: 'Cancelación de Reubicación de Inventario',
+      username: adminName,
+      authorizedBy: adminName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
+        { fieldName: 'Motivo de Cancelación', newValue: justification },
+      ],
+    });
+
+    return updated;
+  }
+
+  // Cancela Salida de Almacén (Outbound)
+  cancelOutbound(folio: string, justification: string, adminName: string): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const index = list.findIndex((o) => o.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseOutbound = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.outboundsSignal.set(newArr);
+
+    this.addOutboundAudit(folio, {
+      id: `aud-out-canc-${Date.now()}`,
+      action: 'SALIDA_CANCELADA',
+      actionLabel: 'Cancelación de Despacho Outbound',
+      username: adminName,
+      authorizedBy: adminName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
+        { fieldName: 'Motivo de Cancelación', newValue: justification },
+      ],
+    });
 
     return updated;
   }
@@ -847,6 +839,21 @@ export class WarehouseMovementsService {
     this.locationsSignal.set(locs);
     this.transfersSignal.update((list) => [newTransfer, ...list]);
 
+    this.addTransferAudit(folio, {
+      id: `aud-tr-reg-${Date.now()}`,
+      action: 'TRASPASO_REGISTRADO',
+      actionLabel: 'Reubicación de Inventario Confirmada',
+      username: dto.transferredBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Ruta de Movimiento', oldValue: origin, newValue: destination },
+        { fieldName: 'Montacarguista', newValue: dto.forkliftOperator },
+        { fieldName: 'Motivo', newValue: dto.reasonLabel || dto.reasonId || 'Reubicación operativa' },
+        { fieldName: 'Tarimas Trasladadas', newValue: palletsToMove.length.toString() },
+        { fieldName: 'Piezas Totales', newValue: totalPiecesMoved.toLocaleString() },
+      ],
+    });
+
     return newTransfer;
   }
 
@@ -930,6 +937,22 @@ export class WarehouseMovementsService {
     );
 
     this.outboundsSignal.update((list) => [newOutbound, ...list]);
+
+    this.addOutboundAudit(folio, {
+      id: `aud-out-reg-${Date.now()}`,
+      action: 'SALIDA_REGISTRADA',
+      actionLabel: 'Despacho Outbound Confirmado',
+      username: dto.dispatchedBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Cliente / Destino', newValue: `${dto.clientName} — ${dto.destinationName}` },
+        { fieldName: 'Transportista', newValue: dto.carrierName },
+        { fieldName: 'No. Sello / Cincho', newValue: dto.sealNumber },
+        { fieldName: 'Tarimas Despachadas', newValue: dto.selectedPallets.length.toString() },
+        { fieldName: 'Piezas Totales', newValue: totalPieces.toLocaleString() },
+      ],
+    });
+
     return newOutbound;
   }
 
@@ -989,44 +1012,5 @@ export class WarehouseMovementsService {
 
     return fullDispatch;
   }
-
-  // Cancela Traspaso (Cambio de Almacén)
-  cancelTransfer(folio: string, justification: string, adminName: string): WarehouseTransfer | null {
-    const list = this.transfersSignal();
-    const index = list.findIndex((t) => t.folio.trim() === folio.trim());
-    if (index === -1) return null;
-
-    const updated: WarehouseTransfer = {
-      ...list[index],
-      status: 'CANCELLED',
-      cancellationReason: justification,
-      cancelledAt: new Date().toLocaleString('es-MX'),
-      cancelledBy: adminName,
-    };
-
-    const newArr = [...list];
-    newArr[index] = updated;
-    this.transfersSignal.set(newArr);
-    return updated;
-  }
-
-  // Cancela Salida de Almacén (Outbound)
-  cancelOutbound(folio: string, justification: string, adminName: string): WarehouseOutbound | null {
-    const list = this.outboundsSignal();
-    const index = list.findIndex((o) => o.folio.trim() === folio.trim());
-    if (index === -1) return null;
-
-    const updated: WarehouseOutbound = {
-      ...list[index],
-      status: 'CANCELLED',
-      cancellationReason: justification,
-      cancelledAt: new Date().toLocaleString('es-MX'),
-      cancelledBy: adminName,
-    };
-
-    const newArr = [...list];
-    newArr[index] = updated;
-    this.outboundsSignal.set(newArr);
-    return updated;
-  }
 }
+

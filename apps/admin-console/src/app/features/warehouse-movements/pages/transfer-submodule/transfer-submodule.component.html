@@ -6,6 +6,25 @@
 
 <div class="space-y-5">
 
+  <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
+  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
+    <div>
+      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">compare_arrows</span>
+        <span>Cambio de Almacén</span>
+      </h2>
+      <p class="text-xs text-slate-500">Reubicación de inventario en ceros (Putaway / Traspasos internos)</p>
+    </div>
+    <button
+      type="button"
+      (click)="startNewTransfer()"
+      class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
+    >
+      <span class="material-symbols-outlined text-base">add</span>
+      <span>Nuevo Traspaso</span>
+    </button>
+  </div>
+
   <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON RECEPCIÓN Y TRANSPORTISTAS) ── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Total Traspasos -->
@@ -61,76 +80,100 @@
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
     <!-- ── 2A. LEFT PANEL: DIRECTORIO MASTER DE TRASPASOS (col-span-4) ── -->
-    <div class="lg:col-span-4 synexia-card p-4 space-y-4 shadow-sm border border-subtle">
+    <aside class="carriers-directory lg:col-span-4" aria-label="Directorio de traspasos">
       
-      <!-- Header de Lista & Botón [+ Nuevo Traspaso] -->
-      <div class="flex items-center justify-between gap-2 border-b border-subtle pb-3">
-        <div>
-          <h3 class="font-bold text-xs text-primary uppercase tracking-wide">DIRECTORIO DE TRASPASOS</h3>
-          <p class="text-[11px] text-secondary">Control de movimientos y reubicaciones</p>
+      <!-- Buscador y Filtros -->
+      <div class="carriers-directory__filters">
+        <div class="carriers-search">
+          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
+          <input
+            type="search"
+            class="carriers-search__input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por Folio, Bahía, Operador..."
+            autocomplete="off"
+            aria-label="Buscar traspaso"
+          />
         </div>
-        <button
-          type="button"
-          (click)="startNewTransfer()"
-          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md transition-transform hover:scale-105"
-        >
-          <span class="material-symbols-outlined text-sm">add</span>
-          <span>Nuevo Traspaso</span>
-        </button>
-      </div>
 
-      <!-- Buscador -->
-      <div class="relative">
-        <span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary text-sm">search</span>
-        <input
-          type="text"
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-          placeholder="Buscar por Folio, Bahía, Montacarguista..."
-          class="fg-input pl-9 text-xs w-full"
-        />
+        <div class="carriers-filters-row">
+          <div class="carriers-filter-group">
+            <select
+              class="carriers-filter-select"
+              [ngModel]="statusFilter()"
+              (ngModelChange)="statusFilter.set($event)"
+              aria-label="Filtrar por estado"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="COMPLETED">Completados</option>
+              <option value="CANCELLED">Cancelados</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sugerencia de búsqueda extendida -->
+        <p class="carriers-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Busca por folio, ubicación origen/destino u operador
+        </p>
       </div>
 
       <!-- Lista Scrollable de Traspasos -->
-      <div class="receptions-master-list space-y-2 max-h-[620px] overflow-y-auto pr-1">
+      <div class="carriers-directory__list">
         @for (transfer of filteredTransfers(); track transfer.folio) {
           <div
             (click)="selectTransferItem(transfer)"
-            [class.selected-item]="formMode() === 'detail' && selectedTransfer()?.folio === transfer.folio"
-            class="reception-item-card p-3 rounded-xl border border-subtle cursor-pointer transition-all hover:border-gold"
+            [class.carrier-item--selected]="formMode() === 'detail' && selectedTransfer()?.folio === transfer.folio"
+            class="carrier-item"
           >
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="font-mono text-xs font-bold text-gold">#{{ transfer.folio }}</span>
-              <span class="status-badge status-badge--completed text-[10px]">
-                COMPLETADO
-              </span>
+            <!-- Avatar Iniciales -->
+            <div class="carrier-avatar avatar--own">
+              {{ getInitials(transfer.originLocation + ' ' + transfer.destinationLocation) }}
             </div>
 
-            <div class="flex items-center justify-between text-xs my-1 font-mono">
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-primary">{{ transfer.originLocation }}</span>
-                <span class="text-secondary text-[11px]">➔</span>
-                <span class="font-bold text-emerald-600">{{ transfer.destinationLocation }}</span>
+            <div class="carrier-item__body">
+              <div class="carrier-item__header">
+                <span class="carrier-item__name">Ruta: {{ transfer.originLocation }} → {{ transfer.destinationLocation }}</span>
+                <span
+                  class="carrier-status-badge"
+                  [class.status-badge--completed]="transfer.status === 'COMPLETED'"
+                  [class.status-badge--cancelled]="transfer.status === 'CANCELLED'"
+                >
+                  {{ transfer.status === 'COMPLETED' ? 'Completado' : 'Cancelado' }}
+                </span>
               </div>
-              <span class="font-mono text-gold font-bold text-[11px]">
-                {{ transfer.totalPallets }} Tarima(s)
-              </span>
-            </div>
 
-            <div class="flex items-center justify-between text-[11px] text-secondary pt-1 border-t border-subtle mt-1">
-              <span class="truncate max-w-[170px]">{{ transfer.forkliftOperator }}</span>
-              <span class="text-[10px]">{{ transfer.timestamp || transfer.transferredAt }}</span>
+              <div class="flex items-center justify-between text-[11px] text-slate-500">
+                <span class="carrier-item__subtitle truncate">{{ transfer.forkliftOperator }}</span>
+                <span class="text-[10px] font-mono opacity-80">{{ transfer.transferredAt ? (transfer.transferredAt.slice(0, 10)) : '' }}</span>
+              </div>
+
+              <div class="flex items-center justify-between mt-0.5">
+                <span class="carrier-item__tag font-mono">{{ transfer.folio }}</span>
+                <span class="text-[10px] text-slate-500 font-medium">{{ transfer.totalPallets }} tarimas ({{ transfer.totalPieces }} pzas)</span>
+              </div>
+
+              @if (transfer.reasonLabel) {
+                <div class="carrier-item__meta truncate mt-0.5" [title]="transfer.reasonLabel">
+                  Motivo: {{ transfer.reasonLabel }}
+                </div>
+              }
             </div>
           </div>
         } @empty {
-          <div class="text-center py-8 text-secondary">
+          <div class="text-center py-10 px-4 text-slate-400">
             <span class="material-symbols-outlined text-3xl opacity-40 mb-1">search_off</span>
             <p class="text-xs font-medium">No se encontraron traspasos</p>
           </div>
         }
       </div>
 
-    </div>
+      <!-- Footer con conteo -->
+      <div class="carriers-directory__footer">
+        <span class="carriers-count">{{ filteredTransfers().length }} traspasos</span>
+      </div>
+    </aside>
 
     <!-- ── 2B. RIGHT PANEL: DETALLE / ALTA DE CAMBIO DE ALMACÉN (col-span-8) ── -->
     <div class="lg:col-span-8 space-y-4">
@@ -637,6 +680,97 @@
               </div>
             </div>
 
+            <!-- SECCIÓN DE CONTROL & AUDITORÍA (HOMOLOGADA 4GUARD) -->
+            <div class="carriers-form-section mt-4 pt-4 border-t border-subtle">
+              <div class="carriers-form-section__legend flex items-center gap-2 text-xs font-bold text-gold uppercase tracking-wider mb-3">
+                <span class="material-symbols-outlined text-base">history</span>
+                <span>Información de Control & Auditoría</span>
+              </div>
+
+              <!-- Metadatos de lectura rápida -->
+              <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
+                  <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Folio de Movimiento</span>
+                  <span class="carriers-readonly-field__value font-mono font-bold text-xs text-primary">{{ selectedTransfer()!.folio }}</span>
+                </div>
+                <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
+                  <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Organización</span>
+                  <span class="carriers-readonly-field__value text-xs text-primary font-medium">4GUARD LOGISTICS CORP</span>
+                </div>
+                <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
+                  <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Registrado Por</span>
+                  <span class="carriers-readonly-field__value font-mono text-xs text-primary">&#64;{{ selectedTransfer()!.transferredBy }}</span>
+                </div>
+                <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
+                  <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Fecha de Operación</span>
+                  <span class="carriers-readonly-field__value text-xs text-primary font-mono">{{ selectedTransfer()!.transferredAt }}</span>
+                </div>
+              </div>
+
+              <!-- Línea de Tiempo de Auditoría -->
+              <div class="carriers-timeline-preview rounded-xl border border-subtle bg-surface-subtle overflow-hidden">
+                <div class="carriers-timeline-preview__header flex items-center justify-between p-3 border-b border-subtle bg-gold/5">
+                  <div class="flex items-center gap-2 text-xs font-bold text-gold uppercase tracking-wider">
+                    <span class="material-symbols-outlined text-base">timeline</span>
+                    <span>Línea de Tiempo de Auditoría</span>
+                  </div>
+                  <span class="text-[11px] font-mono text-muted">{{ auditEntries().length }} evento(s)</span>
+                </div>
+
+                <div class="carriers-timeline-preview__nodes p-4 space-y-4">
+                  @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                    <div class="carriers-tl-node flex items-start gap-3 relative" [ngClass]="getAuditColorClass(log.action)">
+                      <div class="carriers-tl-node__dot flex items-center justify-center w-8 h-8 rounded-full border shrink-0 z-10">
+                        <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
+                      </div>
+                      @if (!isLast) {
+                        <div class="carriers-tl-node__line absolute left-4 top-8 bottom-[-16px] w-[2px] bg-slate-300 dark:bg-slate-700"></div>
+                      }
+                      <div class="carriers-tl-node__content flex-1 min-w-0">
+                        <div class="carriers-tl-node__header flex items-center gap-2 flex-wrap mb-1">
+                          <span class="carriers-tl-node__action font-bold text-xs text-primary">{{ getAuditSummary(log.action) }}</span>
+                          <span class="carriers-tl-node__tag font-mono text-[10px] px-2 py-0.5 rounded bg-surface border border-subtle text-muted">&#64;{{ log.username }}</span>
+                        </div>
+
+                        @if (log.details && log.details.length > 0) {
+                          <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
+                            @for (d of log.details; track d.fieldName) {
+                              <div class="carriers-tl-diff flex items-center gap-1.5 text-xs flex-wrap">
+                                <span class="carriers-tl-diff__field font-semibold text-secondary">{{ d.fieldName }}:</span>
+                                @if (d.oldValue) {
+                                  <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px]">{{ d.oldValue }}</span>
+                                  <span class="carriers-tl-diff__arrow text-muted">→</span>
+                                }
+                                <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px]">{{ d.newValue }}</span>
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        @if (log.reason) {
+                          <p class="text-xs text-rose-500 font-medium italic mt-1">
+                            Motivo: "{{ log.reason }}"
+                          </p>
+                        }
+
+                        <span class="carriers-tl-node__meta text-[11px] text-muted flex items-center gap-1 mt-1 font-mono">
+                          <span class="material-symbols-outlined text-[13px]">schedule</span>
+                          <span>{{ log.timestamp }}</span>
+                          @if (log.authorizedBy) {
+                            <span class="ml-2 font-normal">· Autorizado por: <strong class="text-primary font-bold">{{ log.authorizedBy }}</strong></span>
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="text-xs text-secondary italic text-center py-3">
+                      No hay eventos de auditoría registrados para este folio.
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
             <!-- Footer de Acciones para Detalle -->
             <div class="flex items-center justify-between pt-3 border-t border-subtle">
               <button
@@ -805,47 +939,57 @@
        ════════════════════════════════════════════════════════════════ -->
   @if (showCancelModal()) {
     <div class="modal-overlay" (click)="closeCancelModal()">
-      <div class="modal-card max-w-lg w-full shadow-2xl animate-fade-up border-rose-500/40" (click)="$event.stopPropagation()">
+      <div class="modal-card max-w-lg w-full animate-fade-up" (click)="$event.stopPropagation()">
         
         <!-- Header de Cancelación -->
-        <div class="modal-header flex items-center justify-between border-b border-rose-500/20 bg-rose-950/20">
+        <div class="modal-header flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/40">
-              <span class="material-symbols-outlined text-2xl">gavel</span>
+            <div class="modal-header-icon-box">
+              <span class="material-symbols-outlined">gavel</span>
             </div>
             <div>
-              <h3 class="font-extrabold text-base text-rose-400 uppercase tracking-wide">Cancelar Traspaso de Almacén</h3>
-              <p class="text-xs text-slate-400 font-medium">Autorización requerida del Administrador</p>
+              <h3 class="modal-header-title">Cancelar Traspaso #{{ selectedTransfer()?.folio }}</h3>
+              <p class="modal-header-subtitle">Revocación de reubicación con autorización Admin</p>
             </div>
           </div>
-          <button type="button" (click)="closeCancelModal()" class="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg">
+          <button (click)="closeCancelModal()" type="button" class="modal-close-icon-btn">
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
         <!-- Body con Motivo y Credenciales -->
         <div class="modal-body space-y-4 text-xs">
-          <!-- Alerta de Advertencia -->
-          <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-            <p class="font-bold flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">warning</span>
-              Acción crítica irreversible
-            </p>
-            <p class="mt-1 text-[11px] text-slate-300">
-              Esta acción revocará el folio <strong>{{ selectedTransfer()?.folio }}</strong>. Para continuar, ingresa el motivo y tus credenciales de Administrador.
-            </p>
+          <!-- Resumen de Traspaso -->
+          <div class="modal-summary-box grid grid-cols-2 gap-3">
+            <div>
+              <span class="modal-summary-label">Origen:</span>
+              <span class="modal-summary-val font-mono block">{{ selectedTransfer()?.originLocation }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Destino:</span>
+              <span class="modal-summary-val font-mono">{{ selectedTransfer()?.destinationLocation }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedTransfer()?.totalPallets }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedTransfer()?.totalPieces }} Piezas</span>
+            </div>
           </div>
 
           @if (cancelErrorMessage()) {
-            <div class="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500 text-rose-200 text-xs font-medium">
-              {{ cancelErrorMessage() }}
+            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ cancelErrorMessage() }}</span>
             </div>
           }
 
           <!-- Motivo Obligatorio -->
           <div class="space-y-1">
-            <label class="font-bold uppercase text-[11px] text-slate-300 block">
-              Motivo de Cancelación <span class="text-rose-400">*</span>
+            <label class="modal-field-label">
+              Motivo o Justificación Obligatoria de Cancelación <span class="text-rose-500 font-bold">*</span>
             </label>
             <textarea
               [ngModel]="cancelReason()"
@@ -857,35 +1001,43 @@
           </div>
 
           <!-- Credenciales ADMIN -->
-          <div class="space-y-3 pt-2 border-t border-slate-800">
-            <h4 class="font-bold text-amber-400 uppercase text-[11px] tracking-wider">Credenciales del Administrador</h4>
+          <div class="pt-3 border-t border-subtle space-y-3">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">lock_person</span>
+              <span>Validación de Credenciales de Administrador (Usuario en Sesión)</span>
+            </div>
             
-            <div class="space-y-1">
-              <label class="font-bold uppercase text-[11px] text-slate-300 block">Usuario / Correo Admin</label>
-              <input
-                type="text"
-                [ngModel]="cancelAdminUser()"
-                (ngModelChange)="cancelAdminUser.set($event)"
-                class="fg-input w-full font-mono text-xs"
-                placeholder="admin@4guard.com"
-              />
+            <div>
+              <label class="modal-field-label">Usuario / Correo Admin</label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="cancelAdminUser()"
+                  (ngModelChange)="cancelAdminUser.set($event)"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                  placeholder="admin@4guard.com"
+                />
+              </div>
             </div>
 
-            <div class="space-y-1">
-              <label class="font-bold uppercase text-[11px] text-slate-300 block">Contraseña de Administrador</label>
-              <div class="relative">
+            <div>
+              <label class="modal-field-label">Contraseña de Administrador <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
                 <input
                   [type]="showCancelPassword() ? 'text' : 'password'"
                   [ngModel]="cancelAdminPassword()"
                   (ngModelChange)="cancelAdminPassword.set($event)"
                   (keyup.enter)="confirmCancelTransfer()"
-                  class="fg-input w-full font-mono text-xs pr-10"
-                  placeholder="••••••••••••"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                  placeholder="Ingresa tu contraseña de acceso"
                 />
                 <button
                   type="button"
                   (click)="toggleShowCancelPassword()"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
                 >
                   <span class="material-symbols-outlined text-base">
                     {{ showCancelPassword() ? 'visibility_off' : 'visibility' }}
@@ -897,17 +1049,17 @@
         </div>
 
         <!-- Footer -->
-        <div class="modal-footer flex items-center justify-end gap-3 border-t border-slate-800">
-          <button type="button" (click)="closeCancelModal()" class="btn-secondary-outline text-xs px-4 py-2 rounded-xl font-bold">
-            Cancelar
+        <div class="modal-footer flex items-center justify-between">
+          <button type="button" (click)="closeCancelModal()" class="btn-ghost text-xs px-4 py-2 rounded-xl">
+            Regresar
           </button>
           <button
             type="button"
             (click)="confirmCancelTransfer()"
             [disabled]="isCancelling()"
-            class="btn-danger text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+            class="carriers-btn carriers-btn--danger text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
           >
-            <span class="material-symbols-outlined text-base">verified_user</span>
+            <span class="material-symbols-outlined text-base">security_update_warning</span>
             <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
           </button>
         </div>

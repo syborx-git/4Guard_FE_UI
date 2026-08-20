@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
@@ -13,6 +14,7 @@ import {
   ClientItem,
   ClientDestination,
   InventoryBatch,
+  MovementAuditEntry,
 } from '../../models/warehouse-movements.models';
 import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
 
@@ -27,11 +29,18 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
   private readonly toast = inject(ToastService);
   private readonly authState = inject(AuthState);
+  private readonly router = inject(Router);
+
+  goToManageCarriers(): void {
+    this.router.navigate(['/admin/carriers']);
+  }
 
   // ── MODO DEL WORKBENCH ─────────────────────────────────────────────────────
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedOutbound = signal<WarehouseOutbound | null>(null);
   searchQuery = signal('');
+  statusFilter = signal<string>('ALL');
+  auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Modal Cancelación con Autorización de Administrador
   showCancelModal = signal(false);
@@ -46,6 +55,15 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.showCancelPassword.update((v) => !v);
   }
 
+  getInitials(name?: string): string {
+    if (!name) return 'SAL';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
   // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────
   currentStep = signal<1 | 2>(1);
 
@@ -56,15 +74,15 @@ export class OutboundSubmoduleComponent implements OnInit {
   readonly allBatches = this.svc.inventoryBatches;
 
   // Selecciones Paso 1
-  selectedClientCode = signal('CLI-001');
-  selectedDestinationId = signal('DEST-CLI001-TOLUCA');
-  selectedCarrierCode = signal('TR-01');
-  driverName = signal('Juan Pérez');
-  economicNumber = signal('ECO-901');
-  tractorPlates = signal('12-AA-34');
-  boxPlates = signal('78-BB-90');
+  selectedClientCode = signal('');
+  selectedDestinationId = signal('');
+  selectedCarrierCode = signal('');
+  driverName = signal('');
+  economicNumber = signal('');
+  tractorPlates = signal('');
+  boxPlates = signal('');
   selectedTransportType = signal<TransportType>('TRAILER');
-  sealNumber = signal('SL-88401');
+  sealNumber = signal('');
 
   // Computed: Cliente seleccionado
   selectedClient = computed(() =>
@@ -151,14 +169,21 @@ export class OutboundSubmoduleComponent implements OnInit {
   filteredOutbounds = computed(() => {
     const list = this.outboundsList();
     const q = this.searchQuery().toLowerCase().trim();
-    if (!q) return list;
-    return list.filter((o) =>
-      o.folio.toLowerCase().includes(q) ||
-      o.clientName.toLowerCase().includes(q) ||
-      o.carrierName.toLowerCase().includes(q) ||
-      o.sealNumber.toLowerCase().includes(q) ||
-      o.destinationName.toLowerCase().includes(q)
-    );
+    const status = this.statusFilter();
+
+    return list.filter((o) => {
+      const matchStatus = status === 'ALL' || o.status === status;
+      if (!matchStatus) return false;
+
+      if (!q) return true;
+      return (
+        o.folio.toLowerCase().includes(q) ||
+        o.clientName.toLowerCase().includes(q) ||
+        o.carrierName.toLowerCase().includes(q) ||
+        o.sealNumber.toLowerCase().includes(q) ||
+        o.destinationName.toLowerCase().includes(q)
+      );
+    });
   });
 
   // ── MODALES ────────────────────────────────────────────────────────────────
@@ -169,25 +194,29 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // ── LIFECYCLE ──────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.svc.loadInitialBackendData();
     this.formMode.set('idle');
     this.selectedOutbound.set(null);
   }
 
   // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
   startNewOutbound(): void {
+    this.svc.reloadCarriers();
     this.formMode.set('create');
     this.selectedOutbound.set(null);
     this.currentStep.set(1);
     localStorage.removeItem('4guard_active_outbound_folio');
 
-    // Resetear selecciones
-    this.selectedClientCode.set('CLI-001');
-    this.selectedDestinationId.set('DEST-CLI001-TOLUCA');
-    this.selectedCarrierCode.set('TR-01');
-    this.driverName.set('Juan Pérez');
-    this.economicNumber.set('ECO-901');
-    this.tractorPlates.set('12-AA-34');
-    this.boxPlates.set('78-BB-90');
+    // Inicializar selecciones dinámicas
+    const firstClient = this.clients()[0];
+    const firstCarrier = this.carriers()[0];
+    this.selectedClientCode.set(firstClient ? firstClient.code : '');
+    this.selectedDestinationId.set('');
+    this.selectedCarrierCode.set(firstCarrier ? firstCarrier.code : '');
+    this.driverName.set('');
+    this.economicNumber.set('');
+    this.tractorPlates.set('');
+    this.boxPlates.set('');
     this.selectedTransportType.set('TRAILER');
     this.sealNumber.set('');
     this.selectedPalletIds.set([]);
@@ -211,6 +240,39 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.formMode.set('detail');
     this.selectedOutbound.set(outbound);
     localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
+    this.loadAuditLogs(outbound.folio);
+  }
+
+  loadAuditLogs(folio: string): void {
+    const logs = this.svc.getOutboundAuditLogs(folio);
+    this.auditEntries.set(logs || []);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'local_shipping';
+      case 'SALIDA_DESPACHADA': return 'check_circle';
+      case 'SALIDA_CANCELADA':  return 'cancel';
+      default:                  return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'carriers-tl-node--emerald';
+      case 'SALIDA_DESPACHADA': return 'carriers-tl-node--blue';
+      case 'SALIDA_CANCELADA':  return 'carriers-tl-node--red';
+      default:                  return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'Despacho Outbound Confirmado';
+      case 'SALIDA_DESPACHADA': return 'Salida Física y Tránsito Confirmado';
+      case 'SALIDA_CANCELADA':  return 'Cancelación Extraordinaria de Despacho';
+      default:                  return action;
+    }
   }
 
   // ── PASO 1 → PASO 2 ───────────────────────────────────────────────────────
@@ -325,6 +387,7 @@ export class OutboundSubmoduleComponent implements OnInit {
       // Abrir en modo detalle + mostrar comprobante
       this.selectedOutbound.set(result);
       this.formMode.set('detail');
+      this.loadAuditLogs(result.folio);
       this.selectedPrintOutbound.set(result);
       this.showPrintModal.set(true);
     } catch (err: any) {
@@ -401,6 +464,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
       if (updated) {
         this.selectedOutbound.set(updated);
+        this.loadAuditLogs(updated.folio);
         this.showCancelModal.set(false);
         this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
       } else {

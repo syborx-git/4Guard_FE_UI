@@ -248,14 +248,25 @@ export const CLIENT_DESTINATIONS: ClientDestination[] = [
 | **CA-012** | Ejecución genera folio `SAL-2026-XXXXXX` y descuenta inventario del lote | ✅ |
 | **CA-013** | Comprobante imprimible incluye todos los datos del despacho y 4 bloques de firma | ✅ |
 | **CA-014** | Nuevo folio aparece en el directorio izquierdo con badge de estado | ✅ |
-| **CA-015** | Seleccionar folio del directorio activa modo detalle read-only | ✅ |
+| **CA-015** | Seleccionar folio del directorio activa modo detalle read-only con sección de Control & Auditoría | ✅ |
 | **CA-016** | Persistencia en LocalStorage — workbench sobrevive recarga | ✅ |
-| **CA-017** | Tipografía: `Outfit`, `Inter`, `JetBrains Mono`. Colores: Midnight Navy & Prestige Gold | ✅ |
+| **CA-017** | Tipografía: `Outfit`, `Inter`, `JetBrains Mono`. Colores: Midnight Navy & Prestige Gold y Dark Mode | ✅ |
 | **CA-018** | Botón `+ Nuevo` solo existe en el directorio (no duplicado en breadcrumb) | ✅ |
 
 ---
 
-## 8. Dependencias y Pendientes (MVP2)
+## 8. Control y Auditoría Homologada
+
+En el modo detalle (`formMode === 'detail'`), se despliega la sección **"Información de Control & Auditoría"** homologada con el estándar WMS:
+1. **Metadatos Rápidos:** Grid de 4 columnas con Folio de Despacho, Organización (`4GUARD LOGISTICS CORP`), Registrado Por (`@usuario`), Fecha de Operación.
+2. **Línea de Tiempo Interactiva:** Registro cronológico de eventos con nodos codificados por color:
+   * `SALIDA_REGISTRADA` (Verde Esmeralda `.carriers-tl-node--emerald`): Registro de despacho con cliente, destino, transportista, sello y total de piezas.
+   * `SALIDA_DESPACHADA` (Azul `.carriers-tl-node--blue`): Confirmación de salida física del almacén y tránsito.
+   * `SALIDA_CANCELADA` (Rojo `.carriers-tl-node--red`): Revocación con motivo y autorizador.
+
+---
+
+## 9. Dependencias y Pendientes (MVP2)
 
 ### Catálogos Usados en MVP1 (Simulados con Seed Data)
 - **Transportistas** → `carrierLinesSignal` existente en `WarehouseMovementsService`.
@@ -275,13 +286,28 @@ export const CLIENT_DESTINATIONS: ClientDestination[] = [
 
 ---
 
-## 9. Definition of Done (MVP1)
+## 10. Definition of Done (MVP1)
 
 - [x] SDD documentado y aprobado.
-- [x] Modelos TypeScript `WarehouseOutbound`, `OutboundItem`, `ClientDestination` implementados.
-- [x] Service: `outboundsSignal`, `executeOutbound()`, KPIs computados.
-- [x] Componente: `formMode` tri-estado, Paso 1, Paso 2, modal, detalle.
-- [x] CSS homologado 1:1 con `transfer-submodule.component.css`.
+- [x] Modelos TypeScript `WarehouseOutbound`, `OutboundItem`, `ClientDestination`, `MovementAuditEntry` implementados.
+- [x] Service: `outboundsSignal`, `executeOutbound()`, KPIs computados, auditoría reactiva.
+- [x] Componente: `formMode` tri-estado, Paso 1, Paso 2, modal, detalle con sección de Auditoría.
+- [x] CSS homologado 1:1 con `carrier-management.component.css` y `transfer-submodule.component.css`.
 - [x] Comprobante imprimible con 4 bloques de firma.
-- [x] Build sin errores TypeScript.
+- [x] Build sin errores TypeScript (`tsc --noEmit` exit 0).
 - [x] Funciona en `/warehouse-movements/outbound`.
+
+---
+
+## 11. Contratos Backend REST (Spring Boot — `/api/v1/warehouse-outbounds`)
+
+| Método | Endpoint | DTO / Payload | Descripción |
+|---|---|---|---|
+| `POST` | `/` | `CreateOutboundRequest` | Registrar salida / despacho outbound y descontar inventario |
+| `GET` | `/{id}` | N/A | Consulta de detalle con tarimas despachadas |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
+| `POST` | `/{id}/cancel` | `CancelOutboundRequest` | Cancelación de salida y restauración de inventario |
+| `GET` | `/inventory-batches` | Query params: `organizationId`, `clientId`, `skuId` | Consulta de lotes disponibles con sugerencia FIFO/FEFO |
+| `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
+
+
