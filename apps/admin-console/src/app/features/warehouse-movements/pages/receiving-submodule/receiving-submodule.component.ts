@@ -1,7 +1,7 @@
 import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
@@ -39,6 +39,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  goToManageCarriers(): void {
+    this.router.navigate(['/admin/carriers']);
+  }
 
   // Auto-foco en escáner de UAs
   @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;

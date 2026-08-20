@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
@@ -28,6 +29,11 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
   private readonly toast = inject(ToastService);
   private readonly authState = inject(AuthState);
+  private readonly router = inject(Router);
+
+  goToManageCarriers(): void {
+    this.router.navigate(['/admin/carriers']);
+  }
 
   // ── MODO DEL WORKBENCH ─────────────────────────────────────────────────────
   formMode = signal<'idle' | 'create' | 'detail'>('idle');

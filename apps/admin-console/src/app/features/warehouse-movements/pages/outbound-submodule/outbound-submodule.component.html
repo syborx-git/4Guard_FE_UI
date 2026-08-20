@@ -293,15 +293,25 @@
                 <!-- Transportista -->
                 <div class="fg-field">
                   <label class="fg-label">Línea Transportista <span class="req">*</span></label>
-                  <select
-                    class="fg-select"
-                    [value]="selectedCarrierCode()"
-                    (change)="onCarrierChange($any($event.target).value)"
-                  >
-                    @for (c of carriers(); track c.code) {
-                      <option [value]="c.code">{{ c.name }}</option>
-                    }
-                  </select>
+                  <div class="flex gap-1.5 items-center">
+                    <select
+                      class="fg-select w-full"
+                      [value]="selectedCarrierCode()"
+                      (change)="onCarrierChange($any($event.target).value)"
+                    >
+                      @for (c of carriers(); track c.code) {
+                        <option [value]="c.code">{{ c.name }}</option>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      (click)="goToManageCarriers()"
+                      class="fg-btn-icon shrink-0"
+                      title="Administrar Transportistas"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Nombre del Chofer -->
