@@ -79,7 +79,8 @@ export interface ReceptionPalletItem {
 }
 
 export interface ReceptionHeader {
-  folio: string;             // ej. 26506
+  id?: string;               // UUID del backend
+  folio: string;             // ej. 26506 / REC-2026-000001
   status: 'REGISTERED' | 'COMPLETED' | 'CANCELLED';
   checkIn: CheckInCasetaData;
   lotNumber: string;

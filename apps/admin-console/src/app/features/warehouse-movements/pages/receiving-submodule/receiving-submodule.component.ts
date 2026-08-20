@@ -119,7 +119,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   checkInForm = this.fb.group({
     carrierLineCode: [''],
     carrierLine: ['', [Validators.required]],
-    receptionTime: [new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }), [Validators.required]],
+    receptionTime: [new Date().toTimeString().slice(0, 5), [Validators.required]],
     docNumber: ['', [Validators.required]],
     docDate: [new Date().toISOString().slice(0, 10), [Validators.required]],
     elaborationDate: [''],
@@ -136,6 +136,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     boxPlates: ['', [Validators.required]],
     sealNumber: [''],
   });
+
+  isSubmitting = signal(false);
 
   // Lista Reactiva de Cinchos/Sellos
   sealList = signal<string[]>([]);
@@ -252,21 +254,26 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   resetCheckInForm(): void {
     const firstCarrier = this.carrierLines()[0];
+    const firstClient = this.clients()[0];
+    const firstRamp = this.ramps()[0];
+    const firstOp = this.forkliftOperators()[0];
+    const now24 = new Date().toTimeString().slice(0, 5);
+
     this.checkInForm.reset({
       carrierLineCode: firstCarrier ? firstCarrier.code : '',
       carrierLine: firstCarrier ? firstCarrier.name : '',
-      receptionTime: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      receptionTime: now24,
       docNumber: '',
       docDate: new Date().toISOString().slice(0, 10),
       elaborationDate: '',
       expirationDate: '',
       lotNumber: '',
-      clientCode: '',
-      client: '',
-      rampCode: 'R-01',
-      rampNumber: 1,
-      forkliftOperatorCode: '',
-      forkliftOperator: '',
+      clientCode: firstClient ? firstClient.code : '',
+      client: firstClient ? firstClient.name : '',
+      rampCode: firstRamp ? firstRamp.code : 'R-01',
+      rampNumber: firstRamp ? firstRamp.rampNumber : 1,
+      forkliftOperatorCode: firstOp ? firstOp.code : '',
+      forkliftOperator: firstOp ? firstOp.name : '',
       driverName: '',
       tractorPlates: '',
       boxPlates: '',
@@ -381,26 +388,62 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   submitCheckIn(): void {
+    // Asegurar que si los selects no fueron cambiados manualmente, tomen la opción visualmente visible
+    if (!this.checkInForm.value.carrierLine && this.carrierLines().length > 0) {
+      const c = this.carrierLines()[0];
+      this.checkInForm.patchValue({ carrierLineCode: c.code, carrierLine: c.name });
+    }
+    if (!this.checkInForm.value.client && this.clients().length > 0) {
+      const cl = this.clients()[0];
+      this.checkInForm.patchValue({ clientCode: cl.code, client: cl.name });
+    }
+    if (!this.checkInForm.value.forkliftOperator && this.forkliftOperators().length > 0) {
+      const op = this.forkliftOperators()[0];
+      this.checkInForm.patchValue({ forkliftOperatorCode: op.code, forkliftOperator: op.name });
+    }
+    if (!this.checkInForm.value.rampNumber && this.ramps().length > 0) {
+      const rm = this.ramps()[0];
+      this.checkInForm.patchValue({ rampCode: rm.code, rampNumber: rm.rampNumber });
+    }
+
     if (this.checkInForm.invalid) {
       this.checkInForm.markAllAsTouched();
-      this.toast.warning('Por favor completa los datos obligatorios de caseta.');
+      const missing: string[] = [];
+      if (this.checkInForm.get('carrierLine')?.invalid) missing.push('Línea Transportadora');
+      if (this.checkInForm.get('client')?.invalid) missing.push('Cliente');
+      if (this.checkInForm.get('forkliftOperator')?.invalid) missing.push('Montacarguista');
+      if (this.checkInForm.get('docNumber')?.invalid) missing.push('No. Documento');
+      if (this.checkInForm.get('docDate')?.invalid) missing.push('Fecha del Documento');
+      if (this.checkInForm.get('receptionTime')?.invalid) missing.push('Hora de Recepción');
+      if (this.checkInForm.get('driverName')?.invalid) missing.push('Operador / Chofer');
+      if (this.checkInForm.get('tractorPlates')?.invalid) missing.push('Placas Tracto');
+      if (this.checkInForm.get('boxPlates')?.invalid) missing.push('Placas Caja');
+
+      this.toast.warning(`Por favor completa los campos obligatorios: ${missing.join(', ')}.`);
       return;
     }
 
-    const folio = this.movementsService.generateNextReceptionFolio();
-    this.generatedFolio.set(folio);
-
+    this.isSubmitting.set(true);
     const formData = this.checkInForm.value as any;
     formData.sealNumbers = [...this.sealList()];
     if (formData.sealNumber && !formData.sealNumbers.includes(formData.sealNumber)) {
       formData.sealNumbers.push(formData.sealNumber);
     }
 
-    const newRec = this.movementsService.saveCheckIn(formData, folio);
-    this.showCheckInModal.set(false);
-    this.selectReception(newRec);
-
-    this.toast.success(`Pre-Recepción #${folio} registrada exitosamente.`);
+    this.movementsService.createCheckInBackend(formData).subscribe({
+      next: (newRec) => {
+        this.isSubmitting.set(false);
+        this.showCheckInModal.set(false);
+        this.formMode.set('detail');
+        this.selectReception(newRec);
+        this.toast.success(`Pre-Recepción #${newRec.folio} registrada exitosamente en el servidor.`);
+      },
+      error: (err) => {
+        this.isSubmitting.set(false);
+        const errMsg = err?.error?.message || err?.message || 'Error al registrar pre-recepción en el servidor';
+        this.toast.error(errMsg);
+      },
+    });
   }
 
   // Guardar Cambios Parciales / Avance de Descarga

@@ -5,6 +5,7 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
 import { ForkliftOperatorAdminService } from '../../admin/services/forklift-operator.service';
 import {
   ReceptionHeader,
@@ -453,7 +454,119 @@ export class WarehouseMovementsService {
     return folioStr;
   }
 
-  // Guarda la Pre-Recepción (Caseta)
+  // Guarda la Pre-Recepción en Backend con sincronización reactiva
+  createCheckInBackend(data: CheckInCasetaData): Observable<ReceptionHeader> {
+    const session = this.movementsApi.getSessionOrg();
+    const orgId = session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const branchId = session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+    const clientItem = this.clientsSignal().find((c) => c.code === data.clientCode || c.name === data.client);
+    const clientId = (clientItem && clientItem.code && clientItem.code.includes('-')) 
+      ? clientItem.code 
+      : (data.clientCode && data.clientCode.includes('-') ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
+
+    const carrierItem = this.carrierLinesSignal().find((c) => c.code === data.carrierLineCode || c.name === data.carrierLine);
+    const carrierId = (carrierItem && carrierItem.code && carrierItem.code.includes('-')) ? carrierItem.code : null;
+
+    const opItem = this.forkliftOperatorsSignal().find((o) => o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
+    const forkliftOperatorId = (opItem && opItem.code && opItem.code.includes('-')) ? opItem.code : null;
+
+    // Normalizar hora a formato HH:mm:ss 24h
+    let receptionTime = data.receptionTime ? data.receptionTime.trim() : '09:00:00';
+    if (receptionTime.includes('p.m.') || receptionTime.includes('p. m.')) {
+      const match = receptionTime.match(/(\d+):(\d+)/);
+      if (match) {
+        let hr = parseInt(match[1], 10);
+        if (hr < 12) hr += 12;
+        receptionTime = `${String(hr).padStart(2, '0')}:${match[2]}:00`;
+      }
+    } else if (receptionTime.includes('a.m.') || receptionTime.includes('a. m.')) {
+      const match = receptionTime.match(/(\d+):(\d+)/);
+      if (match) {
+        let hr = parseInt(match[1], 10);
+        if (hr === 12) hr = 0;
+        receptionTime = `${String(hr).padStart(2, '0')}:${match[2]}:00`;
+      }
+    }
+    if (receptionTime.length === 5) {
+      receptionTime = `${receptionTime}:00`;
+    }
+
+    const payload = {
+      organizationId: orgId,
+      branchId: branchId,
+      clientId: clientId,
+      carrierId: carrierId,
+      forkliftOperatorId: forkliftOperatorId,
+      rampId: null,
+      docNumber: data.docNumber,
+      docDate: data.docDate || new Date().toISOString().slice(0, 10),
+      receptionTime: receptionTime,
+      driverName: data.driverName,
+      tractorPlates: data.tractorPlates,
+      boxPlates: data.boxPlates,
+      sealNumbers: data.sealNumbers || (data.sealNumber ? [data.sealNumber] : []),
+    };
+
+    return this.movementsApi.createCheckIn(payload).pipe(
+      map((res: any) => {
+        const header: ReceptionHeader = {
+          id: res.id,
+          folio: res.folio || data.docNumber,
+          status: (res.status as any) || 'REGISTERED',
+          checkIn: {
+            ...data,
+            carrierLine: res.carrierName || data.carrierLine,
+            client: res.clientName || data.client,
+          },
+          lotNumber: res.lotNumber || data.lotNumber || 'LOT-2026-A1',
+          elaborationDate: res.elaborationDate || data.elaborationDate || '2026-01-15',
+          expirationDate: res.expirationDate || data.expirationDate || '2026-11-15',
+          productId: res.productSku || '12572733',
+          productName: res.productDescription || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
+          supplierName: res.supplierName || 'LE MEXICO S.A DE C.V',
+          piecesPerPallet: res.piecesPerPallet || 480,
+          selectedPalletType: (res.palletType as PalletType) || 'MADERA_ESTANDAR',
+          observations: res.observations || '',
+          pallets: (res.pallets || []).map((p: any) => ({
+            id: p.id,
+            palletNumber: p.palletNumber,
+            palletCode: p.palletCode,
+            productId: p.productSku,
+            description: p.productDescription,
+            pieces: p.pieces,
+            palletTypeId: p.palletType,
+            status: p.status,
+            observations: p.observations,
+          })),
+          createdAt: res.createdAt ? String(res.createdAt).substring(11, 16) : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+          capturedBy: res.createdBy || 'Caseta de Seguridad',
+        };
+
+        this.receptionsSignal.update((list) => {
+          const filtered = list.filter((r) => r.folio !== header.folio && r.id !== header.id);
+          return [header, ...filtered];
+        });
+
+        this.addReceptionAudit(header.folio, {
+          id: `aud-rec-reg-${Date.now()}`,
+          action: 'RECEPCION_CREADA',
+          actionLabel: 'Pre-Recepción Registrada en Caseta',
+          username: 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Línea Transportadora', newValue: data.carrierLine },
+            { fieldName: 'Rampa', newValue: `Rampa ${data.rampNumber}` },
+            { fieldName: 'Placas Tracto / Caja', newValue: `${data.tractorPlates} / ${data.boxPlates}` },
+          ],
+        });
+
+        return header;
+      })
+    );
+  }
+
+  // Guarda la Pre-Recepción (Caseta - Local)
   saveCheckIn(data: CheckInCasetaData, assignedFolio: string): ReceptionHeader {
     const newHeader: ReceptionHeader = {
       folio: assignedFolio,
