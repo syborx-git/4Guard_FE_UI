@@ -1,6 +1,6 @@
 <!--
   client-management.component.html
-  Gestión de Clientes (Depositantes / Owners 3PL) — 4GUARD WMS
+  Gestión de Clientes (Depositantes / Owners 3PL & Destinos Físicos) — 4GUARD WMS
 
   Layout: Split View 35/65 (Master-Detail)
   Estilos: Prestige Gold & Midnight Navy (Modo Claro por defecto + Modo Oscuro)
@@ -31,7 +31,7 @@
           </div>
           <h1 class="clients-header__title">Gestión de Clientes</h1>
           <p class="clients-header__subtitle">
-            Administra el catálogo maestro de depositantes, códigos ERP y titulares de mercancía 3PL
+            Catálogo maestro de empresas depositantes 3PL, matriz de contactos y direcciones físicas de entrega (bodegas y plantas)
           </p>
         </div>
       </div>
@@ -54,10 +54,10 @@
     <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
     <div class="clients-kpi-grid" aria-label="Indicadores de clientes">
 
-      <!-- Total -->
+      <!-- Total Clientes -->
       <div class="clients-kpi-card clients-kpi-card--total">
         <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">partner_exchange</span>
+          <span class="material-symbols-outlined">corporate_fare</span>
         </div>
         <div class="clients-kpi-card__body">
           @if (isLoading) {
@@ -65,7 +65,7 @@
           } @else {
             <span class="clients-kpi-card__value">{{ totalClients() }}</span>
           }
-          <span class="clients-kpi-card__label">Total Registrados</span>
+          <span class="clients-kpi-card__label">Empresas Registradas</span>
         </div>
         <div class="clients-kpi-card__bar clients-kpi-card__bar--total"></div>
       </div>
@@ -102,6 +102,22 @@
         <div class="clients-kpi-card__bar clients-kpi-card__bar--inactive"></div>
       </div>
 
+      <!-- Total Destinos Físicos -->
+      <div class="clients-kpi-card clients-kpi-card--destinations">
+        <div class="clients-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">factory</span>
+        </div>
+        <div class="clients-kpi-card__body">
+          @if (isLoading) {
+            <div class="clients-kpi-card__skeleton"></div>
+          } @else {
+            <span class="clients-kpi-card__value">{{ totalDestinations() }}</span>
+          }
+          <span class="clients-kpi-card__label">Destinos / Bodegas</span>
+        </div>
+        <div class="clients-kpi-card__bar clients-kpi-card__bar--destinations"></div>
+      </div>
+
     </div>
   </header>
 
@@ -111,7 +127,7 @@
   <div class="clients-split" [class.clients-split--form-open]="formMode() !== 'idle'">
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
+         COLUMNA IZQUIERDA — Directorio Master (35%)
          ───────────────────────────────────────────────────────────── -->
     <aside class="clients-directory" aria-label="Directorio de clientes">
 
@@ -124,7 +140,7 @@
             id="client-search"
             class="clients-search__input"
             type="search"
-            placeholder="Buscar por nombre, código ERP, organización..."
+            placeholder="Buscar por razón social, RFC, destino o dirección..."
             [ngModel]="filterText()"
             (ngModelChange)="filterText.set($event)"
             aria-label="Buscar cliente"
@@ -186,7 +202,7 @@
         <div class="clients-state" role="status">
           <span class="material-symbols-outlined clients-state__icon">partner_exchange</span>
           <p class="clients-state__title">Sin clientes</p>
-          <p class="clients-state__desc">No hay clientes depositantes registrados aún.</p>
+          <p class="clients-state__desc">No hay empresas depositantes registradas aún.</p>
           @if (canCreate()) {
             <button class="clients-btn clients-btn--primary" type="button" (click)="startNewClient()">
               <span class="material-symbols-outlined">add</span>
@@ -218,18 +234,38 @@
               (keydown.enter)="selectClient(client)"
               tabindex="0">
 
-              <!-- Avatar -->
+              <!-- Avatar con Iniciales -->
               <div class="client-avatar" aria-hidden="true">
                 {{ getInitials(client) }}
               </div>
 
-              <!-- Info -->
+              <!-- Info Principal -->
               <div class="client-item__body">
-                <div class="client-item__name">{{ client.name }}</div>
-                <div class="client-item__meta">
-                  <span class="client-item__code">{{ client.externalId }}</span>
+                <div class="client-item__name-row">
+                  <span class="client-item__name">{{ client.name }}</span>
                 </div>
-                <div class="client-item__org">{{ client.orgName }}</div>
+
+                <div class="client-item__meta">
+                  <span class="client-item__code font-mono">{{ client.externalId }}</span>
+                  <span class="client-item__dest-badge">
+                    <span class="material-symbols-outlined text-[11px]">factory</span>
+                    {{ client.destinations?.length || 0 }} dest.
+                  </span>
+                </div>
+
+                @if (client.address) {
+                  <div class="client-item__address truncate" title="{{ client.address }}">
+                    <span class="material-symbols-outlined text-[12px]">location_on</span>
+                    <span>{{ client.address }}</span>
+                  </div>
+                }
+
+                @if (client.phone) {
+                  <div class="client-item__phone">
+                    <span class="material-symbols-outlined text-[12px]">call</span>
+                    <span>{{ client.phone }}</span>
+                  </div>
+                }
               </div>
 
               <!-- Estado -->
@@ -246,7 +282,7 @@
 
         <div class="clients-directory__footer">
           <span class="clients-count">
-            {{ filteredClients().length }} cliente{{ filteredClients().length !== 1 ? 's' : '' }}
+            {{ filteredClients().length }} cliente{{ filteredClients().length !== 1 ? 's' : '' }} registrado{{ filteredClients().length !== 1 ? 's' : '' }}
           </span>
         </div>
       }
@@ -265,8 +301,8 @@
           </div>
           <h2 class="clients-empty-state__title">Sin selección</h2>
           <p class="clients-empty-state__desc">
-            Selecciona un cliente depositante de la lista para consultar su información,
-            o registra uno nuevo.
+            Selecciona una empresa depositante de la lista para consultar su matriz de contactos y bodegas de entrega,
+            o registra un nuevo cliente.
           </p>
           @if (canCreate()) {
             <button
@@ -287,7 +323,7 @@
             <div class="clients-form-header__left">
               <div class="clients-form-header__breadcrumb">
                 <span class="material-symbols-outlined">partner_exchange</span>
-                Clientes
+                <span>Clientes</span>
                 <span class="material-symbols-outlined clients-form-header__chevron">chevron_right</span>
                 <strong>
                   @if (formMode() === 'new') { Nuevo cliente }
@@ -307,7 +343,7 @@
           @if (saveSuccess()) {
             <div class="clients-alert clients-alert--success" role="status" aria-live="polite">
               <span class="material-symbols-outlined">check_circle</span>
-              <span>Cliente guardado correctamente.</span>
+              <span>Información del cliente y destinos físicos guardada correctamente.</span>
             </div>
           }
 
@@ -319,7 +355,7 @@
           }
 
           <!-- ════════════════════════════════════════════════════════
-               FORMULARIO REACTIVO
+               FORMULARIO REACTIVO MULTI-SECCIÓN
                ════════════════════════════════════════════════════ -->
           <form
             [formGroup]="form"
@@ -328,24 +364,24 @@
             autocomplete="off"
             class="clients-form">
 
-            <!-- SECCIÓN 1 — Información General ──────────────────── -->
+            <!-- SECCIÓN 1 — Información General & Domicilio Fiscal ── -->
             <fieldset class="clients-form-section">
               <legend class="clients-form-section__legend">
-                <span class="material-symbols-outlined">badge</span>
-                Información General del Cliente
+                <span class="material-symbols-outlined text-amber-500">corporate_fare</span>
+                <span>1. Información General y Domicilio Fiscal</span>
               </legend>
 
               <div class="clients-form-grid clients-form-grid--2">
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="name">Nombre / Razón Social</label>
+                  <label class="fg-label fg-label--required" for="name">Razón Social / Nombre Comercial</label>
                   <input
                     id="name"
                     class="fg-input"
                     [class.fg-input--error]="fieldHasError('name')"
                     type="text"
                     formControlName="name"
-                    placeholder="Ej. Cliente Logística SA de CV"
+                    placeholder="Ej. NESTLE MEXICO S.A. DE C.V."
                     maxlength="150"
                     aria-required="true"
                   />
@@ -355,19 +391,66 @@
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="externalId">Código Cliente / RFC (External ID)</label>
+                  <label class="fg-label fg-label--required" for="externalId">Código Cliente / RFC Fiscal (External ID)</label>
                   <input
                     id="externalId"
                     class="fg-input fg-input--mono"
                     [class.fg-input--error]="fieldHasError('externalId')"
                     type="text"
                     formControlName="externalId"
-                    placeholder="Ej. CLI-001 o CLO990101XXX"
+                    placeholder="Ej. NME850101K99 o CLI-1002"
                     maxlength="50"
                     aria-required="true"
                   />
                   @if (fieldHasError('externalId')) {
                     <span class="fg-error" role="alert">{{ getFieldError('externalId') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="address">Dirección Fiscal / Corporativa</label>
+                  <input
+                    id="address"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('address')"
+                    type="text"
+                    formControlName="address"
+                    placeholder="Ej. Av. Ejército Nacional 453, Granada, CDMX"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('address')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('address') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="phone">Teléfono Corporativo Principal</label>
+                  <input
+                    id="phone"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('phone')"
+                    type="text"
+                    formControlName="phone"
+                    placeholder="Ej. 55 5268 2000"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('phone')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('phone') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="email">Correo Electrónico General</label>
+                  <input
+                    id="email"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('email')"
+                    type="email"
+                    formControlName="email"
+                    placeholder="Ej. contacto@empresa.com"
+                  />
+                  @if (fieldHasError('email')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('email') }}</span>
                   }
                 </div>
 
@@ -386,6 +469,17 @@
                 </div>
 
                 <div class="fg-field">
+                  <label class="fg-label" for="webPortalPassword">Contraseña Web Autoservicio</label>
+                  <input
+                    id="webPortalPassword"
+                    class="fg-input font-mono"
+                    type="text"
+                    formControlName="webPortalPassword"
+                    placeholder="Acceso Portal Clientes"
+                  />
+                </div>
+
+                <div class="fg-field">
                   <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
                   <select
                     id="status"
@@ -400,12 +494,168 @@
               </div>
             </fieldset>
 
-            <!-- SECCIÓN 2 — Información de Control e Historial de Auditoría BE ──────── -->
+            <!-- SECCIÓN 2 — Matriz Dinámica de Contactos Corporativos ── -->
+            <fieldset class="clients-form-section">
+              <div class="clients-section-header">
+                <legend class="clients-form-section__legend">
+                  <span class="material-symbols-outlined text-amber-500">contacts</span>
+                  <span>2. Panel Dinámico de Contactos Corporativos</span>
+                </legend>
+                <button
+                  type="button"
+                  (click)="addContactField()"
+                  class="clients-btn clients-btn--ghost clients-btn--sm"
+                  aria-label="Agregar Contacto">
+                  <span class="material-symbols-outlined text-sm">add</span>
+                  Agregar Contacto
+                </button>
+              </div>
+
+              <div formArrayName="contacts" class="clients-sub-list">
+                @for (ctrl of contactsFormArray.controls; track $index) {
+                  <div [formGroupName]="$index" class="client-sub-card">
+                    <div class="client-sub-card__grid client-sub-card__grid--contact">
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Nombre Contacto</label>
+                        <input
+                          type="text"
+                          formControlName="name"
+                          placeholder="Ej. Ing. Carlos Fuentes"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Departamento</label>
+                        <input
+                          type="text"
+                          formControlName="department"
+                          placeholder="Ej. Logística y Abasto"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Teléfono Directo</label>
+                        <input
+                          type="text"
+                          formControlName="phone"
+                          placeholder="Ej. 55 1234 5678"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Correo Electrónico</label>
+                        <input
+                          type="email"
+                          formControlName="email"
+                          placeholder="cfuentes@empresa.com"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="client-sub-card__actions">
+                        @if (contactsFormArray.length > 1) {
+                          <button
+                            type="button"
+                            (click)="removeContactField($index)"
+                            class="clients-btn-icon clients-btn-icon--danger"
+                            title="Eliminar contacto">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Matriz de Direcciones de Destino Físico (Bodegas / Plantas) ── -->
+            <fieldset class="clients-form-section">
+              <div class="clients-section-header">
+                <legend class="clients-form-section__legend">
+                  <span class="material-symbols-outlined text-amber-500">factory</span>
+                  <span>3. Direcciones Físicas de Destino (Bodegas, Plantas, Cedis)</span>
+                </legend>
+                <button
+                  type="button"
+                  (click)="addDestinationField()"
+                  class="clients-btn clients-btn--ghost clients-btn--sm"
+                  aria-label="Agregar Destino Físico">
+                  <span class="material-symbols-outlined text-sm">add_location_alt</span>
+                  Agregar Destino Físico
+                </button>
+              </div>
+
+              <div formArrayName="destinations" class="clients-sub-list">
+                @for (ctrl of destinationsFormArray.controls; track $index) {
+                  <div [formGroupName]="$index" class="client-sub-card client-sub-card--dest">
+                    <div class="client-sub-card__top-bar">
+                      <span class="client-dest-tag font-mono">
+                        {{ ctrl.get('destinationCode')?.value || 'DEST-NEW' }}
+                      </span>
+                      <button
+                        type="button"
+                        (click)="removeDestinationField($index)"
+                        class="clients-btn-icon clients-btn-icon--danger"
+                        title="Eliminar destino">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    </div>
+
+                    <div class="client-sub-card__grid client-sub-card__grid--dest">
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Nombre de Planta / Bodega</label>
+                        <input
+                          type="text"
+                          formControlName="plantName"
+                          placeholder="Ej. Planta Toluca (Café y Cacao)"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Persona de Contacto en Sitio</label>
+                        <input
+                          type="text"
+                          formControlName="contactPerson"
+                          placeholder="Ej. Ing. Fernando Ruiz"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Teléfono de Planta / Bodega</label>
+                        <input
+                          type="text"
+                          formControlName="phone"
+                          placeholder="Ej. 722 279 1000"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="fg-field mt-2">
+                      <label class="fg-label fg-label--required">Dirección Física Completa de Entrega</label>
+                      <input
+                        type="text"
+                        formControlName="fullAddress"
+                        placeholder="Ej. Km 62.5 Carretera México-Toluca, Zona Industrial Toluca, EdoMex"
+                        class="fg-input fg-input--sm"
+                      />
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="client-empty-sub-card">
+                    <span class="material-symbols-outlined text-xl text-slate-400">pin_drop</span>
+                    <p class="text-xs text-slate-500">Sin destinos físicos registrados. Se utilizará la dirección fiscal por defecto.</p>
+                  </div>
+                }
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 4 — Control e Historial de Auditoría BE ──────── -->
             @if (formMode() === 'edit' && selectedClient()) {
               <fieldset class="clients-form-section clients-form-section--readonly">
                 <legend class="clients-form-section__legend">
-                  <span class="material-symbols-outlined">manage_history</span>
-                  Información de Control y Auditoría BE
+                  <span class="material-symbols-outlined text-amber-500">manage_history</span>
+                  <span>4. Información de Control y Auditoría BE</span>
                 </legend>
 
                 <div class="clients-readonly-grid">
@@ -524,18 +774,6 @@
                       Activar
                     </button>
                   }
-
-                  @if (canDelete()) {
-                    <button
-                      class="clients-btn clients-btn--danger"
-                      type="button"
-                      [disabled]="isSaving"
-                      (click)="openStatusDialog('delete')"
-                      aria-label="Desactivar o eliminar este cliente">
-                      <span class="material-symbols-outlined">block</span>
-                      Desactivar
-                    </button>
-                  }
                 </div>
               }
 
@@ -559,7 +797,7 @@
                     Guardando...
                   } @else {
                     <span class="material-symbols-outlined">save</span>
-                    {{ formMode() === 'new' ? 'Crear cliente' : 'Guardar cambios' }}
+                    {{ formMode() === 'new' ? 'Crear cliente y destinos' : 'Guardar cambios' }}
                   }
                 </button>
               </div>

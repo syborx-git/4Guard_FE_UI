@@ -1,0 +1,839 @@
+<!-- ════════════════════════════════════════════════════════════════════
+     HU-134 — Configuración de Alertas y Notificaciones
+     4GUARD WMS Enterprise · Torre de Control y Motor de Reglas
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="ac-page" id="hu134-alerts-config">
+
+  <!-- ═══════════════════════════════════════════
+       HERO
+       ═══════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL (GOLDEN STANDARD)
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="carriers-header" id="ac-hero-header">
+    <div class="carriers-header__top">
+      <div class="carriers-header__left">
+        <div class="carriers-header__icon-wrap">
+          <span class="material-icons-round carriers-header__icon">notifications_active</span>
+        </div>
+
+        <div class="carriers-header__copy">
+          <div class="carriers-header__eyebrow">
+            <a routerLink="/admin" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-icons-round" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="carriers-header__eyebrow-sep">·</span>
+            <span>Configuración del Sistema · Motor de Reglas</span>
+          </div>
+          <h1 class="carriers-header__title">Configuración de Alertas y Notificaciones</h1>
+          <p class="carriers-header__subtitle">
+            Define las reglas de negocio, prioridades y destinatarios que determinan cuándo y cómo el sistema debe alertar sobre eventos críticos en la operación del almacén.
+          </p>
+        </div>
+      </div>
+
+      <div class="carriers-header__actions">
+        <button
+          type="button"
+          class="ac-btn ac-btn--primary"
+          id="btn-new-alert"
+          (click)="createNewAlert()">
+          <span class="material-icons-round">add_alert</span>
+          Nueva alerta
+        </button>
+      </div>
+    </div>
+
+    <!-- ── KPI CARDS (4 columnas homologadas) ────────────────────────── -->
+    <div class="carriers-kpi-grid" aria-label="Indicadores clave de alertas">
+      <div class="carriers-kpi-card" id="kpi-active-alerts">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">notifications</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().activeAlerts }}</span>
+          <span class="carriers-kpi-card__label">Alertas Activas</span>
+        </div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--danger" id="kpi-critical-alerts">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">error</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().criticalAlerts }}</span>
+          <span class="carriers-kpi-card__label">Alertas Críticas</span>
+        </div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--warning" id="kpi-channels">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">campaign</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().configuredChannels }}</span>
+          <span class="carriers-kpi-card__label">Canales Configurados</span>
+        </div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--inactive" id="kpi-escalations">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-icons-round">schedule_send</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().escalationsConfigured }}</span>
+          <span class="carriers-kpi-card__label">Escalamientos</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════
+       MASTER-DETAIL SPLIT VIEW (35% / 65%)
+       ═══════════════════════════════════════════ -->
+  <main class="ac-split" id="ac-master-detail">
+
+    <!-- ── IZQUIERDA: CENTRO DE ALERTAS (35%) ─────────────────────────────── -->
+    <aside class="ac-split__left" aria-label="Directorio de alertas">
+      <div class="ac-dir__toolbar">
+
+        <!-- Buscador principal -->
+        <div class="ac-dir__search-wrap">
+          <span class="material-icons-round ac-dir__search-icon">search</span>
+          <input
+            type="search"
+            class="ac-dir__search"
+            id="alert-search-input"
+            placeholder="Buscar por nombre, evento o descripción…"
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+            autocomplete="off" />
+        </div>
+
+        <!-- Chips de Filtro Rápido -->
+        <div class="ac-dir__filter-chips">
+          <button
+            type="button"
+            class="ac-chip"
+            [class.ac-chip--active]="statusFilter() === 'ALL'"
+            (click)="statusFilter.set('ALL')">
+            Todas
+          </button>
+          <button
+            type="button"
+            class="ac-chip"
+            [class.ac-chip--active]="statusFilter() === 'ACTIVE'"
+            (click)="statusFilter.set('ACTIVE')">
+            Activas
+          </button>
+          <button
+            type="button"
+            class="ac-chip"
+            [class.ac-chip--active]="statusFilter() === 'INACTIVE'"
+            (click)="statusFilter.set('INACTIVE')">
+            Inactivas
+          </button>
+          <button
+            type="button"
+            class="ac-chip ac-chip--critical"
+            [class.ac-chip--active]="statusFilter() === 'CRITICAL'"
+            (click)="statusFilter.set('CRITICAL')">
+            Críticas
+          </button>
+        </div>
+
+        <!-- Fila de Selectores de Filtro (Categoría y Limpiar) -->
+        <div class="ac-dir__filters-row">
+          <div class="ac-dir__filter-group">
+            <select
+              class="ac-dir__category-select"
+              id="filter-category-select"
+              [value]="categoryFilter()"
+              (change)="categoryFilter.set($any($event.target).value)"
+              aria-label="Filtrar por categoría">
+              <option value="ALL">Todas las Categorías</option>
+              <option value="RECEIVING">Recepción</option>
+              <option value="INVENTORY">Inventario</option>
+              <option value="QUALITY">Calidad</option>
+              <option value="PICKING">Picking</option>
+              <option value="SHIPPING">Despacho</option>
+              <option value="USERS">Usuarios</option>
+              <option value="SYSTEM">Sistema</option>
+            </select>
+          </div>
+
+          @if (searchQuery() || statusFilter() !== 'ALL' || categoryFilter() !== 'ALL') {
+            <button
+              class="ac-dir__filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              title="Limpiar filtros"
+              aria-label="Limpiar filtros de búsqueda">
+              <span class="material-icons-round">filter_alt_off</span>
+            </button>
+          }
+        </div>
+
+        <!-- Hint de búsqueda extendida -->
+        <p class="ac-dir__search-hint">
+          <span class="material-icons-round">info</span>
+          Busca por nombre de regla, evento o plantilla
+        </p>
+      </div>
+
+      <!-- Cargando -->
+      @if (isLoading()) {
+        <div class="ac-dir__loading">
+          <span class="ac-spinner"></span>
+          <span>Cargando centro de alertas...</span>
+        </div>
+      } @else {
+        <!-- Lista de Tarjetas de Alerta (Homologadas con Transportistas) -->
+        <ul class="ac-dir__list" role="list" id="alert-items-list">
+          @for (alert of filteredAlerts(); track trackByAlertId($index, alert)) {
+            <li
+              class="ac-dir__item"
+              [class.ac-dir__item--selected]="selectedAlert()?.id === alert.id"
+              [class.ac-dir__item--inactive]="alert.status === 'INACTIVE'"
+              (click)="selectAlert(alert)"
+              tabindex="0"
+              (keydown.enter)="selectAlert(alert)">
+
+              <!-- Icono Avatar Genérico de Alerta -->
+              <div
+                class="ac-dir__item-avatar"
+                [class.ac-dir__item-avatar--critical]="alert.priority === 'CRITICAL'"
+                [class.ac-dir__item-avatar--high]="alert.priority === 'HIGH'"
+                [class.ac-dir__item-avatar--medium]="alert.priority === 'MEDIUM'"
+                [class.ac-dir__item-avatar--low]="alert.priority === 'LOW'"
+                [class.ac-dir__item-avatar--info]="alert.priority === 'INFO'">
+                <span class="material-icons-round">notifications_active</span>
+              </div>
+
+              <!-- Info principal -->
+              <div class="ac-dir__item-body">
+                <div class="ac-dir__item-title-row">
+                  <span class="ac-dir__item-name" [title]="alert.name">{{ alert.name }}</span>
+                </div>
+                <div class="ac-dir__item-meta">
+                  <span class="ac-dir__item-category">{{ categoryLabels[alert.category] }}</span>
+                  <span class="ac-dir__item-sep">•</span>
+                  <span class="ac-dir__item-channel">Sistema</span>
+                </div>
+              </div>
+
+              <!-- Badges de Prioridad -->
+              <div class="ac-dir__item-side">
+                <span
+                  class="ac-priority-badge"
+                  [class.ac-priority-badge--critical]="alert.priority === 'CRITICAL'"
+                  [class.ac-priority-badge--high]="alert.priority === 'HIGH'"
+                  [class.ac-priority-badge--medium]="alert.priority === 'MEDIUM'"
+                  [class.ac-priority-badge--low]="alert.priority === 'LOW'"
+                  [class.ac-priority-badge--info]="alert.priority === 'INFO'">
+                  {{ priorityLabels[alert.priority] }}
+                </span>
+              </div>
+            </li>
+          } @empty {
+            <li class="ac-dir__empty">
+              <span class="material-icons-round">search_off</span>
+              <span>No se encontraron alertas registradas</span>
+            </li>
+          }
+        </ul>
+
+        <!-- Footer Paginador / Contador de Resultados (Homologado con Transportistas) -->
+        <div class="ac-dir__footer">
+          <span class="ac-dir__count">
+            Mostrando <strong>{{ filteredAlerts().length }}</strong> de {{ alertsService.alerts().length }} regla{{ alertsService.alerts().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      }
+    </aside>
+
+    <!-- ── DERECHA: CONFIGURACIÓN Y EDITOR (65%) ────────────────────────── -->
+    <section class="ac-split__right" aria-label="Editor de regla de alerta">
+      <div class="ac-editor">
+
+        <!-- Editor Header -->
+        <header class="ac-editor__header">
+          <div class="ac-editor__header-left">
+            <div class="ac-editor__header-title-wrap">
+              <h2 class="ac-editor__title">
+                {{ formMode() === 'CREATE' ? 'Nueva Regla de Alerta' : (selectedAlert()?.name || 'Configuración') }}
+              </h2>
+              @if (selectedAlert()) {
+                <p class="ac-editor__subtitle">
+                  Última actualización: {{ selectedAlert()?.updatedAt | date:'dd/MM/yyyy · HH:mm' }} hrs por
+                  <strong>{{ selectedAlert()?.updatedBy }}</strong>
+                </p>
+              } @else {
+                <p class="ac-editor__subtitle">
+                  Configura los parámetros para que el backend evalúe y notifique automáticamente este evento.
+                </p>
+              }
+            </div>
+          </div>
+
+          <div class="ac-editor__header-actions">
+            @if (selectedAlert()) {
+              <span
+                class="ac-badge"
+                [class.badge--success]="selectedAlert()?.status === 'ACTIVE'"
+                [class.badge--neutral]="selectedAlert()?.status === 'INACTIVE'">
+                {{ selectedAlert()?.status === 'ACTIVE' ? 'Activa' : 'Inactiva' }}
+              </span>
+            }
+            <button
+              type="button"
+              class="ac-btn ac-btn--primary ac-btn--sm"
+              (click)="createNewAlert()">
+              <span class="material-icons-round">add</span>
+              Nueva alerta
+            </button>
+          </div>
+        </header>
+
+        <!-- FORMULARIO REACTIVO -->
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="ac-form" autocomplete="off">
+
+          <!-- Fila 1: Nombre de la Alerta -->
+          <div class="ac-form__row">
+            <div class="ac-form__field ac-form__field--full">
+              <label class="ac-form__label" for="alert-name">
+                NOMBRE DE LA ALERTA <span class="ac-required">*</span>
+              </label>
+              <input
+                id="alert-name"
+                type="text"
+                class="ac-form__input"
+                [class.ac-form__input--error]="form.get('name')?.touched && form.get('name')?.invalid"
+                formControlName="name"
+                placeholder="Ej. Unidad con tiempo de espera excedido en patio"
+                maxlength="80" />
+              @if (form.get('name')?.touched && form.get('name')?.hasError('required')) {
+                <span class="ac-form__error">El nombre de la alerta es obligatorio.</span>
+              }
+              @if (form.get('name')?.touched && form.get('name')?.hasError('maxlength')) {
+                <span class="ac-form__error">Máximo 80 caracteres.</span>
+              }
+              @if (form.get('name')?.touched && form.get('name')?.hasError('duplicateAlertName')) {
+                <span class="ac-form__error">Ya existe una regla de alerta registrada con este nombre.</span>
+              }
+            </div>
+          </div>
+
+          <!-- Fila 2: Categoría, Evento, Prioridad, Estado -->
+          <div class="ac-form__row">
+            <div class="ac-form__field ac-form__field--md">
+              <label class="ac-form__label" for="alert-category">
+                CATEGORÍA <span class="ac-required">*</span>
+              </label>
+              <select id="alert-category" class="ac-form__select" formControlName="category">
+                <option value="RECEIVING">Recepción</option>
+                <option value="INVENTORY">Inventario</option>
+                <option value="QUALITY">Calidad</option>
+                <option value="PICKING">Picking</option>
+                <option value="SHIPPING">Despacho</option>
+                <option value="USERS">Usuarios</option>
+                <option value="SYSTEM">Sistema</option>
+              </select>
+            </div>
+
+            <div class="ac-form__field ac-form__field--lg">
+              <label class="ac-form__label" for="alert-event">
+                EVENTO DEL WMS <span class="ac-required">*</span>
+              </label>
+              <select id="alert-event" class="ac-form__select" formControlName="event">
+                <option value="WAIT_TIME_EXCEEDED">Tiempo de espera de camión excedido</option>
+                <option value="PENDING_ASN">Recepción sin ASN / Documento pendiente</option>
+                <option value="LOW_INVENTORY">Inventario bajo el stock mínimo</option>
+                <option value="LOT_EXPIRATION">Lote próximo a vencer (FEFO)</option>
+                <option value="HALTED_PICKING">Ola de picking detenida / bloqueada</option>
+                <option value="USER_LOCKED">Usuario bloqueado por intentos fallidos</option>
+                <option value="INTEGRATION_ERROR">Error en integración ERP / SAP</option>
+                <option value="SHIPMENT_DELAYED">Embarque retrasado sobre ventana horaria</option>
+              </select>
+            </div>
+
+            <div class="ac-form__field ac-form__field--sm">
+              <label class="ac-form__label" for="alert-priority">
+                PRIORIDAD <span class="ac-required">*</span>
+              </label>
+              <select id="alert-priority" class="ac-form__select" formControlName="priority">
+                <option value="INFO">Información</option>
+                <option value="LOW">Baja</option>
+                <option value="MEDIUM">Media</option>
+                <option value="HIGH">Alta</option>
+                <option value="CRITICAL">Crítica</option>
+              </select>
+            </div>
+
+            <div class="ac-form__field ac-form__field--sm">
+              <label class="ac-form__label" for="alert-status">ESTADO</label>
+              <select id="alert-status" class="ac-form__select" formControlName="status">
+                <option value="ACTIVE">Activo</option>
+                <option value="INACTIVE">Inactivo</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Fila 3: Canales de Notificación (Sistema y Push) -->
+          <div class="ac-form__section">
+            <h3 class="ac-form__section-title">
+              <span class="material-icons-round">campaign</span>
+              CANALES DE NOTIFICACIÓN
+            </h3>
+            <div class="ac-channels-grid">
+
+              <!-- Canal Sistema (Funcional) -->
+              <label class="ac-channel-card" [class.ac-channel-card--active]="form.get('channelSystem')?.value">
+                <input type="checkbox" formControlName="channelSystem" class="ac-channel-card__check" />
+                <span class="material-icons-round ac-channel-card__icon">desktop_windows</span>
+                <span class="ac-channel-card__label">Notificación del sistema</span>
+                <span class="ac-channel-card__badge ac-channel-card__badge--active">Habilitado</span>
+              </label>
+
+              <!-- Canal Push (Funcional) -->
+              <label class="ac-channel-card" [class.ac-channel-card--active]="form.get('channelPush')?.value">
+                <input type="checkbox" formControlName="channelPush" class="ac-channel-card__check" />
+                <span class="material-icons-round ac-channel-card__icon">notifications_active</span>
+                <span class="ac-channel-card__label">Notificación Push</span>
+                <span class="ac-channel-card__badge ac-channel-card__badge--active">Habilitado</span>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- Fila 4: Destinatarios (Roles del WMS) -->
+          <div class="ac-form__section">
+            <h3 class="ac-form__section-title">
+              <span class="material-icons-round">group</span>
+              DESTINATARIOS DE LA NOTIFICACIÓN
+            </h3>
+            <div class="ac-recipients-grid">
+              <label class="ac-checkbox-label">
+                <input type="checkbox" formControlName="recipientSupervisor" class="ac-checkbox" />
+                <span>Supervisor de Operaciones</span>
+              </label>
+              <label class="ac-checkbox-label">
+                <input type="checkbox" formControlName="recipientManager" class="ac-checkbox" />
+                <span>Gerente de Almacén</span>
+              </label>
+              <label class="ac-checkbox-label">
+                <input type="checkbox" formControlName="recipientAdmin" class="ac-checkbox" />
+                <span>Administrador del Sistema</span>
+              </label>
+              <label class="ac-checkbox-label">
+                <input type="checkbox" formControlName="recipientOperator" class="ac-checkbox" />
+                <span>Operador de Montacargas / Mesa</span>
+              </label>
+              <label class="ac-checkbox-label">
+                <input type="checkbox" formControlName="recipientClient" class="ac-checkbox" />
+                <span>Cliente 3PL / Cuenta</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Fila 5: Condición, Valor, Unidad, Repetición, Escalamiento -->
+          <div class="ac-form__row">
+            <div class="ac-form__field ac-form__field--md">
+              <label class="ac-form__label" for="alert-condition">
+                CONDICIÓN <span class="ac-required">*</span>
+              </label>
+              <select id="alert-condition" class="ac-form__select" formControlName="condition">
+                <option value="GREATER_THAN">Mayor que ( > )</option>
+                <option value="LESS_THAN">Menor que ( < )</option>
+                <option value="EQUALS">Igual a ( = )</option>
+                <option value="TIME_EXCEEDED">Tiempo excedido ( > t )</option>
+              </select>
+            </div>
+
+            <div class="ac-form__field ac-form__field--sm">
+              <label class="ac-form__label" for="alert-value">
+                VALOR <span class="ac-required">*</span>
+              </label>
+              <input
+                id="alert-value"
+                type="number"
+                class="ac-form__input"
+                [class.ac-form__input--error]="form.get('value')?.touched && form.get('value')?.invalid"
+                formControlName="value"
+                placeholder="30" />
+              @if (form.get('value')?.touched && form.get('value')?.invalid) {
+                <span class="ac-form__error">Debe ser un número positivo (> 0).</span>
+              }
+            </div>
+
+            <div class="ac-form__field ac-form__field--sm">
+              <label class="ac-form__label" for="alert-unit">
+                UNIDAD <span class="ac-required">*</span>
+              </label>
+              <select id="alert-unit" class="ac-form__select" formControlName="unit">
+                <option value="MINUTES">Minutos</option>
+                <option value="HOURS">Horas</option>
+                <option value="PIECES">Piezas</option>
+                <option value="PERCENTAGE">Porcentaje</option>
+              </select>
+            </div>
+
+            <div class="ac-form__field ac-form__field--md">
+              <label class="ac-form__label" for="alert-recurrence">
+                REPETICIÓN <span class="ac-required">*</span>
+              </label>
+              <select id="alert-recurrence" class="ac-form__select" formControlName="recurrence">
+                <option value="NEVER">Nunca</option>
+                <option value="EVERY_15_MIN">Cada 15 minutos</option>
+                <option value="EVERY_30_MIN">Cada 30 minutos</option>
+                <option value="EVERY_HOUR">Cada hora</option>
+              </select>
+            </div>
+
+            <div class="ac-form__field ac-form__field--md">
+              <label class="ac-form__label" for="alert-escalation">
+                ESCALAMIENTO <span class="ac-required">*</span>
+              </label>
+              <select id="alert-escalation" class="ac-form__select" formControlName="escalation">
+                <option value="NONE">Sin escalamiento</option>
+                <option value="AFTER_15_MIN">Después de 15 minutos</option>
+                <option value="AFTER_30_MIN">Después de 30 minutos</option>
+                <option value="AFTER_60_MIN">Después de 60 minutos</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Fila 6: Mensaje Mostrado / Plantilla -->
+          <div class="ac-form__row">
+            <div class="ac-form__field ac-form__field--full">
+              <label class="ac-form__label" for="alert-message">
+                MENSAJE MOSTRADO EN EL SISTEMA <span class="ac-required">*</span>
+              </label>
+              <textarea
+                id="alert-message"
+                class="ac-form__textarea"
+                [class.ac-form__input--error]="form.get('messageTemplate')?.touched && form.get('messageTemplate')?.invalid"
+                formControlName="messageTemplate"
+                rows="2"
+                [placeholder]="'Ej. La unidad {{truck}} ha superado el tiempo máximo de espera.'"></textarea>
+
+              <!-- Dynamic Variable Chips (Clickable) -->
+              <div class="ac-tag-chips-wrap">
+                <span class="ac-tag-chips-label">Variables disponibles (haz clic para insertar en el mensaje):</span>
+                <div class="ac-tag-chips">
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('truck')" title="Insertar variable truck">+ truck</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('ramp')" title="Insertar variable ramp">+ ramp</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('supplier')" title="Insertar variable supplier">+ supplier</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('sku')" title="Insertar variable sku">+ sku</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('zone')" title="Insertar variable zone">+ zone</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('qty')" title="Insertar variable qty">+ qty</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('lot')" title="Insertar variable lot">+ lot</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('waveId')" title="Insertar variable waveId">+ waveId</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('username')" title="Insertar variable username">+ username</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('code')" title="Insertar variable code">+ code</button>
+                  <button type="button" class="ac-var-chip" (click)="insertVariableTag('value')" title="Insertar variable value">+ value</button>
+                </div>
+              </div>
+
+              @if (form.get('messageTemplate')?.touched && form.get('messageTemplate')?.invalid) {
+                <span class="ac-form__error">El mensaje es obligatorio (máx 250 caracteres).</span>
+              }
+            </div>
+          </div>
+
+          <!-- ═══════════════════════════════════════════
+               VISTA PREVIA DE NOTIFICACIÓN (SYSTEM TOAST)
+               Protagonista con mayor presencia visual
+               ═══════════════════════════════════════════ -->
+          <div class="ac-preview-box" id="toast-live-preview">
+            <div class="ac-preview-box__header">
+              <span class="material-icons-round ac-preview-box__icon">visibility</span>
+              <span class="ac-preview-box__title">VISTA PREVIA EN TIEMPO REAL (SYSTEM TOAST)</span>
+              <button
+                type="button"
+                class="ac-btn ac-btn--secondary ac-btn--sm"
+                (click)="testAlertNotification()"
+                title="Probar notificación en pantalla">
+                <span class="material-icons-round">notification_important</span>
+                Probar alerta
+              </button>
+            </div>
+
+            <div class="ac-preview-box__body">
+              <div
+                class="ac-toast-preview"
+                [class.ac-toast-preview--critical]="toastPreview().priority === 'CRITICAL'"
+                [class.ac-toast-preview--high]="toastPreview().priority === 'HIGH'"
+                [class.ac-toast-preview--medium]="toastPreview().priority === 'MEDIUM'"
+                [class.ac-toast-preview--low]="toastPreview().priority === 'LOW'"
+                [class.ac-toast-preview--info]="toastPreview().priority === 'INFO'">
+
+                <!-- Icono animado -->
+                <div class="ac-toast-preview__icon-wrap">
+                  <span class="material-icons-round">{{ toastPreview().iconName }}</span>
+                </div>
+
+                <!-- Contenido -->
+                <div class="ac-toast-preview__content">
+                  <div class="ac-toast-preview__header">
+                    <span class="ac-toast-preview__title">{{ toastPreview().title }}</span>
+                    <span class="ac-toast-preview__category">{{ toastPreview().categoryLabel }}</span>
+                  </div>
+                  <p class="ac-toast-preview__message">{{ toastPreview().message }}</p>
+                  <div class="ac-toast-preview__footer">
+                    <span
+                      class="ac-priority-badge ac-priority-badge--sm"
+                      [class.ac-priority-badge--critical]="toastPreview().priority === 'CRITICAL'"
+                      [class.ac-priority-badge--high]="toastPreview().priority === 'HIGH'"
+                      [class.ac-priority-badge--medium]="toastPreview().priority === 'MEDIUM'"
+                      [class.ac-priority-badge--low]="toastPreview().priority === 'LOW'"
+                      [class.ac-priority-badge--info]="toastPreview().priority === 'INFO'">
+                      Prioridad {{ priorityLabels[toastPreview().priority] }}
+                    </span>
+                    <span class="ac-toast-preview__time">{{ toastPreview().formattedTimestamp }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barra de Acciones del Formulario (Homologado con Transportistas) -->
+          <div class="ac-form__action-bar">
+            <!-- Acciones de Estado (lado izquierdo) -->
+            @if (formMode() === 'EDIT' && selectedAlert()) {
+              <div class="ac-form__status-group">
+                @if (selectedAlert()!.status === 'ACTIVE') {
+                  <button
+                    type="button"
+                    class="ac-btn ac-btn--danger"
+                    [disabled]="isSaving()"
+                    (click)="confirmToggleStatus(selectedAlert()!, $event)">
+                    <span class="material-icons-round">block</span>
+                    <span>Desactivar</span>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="ac-btn ac-btn--success"
+                    [disabled]="isSaving()"
+                    (click)="confirmToggleStatus(selectedAlert()!, $event)">
+                    <span class="material-icons-round">check_circle</span>
+                    <span>Activar</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="ac-form__action-info">
+                <span class="material-icons-round">info</span>
+                <span>Los cambios se aplicarán inmediatamente a las reglas del motor.</span>
+              </div>
+            }
+
+            <div class="ac-form__action-buttons">
+              <button
+                type="button"
+                class="ac-btn ac-btn--secondary"
+                (click)="testAlertNotification()">
+                <span class="material-icons-round">notification_important</span>
+                <span>Probar alerta</span>
+              </button>
+              <button
+                type="button"
+                class="ac-btn ac-btn--ghost"
+                (click)="createNewAlert()">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="ac-btn ac-btn--primary"
+                [disabled]="isSaving()">
+                @if (isSaving()) {
+                  <span class="ac-spinner ac-spinner--sm"></span>
+                  <span>Guardando...</span>
+                } @else {
+                  <span class="material-icons-round">save</span>
+                  <span>Guardar cambios</span>
+                }
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- ═══════════════════════════════════════════
+             HISTORIAL DE CAMBIOS DE LA REGLA
+             ═══════════════════════════════════════════ -->
+        @if (selectedAlert()) {
+          <section class="ac-history-section">
+            <div class="ac-history-section__header">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="material-icons-round">history</span>
+                <h3>Historial de Auditoría y Trazabilidad (Backend API)</h3>
+                <span class="ac-history-count">{{ remoteAuditLogs().length || selectedAlertHistory().length }} registros</span>
+              </div>
+              <button
+                type="button"
+                class="ac-btn ac-btn--ghost ac-btn--sm"
+                (click)="loadAuditLogs(selectedAlert()!.id)"
+                [disabled]="isLoadingAudit()"
+                title="Refrescar auditoría desde el servidor">
+                <span class="material-icons-round" [class.ac-spin]="isLoadingAudit()">refresh</span>
+                <span>Refrescar</span>
+              </button>
+            </div>
+
+            @if (isLoadingAudit()) {
+              <div style="padding: 1.5rem; text-align: center; color: var(--ac-txt-3); font-size: 0.8rem;">
+                <span class="ac-spinner ac-spinner--sm"></span> Cargando bitácora de auditoría...
+              </div>
+            } @else {
+              <div class="ac-history-table-wrap">
+                <table class="ac-history-table">
+                  <thead>
+                    <tr>
+                      <th>FECHA Y HORA</th>
+                      <th>USUARIO</th>
+                      <th>ACCIÓN / CAMBIOS</th>
+                      <th>IP ORIGEN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (log of remoteAuditLogs(); track log.logId) {
+                      <tr>
+                        <td class="ac-history-table__date">
+                          {{ log.createdAt | date:'dd/MM/yyyy · HH:mm' }} hrs
+                        </td>
+                        <td class="ac-history-table__user">{{ log.username }}</td>
+                        <td class="ac-history-table__summary">
+                          <strong style="color: var(--ac-gold); font-size: 0.72rem;">{{ log.action }}</strong>
+                          @if (log.changes && log.changes.length > 0) {
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem;">
+                              @for (ch of log.changes; track ch.field) {
+                                <span style="font-family: monospace; font-size: 0.65rem; background: var(--ac-surface-3); border: 1px solid var(--ac-border); padding: 0.1rem 0.4rem; border-radius: 4px; color: var(--ac-txt-2);">
+                                  {{ ch.field }}: <s style="opacity: 0.6;">{{ ch.oldValue }}</s> ➔ <strong>{{ ch.newValue }}</strong>
+                                </span>
+                              }
+                            </div>
+                          }
+                        </td>
+                        <td class="ac-history-table__user" style="font-family: monospace; font-size: 0.7rem;">
+                          {{ log.ipAddress || '127.0.0.1' }}
+                        </td>
+                      </tr>
+                    } @empty {
+                      @for (entry of selectedAlertHistory(); track entry.id) {
+                        <tr>
+                          <td class="ac-history-table__date">
+                            {{ entry.timestamp | date:'dd/MM/yyyy · HH:mm' }}
+                          </td>
+                          <td class="ac-history-table__user">{{ entry.user }}</td>
+                          <td class="ac-history-table__summary">{{ entry.changeSummary }}</td>
+                          <td>
+                            @if (entry.newStatus) {
+                              <span
+                                class="ac-badge"
+                                [class.badge--success]="entry.newStatus === 'ACTIVE'"
+                                [class.badge--neutral]="entry.newStatus === 'INACTIVE'">
+                                {{ entry.newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                              </span>
+                            } @else {
+                              <span class="ac-badge badge--info">Registrado</span>
+                            }
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="4" class="ac-history-table__empty">
+                            Sin registros de auditoría reportados por la API.
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        }
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MODAL DE CONFIRMACIÓN
+     ═══════════════════════════════════════════ -->
+@if (showConfirmModal() && confirmModalConfig()) {
+  <div class="ac-modal-backdrop" (click)="closeConfirmModal()">
+    <div class="ac-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="ac-modal__header">
+        <span class="material-icons-round ac-modal__header-icon">help_outline</span>
+        <h3 class="ac-modal__title">{{ confirmModalConfig()?.title }}</h3>
+      </div>
+      <div class="ac-modal__body">
+        <p>{{ confirmModalConfig()?.message }}</p>
+      </div>
+      <div class="ac-modal__footer">
+        <button type="button" class="ac-btn ac-btn--ghost" (click)="closeConfirmModal()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="ac-btn ac-btn--primary"
+          (click)="confirmModalConfig()?.action()">
+          {{ confirmModalConfig()?.confirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════
+     DRAWER DE AUDITORÍA GLOBAL
+     ═══════════════════════════════════════════ -->
+@if (showAuditDrawer()) {
+  <div class="ac-audit-backdrop" (click)="closeAudit()">
+    <aside class="ac-audit-drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="ac-audit-drawer__header">
+        <span class="material-icons-round">history</span>
+        <h3 class="ac-audit-drawer__title">Auditoría del Motor de Alertas</h3>
+        <button type="button" class="ac-btn-icon" (click)="closeAudit()" title="Cerrar auditoría">
+          <span class="material-icons-round">close</span>
+        </button>
+      </header>
+
+      <div class="ac-audit-drawer__body">
+        @for (entry of alertsService.auditEntries(); track entry.id) {
+          <div class="ac-audit-entry">
+            <div class="ac-audit-entry__icon-wrap">
+              <span class="material-icons-round ac-audit-entry__icon">
+                @switch (entry.action) {
+                  @case ('CREATE') { add_circle }
+                  @case ('UPDATE') { edit }
+                  @case ('ACTIVATE') { check_circle }
+                  @case ('DEACTIVATE') { pause_circle }
+                  @default { info }
+                }
+              </span>
+            </div>
+            <div class="ac-audit-entry__content">
+              <div class="ac-audit-entry__action">Acción: {{ entry.action }}</div>
+              <p class="ac-audit-entry__details">{{ entry.details }}</p>
+              <div class="ac-audit-entry__meta">
+                <span>{{ entry.performedBy }}</span>
+                <span class="ac-audit-entry__sep">•</span>
+                <span>{{ entry.performedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="ac-audit-drawer__empty">
+            <span class="material-icons-round">history</span>
+            <span>Sin registros de auditoría</span>
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+}

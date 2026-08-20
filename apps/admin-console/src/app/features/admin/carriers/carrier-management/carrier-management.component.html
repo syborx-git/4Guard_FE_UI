@@ -444,18 +444,38 @@
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required" for="rfc">RFC / Tax ID</label>
-                  <input
-                    id="rfc"
-                    class="fg-input fg-input--mono"
-                    [class.fg-input--error]="fieldHasError('rfc')"
-                    type="text"
-                    formControlName="rfc"
-                    placeholder="Ej. TNO890314AB2"
-                    maxlength="13"
-                    aria-required="true"
-                    aria-describedby="rfc-hint"
-                  />
+                  <div class="fg-input-wrap">
+                    <input
+                      id="rfc"
+                      class="fg-input fg-input--mono"
+                      [class.fg-input--error]="fieldHasError('rfc')"
+                      [class.fg-input--success]="rfcAvailable() === true"
+                      type="text"
+                      formControlName="rfc"
+                      placeholder="Ej. TNO890314AB2"
+                      maxlength="13"
+                      aria-required="true"
+                      aria-describedby="rfc-hint"
+                      (blur)="onRfcBlur()"
+                      (input)="onRfcInput()"
+                    />
+                    @if (rfcValidating()) {
+                      <span class="fg-input-spinner material-symbols-outlined spinner" title="Validando disponibilidad de RFC...">sync</span>
+                    } @else if (rfcAvailable() === true) {
+                      <span class="fg-input-icon fg-input-icon--success material-symbols-outlined" title="RFC disponible">check_circle</span>
+                    } @else if (rfcAvailable() === false || fieldHasError('rfc')) {
+                      <span class="fg-input-icon fg-input-icon--error material-symbols-outlined" title="RFC no disponible o inválido">cancel</span>
+                    }
+                  </div>
                   <span id="rfc-hint" class="fg-hint">12 caracteres (persona moral) o 13 (física).</span>
+                  @if (rfcValidating()) {
+                    <span class="fg-info" role="status">Validando RFC en el servidor...</span>
+                  } @else if (rfcAvailable() === true) {
+                    <span class="fg-success" role="status">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      El RFC está disponible
+                    </span>
+                  }
                   @if (fieldHasError('rfc')) {
                     <span class="fg-error" role="alert">{{ getFieldError('rfc') }}</span>
                   }

@@ -21,13 +21,14 @@ import { SessionStorageService } from '../../../core/services/session-storage.se
 import { LoginResponse } from '../../../core/models/auth.models';
 import { AUTH_CONFIG } from '../../../core/config/auth.config';
 import { ForgotPasswordModalComponent } from './forgot-password-modal/forgot-password-modal.component';
+import { GhostCursorComponent } from '../../../shared/components/ghost-cursor/ghost-cursor.component';
 
 type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
 
 @Component({
   selector: 'fg-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent, GhostCursorComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
@@ -42,6 +43,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   protected readonly viewState = signal<LoginViewState>('login');
   protected readonly showForgotModal = signal<boolean>(false);
   protected readonly inactivityNotice = signal<boolean>(false);
+  protected readonly savedProcessName = signal<string | null>(null);
 
   // ── Estado de carga y errores ────────────────────────────
   protected readonly isLoading  = signal<boolean>(false);
@@ -71,14 +73,23 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const reason = this.route.snapshot.queryParams['reason'];
-    if (reason === 'inactivity') {
-      this.inactivityNotice.set(true);
-      this.sessionStorageService.clearAuthLockout();
+    // ─── PRIORIDAD 1: Restaurar bloqueo activo si existe ────────────────────
+    // Debe ejecutarse SIEMPRE — incluso cuando reason=inactivity.
+    // El bloqueo tiene precedencia sobre cualquier otra condición de la URL.
+    const restoredLockout = this.checkAndRestoreLockoutState();
+
+    if (!restoredLockout) {
+      // Solo mostrar el aviso de inactividad si NO hay bloqueo activo
+      const reason = this.route.snapshot.queryParams['reason'];
+      if (reason === 'inactivity') {
+        this.inactivityNotice.set(true);
+        const process = localStorage.getItem('4g_pending_process_name');
+        if (process) {
+          this.savedProcessName.set(process);
+        }
+      }
       this.viewState.set('login');
       this.attemptsRemaining.set(null);
-    } else {
-      this.checkAndRestoreLockoutState();
     }
 
     // Sincronizar el conteo de intentos fallidos cuando el usuario cambia o escribe el email
@@ -96,10 +107,11 @@ export class LoginComponent implements OnInit, OnDestroy {
   /**
    * Verifica al cargar la página si existe un bloqueo activo guardado en localStorage.
    * Evita mostrar brevemente el formulario si la cuenta está pausada.
+   * @returns true si hay un bloqueo activo y fue restaurado, false en caso contrario.
    */
-  private checkAndRestoreLockoutState(): void {
+  private checkAndRestoreLockoutState(): boolean {
     const lockoutState = this.sessionStorageService.getAuthLockout();
-    if (!lockoutState) return;
+    if (!lockoutState) return false;
 
     const now = Date.now();
     const remainingSeconds = Math.max(0, Math.ceil((lockoutState.lockedUntil - now) / 1000));
@@ -111,14 +123,14 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.emailCtrl.setValue(lockoutState.identifier, { emitEvent: false });
       }
       this.startLockCountdown(lockoutState.lockedUntil);
+      return true;  // ← Bloqueo activo encontrado y restaurado
     } else {
       // El bloqueo expiró mientras la página estaba cerrada o refrescada
       this.sessionStorageService.clearAuthLockout();
       if (lockoutState.identifier) {
         this.sessionStorageService.clearFailedAttempts(lockoutState.identifier);
       }
-      this.viewState.set('login');
-      this.attemptsRemaining.set(null);
+      return false;  // ← No hay bloqueo activo
     }
   }
 

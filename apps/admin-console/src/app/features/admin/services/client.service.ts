@@ -1,15 +1,23 @@
 /**
  * @file client.service.ts
- * @description Servicio de gestión de Clientes / Owners (3PL).
- * Integrado con el Backend mediante HTTP siguiendo el mismo patrón que OrganizationService y BranchService.
+ * @description Servicio de Gestión de Clientes / Owners 3PL — 4GUARD WMS.
  *
- * Endpoints:
- *   POST   /api/v1/clients                 — Crear cliente
- *   PUT    /api/v1/clients                 — Actualizar cliente
- *   GET    /api/v1/clients/{id}            — Obtener por ID
- *   GET    /api/v1/clients?organizationId   — Listar por organización
- *   DELETE /api/v1/clients/{id}            — Eliminar cliente
- *   GET    /api/v1/clients/{id}/audit      — Historial de auditoría BE
+ * Integrado con el Backend mediante HTTP real (sin fallback a datos simulados).
+ * Soporta persistencia reactiva en Signals, gestión de contactos corporativos y
+ * múltiples destinos físicos (Ship-to Locations).
+ *
+ * Endpoints Backend (4guard_be — rama edj-cliente-destino-be):
+ *   POST   /api/v1/clients                             — Crear cliente
+ *   PUT    /api/v1/clients                             — Actualizar cliente
+ *   GET    /api/v1/clients/{id}                        — Obtener por ID
+ *   GET    /api/v1/clients?organizationId={id}         — Listar por organización
+ *   DELETE /api/v1/clients/{id}                        — Eliminar cliente
+ *   PATCH  /api/v1/clients/{id}/status                 — Toggle ACTIVE ↔ INACTIVE
+ *   GET    /api/v1/clients/{id}/audit                  — Historial de auditoría
+ *   GET    /api/v1/clients/{id}/destinations           — Listar destinos
+ *   POST   /api/v1/clients/{id}/destinations           — Agregar destino
+ *   PUT    /api/v1/clients/{id}/destinations/{destId}  — Actualizar destino
+ *   DELETE /api/v1/clients/{id}/destinations/{destId}  — Eliminar destino
  */
 
 import { Injectable, inject, signal, computed } from '@angular/core';
@@ -20,6 +28,8 @@ import { environment } from '../../../../environments/environment';
 import {
   Client,
   ClientStatus,
+  ClientContact,
+  PhysicalDestination,
   ClientResponse,
   CreateClientRequest,
   UpdateClientRequest,
@@ -30,7 +40,17 @@ import {
   getClientAuditSummary,
 } from '../clients/models/client.model';
 
-export type { Client, ClientStatus, ClientResponse, CreateClientRequest, UpdateClientRequest, ClientAuditEntry, ApiResponse };
+export type {
+  Client,
+  ClientStatus,
+  ClientContact,
+  PhysicalDestination,
+  ClientResponse,
+  CreateClientRequest,
+  UpdateClientRequest,
+  ClientAuditEntry,
+  ApiResponse
+};
 
 @Injectable({
   providedIn: 'root'
@@ -38,6 +58,8 @@ export type { Client, ClientStatus, ClientResponse, CreateClientRequest, UpdateC
 export class ClientService {
   private readonly http = inject(HttpClient);
   private readonly items = signal<Client[]>([]);
+
+  private readonly BASE_URL = `${environment.apiBaseUrl}/api/v1/clients`;
 
   // ─── Signals Reactivos de Estado ─────────────────────────────────────────────
 
@@ -48,17 +70,19 @@ export class ClientService {
 
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
-  readonly totalCount    = computed(() => this.items().length);
-  readonly activeCount   = computed(() => this.items().filter(c => c.status === 'ACTIVE').length);
-  readonly inactiveCount = computed(() => this.items().filter(c => c.status === 'INACTIVE').length);
+  readonly totalCount        = computed(() => this.items().length);
+  readonly activeCount       = computed(() => this.items().filter(c => c.status === 'ACTIVE').length);
+  readonly inactiveCount     = computed(() => this.items().filter(c => c.status === 'INACTIVE').length);
+  readonly totalDestinations = computed(() =>
+    this.items().reduce((acc, c) => acc + (c.destinations?.length || 0), 0)
+  );
 
   getAll(): Client[] {
     return this.items();
   }
 
-  /**
-   * Obtiene el organizationId y organizationName desde la sesión activa en localStorage.
-   */
+  // ─── Obtener organizationId de la sesión activa ──────────────────────────────
+
   private getSessionOrg(): { organizationId: string; organizationName: string } {
     try {
       const sessionStr = localStorage.getItem('session');
@@ -72,7 +96,7 @@ export class ClientService {
         }
       }
     } catch {
-      // Ignorar errores de parseo
+      // Ignorar errores de parseo silenciosamente
     }
     return {
       organizationId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
@@ -80,17 +104,14 @@ export class ClientService {
     };
   }
 
-  /**
-   * Carga los clientes de la organización activa desde el Backend.
-   */
+  // ─── Carga de Clientes desde el Backend ─────────────────────────────────────
+
   loadClients(): Observable<ApiResponse<ClientResponse[]>> {
     this.loading.set(true);
     this.loadError.set(null);
 
     const { organizationId } = this.getSessionOrg();
-    const url = organizationId
-      ? `${environment.apiBaseUrl}/api/v1/clients?organizationId=${organizationId}`
-      : `${environment.apiBaseUrl}/api/v1/clients`;
+    const url = `${this.BASE_URL}?organizationId=${organizationId}`;
 
     return this.http.get<ApiResponse<ClientResponse[]>>(url).pipe(
       tap(response => {
@@ -101,16 +122,35 @@ export class ClientService {
       }),
       catchError((error: HttpErrorResponse) => {
         this.loading.set(false);
-        const msg = error?.error?.message || error?.message || 'Error al cargar los clientes del servidor.';
+        const msg = error?.error?.message || 'Error al cargar los clientes. Verifica la conexión con el servidor.';
         this.loadError.set(msg);
         return throwError(() => error);
       })
     );
   }
 
-  /**
-   * Crea un cliente en el Backend.
-   */
+  // ─── Helpers de Sanitización UUID ───────────────────────────────────────────
+
+  private isUuid(val?: string | null): boolean {
+    return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  }
+
+  private sanitizeContact(c: ClientContact): ClientContact {
+    return {
+      ...c,
+      id: this.isUuid(c.id) ? c.id : undefined,
+    };
+  }
+
+  private sanitizeDestination(d: PhysicalDestination): PhysicalDestination {
+    return {
+      ...d,
+      id: this.isUuid(d.id) ? d.id : undefined,
+    };
+  }
+
+  // ─── Crear Cliente ───────────────────────────────────────────────────────────
+
   create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'version'>): Observable<ApiResponse<ClientResponse>> {
     this.saving.set(true);
     const { organizationId, organizationName } = this.getSessionOrg();
@@ -120,20 +160,23 @@ export class ClientService {
       organizationName: client.orgName || organizationName,
       name: client.name,
       externalId: client.externalId || undefined,
+      taxId: client.taxId || undefined,
+      address: client.address || '',
+      phone: client.phone || '',
+      email: client.email || undefined,
+      webPortalPassword: client.webPortalPassword || undefined,
       status: client.status || 'ACTIVE',
-      version: 1
+      contacts: (client.contacts || []).map(c => this.sanitizeContact(c)),
+      destinations: (client.destinations || []).map(d => this.sanitizeDestination(d)),
     };
 
-    return this.http.post<ApiResponse<ClientResponse>>(`${environment.apiBaseUrl}/api/v1/clients`, payload).pipe(
+    return this.http.post<ApiResponse<ClientResponse>>(this.BASE_URL, payload).pipe(
       tap(response => {
         this.saving.set(false);
         const resData = response.data || (response as any);
-        if (resData && resData.id) {
+        if (resData?.id) {
           const newClient = this.mapDtoToItem(resData);
           this.items.update(list => [newClient, ...list]);
-        } else {
-          // Re-cargar si el DTO no vino completo
-          this.loadClients().subscribe();
         }
       }),
       catchError((error: HttpErrorResponse) => {
@@ -143,12 +186,14 @@ export class ClientService {
     );
   }
 
-  /**
-   * Actualiza un cliente existente en el Backend.
-   */
+  // ─── Actualizar Cliente ──────────────────────────────────────────────────────
+
   update(id: string, updatedFields: Partial<Client>): Observable<ApiResponse<ClientResponse>> {
     this.saving.set(true);
     const existing = this.items().find(c => c.id === id);
+
+    const rawContacts = updatedFields.contacts !== undefined ? updatedFields.contacts : (existing?.contacts || []);
+    const rawDestinations = updatedFields.destinations !== undefined ? updatedFields.destinations : (existing?.destinations || []);
 
     const payload: UpdateClientRequest = {
       id,
@@ -156,19 +201,24 @@ export class ClientService {
       organizationName: updatedFields.orgName || existing?.orgName || '4GUARD LOGISTICS CORP',
       name: updatedFields.name || existing?.name || '',
       externalId: updatedFields.externalId !== undefined ? updatedFields.externalId : existing?.externalId,
+      taxId: updatedFields.taxId !== undefined ? updatedFields.taxId : existing?.taxId,
+      address: updatedFields.address !== undefined ? updatedFields.address : existing?.address,
+      phone: updatedFields.phone !== undefined ? updatedFields.phone : existing?.phone,
+      email: updatedFields.email !== undefined ? updatedFields.email : existing?.email,
+      webPortalPassword: updatedFields.webPortalPassword !== undefined ? updatedFields.webPortalPassword : existing?.webPortalPassword,
       status: updatedFields.status || existing?.status || 'ACTIVE',
-      version: existing?.version || 1
+      contacts: rawContacts.map(c => this.sanitizeContact(c)),
+      destinations: rawDestinations.map(d => this.sanitizeDestination(d)),
+      version: (existing?.version || 1) + 1
     };
 
-    return this.http.put<ApiResponse<ClientResponse>>(`${environment.apiBaseUrl}/api/v1/clients`, payload).pipe(
+    return this.http.put<ApiResponse<ClientResponse>>(this.BASE_URL, payload).pipe(
       tap(response => {
         this.saving.set(false);
         const resData = response.data || (response as any);
-        if (resData && resData.id) {
+        if (resData?.id) {
           const updatedClient = this.mapDtoToItem(resData);
           this.items.update(list => list.map(item => item.id === id ? updatedClient : item));
-        } else {
-          this.loadClients().subscribe();
         }
       }),
       catchError((error: HttpErrorResponse) => {
@@ -178,12 +228,11 @@ export class ClientService {
     );
   }
 
-  /**
-   * Elimina un cliente del Backend.
-   */
+  // ─── Eliminar Cliente ────────────────────────────────────────────────────────
+
   delete(id: string): Observable<ApiResponse<null>> {
     this.saving.set(true);
-    return this.http.delete<ApiResponse<null>>(`${environment.apiBaseUrl}/api/v1/clients/${id}`).pipe(
+    return this.http.delete<ApiResponse<null>>(`${this.BASE_URL}/${id}`).pipe(
       tap(() => {
         this.saving.set(false);
         this.items.update(list => list.filter(item => item.id !== id));
@@ -195,24 +244,105 @@ export class ClientService {
     );
   }
 
-  /**
-   * Cambia el estado (ACTIVE/INACTIVE) de un cliente.
-   */
+  // ─── Toggle de Estado (ACTIVE ↔ INACTIVE) ────────────────────────────────────
+
   toggleStatus(id: string): Observable<ApiResponse<ClientResponse>> {
-    const client = this.items().find(c => c.id === id);
-    if (!client) {
-      return throwError(() => new Error('Cliente no encontrado localmente.'));
-    }
-    const newStatus: ClientStatus = client.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    return this.update(id, { ...client, status: newStatus });
+    this.saving.set(true);
+    return this.http.patch<ApiResponse<ClientResponse>>(`${this.BASE_URL}/${id}/status`, {}).pipe(
+      tap(response => {
+        this.saving.set(false);
+        const resData = response.data || (response as any);
+        if (resData?.id) {
+          const updatedClient = this.mapDtoToItem(resData);
+          this.items.update(list => list.map(item => item.id === id ? updatedClient : item));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
+    );
   }
 
-  /**
-   * Obtiene la bitácora de auditoría del cliente desde la API Backend.
-   * Endpoint: GET /api/v1/clients/{id}/audit
-   */
+  // ─── Gestión de Destinos Físicos (Endpoints Granulares) ──────────────────────
+
+  addDestination(clientId: string, destination: PhysicalDestination): Observable<ApiResponse<PhysicalDestination>> {
+    this.saving.set(true);
+    const payload = this.sanitizeDestination(destination);
+    return this.http.post<ApiResponse<PhysicalDestination>>(
+      `${this.BASE_URL}/${clientId}/destinations`, payload
+    ).pipe(
+      tap(response => {
+        this.saving.set(false);
+        const newDest = response.data || (response as any);
+        if (newDest?.id) {
+          // Actualizar el signal reactivo agregando el destino al cliente correspondiente
+          this.items.update(list => list.map(client =>
+            client.id === clientId
+              ? { ...client, destinations: [...client.destinations, newDest] }
+              : client
+          ));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  updateDestination(clientId: string, destinationId: string, destination: PhysicalDestination): Observable<ApiResponse<PhysicalDestination>> {
+    this.saving.set(true);
+    return this.http.put<ApiResponse<PhysicalDestination>>(
+      `${this.BASE_URL}/${clientId}/destinations/${destinationId}`, destination
+    ).pipe(
+      tap(response => {
+        this.saving.set(false);
+        const updatedDest = response.data || (response as any);
+        if (updatedDest?.id) {
+          this.items.update(list => list.map(client =>
+            client.id === clientId
+              ? {
+                  ...client,
+                  destinations: client.destinations.map(d =>
+                    d.id === destinationId ? updatedDest : d
+                  )
+                }
+              : client
+          ));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  deleteDestination(clientId: string, destinationId: string): Observable<ApiResponse<null>> {
+    this.saving.set(true);
+    return this.http.delete<ApiResponse<null>>(
+      `${this.BASE_URL}/${clientId}/destinations/${destinationId}`
+    ).pipe(
+      tap(() => {
+        this.saving.set(false);
+        this.items.update(list => list.map(client =>
+          client.id === clientId
+            ? { ...client, destinations: client.destinations.filter(d => d.id !== destinationId) }
+            : client
+        ));
+      }),
+      catchError((error: HttpErrorResponse) => {
+        this.saving.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // ─── Historial de Auditoría (BE Endpoint) ────────────────────────────────────
+
   getClientAudit(id: string): Observable<ApiResponse<ClientAuditEntry[]>> {
-    const url = `${environment.apiBaseUrl}/api/v1/clients/${id}/audit`;
+    const url = `${this.BASE_URL}/${id}/audit`;
     return this.http.get<ApiResponse<ClientAuditEntry[]>>(url).pipe(
       map(res => {
         const rawList = res.data || (Array.isArray(res) ? res : []);
@@ -221,7 +351,7 @@ export class ClientService {
           return {
             id: item.logId || item.id || String(Math.random()),
             action: actionStr,
-            performedBy: item.username || item.performedBy || 'enrique',
+            performedBy: item.username || item.performedBy || 'sistema',
             performedAt: item.createdAt || item.performedAt || new Date().toISOString(),
             summary: getClientAuditSummary(actionStr),
             timelineIcon: getClientAuditIcon(actionStr),
@@ -229,22 +359,16 @@ export class ClientService {
             details: item.details || []
           };
         });
-        return {
-          status: res.status || 200,
-          message: res.message || 'Auditoría recuperada',
-          data: formattedData
-        };
+        return { status: res.status || 200, message: res.message || 'Auditoría recuperada', data: formattedData };
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error('Error al recuperar historial de auditoría de cliente:', error);
         return throwError(() => error);
       })
     );
   }
 
-  /**
-   * Mapea el DTO del Backend al modelo del Frontend.
-   */
+  // ─── Mappers DTO ↔ Modelo Frontend ───────────────────────────────────────────
+
   private mapDtoToItem(dto: ClientResponse): Client {
     return {
       id: dto.id,
@@ -252,10 +376,19 @@ export class ClientService {
       orgName: dto.organizationName || '4GUARD LOGISTICS CORP',
       name: dto.name,
       externalId: dto.externalId || '',
+      taxId: dto.taxId || undefined,
+      address: dto.address || '',
+      phone: dto.phone || '',
+      email: dto.email || undefined,
+      webPortalPassword: dto.webPortalPassword || undefined,
       status: (dto.status as ClientStatus) || 'ACTIVE',
+      contacts: dto.contacts || [],
+      destinations: dto.destinations || [],
       version: dto.version || 1,
       createdAt: dto.createdAt || new Date().toISOString(),
       updatedAt: dto.updatedAt || new Date().toISOString(),
+      createdBy: dto.createdBy,
+      updatedBy: dto.updatedBy,
     };
   }
 }

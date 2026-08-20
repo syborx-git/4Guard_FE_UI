@@ -8,7 +8,7 @@
     <div class="sidebar__logo-block">
       <div class="sidebar__logo">
         <div class="sidebar__logo-mark">
-          <img src="assets/logo-4guard.svg" alt="4GUARD Logo" class="sidebar__logo-img" />
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="sidebar__logo-img" />
         </div>
         @if (!isSidebarCollapsed()) {
           <div class="sidebar__logo-text">
@@ -32,23 +32,71 @@
     <!-- Navegacion -->
     <nav class="sidebar__nav" aria-label="Navegacion principal">
       <ul class="sidebar__nav-list" role="list">
-        @for (item of visibleNavItems(); track item.route) {
-          <li class="sidebar__nav-item">
-            <a
-              [routerLink]="item.route"
-              routerLinkActive="sidebar__nav-link--active"
-              [routerLinkActiveOptions]="{ exact: item.route === '/' }"
-              class="sidebar__nav-link"
-              [attr.aria-label]="item.label"
-              [attr.title]="isSidebarCollapsed() ? item.label : null">
-              <span class="material-symbols-outlined sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
-              @if (!isSidebarCollapsed()) {
-                <span class="sidebar__nav-label">{{ item.label }}</span>
+        @for (item of visibleNavItems(); track item.module) {
+          <li class="sidebar__nav-item" [class.sidebar__nav-item--has-children]="item.children && item.children.length > 0">
+            @if (!item.children || item.children.length === 0) {
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="sidebar__nav-link--active"
+                [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+                class="sidebar__nav-link"
+                [attr.aria-label]="item.label"
+                [attr.title]="isSidebarCollapsed() ? item.label : null">
+                <span class="material-symbols-outlined sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+                @if (!isSidebarCollapsed()) {
+                  <span class="sidebar__nav-label">{{ item.label }}</span>
+                }
+                @if (item.badge && item.badge() > 0 && !isSidebarCollapsed()) {
+                  <span class="sidebar__nav-badge">{{ item.badge() }}</span>
+                }
+              </a>
+            } @else {
+              <!-- Parent Item con Submenú -->
+              <div
+                class="sidebar__nav-link sidebar__nav-link--parent cursor-pointer"
+                [class.sidebar__nav-link--active]="isItemActive(item)"
+                (click)="onParentNavClick(item)"
+                [attr.aria-label]="item.label"
+                [attr.title]="isSidebarCollapsed() ? item.label : null"
+              >
+                <span class="material-symbols-outlined sidebar__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+                @if (!isSidebarCollapsed()) {
+                  <span class="sidebar__nav-label flex-1">{{ item.label }}</span>
+                  <button
+                    type="button"
+                    class="sidebar__nav-chevron-btn"
+                    (click)="toggleSubmenu(item.module, $event)"
+                    aria-label="Desplegar submenú"
+                  >
+                    <span
+                      class="material-symbols-outlined sidebar__nav-chevron"
+                      [class.sidebar__nav-chevron--expanded]="isSubmenuExpanded(item.module)"
+                    >
+                      expand_more
+                    </span>
+                  </button>
+                }
+              </div>
+
+              <!-- Lista de Submenú -->
+              @if (!isSidebarCollapsed() && isSubmenuExpanded(item.module)) {
+                <ul class="sidebar__subnav-list animate-fade-in" role="list">
+                  @for (sub of item.children; track sub.route) {
+                    <li class="sidebar__subnav-item">
+                      <a
+                        [routerLink]="sub.route"
+                        routerLinkActive="sidebar__subnav-link--active"
+                        class="sidebar__subnav-link"
+                        [attr.aria-label]="sub.label"
+                      >
+                        <span class="material-symbols-outlined sidebar__subnav-icon" aria-hidden="true">{{ sub.icon }}</span>
+                        <span class="sidebar__subnav-label">{{ sub.label }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
               }
-              @if (item.badge && item.badge() > 0 && !isSidebarCollapsed()) {
-                <span class="sidebar__nav-badge">{{ item.badge() }}</span>
-              }
-            </a>
+            }
           </li>
         }
       </ul>
@@ -89,33 +137,89 @@
         </button>
       }
 
-      <!-- Profile dropdown menu -->
+      <!-- Profile dropdown menu (Consola Operativa de Andén) -->
       @if (showProfileMenu() && !isSidebarCollapsed()) {
-        <div class="profile-menu" role="menu">
+        <div class="profile-menu shadow-2xl animate-fade-in" role="menu">
+          
+          <!-- Encabezado con Avatar, Nombre, Rol y Badge de Turno -->
           <div class="profile-menu__header">
             <div class="profile-menu__avatar">{{ authState.userInitials() }}</div>
             <div class="profile-menu__info">
               <span class="profile-menu__name">{{ authState.userFullName() }}</span>
-              <span class="profile-menu__role">{{ authState.roleLabel() }}</span>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="profile-menu__role">{{ authState.roleLabel() }}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  {{ authState.userShiftBadge() }}
+                </span>
+              </div>
             </div>
           </div>
+
+          <!-- SECCIÓN 1: Acciones de Operación en Andén -->
+          <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+            Operación en Andén
+          </div>
+
+          <button
+            type="button"
+            class="profile-menu__item hover:bg-slate-800 text-amber-300"
+            (click)="lockWorkstation()"
+            role="menuitem"
+          >
+            <span class="material-symbols-outlined profile-menu__item-icon text-amber-400">lock</span>
+            <span>Pausar / Bloquear Estación</span>
+          </button>
+
+          <button
+            type="button"
+            class="profile-menu__item hover:bg-slate-800 text-emerald-300"
+            (click)="openQuickOperatorModal()"
+            role="menuitem"
+          >
+            <span class="material-symbols-outlined profile-menu__item-icon text-emerald-400">sync_alt</span>
+            <span>Cambio Rápido de Operador (PIN)</span>
+          </button>
+
           <div class="profile-menu__divider"></div>
+
+          <!-- SECCIÓN 2: Configuración de Cuenta -->
+          <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Configuración
+          </div>
+
           <button
             id="view-profile-menu-btn"
-            class="profile-menu__item"
+            class="profile-menu__item hover:bg-slate-800"
             (click)="openProfileModal()"
-            role="menuitem">
+            role="menuitem"
+          >
             <span class="material-symbols-outlined profile-menu__item-icon">person</span>
             <span>Ver mi perfil</span>
           </button>
+
           <button
             id="change-pwd-menu-btn"
-            class="profile-menu__item"
+            class="profile-menu__item hover:bg-slate-800"
             (click)="openChangePassword()"
-            role="menuitem">
+            role="menuitem"
+          >
             <span class="material-symbols-outlined profile-menu__item-icon">lock_reset</span>
             <span>Cambiar contraseña</span>
           </button>
+
+          <div class="profile-menu__divider"></div>
+
+          <!-- SECCIÓN 3: Salida Definitiva -->
+          <button
+            id="logout-menu-btn"
+            class="profile-menu__item hover:bg-rose-950/40 text-rose-300"
+            (click)="logout()"
+            role="menuitem"
+          >
+            <span class="material-symbols-outlined profile-menu__item-icon text-rose-400">logout</span>
+            <span>Cerrar Sesión Definitiva</span>
+          </button>
+
         </div>
       }
     </div>
@@ -147,6 +251,85 @@
             [attr.aria-label]="syncState.statusMessage()">
             <span class="sync-indicator__dot"></span>
             <span class="sync-indicator__text">{{ syncState.statusMessage() }}</span>
+          </div>
+        }
+
+        <!-- Pill Notificaciones: Pre-Recepciones en Espera -->
+        @if (pendingReceptionsCount() > 0) {
+          <div class="shell__reception-pill-container relative">
+            <button
+              type="button"
+              (click)="toggleReceptionAlerts($event)"
+              class="shell__alert-badge shell__alert-badge--reception"
+              title="Pre-Recepciones registradas en Caseta pendientes de atención"
+            >
+              <span class="material-symbols-outlined shell__alert-icon">move_to_inbox</span>
+              <span class="shell__alert-text">
+                {{ pendingReceptionsCount() }}
+                {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
+              </span>
+            </button>
+
+            <!-- Dropdown flotante con la cola de notificaciones en fila -->
+            @if (showReceptionAlertsDropdown()) {
+              <div class="shell__reception-dropdown shadow-2xl animate-fade-up">
+                <!-- Header del Dropdown -->
+                <div class="reception-dropdown__header">
+                  <div class="reception-dropdown__title-box">
+                    <div class="reception-dropdown__icon-wrap">
+                      <span class="material-symbols-outlined">notifications_active</span>
+                    </div>
+                    <div>
+                      <h4 class="reception-dropdown__title">Pre-Recepciones en Caseta</h4>
+                      <p class="reception-dropdown__subtitle">Unidades en espera de descarga</p>
+                    </div>
+                  </div>
+                  <span class="reception-dropdown__badge">
+                    {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'en fila' : 'en fila' }}
+                  </span>
+                </div>
+
+                <!-- Lista de Notificaciones -->
+                <div class="reception-dropdown__list">
+                  @for (rec of pendingReceptions(); track rec.folio) {
+                    <div class="reception-dropdown__card">
+                      <!-- Top bar de la tarjeta -->
+                      <div class="reception-dropdown__card-top">
+                        <span class="reception-dropdown__folio">FOLIO #{{ rec.folio }}</span>
+                        <div class="reception-dropdown__card-meta">
+                          <span class="reception-dropdown__ramp-badge">Rampa {{ rec.checkIn.rampNumber }}</span>
+                          <span class="reception-dropdown__time">{{ rec.checkIn.receptionTime }}</span>
+                        </div>
+                      </div>
+
+                      <!-- Información del cliente y remisión -->
+                      <div class="reception-dropdown__client-name">{{ rec.checkIn.client }}</div>
+                      <div class="reception-dropdown__details">
+                        <span class="reception-dropdown__doc">Rem: <strong>{{ rec.checkIn.docNumber }}</strong></span>
+                        <span class="reception-dropdown__dot">·</span>
+                        <span class="reception-dropdown__carrier">{{ rec.checkIn.carrierLine }}</span>
+                      </div>
+
+                      <!-- Footer con chofer y acción -->
+                      <div class="reception-dropdown__card-footer">
+                        <span class="reception-dropdown__driver">
+                          <span class="material-symbols-outlined text-[13px]">badge</span>
+                          {{ rec.checkIn.driverName }}
+                        </span>
+                        <button
+                          type="button"
+                          (click)="openReceptionFromAlert(rec.folio)"
+                          class="reception-dropdown__action-btn"
+                        >
+                          <span>Atender Folio</span>
+                          <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
           </div>
         }
 
@@ -188,6 +371,116 @@
 
         </div>
 
+        <!-- Botón menú waffle (4 cubos) -->
+        <div class="shell__waffle-container">
+          <button
+            id="waffle-menu-btn"
+            type="button"
+            class="shell__header-btn shell__header-btn--waffle"
+            [class.shell__header-btn--waffle-active]="showWaffleMenu()"
+            (click)="toggleWaffleMenu($event)"
+            aria-label="Ecosistema de aplicaciones 4GUARD WMS"
+            title="Ecosistema de aplicaciones WMS">
+            <span class="material-symbols-outlined">apps</span>
+          </button>
+
+          <!-- Waffle Popup Dropdown -->
+          @if (showWaffleMenu()) {
+            <div class="waffle-popup" (click)="$event.stopPropagation()">
+              
+              <!-- Popup Header -->
+              <div class="waffle-popup__header">
+                <div class="waffle-popup__title-group">
+                  <h3 class="waffle-popup__title">TUS FAVORITOS</h3>
+                  <span class="waffle-popup__tag">GOOGLE & WMS</span>
+                </div>
+                <button
+                  type="button"
+                  class="waffle-popup__edit-btn"
+                  (click)="onEditFavorites()"
+                  title="Personalizar accesos directos">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="waffle-popup__search-box">
+                <span class="material-symbols-outlined waffle-popup__search-icon">search</span>
+                <input
+                  type="text"
+                  class="waffle-popup__search-input"
+                  placeholder="Buscar aplicación o servicio..."
+                  [value]="waffleSearchQuery()"
+                  (input)="onWaffleSearchInput($event)"
+                />
+                @if (waffleSearchQuery()) {
+                  <button type="button" class="waffle-popup__search-clear" (click)="clearWaffleSearch()">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                }
+              </div>
+
+              <!-- Filter Tabs (Pills) -->
+              <div class="waffle-popup__tabs">
+                <button
+                  type="button"
+                  class="waffle-popup__tab"
+                  [class.waffle-popup__tab--active]="waffleActiveTab() === 'all'"
+                  (click)="setWaffleTab('all')">
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  class="waffle-popup__tab"
+                  [class.waffle-popup__tab--active]="waffleActiveTab() === 'google'"
+                  (click)="setWaffleTab('google')">
+                  Google Suite
+                </button>
+                <button
+                  type="button"
+                  class="waffle-popup__tab"
+                  [class.waffle-popup__tab--active]="waffleActiveTab() === 'wms'"
+                  (click)="setWaffleTab('wms')">
+                  Módulos WMS
+                </button>
+              </div>
+
+              <!-- Section Header -->
+              <div class="waffle-popup__section-label">FAVORITOS DESTACADOS</div>
+
+              <!-- Apps Grid -->
+              <div class="waffle-popup__grid">
+                @for (item of filteredWaffleItems(); track item.id) {
+                  <div
+                    class="waffle-card"
+                    (click)="onWaffleItemClick(item)"
+                    [attr.title]="item.name">
+                    <div class="waffle-card__icon-box" [style.background]="item.iconBg">
+                      <span class="material-symbols-outlined waffle-card__icon">{{ item.icon }}</span>
+                      @if (item.badge) {
+                        <span class="waffle-card__badge" [style.background]="item.badgeBg || '#d4af37'">
+                          {{ item.badge }}
+                        </span>
+                      }
+                    </div>
+                    <span class="waffle-card__label">{{ item.name }}</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Popup Footer -->
+              <div class="waffle-popup__footer">
+                <div class="waffle-popup__footer-brand">
+                  <span class="material-symbols-outlined waffle-popup__footer-icon">auto_awesome</span>
+                  <span>ECOSISTEMA 4GUARD WMS</span>
+                </div>
+                <span class="waffle-popup__footer-version">V2.8.14</span>
+              </div>
+
+            </div>
+          }
+        </div>
+
         <!-- Botón claro / oscuro -->
         <button
           id="theme-toggle-btn"
@@ -217,6 +510,24 @@
 
     <!-- Router content -->
     <main class="shell__content" role="main" id="main-content">
+      @if (resumedProcessNotice()) {
+        <div class="bg-emerald-950/90 border border-emerald-500/40 text-emerald-100 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-3 mb-6 animate-fade-in">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+              <span class="material-symbols-outlined text-xl">sync_saved_loc</span>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Proceso Reanudado con Éxito</h4>
+              <p class="text-xs text-slate-200 mt-0.5">
+                Has vuelto a <strong class="text-white font-bold underline">{{ resumedProcessNotice() }}</strong>. Tu trabajo y contexto se mantienen disponibles.
+              </p>
+            </div>
+          </div>
+          <button (click)="resumedProcessNotice.set(null)" type="button" class="text-emerald-400 hover:text-emerald-200 p-1">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+      }
       <router-outlet />
     </main>
   </div>
@@ -554,3 +865,17 @@
     </div>
   </div>
 }
+
+<!-- Modal Cambio Rápido de Operador por PIN -->
+<fg-quick-operator-switch-modal
+  [isOpen]="isQuickOperatorModalOpen()"
+  (closeModal)="closeQuickOperatorModal()"
+></fg-quick-operator-switch-modal>
+
+<!-- Drawer Conversacional ForBot AI -->
+<fg-forbot-chat-drawer></fg-forbot-chat-drawer>
+
+<!-- Floating Action Button (FAB) ForBot AI — Esquina Inferior Derecha -->
+<div class="fixed bottom-6 right-6 z-50">
+  <fg-forbot-trigger-button></fg-forbot-trigger-button>
+</div>

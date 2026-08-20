@@ -31,6 +31,7 @@ import {
 } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { ShiftService } from '../services/shift.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -44,6 +45,8 @@ import {
   SHIFT_STATUS_LABELS,
   calculateShiftDuration,
   ShiftDurationCalculation,
+  ShiftAuditLogResponse,
+  ShiftAuditLogDetail,
 } from '../models/shift.model';
 
 type FormMode = 'idle' | 'new' | 'edit';
@@ -68,10 +71,22 @@ function distinctStartEndTimeValidator(control: AbstractControl): ValidationErro
   return null;
 }
 
+/** Normaliza horas en formato "06:00:00" o "06:00" a exactamente 5 caracteres ("06:00") para inputs <input type="time"> */
+function formatTimeForInput(timeStr: string | null | undefined): string {
+  if (!timeStr) return '08:00';
+  const trimmed = timeStr.trim();
+  if (trimmed.length >= 5) {
+    return trimmed.substring(0, 5);
+  }
+  return trimmed;
+}
+
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'fg-shift-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './shift-management.component.html',
   styleUrl: './shift-management.component.css',
 })
@@ -98,6 +113,11 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   protected readonly isSubmitting = signal<boolean>(false);
   protected readonly formError = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
+  protected readonly formValuesSignal = signal<any>(null);
+
+  // Historial de Auditoría
+  protected readonly auditLogs = signal<ShiftAuditLogResponse[]>([]);
+  protected readonly isLoadingAudit = signal<boolean>(false);
 
   // Control de diálogo de descarte de cambios
   protected readonly showUnsavedChangesModal = signal<boolean>(false);
@@ -118,23 +138,25 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
 
   // Cálculo derivado de duración de jornada en tiempo real
   protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() => {
-    if (!this.shiftForm) {
-      return { hours: 0, isOvernight: false, formattedDuration: '0 h' };
-    }
-    const start = this.shiftForm.get('startTime')?.value;
-    const end = this.shiftForm.get('endTime')?.value;
-    const breakMins = Number(this.shiftForm.get('restBreakMinutes')?.value) || 0;
+    const val = this.formValuesSignal();
+    const start = val?.startTime || this.shiftForm?.get('startTime')?.value;
+    const end = val?.endTime || this.shiftForm?.get('endTime')?.value;
+    const breakMins = Number(val?.restBreakMinutes ?? this.shiftForm?.get('restBreakMinutes')?.value) || 0;
     return calculateShiftDuration(start, end, breakMins);
   });
 
   ngOnInit(): void {
     this.initForm();
 
+    // Carga perezosa (lazy): Ejecutar la petición HTTP únicamente cuando el usuario navega a la pantalla de Turnos
+    this.shiftService.loadShifts();
+
     // Sincronizar selección inicial del servicio con el formulario
     const currentSelected = this.shiftService.selectedShift();
     if (currentSelected) {
       this.populateForm(currentSelected);
       this.formMode.set('edit');
+      this.loadAuditLogs(currentSelected.id);
     }
   }
 
@@ -158,8 +180,8 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         ],
         name: ['', [Validators.required, Validators.maxLength(100)]],
         description: ['', [Validators.maxLength(250)]],
-        startTime: ['08:00', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d$/)]],
-        endTime: ['17:00', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d$/)]],
+        startTime: ['08:00', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)]],
+        endTime: ['17:00', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)]],
         operatingDays: [
           ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
           [minOperatingDaysValidator],
@@ -171,10 +193,56 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       { validators: [distinctStartEndTimeValidator] }
     );
 
+    this.formValuesSignal.set(this.shiftForm.value);
+    this.shiftForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
+      this.formValuesSignal.set(val);
+    });
+
     // Deshabilitar formulario si el rol es solo lectura (SHIFT_LEADER)
     if (this.isShiftLeaderReadOnly()) {
       this.shiftForm.disable();
     }
+  }
+
+  // ─── Gestión de Auditoría ─────────────────────────────────────────
+
+  protected loadAuditLogs(shiftId: string): void {
+    if (!shiftId) return;
+    this.isLoadingAudit.set(true);
+    this.shiftService.getAuditLogs(shiftId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (logs) => {
+        this.isLoadingAudit.set(false);
+        this.auditLogs.set(logs || []);
+      },
+      error: (err) => {
+        this.isLoadingAudit.set(false);
+        console.error('Error al cargar historial de auditoría del turno:', err);
+      },
+    });
+  }
+
+  protected getAuditIcon(action: string): string {
+    const act = (action || '').toUpperCase();
+    if (act.includes('CREATE') || act.includes('CREATED')) return 'add_circle';
+    if (act.includes('DELETE') || act.includes('DELETED')) return 'delete';
+    if (act.includes('STATUS') || act.includes('TOGGLE')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action: string): string {
+    const act = (action || '').toUpperCase();
+    if (act.includes('CREATE') || act.includes('CREATED')) return 'tl-node--success';
+    if (act.includes('DELETE') || act.includes('DELETED')) return 'tl-node--danger';
+    if (act.includes('STATUS') || act.includes('TOGGLE')) return 'tl-node--warning';
+    return 'tl-node--info';
+  }
+
+  protected getAuditSummary(action: string): string {
+    const act = (action || '').toUpperCase();
+    if (act.includes('CREATE') || act.includes('CREATED')) return 'Creación de turno';
+    if (act.includes('DELETE') || act.includes('DELETED')) return 'Eliminación de turno';
+    if (act.includes('STATUS') || act.includes('TOGGLE')) return 'Cambio de estatus';
+    return 'Modificación de parámetros';
   }
 
   // ─── Gestión de Selección y Navegación ────────────────────────────────────
@@ -199,6 +267,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
     if (selected) {
       this.populateForm(selected);
       this.formMode.set('edit');
+      this.loadAuditLogs(selected.id);
     }
     this.formError.set(null);
     this.successMessage.set(null);
@@ -219,6 +288,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   private forceStartNewShift(): void {
     this.shiftService.selectShift(null);
     this.resetFormForNew();
+    this.auditLogs.set([]);
     this.formMode.set('new');
     this.formError.set(null);
     this.successMessage.set(null);
@@ -274,13 +344,15 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       code: shift.code,
       name: shift.name,
       description: shift.description || '',
-      startTime: shift.startTime,
-      endTime: shift.endTime,
+      startTime: formatTimeForInput(shift.startTime),
+      endTime: formatTimeForInput(shift.endTime),
       operatingDays: [...shift.operatingDays],
       status: shift.status,
       restBreakMinutes: shift.restBreakMinutes ?? 0,
       toleranceMinutes: shift.toleranceMinutes ?? 0,
     });
+
+    this.formValuesSignal.set(this.shiftForm.value);
 
     if (this.isShiftLeaderReadOnly()) {
       this.shiftForm.disable();
@@ -301,6 +373,8 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       restBreakMinutes: 60,
       toleranceMinutes: 10,
     });
+
+    this.formValuesSignal.set(this.shiftForm.value);
 
     if (this.isShiftLeaderReadOnly()) {
       this.shiftForm.disable();
@@ -327,33 +401,32 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
     const val = this.shiftForm.value;
     const mode = this.formMode();
 
+    const formatTime = (t: string) => (t && t.length === 5 ? `${t}:00` : t);
+
     if (mode === 'new') {
       const createReq: CreateShiftRequest = {
         code: val.code,
         name: val.name,
         description: val.description,
-        startTime: val.startTime,
-        endTime: val.endTime,
+        startTime: formatTime(val.startTime),
+        endTime: formatTime(val.endTime),
         operatingDays: val.operatingDays,
         status: val.status,
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
+        scopeType: 'BRANCH',
       };
 
       this.shiftService.createShift(createReq).subscribe({
         next: (created) => {
           this.isSubmitting.set(false);
           this.formMode.set('edit');
+          this.populateForm(created);
           this.shiftForm.markAsPristine();
-          const msg = `Turno "${created.name}" (${created.code}) registrado exitosamente.`;
-          this.successMessage.set(msg);
-          this.toastService.success(msg);
+          this.loadAuditLogs(created.id);
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          const errMsg = err?.message || 'Error al guardar el nuevo turno.';
-          this.formError.set(errMsg);
-          this.toastService.error(errMsg);
         },
       });
     } else if (mode === 'edit') {
@@ -364,30 +437,28 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       }
 
       const updateReq: UpdateShiftRequest = {
+        id: selected.id,
         code: val.code,
         name: val.name,
         description: val.description,
-        startTime: val.startTime,
-        endTime: val.endTime,
+        startTime: formatTime(val.startTime),
+        endTime: formatTime(val.endTime),
         operatingDays: val.operatingDays,
         status: val.status,
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
+        scopeType: 'BRANCH',
       };
 
       this.shiftService.updateShift(selected.id, updateReq).subscribe({
         next: (updated) => {
           this.isSubmitting.set(false);
+          this.populateForm(updated);
           this.shiftForm.markAsPristine();
-          const msg = `Turno "${updated.name}" actualizado correctamente.`;
-          this.successMessage.set(msg);
-          this.toastService.success(msg);
+          this.loadAuditLogs(updated.id);
         },
         error: (err) => {
           this.isSubmitting.set(false);
-          const errMsg = err?.message || 'Error al actualizar el turno.';
-          this.formError.set(errMsg);
-          this.toastService.error(errMsg);
         },
       });
     }
@@ -402,16 +473,10 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       next: (updated) => {
         this.isSubmitting.set(false);
         this.populateForm(updated);
-        const actionLabel = updated.status === 'ACTIVE' ? 'activado' : 'desactivado';
-        const msg = `Turno "${updated.name}" ${actionLabel} correctamente.`;
-        this.successMessage.set(msg);
-        this.toastService.success(msg);
+        this.loadAuditLogs(updated.id);
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        const errMsg = err?.message || 'Error al cambiar estatus del turno.';
-        this.formError.set(errMsg);
-        this.toastService.error(errMsg);
       },
     });
   }

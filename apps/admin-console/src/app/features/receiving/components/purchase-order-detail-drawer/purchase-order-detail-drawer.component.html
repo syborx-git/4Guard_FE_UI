@@ -1,0 +1,781 @@
+@if (isOpen && appointment) {
+  <div class="po-doc-drawer-overlay" (click)="onClose()"></div>
+  <aside class="po-doc-drawer" role="dialog" aria-modal="true" aria-labelledby="po-doc-drawer-title">
+
+    <!-- HEADER PRINCIPAL FIJO -->
+    <header class="po-doc-drawer__header">
+      <div class="po-doc-drawer__title-wrap">
+        <span class="material-symbols-outlined po-doc-drawer__icon" aria-hidden="true">description</span>
+        <div>
+          <h3 id="po-doc-drawer-title" class="po-doc-drawer__title">EXPEDIENTE DE ORDEN DE COMPRA</h3>
+          <p class="po-doc-drawer__subtitle">
+            Consulta documental y trazabilidad · Cita <strong>{{ appointment!.id }}</strong> ({{ appointment!.asnReference }})
+          </p>
+        </div>
+      </div>
+      <button type="button" class="po-doc-drawer__close" (click)="onClose()" aria-label="Cerrar expediente documental">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <!-- NAVEGACIÓN DE PESTAÑAS STICKY -->
+    <nav class="po-doc-tabs" aria-label="Secciones del expediente">
+      <button
+        type="button"
+        class="po-doc-tab"
+        [class.po-doc-tab--active]="activeTab() === 'SUMMARY'"
+        (click)="activeTab.set('SUMMARY')">
+        <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
+        <span>Resumen</span>
+      </button>
+
+      @if (canViewDocument()) {
+        <button
+          type="button"
+          class="po-doc-tab"
+          [class.po-doc-tab--active]="activeTab() === 'DOCUMENT'"
+          (click)="activeTab.set('DOCUMENT')">
+          <span class="material-symbols-outlined" aria-hidden="true">picture_as_pdf</span>
+          <span>Documento Original</span>
+          @if (activeDocumentRecord()) {
+            <span class="po-ver-badge-micro">v{{ activeDocumentRecord()!.currentVersionNumber }}</span>
+          }
+        </button>
+      }
+
+      @if (canViewComparison()) {
+        <button
+          type="button"
+          class="po-doc-tab"
+          [class.po-doc-tab--active]="activeTab() === 'COMPARISON'"
+          (click)="activeTab.set('COMPARISON')">
+          <span class="material-symbols-outlined" aria-hidden="true">compare_arrows</span>
+          <span>Comparación</span>
+        </button>
+      }
+
+      @if (canViewAudit()) {
+        <button
+          type="button"
+          class="po-doc-tab"
+          [class.po-doc-tab--active]="activeTab() === 'AUDIT'"
+          (click)="activeTab.set('AUDIT')">
+          <span class="material-symbols-outlined" aria-hidden="true">history</span>
+          <span>Auditoría</span>
+        </button>
+      }
+    </nav>
+
+    <!-- CUERPO DEL DRAWER CON SCROLL INTERNO -->
+    <div class="po-doc-drawer__body">
+
+      <!-- BANNERS DE MENSAJES DE ALERTA O ÉXITO -->
+      @if (docErrorMessage()) {
+        <div class="po-alert po-alert--danger" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <span>{{ docErrorMessage() }}</span>
+        </div>
+      }
+
+      @if (docSuccessMessage()) {
+        <div class="po-alert po-alert--success" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+          <span>{{ docSuccessMessage() }}</span>
+        </div>
+      }
+
+      @switch (activeTab()) {
+
+        <!-- ══ PESTAÑA 1: RESUMEN EJECUTIVO ══ -->
+        @case ('SUMMARY') {
+          <section class="po-doc-section">
+            
+            @if (purchaseOrder(); as po) {
+              <!-- Banner de Estado de la Orden de Compra -->
+              <div class="po-doc-status-banner">
+                <div class="po-doc-status-left">
+                  <span class="po-doc-status-lbl">Estatus Documental OC</span>
+                  <span class="po-doc-chip" [class]="poStatusClasses[po.status]">
+                    {{ poStatusTranslations[po.status] || po.status }}
+                  </span>
+                </div>
+                <div class="po-doc-status-right">
+                  <span class="po-doc-status-lbl">Validación Documental (HU-029)</span>
+                  <span class="rc-badge" [class]="poValidationStatusClasses[appointment!.poValidationStatus || 'PENDING']">
+                    {{ poValidationStatusLabels[appointment!.poValidationStatus || 'PENDING'] }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Grid de Datos Principales -->
+              <div class="po-doc-grid-card">
+                <h4 class="po-doc-card-title">
+                  <span class="material-symbols-outlined" aria-hidden="true">assignment</span>
+                  Datos de Cabecera de Orden de Compra
+                </h4>
+                <div class="po-doc-info-grid">
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Número de OC</span>
+                    <strong class="po-doc-info-val po-mono">{{ po.poNumber }}</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Cliente 3PL</span>
+                    <strong class="po-doc-info-val">{{ po.clientName }} ({{ po.clientId }})</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Proveedor</span>
+                    <strong class="po-doc-info-val">{{ po.supplierName }} ({{ po.supplierId }})</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Sucursal Destino</span>
+                    <strong class="po-doc-info-val">{{ po.branchName }} ({{ po.branchId }})</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">ASN Referenciado</span>
+                    <strong class="po-doc-info-val po-mono">{{ po.asnReference || 'No especificado' }}</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Fecha de Emisión</span>
+                    <strong class="po-doc-info-val">{{ formatDate(po.issueDate) }}</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Fecha de Vencimiento</span>
+                    <strong class="po-doc-info-val">{{ formatDate(po.expirationDate) }}</strong>
+                  </div>
+                  <div class="po-doc-info-item">
+                    <span class="po-doc-info-lbl">Fuente de Datos</span>
+                    <span class="po-doc-source-tag">
+                      <span class="material-symbols-outlined" aria-hidden="true">api</span>
+                      Integración ERP / Datos Estructurados
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Resumen de Cantidades Totales Operativas -->
+              <div class="po-doc-grid-card">
+                <h4 class="po-doc-card-title">
+                  <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+                  Totales Operativos de la Orden de Compra
+                </h4>
+                <div class="po-doc-metrics-strip">
+                  <div class="po-doc-metric">
+                    <span class="po-doc-metric__val">{{ po.lines.length }}</span>
+                    <span class="po-doc-metric__lbl">Líneas Autorizadas</span>
+                  </div>
+                  <div class="po-doc-metric">
+                    <span class="po-doc-metric__val po-txt-gold">{{ appointment!.lines.length }}</span>
+                    <span class="po-doc-metric__lbl">Líneas en Cita</span>
+                  </div>
+                  @if (validationResult(); as res) {
+                    <div class="po-doc-metric">
+                      <span class="po-doc-metric__val po-txt-success">{{ res.matchLines }}</span>
+                      <span class="po-doc-metric__lbl">Conciliadas (Match)</span>
+                    </div>
+                    <div class="po-doc-metric">
+                      <span class="po-doc-metric__val po-txt-warn">{{ res.discrepancyLines }}</span>
+                      <span class="po-doc-metric__lbl">Discrepancias</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            } @else {
+              <!-- Estado si la OC no existe o Cita Sin OC -->
+              @if (!appointment!.poNumber) {
+                <div class="po-doc-empty-state">
+                  <span class="material-symbols-outlined po-doc-empty-icon" aria-hidden="true">do_not_disturb_on</span>
+                  <h4 class="po-doc-empty-title">Cita registrada sin Orden de Compra</h4>
+                  <p class="po-doc-empty-desc">
+                    Esta recepción fue agendada bajo modalidad directa o exenta de validación documental previa (NOT_REQUIRED).
+                  </p>
+                </div>
+              } @else {
+                <div class="po-doc-empty-state po-doc-empty-state--danger">
+                  <span class="material-symbols-outlined po-doc-empty-icon" aria-hidden="true">warning</span>
+                  <h4 class="po-doc-empty-title">Orden de Compra No Encontrada</h4>
+                  <p class="po-doc-empty-desc">
+                    No se encontró la Orden de Compra <strong>{{ appointment!.poNumber }}</strong> en el repositorio activo de la sucursal.
+                  </p>
+                </div>
+              }
+            }
+
+          </section>
+        }
+
+        <!-- ══ PESTAÑA 2: DOCUMENTO ORIGINAL (EVOLUCIÓN V2 - CARGA, REEMPLAZO, VERSIONADO Y VISOR) ══ -->
+        @case ('DOCUMENT') {
+          <section class="po-doc-section">
+
+            <!-- Hidden File Inputs para Selección y Reemplazo -->
+            <input
+              type="file"
+              id="po-doc-file-input"
+              style="display: none;"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              (change)="onFileSelected($event)" />
+
+            <input
+              type="file"
+              id="po-doc-replace-input"
+              style="display: none;"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              (change)="onFileSelected($event)" />
+
+            <!-- MODO A: PRECONFIRMACIÓN / PREVISUALIZACIÓN DE ASOCIACIÓN -->
+            @if (docSubMode() === 'PREVIEW_CONFIRM') {
+              @if (stagedPayload(); as staged) {
+                <div class="po-doc-preview-card">
+                  <div class="po-doc-preview-head">
+                    <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+                    <div>
+                      <h4 class="po-doc-preview-title">
+                        {{ isReplacement() ? 'Confirmar Reemplazo de Versión Documental' : 'Confirmar Asociación de Documento' }}
+                      </h4>
+                      <span class="po-doc-preview-sub">Verifique los metadatos del archivo antes de confirmar.</span>
+                    </div>
+                  </div>
+
+                  <div class="po-doc-preview-body">
+                    <div class="po-doc-file-badge">
+                      <span class="material-symbols-outlined po-doc-file-icon" aria-hidden="true">
+                        {{ staged.fileType === 'PDF' ? 'picture_as_pdf' : 'image' }}
+                      </span>
+                      <div class="po-doc-file-meta">
+                        <strong class="po-doc-file-name">{{ staged.fileName }}</strong>
+                        <span class="po-doc-file-specs">{{ staged.fileType }} · {{ staged.fileSizeFormatted }}</span>
+                      </div>
+                    </div>
+
+                    <div class="po-doc-info-grid">
+                      <div class="po-doc-info-item">
+                        <span class="po-doc-info-lbl">Orden de Compra</span>
+                        <strong class="po-doc-info-val po-mono">{{ appointment!.poNumber }}</strong>
+                      </div>
+                      <div class="po-doc-info-item">
+                        <span class="po-doc-info-lbl">Cita de Recepción</span>
+                        <strong class="po-doc-info-val po-mono">{{ appointment!.id }}</strong>
+                      </div>
+                      <div class="po-doc-info-item">
+                        <span class="po-doc-info-lbl">Sucursal</span>
+                        <strong class="po-doc-info-val">{{ appointment!.branchName }}</strong>
+                      </div>
+                      <div class="po-doc-info-item">
+                        <span class="po-doc-info-lbl">Usuario de Carga</span>
+                        <strong class="po-doc-info-val">{{ userName() }} ({{ userRole() }})</strong>
+                      </div>
+                    </div>
+
+                    <!-- Justificación Obligatoria para Reemplazo de Versión -->
+                    @if (isReplacement()) {
+                      <div class="po-form-field" style="margin-top: 0.5rem;">
+                        <label class="rc-label">
+                          Motivo del Reemplazo de Versión <span class="rc-req">* (mínimo 10 caracteres)</span>
+                        </label>
+                        <textarea
+                          class="rc-textarea"
+                          rows="2"
+                          placeholder="Explicar las causas del cambio de versión (ej. Documento corregido, firma de proveedor...)"
+                          [value]="replacementReason()"
+                          (input)="replacementReason.set($any($event.target).value)"></textarea>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="po-doc-preview-actions">
+                    <button type="button" class="rc-btn rc-btn--secondary" (click)="cancelStaging()">
+                      Cancelar
+                    </button>
+                    <button type="button" class="rc-btn rc-btn--gold" (click)="confirmAssociation()">
+                      <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+                      {{ isReplacement() ? 'Confirmar Reemplazo de Versión' : 'Confirmar Asociación' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else if (docSubMode() === 'HISTORY_VIEW') {
+              @if (activeDocumentRecord(); as docRec) {
+                <div class="po-doc-history-card">
+                  <div class="po-doc-history-head">
+                    <div class="po-doc-history-title-wrap">
+                      <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                      <h4 class="po-doc-history-title">Historial de Versiones del Expediente ({{ docRec.versionsHistory.length }})</h4>
+                    </div>
+                    <button type="button" class="rc-btn rc-btn--secondary rc-btn--xs" (click)="docSubMode.set('VIEW')">
+                      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                      Volver al Visor
+                    </button>
+                  </div>
+
+                  <div class="po-doc-history-list">
+                    @for (ver of docRec.versionsHistory; track ver.id) {
+                      <div class="po-doc-history-item" [class.po-doc-history-item--active]="docRec.activeVersion.versionNumber === ver.versionNumber">
+                        <div class="po-doc-history-item__head">
+                          <span class="po-ver-badge" [class.po-ver-badge--active]="docRec.activeVersion.versionNumber === ver.versionNumber">
+                            {{ ver.versionLabel }}
+                            @if (docRec.activeVersion.versionNumber === ver.versionNumber) {
+                              (Activa)
+                            }
+                          </span>
+                          <span class="po-doc-history-item__time">{{ formatDateTime(ver.uploadedAt) }}</span>
+                        </div>
+                        <div class="po-doc-history-item__name">
+                          <span class="material-symbols-outlined" aria-hidden="true">
+                            {{ ver.fileType === 'PDF' ? 'picture_as_pdf' : 'image' }}
+                          </span>
+                          <strong>{{ ver.fileName }}</strong> ({{ ver.fileSizeFormatted }})
+                        </div>
+                        <div class="po-doc-history-item__meta">
+                          👤 {{ ver.uploadedBy }}
+                        </div>
+                        @if (ver.changeReason) {
+                          <p class="po-doc-history-item__reason">"{{ ver.changeReason }}"</p>
+                        }
+                        @if (docRec.activeVersion.versionNumber !== ver.versionNumber) {
+                          <button type="button" class="rc-btn rc-btn--ghost rc-btn--xs" style="margin-top: 0.35rem;" (click)="restoreHistoricalVersion(ver.versionNumber)">
+                            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                            Ver esta versión
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            } @else {
+              <!-- SUB-MODO C1: EXPEDIENTE ASOCIADO ACTIVO (VISOR ENTERPRISE + BARRA ACCIONES) -->
+              @if (activeDocumentRecord(); as docRec) {
+
+                <div class="po-doc-viewer-card">
+                  
+                  <!-- Cabecera de Ficha Documental -->
+                  <div class="po-doc-viewer-head">
+                    <div class="po-doc-viewer-meta-left">
+                      <span class="po-ver-badge po-ver-badge--active">{{ docRec.activeVersion.versionLabel }}</span>
+                      <div>
+                        <strong class="po-doc-viewer-name">{{ docRec.activeVersion.fileName }}</strong>
+                        <span class="po-doc-viewer-specs">
+                          {{ docRec.activeVersion.fileType }} · {{ docRec.activeVersion.fileSizeFormatted }} · Cargado por {{ docRec.activeVersion.uploadedBy }} el {{ formatDateTime(docRec.activeVersion.uploadedAt) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="po-doc-viewer-meta-right">
+                      <span class="po-doc-active-tag">✔ ACTIVO</span>
+                    </div>
+                  </div>
+
+                  <!-- Área Visor de Documento Integrated Canvas/Iframe -->
+                  <div class="po-doc-viewer-canvas">
+                    @if (docRec.activeVersion.fileType === 'PDF') {
+                      <div class="po-paper-doc">
+                        <div class="po-paper-head">
+                          <h3 class="po-paper-company">{{ purchaseOrder()?.clientName || 'CONFECCIONES TELY, S.A.' }}</h3>
+                          <span class="po-paper-tax">Ruc. 129391-9283</span>
+                          
+                          <div class="po-paper-title-box">
+                            <span class="po-paper-title-pill">ORDEN DE COMPRA</span>
+                            <span class="po-paper-no">No: <strong>{{ docRec.poNumber }}</strong></span>
+                          </div>
+                        </div>
+
+                        <div class="po-paper-meta-rows">
+                          <div class="po-paper-row">
+                            <span class="po-paper-lbl">Proveedor:</span>
+                            <span class="po-paper-val po-paper-val--line">{{ purchaseOrder()?.supplierName || 'TIENDAS MIL, S.A.' }}</span>
+                          </div>
+                          <div class="po-paper-row po-paper-row--split">
+                            <div class="po-paper-col">
+                              <span class="po-paper-lbl">Fecha del pedido:</span>
+                              <span class="po-paper-val po-paper-val--line">{{ formatDate(purchaseOrder()?.issueDate || '2026-07-25') }}</span>
+                            </div>
+                            <div class="po-paper-col">
+                              <span class="po-paper-lbl">Fecha de pago:</span>
+                              <span class="po-paper-val po-paper-val--line">{{ formatDate(purchaseOrder()?.expirationDate || '2026-08-28') }}</span>
+                            </div>
+                          </div>
+                          <div class="po-paper-row">
+                            <span class="po-paper-lbl">Términos de entrega:</span>
+                            <span class="po-paper-val po-paper-val--line">En las instalaciones de la fábrica (Planta {{ purchaseOrder()?.branchName || 'Central CDMX' }})</span>
+                          </div>
+                        </div>
+
+                        <p class="po-paper-intro">Sírvanse por este medio suministrarnos los siguientes artículos:</p>
+
+                        <table class="po-paper-table">
+                          <thead>
+                            <tr>
+                              <th class="col-num">No.</th>
+                              <th class="col-art">ARTÍCULO</th>
+                              <th class="col-qty">CANTIDAD</th>
+                              <th class="col-price">PRECIO UNITARIO</th>
+                              <th class="col-total">PRECIO TOTAL</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (line of appointment!.lines; track line.lineId; let idx = $index) {
+                              <tr>
+                                <td class="col-num">{{ idx + 1 }}</td>
+                                <td class="col-art">
+                                  <strong>{{ line.sku }}</strong> — {{ line.description }}
+                                </td>
+                                <td class="col-qty">{{ line.expectedQty | number }} {{ line.unit }}</td>
+                                <td class="col-price">45.00</td>
+                                <td class="col-total">${{ (line.expectedQty * 45) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colspan="4" class="col-total-lbl">COSTO TOTAL</td>
+                              <td class="col-total-val">$85,740.00</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+
+                        <div class="po-paper-signatures">
+                          <div class="po-paper-sig">
+                            <div class="sig-line"></div>
+                            <span class="sig-label">Elaborado Por:</span>
+                          </div>
+                          <div class="po-paper-sig">
+                            <div class="sig-line"></div>
+                            <span class="sig-label">Autorizado Por:</span>
+                          </div>
+                          <div class="po-paper-sig">
+                            <div class="sig-line"></div>
+                            <span class="sig-label">Recibido Por:</span>
+                          </div>
+                        </div>
+
+                        <div class="po-paper-footnote">
+                          <span>Imprenta San Sebastián, Managua - Nicaragua Tel: 289 3849 Fax: 289 7364</span>
+                          <span class="po-paper-watermark">✔ EXPEDIENTE DIGITAL INALTERABLE 4GUARD WMS · VERSIÓN {{ docRec.activeVersion.versionLabel }}</span>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="po-doc-img-preview-box">
+                        <img [src]="docRec.activeVersion.fileUrl || 'assets/icons/document-placeholder.png'" [alt]="docRec.activeVersion.fileName" class="po-doc-img-responsive" />
+                      </div>
+                    }
+                  </div>
+
+                  <!-- BARRA DE ACCIONES ENTERPRISE ULTRA-MEJORADA -->
+                  <div class="po-doc-viewer-actions-bar">
+                    @if (canViewDocument()) {
+                      <button type="button" class="po-doc-action-btn po-doc-action-btn--view" (click)="openFullscreenViewer()">
+                        <span class="material-symbols-outlined" aria-hidden="true">open_in_full</span>
+                        <span>Ver Pantalla Completa</span>
+                      </button>
+                    }
+
+                    @if (canDownloadDocument()) {
+                      <button type="button" class="po-doc-action-btn po-doc-action-btn--download" (click)="downloadDocument()">
+                        <span class="material-symbols-outlined" aria-hidden="true">picture_as_pdf</span>
+                        <span>Descargar PDF</span>
+                      </button>
+                    }
+
+                    @if (canReplaceDocument()) {
+                      <button type="button" class="po-doc-action-btn po-doc-action-btn--replace" (click)="startReplacement()">
+                        <span class="material-symbols-outlined" aria-hidden="true">published_with_changes</span>
+                        <span>Reemplazar Documento</span>
+                      </button>
+                    }
+
+                    @if (canViewHistory()) {
+                      <button type="button" class="po-doc-action-btn po-doc-action-btn--history" (click)="docSubMode.set('HISTORY_VIEW')">
+                        <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                        <span>Historial de Versiones</span>
+                        <span class="po-action-badge">{{ docRec.versionsHistory.length }}</span>
+                      </button>
+                    }
+                  </div>
+
+                </div>
+              } @else {
+                <div class="po-doc-empty-state">
+
+                  <span class="material-symbols-outlined po-doc-empty-icon" aria-hidden="true">cloud_upload</span>
+                  <h4 class="po-doc-empty-title">No existe un documento asociado a esta Orden de Compra.</h4>
+                  <p class="po-doc-empty-desc">
+                    Asocie el expediente digital original (PDF o imagen escaneada) para respaldar la recepción y habilitar la trazabilidad inalterable.
+                  </p>
+
+                  @if (canUploadDocument()) {
+                    <!-- ZONA DRAG & DROP PROFESIONAL -->
+                    <div
+                      class="po-drag-drop-zone"
+                      [class.po-drag-drop-zone--dragging]="isDragging()"
+                      (dragover)="onDragOver($event)"
+                      (dragleave)="onDragLeave($event)"
+                      (drop)="onFileDrop($event)">
+                      
+                      <span class="material-symbols-outlined po-drop-icon" aria-hidden="true">upload_file</span>
+                      <strong class="po-drop-title">Arrastra aquí el documento de la Orden de Compra</strong>
+                      <span class="po-drop-sub">o selecciona un archivo de tu equipo</span>
+                      <span class="po-drop-specs">Formatos permitidos: PDF, JPG, JPEG, PNG · Máximo 10 MB</span>
+
+                      <div class="po-drop-actions">
+                        <button type="button" class="rc-btn rc-btn--gold" (click)="fileInputTrigger.click()">
+                          <span class="material-symbols-outlined" aria-hidden="true">folder_open</span>
+                          Seleccionar archivo
+                        </button>
+                        <input #fileInputTrigger type="file" style="display:none;" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" (change)="onFileSelected($event)" />
+
+                        <button type="button" class="rc-btn rc-btn--secondary" (click)="onCameraCaptureMock()">
+                          <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+                          Tomar fotografía
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="po-no-cap-notice">
+                      <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                      <span>No cuentas con la capacidad <strong>DOCUMENT_UPLOAD</strong> para asociar documentos a esta Orden de Compra.</span>
+                    </div>
+                  }
+                </div>
+              }
+
+            }
+
+
+          </section>
+        }
+
+        <!-- ══ PESTAÑA 3: COMPARACIÓN DOCUMENTAL (HU-029) ══ -->
+        @case ('COMPARISON') {
+          <section class="po-doc-section">
+            @if (validationResult(); as res) {
+              <!-- Gauge & Score de Conciliación -->
+              <div class="po-doc-comp-banner">
+                <div class="po-doc-comp-pct">
+                  <strong>{{ res.overallMatchPercent }}%</strong>
+                  <span>Conciliado</span>
+                </div>
+                <div class="po-doc-comp-info">
+                  <span class="po-doc-comp-outcome"
+                    [class.outcome--match]="res.calculatedOutcome === 'MATCH'"
+                    [class.outcome--diff]="res.calculatedOutcome === 'WITH_DIFFERENCES'"
+                    [class.outcome--blocked]="res.calculatedOutcome === 'BLOCKED'">
+                    Resultado Técnico: {{ res.calculatedOutcome }}
+                  </span>
+                  <span class="po-doc-comp-sub">
+                    {{ res.matchLines }} de {{ res.totalLines }} líneas coinciden exactamente con la cita.
+                  </span>
+                </div>
+              </div>
+
+              <!-- Tabla Comparativa de Líneas -->
+              <div class="po-doc-table-wrap">
+                <table class="po-doc-table">
+                  <thead>
+                    <tr>
+                      <th>SKU</th>
+                      <th>Descripción</th>
+                      <th>Pendiente OC</th>
+                      <th>Cant. Cita</th>
+                      <th>Unidad</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of res.lineResults; track line.lineId) {
+                      <tr [class.row-match]="line.status === 'MATCH'" [class.row-disc]="line.status !== 'MATCH'">
+                        <td><strong class="po-mono">{{ line.sku }}</strong></td>
+                        <td>{{ line.description }}</td>
+                        <td><strong>{{ line.pendingPOQty }}</strong></td>
+                        <td><strong>{{ line.appointmentQty }}</strong></td>
+                        <td>{{ line.unitAppointment }}</td>
+                        <td>
+                          <span class="po-line-chip"
+                            [class.chip--match]="line.status === 'MATCH'"
+                            [class.chip--disc]="line.status === 'DISCREPANCY'"
+                            [class.chip--extra]="line.status === 'EXTRA_IN_APPOINTMENT'"
+                            [class.chip--missing]="line.status === 'MISSING_IN_APPOINTMENT'">
+                            {{ line.status === 'MATCH' ? 'Match 100%' : (line.status === 'DISCREPANCY' ? 'Discrepancia' : (line.status === 'EXTRA_IN_APPOINTMENT' ? 'SKU No en OC' : 'Omitido en Cita')) }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Botón para ir a la Acción de Conciliación HU-029 -->
+              <div class="po-doc-action-strip">
+                <button type="button" class="rc-btn rc-btn--gold" (click)="onGoToPOValidation()">
+                  <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+                  Ir a Conciliación Documental HU-029
+                </button>
+              </div>
+            } @else {
+              <div class="po-doc-empty-state">
+                <span class="material-symbols-outlined po-doc-empty-icon" aria-hidden="true">rule</span>
+                <h4 class="po-doc-empty-title">Sin datos de comparación</h4>
+                <p class="po-doc-empty-desc">No existen datos de comparación registrados para esta recepción.</p>
+              </div>
+            }
+          </section>
+        }
+
+        <!-- ══ PESTAÑA 4: AUDITORÍA Y TRAZABILIDAD (Ajustes #9 y #10) ══ -->
+        @case ('AUDIT') {
+          <section class="po-doc-section">
+            <h4 class="po-doc-card-title">
+              <span class="material-symbols-outlined" aria-hidden="true">history</span>
+              Bitácora de Eventos Documentales de la Cita
+            </h4>
+
+            @if (auditEntries().length > 0) {
+              <div class="po-doc-audit-list">
+                @for (entry of auditEntries(); track entry.id) {
+                  <div class="po-doc-audit-item">
+                    <div class="po-doc-audit-head">
+                      <span class="po-doc-audit-action">{{ entry.action }}</span>
+                      <span class="po-doc-audit-time">{{ formatDateTime(entry.performedAt) }}</span>
+                    </div>
+                    <div class="po-doc-audit-user">
+                      👤 <strong>{{ entry.performedBy }}</strong> ({{ entry.userRole }})
+                    </div>
+                    @if (entry.reason) {
+                      <p class="po-doc-audit-reason">"{{ entry.reason }}"</p>
+                    }
+                    <div class="po-doc-audit-trans">
+                      Estado: <span class="po-mono">{{ entry.previousStatus }}</span> ➔ <strong class="po-mono">{{ entry.newStatus }}</strong>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="po-doc-empty-state">
+                <span class="material-symbols-outlined po-doc-empty-icon" aria-hidden="true">history_toggle_off</span>
+                <h4 class="po-doc-empty-title">Sin historial registrado</h4>
+                <p class="po-doc-empty-desc">Esta recepción no ha generado eventos de decisión o validación documental aún.</p>
+              </div>
+            }
+          </section>
+        }
+
+      }
+
+    </div>
+
+    <!-- FOOTER FIJO -->
+    <footer class="po-doc-drawer__footer">
+      <button type="button" class="rc-btn rc-btn--secondary" (click)="onClose()">
+        Cerrar
+      </button>
+    </footer>
+
+  </aside>
+}
+
+<!-- ══ OVERLAY DE VISOR PANTALLA COMPLETA ══ -->
+@if (isFullscreenViewerOpen() && activeDocumentRecord(); as docRec) {
+  <div class="po-doc-fullscreen-overlay" (click)="isFullscreenViewerOpen.set(false)">
+    <div class="po-doc-fullscreen-card" (click)="$event.stopPropagation()">
+      <header class="po-doc-fullscreen-header">
+        <div>
+          <strong>{{ docRec.activeVersion.fileName }}</strong>
+          <span class="po-ver-badge po-ver-badge--active" style="margin-left: 0.5rem;">{{ docRec.activeVersion.versionLabel }}</span>
+        </div>
+        <button type="button" class="rc-btn-icon" (click)="isFullscreenViewerOpen.set(false)">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+      <div class="po-doc-fullscreen-body">
+        @if (docRec.activeVersion.fileType === 'PDF') {
+          <div class="po-paper-doc po-paper-doc--lg">
+            <div class="po-paper-head">
+              <h3 class="po-paper-company">{{ purchaseOrder()?.clientName || 'CONFECCIONES TELY, S.A.' }}</h3>
+              <span class="po-paper-tax">Ruc. 129391-9283</span>
+              
+              <div class="po-paper-title-box">
+                <span class="po-paper-title-pill">ORDEN DE COMPRA</span>
+                <span class="po-paper-no">No: <strong>{{ docRec.poNumber }}</strong></span>
+              </div>
+            </div>
+
+            <div class="po-paper-meta-rows">
+              <div class="po-paper-row">
+                <span class="po-paper-lbl">Proveedor:</span>
+                <span class="po-paper-val po-paper-val--line">{{ purchaseOrder()?.supplierName || 'TIENDAS MIL, S.A.' }}</span>
+              </div>
+              <div class="po-paper-row po-paper-row--split">
+                <div class="po-paper-col">
+                  <span class="po-paper-lbl">Fecha del pedido:</span>
+                  <span class="po-paper-val po-paper-val--line">{{ formatDate(purchaseOrder()?.issueDate || '2026-07-25') }}</span>
+                </div>
+                <div class="po-paper-col">
+                  <span class="po-paper-lbl">Fecha de pago:</span>
+                  <span class="po-paper-val po-paper-val--line">{{ formatDate(purchaseOrder()?.expirationDate || '2026-08-28') }}</span>
+                </div>
+              </div>
+              <div class="po-paper-row">
+                <span class="po-paper-lbl">Términos de entrega:</span>
+                <span class="po-paper-val po-paper-val--line">En las instalaciones de la fábrica (Planta {{ purchaseOrder()?.branchName || 'Central CDMX' }})</span>
+              </div>
+            </div>
+
+            <p class="po-paper-intro">Sírvanse por este medio suministrarnos los siguientes artículos:</p>
+
+            <table class="po-paper-table">
+              <thead>
+                <tr>
+                  <th class="col-num">No.</th>
+                  <th class="col-art">ARTÍCULO</th>
+                  <th class="col-qty">CANTIDAD</th>
+                  <th class="col-price">PRECIO UNITARIO</th>
+                  <th class="col-total">PRECIO TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of appointment!.lines; track line.lineId; let idx = $index) {
+                  <tr>
+                    <td class="col-num">{{ idx + 1 }}</td>
+                    <td class="col-art">
+                      <strong>{{ line.sku }}</strong> — {{ line.description }}
+                    </td>
+                    <td class="col-qty">{{ line.expectedQty | number }} {{ line.unit }}</td>
+                    <td class="col-price">45.00</td>
+                    <td class="col-total">${{ (line.expectedQty * 45) | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" class="col-total-lbl">COSTO TOTAL</td>
+                  <td class="col-total-val">$85,740.00</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="po-paper-signatures">
+              <div class="po-paper-sig">
+                <div class="sig-line"></div>
+                <span class="sig-label">Elaborado Por:</span>
+              </div>
+              <div class="po-paper-sig">
+                <div class="sig-line"></div>
+                <span class="sig-label">Autorizado Por:</span>
+              </div>
+              <div class="po-paper-sig">
+                <div class="sig-line"></div>
+                <span class="sig-label">Recibido Por:</span>
+              </div>
+            </div>
+
+            <div class="po-paper-footnote">
+              <span>Imprenta San Sebastián, Managua - Nicaragua Tel: 289 3849 Fax: 289 7364</span>
+              <span class="po-paper-watermark">✔ EXPEDIENTE DIGITAL INALTERABLE 4GUARD WMS · VERSIÓN {{ docRec.activeVersion.versionLabel }}</span>
+            </div>
+          </div>
+        } @else {
+          <img [src]="docRec.activeVersion.fileUrl || 'assets/icons/document-placeholder.png'" [alt]="docRec.activeVersion.fileName" class="po-doc-img-fullscreen" />
+        }
+      </div>
+    </div>
+  </div>
+}
+

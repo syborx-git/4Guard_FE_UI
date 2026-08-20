@@ -1,0 +1,64 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TARJETAS KPI
+   ───────────────────────────────────────────────────────────── */
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid rgba(197, 168, 107, 0.25);
+  border-radius: 16px;
+  padding: 1.15rem 1.35rem;
+  transition: all 180ms ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+}
+
+.kpi-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BADGES DE ESTADO DE CADUCIDAD
+   ───────────────────────────────────────────────────────────── */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  border: 1px solid;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.badge-en-tiempo {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.badge-proximo-30 {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.badge-caduco {
+  background: rgba(244, 63, 94, 0.12);
+  color: #be123c;
+  border-color: rgba(244, 63, 94, 0.3);
+}

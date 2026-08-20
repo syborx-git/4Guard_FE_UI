@@ -1,0 +1,969 @@
+<!-- license-management.component.html -->
+<!-- HU-139 — Licencias y Capacidades del WMS -->
+
+<div class="carriers-page" aria-label="Licencias y Capacidades del WMS">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL (HOMOLOGADO A TRANSPORTISTAS)
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="carriers-header" id="lm-hero-header">
+    <div class="carriers-header__top">
+      <div class="carriers-header__left">
+        <div class="carriers-header__icon-wrap">
+          <span class="material-symbols-outlined carriers-header__icon">workspace_premium</span>
+        </div>
+
+        <div class="carriers-header__copy">
+          <div class="carriers-header__eyebrow">
+            <a routerLink="/admin" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="carriers-header__eyebrow-sep">·</span>
+            <span>Control Comercial · Capacidades</span>
+          </div>
+          <h1 class="carriers-header__title">Licencias y Capacidades del WMS</h1>
+          <p class="carriers-header__subtitle">
+            Administra la vigencia, los módulos contratados y los límites operativos asignados a cada organización.
+          </p>
+        </div>
+      </div>
+
+      <div class="carriers-header__actions">
+        <button
+          type="button"
+          class="carriers-btn carriers-btn--primary"
+          id="lm-btn-new-header"
+          (click)="startCreate()">
+          <span class="material-symbols-outlined">add</span>
+          Nueva licencia
+        </button>
+      </div>
+    </div>
+
+    <!-- ── KPI CARDS (4 columnas homologadas) ────────────────────────── -->
+    <div class="carriers-kpi-grid" role="region" aria-label="Indicadores de licencias">
+      <div class="carriers-kpi-card carriers-kpi-card--active">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">verified</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpiActiveLicenses() }}</span>
+          <span class="carriers-kpi-card__label">Licencias activas</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--suspended">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">schedule</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpiExpiringSoon() }}</span>
+          <span class="carriers-kpi-card__label">Próximas a vencer</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--total">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">group</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">
+            {{ kpiUserCapacity().used }} <small style="font-size: 1rem; opacity: 0.7;">/ {{ kpiUserCapacity().max }}</small>
+          </span>
+          <span class="carriers-kpi-card__label">Capacidad usuarios</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--inactive">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">apps</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpiModulesCount() }}</span>
+          <span class="carriers-kpi-card__label">Módulos activos</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--inactive"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════
+       LOADING / ERROR
+       ════════════════════════════════════════════════════════ -->
+  @if (isLoading()) {
+    <div class="lm-loading" role="status" aria-live="polite">
+      <span class="lm-loading__spinner" aria-hidden="true"></span>
+      <span>Cargando licencias…</span>
+    </div>
+  }
+
+  @if (loadError()) {
+    <div class="lm-error-banner" role="alert">
+      <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
+      <span>{{ loadError() }}</span>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════
+       SPLIT VIEW: 35% Directorio | 65% Editor
+       ════════════════════════════════════════════════════════ -->
+  <div class="lm-split" [class.lm-split--loading]="isLoading()">
+
+    <!-- ══════════════════════════════
+         PANEL IZQUIERDO — DIRECTORIO
+         ══════════════════════════════ -->
+    <aside class="lm-split__left" aria-label="Directorio de licencias">
+
+      <!-- Encabezado del directorio -->
+      <div class="lm-dir__header">
+        <div class="lm-dir__header-top">
+          <h2 class="lm-dir__title">Directorio de licencias</h2>
+        </div>
+
+        <!-- Buscador -->
+        <div class="lm-dir__search">
+          <span class="material-symbols-outlined lm-dir__search-icon" aria-hidden="true">search</span>
+          <input
+            id="lm-search"
+            type="text"
+            class="lm-dir__search-input"
+            placeholder="Buscar por organización, plan o licencia…"
+            [value]="searchQuery()"
+            (input)="setSearch($any($event.target).value)"
+            aria-label="Buscar licencia"
+            autocomplete="off"
+          />
+          @if (searchQuery()) {
+            <button
+              type="button"
+              style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted);"
+              (click)="setSearch('')"
+              aria-label="Limpiar búsqueda">
+              <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+            </button>
+          }
+        </div>
+
+        <!-- Filtros por estado -->
+        <div class="lm-dir__filters" role="group" aria-label="Filtrar por estado">
+          @for (f of [
+            {key: 'ALL', label: 'Todas'},
+            {key: 'ACTIVE', label: 'Activas'},
+            {key: 'EXPIRING_SOON', label: 'Por vencer'},
+            {key: 'SUSPENDED', label: 'Suspendidas'},
+            {key: 'EXPIRED', label: 'Vencidas'}
+          ]; track f.key) {
+            <button
+              type="button"
+              class="lm-dir__filter-chip"
+              [class.lm-dir__filter-chip--active]="statusFilter() === f.key"
+              (click)="setStatusFilter($any(f.key))"
+              [attr.aria-pressed]="statusFilter() === f.key">
+              {{ f.label }}
+            </button>
+          }
+        </div>
+
+        <!-- Filtro por plan -->
+        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+          <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;" for="lm-plan-filter">PLAN</label>
+          <select
+            id="lm-plan-filter"
+            class="lm-dir__plan-select"
+            [value]="planFilter()"
+            (change)="setPlanFilter($any($any($event.target).value))"
+            aria-label="Filtrar por plan">
+            <option value="ALL">Todos los planes</option>
+            @for (p of plans; track p) {
+              <option [value]="p">{{ planLabels[p] }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Lista de licencias -->
+      <div class="lm-dir__list" role="list" aria-label="Lista de licencias">
+        @if (!isLoading() && filteredLicenses().length === 0) {
+          <div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 0.5rem;" role="status">
+            <span class="material-symbols-outlined" style="font-size: 32px;" aria-hidden="true">search_off</span>
+            <span>Sin resultados para la búsqueda actual.</span>
+          </div>
+        }
+
+        @for (item of filteredLicenses(); track item.license.id) {
+          <div
+            class="lm-dir__item"
+            [class.lm-dir__item--selected]="selectedLicense()?.id === item.license.id"
+            role="listitem"
+            (click)="selectLicense(item.license)"
+            [attr.aria-selected]="selectedLicense()?.id === item.license.id"
+            tabindex="0"
+            (keydown.enter)="selectLicense(item.license)"
+            (keydown.space)="selectLicense(item.license); $event.preventDefault()"
+            [attr.aria-label]="item.license.organizationName + ' — ' + statusLabels[item.derived]">
+
+            <!-- Avatar organización -->
+            <div class="lm-dir__item-avatar" aria-hidden="true">
+              {{ item.license.organizationName.charAt(0) }}
+            </div>
+
+            <!-- Info principal -->
+            <div class="lm-dir__item-body">
+              <span class="lm-dir__item-org">{{ item.license.organizationName }}</span>
+              <span class="lm-dir__item-plan">{{ planLabels[item.license.plan] }}</span>
+              <span class="lm-dir__item-key">{{ item.license.maskedLicenseKey }}</span>
+              <span style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 2px;">
+                {{ getCurrentUsers(item.license) }} / {{ getMaxUsers(item.license) }} usuarios
+              </span>
+              <span style="font-size: 0.65rem; color: var(--text-muted);">Vence: {{ formatDate(item.license.validUntil) }}</span>
+            </div>
+
+            <!-- Badge de estado -->
+            <div>
+              <span class="carrier-status-badge carrier-status-badge--{{ item.derived.toLowerCase() }}">
+                {{ statusLabels[item.derived] }}
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+
+    </aside>
+
+    <!-- ══════════════════════════════
+         PANEL DERECHO — EDITOR
+         ══════════════════════════════ -->
+    <main class="lm-split__right" aria-label="Editor de licencia">
+
+      @if (!selectedLicense() && formMode() === 'EDIT') {
+        <!-- Estado vacío -->
+        <div style="padding: 4rem 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem; flex: 1; justify-content: center;">
+          <span class="material-symbols-outlined" style="font-size: 48px; color: var(--gold); opacity: 0.7;" aria-hidden="true">workspace_premium</span>
+          <h2 style="font-family: var(--font-display); font-size: 1.2rem; margin: 0; color: var(--text-primary);">Selecciona una licencia</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 320px; line-height: 1.5; margin: 0;">
+            Elige una licencia del directorio para ver y editar su configuración, o crea una nueva.
+          </p>
+          <button type="button" class="carriers-btn carriers-btn--primary" (click)="startCreate()">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Nueva licencia
+          </button>
+        </div>
+      } @else {
+        <!-- ── Header del editor (Homologado a Transportistas) ── -->
+        <div class="carriers-form-header">
+          <div class="carriers-form-header__left">
+            <div class="carriers-form-header__breadcrumb">
+              <span class="material-symbols-outlined">workspace_premium</span>
+              Licencias
+              <span class="material-symbols-outlined carriers-form-header__chevron">chevron_right</span>
+              <strong>
+                @if (formMode() === 'CREATE') { Nueva licencia }
+                @else { {{ selectedLicense()?.licenseName }} }
+              </strong>
+            </div>
+            @if (formMode() === 'EDIT' && selectedLicense()) {
+              <span
+                class="carrier-status-badge carrier-status-badge--{{ selectedLicense()!.adminStatus.toLowerCase() }}"
+                [attr.aria-label]="'Estado actual: ' + statusLabels[selectedLicense()!.adminStatus]">
+                {{ statusLabels[selectedLicense()!.adminStatus] }}
+              </span>
+            }
+          </div>
+
+          <!-- Acciones de cabecera -->
+          <div class="carriers-form-header__right">
+            @if (formMode() === 'EDIT' && selectedLicense()) {
+              <button
+                id="lm-btn-audit"
+                type="button"
+                class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                (click)="openAuditDrawer()"
+                aria-label="Ver registro de auditoría"
+                title="Ver historial de cambios de la licencia">
+                <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+                Ver historial
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- ── AVISO SOLO LECTURA (REVOKED) ── -->
+        @if (isRevokedReadOnly()) {
+          <div style="padding: 0.8rem 1.5rem; background: var(--c-danger-bg); border-bottom: 1px solid var(--c-danger-bdr); color: var(--c-danger); display: flex; align-items: center; gap: 0.75rem; font-size: 0.82rem;" role="alert">
+            <span class="material-symbols-outlined" aria-hidden="true">block</span>
+            <div>
+              <strong>Licencia revocada — Vista de solo lectura</strong>
+              <p style="margin: 0; font-size: 0.76rem; opacity: 0.85;">Esta licencia fue revocada y no puede editarse desde esta interfaz.</p>
+            </div>
+          </div>
+        }
+
+        <!-- ══════════════════════════════════════════════════
+             FORMULARIO REACTIVO
+             ══════════════════════════════════════════════════ -->
+        <form
+          class="lm-form"
+          [formGroup]="licenseForm"
+          (ngSubmit)="onSubmit()"
+          aria-label="Formulario de licencia"
+          [class.lm-form--readonly]="isRevokedReadOnly()"
+          novalidate>
+
+          <!-- ────────────────────────────────────────────────
+               SECCIÓN 1 — IDENTIFICACIÓN Y ORGANIZACIÓN
+               ──────────────────────────────────────────────── -->
+          <fieldset class="carriers-form-section" formGroupName="identification" [disabled]="isRevokedReadOnly()">
+            <legend class="carriers-form-section__legend">
+              <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+              Identificación y Organización
+            </legend>
+
+            <div class="carriers-form-grid carriers-form-grid--2">
+              <!-- Organización -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-org">Organización</label>
+                <select
+                  id="lm-org"
+                  class="fg-select"
+                  formControlName="organizationId"
+                  [class.fg-input--error]="licenseForm.get('identification.organizationId')?.touched && licenseForm.get('identification.organizationId')?.invalid"
+                  [attr.disabled]="(isRevokedReadOnly() || formMode() === 'EDIT') ? '' : null"
+                  aria-required="true">
+                  <option value="">— Seleccionar organización —</option>
+                  @for (org of organizations(); track org.id) {
+                    <option [value]="org.id">{{ org.name }}</option>
+                  }
+                </select>
+                @if (getFieldError('identification.organizationId')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('identification.organizationId') }}</span>
+                }
+              </div>
+
+              <!-- Plan -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-plan">Plan de Licencia</label>
+                <select
+                  id="lm-plan"
+                  class="fg-select"
+                  formControlName="plan"
+                  [class.fg-input--error]="licenseForm.get('identification.plan')?.touched && licenseForm.get('identification.plan')?.invalid"
+                  aria-required="true">
+                  @for (p of plans; track p) {
+                    <option [value]="p">{{ planLabels[p] }}</option>
+                  }
+                </select>
+                @if (getFieldError('identification.plan')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('identification.plan') }}</span>
+                }
+              </div>
+
+              <!-- Nombre de licencia -->
+              <div class="fg-field fg-field--full">
+                <label class="fg-label fg-label--required" for="lm-name">Nombre de la Licencia</label>
+                <input
+                  id="lm-name"
+                  type="text"
+                  class="fg-input"
+                  formControlName="licenseName"
+                  [class.fg-input--error]="licenseForm.get('identification.licenseName')?.touched && licenseForm.get('identification.licenseName')?.invalid"
+                  placeholder="Ej. Enterprise 3PL — Operación México"
+                  maxlength="100"
+                  aria-required="true"
+                />
+                <span class="fg-hint">Mínimo 3 caracteres, máximo 100.</span>
+                @if (getFieldError('identification.licenseName')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('identification.licenseName') }}</span>
+                }
+              </div>
+
+              <!-- Clave de licencia -->
+              <div class="fg-field fg-field--full">
+                <label class="fg-label fg-label--required" for="lm-key">Clave de Licencia (Masked)</label>
+                <div class="fg-input-group">
+                  <input
+                    id="lm-key"
+                    type="text"
+                    class="fg-input fg-input--mono"
+                    formControlName="licenseKey"
+                    [class.fg-input--error]="licenseForm.get('identification.licenseKey')?.touched && licenseForm.get('identification.licenseKey')?.invalid"
+                    placeholder="4GD-ENT-••••-••••-XXXX"
+                    maxlength="64"
+                    autocomplete="off"
+                  />
+                  @if (formMode() === 'EDIT' && !isRevokedReadOnly()) {
+                    <button
+                      id="lm-btn-regen"
+                      type="button"
+                      class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                      (click)="openActionModal('REGENERATE_KEY')"
+                      title="Regenerar clave de licencia"
+                      aria-label="Regenerar clave de licencia">
+                      <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                      Regenerar
+                    </button>
+                  }
+                </div>
+                <span class="fg-hint">
+                  @if (formMode() === 'EDIT') {
+                    La clave se muestra enmascarada. Usa "Regenerar" para cambiarla.
+                  } @else {
+                    Se generará automáticamente al guardar. Máximo 64 caracteres.
+                  }
+                </span>
+                @if (getFieldError('identification.licenseKey')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('identification.licenseKey') }}</span>
+                }
+              </div>
+
+              <!-- Descripción -->
+              <div class="fg-field fg-field--full">
+                <label class="fg-label" for="lm-desc">Descripción Contractual</label>
+                <textarea
+                  id="lm-desc"
+                  class="fg-textarea"
+                  formControlName="description"
+                  rows="2"
+                  placeholder="Descripción opcional de esta licencia…"
+                  maxlength="300">
+                </textarea>
+                <span class="fg-hint">Máximo 300 caracteres. Opcional.</span>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ────────────────────────────────────────────────
+               SECCIÓN 2 — VIGENCIA Y REGLAS CONTRACTUALES
+               ──────────────────────────────────────────────── -->
+          <fieldset class="carriers-form-section" formGroupName="validity" [disabled]="isRevokedReadOnly()">
+            <legend class="carriers-form-section__legend">
+              <span class="material-symbols-outlined" aria-hidden="true">event_available</span>
+              Vigencia y Reglas Contractuales
+            </legend>
+
+            <div class="carriers-form-grid carriers-form-grid--3">
+              <!-- Fecha inicio -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-valid-from">Fecha de Inicio</label>
+                <input
+                  id="lm-valid-from"
+                  type="date"
+                  class="fg-input"
+                  formControlName="validFrom"
+                  [class.fg-input--error]="licenseForm.get('validity.validFrom')?.touched && licenseForm.get('validity.validFrom')?.invalid"
+                  aria-required="true"
+                />
+                @if (getFieldError('validity.validFrom')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('validity.validFrom') }}</span>
+                }
+              </div>
+
+              <!-- Fecha vencimiento -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-valid-until">Fecha de Vencimiento</label>
+                <input
+                  id="lm-valid-until"
+                  type="date"
+                  class="fg-input"
+                  formControlName="validUntil"
+                  [class.fg-input--error]="licenseForm.get('validity.validUntil')?.touched && licenseForm.get('validity.validUntil')?.invalid"
+                  aria-required="true"
+                />
+                @if (getFieldError('validity.validUntil')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('validity.validUntil') }}</span>
+                }
+              </div>
+
+              <!-- Periodo de gracia -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-grace">Gracia (Días)</label>
+                <input
+                  id="lm-grace"
+                  type="number"
+                  class="fg-input"
+                  formControlName="gracePeriodDays"
+                  min="0" max="90" step="1"
+                  [class.fg-input--error]="licenseForm.get('validity.gracePeriodDays')?.touched && licenseForm.get('validity.gracePeriodDays')?.invalid"
+                  aria-required="true"
+                />
+                @if (getFieldError('validity.gracePeriodDays')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('validity.gracePeriodDays') }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Error de rango de fechas (validador de grupo) -->
+            @if (getGroupError('validity')) {
+              <div class="fg-error" role="alert" style="margin-top: 0.8rem;">
+                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;" aria-hidden="true">error_outline</span>
+                {{ getGroupError('validity') }}
+              </div>
+            }
+
+            <span class="fg-hint" style="display: block; margin-top: 0.5rem;">
+              Periodo adicional (0–90 días) antes de restringir nuevas operaciones por vencimiento.
+            </span>
+          </fieldset>
+
+          <!-- ────────────────────────────────────────────────
+               SECCIÓN 3 — CAPACIDADES CONTRATADAS
+               ──────────────────────────────────────────────── -->
+          <fieldset class="carriers-form-section" formGroupName="capacities" [disabled]="isRevokedReadOnly()">
+            <legend class="carriers-form-section__legend">
+              <span class="material-symbols-outlined" aria-hidden="true">speed</span>
+              Capacidades Contratadas
+            </legend>
+
+            <div class="carriers-form-grid carriers-form-grid--3">
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-max-users">Usuarios Máx.</label>
+                <input id="lm-max-users" type="number" class="fg-input"
+                  formControlName="maxUsers" min="1" max="10000" step="1"
+                  [class.fg-input--error]="licenseForm.get('capacities.maxUsers')?.touched && licenseForm.get('capacities.maxUsers')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxUsers')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('capacities.maxUsers') }}</span>
+                }
+              </div>
+
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-max-concurrent">Concurrentes</label>
+                <input id="lm-max-concurrent" type="number" class="fg-input"
+                  formControlName="maxConcurrentUsers" min="1" max="10000" step="1"
+                  [class.fg-input--error]="licenseForm.get('capacities.maxConcurrentUsers')?.touched && licenseForm.get('capacities.maxConcurrentUsers')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxConcurrentUsers')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('capacities.maxConcurrentUsers') }}</span>
+                }
+              </div>
+
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-max-warehouses">Almacenes</label>
+                <input id="lm-max-warehouses" type="number" class="fg-input"
+                  formControlName="maxWarehouses" min="1" max="1000" step="1"
+                  [class.fg-input--error]="licenseForm.get('capacities.maxWarehouses')?.touched && licenseForm.get('capacities.maxWarehouses')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxWarehouses')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('capacities.maxWarehouses') }}</span>
+                }
+              </div>
+
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-max-handhelds">Handhelds</label>
+                <input id="lm-max-handhelds" type="number" class="fg-input"
+                  formControlName="maxHandheldDevices" min="1" max="10000" step="1"
+                  [class.fg-input--error]="licenseForm.get('capacities.maxHandheldDevices')?.touched && licenseForm.get('capacities.maxHandheldDevices')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxHandheldDevices')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('capacities.maxHandheldDevices') }}</span>
+                }
+              </div>
+
+              <div class="fg-field">
+                <label class="fg-label fg-label--required" for="lm-max-integrations">Integraciones</label>
+                <input id="lm-max-integrations" type="number" class="fg-input"
+                  formControlName="maxIntegrations" min="0" max="100" step="1"
+                  [class.fg-input--error]="licenseForm.get('capacities.maxIntegrations')?.touched && licenseForm.get('capacities.maxIntegrations')?.invalid"
+                  aria-required="true" />
+                @if (getFieldError('capacities.maxIntegrations')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('capacities.maxIntegrations') }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Errores de grupo (cross-field) -->
+            @if (getGroupError('capacities')) {
+              <div class="fg-error" role="alert" style="margin-top: 0.8rem;">
+                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;" aria-hidden="true">error_outline</span>
+                {{ getGroupError('capacities') }}
+              </div>
+            }
+
+            <span class="fg-hint" style="display: block; margin-top: 0.5rem;">
+              Límites: Usuarios 1–10,000 · Concurrentes ≤ Usuarios máximos · Almacenes 1–1,000 · Handhelds 1–10,000 · Integraciones 0–100.
+            </span>
+          </fieldset>
+
+          <!-- ────────────────────────────────────────────────
+               SECCIÓN 4 — MÓDULOS HABILITADOS
+               ──────────────────────────────────────────────── -->
+          <fieldset class="carriers-form-section" [disabled]="isRevokedReadOnly()">
+            <legend class="carriers-form-section__legend">
+              <span class="material-symbols-outlined" aria-hidden="true">apps</span>
+              Módulos Habilitados
+            </legend>
+
+            <p class="fg-hint" style="margin-bottom: 1rem;">
+              <span class="material-symbols-outlined" style="font-size: 15px; vertical-align: middle;" aria-hidden="true">info</span>
+              La licencia define la disponibilidad del módulo. Los permisos de usuario continúan administrándose mediante roles y RBAC.
+            </p>
+
+            <div class="carriers-form-grid carriers-form-grid--3" role="group" aria-label="Módulos de la licencia">
+              @for (def of moduleDefinitions; track def.key) {
+                <div
+                  style="border: 1px solid var(--border-card); border-radius: var(--radius-input); padding: 0.85rem; background: rgba(255,255,255,0.7); display: flex; flex-direction: column; gap: 0.4rem; cursor: pointer; transition: all 0.15s ease;"
+                  [style.border-color]="isModuleEnabled(def.key) && !def.comingSoon ? 'var(--gold)' : 'rgba(88,98,116,0.17)'"
+                  [style.background]="isModuleEnabled(def.key) && !def.comingSoon ? 'var(--gold-bg)' : 'rgba(255,255,255,0.7)'"
+                  (click)="!isRevokedReadOnly() && !def.required && !def.comingSoon && toggleModule(def.key)">
+
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span class="material-symbols-outlined" style="font-size: 20px; color: var(--gold);" aria-hidden="true">{{ def.icon }}</span>
+                    <span class="carrier-status-badge carrier-status-badge--active">
+                      {{ def.badge }}
+                    </span>
+                  </div>
+                  <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">{{ def.label }}</span>
+                  <span style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.3;">{{ def.description }}</span>
+
+                  <div style="margin-top: auto; padding-top: 0.4rem; font-size: 0.7rem; font-weight: 650;">
+                    @if (def.required) {
+                      <span style="color: var(--navy); display: inline-flex; align-items: center; gap: 2px;">
+                        <span class="material-symbols-outlined" style="font-size: 13px;" aria-hidden="true">lock</span>
+                        Obligatorio
+                      </span>
+                    } @else if (def.comingSoon) {
+                      <span style="color: var(--text-muted);">Próximamente</span>
+                    } @else if (isModuleEnabled(def.key)) {
+                      <span style="color: var(--c-success); display: inline-flex; align-items: center; gap: 2px;">
+                        <span class="material-symbols-outlined" style="font-size: 13px;" aria-hidden="true">check_circle</span>
+                        Habilitado
+                      </span>
+                    } @else {
+                      <span style="color: var(--text-muted);">No incluido</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </fieldset>
+
+          <!-- ────────────────────────────────────────────────
+               SECCIÓN 5 — MOTIVO Y OBSERVACIONES
+               ──────────────────────────────────────────────── -->
+          <fieldset class="carriers-form-section" formGroupName="administrative" [disabled]="isRevokedReadOnly()">
+            <legend class="carriers-form-section__legend">
+              <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+              Motivo y Observaciones
+            </legend>
+
+            <div class="carriers-form-grid carriers-form-grid--2">
+              <div class="fg-field fg-field--full">
+                <label class="fg-label" for="lm-reason">
+                  Motivo del cambio
+                  @if (_requiresReason()) {
+                    <span class="fg-label--required"></span>
+                  }
+                </label>
+                <textarea
+                  id="lm-reason"
+                  class="fg-textarea"
+                  formControlName="administrativeReason"
+                  rows="2"
+                  maxlength="250"
+                  [class.fg-input--error]="licenseForm.get('administrative.administrativeReason')?.touched && licenseForm.get('administrative.administrativeReason')?.invalid"
+                  placeholder="Motivo del cambio de plan, vigencia, capacidades o módulos…">
+                </textarea>
+                <span class="fg-hint">
+                  @if (_requiresReason()) {
+                    Obligatorio para cambios de plan, vigencia, capacidades, módulos o clave. Mínimo 10 caracteres.
+                  } @else {
+                    Opcional para cambios de nombre o descripción. Máximo 250 caracteres.
+                  }
+                </span>
+                @if (getFieldError('administrative.administrativeReason')) {
+                  <span class="fg-error" role="alert">{{ getFieldError('administrative.administrativeReason') }}</span>
+                }
+              </div>
+
+              <div class="fg-field fg-field--full">
+                <label class="fg-label" for="lm-obs">Observaciones</label>
+                <textarea
+                  id="lm-obs"
+                  class="fg-textarea"
+                  formControlName="observations"
+                  rows="2"
+                  maxlength="500"
+                  placeholder="Notas internas adicionales. Opcional.">
+                </textarea>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ────────────────────────────────────────────────
+               SECCIÓN 5 — AUDITORÍA E HISTORIAL DE CAMBIOS
+               ──────────────────────────────────────────────── -->
+          @if (formMode() === 'EDIT' && selectedLicense()) {
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                Auditoría e Historial de Cambios
+              </legend>
+
+              <div class="carriers-timeline-preview">
+                <div class="carriers-timeline-preview__header">
+                  <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+                  <span>Historial de cambios</span>
+                </div>
+
+                @if (drawerAuditEntries().length === 0) {
+                  <p class="carriers-timeline-preview__desc" style="padding: 1rem 0;">
+                    No hay registros de cambios disponibles para esta licencia.
+                  </p>
+                } @else {
+                  <div class="carriers-timeline-preview__nodes">
+                    @for (entry of drawerAuditEntries(); track entry.id; let last = $last) {
+                      <div class="carriers-tl-node carriers-tl-node--update">
+                        <div class="carriers-tl-node__dot">
+                          <span class="material-symbols-outlined">info</span>
+                        </div>
+                        <div class="carriers-tl-node__line" [class.carriers-tl-node__line--last]="last"></div>
+                        <div class="carriers-tl-node__content">
+                          <span class="carriers-tl-node__action">{{ entry.action }} — {{ entry.reason || 'Acción registrada' }}</span>
+                          <span class="carriers-tl-node__meta">
+                            Por {{ entry.performedBy }} · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm' }}
+                          </span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </fieldset>
+          }
+
+          <!-- ────────────────────────────────────────────────
+               BARRA DE ACCIONES (ESTILO TRANSPORTISTAS)
+               ──────────────────────────────────────────────── -->
+          <div class="carriers-form-actions">
+            <div class="carriers-form-actions__status-group">
+              @if (formMode() === 'EDIT' && selectedLicense()) {
+                @if (selectedLicense()!.adminStatus === 'REVOKED' || selectedLicense()!.adminStatus === 'SUSPENDED') {
+                  <button
+                    id="lm-btn-reactivate"
+                    type="button"
+                    class="carriers-btn carriers-btn--success"
+                    [disabled]="isSaving()"
+                    (click)="openActionModal('REACTIVATE')"
+                    aria-label="Activar esta licencia">
+                    <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                    Activar
+                  </button>
+                } @else {
+                  <button
+                    id="lm-btn-revoke"
+                    type="button"
+                    class="carriers-btn carriers-btn--danger"
+                    [disabled]="isSaving()"
+                    (click)="openActionModal('REVOKE')"
+                    aria-label="Revocar esta licencia">
+                    <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                    Revocar
+                  </button>
+                }
+              }
+            </div>
+            <div class="carriers-form-actions__main">
+              @if (!isRevokedReadOnly()) {
+                <button
+                  id="lm-btn-discard"
+                  type="button"
+                  class="carriers-btn carriers-btn--ghost"
+                  [disabled]="isSaving()"
+                  (click)="selectedLicense() ? selectLicense(selectedLicense()!) : startCreate()"
+                  aria-label="Descartar cambios">
+                  Descartar
+                </button>
+                <button
+                  id="lm-btn-save"
+                  type="submit"
+                  class="carriers-btn carriers-btn--save"
+                  [disabled]="isSaving()"
+                  [attr.aria-busy]="isSaving()"
+                  aria-label="Guardar cambios">
+                  @if (isSaving()) {
+                    <span class="material-symbols-outlined spinner" aria-hidden="true">sync</span>
+                    Guardando…
+                  } @else {
+                    <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                    {{ formMode() === 'CREATE' ? 'Crear licencia' : 'Guardar cambios' }}
+                  }
+                </button>
+              }
+            </div>
+          </div>
+
+        </form>
+
+      }<!-- /else -->
+
+    </main><!-- /lm-split__right -->
+
+  </div><!-- /lm-split -->
+
+</div><!-- /carriers-page -->
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL DE CONFIRMACIÓN DE ACCIÓN (ACTIVAR / REVOCAR)
+     ════════════════════════════════════════════════════════ -->
+@if (isActionModalOpen()) {
+  <div
+    class="carriers-dialog-overlay"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="pendingAction() === 'REACTIVATE' ? 'Confirmar activación de licencia' : 'Confirmar revocación de licencia'"
+    (click)="closeActionModal()">
+
+    <div class="carriers-dialog" (click)="$event.stopPropagation()">
+
+      <header class="carriers-dialog__header">
+        <div class="carriers-dialog__icon"
+          [class.carriers-dialog__icon--danger]="pendingAction() === 'REVOKE'"
+          [class.carriers-dialog__icon--success]="pendingAction() === 'REACTIVATE'">
+          <span class="material-symbols-outlined">
+            {{ pendingAction() === 'REACTIVATE' ? 'check_circle' : 'block' }}
+          </span>
+        </div>
+        <div>
+          <h2 class="carriers-dialog__title">
+            {{ pendingAction() === 'REACTIVATE' ? 'Activar licencia de WMS' : 'Revocar licencia de WMS' }}
+          </h2>
+          <p class="carriers-dialog__desc">
+            @if (pendingAction() === 'REACTIVATE') {
+              Esta acción reactivará la licencia y restaurará el acceso operativo a la organización.
+            } @else {
+              Esta acción revocará el acceso contractual a la organización. Quedará en estado inalterable.
+            }
+          </p>
+        </div>
+      </header>
+
+      <div class="carriers-dialog__form">
+
+        <div class="fg-field">
+          <label class="fg-label fg-label--required" for="lm-action-reason">
+            {{ pendingAction() === 'REACTIVATE' ? 'Motivo de activación' : 'Motivo de revocación' }}
+          </label>
+          <textarea
+            id="lm-action-reason"
+            class="fg-textarea"
+            [class.fg-input--error]="actionReasonError()"
+            rows="3"
+            [value]="actionReason()"
+            (input)="actionReason.set($any($event.target).value); actionReasonError.set(null)"
+            placeholder="Describe el motivo detallado de esta acción… (mínimo 10 caracteres)"
+            maxlength="300"
+            aria-required="true">
+          </textarea>
+          @if (actionReasonError()) {
+            <span class="fg-error" role="alert">{{ actionReasonError() }}</span>
+          }
+        </div>
+
+        <div class="carriers-dialog__actions">
+          <button
+            id="lm-action-cancel"
+            type="button"
+            class="carriers-btn carriers-btn--ghost"
+            (click)="closeActionModal()"
+            aria-label="Cancelar">
+            Cancelar
+          </button>
+
+          @if (pendingAction() === 'REACTIVATE') {
+            <button
+              id="lm-action-confirm-reactivate"
+              type="button"
+              class="carriers-btn carriers-btn--success"
+              (click)="confirmAction($event)"
+              [disabled]="isSaving()"
+              aria-label="Confirmar activación">
+              @if (isSaving()) {
+                <span class="material-symbols-outlined spinner" aria-hidden="true">sync</span>
+                Activando…
+              } @else {
+                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                Confirmar activación
+              }
+            </button>
+          } @else {
+            <button
+              id="lm-action-confirm"
+              type="button"
+              class="carriers-btn carriers-btn--danger"
+              (click)="confirmAction($event)"
+              [disabled]="isSaving()"
+              aria-label="Confirmar revocación">
+              @if (isSaving()) {
+                <span class="material-symbols-outlined spinner" aria-hidden="true">sync</span>
+                Revocando…
+              } @else {
+                <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                Confirmar revocación
+              }
+            </button>
+          }
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER LATERAL DE AUDITORÍA
+     ════════════════════════════════════════════════════════ -->
+@if (isDrawerOpen()) {
+  <div class="lm-drawer-overlay" (click)="closeAuditDrawer()" aria-hidden="true"></div>
+  <aside class="lm-drawer" role="complementary" aria-labelledby="lm-drawer-title">
+    <div class="lm-drawer__header" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-card);">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="material-symbols-outlined" style="color: var(--text-gold);" aria-hidden="true">policy</span>
+        <h2 class="lm-drawer__title" id="lm-drawer-title" style="margin: 0; font-size: 1.1rem;">Auditoría de licencia</h2>
+      </div>
+      <button
+        id="lm-drawer-close"
+        type="button"
+        class="carriers-btn carriers-btn--ghost"
+        (click)="closeAuditDrawer()"
+        aria-label="Cerrar auditoría">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <div class="lm-drawer__body" style="padding: 1.5rem;">
+      @if (drawerAuditEntries().length === 0) {
+        <div class="lm-drawer__empty" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+          <span class="material-symbols-outlined" style="font-size: 40px; display: block; margin-bottom: 0.5rem;" aria-hidden="true">policy</span>
+          <span>Sin registros de auditoría para esta licencia.</span>
+        </div>
+      } @else {
+        <div class="lm-drawer__entries" role="list" style="display: flex; flex-direction: column; gap: 1rem;">
+          @for (entry of drawerAuditEntries(); track entry.id) {
+            <div class="lm-drawer__entry" role="listitem" style="padding: 1rem; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-card);">
+              <div class="lm-drawer__entry-header" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span class="carrier-status-badge carrier-status-badge--active">{{ entry.action }}</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">{{ entry.transactionStatus }}</span>
+              </div>
+              <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                <div><strong>Usuario:</strong> {{ entry.performedBy }}</div>
+                <div><strong>Fecha:</strong> {{ formatDateTime(entry.performedAt) }}</div>
+                <div><strong>Motivo:</strong> {{ entry.reason || 'N/A' }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="lm-drawer__footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-card); font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+      <span class="material-symbols-outlined" aria-hidden="true">security</span>
+      <span>
+        <strong>Seguridad RLS activa.</strong> Los cambios quedan registrados de forma inmutable en audit_logs.
+      </span>
+    </div>
+  </aside>
+}

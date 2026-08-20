@@ -8,12 +8,15 @@ import { Routes } from '@angular/router';
 import { authGuard }         from './core/guards/auth.guard';
 import { rbacGuard }         from './core/guards/rbac.guard';
 import { changePasswordGuard } from './core/guards/change-password.guard';
+import { lockoutGuard }      from './core/guards/lockout.guard';
 import { UserRole }           from '@4guard/shared-core';
 
 export const adminRoutes: Routes = [
   // Ruta pública: Login
+  // lockoutGuard: intercepta ANTES del componente para evitar evasion del bloqueo por F5 (HU-010)
   {
     path: 'login',
+    canActivate: [lockoutGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
     title: '4GUARD WMS — Iniciar Sesión',
@@ -83,14 +86,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Layout',
       },
 
-      // Recepción
+      // Recepción (Redirección directa a Movimientos de Almacén)
       {
         path: 'receiving',
-        canActivate: [rbacGuard],
-        data: { module: 'receiving' },
-        loadChildren: () =>
-          import('./features/receiving/receiving.routes').then((m) => m.receivingRoutes),
-        title: '4GUARD WMS — Recepción',
+        redirectTo: 'warehouse-movements/receiving',
+        pathMatch: 'prefix',
       },
 
       // Control de Calidad
@@ -266,11 +266,77 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Motor de Reglas de Negocio',
       },
 
+      // Divisas y Tipos de Cambio (HU-148)
+      {
+        path: 'currency-exchange',
+        canActivate: [rbacGuard],
+        data: { module: 'currency-exchange' },
+        loadChildren: () =>
+          import('./features/currency-exchange/currency-exchange.routes').then((m) => m.currencyExchangeRoutes),
+        title: '4GUARD WMS — Divisas y Tipos de Cambio',
+      },
+
+      // Configuración de Alertas y Notificaciones (HU-134)
+      {
+        path: 'alerts-config',
+        canActivate: [rbacGuard],
+        data: { module: 'alerts-config' },
+        loadChildren: () =>
+          import('./features/alerts-config/alerts-config.routes').then((m) => m.alertsConfigRoutes),
+        title: '4GUARD WMS — Configuración de Alertas y Notificaciones',
+      },
+
+      // Gestión de Licencias del WMS (HU-139)
+      {
+        path: 'licenses',
+        canActivate: [rbacGuard],
+        data: { module: 'license-management' },
+        loadChildren: () =>
+          import('./features/license-management/license-management.routes').then(
+            (m) => m.licenseManagementRoutes
+          ),
+        title: '4GUARD WMS — Licencias y Capacidades del WMS',
+      },
+
+      // Movimientos de Almacén (Recepción, Traspasos, Outbound)
+      {
+        path: 'warehouse-movements',
+        canActivate: [rbacGuard],
+        data: { module: 'warehouse-movements' },
+        loadChildren: () =>
+          import('./features/warehouse-movements/warehouse-movements.routes').then(
+            (m) => m.WAREHOUSE_MOVEMENTS_ROUTES
+          ),
+        title: '4GUARD WMS — Movimientos de Almacén',
+      },
+
+      // Catálogos Maestros (Legacy 4SND Optimizado)
+      {
+        path: 'catalogs',
+        canActivate: [rbacGuard],
+        data: { module: 'catalogs' },
+        loadChildren: () =>
+          import('./features/catalogs/catalogs.routes').then((m) => m.catalogsRoutes),
+        title: '4GUARD WMS — Catálogos Maestros',
+      },
+
+      // Consulta de Inventarios y Exportación Excel
+      {
+        path: 'inventory-query',
+        canActivate: [rbacGuard],
+        data: { module: 'inventory-query' },
+        loadChildren: () =>
+          import('./features/inventory-query/inventory-query.routes').then(
+            (m) => m.INVENTORY_QUERY_ROUTES
+          ),
+        title: '4GUARD WMS — Consulta de Inventarios',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
 
-  // Catch-all: redirigir a dashboard o login
-  { path: '**', redirectTo: 'dashboard' },
+  // Catch-all: redirigir a login (el authGuard en '/' llevará al dashboard si hay sesión activa)
+  { path: '**', redirectTo: 'login' },
 ];

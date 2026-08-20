@@ -29,6 +29,11 @@
 @use 'layouts/toolbar';
 @use 'layouts/dashboard';
 
+// ── 5. Tailwind CSS Directives ───────────────────────────────
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 // ── 5. Reset / Base ───────────────────────────────────────────
 *,
 *::before,

@@ -88,6 +88,8 @@ function dateRangeValidator(control: AbstractControl): ValidationErrors | null {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
+import { RouterLink } from '@angular/router';
+
 const PAGE_SIZE_DEFAULT = 10;
 
 @Component({
@@ -97,6 +99,7 @@ const PAGE_SIZE_DEFAULT = 10;
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
+    RouterLink,
     ActivityDetailDrawerComponent,
     ReportProfileManagerComponent,
   ],
@@ -246,6 +249,10 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
       dateFrom: this.formatDate(weekAgo),
       dateTo: this.formatDate(today),
     });
+
+    // Carga inicial automática de datos desde el backend al entrar a la pantalla
+    this.applyFilters();
+    this.refresh();
   }
 
   ngOnDestroy(): void {
@@ -510,9 +517,12 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
     </head>
     <body>
       <div class="header">
-        <div>
-          <div class="brand">4GUARD <span>WMS</span> — HU-146</div>
-          <div class="subtitle">Consola de Consulta y Trazabilidad de Actividad por Usuario</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" style="height: 44px; width: auto; object-fit: contain; border-radius: 6px;" />
+          <div>
+            <div class="brand">4GUARD <span>WMS</span> — HU-146</div>
+            <div class="subtitle">Consola de Consulta y Trazabilidad de Actividad por Usuario</div>
+          </div>
         </div>
       </div>
       <div class="meta-box">

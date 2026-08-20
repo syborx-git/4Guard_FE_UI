@@ -1,15 +1,27 @@
-<!-- apps/admin-console/src/app/features/auth/login/login.component.html -->
 <div class="login-page" role="main" aria-label="Inicio de sesión">
 
   <!-- ══ Panel izquierdo — Branding & Logo Destacado ══════════════════════════ -->
   <aside class="login-brand" aria-hidden="true">
+    <!-- Animación Ghost Cursor (Estela fluida azul neón 4GUARD en fondo oscuro del panel izquierdo) -->
+    <fg-ghost-cursor
+      color="#38bdf8"
+      [brightness]="2.0"
+      [blobSize]="1.2"
+      [bloomStrength]="0.15"
+      [bloomRadius]="1.0"
+      [bloomThreshold]="0.025"
+      [trailLength]="50"
+      [grainIntensity]="0.03"
+      [zIndex]="1"
+    ></fg-ghost-cursor>
+
     <div class="login-brand__overlay"></div>
     <div class="login-brand__grid"></div>
 
     <div class="login-brand__content">
       <!-- Hero Logo Redondeado con Máximo Énfasis -->
       <div class="login-brand__hero-logo-wrap">
-        <img src="assets/logo-4guard.svg" alt="4GUARD Logo" class="login-brand__hero-logo-img" />
+        <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="login-brand__hero-logo-img" />
       </div>
 
       <!-- Copy central -->
@@ -39,11 +51,16 @@
             Ingresa tus credenciales para acceder al sistema.
           </p>
 
-          <!-- Aviso de cierre por inactividad -->
+          <!-- Aviso de cierre por inactividad y preservación de proceso -->
           @if (inactivityNotice()) {
             <div class="login-info-alert" role="status" aria-live="polite">
-              <span class="material-symbols-outlined login-info-alert__icon">info</span>
-              <span class="login-info-alert__msg">Tu sesión se cerró por inactividad. Puedes ingresar normalmente con tus credenciales.</span>
+              <span class="material-symbols-outlined login-info-alert__icon">hourglass_pause</span>
+              <div class="space-y-0.5">
+                <span class="login-info-alert__msg font-bold">Sesión Pausada por Inactividad</span>
+                <p class="text-xs text-amber-300 font-medium">
+                  Tu trabajo en <strong class="text-white underline">{{ savedProcessName() || 'tu proceso activo' }}</strong> se ha preservado. Ingresa para reanudar.
+                </p>
+              </div>
             </div>
           }
 

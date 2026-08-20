@@ -1,0 +1,798 @@
+<!--
+  currency-exchange-management.component.html
+  HU-148 — Divisas y Tipos de Cambio — 4GUARD WMS Enterprise
+  Layout: Homologado 100% con Transportistas & Licencias WMS
+-->
+
+<div class="carriers-page" aria-label="Divisas y Tipos de Cambio">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL (HOMOLOGADO A TRANSPORTISTAS)
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="carriers-header" id="ce-hero-header">
+    <div class="carriers-header__top">
+      <div class="carriers-header__left">
+        <div class="carriers-header__icon-wrap">
+          <span class="material-symbols-outlined carriers-header__icon">currency_exchange</span>
+        </div>
+
+        <div class="carriers-header__copy">
+          <div class="carriers-header__eyebrow">
+            <a routerLink="/admin" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="carriers-header__eyebrow-sep">·</span>
+            <span>Módulo Financiero · HU-148</span>
+          </div>
+          <h1 class="carriers-header__title">Divisas y Tipos de Cambio</h1>
+          <p class="carriers-header__subtitle">
+            Administra las monedas contables, paridades cambiarias, conversión de montos y bitácora de auditoría.
+          </p>
+        </div>
+      </div>
+
+      <div class="carriers-header__actions">
+        <button
+          type="button"
+          class="carriers-btn carriers-btn--ghost"
+          id="btn-audit-drawer"
+          (click)="openAudit()"
+          title="Historial de auditoría">
+          <span class="material-symbols-outlined">history</span>
+          Auditoría
+        </button>
+        <button
+          type="button"
+          class="carriers-btn carriers-btn--primary"
+          id="btn-new-currency"
+          (click)="createNewCurrency()">
+          <span class="material-symbols-outlined">add</span>
+          Nueva divisa
+        </button>
+      </div>
+    </div>
+
+    <!-- ── KPI CARDS (4 columnas homologadas a WMS) ───────────────────── -->
+    <div class="carriers-kpi-grid" role="region" aria-label="Indicadores de divisas">
+      <div class="carriers-kpi-card carriers-kpi-card--total" id="kpi-base-currency">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">account_balance</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().baseCurrencyCode }}</span>
+          <span class="carriers-kpi-card__label">Divisa Base Contable</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--active" id="kpi-active-currencies">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">monetization_on</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().activeCurrencies }}</span>
+          <span class="carriers-kpi-card__label">Divisas Activas</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--suspended" id="kpi-current-rates">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">trending_up</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().totalRates }}</span>
+          <span class="carriers-kpi-card__label">Tasas Registradas</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+      </div>
+
+      <div class="carriers-kpi-card carriers-kpi-card--inactive" id="kpi-latest-parity">
+        <div class="carriers-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">sync</span>
+        </div>
+        <div class="carriers-kpi-card__body">
+          <span class="carriers-kpi-card__value">{{ kpis().latestRateUsdMxn | number: '1.2-4' }}</span>
+          <span class="carriers-kpi-card__label">Paridad USD / MXN</span>
+        </div>
+        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--inactive"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════
+       SIMULADOR DE CONVERSIÓN EN TIEMPO REAL
+       ═══════════════════════════════════════════ -->
+  <section class="carriers-form-section" style="border: 1px solid var(--gold-border); border-radius: var(--radius-card); background: var(--bg-card); box-shadow: var(--shadow-card); padding: 1.1rem 1.4rem;" aria-label="Simulador de conversión">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border-card); padding-bottom: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="material-symbols-outlined" style="font-size: 22px; color: var(--gold);">calculate</span>
+        <h3 style="font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.05em;">
+          Calculadora de Conversión en Tiempo Real
+        </h3>
+      </div>
+      <span class="carrier-status-badge carrier-status-badge--active" style="font-family: var(--font-mono);">API LIVE</span>
+    </div>
+
+    <div class="carriers-form-grid carriers-form-grid--3" style="align-items: flex-end;">
+      <!-- Monto -->
+      <div class="fg-field">
+        <label for="sim-amount" class="fg-label">Monto</label>
+        <input
+          type="number"
+          id="sim-amount"
+          class="fg-input"
+          [value]="simAmount()"
+          (input)="updateSimAmount($event)"
+          min="0"
+          step="100"
+          placeholder="1,000" />
+      </div>
+
+      <!-- Moneda origen -->
+      <div class="fg-field">
+        <label for="sim-source" class="fg-label">De (Origen)</label>
+        <select id="sim-source" class="fg-select" (change)="updateSimSource($event)">
+          @for (c of ceService.currencies(); track c.id) {
+            @if (c.status === 'ACTIVE') {
+              <option [value]="c.code" [selected]="c.code === simSource()">
+                {{ c.code }} — {{ c.name }}
+              </option>
+            }
+          }
+        </select>
+      </div>
+
+      <!-- Swap & Destino -->
+      <div class="fg-field" style="display: flex; flex-direction: row; gap: 0.5rem; align-items: flex-end;">
+        <button
+          type="button"
+          class="carriers-filter-clear"
+          id="btn-sim-swap"
+          (click)="swapSimCurrencies()"
+          title="Intercambiar monedas"
+          style="width: 38px; height: 38px; border-radius: 50%;"
+          aria-label="Intercambiar monedas">
+          <span class="material-symbols-outlined">swap_horiz</span>
+        </button>
+        <div style="flex: 1;">
+          <label for="sim-target" class="fg-label">A (Destino)</label>
+          <select id="sim-target" class="fg-select" (change)="updateSimTarget($event)">
+            @for (c of ceService.currencies(); track c.id) {
+              @if (c.status === 'ACTIVE') {
+                <option [value]="c.code" [selected]="c.code === simTarget()">
+                  {{ c.code }} — {{ c.name }}
+                </option>
+              }
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Display Resultado -->
+    <div style="margin-top: 1rem; padding: 0.85rem 1.25rem; background: var(--gold-bg); border: 1px solid var(--gold-border); border-radius: var(--radius-input); display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <span class="material-symbols-outlined" style="color: var(--gold); font-size: 24px;">payments</span>
+        <span style="font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--text-gold);">
+          {{ liveConversion()?.convertedAmount | number: '1.2-4' }}
+        </span>
+        <span style="font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
+          {{ liveConversion()?.toCode }}
+        </span>
+      </div>
+      <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+        Tipo de cambio aplicado: {{ liveConversion()?.rateUsed | number: '1.4-6' }}
+      </span>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       SPLIT VIEW (DIRECTORIO 35% | EDITOR 65%)
+       ═══════════════════════════════════════════ -->
+  <div class="carriers-split" id="ce-split-view">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio de Divisas
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="carriers-directory" aria-label="Directorio de divisas">
+
+      <div class="carriers-directory__filters">
+        <!-- Buscador -->
+        <div class="carriers-search">
+          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
+          <input
+            id="dir-search-input"
+            class="carriers-search__input"
+            type="search"
+            placeholder="Buscar divisa por código ISO, nombre…"
+            [value]="searchQuery()"
+            (input)="updateSearch($event)"
+            autocomplete="off"
+          />
+        </div>
+
+        <!-- Chips de Filtros -->
+        <div class="carriers-filters-row" style="margin-top: 0.4rem;">
+          <button
+            type="button"
+            class="ce-chip"
+            [class.ce-chip--active]="statusFilter() === 'ALL'"
+            (click)="setStatusFilter('ALL')">Todas</button>
+          <button
+            type="button"
+            class="ce-chip"
+            [class.ce-chip--active]="statusFilter() === 'ACTIVE'"
+            (click)="setStatusFilter('ACTIVE')">Activas</button>
+          <button
+            type="button"
+            class="ce-chip"
+            [class.ce-chip--active]="statusFilter() === 'INACTIVE'"
+            (click)="setStatusFilter('INACTIVE')">Inactivas</button>
+        </div>
+      </div>
+
+      <!-- Lista de divisas -->
+      @if (isLoading()) {
+        <div class="carriers-directory__list" aria-busy="true">
+          @for (i of [1,2,3]; track i) {
+            <div class="carrier-item carrier-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="carrier-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-short"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <ul class="carriers-directory__list" role="listbox" aria-label="Lista de divisas">
+          @for (currency of filteredCurrencies(); track trackByCurrencyId($index, currency)) {
+            <li
+              class="carrier-item"
+              [class.carrier-item--selected]="selectedCurrency()?.id === currency.id"
+              [class.carrier-item--inactive]="currency.status === 'INACTIVE'"
+              role="option"
+              [attr.aria-selected]="selectedCurrency()?.id === currency.id"
+              (click)="selectCurrency(currency)"
+              (keydown.enter)="selectCurrency(currency)"
+              tabindex="0">
+
+              <!-- Avatar con Símbolo -->
+              <div class="carrier-avatar" [class.avatar--own]="currency.isBase" [class.avatar--external]="!currency.isBase">
+                {{ currency.symbol }}
+              </div>
+
+              <!-- Info de la Divisa -->
+              <div class="carrier-item__body">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span class="carrier-item__name" style="font-family: var(--font-mono); font-weight: 700;">{{ currency.code }}</span>
+                  @if (currency.isBase) {
+                    <span class="carrier-status-badge carrier-status-badge--active" style="font-size: 0.6rem; padding: 1px 6px;">BASE</span>
+                  }
+                </div>
+                <div class="carrier-item__business">{{ currency.name }}</div>
+              </div>
+
+              <!-- Estado -->
+              <div class="carrier-item__status-col">
+                <span
+                  class="carrier-status-badge carrier-status-badge--{{ currency.status === 'ACTIVE' ? 'active' : 'inactive' }}">
+                  {{ currency.status === 'ACTIVE' ? 'Activa' : 'Inactiva' }}
+                </span>
+                <span style="font-size: 0.65rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  {{ currency.decimalPlaces }} dec
+                </span>
+              </div>
+            </li>
+          }
+
+          @if (filteredCurrencies().length === 0) {
+            <div class="carriers-state" role="status">
+              <span class="material-symbols-outlined carriers-state__icon">search_off</span>
+              <p class="carriers-state__title">Sin resultados</p>
+            </div>
+          }
+        </ul>
+
+        <div class="carriers-directory__footer">
+          <span class="carriers-count">
+            {{ filteredCurrencies().length }} divisa{{ filteredCurrencies().length !== 1 ? 's' : '' }} en catálogo
+          </span>
+        </div>
+      }
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Editor / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="carriers-detail" aria-label="Editor de divisa">
+
+      @if (panelView() === 'CURRENCY_FORM') {
+        <div class="carriers-form-container">
+
+          <!-- ── Header del formulario ── -->
+          <div class="carriers-form-header">
+            <div class="carriers-form-header__left">
+              <div class="carriers-form-header__breadcrumb">
+                <span class="material-symbols-outlined">currency_exchange</span>
+                Divisas
+                <span class="material-symbols-outlined carriers-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'CREATE') { Nueva divisa }
+                  @else { {{ selectedCurrency()?.code }} — {{ selectedCurrency()?.name }} }
+                </strong>
+              </div>
+              @if (formMode() === 'EDIT' && selectedCurrency()) {
+                <span class="carrier-status-badge carrier-status-badge--{{ selectedCurrency()!.status === 'ACTIVE' ? 'active' : 'inactive' }}">
+                  {{ selectedCurrency()!.status === 'ACTIVE' ? 'Activa' : 'Inactiva' }}
+                </span>
+              }
+            </div>
+
+            <!-- Acciones rápidas de cabecera -->
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              @if (formMode() === 'EDIT' && selectedCurrency()) {
+                @if (!selectedCurrency()?.isBase) {
+                  <button
+                    type="button"
+                    class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                    (click)="setAsBaseCurrency(selectedCurrency()!)">
+                    <span class="material-symbols-outlined">account_balance</span>
+                    Asignar como Base
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                  (click)="toggleCurrencyStatus(selectedCurrency()!)">
+                  <span class="material-symbols-outlined">
+                    {{ selectedCurrency()?.status === 'ACTIVE' ? 'block' : 'check_circle' }}
+                  </span>
+                  {{ selectedCurrency()?.status === 'ACTIVE' ? 'Inactivar' : 'Activar' }}
+                </button>
+                <button
+                  type="button"
+                  class="carriers-btn carriers-btn--primary carriers-btn--sm"
+                  (click)="openRateForm()"
+                  [disabled]="selectedCurrency()?.status === 'INACTIVE'">
+                  <span class="material-symbols-outlined">add</span>
+                  Registrar Tasa
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO DIVISA
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="currencyForm"
+            (ngSubmit)="saveCurrency()"
+            novalidate
+            autocomplete="off"
+            class="carriers-form">
+
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">badge</span>
+                Información de la Divisa
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+                <!-- Código ISO -->
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="cf-code">Código ISO 4217</label>
+                  <input
+                    id="cf-code"
+                    class="fg-input fg-input--mono"
+                    [class.fg-input--error]="cfError('code', 'required')"
+                    type="text"
+                    formControlName="code"
+                    placeholder="Ej. USD"
+                    maxlength="3"
+                    style="text-transform: uppercase;"
+                  />
+                  @if (cfError('code', 'required')) {
+                    <span class="fg-error" role="alert">El código ISO es obligatorio.</span>
+                  }
+                </div>
+
+                <!-- Nombre -->
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="cf-name">Nombre de la Divisa</label>
+                  <input
+                    id="cf-name"
+                    class="fg-input"
+                    [class.fg-input--error]="cfError('name', 'required')"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Ej. Dólar Estadounidense"
+                    maxlength="80"
+                  />
+                  @if (cfError('name', 'required')) {
+                    <span class="fg-error" role="alert">El nombre es obligatorio.</span>
+                  }
+                </div>
+
+                <!-- Símbolo -->
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="cf-symbol">Símbolo Gráfico</label>
+                  <input
+                    id="cf-symbol"
+                    class="fg-input"
+                    [class.fg-input--error]="cfError('symbol', 'required')"
+                    type="text"
+                    formControlName="symbol"
+                    placeholder="Ej. $"
+                    maxlength="8"
+                  />
+                  @if (cfError('symbol', 'required')) {
+                    <span class="fg-error" role="alert">El símbolo es obligatorio.</span>
+                  }
+                </div>
+
+                <!-- Decimales -->
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="cf-decimal-places">Decimales de Despliegue</label>
+                  <select id="cf-decimal-places" class="fg-select" formControlName="decimalPlaces">
+                    <option [value]="0">0 decimales</option>
+                    <option [value]="2">2 decimales</option>
+                    <option [value]="3">3 decimales</option>
+                    <option [value]="4">4 decimales</option>
+                    <option [value]="6">6 decimales</option>
+                  </select>
+                </div>
+
+                <!-- Estado -->
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="cf-status">Estado Operativo</label>
+                  <select id="cf-status" class="fg-select" formControlName="status">
+                    <option value="ACTIVE">Activa</option>
+                    <option value="INACTIVE">Inactiva</option>
+                  </select>
+                </div>
+
+                <!-- Checkbox Base -->
+                @if (formMode() === 'CREATE') {
+                  <div class="fg-field fg-field--full" style="margin-top: 0.5rem;">
+                    <label class="carriers-checkbox-item" for="cf-is-base">
+                      <input
+                        type="checkbox"
+                        id="cf-is-base"
+                        class="carriers-checkbox-input"
+                        formControlName="isBase" />
+                      <span class="carriers-checkbox-label" style="font-weight: 700;">Establecer como Divisa Base Principal de la organización</span>
+                    </label>
+                    <span class="fg-hint">La divisa base sirve como referencia para la contabilidad del WMS.</span>
+                  </div>
+                }
+              </div>
+            </fieldset>
+
+            <!-- ── Historial de Tasas Asociadas ── -->
+            @if (formMode() === 'EDIT' && selectedCurrencyRates().length > 0) {
+              <fieldset class="carriers-form-section">
+                <legend class="carriers-form-section__legend">
+                  <span class="material-symbols-outlined">trending_up</span>
+                  Tipos de Cambio Asociados
+                </legend>
+
+                <div class="ce-rate-history" style="margin: 0;">
+                  <div class="ce-rate-history__table-wrap">
+                    <table class="ce-rate-table">
+                      <thead>
+                        <tr>
+                          <th>Par</th>
+                          <th>Tasa Directa</th>
+                          <th>Tasa Inversa</th>
+                          <th>Vigencia</th>
+                          <th>Fuente</th>
+                          <th>Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (rate of selectedCurrencyRates(); track trackByRateId($index, rate)) {
+                          <tr>
+                            <td style="font-family: var(--font-mono); font-weight: 700;">
+                              {{ rate.fromCurrencyCode }} → {{ rate.toCurrencyCode }}
+                            </td>
+                            <td class="ce-rate-table__value">{{ rate.rate | number: '1.4-6' }}</td>
+                            <td class="ce-rate-table__value">{{ rate.inverseRate | number: '1.4-6' }}</td>
+                            <td>{{ rate.effectiveDate }}</td>
+                            <td>{{ sourceLabelMap[rate.sourceType] }}</td>
+                            <td>
+                              <span class="carrier-status-badge carrier-status-badge--{{ rate.status === 'ACTIVE' ? 'active' : 'inactive' }}">
+                                {{ statusLabelMap[rate.status] }}
+                              </span>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </fieldset>
+            }
+
+            <!-- ── Historial de Auditoría (Timeline por Usuario) ── -->
+            @if (formMode() === 'EDIT' && selectedCurrency()) {
+              <fieldset class="carriers-form-section">
+                <legend class="carriers-form-section__legend">
+                  <span class="material-symbols-outlined">history</span>
+                  Auditoría e Historial de Cambios por Usuario
+                </legend>
+
+                <div class="carriers-timeline-preview">
+                  <div class="carriers-timeline-preview__header">
+                    <span class="material-symbols-outlined">timeline</span>
+                    <span>Trazabilidad de operaciones en esta divisa</span>
+                  </div>
+
+                  @if (ceService.auditEntries().length === 0) {
+                    <p class="carriers-timeline-preview__desc" style="padding: 0.5rem 0;">
+                      No hay registros de auditoría disponibles aún.
+                    </p>
+                  } @else {
+                    <div class="carriers-timeline-preview__nodes">
+                      @for (entry of ceService.auditEntries(); track trackByAuditId($index, entry); let last = $last) {
+                        <div class="carriers-tl-node">
+                          <div class="carriers-tl-node__dot">
+                            <span class="material-symbols-outlined">info</span>
+                          </div>
+                          <div class="carriers-tl-node__line" [class.carriers-tl-node__line--last]="last"></div>
+                          <div class="carriers-tl-node__content">
+                            <span class="carriers-tl-node__action">
+                              {{ auditActionMap[entry.action] || entry.action }} — {{ entry.description }}
+                            </span>
+                            <span class="carriers-tl-node__meta">
+                              Por <strong>{{ entry.performedBy }}</strong> · {{ formatDateMX(entry.performedAt) }}
+                            </span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </fieldset>
+            }
+
+            <!-- Barra de Acciones del Formulario -->
+            <div class="carriers-form-actions" style="display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.5rem; border-top: 1px solid var(--border-card); background: rgba(23,32,51,0.02); margin-top: auto;">
+              <button
+                type="button"
+                class="carriers-btn carriers-btn--ghost"
+                (click)="formMode() === 'CREATE' ? createNewCurrency() : selectCurrency(selectedCurrency()!)"
+                [disabled]="isSaving()">
+                Descartar
+              </button>
+              <button
+                type="submit"
+                class="carriers-btn carriers-btn--primary"
+                [disabled]="currencyForm.invalid || currencyForm.pristine || isSaving()">
+                @if (isSaving()) {
+                  <span class="material-symbols-outlined spinner">sync</span>
+                  Guardando…
+                } @else {
+                  <span class="material-symbols-outlined">save</span>
+                  {{ formMode() === 'CREATE' ? 'Crear divisa' : 'Guardar cambios' }}
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- ─────────────────────────────────────
+           VISTA: Formulario de Tipo de Cambio
+           ───────────────────────────────────── -->
+      @if (panelView() === 'RATE_FORM') {
+        <div class="carriers-form-container">
+
+          <div class="carriers-form-header">
+            <div class="carriers-form-header__left">
+              <button
+                type="button"
+                class="carriers-filter-clear"
+                (click)="backToCurrencyForm()"
+                title="Volver"
+                style="width: 32px; height: 32px;">
+                <span class="material-symbols-outlined">arrow_back</span>
+              </button>
+              <div class="carriers-form-header__breadcrumb">
+                <span class="material-symbols-outlined">trending_up</span>
+                Registrar Tipo de Cambio
+                <span class="material-symbols-outlined carriers-form-header__chevron">chevron_right</span>
+                <strong>{{ selectedCurrency()?.code }}</strong>
+              </div>
+            </div>
+
+            <!-- Botón de consulta a Banxico Live -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <button
+                type="button"
+                class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                id="btn-banxico-live"
+                (click)="fetchBanxicoLive()"
+                [disabled]="isFetchingBanxico()"
+                title="Consultar cotización oficial en vivo desde la API de Banxico">
+                @if (isFetchingBanxico()) {
+                  <span class="material-symbols-outlined spinner">sync</span>
+                  Consultando Banxico…
+                } @else {
+                  <span class="material-symbols-outlined" style="color: var(--gold);">cloud_download</span>
+                  Obtener de Banxico (Live)
+                }
+              </button>
+            </div>
+          </div>
+
+          <form
+            [formGroup]="rateForm"
+            (ngSubmit)="saveExchangeRate()"
+            novalidate
+            autocomplete="off"
+            class="carriers-form">
+
+            <!-- Banner de información Banxico Live si se consultó -->
+            @if (banxicoLiveInfo()) {
+              <div style="margin: 1rem 1.5rem 0; padding: 0.85rem 1.1rem; background: var(--gold-bg); border: 1px solid var(--gold-border); border-radius: var(--radius-input); display: flex; align-items: flex-start; gap: 0.75rem;">
+                <span class="material-symbols-outlined" style="color: var(--gold); font-size: 24px;">account_balance</span>
+                <div style="flex: 1;">
+                  <div style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary);">
+                    Cotización oficial Banxico recuperada:
+                    <span style="font-family: var(--font-mono); color: var(--text-gold); font-size: 0.95rem;">
+                      {{ banxicoLiveInfo()?.rate }} MXN / {{ banxicoLiveInfo()?.currencyCode }}
+                    </span>
+                  </div>
+                  <div style="font-size: 0.73rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                    Serie: <strong>{{ banxicoLiveInfo()?.seriesId }}</strong> · Fecha Publicación: <strong>{{ banxicoLiveInfo()?.publicationDate }}</strong> · Fuente: {{ banxicoLiveInfo()?.sourceType }}
+                  </div>
+                  <div style="font-size: 0.71rem; color: var(--c-success); margin-top: 0.25rem; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                    Se cargó el valor en el formulario. Tienes la opción de editar la tasa antes de guardar.
+                  </div>
+                </div>
+              </div>
+            }
+
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">calculate</span>
+                Paridad Cambiaria
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+                <div class="fg-field">
+                  <label class="fg-label">Divisa Origen</label>
+                  <input class="fg-input fg-input--mono" [value]="selectedCurrency()?.code + ' — ' + selectedCurrency()?.name" disabled />
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="rf-target">Divisa Destino</label>
+                  <select id="rf-target" class="fg-select" formControlName="toCurrencyId">
+                    @for (c of availableTargetCurrencies; track c.id) {
+                      <option [value]="c.id">{{ c.code }} — {{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label class="fg-label fg-label--required" for="rf-rate">Tasa de Cambio</label>
+                    <button
+                      type="button"
+                      style="background: none; border: none; font-size: 0.68rem; color: var(--text-gold); font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 2px;"
+                      (click)="fetchBanxicoLive()">
+                      <span class="material-symbols-outlined" style="font-size: 13px;">sync</span>
+                      Auto Banxico
+                    </button>
+                  </div>
+                  <input
+                    id="rf-rate"
+                    class="fg-input fg-input--mono"
+                    type="number"
+                    formControlName="rate"
+                    step="0.000001"
+                    min="0.000001"
+                    placeholder="Ej. 18.450000"
+                  />
+                  <span class="fg-hint">Puedes editar libremente el valor traído de Banxico antes de guardar.</span>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="rf-effective-date">Fecha de Vigencia</label>
+                  <input id="rf-effective-date" class="fg-input" type="date" formControlName="effectiveDate" />
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="rf-source-type">Fuente de Información</label>
+                  <select id="rf-source-type" class="fg-select" formControlName="sourceType">
+                    @for (src of rateSources; track src) {
+                      <option [value]="src">{{ sourceLabelMap[src] }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label" for="rf-notes">Observaciones / Notas</label>
+                  <textarea id="rf-notes" class="fg-textarea" formControlName="notes" rows="2" maxlength="255" placeholder="Referencia oficial ej. DOF…"></textarea>
+                </div>
+              </div>
+            </fieldset>
+
+            <div class="carriers-form-actions" style="display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.5rem; border-top: 1px solid var(--border-card); background: rgba(23,32,51,0.02); margin-top: auto;">
+              <button type="button" class="carriers-btn carriers-btn--ghost" (click)="backToCurrencyForm()" [disabled]="isSaving()">Cancelar</button>
+              <button type="submit" class="carriers-btn carriers-btn--primary" [disabled]="rateForm.invalid || isSaving()">
+                @if (isSaving()) {
+                  <span class="material-symbols-outlined spinner">sync</span>
+                  Registrando…
+                } @else {
+                  <span class="material-symbols-outlined">save</span>
+                  Registrar Tasa
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+    </main>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL DE CONFIRMACIÓN (HOMOLOGADO)
+     ═══════════════════════════════════════════════════════ -->
+@if (showConfirmModal()) {
+  <div class="ce-modal-backdrop" (click)="closeConfirmModal()">
+    <div class="ce-modal" (click)="$event.stopPropagation()">
+      <div class="ce-modal__header">
+        <span class="material-symbols-outlined ce-modal__header-icon">warning</span>
+        <h3 class="ce-modal__title">{{ confirmModalConfig()?.title }}</h3>
+      </div>
+      <div class="ce-modal__body">
+        <p [innerHTML]="confirmModalConfig()?.message"></p>
+      </div>
+      <div class="ce-modal__footer">
+        <button type="button" class="carriers-btn carriers-btn--ghost" (click)="closeConfirmModal()">Cancelar</button>
+        <button type="button" class="carriers-btn carriers-btn--primary" (click)="confirmAction()">{{ confirmModalConfig()?.confirmLabel }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════
+     DRAWER DE AUDITORÍA (HOMOLOGADO)
+     ═══════════════════════════════════════════════════════ -->
+@if (showAuditDrawer()) {
+  <div class="ce-audit-backdrop" (click)="closeAudit()">
+    <aside class="ce-audit-drawer" (click)="$event.stopPropagation()">
+      <div class="ce-audit-drawer__header">
+        <span class="material-symbols-outlined">history</span>
+        <h2 class="ce-audit-drawer__title">Bitácora de Auditoría</h2>
+        <button type="button" class="carriers-filter-clear" (click)="closeAudit()" style="width: 32px; height: 32px;">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="ce-audit-drawer__body">
+        @for (entry of ceService.auditEntries(); track trackByAuditId($index, entry)) {
+          <div class="ce-audit-entry">
+            <div style="flex: 1;">
+              <div style="font-weight: 700; font-size: 0.82rem; color: var(--text-primary);">
+                {{ auditActionMap[entry.action] || entry.action }}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.2rem 0;">
+                {{ entry.description }}
+              </div>
+              <div style="font-size: 0.68rem; color: var(--text-muted);">
+                Por {{ entry.performedBy }} · {{ formatDateMX(entry.performedAt) }}
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+}

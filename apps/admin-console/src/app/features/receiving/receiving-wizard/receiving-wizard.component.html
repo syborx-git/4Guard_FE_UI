@@ -13,9 +13,13 @@
 
       <p class="wizard-header__sub">
         Recepción:
-        <strong>ASN-NESPRESSO-240616</strong>
+        <strong>{{ activeAppointment()?.asnReference || step1Form.get('asnReference')?.value || 'ASN-NESPRESSO-240616' }}</strong>
         <span class="wizard-header__separator">•</span>
-        Andén 01
+        Andén: <strong>{{ activeAppointment()?.dockNumber || step1Form.get('dockNumber')?.value || 'AND-01' }}</strong>
+        @if (activeAppointment()?.clientName) {
+          <span class="wizard-header__separator">•</span>
+          {{ activeAppointment()?.clientName }}
+        }
       </p>
     </div>
 
@@ -559,24 +563,26 @@
     </span>
 
     <h3 class="wizard-success__title">
-      ¡Recepción Cerrada!
+      ¡Cuadratura de Recepción Completada!
     </h3>
 
     <p class="wizard-success__desc">
-      La recepción ASN-NESPRESSO-240616 fue cerrada
-      exitosamente con cuadratura del 100%.
-      Los lotes quedarán disponibles después de inspección.
+      La recepción <strong>{{ activeAppointment()?.asnReference || 'ASN-NESPRESSO-240616' }}</strong> registró cuadratura al 100%.
+      La cita permanece en estado <strong>En Recepción</strong> lista para la posterior liberación documental e inspección de calidad.
     </p>
 
-    <button id="wizard-back-dashboard" type="button" class="wizard-btn wizard-btn--primary"
-      (click)="navigateToDashboard()">
+    <div style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+      <button id="wizard-back-center" type="button" class="wizard-btn wizard-btn--primary"
+        (click)="navigateToCenter()">
+        <span class="material-symbols-outlined">calendar_month</span>
+        <span>Regresar al Centro de Recepciones</span>
+      </button>
 
-      <span>Volver al Dashboard</span>
-
-      <span class="material-symbols-outlined">
-        arrow_forward
-      </span>
-    </button>
+      <button id="wizard-back-dashboard" type="button" class="wizard-btn wizard-btn--secondary"
+        (click)="navigateToDashboard()">
+        <span>Dashboard</span>
+      </button>
+    </div>
   </div>
   }
 </section>

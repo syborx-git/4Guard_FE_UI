@@ -1,0 +1,394 @@
+/* ══════════════════════════════════════════════════════════════════════
+   DOCK ASSIGNMENT DRAWER (HU-030)
+   Width: min(640px, 92vw) · Enterprise Dark Aesthetic · Dock Cards Grid
+   ══════════════════════════════════════════════════════════════════════ */
+
+.dock-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 890;
+  animation: dock-fade-in 0.2s ease;
+}
+
+.dock-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(640px, 92vw);
+  max-width: 100vw;
+  background: var(--ac-surface, #0f172a);
+  border-left: 1px solid var(--ac-border-mid, rgba(201, 168, 96, 0.25));
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  animation: dock-slide-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dock-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dock-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* HEADER FIJO */
+.dock-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--ac-surface-2, #1e293b);
+  border-bottom: 1px solid var(--ac-border-mid, rgba(201, 168, 96, 0.2));
+  flex-shrink: 0;
+}
+
+.dock-drawer__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dock-drawer__icon {
+  font-size: 1.4rem;
+  color: var(--ac-gold, #c9a860);
+}
+
+.dock-drawer__title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ac-txt-1, #f8fafc);
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+.dock-drawer__subtitle {
+  font-size: 0.65rem;
+  color: var(--ac-txt-3, #94a3b8);
+  margin: 0.1rem 0 0;
+}
+
+.dock-drawer__close {
+  background: transparent;
+  border: none;
+  color: var(--ac-txt-3, #94a3b8);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.dock-drawer__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ac-txt-1, #f8fafc);
+}
+
+/* CUERPO CON SCROLL */
+.dock-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* BANNERS DE ALERTA */
+.dock-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.dock-alert .material-symbols-outlined { font-size: 1rem; }
+.dock-alert--danger { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.dock-alert--success { background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.dock-alert--warning { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+/* RESUMEN DE CITA */
+.dock-summary-card {
+  background: var(--ac-surface-2, #1e293b);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.dock-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem 1rem;
+}
+
+.dock-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.dock-summary-item .lbl { font-size: 0.6rem; color: var(--ac-txt-3, #94a3b8); font-weight: 600; }
+.dock-summary-item strong { font-size: 0.78rem; color: var(--ac-txt-1, #f8fafc); font-weight: 700; }
+
+.dock-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+.dock-tag--success { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.dock-tag--danger  { background: rgba(239, 68, 68, 0.12); color: #f87171; }
+.dock-tag--neutral { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+/* 1. HARD GATE BLOCKER CARD */
+.dock-blocker-card {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dock-blocker-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #f87171;
+}
+
+.dock-blocker-head strong { font-size: 0.85rem; font-weight: 800; }
+.dock-blocker-head p { font-size: 0.68rem; color: var(--ac-txt-3, #94a3b8); margin: 0.1rem 0 0; }
+
+.dock-blocker-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.72rem;
+  color: #fca5a5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* 2. OPERATIONAL DOCK RECOMMENDATION ENGINE CARD */
+.dock-engine-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
+  border: 1px solid rgba(201, 168, 96, 0.35);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+.dock-engine-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.dock-engine-head .material-symbols-outlined {
+  font-size: 1.6rem;
+  color: var(--ac-gold, #c9a860);
+}
+
+.dock-engine-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.dock-engine-badge {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.dock-engine-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ac-txt-1, #f8fafc);
+  margin: 0;
+}
+
+.dock-engine-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dock-engine-reasons .lbl {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--ac-gold, #c9a860);
+  text-transform: uppercase;
+}
+
+.dock-engine-reasons ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--ac-txt-2, #cbd5e1);
+}
+
+.dock-engine-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.2rem;
+}
+
+/* 3. SELECTOR VISUAL DE MUELLES (GRID DE TARJETAS) */
+.dock-grid-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dock-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--ac-txt-2, #cbd5e1);
+  margin: 0;
+}
+
+.dock-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.dock-card {
+  background: var(--ac-surface-2, #1e293b);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.dock-card:hover {
+  border-color: rgba(201, 168, 96, 0.4);
+  transform: translateY(-1px);
+}
+
+.dock-card--selected {
+  border-color: var(--ac-gold-bright, #e8c878) !important;
+  background: rgba(201, 168, 96, 0.12) !important;
+  box-shadow: 0 4px 14px rgba(201, 168, 96, 0.2);
+}
+
+.dock-card--suggested {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.dock-card--occupied {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.dock-card--maintenance {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.dock-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dock-card-code {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ac-txt-1, #f8fafc);
+}
+
+.dock-status-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+.badge--available { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.badge--occupied  { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+.badge--reserved  { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+.badge--blocked   { background: rgba(239, 68, 68, 0.12); color: #f87171; }
+
+.dock-tag-sug {
+  font-size: 0.58rem;
+  font-weight: 900;
+  color: #10b981;
+}
+
+.dock-card-sub {
+  font-size: 0.62rem;
+  color: var(--ac-txt-3, #94a3b8);
+}
+
+/* 4. FORMULARIO DE EXCEPCIÓN HUMANA */
+.dock-override-card {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  padding: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dock-override-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #fbbf24;
+  font-size: 0.78rem;
+}
+
+.dock-override-desc {
+  font-size: 0.68rem;
+  color: var(--ac-txt-2, #cbd5e1);
+  margin: 0;
+}
+
+/* FOOTER FIJO */
+.dock-drawer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--ac-surface-2, #1e293b);
+  border-top: 1px solid var(--ac-border-mid, rgba(201, 168, 96, 0.2));
+  flex-shrink: 0;
+}
