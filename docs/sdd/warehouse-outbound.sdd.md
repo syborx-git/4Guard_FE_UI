@@ -297,3 +297,17 @@ En el modo detalle (`formMode === 'detail'`), se despliega la sección **"Inform
 - [x] Build sin errores TypeScript (`tsc --noEmit` exit 0).
 - [x] Funciona en `/warehouse-movements/outbound`.
 
+---
+
+## 11. Contratos Backend REST (Spring Boot — `/api/v1/warehouse-outbounds`)
+
+| Método | Endpoint | DTO / Payload | Descripción |
+|---|---|---|---|
+| `POST` | `/` | `CreateOutboundRequest` | Registrar salida / despacho outbound y descontar inventario |
+| `GET` | `/{id}` | N/A | Consulta de detalle con tarimas despachadas |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
+| `POST` | `/{id}/cancel` | `CancelOutboundRequest` | Cancelación de salida y restauración de inventario |
+| `GET` | `/inventory-batches` | Query params: `organizationId`, `clientId`, `skuId` | Consulta de lotes disponibles con sugerencia FIFO/FEFO |
+| `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
+
+

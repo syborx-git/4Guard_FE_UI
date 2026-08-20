@@ -118,3 +118,22 @@ export interface MovementAuditEntry {
   * Midnight Navy: `--navy: #172033`, `--navy-mid: #25324a`.
   * Prestige Gold: `--gold: #c5a86b`, `--gold-light: #e0c87a`, `--gold-bg: rgba(197, 168, 107, 0.10)`.
   * Soporte Dark Mode nativo con `:host-context(.theme-dark)` y `.dark`.
+
+---
+
+## 6. Contratos Backend REST (Spring Boot — `/api/v1/warehouse-receptions`)
+
+| Método | Endpoint | DTO / Payload | Descripción |
+|---|---|---|---|
+| `POST` | `/check-in` | `CreateCheckInRequest` | Registro inicial de arribo en caseta |
+| `PUT` | `/{id}/parameters` | `UpdateReceptionParametersRequest` | Guardar avance de parámetros en andén |
+| `GET` | `/{id}` | N/A | Consulta de detalle con tarimas y sellos |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
+| `POST` | `/{id}/pallets` | `AddReceptionPalletsRequest` | Escáner y alta de UAs |
+| `PUT` | `/{id}/pallets/{palletId}` | `UpdatePalletRequest` | Edición de tarima individual |
+| `DELETE` | `/{id}/pallets/{palletId}` | N/A | Eliminación de tarima |
+| `POST` | `/{id}/complete` | `CompleteReceptionRequest` | Autorización Líder y cierre F01 |
+| `POST` | `/{id}/cancel` | `CancelReceptionRequest` | Cancelación extraordinaria con Admin |
+| `PUT` | `/{id}/change-remision` | `ChangeRemisionRequest` | Modificación de remisión con auditoría |
+| `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
+

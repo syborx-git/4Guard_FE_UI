@@ -228,3 +228,16 @@ En el modo detalle (`formMode === 'detail'`), se despliega la sección **"Inform
 | **CA-014** | La barra de breadcrumb no contiene botones redundantes y se homologa 1:1 con Recepción. | ✅ Cumplido |
 | **CA-015** | La tipografía utiliza `Outfit`, `Inter` y `JetBrains Mono` con colores Midnight Navy & Prestige Gold y soporte Dark Mode. | ✅ Cumplido |
 
+---
+
+## 10. Contratos Backend REST (Spring Boot — `/api/v1/warehouse-transfers`)
+
+| Método | Endpoint | DTO / Payload | Descripción |
+|---|---|---|---|
+| `POST` | `/` | `CreateTransferRequest` | Registrar cambio de almacén y reubicación de UAs |
+| `GET` | `/{id}` | N/A | Consulta de detalle con tarimas reubicadas |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
+| `POST` | `/{id}/cancel` | `CancelTransferRequest` | Cancelación de traspaso con compensación |
+| `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
+
+

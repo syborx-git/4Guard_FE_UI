@@ -30,11 +30,13 @@ import {
   MovementAuditEntry,
   MovementAuditDetail,
 } from '../models/warehouse-movements.models';
+import { WarehouseMovementsApiService } from './warehouse-movements-api.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class WarehouseMovementsService {
+  public readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
   // Consecutivo base de recepción
   private nextFolioNumber = signal(26510);
@@ -448,6 +450,146 @@ export class WarehouseMovementsService {
 
   constructor() {
     this.seedInitialData();
+    this.loadInitialBackendData();
+  }
+
+  public loadInitialBackendData(): void {
+    // 1. Clientes
+    this.movementsApi.getClients().subscribe({
+      next: (clients) => {
+        if (clients && clients.length > 0) {
+          this.clientsSignal.set(
+            clients.map((c) => ({
+              code: c.id || c.code || 'CLI',
+              name: c.name || c.tradeName || 'Cliente',
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
+
+    // 2. Transportistas
+    this.movementsApi.getCarriers().subscribe({
+      next: (carriers) => {
+        if (carriers && carriers.length > 0) {
+          this.carrierLinesSignal.set(
+            carriers.map((c) => ({
+              code: c.id || c.taxId || 'TR',
+              name: c.name || c.tradeName || 'Transportista',
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
+
+    // 3. Recepciones
+    this.movementsApi.getReceptions().subscribe({
+      next: (receptions) => {
+        if (receptions && receptions.length > 0) {
+          this.receptionsSignal.set(
+            receptions.map((r: any) => ({
+              id: r.id,
+              folio: r.folio,
+              status: r.status,
+              checkIn: {
+                carrierLine: r.carrierName || 'Transportes Castores',
+                receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : '08:30',
+                docNumber: r.docNumber,
+                docDate: r.docDate,
+                client: r.clientName || 'Cliente',
+                rampNumber: 4,
+                forkliftOperator: 'Pablo Hernández',
+                driverName: r.driverName || '',
+                tractorPlates: r.tractorPlates || '',
+                boxPlates: r.boxPlates || '',
+                sealNumber: '',
+              },
+              lotNumber: r.lotNumber || '',
+              elaborationDate: '',
+              expirationDate: '',
+              productId: r.skuCode || '12572733',
+              productName: r.productName || 'Producto General',
+              supplierName: '',
+              piecesPerPallet: r.piecesPerPallet || 480,
+              selectedPalletType: 'MADERA_ESTANDAR',
+              pallets: [],
+              createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : '',
+              completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
+              cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
+              capturedBy: r.capturedBy || 'Operador WMS',
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
+
+    // 4. Traspasos
+    this.movementsApi.getTransfers().subscribe({
+      next: (transfers) => {
+        if (transfers && transfers.length > 0) {
+          this.transfersSignal.set(
+            transfers.map((t: any) => ({
+              id: t.id,
+              folio: t.folio,
+              status: t.status,
+              forkliftOperator: t.forkliftOperatorName || 'Pablo Hernández',
+              forkliftOperatorId: t.forkliftOperatorId,
+              originLocation: t.originLocationCode || 'A-14',
+              destinationLocation: t.destinationLocationCode || 'M-98',
+              reasonId: t.reasonCode,
+              reasonLabel: t.reasonLabel || t.reasonCode,
+              pallets: [],
+              totalPallets: t.totalPallets || 0,
+              totalPieces: t.totalPieces || 0,
+              distinctSkus: t.distinctSkus || 1,
+              transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
+              transferredBy: t.createdBy || 'Operador WMS',
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
+
+    // 5. Salidas
+    this.movementsApi.getOutbounds().subscribe({
+      next: (outbounds) => {
+        if (outbounds && outbounds.length > 0) {
+          this.outboundsSignal.set(
+            outbounds.map((o: any) => ({
+              id: o.id,
+              folio: o.folio,
+              status: o.status,
+              clientCode: o.clientId || 'CLI-001',
+              clientName: o.clientName || 'Cliente',
+              destinationId: o.destinationId || '',
+              destinationName: o.destinationName || '',
+              destinationAddress: '',
+              carrierCode: o.carrierId || 'TR-01',
+              carrierName: o.carrierName || '',
+              driverName: o.driverName || '',
+              economicNumber: '',
+              tractorPlates: o.tractorPlates || '',
+              boxPlates: o.boxPlates || '',
+              transportType: o.transportType || 'TRAILER',
+              sealNumber: o.sealNumber || '',
+              remisionNo: o.remisionNo || '',
+              items: [],
+              totalPallets: o.totalPallets || 0,
+              totalPieces: o.totalPieces || 0,
+              distinctSkus: o.distinctSkus || 1,
+              dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+              dispatchedBy: o.createdBy || 'Operador WMS',
+              timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '12:00',
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
   }
 
   private seedInitialData(): void {
