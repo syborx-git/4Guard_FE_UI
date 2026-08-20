@@ -216,7 +216,7 @@ export class WarehouseMovementsService {
           this.forkliftOperatorsSignal.set(
             ops.map((o) => ({
               code: o.id || o.code,
-              name: `${o.firstName || ''} ${o.lastName || ''}`.trim() || o.name || 'Montacarguista',
+              name: o.fullName || `${o.firstName || ''} ${o.lastNamePaternal || o.lastName || ''} ${o.lastNameMaternal || ''}`.trim() || o.name || 'Montacarguista',
             }))
           );
         }
