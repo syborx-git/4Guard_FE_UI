@@ -701,7 +701,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.showLeaderModal.set(true);
   }
 
-  onLeaderValidated(event: { leaderName: string }): void {
+  onLeaderValidated(event: { leaderName: string; username?: string; password?: string }): void {
     this.showLeaderModal.set(false);
     const action = this.leaderAction();
     const rec = this.selectedReception();
@@ -720,7 +720,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
           currentStream,
           this.products(),
           this.suppliers(),
-          event.leaderName
+          event.leaderName,
+          event.username,
+          event.password
         )
         .subscribe({
           next: (updated) => {

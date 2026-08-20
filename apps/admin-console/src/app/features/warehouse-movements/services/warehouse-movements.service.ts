@@ -689,21 +689,23 @@ export class WarehouseMovementsService {
         return this.movementsApi.completeReception(receptionId, completePayload);
       }),
       map((res: any) => {
-        const updated = this.completeReception(
-          res.folio || receptionId,
-          formVals.lotNumber,
-          res.elaborationDate || '2026-01-01',
-          formVals.expirationDate,
-          formVals.productId,
-          formVals.productName,
-          formVals.piecesPerPallet,
-          formVals.selectedPalletType,
-          pallets,
-          formVals.observations,
-          'Christian Durán',
-          leaderName
-        );
-        return updated || ({} as ReceptionHeader);
+        const mapped = this.mapReceptionResponseToHeader(res);
+        mapped.status = 'COMPLETED';
+        mapped.completedAt = mapped.completedAt || new Date().toLocaleString('es-MX');
+        mapped.leaderAuthorizedBy = leaderName || mapped.leaderAuthorizedBy;
+        this.updateReception(receptionId, mapped);
+        this.addReceptionAudit(mapped.folio, {
+          id: `aud-rec-comp-${Date.now()}`,
+          action: 'RECEPCION_COMPLETADA',
+          actionLabel: 'Descarga Finalizada y Cerrada en WMS',
+          username: leaderName || 'Líder de Almacén',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'REGISTERED', newValue: 'COMPLETED' },
+            { fieldName: 'Total Tarimas', newValue: String(mapped.pallets?.length || 0) },
+          ],
+        });
+        return mapped;
       })
     );
   }
