@@ -270,37 +270,7 @@ export class WarehouseMovementsService {
     this.movementsApi.getReceptions().subscribe({
       next: (receptions) => {
         this.receptionsSignal.set(
-          (receptions || []).map((r: any) => ({
-            id: r.id,
-            folio: r.folio,
-            status: r.status,
-            checkIn: {
-              carrierLine: r.carrierName || '',
-              receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : '',
-              docNumber: r.docNumber || '',
-              docDate: r.docDate || '',
-              client: r.clientName || '',
-              rampNumber: 4,
-              forkliftOperator: '',
-              driverName: r.driverName || '',
-              tractorPlates: r.tractorPlates || '',
-              boxPlates: r.boxPlates || '',
-              sealNumber: '',
-            },
-            lotNumber: r.lotNumber || '',
-            elaborationDate: '',
-            expirationDate: '',
-            productId: r.skuCode || '',
-            productName: r.productName || '',
-            supplierName: '',
-            piecesPerPallet: r.piecesPerPallet || 0,
-            selectedPalletType: 'MADERA_ESTANDAR',
-            pallets: [],
-            createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : '',
-            completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
-            cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
-            capturedBy: r.capturedBy || '',
-          }))
+          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
         );
       },
       error: () => {},
@@ -587,6 +557,64 @@ export class WarehouseMovementsService {
     );
   }
 
+  // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
+  mapReceptionResponseToHeader(r: any): ReceptionHeader {
+    const pType = (r.palletType as PalletType) || 'MADERA_ESTANDAR';
+    const pallets = (r.pallets || []).map((p: any) => ({
+      id: p.id,
+      palletNumber: p.palletNumber,
+      palletCode: p.palletCode,
+      productId: p.skuCode || r.skuCode || '',
+      description: p.description || p.productDescription || r.productName || '',
+      supplierName: p.supplierName || r.supplierName || '',
+      pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
+      palletTypeId: p.palletTypeId || p.palletType || pType,
+      palletTypeLabel: p.palletTypeLabel || PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+      observations: p.observations || '',
+      status: p.status || 'SCANNED',
+    }));
+
+    return {
+      id: r.id,
+      folio: r.folio || '',
+      status: r.status || 'REGISTERED',
+      checkIn: {
+        carrierLine: r.carrierName || '',
+        carrierLineCode: r.carrierId || '',
+        receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : '',
+        docNumber: r.docNumber || '',
+        docDate: r.docDate || '',
+        client: r.clientName || '',
+        clientCode: r.clientId || '',
+        rampNumber: r.rampName ? (parseInt(r.rampName.replace(/\D/g, ''), 10) || 4) : 4,
+        rampCode: r.rampId || '',
+        forkliftOperator: r.forkliftOperatorName || '',
+        forkliftOperatorCode: r.forkliftOperatorId || '',
+        driverName: r.driverName || '',
+        tractorPlates: r.tractorPlates || '',
+        boxPlates: r.boxPlates || '',
+        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers[0] : (r.sealNumber || ''),
+      },
+      lotNumber: r.lotNumber || '',
+      elaborationDate: r.elaborationDate || '',
+      expirationDate: r.expirationDate || '',
+      productId: r.skuCode || r.skuId || '',
+      productName: r.productName || '',
+      supplierName: r.supplierName || '',
+      piecesPerPallet: r.piecesPerPallet || (pallets.length > 0 ? pallets[0].pieces : 480),
+      selectedPalletType: pType,
+      storageLocation: r.storageLocationCode || '',
+      observations: r.observations || '',
+      pallets: pallets,
+      createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : '',
+      completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
+      cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
+      capturedBy: r.capturedBy || '',
+      leaderAuthorizedBy: r.leaderAuthorizedBy || '',
+      cancellationReason: r.cancellationReason || '',
+    };
+  }
+
   // Persiste avances de descarga (parámetros y tarimas) en el Backend (wms.warehouse_reception_pallets)
   saveDraftReceptionBackend(
     receptionId: string,
@@ -631,19 +659,11 @@ export class WarehouseMovementsService {
           return of([]);
         }
       }),
-      map(() => {
-        const updated = this.updateReception(receptionId, {
-          lotNumber: formVals.lotNumber,
-          expirationDate: formVals.expirationDate,
-          productId: formVals.productId,
-          productName: formVals.productName,
-          supplierName: formVals.supplierName,
-          piecesPerPallet: formVals.piecesPerPallet,
-          selectedPalletType: formVals.selectedPalletType,
-          observations: formVals.observations,
-          pallets: pallets,
-        });
-        return updated || ({} as ReceptionHeader);
+      concatMap(() => this.movementsApi.getReceptionById(receptionId)),
+      map((freshRec: any) => {
+        const mapped = this.mapReceptionResponseToHeader(freshRec);
+        this.updateReception(receptionId, mapped);
+        return mapped;
       })
     );
   }
@@ -726,11 +746,22 @@ export class WarehouseMovementsService {
     return newHeader;
   }
 
-  // Actualiza datos de una recepción en progreso
-  updateReception(folio: string, partial: Partial<ReceptionHeader>): ReceptionHeader | null {
+  // Actualiza datos de una recepción en progreso (por folio o id)
+  updateReception(folioOrId: string, partial: Partial<ReceptionHeader>): ReceptionHeader | null {
     const list = this.receptionsSignal();
-    const index = list.findIndex((r) => r.folio.trim() === folio.trim());
-    if (index === -1) return null;
+    const cleanKey = (folioOrId || '').trim();
+    const index = list.findIndex(
+      (r) =>
+        (r.folio && r.folio.trim() === cleanKey) ||
+        (r.id && r.id.trim() === cleanKey)
+    );
+
+    if (index === -1) {
+      if (partial.folio) {
+        this.receptionsSignal.update((arr) => [partial as ReceptionHeader, ...arr]);
+      }
+      return partial as ReceptionHeader;
+    }
 
     const updated: ReceptionHeader = {
       ...list[index],
@@ -741,7 +772,7 @@ export class WarehouseMovementsService {
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
 
-    this.addReceptionAudit(folio, {
+    this.addReceptionAudit(updated.folio, {
       id: `aud-rec-upd-${Date.now()}`,
       action: 'RECEPCION_ACTUALIZADA',
       actionLabel: 'Actualización de Datos de Recepción',

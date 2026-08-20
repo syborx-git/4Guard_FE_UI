@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
+import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import {
   CheckInCasetaData,
   ReceptionHeader,
@@ -36,6 +37,7 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 export class ReceivingSubmoduleComponent implements OnInit {
   protected readonly authState = inject(AuthState);
   private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
@@ -304,10 +306,26 @@ export class ReceivingSubmoduleComponent implements OnInit {
     localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
     this.loadAuditLogs(rec.folio);
+    this.patchAltaFormWithReception(rec);
 
+    if (rec.id) {
+      this.movementsApi.getReceptionById(rec.id).subscribe({
+        next: (fullData) => {
+          const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+          this.selectedReception.set(mapped);
+          this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
+          this.patchAltaFormWithReception(mapped);
+          this.movementsService.updateReception(mapped.id || mapped.folio, mapped);
+        },
+        error: () => {},
+      });
+    }
+  }
+
+  patchAltaFormWithReception(rec: ReceptionHeader): void {
     const defaultSupplier = rec.supplierName || (this.suppliers().length > 0 ? this.suppliers()[0].name : '');
     const defaultOperator = rec.checkIn?.forkliftOperator || (this.forkliftOperators().length > 0 ? this.forkliftOperators()[0].name : '');
-    const defaultProduct = this.products().find((p) => p.id === rec.productId) || (this.products().length > 0 ? this.products()[0] : null);
+    const defaultProduct = this.products().find((p) => p.id === rec.productId || p.name === rec.productName) || (this.products().length > 0 ? this.products()[0] : null);
 
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
@@ -494,7 +512,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
         next: (updated) => {
           this.isSavingDraft.set(false);
           this.selectedReception.set(updated);
-          this.toast.success(`Avance de Folio #${current.folio} y ${currentStream.length} tarima(s) guardados correctamente en la base de datos.`);
+          this.palletStream.set(updated.pallets ? [...updated.pallets] : []);
+          this.patchAltaFormWithReception(updated);
+          this.toast.success(`Avance de Folio #${current.folio} y ${(updated.pallets || []).length} tarima(s) guardados correctamente en la base de datos.`);
         },
         error: (err) => {
           this.isSavingDraft.set(false);
