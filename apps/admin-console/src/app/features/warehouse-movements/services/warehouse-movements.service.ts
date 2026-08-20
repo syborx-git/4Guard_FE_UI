@@ -855,6 +855,26 @@ export class WarehouseMovementsService {
     return updated;
   }
 
+  // Modifica el número de remisión/documento de la recepción
+  changeRemision(folio: string, newDocNumber: string, reason: string): ReceptionHeader | null {
+    const rec = this.findReceptionByFolio(folio);
+    if (!rec) return null;
+
+    const updated = this.updateReception(folio, {
+      checkIn: {
+        ...rec.checkIn,
+        docNumber: newDocNumber,
+      },
+      observations: `${rec.observations || ''} | Cambio Remisión: ${rec.checkIn?.docNumber} -> ${newDocNumber} (${reason})`.trim(),
+    });
+
+    if (rec.id) {
+      this.movementsApi.changeRemision(rec.id, { newDocNumber, reason }).subscribe({ error: () => {} });
+    }
+
+    return updated;
+  }
+
   // Cancela Recepción (Compuerta de Seguridad)
   cancelReception(folio: string, justification: string, leaderName: string): ReceptionHeader | null {
     const list = this.receptionsSignal();

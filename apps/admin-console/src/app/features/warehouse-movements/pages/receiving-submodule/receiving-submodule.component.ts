@@ -152,7 +152,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     forkliftOperator: ['', [Validators.required]],
     rampNumber: [1, [Validators.required]],
     productId: ['', [Validators.required]],
-    productName: ['', [Validators.required]],
+    productName: [''],
     supplierName: ['', [Validators.required]],
     piecesPerPallet: [0, [Validators.required, Validators.min(1)]],
     selectedPalletType: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
@@ -468,8 +468,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   isSavingDraft = signal(false);
+  isCompleting = signal(false);
 
   validateAltaForm(): boolean {
+    const pId = this.altaForm.get('productId')?.value;
+    if (pId && !this.altaForm.get('productName')?.value) {
+      const prod = this.products().find((p) => p.id === pId);
+      if (prod) {
+        this.altaForm.patchValue({ productName: prod.name });
+      }
+    }
+
     if (this.altaForm.invalid) {
       this.altaForm.markAllAsTouched();
       const missing: string[] = [];
@@ -573,18 +582,19 @@ export class ReceivingSubmoduleComponent implements OnInit {
       })
     );
 
-    this.showEditPalletModal.set(false);
-    this.toast.success(`Tarima ${formVals.palletCode} actualizada correctamente`);
+    this.closeEditPalletModal();
+    this.toast.success(`Tarima #${formVals.palletNumber} actualizada.`);
   }
 
-  removePalletFromStream(id: string): void {
-    this.palletStream.update((list) => {
-      const filtered = list.filter((item) => item.id !== id);
-      return filtered.map((item, idx) => ({ ...item, palletNumber: idx + 1 }));
-    });
-    this.toast.info('Tarima eliminada de la lista de descarga');
+  removePalletFromStream(palletId: string): void {
+    const list = this.palletStream().filter((p) => p.id !== palletId);
+    // Re-enumerar tarimas para que siempre sean 1, 2, 3... N
+    const renumbered = list.map((item, idx) => ({ ...item, palletNumber: idx + 1 }));
+    this.palletStream.set(renumbered);
+    this.toast.info('Tarima removida de la descarga');
   }
 
+  // ── CAMBIO EXTRAORDINARIO DE REMISIÓN / DOCUMENTO ──
   openChangeRemisionModal(): void {
     const current = this.selectedReception();
     if (!current) return;
@@ -597,75 +607,68 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.showChangeRemisionModal.set(false);
   }
 
-  submitChangeRemision(): void {
+  saveChangeRemision(): void {
+    const newDoc = this.newRemisionInput().trim();
+    const reason = this.changeJustification().trim();
     const current = this.selectedReception();
     if (!current) return;
-    const oldRem = current.checkIn.docNumber;
-    const newRem = this.newRemisionInput().trim();
-    const just = this.changeJustification().trim();
 
-    if (!newRem || !just) {
-      this.toast.warning('La nueva remisión y la justificación son obligatorias.');
+    if (!newDoc) {
+      this.toast.warning('Ingresa el nuevo número de documento.');
+      return;
+    }
+    if (!reason) {
+      this.toast.warning('Ingresa la justificación del cambio.');
       return;
     }
 
-    const count = this.movementsService.updateRemisionNumber(oldRem, newRem, just);
-    if (count > 0) {
-      this.toast.success(`Remisión actualizada de "${oldRem}" a "${newRem}"`);
-      this.showChangeRemisionModal.set(false);
-      // Re-seleccionar la recepción actualizada
-      const updated = this.movementsService.findReceptionByFolio(current.folio);
-      if (updated) this.selectReception(updated);
-    } else {
-      this.toast.error('No se pudo actualizar la remisión.');
+    const updated = this.movementsService.changeRemision(current.folio, newDoc, reason);
+    if (updated) {
+      this.selectReception(updated);
+      this.closeChangeRemisionModal();
+      this.toast.success(`Número de documento actualizado a "${newDoc}". Registrado en auditoría.`);
     }
   }
 
+  // ── CANCELACIÓN EXTRAORDINARIA DE RECEPCIÓN ──
   openCancelModal(): void {
-    const rec = this.selectedReception();
-    if (!rec) return;
     this.cancelReason.set('');
-    this.cancelAdminUser.set(this.authState.currentUser()?.email || this.authState.userFullName() || 'admin@4guard.com');
+    this.cancelAdminUser.set('');
     this.cancelAdminPassword.set('');
     this.cancelErrorMessage.set(null);
-    this.showCancelPassword.set(false);
     this.showCancelModal.set(true);
   }
 
   closeCancelModal(): void {
     this.showCancelModal.set(false);
-    this.cancelErrorMessage.set(null);
   }
 
   confirmCancelReception(): void {
-    const rec = this.selectedReception();
-    if (!rec) return;
-
+    this.cancelErrorMessage.set(null);
     const reason = this.cancelReason().trim();
     const user = this.cancelAdminUser().trim();
-    const password = this.cancelAdminPassword().trim();
+    const pass = this.cancelAdminPassword().trim();
+    const current = this.selectedReception();
 
-    if (!reason || reason.length < 5) {
-      this.cancelErrorMessage.set('Por favor ingresa un motivo detallado de cancelación (mínimo 5 caracteres).');
+    if (!current) return;
+
+    if (!reason) {
+      this.cancelErrorMessage.set('El motivo de cancelación es obligatorio.');
       return;
     }
-
-    if (!user) {
-      this.cancelErrorMessage.set('Por favor ingresa el usuario administrador.');
-      return;
-    }
-
-    if (!password) {
-      this.cancelErrorMessage.set('Por favor ingresa tu contraseña de administrador para autorizar la revocación.');
+    if (!user || !pass) {
+      this.cancelErrorMessage.set('Ingresa usuario y contraseña de Administrador.');
       return;
     }
 
     this.isCancelling.set(true);
-    this.cancelErrorMessage.set(null);
 
-    const adminLabel = this.authState.userFullName() ? `${this.authState.userFullName()} (${user})` : user;
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Admin Autorizado)`;
+
     const cancelled = this.movementsService.cancelReception(
-      rec.folio,
+      current.folio,
       reason,
       adminLabel
     );
@@ -697,64 +700,40 @@ export class ReceivingSubmoduleComponent implements OnInit {
       return;
     }
 
-    this.leaderAction.set('COMPLETE');
-    this.showLeaderModal.set(true);
-  }
+    const receptionId = rec.id || rec.folio;
+    const currentStream = [...this.palletStream()];
+    const formVals = this.altaForm.value;
+    const leaderName = this.authState.userFullName() || 'Pablo Hernández (Líder)';
+    const leaderUser = this.authState.currentUser()?.email || 'admin';
 
-  onLeaderValidated(event: { leaderName: string; username?: string; password?: string }): void {
-    this.showLeaderModal.set(false);
-    const action = this.leaderAction();
-    const rec = this.selectedReception();
-    if (!rec) return;
-
-    if (action === 'COMPLETE') {
-      if (!this.validateAltaForm()) return;
-      const receptionId = rec.id || rec.folio;
-      const currentStream = [...this.palletStream()];
-      const formVals = this.altaForm.value;
-
-      this.movementsService
-        .completeReceptionBackend(
-          receptionId,
-          formVals,
-          currentStream,
-          this.products(),
-          this.suppliers(),
-          event.leaderName,
-          event.username,
-          event.password
-        )
-        .subscribe({
-          next: (updated) => {
-            const finalRec = updated.folio ? updated : { ...rec, status: 'COMPLETED' as const };
-            this.selectedReception.set(finalRec);
-            this.selectedPrintReception.set(finalRec);
-            this.printType.set('RECEPTION');
-            this.showPrintModal.set(true);
-            this.toast.success(`Recepción #${rec.folio} autorizada y cerrada exitosamente. Guardada en la base de datos.`);
-          },
-          error: (err) => {
-            const msg = err?.error?.message || err?.message || 'Error al completar la recepción en el servidor';
-            this.toast.error(msg);
-          },
-        });
-    } else if (action === 'CANCEL') {
-      const cancelled = this.movementsService.cancelReception(
-        rec.folio,
-        this.cancellationJustification() || 'Cancelado por el operador en andén',
-        event.leaderName
-      );
-
-      if (cancelled) {
-        this.selectReception(cancelled);
-        this.selectedPrintReception.set(cancelled);
-        this.printType.set('CANCELLATION');
-        this.showPrintModal.set(true);
-        this.toast.info(`Recepción #${cancelled.folio} cancelada`);
-      }
-    }
-
-    this.leaderAction.set(null);
+    this.isCompleting.set(true);
+    this.movementsService
+      .completeReceptionBackend(
+        receptionId,
+        formVals,
+        currentStream,
+        this.products(),
+        this.suppliers(),
+        leaderName,
+        leaderUser,
+        'adminPassword'
+      )
+      .subscribe({
+        next: (updated) => {
+          this.isCompleting.set(false);
+          const finalRec = updated.folio ? updated : { ...rec, status: 'COMPLETED' as const, pallets: currentStream };
+          this.selectedReception.set(finalRec);
+          this.selectedPrintReception.set(finalRec);
+          this.printType.set('RECEPTION');
+          this.showPrintModal.set(true);
+          this.toast.success(`Recepción #${rec.folio} autorizada y cerrada exitosamente. Guardada en la base de datos.`);
+        },
+        error: (err) => {
+          this.isCompleting.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al completar la recepción en el servidor';
+          this.toast.error(msg);
+        },
+      });
   }
 
   onProductSelect(productId: string): void {
