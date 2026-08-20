@@ -173,6 +173,7 @@ export class TransferSubmoduleComponent implements OnInit {
   selectedPrintTransfer = signal<WarehouseTransfer | null>(null);
 
   ngOnInit(): void {
+    this.movementsService.loadInitialBackendData();
     const savedFolio = localStorage.getItem('4g_active_transfer_folio');
     if (savedFolio) {
       const list = this.movementsService.transfers();

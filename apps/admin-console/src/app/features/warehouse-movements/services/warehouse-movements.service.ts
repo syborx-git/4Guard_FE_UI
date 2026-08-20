@@ -207,17 +207,7 @@ export class WarehouseMovementsService {
     });
 
     // 2. Transportistas
-    this.movementsApi.getCarriers().subscribe({
-      next: (carriers) => {
-        this.carrierLinesSignal.set(
-          (carriers || []).map((c) => ({
-            code: c.id || c.taxId || 'TR',
-            name: c.name || c.tradeName || 'Transportista',
-          }))
-        );
-      },
-      error: () => {},
-    });
+    this.reloadCarriers();
 
     // 3. Montacarguistas
     this.movementsApi.getForkliftOperators().subscribe({
@@ -367,6 +357,22 @@ export class WarehouseMovementsService {
             timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
           }))
         );
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadCarriers(): void {
+    this.movementsApi.getCarriers().subscribe({
+      next: (carriers) => {
+        if (carriers) {
+          this.carrierLinesSignal.set(
+            carriers.map((c) => ({
+              code: c.id || c.code || c.taxId || 'TR',
+              name: c.tradeName && c.tradeName !== c.name ? `${c.tradeName} (${c.name})` : (c.name || c.tradeName || 'Transportista'),
+            }))
+          );
+        }
       },
       error: () => {},
     });

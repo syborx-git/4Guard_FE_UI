@@ -194,25 +194,29 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // ── LIFECYCLE ──────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.svc.loadInitialBackendData();
     this.formMode.set('idle');
     this.selectedOutbound.set(null);
   }
 
   // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
   startNewOutbound(): void {
+    this.svc.reloadCarriers();
     this.formMode.set('create');
     this.selectedOutbound.set(null);
     this.currentStep.set(1);
     localStorage.removeItem('4guard_active_outbound_folio');
 
-    // Resetear selecciones
-    this.selectedClientCode.set('CLI-001');
-    this.selectedDestinationId.set('DEST-CLI001-TOLUCA');
-    this.selectedCarrierCode.set('TR-01');
-    this.driverName.set('Juan Pérez');
-    this.economicNumber.set('ECO-901');
-    this.tractorPlates.set('12-AA-34');
-    this.boxPlates.set('78-BB-90');
+    // Inicializar selecciones dinámicas
+    const firstClient = this.clients()[0];
+    const firstCarrier = this.carriers()[0];
+    this.selectedClientCode.set(firstClient ? firstClient.code : '');
+    this.selectedDestinationId.set('');
+    this.selectedCarrierCode.set(firstCarrier ? firstCarrier.code : '');
+    this.driverName.set('');
+    this.economicNumber.set('');
+    this.tractorPlates.set('');
+    this.boxPlates.set('');
     this.selectedTransportType.set('TRAILER');
     this.sealNumber.set('');
     this.selectedPalletIds.set([]);

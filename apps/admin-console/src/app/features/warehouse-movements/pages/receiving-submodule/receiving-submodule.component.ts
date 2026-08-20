@@ -218,6 +218,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.movementsService.loadInitialBackendData();
+
     this.movementsService.movementsApi.getSuppliers().subscribe({
       next: (sups) => {
         if (sups && sups.length > 0) {
@@ -249,9 +251,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   resetCheckInForm(): void {
+    const firstCarrier = this.carrierLines()[0];
     this.checkInForm.reset({
-      carrierLineCode: '',
-      carrierLine: '',
+      carrierLineCode: firstCarrier ? firstCarrier.code : '',
+      carrierLine: firstCarrier ? firstCarrier.name : '',
       receptionTime: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
       docNumber: '',
       docDate: new Date().toISOString().slice(0, 10),
@@ -274,6 +277,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Iniciar registro de nueva pre-recepción en el panel (sin modal)
   startNewReception(): void {
+    this.movementsService.reloadCarriers();
     this.formMode.set('create');
     this.selectedReception.set(null);
     localStorage.removeItem('4g_active_reception_folio');

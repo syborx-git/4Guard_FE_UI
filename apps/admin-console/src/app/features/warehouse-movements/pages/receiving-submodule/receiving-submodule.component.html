@@ -216,7 +216,12 @@
                     Línea Transportadora <span class="text-amber-500">*</span>
                   </label>
                   <div class="flex gap-1.5">
-                    <select (change)="onCarrierLineSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                    <select
+                      [value]="checkInForm.get('carrierLineCode')?.value"
+                      (change)="onCarrierLineSelect($any($event.target).value)"
+                      class="fg-input w-full font-bold"
+                    >
+                      <option value="">-- Selecciona transportista --</option>
                       @for (tr of carrierLines(); track tr.code) {
                         <option [value]="tr.code">{{ tr.name }}</option>
                       }

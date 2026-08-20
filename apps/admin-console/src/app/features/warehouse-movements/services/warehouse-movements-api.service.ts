@@ -225,7 +225,7 @@ export class WarehouseMovementsApiService {
 
   getCarriers(orgId?: string): Observable<any[]> {
     const id = orgId || this.getSessionOrgId();
-    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/carriers?organizationId=${id}&status=ACTIVE`).pipe(
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/carriers?organizationId=${id}`).pipe(
       map((res) => res.data || [])
     );
   }
