@@ -33,6 +33,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedOutbound = signal<WarehouseOutbound | null>(null);
   searchQuery = signal('');
+  statusFilter = signal<string>('ALL');
   auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Modal Cancelación con Autorización de Administrador
@@ -48,6 +49,15 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.showCancelPassword.update((v) => !v);
   }
 
+  getInitials(name?: string): string {
+    if (!name) return 'SAL';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
   // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────
   currentStep = signal<1 | 2>(1);
 
@@ -58,15 +68,15 @@ export class OutboundSubmoduleComponent implements OnInit {
   readonly allBatches = this.svc.inventoryBatches;
 
   // Selecciones Paso 1
-  selectedClientCode = signal('CLI-001');
-  selectedDestinationId = signal('DEST-CLI001-TOLUCA');
-  selectedCarrierCode = signal('TR-01');
-  driverName = signal('Juan Pérez');
-  economicNumber = signal('ECO-901');
-  tractorPlates = signal('12-AA-34');
-  boxPlates = signal('78-BB-90');
+  selectedClientCode = signal('');
+  selectedDestinationId = signal('');
+  selectedCarrierCode = signal('');
+  driverName = signal('');
+  economicNumber = signal('');
+  tractorPlates = signal('');
+  boxPlates = signal('');
   selectedTransportType = signal<TransportType>('TRAILER');
-  sealNumber = signal('SL-88401');
+  sealNumber = signal('');
 
   // Computed: Cliente seleccionado
   selectedClient = computed(() =>
@@ -153,14 +163,21 @@ export class OutboundSubmoduleComponent implements OnInit {
   filteredOutbounds = computed(() => {
     const list = this.outboundsList();
     const q = this.searchQuery().toLowerCase().trim();
-    if (!q) return list;
-    return list.filter((o) =>
-      o.folio.toLowerCase().includes(q) ||
-      o.clientName.toLowerCase().includes(q) ||
-      o.carrierName.toLowerCase().includes(q) ||
-      o.sealNumber.toLowerCase().includes(q) ||
-      o.destinationName.toLowerCase().includes(q)
-    );
+    const status = this.statusFilter();
+
+    return list.filter((o) => {
+      const matchStatus = status === 'ALL' || o.status === status;
+      if (!matchStatus) return false;
+
+      if (!q) return true;
+      return (
+        o.folio.toLowerCase().includes(q) ||
+        o.clientName.toLowerCase().includes(q) ||
+        o.carrierName.toLowerCase().includes(q) ||
+        o.sealNumber.toLowerCase().includes(q) ||
+        o.destinationName.toLowerCase().includes(q)
+      );
+    });
   });
 
   // ── MODALES ────────────────────────────────────────────────────────────────

@@ -7,6 +7,25 @@
 
 <div class="space-y-5">
 
+  <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
+  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
+    <div>
+      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">local_shipping</span>
+        <span>Salidas de Almacén</span>
+      </h2>
+      <p class="text-xs text-slate-500">Despacho Outbound, asignación de transporte, precintos y control FIFO / FEFO</p>
+    </div>
+    <button
+      type="button"
+      (click)="startNewOutbound()"
+      class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
+    >
+      <span class="material-symbols-outlined text-base">add</span>
+      <span>Nueva Salida</span>
+    </button>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════════════════════
        KPI CARDS SUPERIORES (4 MÉTRICAS EN TIEMPO REAL)
        ═══════════════════════════════════════════════════════════════════ -->
@@ -57,68 +76,108 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        WORKBENCH MASTER-DETAIL (4 COL DIRECTORIO + 8 COL PANEL)
        ═══════════════════════════════════════════════════════════════════ -->
-  <div class="outbound-workbench">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
     <!-- ── PANEL IZQUIERDO: DIRECTORIO MASTER DE SALIDAS ── -->
-    <div class="outbound-master-panel">
-
-      <div class="master-panel__header">
-        <div class="master-panel__title">Directorio de Salidas</div>
-        <div class="master-panel__search">
-          <span class="material-symbols-outlined search-icon">search</span>
+    <aside class="carriers-directory lg:col-span-4" aria-label="Directorio de salidas">
+      
+      <!-- Buscador y Filtros -->
+      <div class="carriers-directory__filters">
+        <div class="carriers-search">
+          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
           <input
-            type="text"
-            [value]="searchQuery()"
-            (input)="searchQuery.set($any($event.target).value)"
-            placeholder="Folio, cliente, sello..."
+            type="search"
+            class="carriers-search__input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por Folio, Cliente, Sello..."
+            autocomplete="off"
+            aria-label="Buscar salida"
           />
         </div>
+
+        <div class="carriers-filters-row">
+          <div class="carriers-filter-group">
+            <select
+              class="carriers-filter-select"
+              [ngModel]="statusFilter()"
+              (ngModelChange)="statusFilter.set($event)"
+              aria-label="Filtrar por estado"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="COMPLETED">Completadas</option>
+              <option value="IN_PROGRESS">En Proceso</option>
+              <option value="CANCELLED">Canceladas</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sugerencia de búsqueda extendida -->
+        <p class="carriers-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Busca por folio, cliente, destino, sello o remisión
+        </p>
       </div>
 
-      <button
-        type="button"
-        class="master-panel__new-btn"
-        (click)="startNewOutbound()"
-      >
-        <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
-        Nueva Salida
-      </button>
-
-      <div class="outbound-master-list">
-
-        <!-- Tarjetas de Salidas Registradas -->
+      <!-- Lista Scrollable de Salidas -->
+      <div class="carriers-directory__list">
         @for (outbound of filteredOutbounds(); track outbound.folio) {
           <div
-            class="outbound-item-card"
-            [class.selected-item]="selectedOutbound()?.folio === outbound.folio"
             (click)="selectOutboundItem(outbound)"
+            [class.carrier-item--selected]="formMode() === 'detail' && selectedOutbound()?.folio === outbound.folio"
+            class="carrier-item"
           >
-            <div class="outbound-item-card__folio">{{ outbound.folio }}</div>
-            <div class="outbound-item-card__client">{{ outbound.clientName }}</div>
-            <div class="outbound-item-card__dest">→ {{ outbound.destinationName }}</div>
-            <div class="outbound-item-card__meta">
-              <span class="outbound-item-card__seal">{{ outbound.sealNumber }}</span>
-              <div style="display:flex;align-items:center;gap:0.4rem;">
-                <span class="status-badge--completed">Completado</span>
-                <span class="outbound-item-card__time">{{ outbound.timestamp }}</span>
+            <!-- Avatar Iniciales -->
+            <div class="carrier-avatar avatar--external">
+              {{ getInitials(outbound.clientName) }}
+            </div>
+
+            <div class="carrier-item__body">
+              <div class="carrier-item__header">
+                <span class="carrier-item__name" [title]="outbound.clientName">{{ outbound.clientName }}</span>
+                <span
+                  class="carrier-status-badge"
+                  [class.status-badge--completed]="outbound.status === 'COMPLETED'"
+                  [class.status-badge--registered]="outbound.status === 'IN_PROGRESS'"
+                  [class.status-badge--cancelled]="outbound.status === 'CANCELLED'"
+                >
+                  {{ outbound.status === 'COMPLETED' ? 'Completado' : (outbound.status === 'IN_PROGRESS' ? 'En Proceso' : 'Cancelado') }}
+                </span>
               </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-500">
+                <span class="carrier-item__subtitle truncate">→ {{ outbound.destinationName }}</span>
+                <span class="text-[10px] font-mono opacity-80">{{ outbound.dispatchedAt ? (outbound.dispatchedAt.slice(0, 10)) : '' }}</span>
+              </div>
+
+              <div class="flex items-center justify-between mt-0.5">
+                <span class="carrier-item__tag font-mono">{{ outbound.folio }}</span>
+                <span class="text-[10px] text-slate-500 font-medium">{{ outbound.totalPallets }} tarimas ({{ outbound.totalPieces }} pzas)</span>
+              </div>
+
+              @if (outbound.sealNumber) {
+                <div class="carrier-item__meta truncate mt-0.5">
+                  Sello: <span class="font-mono text-slate-600 dark:text-slate-300 font-semibold">{{ outbound.sealNumber }}</span>
+                </div>
+              }
             </div>
           </div>
-        }
-
-        <!-- Estado vacío del directorio -->
-        @if (filteredOutbounds().length === 0) {
-          <div class="master-panel__empty">
-            <span class="material-symbols-outlined" style="font-size:2rem;color:var(--text-muted);display:block;margin-bottom:0.5rem;">local_shipping</span>
-            Sin salidas registradas
+        } @empty {
+          <div class="text-center py-10 px-4 text-slate-400">
+            <span class="material-symbols-outlined text-3xl opacity-40 mb-1">search_off</span>
+            <p class="text-xs font-medium">No se encontraron salidas</p>
           </div>
         }
-
       </div>
-    </div>
+
+      <!-- Footer con conteo -->
+      <div class="carriers-directory__footer">
+        <span class="carriers-count">{{ filteredOutbounds().length }} salidas</span>
+      </div>
+    </aside>
 
     <!-- ── PANEL DERECHO: WORKBENCH TRI-ESTADO ── -->
-    <div class="outbound-detail-panel">
+    <div class="outbound-detail-panel lg:col-span-8 space-y-4">
 
       <!-- ─────────────── MODO IDLE: SIN SELECCIÓN (ESTILO OFICIAL WMS) ─────────────── -->
       @if (formMode() === 'idle') {

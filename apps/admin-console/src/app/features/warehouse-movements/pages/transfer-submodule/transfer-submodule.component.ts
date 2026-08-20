@@ -37,6 +37,7 @@ export class TransferSubmoduleComponent implements OnInit {
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedTransfer = signal<WarehouseTransfer | null>(null);
   searchQuery = signal<string>('');
+  statusFilter = signal<string>('ALL');
   auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Modal Cancelación con Autorización de Administrador
@@ -52,6 +53,15 @@ export class TransferSubmoduleComponent implements OnInit {
     this.showCancelPassword.update((v) => !v);
   }
 
+  getInitials(name?: string): string {
+    if (!name) return 'TR';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
   // Catálogo de Montacarguistas Certificados
   forkliftOperators: ForkliftOperatorOption[] = [
     { id: 'MC-101', name: 'Pablo Hernández', badge: 'Certificado Senior', shift: 'Matutino (06:00 - 14:00)', status: 'ACTIVO' },
@@ -64,13 +74,13 @@ export class TransferSubmoduleComponent implements OnInit {
   transferReasons: TransferReasonItem[] = TRANSFER_REASONS;
 
   // ── PASO 1: MONTACARGUISTA ──
-  selectedOperatorId = signal('MC-101');
+  selectedOperatorId = signal('');
   selectedOperator = computed(() =>
     this.forkliftOperators.find((op) => op.id === this.selectedOperatorId()) || this.forkliftOperators[0]
   );
 
   // ── PASO 2: BAHÍA ORIGEN E INVENTARIO ──
-  selectedOriginCode = signal('A-14');
+  selectedOriginCode = signal('');
   selectedPalletIds = signal<string[]>([]);
 
   originStock = computed<LocationStockInfo>(() =>
@@ -78,7 +88,7 @@ export class TransferSubmoduleComponent implements OnInit {
   );
 
   // ── PASO 3: BAHÍA DESTINO ──
-  selectedDestinationCode = signal('M-98');
+  selectedDestinationCode = signal('');
 
   destStock = computed<LocationStockInfo>(() =>
     this.movementsService.getLocationInfo(this.selectedDestinationCode())
@@ -139,9 +149,13 @@ export class TransferSubmoduleComponent implements OnInit {
   filteredTransfers = computed(() => {
     const list = this.transfersList();
     const query = this.searchQuery().toLowerCase().trim();
-    if (!query) return list;
+    const status = this.statusFilter();
 
     return list.filter((t) => {
+      const matchStatus = status === 'ALL' || t.status === status;
+      if (!matchStatus) return false;
+
+      if (!query) return true;
       const matchFolio = t.folio.toLowerCase().includes(query);
       const matchOrigin = t.originLocation.toLowerCase().includes(query);
       const matchDest = t.destinationLocation.toLowerCase().includes(query);

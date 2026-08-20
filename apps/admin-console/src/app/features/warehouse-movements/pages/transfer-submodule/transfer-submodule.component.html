@@ -6,6 +6,25 @@
 
 <div class="space-y-5">
 
+  <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
+  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
+    <div>
+      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">compare_arrows</span>
+        <span>Cambio de Almacén</span>
+      </h2>
+      <p class="text-xs text-slate-500">Reubicación de inventario en ceros (Putaway / Traspasos internos)</p>
+    </div>
+    <button
+      type="button"
+      (click)="startNewTransfer()"
+      class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
+    >
+      <span class="material-symbols-outlined text-base">add</span>
+      <span>Nuevo Traspaso</span>
+    </button>
+  </div>
+
   <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON RECEPCIÓN Y TRANSPORTISTAS) ── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Total Traspasos -->
@@ -61,76 +80,100 @@
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
     <!-- ── 2A. LEFT PANEL: DIRECTORIO MASTER DE TRASPASOS (col-span-4) ── -->
-    <div class="lg:col-span-4 synexia-card p-4 space-y-4 shadow-sm border border-subtle">
+    <aside class="carriers-directory lg:col-span-4" aria-label="Directorio de traspasos">
       
-      <!-- Header de Lista & Botón [+ Nuevo Traspaso] -->
-      <div class="flex items-center justify-between gap-2 border-b border-subtle pb-3">
-        <div>
-          <h3 class="font-bold text-xs text-primary uppercase tracking-wide">DIRECTORIO DE TRASPASOS</h3>
-          <p class="text-[11px] text-secondary">Control de movimientos y reubicaciones</p>
+      <!-- Buscador y Filtros -->
+      <div class="carriers-directory__filters">
+        <div class="carriers-search">
+          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
+          <input
+            type="search"
+            class="carriers-search__input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por Folio, Bahía, Operador..."
+            autocomplete="off"
+            aria-label="Buscar traspaso"
+          />
         </div>
-        <button
-          type="button"
-          (click)="startNewTransfer()"
-          class="btn-primary-gold flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md transition-transform hover:scale-105"
-        >
-          <span class="material-symbols-outlined text-sm">add</span>
-          <span>Nuevo Traspaso</span>
-        </button>
-      </div>
 
-      <!-- Buscador -->
-      <div class="relative">
-        <span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary text-sm">search</span>
-        <input
-          type="text"
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-          placeholder="Buscar por Folio, Bahía, Montacarguista..."
-          class="fg-input pl-9 text-xs w-full"
-        />
+        <div class="carriers-filters-row">
+          <div class="carriers-filter-group">
+            <select
+              class="carriers-filter-select"
+              [ngModel]="statusFilter()"
+              (ngModelChange)="statusFilter.set($event)"
+              aria-label="Filtrar por estado"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="COMPLETED">Completados</option>
+              <option value="CANCELLED">Cancelados</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sugerencia de búsqueda extendida -->
+        <p class="carriers-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Busca por folio, ubicación origen/destino u operador
+        </p>
       </div>
 
       <!-- Lista Scrollable de Traspasos -->
-      <div class="receptions-master-list space-y-2 max-h-[620px] overflow-y-auto pr-1">
+      <div class="carriers-directory__list">
         @for (transfer of filteredTransfers(); track transfer.folio) {
           <div
             (click)="selectTransferItem(transfer)"
-            [class.selected-item]="formMode() === 'detail' && selectedTransfer()?.folio === transfer.folio"
-            class="reception-item-card p-3 rounded-xl border border-subtle cursor-pointer transition-all hover:border-gold"
+            [class.carrier-item--selected]="formMode() === 'detail' && selectedTransfer()?.folio === transfer.folio"
+            class="carrier-item"
           >
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="font-mono text-xs font-bold text-gold">#{{ transfer.folio }}</span>
-              <span class="status-badge status-badge--completed text-[10px]">
-                COMPLETADO
-              </span>
+            <!-- Avatar Iniciales -->
+            <div class="carrier-avatar avatar--own">
+              {{ getInitials(transfer.originLocation + ' ' + transfer.destinationLocation) }}
             </div>
 
-            <div class="flex items-center justify-between text-xs my-1 font-mono">
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-primary">{{ transfer.originLocation }}</span>
-                <span class="text-secondary text-[11px]">➔</span>
-                <span class="font-bold text-emerald-600">{{ transfer.destinationLocation }}</span>
+            <div class="carrier-item__body">
+              <div class="carrier-item__header">
+                <span class="carrier-item__name">Ruta: {{ transfer.originLocation }} → {{ transfer.destinationLocation }}</span>
+                <span
+                  class="carrier-status-badge"
+                  [class.status-badge--completed]="transfer.status === 'COMPLETED'"
+                  [class.status-badge--cancelled]="transfer.status === 'CANCELLED'"
+                >
+                  {{ transfer.status === 'COMPLETED' ? 'Completado' : 'Cancelado' }}
+                </span>
               </div>
-              <span class="font-mono text-gold font-bold text-[11px]">
-                {{ transfer.totalPallets }} Tarima(s)
-              </span>
-            </div>
 
-            <div class="flex items-center justify-between text-[11px] text-secondary pt-1 border-t border-subtle mt-1">
-              <span class="truncate max-w-[170px]">{{ transfer.forkliftOperator }}</span>
-              <span class="text-[10px]">{{ transfer.timestamp || transfer.transferredAt }}</span>
+              <div class="flex items-center justify-between text-[11px] text-slate-500">
+                <span class="carrier-item__subtitle truncate">{{ transfer.forkliftOperator }}</span>
+                <span class="text-[10px] font-mono opacity-80">{{ transfer.transferredAt ? (transfer.transferredAt.slice(0, 10)) : '' }}</span>
+              </div>
+
+              <div class="flex items-center justify-between mt-0.5">
+                <span class="carrier-item__tag font-mono">{{ transfer.folio }}</span>
+                <span class="text-[10px] text-slate-500 font-medium">{{ transfer.totalPallets }} tarimas ({{ transfer.totalPieces }} pzas)</span>
+              </div>
+
+              @if (transfer.reasonLabel) {
+                <div class="carrier-item__meta truncate mt-0.5" [title]="transfer.reasonLabel">
+                  Motivo: {{ transfer.reasonLabel }}
+                </div>
+              }
             </div>
           </div>
         } @empty {
-          <div class="text-center py-8 text-secondary">
+          <div class="text-center py-10 px-4 text-slate-400">
             <span class="material-symbols-outlined text-3xl opacity-40 mb-1">search_off</span>
             <p class="text-xs font-medium">No se encontraron traspasos</p>
           </div>
         }
       </div>
 
-    </div>
+      <!-- Footer con conteo -->
+      <div class="carriers-directory__footer">
+        <span class="carriers-count">{{ filteredTransfers().length }} traspasos</span>
+      </div>
+    </aside>
 
     <!-- ── 2B. RIGHT PANEL: DETALLE / ALTA DE CAMBIO DE ALMACÉN (col-span-8) ── -->
     <div class="lg:col-span-8 space-y-4">
