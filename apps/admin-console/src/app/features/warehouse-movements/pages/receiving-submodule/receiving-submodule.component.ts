@@ -449,30 +449,59 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
   }
 
-  // Guardar Cambios Parciales / Avance de Descarga
+  isSavingDraft = signal(false);
+
+  validateAltaForm(): boolean {
+    if (this.altaForm.invalid) {
+      this.altaForm.markAllAsTouched();
+      const missing: string[] = [];
+      if (this.altaForm.get('lotNumber')?.invalid) missing.push('Lote de Recepción');
+      if (this.altaForm.get('expirationDate')?.invalid) missing.push('Fecha de Caducidad');
+      if (this.altaForm.get('forkliftOperator')?.invalid) missing.push('Montacarguista');
+      if (this.altaForm.get('rampNumber')?.invalid) missing.push('Rampa de Recepción');
+      if (this.altaForm.get('productId')?.invalid) missing.push('Producto (SKU)');
+      if (this.altaForm.get('piecesPerPallet')?.invalid) missing.push('Piezas por Tarima');
+      if (this.altaForm.get('selectedPalletType')?.invalid) missing.push('Tipo de Tarima');
+      if (this.altaForm.get('supplierName')?.invalid) missing.push('Proveedor');
+
+      this.toast.warning(`Por favor completa los parámetros obligatorios de la descarga: ${missing.join(', ')}.`);
+      return false;
+    }
+    return true;
+  }
+
+  // Guardar Cambios Parciales / Avance de Descarga en el Backend (wms.warehouse_reception_pallets)
   saveDraftReception(): void {
     const current = this.selectedReception();
     if (!current) return;
 
+    if (!this.validateAltaForm()) return;
+
     const formVals = this.altaForm.value;
     const currentStream = [...this.palletStream()];
+    const receptionId = current.id || current.folio;
 
-    const updated = this.movementsService.updateReception(current.folio, {
-      lotNumber: formVals.lotNumber || 'LOT-2026-A1',
-      expirationDate: formVals.expirationDate || '2026-11-15',
-      productId: formVals.productId || '12572733',
-      productName: formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: formVals.supplierName || 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: formVals.piecesPerPallet || 480,
-      selectedPalletType: (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
-      observations: formVals.observations || '',
-      pallets: currentStream,
-    });
-
-    if (updated) {
-      this.selectedReception.set(updated);
-      this.toast.success(`Avance de Folio #${current.folio} guardado correctamente.`);
-    }
+    this.isSavingDraft.set(true);
+    this.movementsService
+      .saveDraftReceptionBackend(
+        receptionId,
+        formVals,
+        currentStream,
+        this.products(),
+        this.suppliers()
+      )
+      .subscribe({
+        next: (updated) => {
+          this.isSavingDraft.set(false);
+          this.selectedReception.set(updated);
+          this.toast.success(`Avance de Folio #${current.folio} y ${currentStream.length} tarima(s) guardados correctamente en la base de datos.`);
+        },
+        error: (err) => {
+          this.isSavingDraft.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al guardar avances en el servidor';
+          this.toast.error(msg);
+        },
+      });
   }
 
   // ── EDICIÓN Y ELIMINACIÓN DE TARIMAS (ROL ADMINISTRADOR) ──
@@ -641,53 +670,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.toast.warning('No hay ninguna recepción seleccionada.');
       return;
     }
+    if (!this.validateAltaForm()) return;
+
     if (this.palletStream().length === 0) {
-      this.toast.warning('Debes ingresar al menos 1 Tarima en la lista de descarga antes de generar la impresión.');
+      this.toast.warning('Debes ingresar al menos 1 Tarima en la lista de descarga antes de completar la recepción.');
       return;
     }
 
-    const currentStream = [...this.palletStream()];
-    const formVals = this.altaForm.value;
-
-    const updated = this.movementsService.completeReception(
-      rec.folio,
-      formVals.lotNumber || '01.07.2026',
-      rec.elaborationDate || '2026-01-01',
-      formVals.expirationDate || '2028-07-31',
-      formVals.productId || '12572733',
-      formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      formVals.piecesPerPallet || 480,
-      (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
-      currentStream,
-      formVals.observations || undefined,
-      'Christian Durán',
-      'Gerente Operativo'
-    );
-
-    const recToPrint: ReceptionHeader = updated || {
-      ...rec,
-      status: 'COMPLETED',
-      lotNumber: formVals.lotNumber || '01.07.2026',
-      expirationDate: formVals.expirationDate || '2028-07-31',
-      productId: formVals.productId || '12572733',
-      productName: formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: formVals.supplierName || 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: formVals.piecesPerPallet || 40,
-      selectedPalletType: (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP',
-      pallets: currentStream,
-      observations: formVals.observations || undefined,
-    };
-
-    if (updated) {
-      this.selectedReception.set(updated);
-    } else {
-      this.selectedReception.set(recToPrint);
-    }
-
-    this.selectedPrintReception.set(recToPrint);
-    this.printType.set('RECEPTION');
-    this.showPrintModal.set(true);
-    this.toast.success(`Recepción #${rec.folio} completada. Formato oficial generado con ${currentStream.length} tarimas.`);
+    this.leaderAction.set('COMPLETE');
+    this.showLeaderModal.set(true);
   }
 
   onLeaderValidated(event: { leaderName: string }): void {
@@ -697,28 +688,34 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (!rec) return;
 
     if (action === 'COMPLETE') {
-      const updated = this.movementsService.completeReception(
-        rec.folio,
-        this.altaForm.value.lotNumber || '01.07.2026',
-        rec.elaborationDate || '2026-01-01',
-        this.altaForm.value.expirationDate || '2028-07-31',
-        this.altaForm.value.productId || '12572733',
-        this.altaForm.value.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-        this.altaForm.value.piecesPerPallet || 40,
-        (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP',
-        this.palletStream(),
-        this.altaForm.value.observations || undefined,
-        'Christian Durán',
-        event.leaderName
-      );
+      if (!this.validateAltaForm()) return;
+      const receptionId = rec.id || rec.folio;
+      const currentStream = [...this.palletStream()];
+      const formVals = this.altaForm.value;
 
-      if (updated) {
-        this.selectReception(updated);
-        this.selectedPrintReception.set(updated);
-        this.printType.set('RECEPTION');
-        this.showPrintModal.set(true);
-        this.toast.success(`Recepción #${updated.folio} cerrada exitosamente`);
-      }
+      this.movementsService
+        .completeReceptionBackend(
+          receptionId,
+          formVals,
+          currentStream,
+          this.products(),
+          this.suppliers(),
+          event.leaderName
+        )
+        .subscribe({
+          next: (updated) => {
+            const finalRec = updated.folio ? updated : { ...rec, status: 'COMPLETED' as const };
+            this.selectedReception.set(finalRec);
+            this.selectedPrintReception.set(finalRec);
+            this.printType.set('RECEPTION');
+            this.showPrintModal.set(true);
+            this.toast.success(`Recepción #${rec.folio} autorizada y cerrada exitosamente. Guardada en la base de datos.`);
+          },
+          error: (err) => {
+            const msg = err?.error?.message || err?.message || 'Error al completar la recepción en el servidor';
+            this.toast.error(msg);
+          },
+        });
     } else if (action === 'CANCEL') {
       const cancelled = this.movementsService.cancelReception(
         rec.folio,

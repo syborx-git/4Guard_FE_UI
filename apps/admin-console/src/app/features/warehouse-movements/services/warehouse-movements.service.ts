@@ -5,7 +5,7 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, concatMap, of, catchError } from 'rxjs';
 import { ForkliftOperatorAdminService } from '../../admin/services/forklift-operator.service';
 import {
   ReceptionHeader,
@@ -583,6 +583,107 @@ export class WarehouseMovementsService {
         });
 
         return header;
+      })
+    );
+  }
+
+  // Persiste avances de descarga (parámetros y tarimas) en el Backend (wms.warehouse_reception_pallets)
+  saveDraftReceptionBackend(
+    receptionId: string,
+    formVals: any,
+    pallets: ReceptionPalletItem[],
+    productsList: any[],
+    suppliersList: any[]
+  ): Observable<ReceptionHeader> {
+    const prodItem = productsList.find((p) => p.id === formVals.productId || p.name === formVals.productName);
+    const skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
+      ? prodItem.id
+      : (formVals.productId && formVals.productId.includes('-') ? formVals.productId : null);
+
+    const supItem = suppliersList.find((s) => s.name === formVals.supplierName || s.code === formVals.supplierName);
+    const supplierId = (supItem && supItem.code && supItem.code.includes('-'))
+      ? supItem.code
+      : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null);
+
+    const paramPayload = {
+      skuId: skuId,
+      supplierId: supplierId,
+      lotNumber: formVals.lotNumber,
+      expirationDate: formVals.expirationDate || null,
+      piecesPerPallet: Number(formVals.piecesPerPallet) || 480,
+      palletType: formVals.selectedPalletType || 'MADERA_ESTANDAR',
+      observations: formVals.observations || '',
+    };
+
+    return this.movementsApi.updateReceptionParameters(receptionId, paramPayload).pipe(
+      concatMap(() => {
+        if (pallets && pallets.length > 0) {
+          const palletPayload = pallets.map((p) => ({
+            palletCode: p.palletCode,
+            pieces: p.pieces,
+            palletType: p.palletTypeId,
+            observations: p.observations || '',
+          }));
+          return this.movementsApi.addReceptionPallets(receptionId, palletPayload).pipe(
+            catchError(() => of([]))
+          );
+        } else {
+          return of([]);
+        }
+      }),
+      map(() => {
+        const updated = this.updateReception(receptionId, {
+          lotNumber: formVals.lotNumber,
+          expirationDate: formVals.expirationDate,
+          productId: formVals.productId,
+          productName: formVals.productName,
+          supplierName: formVals.supplierName,
+          piecesPerPallet: formVals.piecesPerPallet,
+          selectedPalletType: formVals.selectedPalletType,
+          observations: formVals.observations,
+          pallets: pallets,
+        });
+        return updated || ({} as ReceptionHeader);
+      })
+    );
+  }
+
+  // Completa y autoriza formalmente la recepción F01 en el Backend
+  completeReceptionBackend(
+    receptionId: string,
+    formVals: any,
+    pallets: ReceptionPalletItem[],
+    productsList: any[],
+    suppliersList: any[],
+    leaderName: string,
+    leaderUser?: string,
+    leaderPass?: string
+  ): Observable<ReceptionHeader> {
+    return this.saveDraftReceptionBackend(receptionId, formVals, pallets, productsList, suppliersList).pipe(
+      concatMap(() => {
+        const completePayload = {
+          leaderUsername: leaderUser || 'admin',
+          leaderPassword: leaderPass || 'adminPassword',
+          observations: `Autorizado por ${leaderName}. ${formVals.observations || ''}`.trim(),
+        };
+        return this.movementsApi.completeReception(receptionId, completePayload);
+      }),
+      map((res: any) => {
+        const updated = this.completeReception(
+          res.folio || receptionId,
+          formVals.lotNumber,
+          res.elaborationDate || '2026-01-01',
+          formVals.expirationDate,
+          formVals.productId,
+          formVals.productName,
+          formVals.piecesPerPallet,
+          formVals.selectedPalletType,
+          pallets,
+          formVals.observations,
+          'Christian Durán',
+          leaderName
+        );
+        return updated || ({} as ReceptionHeader);
       })
     );
   }

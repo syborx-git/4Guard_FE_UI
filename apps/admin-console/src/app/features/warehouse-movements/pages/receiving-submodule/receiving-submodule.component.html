@@ -536,9 +536,14 @@
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required">Producto (SKU)</label>
-                  <select (change)="onProductSelect($any($event.target).value)" class="fg-input">
+                  <select
+                    [value]="altaForm.get('productId')?.value"
+                    (change)="onProductSelect($any($event.target).value)"
+                    class="fg-input"
+                  >
+                    <option value="">-- Selecciona producto / SKU --</option>
                     @for (p of products(); track p.id) {
-                      <option [value]="p.id" [selected]="p.id === altaForm.value.productId">{{ p.id }} - {{ p.name }}</option>
+                      <option [value]="p.id">{{ p.id }} - {{ p.name }}</option>
                     }
                   </select>
                 </div>
@@ -882,11 +887,17 @@
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
               <button
                 type="button"
+                [disabled]="isSavingDraft()"
                 (click)="saveDraftReception()"
-                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center"
+                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span class="material-symbols-outlined text-sm">save</span>
-                <span>Guardar Avance de Descarga</span>
+                @if (isSavingDraft()) {
+                  <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                  <span>Guardando en Servidor...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-sm">save</span>
+                  <span>Guardar Avance de Descarga</span>
+                }
               </button>
 
               <button
