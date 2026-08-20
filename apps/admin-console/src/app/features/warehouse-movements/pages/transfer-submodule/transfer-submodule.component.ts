@@ -194,11 +194,11 @@ export class TransferSubmoduleComponent implements OnInit {
     localStorage.removeItem('4g_active_transfer_folio');
 
     const occupied = this.occupiedLocations();
-    const defaultOrigin = occupied.length > 0 ? occupied[0].locationCode : 'A-14';
+    const defaultOrigin = occupied.length > 0 ? occupied[0].locationCode : 'A-01-N1';
     this.selectedOriginCode.set(defaultOrigin);
 
     const available = this.availableLocations();
-    const defaultDest = available.length > 0 ? available[0].locationCode : 'M-98';
+    const defaultDest = available.length > 0 ? available[0].locationCode : 'E-01-N1';
     this.selectedDestinationCode.set(defaultDest);
 
     this.selectedReasonId.set('OPT_ESPACIO');

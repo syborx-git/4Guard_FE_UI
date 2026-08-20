@@ -226,10 +226,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.movementsService.reloadSuppliers();
 
     this.movementsService.movementsApi.getProductSkus().subscribe({
-      next: (prods) => {
+      next: (prods: any) => {
         if (prods && prods.length > 0) {
           this.products.set(
-            prods.map((p) => ({
+            prods.map((p: any) => ({
               id: p.id || p.code,
               name: p.name || p.description || p.code,
               defaultPieces: p.piecesPerPallet || 480,

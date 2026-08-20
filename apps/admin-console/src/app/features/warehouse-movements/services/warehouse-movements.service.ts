@@ -33,6 +33,125 @@ import {
 } from '../models/warehouse-movements.models';
 import { WarehouseMovementsApiService } from './warehouse-movements-api.service';
 
+const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
+  'A-01-N1': {
+    locationCode: 'A-01-N1',
+    warehouseName: 'Almacén Central',
+    zone: 'Andén Recibo A',
+    aisle: 'Pasillo A1',
+    rack: 'Rack 01',
+    level: 'Nivel 1',
+    capacity: 6,
+    occupancy: 4,
+    availableCapacity: 2,
+    totalPallets: 4,
+    totalPieces: 1920,
+    pallets: [
+      { id: 'pal-dummy-101', palletNumber: 1, palletCode: '0376130491001', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-102', palletNumber: 2, palletCode: '0376130491002', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-103', palletNumber: 3, palletCode: '0376130491003', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-104', palletNumber: 4, palletCode: '0376130491004', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+    ],
+  },
+  'B-03-N2': {
+    locationCode: 'B-03-N2',
+    warehouseName: 'Almacén Central',
+    zone: 'Rack Principal B',
+    aisle: 'Pasillo B2',
+    rack: 'Rack 03',
+    level: 'Nivel 2',
+    capacity: 4,
+    occupancy: 3,
+    availableCapacity: 1,
+    totalPallets: 3,
+    totalPieces: 1440,
+    pallets: [
+      { id: 'pal-dummy-201', palletNumber: 1, palletCode: '0376130492001', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
+      { id: 'pal-dummy-202', palletNumber: 2, palletCode: '0376130492002', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
+      { id: 'pal-dummy-203', palletNumber: 3, palletCode: '0376130492003', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
+    ],
+  },
+  'C-05-N1': {
+    locationCode: 'C-05-N1',
+    warehouseName: 'Almacén Central',
+    zone: 'Cámara Alta Rotación C',
+    aisle: 'Pasillo C1',
+    rack: 'Rack 05',
+    level: 'Nivel 1',
+    capacity: 4,
+    occupancy: 2,
+    availableCapacity: 2,
+    totalPallets: 2,
+    totalPieces: 960,
+    pallets: [
+      { id: 'pal-dummy-301', palletNumber: 1, palletCode: '0376130493001', productId: '12345678', description: 'LECHE NIDO ENTERA LATA 12X800G', supplierName: 'UNILEVER MEXICO', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-302', palletNumber: 2, palletCode: '0376130493002', productId: '12345678', description: 'LECHE NIDO ENTERA LATA 12X800G', supplierName: 'UNILEVER MEXICO', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+    ],
+  },
+  'D-02-N3': {
+    locationCode: 'D-02-N3',
+    warehouseName: 'Almacén Central',
+    zone: 'Almacenaje General D',
+    aisle: 'Pasillo D3',
+    rack: 'Rack 02',
+    level: 'Nivel 3',
+    capacity: 6,
+    occupancy: 5,
+    availableCapacity: 1,
+    totalPallets: 5,
+    totalPieces: 2400,
+    pallets: [
+      { id: 'pal-dummy-401', palletNumber: 1, palletCode: '0376130494001', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-402', palletNumber: 2, palletCode: '0376130494002', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-403', palletNumber: 3, palletCode: '0376130494003', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-404', palletNumber: 4, palletCode: '0376130494004', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+      { id: 'pal-dummy-405', palletNumber: 5, palletCode: '0376130494005', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
+    ],
+  },
+  'E-01-N1': {
+    locationCode: 'E-01-N1',
+    warehouseName: 'Almacén Central',
+    zone: 'Bahías Libres E',
+    aisle: 'Pasillo E1',
+    rack: 'Rack 01',
+    level: 'Nivel 1',
+    capacity: 4,
+    occupancy: 0,
+    availableCapacity: 4,
+    totalPallets: 0,
+    totalPieces: 0,
+    pallets: [],
+  },
+  'E-02-N1': {
+    locationCode: 'E-02-N1',
+    warehouseName: 'Almacén Central',
+    zone: 'Bahías Libres E',
+    aisle: 'Pasillo E1',
+    rack: 'Rack 02',
+    level: 'Nivel 1',
+    capacity: 4,
+    occupancy: 0,
+    availableCapacity: 4,
+    totalPallets: 0,
+    totalPieces: 0,
+    pallets: [],
+  },
+  'F-04-N2': {
+    locationCode: 'F-04-N2',
+    warehouseName: 'Almacén Central',
+    zone: 'Bahías Libres F',
+    aisle: 'Pasillo F2',
+    rack: 'Rack 04',
+    level: 'Nivel 2',
+    capacity: 4,
+    occupancy: 0,
+    availableCapacity: 4,
+    totalPallets: 0,
+    totalPieces: 0,
+    pallets: [],
+  },
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -95,8 +214,8 @@ export class WarehouseMovementsService {
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
   private readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
 
-  // Bahías y su stock
-  private readonly locationsSignal = signal<Record<string, LocationStockInfo>>({});
+  // Bahías y su stock (inicia con datos dummy para Cambio de Almacén)
+  private readonly locationsSignal = signal<Record<string, LocationStockInfo>>(INITIAL_DUMMY_LOCATIONS);
 
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
@@ -198,9 +317,9 @@ export class WarehouseMovementsService {
   public loadInitialBackendData(): void {
     // 1. Clientes
     this.movementsApi.getClients().subscribe({
-      next: (clients) => {
+      next: (clients: any) => {
         this.clientsSignal.set(
-          (clients || []).map((c) => ({
+          (clients || []).map((c: any) => ({
             code: c.id || c.code || 'CLI',
             name: c.name || c.tradeName || 'Cliente',
           }))
@@ -217,10 +336,10 @@ export class WarehouseMovementsService {
 
     // 3. Montacarguistas
     this.movementsApi.getForkliftOperators().subscribe({
-      next: (ops) => {
+      next: (ops: any) => {
         if (ops && ops.length > 0) {
           this.forkliftOperatorsSignal.set(
-            ops.map((o) => ({
+            ops.map((o: any) => ({
               code: o.id || o.code,
               name: o.fullName || `${o.firstName || ''} ${o.lastNamePaternal || o.lastName || ''} ${o.lastNameMaternal || ''}`.trim() || o.name || 'Montacarguista',
             }))
@@ -232,25 +351,27 @@ export class WarehouseMovementsService {
 
     // 4. Ubicaciones / Bahías
     this.movementsApi.getLocations().subscribe({
-      next: (locs) => {
+      next: (locs: any) => {
         if (locs && locs.length > 0) {
-          const locMap: Record<string, LocationStockInfo> = {};
-          locs.forEach((l) => {
+          const locMap: Record<string, LocationStockInfo> = { ...INITIAL_DUMMY_LOCATIONS };
+          locs.forEach((l: any) => {
             const code = l.code || l.locationCode || 'LOC';
-            locMap[code] = {
-              locationCode: code,
-              warehouseName: l.warehouseName || 'Almacén Principal',
-              zone: l.zoneName || 'General',
-              aisle: l.aisle || '',
-              rack: l.rack || '',
-              level: l.level || '',
-              capacity: l.capacity || 4,
-              occupancy: 0,
-              availableCapacity: l.capacity || 4,
-              totalPallets: 0,
-              totalPieces: 0,
-              pallets: [],
-            };
+            if (!locMap[code]) {
+              locMap[code] = {
+                locationCode: code,
+                warehouseName: l.warehouseName || 'Almacén Principal',
+                zone: l.zoneName || 'General',
+                aisle: l.aisle || '',
+                rack: l.rack || '',
+                level: l.level || '',
+                capacity: l.capacity || 4,
+                occupancy: 0,
+                availableCapacity: l.capacity || 4,
+                totalPallets: 0,
+                totalPieces: 0,
+                pallets: [],
+              };
+            }
           });
           this.locationsSignal.set(locMap);
         }
@@ -260,7 +381,7 @@ export class WarehouseMovementsService {
 
     // 5. Lotes de inventario (FIFO/FEFO)
     this.movementsApi.getInventoryBatches().subscribe({
-      next: (batches) => {
+      next: (batches: any) => {
         this.inventoryBatchesSignal.set(batches || []);
       },
       error: () => {},
@@ -268,7 +389,7 @@ export class WarehouseMovementsService {
 
     // 6. Recepciones
     this.movementsApi.getReceptions().subscribe({
-      next: (receptions) => {
+      next: (receptions: any) => {
         this.receptionsSignal.set(
           (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
         );
@@ -278,7 +399,7 @@ export class WarehouseMovementsService {
 
     // 7. Traspasos
     this.movementsApi.getTransfers().subscribe({
-      next: (transfers) => {
+      next: (transfers: any) => {
         this.transfersSignal.set(
           (transfers || []).map((t: any) => ({
             id: t.id,
@@ -304,7 +425,7 @@ export class WarehouseMovementsService {
 
     // 8. Salidas
     this.movementsApi.getOutbounds().subscribe({
-      next: (outbounds) => {
+      next: (outbounds: any) => {
         this.outboundsSignal.set(
           (outbounds || []).map((o: any) => ({
             id: o.id,
@@ -340,10 +461,10 @@ export class WarehouseMovementsService {
 
   public reloadCarriers(): void {
     this.movementsApi.getCarriers().subscribe({
-      next: (carriers) => {
+      next: (carriers: any) => {
         if (carriers) {
           this.carrierLinesSignal.set(
-            carriers.map((c) => ({
+            carriers.map((c: any) => ({
               code: c.id || c.code || c.taxId || 'TR',
               name: c.tradeName && c.tradeName !== c.name ? `${c.tradeName} (${c.name})` : (c.name || c.tradeName || 'Transportista'),
             }))
@@ -356,7 +477,7 @@ export class WarehouseMovementsService {
 
   public reloadSuppliers(): void {
     this.movementsApi.getSuppliers().subscribe({
-      next: (sups) => {
+      next: (sups: any) => {
         if (sups && sups.length > 0) {
           this.suppliersSignal.set(
             sups.map((s: any) => ({
@@ -653,7 +774,7 @@ export class WarehouseMovementsService {
             observations: p.observations || '',
           }));
           return this.movementsApi.addReceptionPallets(receptionId, palletPayload).pipe(
-            catchError(() => of([]))
+            catchError((_: any) => of([]))
           );
         } else {
           return of([]);
@@ -869,7 +990,7 @@ export class WarehouseMovementsService {
     });
 
     if (rec.id) {
-      this.movementsApi.changeRemision(rec.id, { newDocNumber, reason }).subscribe({ error: () => {} });
+      this.movementsApi.changeRemision(rec.id, { newDocNumber, reason }).subscribe({ error: (_: any) => {} });
     }
 
     return updated;
