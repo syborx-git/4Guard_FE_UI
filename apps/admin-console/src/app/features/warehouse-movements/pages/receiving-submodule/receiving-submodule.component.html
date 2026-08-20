@@ -560,6 +560,7 @@
                 <div class="fg-field">
                   <label class="fg-label fg-label--required">Proveedor</label>
                   <select formControlName="supplierName" class="fg-input">
+                    <option value="">-- Selecciona proveedor --</option>
                     @for (sup of suppliers(); track sup.code) {
                       <option [value]="sup.name">{{ sup.name }}</option>
                     }

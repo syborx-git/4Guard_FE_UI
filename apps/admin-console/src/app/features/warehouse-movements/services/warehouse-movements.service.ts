@@ -70,10 +70,12 @@ export class WarehouseMovementsService {
   ]);
 
   private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
+  private readonly suppliersSignal = signal<{ code: string; name: string }[]>([]);
 
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();
   readonly ramps = this.rampsSignal.asReadonly();
+  readonly suppliers = this.suppliersSignal.asReadonly();
   readonly forkliftOperators = computed<ForkliftOperatorItem[]>(() => {
     const adminOps = this.forkliftAdminService.dropdownOperators();
     return adminOps.length > 0 ? adminOps : this.forkliftOperatorsSignal();
@@ -209,6 +211,9 @@ export class WarehouseMovementsService {
 
     // 2. Transportistas
     this.reloadCarriers();
+
+    // 3. Proveedores
+    this.reloadSuppliers();
 
     // 3. Montacarguistas
     this.movementsApi.getForkliftOperators().subscribe({
@@ -371,6 +376,22 @@ export class WarehouseMovementsService {
             carriers.map((c) => ({
               code: c.id || c.code || c.taxId || 'TR',
               name: c.tradeName && c.tradeName !== c.name ? `${c.tradeName} (${c.name})` : (c.name || c.tradeName || 'Transportista'),
+            }))
+          );
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadSuppliers(): void {
+    this.movementsApi.getSuppliers().subscribe({
+      next: (sups) => {
+        if (sups && sups.length > 0) {
+          this.suppliersSignal.set(
+            sups.map((s: any) => ({
+              code: s.id || s.code,
+              name: s.legalName || s.commercialName || s.tradeName || s.name,
             }))
           );
         }

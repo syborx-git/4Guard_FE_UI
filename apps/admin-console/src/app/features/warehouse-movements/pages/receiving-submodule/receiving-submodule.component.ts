@@ -112,7 +112,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   ramps = this.movementsService.ramps;
   forkliftOperators = this.movementsService.forkliftOperators;
 
-  suppliers = signal<{ code: string; name: string }[]>([]);
+  suppliers = this.movementsService.suppliers;
   products = signal<{ id: string; name: string; defaultPieces: number }[]>([]);
 
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
@@ -221,20 +221,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   ngOnInit(): void {
     this.movementsService.loadInitialBackendData();
-
-    this.movementsService.movementsApi.getSuppliers().subscribe({
-      next: (sups) => {
-        if (sups && sups.length > 0) {
-          this.suppliers.set(sups.map((s) => ({ code: s.id || s.code, name: s.commercialName || s.tradeName || s.name })));
-        }
-      },
-      error: () => {},
-    });
+    this.movementsService.reloadSuppliers();
 
     this.movementsService.movementsApi.getProductSkus().subscribe({
       next: (prods) => {
         if (prods && prods.length > 0) {
-          this.products.set(prods.map((p) => ({ id: p.id || p.code, name: p.name || p.description, defaultPieces: p.piecesPerPallet || 480 })));
+          this.products.set(
+            prods.map((p) => ({
+              id: p.id || p.code,
+              name: p.name || p.description || p.code,
+              defaultPieces: p.piecesPerPallet || 480,
+            }))
+          );
         }
       },
       error: () => {},
@@ -306,15 +304,20 @@ export class ReceivingSubmoduleComponent implements OnInit {
     localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
     this.loadAuditLogs(rec.folio);
+
+    const defaultSupplier = rec.supplierName || (this.suppliers().length > 0 ? this.suppliers()[0].name : '');
+    const defaultOperator = rec.checkIn?.forkliftOperator || (this.forkliftOperators().length > 0 ? this.forkliftOperators()[0].name : '');
+    const defaultProduct = this.products().find((p) => p.id === rec.productId) || (this.products().length > 0 ? this.products()[0] : null);
+
     this.altaForm.patchValue({
-      lotNumber: rec.lotNumber || rec.checkIn.lotNumber || '',
-      expirationDate: rec.expirationDate || rec.checkIn.expirationDate || '',
-      forkliftOperator: rec.checkIn.forkliftOperator || '',
-      rampNumber: rec.checkIn.rampNumber || 1,
-      productId: rec.productId || '',
-      productName: rec.productName || '',
-      supplierName: rec.supplierName || '',
-      piecesPerPallet: rec.piecesPerPallet || 0,
+      lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
+      expirationDate: rec.expirationDate || rec.checkIn?.expirationDate || '',
+      forkliftOperator: defaultOperator,
+      rampNumber: rec.checkIn?.rampNumber || 1,
+      productId: rec.productId || (defaultProduct ? defaultProduct.id : ''),
+      productName: rec.productName || (defaultProduct ? defaultProduct.name : ''),
+      supplierName: defaultSupplier,
+      piecesPerPallet: rec.piecesPerPallet || (defaultProduct ? defaultProduct.defaultPieces : 480),
       selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
       observations: rec.observations || '',
     });
