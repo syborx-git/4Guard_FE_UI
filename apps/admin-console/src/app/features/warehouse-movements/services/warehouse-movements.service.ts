@@ -27,6 +27,8 @@ import {
   TransportType,
   CLIENT_DESTINATIONS,
   ClientDestination,
+  MovementAuditEntry,
+  MovementAuditDetail,
 } from '../models/warehouse-movements.models';
 
 @Injectable({
@@ -39,6 +41,11 @@ export class WarehouseMovementsService {
   private nextTransferNumber = signal(4081);
   private nextDispatchNumber = signal(8821);
   private nextOutboundNumber = signal(1);  // SAL-2026-000001
+
+  // Mapas de Auditoría por Folio
+  private readonly receptionAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
+  private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
+  private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
   // Catálogos Reactivos
   private readonly carrierLinesSignal = signal<CarrierLineItem[]>([
@@ -580,6 +587,142 @@ export class WarehouseMovementsService {
     };
     this.outboundsSignal.set([seedOutbound]);
     this.nextOutboundNumber.set(2);
+
+    // Inicializar Auditoría Semilla
+    this.receptionAuditMap.set({
+      '26506': [
+        {
+          id: 'aud-rec-1',
+          action: 'RECEPCION_CREADA',
+          actionLabel: 'Pre-Recepción Registrada en Caseta',
+          username: 'Caseta de Seguridad',
+          timestamp: '2026-08-10 09:15',
+          details: [
+            { fieldName: 'Línea Transportadora', newValue: 'Transportes Castores' },
+            { fieldName: 'Rampa', newValue: 'Rampa 04' },
+            { fieldName: 'Placas Tracto / Caja', newValue: '12-AA-34 / 78-BB-90' },
+          ],
+        },
+        {
+          id: 'aud-rec-2',
+          action: 'RECEPCION_COMPLETADA',
+          actionLabel: 'Descarga y Cierre de Recepción F01',
+          username: 'Christian Durán',
+          authorizedBy: 'Pablo Hernández',
+          timestamp: '2026-08-10 10:00',
+          details: [
+            { fieldName: 'Tarimas Descargadas', newValue: '2' },
+            { fieldName: 'Piezas Totales', newValue: '960' },
+            { fieldName: 'Lugar de Almacenaje', newValue: 'Bodega M 98' },
+          ],
+        },
+      ],
+    });
+
+    this.transferAuditMap.set({
+      'CAM-2026-000001': [
+        {
+          id: 'aud-tr-1',
+          action: 'TRASPASO_REGISTRADO',
+          actionLabel: 'Reubicación de Inventario Confirmada',
+          username: 'Christian Durán',
+          timestamp: '2026-08-10 11:30',
+          details: [
+            { fieldName: 'Ruta de Movimiento', oldValue: 'RAMPA-04', newValue: 'A-14' },
+            { fieldName: 'Montacarguista', newValue: 'Pablo Hernández (MC-101)' },
+            { fieldName: 'Motivo', newValue: 'Reubicación operativa' },
+            { fieldName: 'Tarimas Trasladadas', newValue: '2' },
+          ],
+        },
+      ],
+    });
+
+    this.outboundAuditMap.set({
+      'SAL-2026-000001': [
+        {
+          id: 'aud-out-1',
+          action: 'SALIDA_REGISTRADA',
+          actionLabel: 'Despacho Outbound Confirmado',
+          username: 'Christian Durán',
+          timestamp: '2026-08-10 14:20',
+          details: [
+            { fieldName: 'Cliente / Destino', newValue: 'Nestlé México — CEDIS Toluca' },
+            { fieldName: 'Transportista', newValue: 'Transportes Castores' },
+            { fieldName: 'No. Sello / Cincho', newValue: 'SL-88401' },
+            { fieldName: 'Tarimas Despachadas', newValue: '3' },
+            { fieldName: 'Piezas Totales', newValue: '1,440' },
+          ],
+        },
+      ],
+    });
+  }
+
+  // ─── MÉTODOS DE AUDITORÍA ───────────────────────────────────────────────────
+
+  getReceptionAuditLogs(folio: string): MovementAuditEntry[] {
+    const map = this.receptionAuditMap();
+    return map[folio.trim()] || [
+      {
+        id: `aud-default-${folio}`,
+        action: 'RECEPCION_CREADA',
+        actionLabel: 'Registro de Movimiento en WMS',
+        username: 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [{ fieldName: 'Folio', newValue: folio }],
+      },
+    ];
+  }
+
+  addReceptionAudit(folio: string, entry: MovementAuditEntry): void {
+    this.receptionAuditMap.update((map) => {
+      const key = folio.trim();
+      const current = map[key] || [];
+      return { ...map, [key]: [entry, ...current] };
+    });
+  }
+
+  getTransferAuditLogs(folio: string): MovementAuditEntry[] {
+    const map = this.transferAuditMap();
+    return map[folio.trim()] || [
+      {
+        id: `aud-default-${folio}`,
+        action: 'TRASPASO_REGISTRADO',
+        actionLabel: 'Reubicación Registrada en Catálogo',
+        username: 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [{ fieldName: 'Folio', newValue: folio }],
+      },
+    ];
+  }
+
+  addTransferAudit(folio: string, entry: MovementAuditEntry): void {
+    this.transferAuditMap.update((map) => {
+      const key = folio.trim();
+      const current = map[key] || [];
+      return { ...map, [key]: [entry, ...current] };
+    });
+  }
+
+  getOutboundAuditLogs(folio: string): MovementAuditEntry[] {
+    const map = this.outboundAuditMap();
+    return map[folio.trim()] || [
+      {
+        id: `aud-default-${folio}`,
+        action: 'SALIDA_REGISTRADA',
+        actionLabel: 'Despacho Registrado en WMS',
+        username: 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [{ fieldName: 'Folio', newValue: folio }],
+      },
+    ];
+  }
+
+  addOutboundAudit(folio: string, entry: MovementAuditEntry): void {
+    this.outboundAuditMap.update((map) => {
+      const key = folio.trim();
+      const current = map[key] || [];
+      return { ...map, [key]: [entry, ...current] };
+    });
   }
 
   // Genera un Folio Consecutivo de Recepción (ej. 26510)
@@ -610,6 +753,20 @@ export class WarehouseMovementsService {
     };
 
     this.receptionsSignal.update((list) => [newHeader, ...list]);
+
+    this.addReceptionAudit(assignedFolio, {
+      id: `aud-rec-reg-${Date.now()}`,
+      action: 'RECEPCION_CREADA',
+      actionLabel: 'Pre-Recepción Registrada en Caseta',
+      username: 'Caseta de Seguridad',
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Línea Transportadora', newValue: data.carrierLine },
+        { fieldName: 'Rampa', newValue: `Rampa ${data.rampNumber}` },
+        { fieldName: 'Placas Tracto / Caja', newValue: `${data.tractorPlates} / ${data.boxPlates}` },
+      ],
+    });
+
     return newHeader;
   }
 
@@ -627,6 +784,19 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-upd-${Date.now()}`,
+      action: 'RECEPCION_ACTUALIZADA',
+      actionLabel: 'Actualización de Datos de Recepción',
+      username: partial.capturedBy || 'Operador WMS',
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Lugar de Almacenaje', newValue: partial.storageLocation || '' },
+        { fieldName: 'Total Tarimas', newValue: partial.pallets?.length.toString() || '0' },
+      ],
+    });
+
     return updated;
   }
 
@@ -676,6 +846,23 @@ export class WarehouseMovementsService {
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
 
+    const totalPieces = pallets.reduce((sum, p) => sum + p.pieces, 0);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-comp-${Date.now()}`,
+      action: 'RECEPCION_COMPLETADA',
+      actionLabel: 'Descarga y Cierre de Recepción F01',
+      username: capturedBy,
+      authorizedBy: leaderName,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Lote de Fabricación', newValue: lotNumber },
+        { fieldName: 'SKU / Producto', newValue: `${productId} - ${productName}` },
+        { fieldName: 'Tarimas Descargadas', newValue: pallets.length.toString() },
+        { fieldName: 'Piezas Totales', newValue: totalPieces.toLocaleString() },
+      ],
+    });
+
     return updated;
   }
 
@@ -697,6 +884,90 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-canc-${Date.now()}`,
+      action: 'RECEPCION_CANCELADA',
+      actionLabel: 'Cancelación Extraordinaria con Autorización',
+      username: leaderName,
+      authorizedBy: leaderName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
+        { fieldName: 'Motivo de Cancelación', newValue: justification },
+      ],
+    });
+
+    return updated;
+  }
+
+  // Cancela Traspaso (Cambio de Almacén)
+  cancelTransfer(folio: string, justification: string, adminName: string): WarehouseTransfer | null {
+    const list = this.transfersSignal();
+    const index = list.findIndex((t) => t.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseTransfer = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.transfersSignal.set(newArr);
+
+    this.addTransferAudit(folio, {
+      id: `aud-tr-canc-${Date.now()}`,
+      action: 'TRASPASO_CANCELADO',
+      actionLabel: 'Cancelación de Reubicación de Inventario',
+      username: adminName,
+      authorizedBy: adminName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
+        { fieldName: 'Motivo de Cancelación', newValue: justification },
+      ],
+    });
+
+    return updated;
+  }
+
+  // Cancela Salida de Almacén (Outbound)
+  cancelOutbound(folio: string, justification: string, adminName: string): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const index = list.findIndex((o) => o.folio.trim() === folio.trim());
+    if (index === -1) return null;
+
+    const updated: WarehouseOutbound = {
+      ...list[index],
+      status: 'CANCELLED',
+      cancellationReason: justification,
+      cancelledAt: new Date().toLocaleString('es-MX'),
+      cancelledBy: adminName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.outboundsSignal.set(newArr);
+
+    this.addOutboundAudit(folio, {
+      id: `aud-out-canc-${Date.now()}`,
+      action: 'SALIDA_CANCELADA',
+      actionLabel: 'Cancelación de Despacho Outbound',
+      username: adminName,
+      authorizedBy: adminName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
+        { fieldName: 'Motivo de Cancelación', newValue: justification },
+      ],
+    });
 
     return updated;
   }
@@ -847,6 +1118,21 @@ export class WarehouseMovementsService {
     this.locationsSignal.set(locs);
     this.transfersSignal.update((list) => [newTransfer, ...list]);
 
+    this.addTransferAudit(folio, {
+      id: `aud-tr-reg-${Date.now()}`,
+      action: 'TRASPASO_REGISTRADO',
+      actionLabel: 'Reubicación de Inventario Confirmada',
+      username: dto.transferredBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Ruta de Movimiento', oldValue: origin, newValue: destination },
+        { fieldName: 'Montacarguista', newValue: dto.forkliftOperator },
+        { fieldName: 'Motivo', newValue: dto.reasonLabel || dto.reasonId || 'Reubicación operativa' },
+        { fieldName: 'Tarimas Trasladadas', newValue: palletsToMove.length.toString() },
+        { fieldName: 'Piezas Totales', newValue: totalPiecesMoved.toLocaleString() },
+      ],
+    });
+
     return newTransfer;
   }
 
@@ -930,6 +1216,22 @@ export class WarehouseMovementsService {
     );
 
     this.outboundsSignal.update((list) => [newOutbound, ...list]);
+
+    this.addOutboundAudit(folio, {
+      id: `aud-out-reg-${Date.now()}`,
+      action: 'SALIDA_REGISTRADA',
+      actionLabel: 'Despacho Outbound Confirmado',
+      username: dto.dispatchedBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Cliente / Destino', newValue: `${dto.clientName} — ${dto.destinationName}` },
+        { fieldName: 'Transportista', newValue: dto.carrierName },
+        { fieldName: 'No. Sello / Cincho', newValue: dto.sealNumber },
+        { fieldName: 'Tarimas Despachadas', newValue: dto.selectedPallets.length.toString() },
+        { fieldName: 'Piezas Totales', newValue: totalPieces.toLocaleString() },
+      ],
+    });
+
     return newOutbound;
   }
 
@@ -989,44 +1291,5 @@ export class WarehouseMovementsService {
 
     return fullDispatch;
   }
-
-  // Cancela Traspaso (Cambio de Almacén)
-  cancelTransfer(folio: string, justification: string, adminName: string): WarehouseTransfer | null {
-    const list = this.transfersSignal();
-    const index = list.findIndex((t) => t.folio.trim() === folio.trim());
-    if (index === -1) return null;
-
-    const updated: WarehouseTransfer = {
-      ...list[index],
-      status: 'CANCELLED',
-      cancellationReason: justification,
-      cancelledAt: new Date().toLocaleString('es-MX'),
-      cancelledBy: adminName,
-    };
-
-    const newArr = [...list];
-    newArr[index] = updated;
-    this.transfersSignal.set(newArr);
-    return updated;
-  }
-
-  // Cancela Salida de Almacén (Outbound)
-  cancelOutbound(folio: string, justification: string, adminName: string): WarehouseOutbound | null {
-    const list = this.outboundsSignal();
-    const index = list.findIndex((o) => o.folio.trim() === folio.trim());
-    if (index === -1) return null;
-
-    const updated: WarehouseOutbound = {
-      ...list[index],
-      status: 'CANCELLED',
-      cancellationReason: justification,
-      cancelledAt: new Date().toLocaleString('es-MX'),
-      cancelledBy: adminName,
-    };
-
-    const newArr = [...list];
-    newArr[index] = updated;
-    this.outboundsSignal.set(newArr);
-    return updated;
-  }
 }
+

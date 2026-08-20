@@ -9,6 +9,7 @@ import {
   WarehouseTransfer,
   TransferReasonItem,
   TRANSFER_REASONS,
+  MovementAuditEntry,
 } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
 
@@ -36,6 +37,7 @@ export class TransferSubmoduleComponent implements OnInit {
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedTransfer = signal<WarehouseTransfer | null>(null);
   searchQuery = signal<string>('');
+  auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Modal Cancelación con Autorización de Administrador
   showCancelModal = signal(false);
@@ -203,6 +205,39 @@ export class TransferSubmoduleComponent implements OnInit {
     this.formMode.set('detail');
     this.selectedTransfer.set(transfer);
     localStorage.setItem('4g_active_transfer_folio', transfer.folio);
+    this.loadAuditLogs(transfer.folio);
+  }
+
+  loadAuditLogs(folio: string): void {
+    const logs = this.movementsService.getTransferAuditLogs(folio);
+    this.auditEntries.set(logs || []);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'TRASPASO_REGISTRADO': return 'compare_arrows';
+      case 'TRASPASO_COMPLETADO': return 'check_circle';
+      case 'TRASPASO_CANCELADO':  return 'cancel';
+      default:                    return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'TRASPASO_REGISTRADO': return 'carriers-tl-node--emerald';
+      case 'TRASPASO_COMPLETADO': return 'carriers-tl-node--blue';
+      case 'TRASPASO_CANCELADO':  return 'carriers-tl-node--red';
+      default:                    return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'TRASPASO_REGISTRADO': return 'Reubicación de Inventario Confirmada';
+      case 'TRASPASO_COMPLETADO': return 'Traspaso Concluido en Bahía Destino';
+      case 'TRASPASO_CANCELADO':  return 'Cancelación Extraordinaria de Traspaso';
+      default:                    return action;
+    }
   }
 
   // Selección de Bahía Origen
@@ -276,6 +311,7 @@ export class TransferSubmoduleComponent implements OnInit {
       // Seleccionar el traspaso recién creado en modo detalle y abrir vista de impresión
       this.selectedTransfer.set(transfer);
       this.formMode.set('detail');
+      this.loadAuditLogs(transfer.folio);
       this.selectedPrintTransfer.set(transfer);
       this.showPrintModal.set(true);
     } catch (err: any) {
@@ -347,6 +383,7 @@ export class TransferSubmoduleComponent implements OnInit {
 
       if (updated) {
         this.selectedTransfer.set(updated);
+        this.loadAuditLogs(updated.folio);
         this.showCancelModal.set(false);
         this.toast.success(`Cambio de Almacén #${current.folio} ha sido cancelado.`);
       } else {

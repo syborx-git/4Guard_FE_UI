@@ -13,6 +13,7 @@ import {
   ClientItem,
   ClientDestination,
   InventoryBatch,
+  MovementAuditEntry,
 } from '../../models/warehouse-movements.models';
 import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
 
@@ -32,6 +33,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedOutbound = signal<WarehouseOutbound | null>(null);
   searchQuery = signal('');
+  auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Modal Cancelación con Autorización de Administrador
   showCancelModal = signal(false);
@@ -211,6 +213,39 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.formMode.set('detail');
     this.selectedOutbound.set(outbound);
     localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
+    this.loadAuditLogs(outbound.folio);
+  }
+
+  loadAuditLogs(folio: string): void {
+    const logs = this.svc.getOutboundAuditLogs(folio);
+    this.auditEntries.set(logs || []);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'local_shipping';
+      case 'SALIDA_DESPACHADA': return 'check_circle';
+      case 'SALIDA_CANCELADA':  return 'cancel';
+      default:                  return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'carriers-tl-node--emerald';
+      case 'SALIDA_DESPACHADA': return 'carriers-tl-node--blue';
+      case 'SALIDA_CANCELADA':  return 'carriers-tl-node--red';
+      default:                  return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'Despacho Outbound Confirmado';
+      case 'SALIDA_DESPACHADA': return 'Salida Física y Tránsito Confirmado';
+      case 'SALIDA_CANCELADA':  return 'Cancelación Extraordinaria de Despacho';
+      default:                  return action;
+    }
   }
 
   // ── PASO 1 → PASO 2 ───────────────────────────────────────────────────────
@@ -325,6 +360,7 @@ export class OutboundSubmoduleComponent implements OnInit {
       // Abrir en modo detalle + mostrar comprobante
       this.selectedOutbound.set(result);
       this.formMode.set('detail');
+      this.loadAuditLogs(result.folio);
       this.selectedPrintOutbound.set(result);
       this.showPrintModal.set(true);
     } catch (err: any) {
@@ -401,6 +437,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
       if (updated) {
         this.selectedOutbound.set(updated);
+        this.loadAuditLogs(updated.folio);
         this.showCancelModal.set(false);
         this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
       } else {

@@ -476,7 +476,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
   );
 
-  protected readonly expandedSubmenus = signal<Set<string>>(new Set<string>(['warehouse-movements']));
+  protected readonly expandedSubmenus = signal<Set<string>>(new Set<string>());
 
   protected isSubmenuExpanded(module: string): boolean {
     return this.expandedSubmenus().has(module);

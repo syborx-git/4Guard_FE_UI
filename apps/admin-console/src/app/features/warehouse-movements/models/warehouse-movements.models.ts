@@ -282,3 +282,24 @@ export const CLIENT_DESTINATIONS: ClientDestination[] = [
   // Nestlé Planta Veracruz (CLI-004)
   { id: 'DEST-CLI004-VER',    clientCode: 'CLI-004', name: 'Planta Veracruz',   address: 'Km. 4.5 Carr. Veracruz-Xalapa', city: 'Veracruz',  state: 'Veracruz',        status: 'ACTIVO' },
 ];
+
+// ─── CONTROL Y AUDITORÍA DE MOVIMIENTOS ──────────────────────────────────────
+
+export interface MovementAuditDetail {
+  fieldName: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+export interface MovementAuditEntry {
+  id?: string;
+  action: string;
+  actionLabel?: string;
+  username: string;
+  timestamp: string;
+  details?: MovementAuditDetail[];
+  reason?: string;
+  authorizedBy?: string;
+  observations?: string;
+}
+

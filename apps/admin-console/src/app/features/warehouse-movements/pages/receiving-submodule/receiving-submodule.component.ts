@@ -11,6 +11,7 @@ import {
   ReceptionPalletItem,
   PalletType,
   PALLET_TYPE_LABELS,
+  MovementAuditEntry,
 } from '../../models/warehouse-movements.models';
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
@@ -46,6 +47,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   searchQuery = signal('');
   statusFilter = signal<string>('ALL');
   selectedReception = signal<ReceptionHeader | null>(null);
+  auditEntries = signal<MovementAuditEntry[]>([]);
 
   // Cola Reactiva de Pre-Recepciones Pendientes (Caseta)
   pendingReceptions = this.movementsService.pendingReceptions;
@@ -247,6 +249,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.selectedReception.set(rec);
     localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
+    this.loadAuditLogs(rec.folio);
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn.lotNumber || 'LOT-2026-A1',
       expirationDate: rec.expirationDate || rec.checkIn.expirationDate || '2026-11-15',
@@ -259,6 +262,44 @@ export class ReceivingSubmoduleComponent implements OnInit {
       selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
       observations: rec.observations || 'Ingreso directo andén 4 sin incidentes.',
     });
+  }
+
+  loadAuditLogs(folio: string): void {
+    const logs = this.movementsService.getReceptionAuditLogs(folio);
+    this.auditEntries.set(logs || []);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'add_circle';
+      case 'RECEPCION_COMPLETADA': return 'check_circle';
+      case 'TARIMA_EDITADA':       return 'edit_note';
+      case 'RECEPCION_ACTUALIZADA':return 'edit';
+      case 'RECEPCION_CANCELADA':  return 'cancel';
+      default:                     return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'carriers-tl-node--emerald';
+      case 'RECEPCION_COMPLETADA': return 'carriers-tl-node--blue';
+      case 'TARIMA_EDITADA':
+      case 'RECEPCION_ACTUALIZADA':return 'carriers-tl-node--amber';
+      case 'RECEPCION_CANCELADA':  return 'carriers-tl-node--red';
+      default:                     return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
+      case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cerrada en WMS';
+      case 'TARIMA_EDITADA':       return 'Modificación Manual de Tarima/UA';
+      case 'RECEPCION_ACTUALIZADA':return 'Actualización de Datos de Recepción';
+      case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria de Recepción';
+      default:                     return action;
+    }
   }
 
   // Notificación Simulada & Navegación Directa por Folio
