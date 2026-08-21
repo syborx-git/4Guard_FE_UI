@@ -212,7 +212,7 @@ export class WarehouseMovementsService {
   private readonly receptionsSignal = signal<ReceptionHeader[]>([]);
   private readonly transfersSignal = signal<WarehouseTransfer[]>([]);
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
-  private readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
+  readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
 
   // Bahías y su stock (inicia con datos dummy para Cambio de Almacén)
   private readonly locationsSignal = signal<Record<string, LocationStockInfo>>(INITIAL_DUMMY_LOCATIONS);
@@ -244,9 +244,13 @@ export class WarehouseMovementsService {
     new Set(this.outboundsSignal().map((o) => o.clientCode)).size
   );
 
-  // Catálogo de Destinos por Cliente
+  // Catálogo de Destinos por Cliente (dinámico de BD + fallback de catálogo)
   readonly clientDestinations = CLIENT_DESTINATIONS;
   getDestinationsForClient(clientCode: string): ClientDestination[] {
+    const client = this.clientsSignal().find((c) => c.code === clientCode || c.name === clientCode);
+    if (client && client.destinations && client.destinations.length > 0) {
+      return client.destinations.filter((d) => d.status === 'ACTIVO');
+    }
     return CLIENT_DESTINATIONS.filter(
       (d) => d.clientCode === clientCode && d.status === 'ACTIVO'
     );
@@ -322,6 +326,17 @@ export class WarehouseMovementsService {
           (clients || []).map((c: any) => ({
             code: c.id || c.code || 'CLI',
             name: c.name || c.tradeName || 'Cliente',
+            destinations: (c.destinations || []).map((d: any) => ({
+              id: d.id || `DEST-${d.destinationCode || Math.random()}`,
+              clientCode: c.id || c.code,
+              name: d.plantName || d.name || 'Planta / Destino',
+              address: d.fullAddress || d.address || '',
+              city: d.city || '',
+              state: d.state || '',
+              contactName: d.contactPerson || d.contactName || '',
+              contactPhone: d.phone || d.contactPhone || '',
+              status: (d.status === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+            })),
           }))
         );
       },
@@ -363,7 +378,28 @@ export class WarehouseMovementsService {
 
     this.movementsApi.getInventoryBatches().subscribe({
       next: (batches: any) => {
-        fetchedBatches = batches || [];
+        fetchedBatches = (batches || []).map((b: any) => ({
+          remisionNo: b.remisionNo || 'REM-S/N',
+          client: b.clientName || 'Cliente WMS',
+          productId: b.skuCode || '',
+          productName: b.productName || 'Producto',
+          lotNumber: b.lotNumber || '',
+          elaborationDate: b.manufacturingDate || '',
+          expirationDate: b.expirationDate || '',
+          availablePallets: b.availablePallets || (b.pallets ? b.pallets.length : 0),
+          totalPieces: b.totalPieces || 0,
+          locationCode: b.locationCode || '',
+          isFifoSuggested: !!b.isFifoSuggested,
+          pallets: (b.pallets || []).map((p: any) => ({
+            id: p.itemId || p.id,
+            palletCode: p.palletCode || p.sscc || '',
+            description: p.description || b.productName || '',
+            productId: p.skuCode || b.skuCode || '',
+            pieces: p.pieces || 0,
+            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+          })),
+        }));
         this.inventoryBatchesSignal.set(fetchedBatches);
         this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
       },
