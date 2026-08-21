@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
+import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import {
   WarehouseOutbound,
   OutboundItem,
@@ -27,6 +28,7 @@ import { PrintDispatchLayoutComponent } from '../../components/print-layouts/pri
 })
 export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
+  private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly toast = inject(ToastService);
   private readonly authState = inject(AuthState);
   private readonly router = inject(Router);
@@ -118,7 +120,6 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // Lotes disponibles para el cliente seleccionado (simulado: todos los disponibles)
   availableBatches = computed(() => {
-    const client = this.selectedClient();
     return this.allBatches().filter((b) => b.availablePallets > 0);
   });
 
@@ -150,31 +151,35 @@ export class OutboundSubmoduleComponent implements OnInit {
   totalSelectedPieces = computed(() =>
     this.selectedPalletItems().reduce((acc, p) => acc + p.pieces, 0)
   );
-  totalSelectedSkus = computed(() =>
-    new Set(this.selectedPalletItems().map((p) => p.productId)).size
-  );
+  distinctSkusCount = computed(() => {
+    const items = this.selectedPalletItems();
+    return new Set(items.map((i) => i.productId)).size;
+  });
+  readonly totalSelectedSkus = this.distinctSkusCount;
 
   isStep2Valid = computed(() => this.selectedPalletItems().length > 0);
 
-  canConfirm = computed(() => this.isStep1Valid() && this.isStep2Valid());
+  canConfirm = computed(() =>
+    this.isStep1Valid() &&
+    this.selectedPalletIds().length > 0 &&
+    !!this.selectedBatch()
+  );
 
   // ── KPI SIGNALS ────────────────────────────────────────────────────────────
-  kpiTotalOutbounds = this.svc.kpiTotalOutbounds;
-  kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
-  kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
-  kpiClients = this.svc.kpiDistinctClientsServed;
+  readonly kpiTotalOutbounds = this.svc.kpiTotalOutbounds;
+  readonly kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
+  readonly kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
+  readonly kpiClients = this.svc.kpiDistinctClientsServed;
 
   // ── DIRECTORIO (LISTA IZQUIERDA) ──────────────────────────────────────────
-  outboundsList = this.svc.outbounds;
   filteredOutbounds = computed(() => {
-    const list = this.outboundsList();
-    const q = this.searchQuery().toLowerCase().trim();
-    const status = this.statusFilter();
+    const list = this.svc.outbounds();
+    const q = this.searchQuery().trim().toLowerCase();
+    const st = this.statusFilter();
 
     return list.filter((o) => {
-      const matchStatus = status === 'ALL' || o.status === status;
+      const matchStatus = st === 'ALL' || o.status === st;
       if (!matchStatus) return false;
-
       if (!q) return true;
       return (
         o.folio.toLowerCase().includes(q) ||
@@ -210,8 +215,12 @@ export class OutboundSubmoduleComponent implements OnInit {
     // Inicializar selecciones dinámicas
     const firstClient = this.clients()[0];
     const firstCarrier = this.carriers()[0];
-    this.selectedClientCode.set(firstClient ? firstClient.code : '');
-    this.selectedDestinationId.set('');
+    const clientCode = firstClient ? firstClient.code : '';
+    this.selectedClientCode.set(clientCode);
+
+    const dests = this.svc.getDestinationsForClient(clientCode);
+    this.selectedDestinationId.set(dests.length > 0 ? dests[0].id : '');
+
     this.selectedCarrierCode.set(firstCarrier ? firstCarrier.code : '');
     this.driverName.set('');
     this.economicNumber.set('');
@@ -240,12 +249,38 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.formMode.set('detail');
     this.selectedOutbound.set(outbound);
     localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
-    this.loadAuditLogs(outbound.folio);
+    this.loadAuditLogs(outbound.id || outbound.folio);
   }
 
-  loadAuditLogs(folio: string): void {
-    const logs = this.svc.getOutboundAuditLogs(folio);
-    this.auditEntries.set(logs || []);
+  loadAuditLogs(idOrFolio: string): void {
+    const target = this.selectedOutbound();
+    const targetId = (target && target.id && target.id.includes('-')) ? target.id : (idOrFolio.includes('-') ? idOrFolio : null);
+    if (targetId) {
+      this.movementsApi.getOutboundAudit(targetId).subscribe({
+        next: (logs: any[]) => {
+          this.auditEntries.set(
+            (logs || []).map((l: any) => ({
+              id: l.id,
+              action: l.action,
+              actionLabel: this.getAuditSummary(l.action),
+              username: l.username || l.authorizedBy || 'Admin',
+              timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : '',
+              details: l.details || [],
+              reason: l.reason || '',
+              authorizedBy: l.authorizedBy || '',
+              observations: l.observations || '',
+            }))
+          );
+        },
+        error: () => {
+          const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
+          this.auditEntries.set(fallback || []);
+        },
+      });
+    } else {
+      const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
+      this.auditEntries.set(fallback || []);
+    }
   }
 
   getAuditIcon(action: string): string {
@@ -282,6 +317,10 @@ export class OutboundSubmoduleComponent implements OnInit {
       return;
     }
     this.currentStep.set(2);
+    const batches = this.availableBatches();
+    if (batches.length > 0 && !this.selectedBatch()) {
+      this.pickBatch(batches[0]);
+    }
   }
 
   goBackToStep1(): void {
@@ -291,24 +330,17 @@ export class OutboundSubmoduleComponent implements OnInit {
   // ── CLIENTE / DESTINO / CARRIER ────────────────────────────────────────────
   onClientChange(code: string): void {
     this.selectedClientCode.set(code);
-    // Auto-seleccionar primer destino del nuevo cliente
     const dests = this.svc.getDestinationsForClient(code);
-    if (dests.length > 0) {
-      this.selectedDestinationId.set(dests[0].id);
-    } else {
-      this.selectedDestinationId.set('');
-    }
+    this.selectedDestinationId.set(dests.length > 0 ? dests[0].id : '');
   }
 
   onCarrierChange(code: string): void {
     this.selectedCarrierCode.set(code);
-    // Precargar nombre del transportista (snapshot)
   }
 
   // ── SELECCIÓN DE BATCH Y TARIMAS ─────────────────────────────────────────
   pickBatch(batch: InventoryBatch): void {
     this.selectedBatch.set(batch);
-    // Pre-seleccionar todas las tarimas disponibles
     this.selectedPalletIds.set(batch.pallets.map((p) => p.id));
   }
 
@@ -355,45 +387,95 @@ export class OutboundSubmoduleComponent implements OnInit {
     if (!this.canConfirm()) return;
     this.isExecuting.set(true);
 
-    try {
-      const batch = this.selectedBatch();
-      const carrier = this.selectedCarrier();
-      const client = this.selectedClient();
-      const dest = this.selectedDestination();
+    const batch = this.selectedBatch();
+    const carrier = this.selectedCarrier();
+    const client = this.selectedClient();
+    const dest = this.selectedDestination();
+    const session = this.movementsApi.getSessionOrg();
 
-      const result = this.svc.executeOutbound({
-        clientCode: this.selectedClientCode(),
-        clientName: client?.name || '',
-        destinationId: this.selectedDestinationId(),
-        destinationName: dest?.name || '',
-        destinationAddress: dest ? `${dest.address}, ${dest.city}, ${dest.state}` : '',
-        carrierCode: this.selectedCarrierCode(),
-        carrierName: carrier?.name || '',
-        driverName: this.driverName(),
-        economicNumber: this.economicNumber(),
-        tractorPlates: this.tractorPlates(),
-        boxPlates: this.boxPlates(),
-        transportType: this.selectedTransportType(),
-        sealNumber: this.sealNumber(),
-        remisionNo: batch?.remisionNo || 'REM-SIN-ASIGNAR',
-        selectedPallets: this.selectedPalletItems(),
-        dispatchedBy: 'Christian Durán (Admin)',
-      });
+    const selectedPallets = this.selectedPalletItems();
+    const selectedItemIds = selectedPallets.map((p) => p.id);
 
+    if (selectedItemIds.length === 0) {
       this.isExecuting.set(false);
-      this.showConfirmModal.set(false);
-      this.toast.success(`Salida ${result.folio} registrada y lista para despacho.`);
-
-      // Abrir en modo detalle + mostrar comprobante
-      this.selectedOutbound.set(result);
-      this.formMode.set('detail');
-      this.loadAuditLogs(result.folio);
-      this.selectedPrintOutbound.set(result);
-      this.showPrintModal.set(true);
-    } catch (err: any) {
-      this.isExecuting.set(false);
-      this.toast.error(err.message || 'Error al registrar la salida de almacén.');
+      this.toast.error('Debes seleccionar al menos una tarima para registrar el despacho.');
+      return;
     }
+
+    const clientId = (client && client.code && client.code.includes('-')) 
+      ? client.code 
+      : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938';
+
+    const destinationId = (dest && dest.id && dest.id.includes('-')) ? dest.id : null;
+    const carrierId = (carrier && carrier.code && carrier.code.includes('-')) ? carrier.code : null;
+
+    const payload = {
+      organizationId: session.organizationId,
+      branchId: session.branchId,
+      clientId: clientId,
+      destinationId: destinationId,
+      destinationName: dest ? dest.name : '',
+      destinationAddress: dest ? (dest.address ? `${dest.address}, ${dest.city || ''} ${dest.state || ''}`.trim() : '') : '',
+      carrierId: carrierId,
+      carrierName: carrier ? carrier.name : '',
+      transportType: this.selectedTransportType(),
+      driverName: this.driverName(),
+      economicNumber: this.economicNumber() || '',
+      tractorPlates: this.tractorPlates(),
+      boxPlates: this.boxPlates(),
+      sealNumber: this.sealNumber(),
+      remisionNo: batch?.remisionNo || 'REM-SIN-ASIGNAR',
+      selectedItemIds: selectedItemIds,
+    };
+
+    this.movementsApi.createOutbound(payload).subscribe({
+      next: (res: any) => {
+        this.isExecuting.set(false);
+        this.showConfirmModal.set(false);
+
+        const result: WarehouseOutbound = {
+          id: res.id,
+          folio: res.folio,
+          status: res.status || 'COMPLETED',
+          clientCode: res.clientId || this.selectedClientCode(),
+          clientName: res.clientName || client?.name || '',
+          destinationId: res.destinationId || this.selectedDestinationId(),
+          destinationName: res.destinationName || dest?.name || '',
+          destinationAddress: res.destinationAddress || (dest ? `${dest.address}, ${dest.city}, ${dest.state}` : ''),
+          carrierCode: res.carrierId || this.selectedCarrierCode(),
+          carrierName: res.carrierName || carrier?.name || '',
+          driverName: res.driverName || this.driverName(),
+          economicNumber: res.economicNumber || this.economicNumber(),
+          tractorPlates: res.tractorPlates || this.tractorPlates(),
+          boxPlates: res.boxPlates || this.boxPlates(),
+          transportType: (res.transportType || this.selectedTransportType()) as TransportType,
+          sealNumber: res.sealNumber || this.sealNumber(),
+          remisionNo: res.remisionNo || batch?.remisionNo || '',
+          items: selectedPallets,
+          totalPallets: res.totalPallets || selectedPallets.length,
+          totalPieces: res.totalPieces || this.totalSelectedPieces(),
+          distinctSkus: res.distinctSkus || this.distinctSkusCount(),
+          dispatchedAt: res.createdAt ? new Date(res.createdAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX'),
+          dispatchedBy: res.createdBy || 'Admin',
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.svc.loadInitialBackendData();
+
+        this.selectedOutbound.set(result);
+        this.formMode.set('detail');
+        this.loadAuditLogs(result.id || result.folio);
+        this.selectedPrintOutbound.set(result);
+        this.showPrintModal.set(true);
+        this.toast.success(`Salida ${result.folio} registrada exitosamente en el servidor.`);
+      },
+      error: (err: any) => {
+        this.isExecuting.set(false);
+        const errMsg = err?.error?.message || err?.message || 'Error al registrar la salida de almacén en el servidor.';
+        this.toast.error(errMsg);
+      },
+    });
   }
 
   // ── IMPRESIÓN ─────────────────────────────────────────────────────────────
@@ -453,26 +535,51 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.isCancelling.set(true);
     this.cancelErrorMessage.set(null);
 
-    try {
-      const updated = this.svc.cancelOutbound(
-        current.folio,
-        reason,
-        username
-      );
 
-      this.isCancelling.set(false);
+    if (current.id && current.id.includes('-')) {
+      this.movementsApi.cancelOutbound(current.id, { adminUsername: username, adminPassword: password, reason }).subscribe({
+        next: (res: any) => {
+          this.isCancelling.set(false);
+          const updated: WarehouseOutbound = {
+            ...current,
+            status: 'CANCELLED',
+            cancellationReason: reason,
+            cancelledAt: res.cancelledAt ? new Date(res.cancelledAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX'),
+            cancelledBy: res.cancelledBy || username,
+          };
 
-      if (updated) {
-        this.selectedOutbound.set(updated);
-        this.loadAuditLogs(updated.folio);
-        this.showCancelModal.set(false);
-        this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
-      } else {
-        this.cancelErrorMessage.set('No se pudo cancelar la salida. Folio no encontrado.');
+          this.selectedOutbound.set(updated);
+          this.svc.outboundsSignal.update((list) =>
+            list.map((o) => (o.id === current.id || o.folio === current.folio ? updated : o))
+          );
+          this.svc.loadInitialBackendData();
+          this.loadAuditLogs(updated.id || updated.folio);
+          this.showCancelModal.set(false);
+          this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
+        },
+        error: (err: any) => {
+          this.isCancelling.set(false);
+          const errMsg = err?.error?.message || err?.message || 'Error al cancelar la salida en el servidor.';
+          this.cancelErrorMessage.set(errMsg);
+        },
+      });
+    } else {
+      try {
+        const updated = this.svc.cancelOutbound(current.folio, reason, username);
+        this.isCancelling.set(false);
+
+        if (updated) {
+          this.selectedOutbound.set(updated);
+          this.loadAuditLogs(updated.folio);
+          this.showCancelModal.set(false);
+          this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
+        } else {
+          this.cancelErrorMessage.set('No se pudo cancelar la salida. Folio no encontrado.');
+        }
+      } catch (err: any) {
+        this.isCancelling.set(false);
+        this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
       }
-    } catch (err: any) {
-      this.isCancelling.set(false);
-      this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
     }
   }
 }

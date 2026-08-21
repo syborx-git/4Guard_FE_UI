@@ -212,7 +212,7 @@ export class WarehouseMovementsService {
   private readonly receptionsSignal = signal<ReceptionHeader[]>([]);
   private readonly transfersSignal = signal<WarehouseTransfer[]>([]);
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
-  private readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
+  readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
 
   // Bahías y su stock (inicia con datos dummy para Cambio de Almacén)
   private readonly locationsSignal = signal<Record<string, LocationStockInfo>>(INITIAL_DUMMY_LOCATIONS);
@@ -244,9 +244,13 @@ export class WarehouseMovementsService {
     new Set(this.outboundsSignal().map((o) => o.clientCode)).size
   );
 
-  // Catálogo de Destinos por Cliente
+  // Catálogo de Destinos por Cliente (dinámico de BD + fallback de catálogo)
   readonly clientDestinations = CLIENT_DESTINATIONS;
   getDestinationsForClient(clientCode: string): ClientDestination[] {
+    const client = this.clientsSignal().find((c) => c.code === clientCode || c.name === clientCode);
+    if (client && client.destinations && client.destinations.length > 0) {
+      return client.destinations.filter((d) => d.status === 'ACTIVO');
+    }
     return CLIENT_DESTINATIONS.filter(
       (d) => d.clientCode === clientCode && d.status === 'ACTIVO'
     );
@@ -322,6 +326,17 @@ export class WarehouseMovementsService {
           (clients || []).map((c: any) => ({
             code: c.id || c.code || 'CLI',
             name: c.name || c.tradeName || 'Cliente',
+            destinations: (c.destinations || []).map((d: any) => ({
+              id: d.id || `DEST-${d.destinationCode || Math.random()}`,
+              clientCode: c.id || c.code,
+              name: d.plantName || d.name || 'Planta / Destino',
+              address: d.fullAddress || d.address || '',
+              city: d.city || '',
+              state: d.state || '',
+              contactName: d.contactPerson || d.contactName || '',
+              contactPhone: d.phone || d.contactPhone || '',
+              status: (d.status === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+            })),
           }))
         );
       },
@@ -349,40 +364,44 @@ export class WarehouseMovementsService {
       error: () => {},
     });
 
-    // 4. Ubicaciones / Bahías
+    // 4. Ubicaciones / Bahías y 5. Lotes de inventario (FIFO/FEFO)
+    let fetchedLocations: any[] = [];
+    let fetchedBatches: any[] = [];
+
     this.movementsApi.getLocations().subscribe({
       next: (locs: any) => {
-        if (locs && locs.length > 0) {
-          const locMap: Record<string, LocationStockInfo> = { ...INITIAL_DUMMY_LOCATIONS };
-          locs.forEach((l: any) => {
-            const code = l.code || l.locationCode || 'LOC';
-            if (!locMap[code]) {
-              locMap[code] = {
-                locationCode: code,
-                warehouseName: l.warehouseName || 'Almacén Principal',
-                zone: l.zoneName || 'General',
-                aisle: l.aisle || '',
-                rack: l.rack || '',
-                level: l.level || '',
-                capacity: l.capacity || 4,
-                occupancy: 0,
-                availableCapacity: l.capacity || 4,
-                totalPallets: 0,
-                totalPieces: 0,
-                pallets: [],
-              };
-            }
-          });
-          this.locationsSignal.set(locMap);
-        }
+        fetchedLocations = locs || [];
+        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
       },
       error: () => {},
     });
 
-    // 5. Lotes de inventario (FIFO/FEFO)
     this.movementsApi.getInventoryBatches().subscribe({
       next: (batches: any) => {
-        this.inventoryBatchesSignal.set(batches || []);
+        fetchedBatches = (batches || []).map((b: any) => ({
+          remisionNo: b.remisionNo || 'REM-S/N',
+          client: b.clientName || 'Cliente WMS',
+          productId: b.skuCode || '',
+          productName: b.productName || 'Producto',
+          lotNumber: b.lotNumber || '',
+          elaborationDate: b.manufacturingDate || '',
+          expirationDate: b.expirationDate || '',
+          availablePallets: b.availablePallets || (b.pallets ? b.pallets.length : 0),
+          totalPieces: b.totalPieces || 0,
+          locationCode: b.locationCode || '',
+          isFifoSuggested: !!b.isFifoSuggested,
+          pallets: (b.pallets || []).map((p: any) => ({
+            id: p.itemId || p.id,
+            palletCode: p.palletCode || p.sscc || '',
+            description: p.description || b.productName || '',
+            productId: p.skuCode || b.skuCode || '',
+            pieces: p.pieces || 0,
+            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+          })),
+        }));
+        this.inventoryBatchesSignal.set(fetchedBatches);
+        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
       },
       error: () => {},
     });
@@ -489,6 +508,94 @@ export class WarehouseMovementsService {
       },
       error: () => {},
     });
+  }
+
+  private syncLocationsAndInventory(locs: any[], batches: any[]): void {
+    const locMap: Record<string, LocationStockInfo> = {};
+
+    // 1. Inicializar todas las ubicaciones reales devueltas por el BE
+    if (locs && locs.length > 0) {
+      locs.forEach((l: any) => {
+        const code = (l.code || l.locationCode || '').toUpperCase().trim();
+        if (!code) return;
+        locMap[code] = {
+          locationCode: code,
+          locationId: l.id, // UUID real de la tabla wms.locations
+          warehouseName: l.warehouseName || l.branchName || 'Almacén Principal',
+          zone: l.zone || l.zoneName || 'General',
+          aisle: l.aisle || '',
+          rack: l.rack || '',
+          level: l.level ? `Nivel ${l.level}` : '',
+          capacity: l.capacityUnits || l.capacity || 4,
+          occupancy: 0,
+          availableCapacity: l.capacityUnits || l.capacity || 4,
+          isBlocked: !!l.isBlocked || l.status === 'BLOCKED',
+          blockReason: l.blockReason || l.statusReason,
+          totalPallets: 0,
+          totalPieces: 0,
+          pallets: [],
+        };
+      });
+    }
+
+    // Si el backend no devolvió ubicaciones, usar las ubicaciones iniciales de fallback
+    if (Object.keys(locMap).length === 0) {
+      Object.assign(locMap, INITIAL_DUMMY_LOCATIONS);
+    }
+
+    // 2. Asociar los lotes e items de inventario reales del BE a sus bahías
+    if (batches && batches.length > 0) {
+      batches.forEach((b: any) => {
+        if (!b.pallets || b.pallets.length === 0) return;
+
+        b.pallets.forEach((p: any) => {
+          const locCode = (p.locationCode || b.locationCode || '').toUpperCase().trim();
+          if (!locCode) return;
+
+          // Si la ubicación no estaba en el mapa, registrarla
+          if (!locMap[locCode]) {
+            locMap[locCode] = {
+              locationCode: locCode,
+              locationId: p.locationId,
+              warehouseName: 'Almacén Principal',
+              zone: 'General',
+              capacity: 4,
+              occupancy: 0,
+              availableCapacity: 4,
+              totalPallets: 0,
+              totalPieces: 0,
+              pallets: [],
+            };
+          }
+
+          const palletItem: ReceptionPalletItem = {
+            id: p.itemId || p.id, // UUID real del item en wms.inventory_items
+            palletCode: p.palletCode || p.sscc || `UA-${p.itemId?.substring(0, 8) || '001'}`,
+            productId: p.skuCode || b.skuCode || '',
+            description: p.description || b.productName || '',
+            supplierName: b.clientName || 'Cliente WMS',
+            pieces: Number(p.pieces || b.totalPieces || 0),
+            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+            observations: p.observations || '',
+            status: 'SCANNED',
+          };
+
+          locMap[locCode].pallets.push(palletItem);
+        });
+      });
+    }
+
+    // 3. Recalcular totalizadores para cada ubicación
+    Object.values(locMap).forEach((loc) => {
+      loc.totalPallets = loc.pallets.length;
+      loc.totalPieces = loc.pallets.reduce((acc, p) => acc + (p.pieces || 0), 0);
+      loc.occupancy = loc.totalPallets;
+      const cap = loc.capacity || 4;
+      loc.availableCapacity = Math.max(0, cap - loc.totalPallets);
+    });
+
+    this.locationsSignal.set(locMap);
   }
 
   // ─── MÉTODOS DE AUDITORÍA ───────────────────────────────────────────────────
