@@ -349,40 +349,23 @@ export class WarehouseMovementsService {
       error: () => {},
     });
 
-    // 4. Ubicaciones / Bahías
+    // 4. Ubicaciones / Bahías y 5. Lotes de inventario (FIFO/FEFO)
+    let fetchedLocations: any[] = [];
+    let fetchedBatches: any[] = [];
+
     this.movementsApi.getLocations().subscribe({
       next: (locs: any) => {
-        if (locs && locs.length > 0) {
-          const locMap: Record<string, LocationStockInfo> = { ...INITIAL_DUMMY_LOCATIONS };
-          locs.forEach((l: any) => {
-            const code = l.code || l.locationCode || 'LOC';
-            if (!locMap[code]) {
-              locMap[code] = {
-                locationCode: code,
-                warehouseName: l.warehouseName || 'Almacén Principal',
-                zone: l.zoneName || 'General',
-                aisle: l.aisle || '',
-                rack: l.rack || '',
-                level: l.level || '',
-                capacity: l.capacity || 4,
-                occupancy: 0,
-                availableCapacity: l.capacity || 4,
-                totalPallets: 0,
-                totalPieces: 0,
-                pallets: [],
-              };
-            }
-          });
-          this.locationsSignal.set(locMap);
-        }
+        fetchedLocations = locs || [];
+        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
       },
       error: () => {},
     });
 
-    // 5. Lotes de inventario (FIFO/FEFO)
     this.movementsApi.getInventoryBatches().subscribe({
       next: (batches: any) => {
-        this.inventoryBatchesSignal.set(batches || []);
+        fetchedBatches = batches || [];
+        this.inventoryBatchesSignal.set(fetchedBatches);
+        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
       },
       error: () => {},
     });
@@ -489,6 +472,94 @@ export class WarehouseMovementsService {
       },
       error: () => {},
     });
+  }
+
+  private syncLocationsAndInventory(locs: any[], batches: any[]): void {
+    const locMap: Record<string, LocationStockInfo> = {};
+
+    // 1. Inicializar todas las ubicaciones reales devueltas por el BE
+    if (locs && locs.length > 0) {
+      locs.forEach((l: any) => {
+        const code = (l.code || l.locationCode || '').toUpperCase().trim();
+        if (!code) return;
+        locMap[code] = {
+          locationCode: code,
+          locationId: l.id, // UUID real de la tabla wms.locations
+          warehouseName: l.warehouseName || l.branchName || 'Almacén Principal',
+          zone: l.zone || l.zoneName || 'General',
+          aisle: l.aisle || '',
+          rack: l.rack || '',
+          level: l.level ? `Nivel ${l.level}` : '',
+          capacity: l.capacityUnits || l.capacity || 4,
+          occupancy: 0,
+          availableCapacity: l.capacityUnits || l.capacity || 4,
+          isBlocked: !!l.isBlocked || l.status === 'BLOCKED',
+          blockReason: l.blockReason || l.statusReason,
+          totalPallets: 0,
+          totalPieces: 0,
+          pallets: [],
+        };
+      });
+    }
+
+    // Si el backend no devolvió ubicaciones, usar las ubicaciones iniciales de fallback
+    if (Object.keys(locMap).length === 0) {
+      Object.assign(locMap, INITIAL_DUMMY_LOCATIONS);
+    }
+
+    // 2. Asociar los lotes e items de inventario reales del BE a sus bahías
+    if (batches && batches.length > 0) {
+      batches.forEach((b: any) => {
+        if (!b.pallets || b.pallets.length === 0) return;
+
+        b.pallets.forEach((p: any) => {
+          const locCode = (p.locationCode || b.locationCode || '').toUpperCase().trim();
+          if (!locCode) return;
+
+          // Si la ubicación no estaba en el mapa, registrarla
+          if (!locMap[locCode]) {
+            locMap[locCode] = {
+              locationCode: locCode,
+              locationId: p.locationId,
+              warehouseName: 'Almacén Principal',
+              zone: 'General',
+              capacity: 4,
+              occupancy: 0,
+              availableCapacity: 4,
+              totalPallets: 0,
+              totalPieces: 0,
+              pallets: [],
+            };
+          }
+
+          const palletItem: ReceptionPalletItem = {
+            id: p.itemId || p.id, // UUID real del item en wms.inventory_items
+            palletCode: p.palletCode || p.sscc || `UA-${p.itemId?.substring(0, 8) || '001'}`,
+            productId: p.skuCode || b.skuCode || '',
+            description: p.description || b.productName || '',
+            supplierName: b.clientName || 'Cliente WMS',
+            pieces: Number(p.pieces || b.totalPieces || 0),
+            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+            observations: p.observations || '',
+            status: 'SCANNED',
+          };
+
+          locMap[locCode].pallets.push(palletItem);
+        });
+      });
+    }
+
+    // 3. Recalcular totalizadores para cada ubicación
+    Object.values(locMap).forEach((loc) => {
+      loc.totalPallets = loc.pallets.length;
+      loc.totalPieces = loc.pallets.reduce((acc, p) => acc + (p.pieces || 0), 0);
+      loc.occupancy = loc.totalPallets;
+      const cap = loc.capacity || 4;
+      loc.availableCapacity = Math.max(0, cap - loc.totalPallets);
+    });
+
+    this.locationsSignal.set(locMap);
   }
 
   // ─── MÉTODOS DE AUDITORÍA ───────────────────────────────────────────────────
