@@ -30,6 +30,7 @@ export interface CarrierLineItem {
 export interface ClientItem {
   code: string;
   name: string;
+  destinations?: ClientDestination[];
 }
 
 export interface RampItem {
