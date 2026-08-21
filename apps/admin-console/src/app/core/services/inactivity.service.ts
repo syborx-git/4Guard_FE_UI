@@ -12,7 +12,7 @@ import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { fromEvent, merge, Subscription, timer, of } from 'rxjs';
-import { switchMap, throttleTime } from 'rxjs/operators';
+import { switchMap, throttleTime, startWith, timeout, catchError } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
@@ -28,7 +28,7 @@ export class InactivityService implements OnDestroy {
 
   private readonly BASE_URL = `${environment.apiBaseUrl}/api/v1/auth`;
 
-  // Configuración de tiempos (15 minutos de inactividad, 60 segundos de aviso)
+  // Configuración de tiempos (15 minutos de inactividad real, 60 segundos de aviso)
   private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutos de inactividad
   private readonly WARNING_TIME = 60; // 60 segundos de aviso
 
@@ -45,28 +45,33 @@ export class InactivityService implements OnDestroy {
   }
 
   /**
-   * Empieza a escuchar eventos globales del usuario para reiniciar el temporizador de inactividad.
+   * Empieza a escuchar todos los eventos del usuario para reiniciar el temporizador de inactividad.
+   * Utiliza startWith(null) y switchMap() para garantizar que CADA interacción del usuario
+   * cancele el temporizador anterior y reinicie el conteo de 15 minutos desde cero.
+   * Solo si transcurren 15 minutos CONTINUOS de inactividad absoluta se desplegará la advertencia.
    */
   startTracking(): void {
     this.stopTracking();
-
-    // Sembrar con un timer inicial inmediato para que el conteo comience desde el inicio de la sesión
-    const initialTimer$ = timer(this.INACTIVITY_TIME);
 
     const activityEvents$ = merge(
       fromEvent(window, 'mousemove'),
       fromEvent(window, 'keydown'),
       fromEvent(window, 'click'),
-      fromEvent(window, 'scroll')
+      fromEvent(window, 'scroll'),
+      fromEvent(window, 'touchstart'),
+      fromEvent(window, 'pointermove'),
+      fromEvent(window, 'wheel')
     ).pipe(
       throttleTime(2000)
     );
 
-    // Cada evento reinicia el temporizador de inactividad
-    this.activitySub = merge(initialTimer$, activityEvents$.pipe(
+    // Un solo flujo unificado: al iniciar o tras cada evento del usuario,
+    // switchMap CANCELA el temporizador anterior y arranca un NUEVO conteo de 15 minutos.
+    this.activitySub = activityEvents$.pipe(
+      startWith(null),
       switchMap(() => timer(this.INACTIVITY_TIME))
-    )).subscribe(() => {
-      // Se cumplió el tiempo de inactividad si el usuario está autenticado y no hay advertencia previa
+    ).subscribe(() => {
+      // Se cumplió el tiempo de inactividad real si el usuario está autenticado y no hay advertencia previa
       if (this.authState.currentUser() && !this.showWarning()) {
         this.triggerWarning();
       }
@@ -112,7 +117,7 @@ export class InactivityService implements OnDestroy {
 
   /**
    * Mantiene la sesión activa extendiendo los tokens de forma transparente.
-   * Si la API falla (ej: entorno mock/local), renueva la sesión localmente sin cerrar la cuenta.
+   * Si la API tarda o falla (ej: entorno mock/local/latencia en Render), renueva la sesión localmente sin cerrar la cuenta ni atascar la UI.
    */
   keepSessionAlive(): void {
     if (this.isProcessing()) return;
@@ -125,15 +130,14 @@ export class InactivityService implements OnDestroy {
       return;
     }
 
-    this.http.post<any>(`${this.BASE_URL}/refresh`, { refreshToken }).subscribe({
+    this.http.post<any>(`${this.BASE_URL}/refresh`, { refreshToken }).pipe(
+      timeout(4000),
+      catchError(() => of(null))
+    ).subscribe({
       next: (response) => {
         if (response && response.success && response.data) {
           this.authState.setSession(response.data);
         }
-        this.handleKeepAliveSuccess();
-      },
-      error: () => {
-        // En entorno mock o fallo de red: si el usuario aún tiene sesión, extender localmente
         if (this.authState.currentUser()) {
           this.handleKeepAliveSuccess();
         } else {

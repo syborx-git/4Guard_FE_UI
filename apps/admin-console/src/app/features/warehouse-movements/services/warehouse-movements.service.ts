@@ -49,9 +49,22 @@ export class WarehouseMovementsService {
   private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
   private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
-  // Catálogos Reactivos (inician vacíos hasta cargar del BE)
-  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([]);
-  private readonly clientsSignal = signal<ClientItem[]>([]);
+  // Catálogos Reactivos (con fallback de datos demo)
+  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([
+    { code: 'TR-01', name: 'TransNoreste Express' },
+    { code: 'TR-02', name: 'Fletes Directos de Puebla' },
+    { code: 'TR-03', name: 'Transportes Castores' },
+    { code: 'TR-04', name: 'Logística Flecha Amarilla' },
+    { code: 'TR-05', name: 'Transportes Norte de México' },
+  ]);
+
+  private readonly clientsSignal = signal<ClientItem[]>([
+    { code: 'CLI-01', name: 'Lala S.A. de C.V.' },
+    { code: 'CLI-02', name: 'Plásticos y Envases de México' },
+    { code: 'CLI-03', name: 'Grupo Bimbo S.A.B.' },
+    { code: 'CLI-04', name: 'Nestlé México S.A.' },
+    { code: 'CLI-05', name: 'Comercializadora Alpura' },
+  ]);
 
   private readonly rampsSignal = signal<RampItem[]>([
     { code: 'R-01', rampNumber: 1, name: 'Rampa 01' },
@@ -68,7 +81,13 @@ export class WarehouseMovementsService {
     { code: 'R-12', rampNumber: 12, name: 'Rampa 12' },
   ]);
 
-  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
+  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([
+    { code: 'OP-01', name: 'Pablo Hernández (Montacargas M-01)' },
+    { code: 'OP-02', name: 'Carlos Ruiz (Montacargas M-02)' },
+    { code: 'OP-03', name: 'Juan Pérez (Montacargas M-03)' },
+    { code: 'OP-04', name: 'Roberto Gómez (Montacargas M-04)' },
+    { code: 'OP-05', name: 'Miguel Torres (Montacargas M-05)' },
+  ]);
 
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();

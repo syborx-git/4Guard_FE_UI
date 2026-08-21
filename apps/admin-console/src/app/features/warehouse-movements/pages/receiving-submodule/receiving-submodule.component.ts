@@ -112,8 +112,21 @@ export class ReceivingSubmoduleComponent implements OnInit {
   ramps = this.movementsService.ramps;
   forkliftOperators = this.movementsService.forkliftOperators;
 
-  suppliers = signal<{ code: string; name: string }[]>([]);
-  products = signal<{ id: string; name: string; defaultPieces: number }[]>([]);
+  suppliers = signal<{ code: string; name: string }[]>([
+    { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
+    { code: 'SUP-02', name: 'ENVASES Y PLÁSTICOS INTERNACIONALES' },
+    { code: 'SUP-03', name: 'PRODUCTOS LÁCTEOS DE PUEBLA' },
+    { code: 'SUP-04', name: 'DISTRIBUIDORA AGROALIMENTARIA S.A.' },
+    { code: 'SUP-05', name: 'EMBALAJES Y EMPAQUES DEL NORTE' },
+  ]);
+
+  products = signal<{ id: string; name: string; defaultPieces: number }[]>([
+    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 480 },
+    { id: '12445890', name: 'NESCAFÉ CLÁSICO FRASCO 24X200G FEFO', defaultPieces: 360 },
+    { id: '12398112', name: 'LECHE ENTERA LALA UHT 12X1L CAJA', defaultPieces: 600 },
+    { id: '12884901', name: 'AGUA PURIFICADA CIEL 24X600ML PET', defaultPieces: 720 },
+    { id: '12663402', name: 'ACEITE VEGETAL CANOLA 12X1L BOTELLA', defaultPieces: 480 },
+  ]);
 
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
   checkInForm = this.fb.group({
@@ -299,15 +312,26 @@ export class ReceivingSubmoduleComponent implements OnInit {
     localStorage.setItem('4g_active_reception_folio', rec.folio);
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
     this.loadAuditLogs(rec.folio);
+
+    const firstProd = this.products()[0];
+    const firstSupp = this.suppliers()[0];
+    const firstOp = this.forkliftOperators()[0];
+
+    const prodId = rec.productId || (firstProd ? firstProd.id : '12572733');
+    const prodName = rec.productName || (firstProd ? firstProd.name : 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1');
+    const suppName = rec.supplierName || (firstSupp ? firstSupp.name : 'LE MEXICO S.A DE C.V');
+    const operatorName = rec.checkIn.forkliftOperator || (firstOp ? firstOp.name : 'Roberto Gómez (Montacargas M-04)');
+    const pzas = rec.piecesPerPallet || (firstProd ? firstProd.defaultPieces : 480);
+
     this.altaForm.patchValue({
-      lotNumber: rec.lotNumber || rec.checkIn.lotNumber || '',
-      expirationDate: rec.expirationDate || rec.checkIn.expirationDate || '',
-      forkliftOperator: rec.checkIn.forkliftOperator || '',
+      lotNumber: rec.lotNumber || rec.checkIn.lotNumber || 'LOT-2026-N1',
+      expirationDate: rec.expirationDate || rec.checkIn.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().slice(0, 10),
+      forkliftOperator: operatorName,
       rampNumber: rec.checkIn.rampNumber || 1,
-      productId: rec.productId || '',
-      productName: rec.productName || '',
-      supplierName: rec.supplierName || '',
-      piecesPerPallet: rec.piecesPerPallet || 0,
+      productId: prodId,
+      productName: prodName,
+      supplierName: suppName,
+      piecesPerPallet: pzas,
       selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
       observations: rec.observations || '',
     });
