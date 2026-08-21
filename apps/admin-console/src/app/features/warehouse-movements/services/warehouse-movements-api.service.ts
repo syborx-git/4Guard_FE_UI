@@ -19,6 +19,7 @@ export interface ApiResponse<T> {
 }
 
 const DEFAULT_ORG_ID = 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+const DEFAULT_BRANCH_ID = 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
 
 @Injectable({
   providedIn: 'root',
@@ -37,7 +38,7 @@ export class WarehouseMovementsApiService {
 
   // ─── SESIÓN / ORGANIZACIÓN ──────────────────────────────────────────────────
 
-  getSessionOrg(): { organizationId: string; branchId?: string } {
+  getSessionOrg(): { organizationId: string; branchId: string } {
     try {
       const sessionStr = localStorage.getItem('session');
       if (sessionStr) {
@@ -45,14 +46,14 @@ export class WarehouseMovementsApiService {
         if (session?.user?.organizationId) {
           return {
             organizationId: session.user.organizationId,
-            branchId: session.user.branchId,
+            branchId: session.user.branchId || DEFAULT_BRANCH_ID,
           };
         }
       }
     } catch {
       // Fallback
     }
-    return { organizationId: DEFAULT_ORG_ID };
+    return { organizationId: DEFAULT_ORG_ID, branchId: DEFAULT_BRANCH_ID };
   }
 
   getSessionOrgId(): string {

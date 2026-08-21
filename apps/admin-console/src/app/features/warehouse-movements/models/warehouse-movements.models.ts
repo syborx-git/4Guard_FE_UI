@@ -66,7 +66,7 @@ export interface CheckInCasetaData {
 }
 
 export interface ReceptionPalletItem {
-  id: string;               // ID consecutivo o timestamp
+  id: string;               // ID consecutivo o timestamp (o UUID de inventory_items)
   palletNumber?: number;    // N. Tarima (1, 2, 3...)
   palletCode: string;       // Código Tarima / UA (ej. 037613041909243094)
   description: string;      // Descripción SKU
@@ -76,6 +76,7 @@ export interface ReceptionPalletItem {
   observations?: string;    // Observaciones
   palletTypeId: PalletType; // Tipo Tarima key
   palletTypeLabel: string;  // Tipo Tarima nombre legible
+  status?: string;          // Estado de la tarima (ej. SCANNED, STORED, DISPATCHED)
 }
 
 export interface ReceptionHeader {
@@ -145,6 +146,8 @@ export interface WarehouseTransfer {
 
 export interface LocationStockInfo {
   locationCode: string;
+  /** UUID del Backend — necesario para enviar originLocationId / destinationLocationId al BE */
+  locationId?: string;
   warehouseName?: string;
   zone?: string;
   aisle?: string;

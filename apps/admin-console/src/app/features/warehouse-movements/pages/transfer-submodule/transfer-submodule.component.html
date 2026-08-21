@@ -282,7 +282,8 @@
                   (ngModelChange)="selectedOperatorId.set($event)"
                   class="fg-input font-bold"
                 >
-                  @for (op of forkliftOperators; track op.id) {
+                  <option value="" disabled>-- Selecciona un montacarguista certificado --</option>
+                  @for (op of forkliftOperators(); track op.id) {
                     <option [value]="op.id">{{ op.name }} ({{ op.badge }})</option>
                   }
                 </select>
@@ -291,13 +292,13 @@
               <div class="md:col-span-6 flex flex-wrap items-center gap-3 text-xs">
                 <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs flex-1">
                   <span class="text-secondary block text-[10px] uppercase font-bold">Turno:</span>
-                  <span class="font-bold text-primary truncate block">{{ selectedOperator().shift }}</span>
+                  <span class="font-bold text-primary truncate block">{{ selectedOperator()?.shift || 'No asignado' }}</span>
                 </div>
                 <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs">
                   <span class="text-secondary block text-[10px] uppercase font-bold">Estatus:</span>
                   <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    {{ selectedOperator().status }}
+                    {{ selectedOperator()?.status || 'ACTIVO' }}
                   </span>
                 </div>
               </div>
@@ -842,7 +843,7 @@
           <div class="bg-surface-subtle p-3.5 rounded-xl border border-subtle space-y-2">
             <div class="flex justify-between">
               <span class="text-secondary font-medium">Montacarguista:</span>
-              <span class="font-bold text-primary">{{ selectedOperator().name }} ({{ selectedOperator().badge }})</span>
+              <span class="font-bold text-primary">{{ selectedOperator()?.name || 'No asignado' }} ({{ selectedOperator()?.badge || '--' }})</span>
             </div>
             <div class="flex justify-between">
               <span class="text-secondary font-medium">Motivo:</span>
