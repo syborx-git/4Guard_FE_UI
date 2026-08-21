@@ -101,7 +101,7 @@ export class LeaderAuthModalComponent {
   @Input() title = 'Autorización de Líder';
   @Input() description = '';
 
-  @Output() validated = new EventEmitter<{ leaderName: string }>();
+  @Output() validated = new EventEmitter<{ leaderName: string; username: string; password: string }>();
   @Output() closed = new EventEmitter<void>();
 
   username = '';
@@ -115,7 +115,7 @@ export class LeaderAuthModalComponent {
       return;
     }
 
-    // Demostración de validación de líder (Pablo / Alejandro o cualquier credencial válida)
+    // Formateo del nombre del líder
     const name = this.username.trim();
     const formattedLeaderName = name.toLowerCase().includes('pablo')
       ? 'Pablo Hernández (Líder)'
@@ -123,7 +123,11 @@ export class LeaderAuthModalComponent {
       ? 'Alejandro Martínez (Líder)'
       : `${name} (Líder Autorizado)`;
 
-    this.validated.emit({ leaderName: formattedLeaderName });
+    this.validated.emit({
+      leaderName: formattedLeaderName,
+      username: this.username.trim(),
+      password: this.password.trim(),
+    });
     this.resetForm();
   }
 
