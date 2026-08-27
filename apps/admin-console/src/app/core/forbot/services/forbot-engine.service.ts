@@ -1,7 +1,8 @@
-/**
+﻿/**
  * @file forbot-engine.service.ts
  * @description Motor NLP Conversacional 100% Local (0-Tokens) para ForBot (4GUARD AI).
- * Procesa intenciones con Pattern Matching y lee métricas reactivas directamente de las Signals de la app.
+ * Procesa intenciones con Pattern Matching, lee métricas reactivas directamente de las Signals de la app,
+ * ofrece soporte para Modo Operativo vs Modo Tutor y coordina el Tour de Pantalla.
  */
 
 import { Injectable, signal, inject } from '@angular/core';
@@ -9,12 +10,14 @@ import { Router } from '@angular/router';
 import {
   ForbotChatMessage,
   ForbotIntentType,
-  ForbotWidgetData
+  ForbotWidgetData,
+  ForbotMode
 } from '../models/forbot.models';
 import { InventoryQueryService } from '../../../features/inventory-query/services/inventory-query.service';
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 import { CatalogsService } from '../../../features/catalogs/services/catalogs.service';
 import { AuthState } from '../../../core/auth/auth.state';
+import { ForbotTourService } from './forbot-tour.service';
 
 @Injectable({
   providedIn: 'root'
@@ -25,9 +28,13 @@ export class ForbotEngineService {
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly catalogsService = inject(CatalogsService);
   private readonly authState = inject(AuthState);
+  private readonly tourService = inject(ForbotTourService);
 
   /** Visibilidad del Drawer Flotante Lateral */
   public readonly isDrawerOpen = signal<boolean>(false);
+
+  /** Modo de Operación: 'operativo' (default) o 'tutor' (inducción interactiva) */
+  public readonly currentMode = signal<ForbotMode>('operativo');
 
   /** Señal de Estado de Tema (Modo Día / Modo Noche) */
   public readonly isDarkMode = signal<boolean>(
@@ -50,7 +57,7 @@ export class ForbotEngineService {
     {
       id: 'msg-welcome',
       sender: 'bot',
-      text: '¡Hola! Soy **ForBot**, tu asistente inteligente de almacén en **4GUARD WMS**. Puedo responder al instante consultas sobre caducidades, saturación de bodegas, rampas y rendimiento operacionales. ¿En qué te puedo apoyar hoy?',
+      text: '¡Hola! Soy **ForBot**, tu asistente inteligente de almacén en **4GUARD WMS**. Puedo responder al instante consultas sobre caducidades, saturación de bodegas, rampas y rendimiento operacional. ¿En qué te puedo apoyar hoy?',
       timestamp: this.getCurrentTimestamp(),
       widgetData: {
         type: 'kpi-summary',
@@ -61,10 +68,54 @@ export class ForbotEngineService {
           { label: 'Alertas <30d', value: '3 Mermas', badgeColor: 'amber' }
         ],
         actionRoute: '/inventory-query',
-        actionLabel: 'Ver Consulta de Inventario'
+        actionLabel: 'Ver Consulta de Inventario',
+        proactiveTip: 'Sugerencia FEFO: 2 tarimas de Alpura (Lote L-8841) en Alerta Pablo tienen prioridad de despacho sugerida.'
       }
     }
   ]);
+
+  public setMode(mode: ForbotMode): void {
+    this.currentMode.set(mode);
+    if (mode === 'tutor') {
+      this.chatHistory.update((msgs) => [
+        ...msgs,
+        {
+          id: `tutor-welcome-${Date.now()}`,
+          sender: 'bot',
+          intent: 'GENERAL_HELP',
+          timestamp: this.getCurrentTimestamp(),
+          text: '🎓 **Modo Tutor Activado**\nBienvenido al centro de inducción interactivo de 4GUARD WMS. Puedes iniciar el **Tour de Pantalla** o preguntarme sobre el **ciclo de 8 estados (FSM)** o la **Regla de Pablo**.',
+          widgetData: {
+            type: 'tutorial-card',
+            title: 'Inducción de Interfaz 4GUARD',
+            items: [
+              { label: 'Navegación & Menú', value: 'Módulo 1', badgeColor: 'blue' },
+              { label: 'Filtros & Búsqueda', value: 'Módulo 2', badgeColor: 'amber' },
+              { label: 'FSM & Trazabilidad', value: 'Módulo 3', badgeColor: 'emerald' }
+            ],
+            actionLabel: 'Iniciar Tour'
+          }
+        }
+      ]);
+    }
+  }
+
+  public startDriverTour(): void {
+    this.isDrawerOpen.set(false);
+    this.tourService.startInterfaceTour(() => {
+      this.isDrawerOpen.set(true);
+      this.chatHistory.update((msgs) => [
+        ...msgs,
+        {
+          id: `tour-complete-${Date.now()}`,
+          sender: 'bot',
+          intent: 'TOUR_DRIVER_JS',
+          timestamp: this.getCurrentTimestamp(),
+          text: '🎉 **¡Felicidades!** Has completado el recorrido guiado por la interfaz de 4GUARD WMS. Ahora puedes consultar cualquier duda operativa o volver al **Modo Operativo**.'
+        }
+      ]);
+    });
+  }
 
   public toggleDrawer(): void {
     this.isDrawerOpen.update((open) => !open);
@@ -78,14 +129,10 @@ export class ForbotEngineService {
     this.isDrawerOpen.set(false);
   }
 
-  /**
-   * Procesa la pregunta del usuario y genera una respuesta inteligente local en milisegundos.
-   */
-  public sendUserMessage(userText: string): void {
-    const trimmed = userText.trim();
+  public sendUserMessage(text: string): void {
+    const trimmed = text.trim();
     if (!trimmed) return;
 
-    // 1. Agregar mensaje del usuario al historial
     const userMsg: ForbotChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
@@ -93,45 +140,48 @@ export class ForbotEngineService {
       timestamp: this.getCurrentTimestamp()
     };
 
-    this.chatHistory.update((list) => [...list, userMsg]);
-
-    // 2. Indicador visual de typing
-    const typingId = `typing-${Date.now()}`;
     const typingMsg: ForbotChatMessage = {
-      id: typingId,
+      id: `typing-${Date.now()}`,
       sender: 'bot',
-      text: 'ForBot está procesando los datos de almacén...',
+      text: '...',
       timestamp: this.getCurrentTimestamp(),
       isTyping: true
     };
 
-    this.chatHistory.update((list) => [...list, typingMsg]);
+    this.chatHistory.update((msgs) => [...msgs, userMsg, typingMsg]);
 
-    // 3. Procesar intención y generar respuesta tras 350ms (efecto respuesta ágil)
     setTimeout(() => {
-      const intent = this.parseIntent(trimmed);
+      const intent = this.classifyIntent(trimmed);
       const botResponse = this.generateResponseForIntent(intent, trimmed);
 
-      // Eliminar typing y agregar respuesta final
-      this.chatHistory.update((list) =>
-        list.filter((m) => m.id !== typingId).concat(botResponse)
-      );
-    }, 350);
+      this.chatHistory.update((msgs) => {
+        const withoutTyping = msgs.filter((m) => !m.isTyping);
+        return [...withoutTyping, botResponse];
+      });
+    }, 450);
   }
 
-  /**
-   * Analizador NLP de Intenciones basado en Pattern Matching
-   */
-  private parseIntent(query: string): ForbotIntentType {
+  private classifyIntent(query: string): ForbotIntentType {
     const q = query.toLowerCase();
+
+    if (q.includes('tour') || q.includes('recorrido') || q.includes('guiado') || q.includes('pantalla')) {
+      return 'TOUR_DRIVER_JS';
+    }
+
+    if (q.includes('fsm') || q.includes('8 estados') || q.includes('estados') || q.includes('ciclo de vida') || q.includes('cuarentena')) {
+      return 'FSM_8_ESTADOS';
+    }
+
+    if (q.includes('pablo') || q.includes('regla de pablo')) {
+      return 'REGLA_PABLO_INFO';
+    }
 
     if (
       q.includes('caduc') ||
       q.includes('merma') ||
-      q.includes('vence') ||
-      q.includes('30 días') ||
-      q.includes('30 dias') ||
-      q.includes('pablo')
+      q.includes('venc') ||
+      q.includes('30 d') ||
+      q.includes('30 dias')
     ) {
       return 'CADUCIDAD_MERMAS';
     }
@@ -173,7 +223,6 @@ export class ForbotEngineService {
       q.includes('calidad') ||
       q.includes('nom-251') ||
       q.includes('nom 251') ||
-      q.includes('cuarentena') ||
       q.includes('bloqueo')
     ) {
       return 'BLOQUEOS_CALIDAD_NOM251';
@@ -186,14 +235,75 @@ export class ForbotEngineService {
     return 'UNKNOWN';
   }
 
-  /**
-   * Genera respuestas estructuradas dinámicas basadas en Signals vivas
-   */
   private generateResponseForIntent(intent: ForbotIntentType, userText: string): ForbotChatMessage {
     const time = this.getCurrentTimestamp();
     const id = `bot-${Date.now()}`;
 
     switch (intent) {
+      case 'TOUR_DRIVER_JS': {
+        this.startDriverTour();
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: '🚀 Iniciando el Tour Guiado de la interfaz. Te resaltaré los elementos principales de 4GUARD WMS.'
+        };
+      }
+
+      case 'FSM_8_ESTADOS': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📘 **Máquina de Estados Finitos (FSM - 8 Estados):**
+1. **10 - Recibido:** Registro físico en andén F01.
+2. **20 - Cuarentena:** Espera de liberación por Inspector QM.
+3. **30 - Disponible:** Listo para almacenamiento en rack o despacho.
+4. **40 - Reservado:** Asignado formalmente a orden de salida.
+5. **50 - En Picking:** Recolección activa en pasillo.
+6. **60 - Despachado:** Salida confirmada y camión en ruta.
+7. **70 - Bloqueado QM:** Incidencia o no conformidad.
+8. **80 - Dado de Baja:** Retirado por merma u obsolescencia.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Ciclo de Estados FSM',
+            items: [
+              { label: '10 Recibido ➔ 20 Cuarentena', value: 'Andén / Calidad', badgeColor: 'amber' },
+              { label: '30 Disponible ➔ 40 Reservado', value: 'Racks / Salidas', badgeColor: 'emerald' },
+              { label: '50 Picking ➔ 60 Despachado', value: 'Salida Final', badgeColor: 'blue' }
+            ],
+            actionRoute: '/inventory-query',
+            actionLabel: 'Ver Inventario por Estado FSM'
+          }
+        };
+      }
+
+      case 'REGLA_PABLO_INFO': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `⏳ **Regla Crítica de Pablo (Caducidad Preventiva):**
+• 🟢 **En Tiempo:** Producto con más de 30 días de vida útil.
+• 🟡 **Próximo <30 días (Alerta Pablo):** Prioridad FEFO de salida para evitar merma.
+• 🔴 **Caduco:** Retiro inmediato a Estado 70 (Bloqueado QM) u 80 (Baja).`,
+          widgetData: {
+            type: 'warning-card',
+            title: 'Semaforización de Caducidades',
+            items: [
+              { label: 'En Tiempo (>30d)', value: '🟢 Normal', badgeColor: 'emerald' },
+              { label: 'Alerta Pablo (<30d)', value: '🟡 Prioridad FEFO', badgeColor: 'amber' },
+              { label: 'Caducado (<0d)', value: '🔴 Bloqueo Inmediato', badgeColor: 'rose' }
+            ],
+            actionRoute: '/inventory-query',
+            actionLabel: 'Filtrar Alertas de Pablo'
+          }
+        };
+      }
+
       case 'CADUCIDAD_MERMAS': {
         const kpi = this.inventoryService.kpiSummary();
         const records = this.inventoryService.rawInventory();
@@ -205,7 +315,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent,
           timestamp: time,
-          text: `Analicé los registros de stock activo en 4GUARD WMS. Actualmente detecto **${expiringCount} palets con caducidad próxima (<30 días)** y **${expiredCount} palets caducos** que requieren atención o despeje preventivo (Regla de Pablo).`,
+          text: `Analicé los registros de stock activo en 4GUARD WMS. Actualmente detecto **${expiringCount} palets con caducidad próxima (<30 días)** y **${expiredCount} palets caducos** que requieren atención preventiva (Regla de Pablo).`,
           widgetData: {
             type: 'warning-card',
             title: 'Resumen de Caducidades & Mermas',
@@ -215,7 +325,8 @@ export class ForbotEngineService {
               { label: 'Promedio de Estadía', value: `${kpi.avgStayDays} Días`, badgeColor: 'blue' }
             ],
             actionRoute: '/inventory-query',
-            actionLabel: 'Filtrar Caducidades en Inventario'
+            actionLabel: 'Filtrar Caducidades en Inventario',
+            proactiveTip: 'Sugerencia ForBot: Aplica despacho FEFO en tarimas con <20 días para clientes perecederos.'
           }
         };
       }
@@ -229,7 +340,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent,
           timestamp: time,
-          text: `En el módulo de Movimientos de Almacén contamos con **4 rampas principales en andén** habilitadas. Hay **${pendingCount} unidades** registradas en caseta listos para asignación de descarga F01.`,
+          text: `En el módulo de Movimientos contamos con **4 rampas en andén** habilitadas. Hay **${pendingCount} unidades** registradas en caseta listos para asignación de descarga F01.`,
           widgetData: {
             type: 'status-list',
             title: 'Andenes & Recepción (F01)',
@@ -239,7 +350,8 @@ export class ForbotEngineService {
               { label: 'Unidades en Caseta', value: `${pendingCount} Tráileres`, badgeColor: 'blue' }
             ],
             actionRoute: '/warehouse-movements/receiving',
-            actionLabel: 'Ir a Recepción de Mercancía'
+            actionLabel: 'Ir a Recepción de Mercancía',
+            proactiveTip: 'Atención: Revisa el checklist de sellos en caseta antes de autorizar descarga en rampa.'
           }
         };
       }
@@ -275,7 +387,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent,
           timestamp: time,
-          text: `Hay **${operators.length} montacarguistas registrados** en plantilla. Todos cuentan con licencia **DC-3 vigente** expedida ante la STPS para operabilidad 3PL.`,
+          text: `Hay **${operators.length} montacarguistas registrados** en plantilla. Todos cuentan con licencia **DC-3 vigente** ante la STPS para operabilidad 3PL.`,
           widgetData: {
             type: 'status-list',
             title: 'Montacarguistas & Licencias DC-3',
@@ -296,7 +408,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent,
           timestamp: time,
-          text: `Revisé el catálogo de SKUs y NOM-251. El **100% de los productos activos** cumple con las normas de inocuidad y etiquetado requeridas para alimentos y bebidas.`,
+          text: `Revisé el catálogo de SKUs y NOM-251. El **100% de los productos activos** cumple con las normas de inocuidad y etiquetado requeridas.`,
           widgetData: {
             type: 'warning-card',
             title: 'Inocuidad & NOM-251',
@@ -320,8 +432,8 @@ export class ForbotEngineService {
 - *"¿Qué productos caducan en menos de 30 días?"*
 - *"¿Cómo están las rampas de recepción?"*
 - *"¿Cuál es la saturación en Bodega A y APC?"*
-- *"¿Cuántos montacarguistas tienen DC-3 activo?"*
-- *"¿Hay lotes bloqueados por NOM-251?"*`
+- *"Iniciar tour guiado"*
+- *"Explícame los 8 estados del FSM"*`
         };
       }
 
@@ -331,7 +443,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent: 'UNKNOWN',
           timestamp: time,
-          text: `Entendí tu consulta sobre **"${userText}"**. Para darte una respuesta exacta sobre 4GUARD WMS, puedes seleccionar una de las píldoras de sugerencia rápida o preguntarme sobre **caducidades (<30 días), rampas, saturación de bodegas o montacarguistas**.`
+          text: `Entendí tu consulta sobre **"${userText}"**. Puedes seleccionar una de las píldoras de sugerencia o preguntarme sobre **caducidades (<30d), rampas, bodegas, estados FSM o tour de pantalla**.`
         };
       }
     }
