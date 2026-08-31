@@ -1,17 +1,13 @@
 /**
  * @file inactivity.service.ts
- * @description Servicio global para la gestión de inactividad (HU-005) en 4GUARD WMS.
- *
- * Escucha eventos globales del usuario (mousemove, keydown, click, scroll) con RxJS.
- * Si no hay actividad durante 15 minutos (o el tiempo configurado), despliega el modal de advertencia con cuenta regresiva.
- * Si el usuario confirma "Mantener sesión activa", renueva el token y extiende la sesión sin cerrarla.
- * Si expira la cuenta regresiva de 60s o se solicita salir, limpia la sesión y redirige de forma limpia a /login.
+ * @description Servicio de detección de inactividad del usuario con auto-renovación y cierre de sesión seguro.
  */
 
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { fromEvent, merge, Subscription, timer, of } from 'rxjs';
+<<<<<<< HEAD
 import { switchMap, throttleTime, startWith, timeout, catchError } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
@@ -62,7 +58,7 @@ export class InactivityService implements OnDestroy {
       fromEvent(window, 'pointermove'),
       fromEvent(window, 'wheel')
     ).pipe(
-      throttleTime(2000)
+      throttleTime(1000)
     );
 
     // Un solo flujo unificado: al iniciar o tras cada evento del usuario,
@@ -138,6 +134,9 @@ export class InactivityService implements OnDestroy {
         if (response && response.success && response.data) {
           this.authState.setSession(response.data);
         }
+        this.handleKeepAliveSuccess();
+      },
+      error: () => {
         if (this.authState.currentUser()) {
           this.handleKeepAliveSuccess();
         } else {
@@ -152,7 +151,6 @@ export class InactivityService implements OnDestroy {
     this.showWarning.set(false);
     this.stopCountdown();
 
-    // Renovar timestamp de expiración local (+1 hora)
     const newExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     localStorage.setItem('4g_expires_at', newExpiresAt);
 
@@ -161,7 +159,7 @@ export class InactivityService implements OnDestroy {
   }
 
   /**
-   * Cierre de sesión por inactividad. Oculta el modal de inmediato y limpia los estados de bloqueo.
+   * Cierre de sesión por inactividad real.
    */
   autoLogout(): void {
     this.stopCountdown();
@@ -189,7 +187,6 @@ export class InactivityService implements OnDestroy {
 
     this.writeAuditLog('SESSION_TIMEOUT_LOGOUT');
 
-    // Preservar la ruta y proceso actual antes de limpiar la sesión (HU-005 / Reanudación de Proceso)
     const currentUrl = this.router.url;
     if (currentUrl && !currentUrl.includes('/login') && !currentUrl.includes('/change-password')) {
       const processName = this.getProcessNameFromUrl(currentUrl);
@@ -200,7 +197,6 @@ export class InactivityService implements OnDestroy {
 
     this.authState.clearSession();
 
-    // Limpieza completa de tokens y eliminación de estados de bloqueo residuales
     localStorage.removeItem('4g_token');
     localStorage.removeItem('4g_refresh');
     localStorage.removeItem('4g_expires_at');
