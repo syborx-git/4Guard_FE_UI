@@ -787,12 +787,13 @@ export class WarehouseMovementsService {
 
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
-    const pType = (r.palletType as PalletType) || 'MADERA_ESTANDAR';
+    if (!r) return {} as ReceptionHeader;
+    const pType = (r.palletType as PalletType) || (r.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
     const pallets = (r.pallets || []).map((p: any) => ({
-      id: p.id,
+      id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
       palletNumber: p.palletNumber,
-      palletCode: p.palletCode,
-      productId: p.skuCode || r.skuCode || '',
+      palletCode: p.palletCode || p.sscc || '',
+      productId: p.skuCode || r.skuCode || r.productId || '',
       description: p.description || p.productDescription || r.productName || '',
       supplierName: p.supplierName || r.supplierName || '',
       pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
@@ -802,39 +803,49 @@ export class WarehouseMovementsService {
       status: p.status || 'SCANNED',
     }));
 
+    const resolvedDoc =
+      r.docNumber ||
+      r.doc_number ||
+      r.checkIn?.docNumber ||
+      r.checkIn?.doc_number ||
+      r.remisionNo ||
+      r.remision_no ||
+      r.documentNumber ||
+      '';
+
     return {
       id: r.id,
       folio: r.folio || '',
       status: r.status || 'REGISTERED',
       checkIn: {
-        carrierLine: r.carrierName || '',
-        carrierLineCode: r.carrierId || '',
-        receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : '',
-        docNumber: r.docNumber || '',
-        docDate: r.docDate || '',
-        client: r.clientName || '',
-        clientCode: r.clientId || '',
-        rampNumber: r.rampName ? (parseInt(r.rampName.replace(/\D/g, ''), 10) || 4) : 4,
-        rampCode: r.rampId || '',
-        forkliftOperator: r.forkliftOperatorName || '',
-        forkliftOperatorCode: r.forkliftOperatorId || '',
-        driverName: r.driverName || '',
-        tractorPlates: r.tractorPlates || '',
-        boxPlates: r.boxPlates || '',
-        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers[0] : (r.sealNumber || ''),
+        carrierLine: r.carrierName || r.carrierLine || r.checkIn?.carrierLine || '',
+        carrierLineCode: r.carrierId || r.carrierLineCode || r.checkIn?.carrierLineCode || '',
+        receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : (r.checkIn?.receptionTime || ''),
+        docNumber: String(resolvedDoc || '').trim(),
+        docDate: r.docDate || r.checkIn?.docDate || '',
+        client: r.clientName || r.client || r.checkIn?.client || '',
+        clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
+        rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 4) : (r.rampNumber || r.checkIn?.rampNumber || 4),
+        rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
+        forkliftOperator: r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '',
+        forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
+        driverName: r.driverName || r.checkIn?.driverName || '',
+        tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
+        boxPlates: r.boxPlates || r.checkIn?.boxPlates || '',
+        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers[0] : (r.sealNumber || r.checkIn?.sealNumber || ''),
       },
-      lotNumber: r.lotNumber || '',
-      elaborationDate: r.elaborationDate || '',
-      expirationDate: r.expirationDate || '',
-      productId: r.skuCode || r.skuId || '',
+      lotNumber: r.lotNumber || r.checkIn?.lotNumber || '',
+      elaborationDate: r.elaborationDate || r.checkIn?.elaborationDate || '',
+      expirationDate: r.expirationDate || r.checkIn?.expirationDate || '',
+      productId: r.skuCode || r.skuId || r.productId || '',
       productName: r.productName || '',
       supplierName: r.supplierName || '',
       piecesPerPallet: r.piecesPerPallet || (pallets.length > 0 ? pallets[0].pieces : 480),
       selectedPalletType: pType,
-      storageLocation: r.storageLocationCode || '',
-      observations: r.observations || '',
+      storageLocation: r.storageLocationCode || r.storageLocation || '',
+      observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
       pallets: pallets,
-      createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : '',
+      createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : (r.checkIn?.receptionTime || ''),
       completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
       cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
       capturedBy: r.capturedBy || '',
@@ -1083,22 +1094,39 @@ export class WarehouseMovementsService {
     return updated;
   }
 
-  // Modifica el número de remisión/documento de la recepción
-  changeRemision(folio: string, newDocNumber: string, reason: string): ReceptionHeader | null {
+  // Modifica el número de remisión/documento de la recepción con autorización
+  changeRemision(
+    folio: string,
+    newDocNumber: string,
+    reason: string,
+    adminUser: string
+  ): ReceptionHeader | null {
     const rec = this.findReceptionByFolio(folio);
     if (!rec) return null;
 
+    const oldDoc = rec.checkIn?.docNumber || 'N/A';
     const updated = this.updateReception(folio, {
       checkIn: {
         ...rec.checkIn,
         docNumber: newDocNumber,
       },
-      observations: `${rec.observations || ''} | Cambio Remisión: ${rec.checkIn?.docNumber} -> ${newDocNumber} (${reason})`.trim(),
     });
 
-    if (rec.id) {
-      this.movementsApi.changeRemision(rec.id, { newDocNumber, reason }).subscribe({ error: (_: any) => {} });
-    }
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-rem-${Date.now()}`,
+      action: 'REMISION_MODIFICADA',
+      actionLabel: 'Modificación de No. de Remisión con Autorización',
+      username: adminUser,
+      authorizedBy: adminUser,
+      reason: reason,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'No. Remisión Anterior', oldValue: oldDoc },
+        { fieldName: 'Nuevo No. Remisión', newValue: newDocNumber },
+        { fieldName: 'Justificación / Motivo', newValue: reason },
+        { fieldName: 'Autorizado Por', newValue: adminUser },
+      ],
+    });
 
     return updated;
   }
@@ -1222,7 +1250,6 @@ export class WarehouseMovementsService {
               ...rec.checkIn,
               docNumber: newRemision,
             },
-            observations: (rec.observations || '') + ` | Cambio de Remisión: ${oldRemision} -> ${newRemision} (${justification})`,
           };
         }
         return rec;

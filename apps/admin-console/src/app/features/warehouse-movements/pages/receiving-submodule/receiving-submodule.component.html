@@ -448,6 +448,16 @@
 
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
             <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="openChangeRemisionModal()"
+                class="btn-gold-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm"
+                title="Cambiar número de remisión con autorización de supervisor"
+              >
+                <span class="material-symbols-outlined text-sm">edit_document</span>
+                <span>Cambiar Remisión</span>
+              </button>
+
               @if (rec.status !== 'CANCELLED') {
                 <button
                   type="button"
@@ -1010,48 +1020,6 @@
     </div>
   }
 
-  <!-- ── 5. MODAL: CAMBIO DE REMISIÓN ── -->
-  @if (showChangeRemisionModal()) {
-    <div class="modal-overlay">
-      <div class="modal-card max-w-md w-full p-6 space-y-4 shadow-2xl animate-fade-up">
-        <div class="flex items-center justify-between border-b border-subtle pb-3">
-          <h3 class="font-bold text-sm text-primary uppercase">CAMBIAR NÚMERO DE REMISIÓN</h3>
-          <button type="button" (click)="closeChangeRemisionModal()" class="text-secondary hover:text-primary">
-            <span class="material-symbols-outlined text-sm">close</span>
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="font-bold text-secondary block mb-1">NUEVO NÚMERO DE REMISIÓN:</label>
-            <input
-              type="text"
-              [ngModel]="newRemisionInput()"
-              (ngModelChange)="newRemisionInput.set($event)"
-              class="fg-input font-mono uppercase w-full"
-            />
-          </div>
-
-          <div>
-            <label class="font-bold text-secondary block mb-1">JUSTIFICACIÓN DEL CAMBIO:</label>
-            <textarea
-              [ngModel]="changeJustification()"
-              (ngModelChange)="changeJustification.set($event)"
-              rows="3"
-              placeholder="Explicación requerida por auditoría..."
-              class="fg-input w-full"
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
-          <button type="button" (click)="closeChangeRemisionModal()" class="btn-ghost text-xs px-3 py-1.5 rounded-lg">Cancelar</button>
-          <button type="button" (click)="submitChangeRemision()" class="btn-save text-xs px-4 py-1.5 rounded-lg font-bold">Guardar Cambio</button>
-        </div>
-      </div>
-    </div>
-  }
-
   <!-- ── 6. MODAL DE CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ── -->
   @if (showCancelModal()) {
     <div class="modal-overlay" (click)="closeCancelModal()">
@@ -1182,6 +1150,158 @@
           >
             <span class="material-symbols-outlined text-base">security_update_warning</span>
             <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Modal Cambio de No. de Remisión (Con Autorización de Rango Superior) -->
+  @if (showChangeRemisionModal()) {
+    <div class="modal-overlay" (click)="closeChangeRemisionModal()">
+      <div class="modal-card max-w-lg w-full animate-fade-up" (click)="$event.stopPropagation()">
+
+        <!-- Header del Modal (Idéntico a Cancelar) -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="modal-header-icon-box" style="background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.28);">
+              <span class="material-symbols-outlined">edit_document</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Cambio de Remisión #{{ selectedReception()?.folio }}</h3>
+              <p class="modal-header-subtitle" style="color: #b45309;">Modificación de documento con autorización Supervisor/Admin</p>
+            </div>
+          </div>
+          <button (click)="closeChangeRemisionModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal (Idéntico a Cancelar) -->
+        <div class="modal-body space-y-4 text-xs">
+          <!-- Resumen de lo que se modificará (Mismo bloque de Cancelar) -->
+          <div class="modal-summary-box grid grid-cols-2 gap-3">
+            <div>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block">{{ selectedReception()?.checkIn?.client }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Remisión Actual:</span>
+              <span class="modal-summary-val font-mono font-bold text-amber-600 dark:text-amber-400">{{ selectedReception()?.checkIn?.docNumber }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ totalTarimas() }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ totalPiezas() }} Piezas</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (changeRemisionError()) {
+            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ changeRemisionError() }}</span>
+            </div>
+          }
+
+          <!-- Nuevo No. de Remisión -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Nuevo Número de Remisión / Documento <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <input
+              type="text"
+              [ngModel]="newRemisionInput()"
+              (ngModelChange)="newRemisionInput.set($event)"
+              placeholder="EJ. REM-2026-9901"
+              class="fg-input font-mono font-bold uppercase text-xs w-full"
+              autofocus
+            />
+          </div>
+
+          <!-- Motivo de modificación obligatorio -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Motivo o Justificación Obligatoria del Cambio <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <textarea
+              [ngModel]="changeRemisionReason()"
+              (ngModelChange)="changeRemisionReason.set($event)"
+              rows="3"
+              placeholder="Describe detalladamente el motivo de la modificación (ej. Error de captura en caseta, corrección de remisión del proveedor)..."
+              class="fg-input w-full text-xs"
+            ></textarea>
+          </div>
+
+          <!-- Credenciales de Rango Superior (Supervisor / Administrador) -->
+          <div class="pt-3 border-t border-subtle space-y-3">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">verified_user</span>
+              <span>Validación de Credenciales de Supervisor o Administrador</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Usuario / Correo Supervisor o Admin <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="changeRemisionAdminUser()"
+                  (ngModelChange)="changeRemisionAdminUser.set($event)"
+                  placeholder="supervisor@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Autorización <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showChangeRemisionPassword() ? 'text' : 'password'"
+                  [ngModel]="changeRemisionAdminPassword()"
+                  (ngModelChange)="changeRemisionAdminPassword.set($event)"
+                  (keyup.enter)="confirmChangeRemision()"
+                  placeholder="Ingresa la contraseña de autorización"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowChangeRemisionPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showChangeRemisionPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeChangeRemisionModal()"
+            class="btn-ghost text-xs px-4 py-2 rounded-xl"
+          >
+            Regresar
+          </button>
+          <button
+            type="button"
+            (click)="confirmChangeRemision()"
+            [disabled]="isChangingRemision()"
+            class="carriers-btn carriers-btn--gold text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+          >
+            <span class="material-symbols-outlined text-base">published_with_changes</span>
+            <span>{{ isChangingRemision() ? 'Actualizando...' : 'Confirmar Cambio de Remisión' }}</span>
           </button>
         </div>
 

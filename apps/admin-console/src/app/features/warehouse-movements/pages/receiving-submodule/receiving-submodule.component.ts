@@ -76,6 +76,20 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.showCancelPassword.update((v) => !v);
   }
 
+  // Modal Cambio de Remisión con Autorización de Rango Superior
+  showChangeRemisionModal = signal(false);
+  newRemisionInput = signal('');
+  changeRemisionReason = signal('');
+  changeRemisionAdminUser = signal('');
+  changeRemisionAdminPassword = signal('');
+  changeRemisionError = signal<string | null>(null);
+  showChangeRemisionPassword = signal(false);
+  isChangingRemision = signal(false);
+
+  toggleShowChangeRemisionPassword(): void {
+    this.showChangeRemisionPassword.update((v) => !v);
+  }
+
   getInitials(name?: string): string {
     if (!name) return 'RC';
     const parts = name.trim().split(/\s+/);
@@ -87,7 +101,6 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Modales del Workbench
   showCheckInModal = signal(false);
-  showChangeRemisionModal = signal(false);
   showEditPalletModal = signal(false);
   showQuickAddModal = signal(false);
   showPrintModal = signal(false);
@@ -171,10 +184,6 @@ export class ReceivingSubmoduleComponent implements OnInit {
     pieces: [480, [Validators.required, Validators.min(1)]],
     observations: [''],
   });
-
-  // ── FORMULARIO: Cambio de Remisión ──
-  newRemisionInput = signal('');
-  changeJustification = signal('');
 
   // ── ESTADO DE MODAL LÍDER E IMPRESIÓN ──
   leaderModalTitle = signal('');
@@ -312,6 +321,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.movementsApi.getReceptionById(rec.id).subscribe({
         next: (fullData) => {
           const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+          if (!mapped.checkIn?.docNumber && rec.checkIn?.docNumber) {
+            mapped.checkIn.docNumber = rec.checkIn.docNumber;
+          }
           this.selectedReception.set(mapped);
           this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
           this.patchAltaFormWithReception(mapped);
@@ -337,7 +349,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       supplierName: defaultSupplier,
       piecesPerPallet: rec.piecesPerPallet || (defaultProduct ? defaultProduct.defaultPieces : 480),
       selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
-      observations: rec.observations || '',
+      observations: (rec.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
     });
   }
 
@@ -351,6 +363,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       case 'RECEPCION_CREADA':     return 'add_circle';
       case 'RECEPCION_COMPLETADA': return 'check_circle';
       case 'TARIMA_EDITADA':       return 'edit_note';
+      case 'REMISION_MODIFICADA':  return 'edit_document';
       case 'RECEPCION_ACTUALIZADA':return 'edit';
       case 'RECEPCION_CANCELADA':  return 'cancel';
       default:                     return 'history';
@@ -361,6 +374,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     switch (action) {
       case 'RECEPCION_CREADA':     return 'carriers-tl-node--emerald';
       case 'RECEPCION_COMPLETADA': return 'carriers-tl-node--blue';
+      case 'REMISION_MODIFICADA':  return 'carriers-tl-node--purple';
       case 'TARIMA_EDITADA':
       case 'RECEPCION_ACTUALIZADA':return 'carriers-tl-node--amber';
       case 'RECEPCION_CANCELADA':  return 'carriers-tl-node--red';
@@ -372,6 +386,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     switch (action) {
       case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
       case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cerrada en WMS';
+      case 'REMISION_MODIFICADA':  return 'Modificación de No. de Remisión con Autorización';
       case 'TARIMA_EDITADA':       return 'Modificación Manual de Tarima/UA';
       case 'RECEPCION_ACTUALIZADA':return 'Actualización de Datos de Recepción';
       case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria de Recepción';
@@ -594,42 +609,6 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.toast.info('Tarima removida de la descarga');
   }
 
-  // ── CAMBIO EXTRAORDINARIO DE REMISIÓN / DOCUMENTO ──
-  openChangeRemisionModal(): void {
-    const current = this.selectedReception();
-    if (!current) return;
-    this.newRemisionInput.set(current.checkIn.docNumber);
-    this.changeJustification.set('');
-    this.showChangeRemisionModal.set(true);
-  }
-
-  closeChangeRemisionModal(): void {
-    this.showChangeRemisionModal.set(false);
-  }
-
-  saveChangeRemision(): void {
-    const newDoc = this.newRemisionInput().trim();
-    const reason = this.changeJustification().trim();
-    const current = this.selectedReception();
-    if (!current) return;
-
-    if (!newDoc) {
-      this.toast.warning('Ingresa el nuevo número de documento.');
-      return;
-    }
-    if (!reason) {
-      this.toast.warning('Ingresa la justificación del cambio.');
-      return;
-    }
-
-    const updated = this.movementsService.changeRemision(current.folio, newDoc, reason);
-    if (updated) {
-      this.selectReception(updated);
-      this.closeChangeRemisionModal();
-      this.toast.success(`Número de documento actualizado a "${newDoc}". Registrado en auditoría.`);
-    }
-  }
-
   // ── CANCELACIÓN EXTRAORDINARIA DE RECEPCIÓN ──
   openCancelModal(): void {
     this.cancelReason.set('');
@@ -684,6 +663,111 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.showPrintModal.set(true);
     } else {
       this.toast.error('No se pudo procesar la cancelación de la recepción.');
+    }
+  }
+
+  // ── CAMBIO DE NO. DE REMISIÓN / DOCUMENTO ──
+  openChangeRemisionModal(): void {
+    this.newRemisionInput.set('');
+    this.changeRemisionReason.set('');
+    this.changeRemisionAdminUser.set('');
+    this.changeRemisionAdminPassword.set('');
+    this.changeRemisionError.set(null);
+    this.showChangeRemisionModal.set(true);
+  }
+
+  closeChangeRemisionModal(): void {
+    this.showChangeRemisionModal.set(false);
+  }
+
+  confirmChangeRemision(): void {
+    this.changeRemisionError.set(null);
+    const newDoc = this.newRemisionInput().trim();
+    const reason = this.changeRemisionReason().trim();
+    const user = this.changeRemisionAdminUser().trim();
+    const pass = this.changeRemisionAdminPassword().trim();
+    const current = this.selectedReception();
+
+    if (!current) return;
+
+    if (!newDoc) {
+      this.changeRemisionError.set('El nuevo número de remisión es obligatorio.');
+      return;
+    }
+
+    if (newDoc.toUpperCase() === (current.checkIn?.docNumber || '').toUpperCase()) {
+      this.changeRemisionError.set('El nuevo número de remisión debe ser diferente al actual.');
+      return;
+    }
+
+    if (!reason) {
+      this.changeRemisionError.set('La justificación o motivo del cambio es obligatoria.');
+      return;
+    }
+
+    if (!user || !pass) {
+      this.changeRemisionError.set('Ingresa usuario y contraseña de Supervisor o Administrador.');
+      return;
+    }
+
+    this.isChangingRemision.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    if (current.id && pass) {
+      this.movementsApi
+        .changeRemision(current.id, {
+          newDocNumber: newDoc,
+          reason,
+          adminUsername: user,
+          adminPassword: pass,
+        })
+        .subscribe({
+          next: () => {
+            this.isChangingRemision.set(false);
+            this.showChangeRemisionModal.set(false);
+
+            const updated = this.movementsService.changeRemision(
+              current.folio,
+              newDoc,
+              reason,
+              adminLabel
+            );
+
+            if (updated) {
+              this.selectedReception.set(updated);
+              this.loadAuditLogs(updated.folio);
+            }
+            this.toast.success(`No. de Remisión modificado exitosamente a: ${newDoc}`);
+          },
+          error: (err: any) => {
+            this.isChangingRemision.set(false);
+            const msg =
+              err.error?.message ||
+              err.message ||
+              'Error al validar credenciales o procesar el cambio de remisión en el servidor.';
+            this.changeRemisionError.set(msg);
+          },
+        });
+    } else {
+      const updated = this.movementsService.changeRemision(
+        current.folio,
+        newDoc,
+        reason,
+        adminLabel
+      );
+      this.isChangingRemision.set(false);
+      this.showChangeRemisionModal.set(false);
+
+      if (updated) {
+        this.selectedReception.set(updated);
+        this.loadAuditLogs(updated.folio);
+        this.toast.success(`No. de Remisión modificado exitosamente a: ${newDoc}`);
+      } else {
+        this.toast.error('No se pudo procesar el cambio de remisión.');
+      }
     }
   }
 

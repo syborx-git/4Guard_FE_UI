@@ -122,7 +122,7 @@ export class WarehouseMovementsApiService {
     );
   }
 
-  changeRemision(id: string, body: { newDocNumber: string; reason: string }): Observable<any> {
+  changeRemision(id: string, body: { newDocNumber: string; reason: string; adminUsername: string; adminPassword: string }): Observable<any> {
     return this.http.put<ApiResponse<any>>(`${this.receptionsUrl}/${id}/change-remision`, body).pipe(
       map((res) => res.data)
     );
