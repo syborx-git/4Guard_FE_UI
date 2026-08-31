@@ -1,0 +1,930 @@
+/* ==========================================================================
+   4GUARD WMS — QM QUALITY INSPECTION MODAL (LIMPIO, LIMPIEZA DE INTERFAZ)
+   ========================================================================== */
+
+:host {
+  display: block;
+  font-family: 'Plus Jakarta Sans', 'Inter', 'DM Sans', sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   MODO CLARO (DEFAULT SYNEXIA LIGHT)
+   -------------------------------------------------------------------------- */
+
+/* BACKDROP */
+.qm-modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1rem !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  animation: qmFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) ease-out;
+}
+
+/* DIALOG PANEL MODO CLARO */
+.qm-modal-dialog {
+  position: relative !important;
+  z-index: 1000000 !important;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px !important;
+  box-shadow: 
+    0 25px 60px -10px rgba(15, 23, 42, 0.2), 
+    0 0 35px rgba(2, 132, 199, 0.08);
+  width: 100%;
+  max-width: 1040px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: visible !important;
+  margin: auto !important;
+  animation: qmSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qm-modal-dialog:hover {
+  border-color: rgba(212, 175, 55, 0.90) !important;
+  box-shadow: 0 25px 60px -10px rgba(15, 23, 42, 0.2), 0 0 35px rgba(212, 175, 55, 0.40) !important;
+}
+
+.qm-modal-dialog::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: -2.5px !important;
+  border-radius: inherit !important;
+  padding: 2.5px !important;
+  background: radial-gradient(
+    350px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+    rgba(212, 175, 55, 1) 0%,
+    rgba(197, 168, 107, 0.92) 32%,
+    rgba(184, 134, 11, 0.55) 68%,
+    transparent 88%
+  ) !important;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none !important;
+  z-index: 999999 !important;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.qm-modal-dialog:hover::before {
+  opacity: 1 !important;
+}
+
+/* HEADER DEL MODAL */
+.qm-modal-header {
+  flex-shrink: 0;
+  padding: 0.85rem 1.25rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+  border-top-left-radius: 24px !important;
+  border-top-right-radius: 24px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.qm-modal-header__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qm-modal-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(2, 132, 199, 0.1);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.qm-modal-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.qm-client-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 0.15rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid #cbd5e1;
+}
+
+.qm-status-chip {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 5px;
+  text-transform: uppercase;
+}
+.qm-status-chip--quarantine {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.qm-status-chip--blocked {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.qm-status-chip--approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.qm-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.qm-highlight-lote {
+  color: #0284c7;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+}
+
+.qm-modal-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qm-sscc-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.3rem 0.65rem;
+  border-radius: 7px;
+  color: #1e293b;
+}
+.qm-sscc-info {
+  display: flex;
+  flex-direction: column;
+}
+.qm-sscc-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.qm-sscc-code {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #0284c7;
+}
+
+.qm-btn-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.qm-btn-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* BARRA DE PROGRESO DE CHECKLIST */
+.qm-progress-bar-container {
+  flex-shrink: 0;
+  padding: 0.45rem 1.25rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.qm-progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.775rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+.qm-critical-indicator {
+  font-size: 0.725rem;
+  color: #b45309;
+  margin-left: 0.4rem;
+  font-weight: 600;
+}
+.qm-critical-indicator.is-complete {
+  color: #047857;
+}
+
+.qm-progress-percent {
+  font-weight: 700;
+  color: #0284c7;
+}
+.qm-progress-track {
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.qm-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  border-radius: 4px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.qm-progress-fill.is-complete {
+  background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+}
+
+/* BODY 2 COLUMNAS CON SCROLL INTERNO */
+.qm-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0.85rem 1.25rem;
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  gap: 1rem;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+/* COLUMNA IZQUIERDA: METADATOS */
+.qm-meta-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.qm-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #0f172a;
+}
+.qm-panel-title h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.qm-panel-title .material-symbols-outlined {
+  color: #0284c7;
+  font-size: 1.1rem;
+}
+.qm-panel-title--between {
+  justify-content: space-between;
+}
+.qm-panel-title__left {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qm-meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.qm-meta-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.qm-meta-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+.qm-meta-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.qm-mono {
+  font-family: monospace;
+}
+.qm-accent-location {
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.qm-warning-date {
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.qm-meta-subtext {
+  font-size: 0.675rem;
+  color: #64748b;
+}
+
+.qm-initial-notes-box {
+  background: rgba(2, 132, 199, 0.05);
+  border-left: 3px solid #0284c7;
+  border-radius: 5px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.75rem;
+  color: #334155;
+}
+.qm-notes-box-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+  color: #0284c7;
+  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
+}
+
+/* COLUMNA DERECHA: CHECKLIST */
+.qm-checklist-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.qm-checklist-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.725rem;
+}
+.qm-link-btn {
+  background: none;
+  border: none;
+  color: #0284c7;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+}
+.qm-link-btn:hover {
+  text-decoration: underline;
+}
+.qm-divider {
+  color: #cbd5e1;
+}
+
+.qm-checklist-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.qm-check-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.qm-check-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.qm-check-card.is-checked {
+  background: rgba(2, 132, 199, 0.05);
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+/* CHECKBOX PERSONALIZADO */
+.qm-checkbox-custom {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.qm-checkbox-custom input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.qm-checkbox-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid #94a3b8;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.2s ease;
+}
+.qm-checkbox-custom input:checked + .qm-checkbox-box,
+.qm-check-card.is-checked .qm-checkbox-box {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+.qm-checkbox-box .material-symbols-outlined {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.qm-check-content {
+  flex: 1;
+}
+.qm-check-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.qm-check-label {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+.qm-critical-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+}
+.qm-check-desc {
+  font-size: 0.685rem;
+  color: #64748b;
+  margin: 0.1rem 0 0 0;
+}
+
+.qm-check-status-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+.qm-check-status-badge.is-checked {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+/* UPLOADER FALSO DE EVIDENCIAS (DROPZONE INTERACTIVA CONSERVADA) */
+.qm-uploader-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+.qm-dropzone {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 9px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.qm-dropzone:hover {
+  background: #f1f5f9;
+  border-color: #0284c7;
+}
+.qm-dropzone-icon {
+  font-size: 1.8rem;
+  color: #0284c7;
+  background: rgba(2, 132, 199, 0.08);
+  padding: 0.35rem;
+  border-radius: 8px;
+}
+.qm-dropzone-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.qm-dropzone-text strong {
+  font-size: 0.775rem;
+  color: #1e293b;
+}
+.qm-dropzone-text span {
+  font-size: 0.675rem;
+  color: #64748b;
+}
+.qm-btn-browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.qm-btn-browse:hover {
+  background: #f1f5f9;
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+.qm-file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.1rem;
+}
+.qm-file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.725rem;
+}
+.qm-file-icon {
+  font-size: 1rem;
+  color: #0284c7;
+}
+.qm-file-info {
+  display: flex;
+  flex-direction: column;
+}
+.qm-file-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.7rem;
+}
+.qm-file-size {
+  font-size: 0.6rem;
+  color: #64748b;
+}
+.qm-file-remove {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.qm-file-remove:hover {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* DICTAMEN SECTION */
+.qm-dictamen-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+.qm-field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.qm-label-help {
+  font-size: 0.685rem;
+  color: #64748b;
+  font-weight: normal;
+}
+.qm-textarea {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.8rem;
+  resize: vertical;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+.qm-textarea:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+.qm-textarea-counter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.675rem;
+  color: #64748b;
+}
+.qm-textarea-counter .is-valid {
+  color: #047857;
+  font-weight: 600;
+}
+
+/* FOOTER DEL MODAL FIJO EN LA PARTE INFERIOR */
+.qm-modal-footer {
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  border-bottom-left-radius: 24px !important;
+  border-bottom-right-radius: 24px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.qm-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.qm-mandatory-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* BOTONES */
+.qm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+.qm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+  box-shadow: none !important;
+}
+
+.qm-btn--ghost {
+  background: transparent;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+.qm-btn--ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.qm-btn--danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+.qm-btn--danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.qm-btn--success {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+}
+.qm-btn--success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+}
+
+.icon-small {
+  font-size: 15px !important;
+}
+.icon-inline {
+  font-size: 15px !important;
+  vertical-align: sub;
+}
+
+/* ANIMACIONES */
+@keyframes qmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes qmSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   SOBREESCRITURA MODO OSCURO SOBRE EL MODAL (.theme-dark / .dark)
+   -------------------------------------------------------------------------- */
+:host-context(.theme-dark) .qm-modal-backdrop,
+:host-context(.dark) .qm-modal-backdrop {
+  background-color: rgba(6, 10, 18, 0.88) !important;
+}
+
+:host-context(.theme-dark) .qm-modal-dialog,
+:host-context(.dark) .qm-modal-dialog {
+  background: #0f172a;
+  border-color: #273548;
+  box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.15);
+}
+
+:host-context(.theme-dark) .qm-modal-header,
+:host-context(.dark) .qm-modal-header {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-color: #273548;
+}
+
+:host-context(.theme-dark) .qm-modal-title,
+:host-context(.dark) .qm-modal-title {
+  color: #f8fafc;
+}
+
+:host-context(.theme-dark) .qm-sscc-badge,
+:host-context(.dark) .qm-sscc-badge {
+  background: #090d16;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+:host-context(.theme-dark) .qm-progress-bar-container,
+:host-context(.dark) .qm-progress-bar-container {
+  background: #090d16;
+  border-color: #1e293b;
+}
+
+:host-context(.theme-dark) .qm-progress-track,
+:host-context(.dark) .qm-progress-track {
+  background: #1e293b;
+}
+
+:host-context(.theme-dark) .qm-modal-body,
+:host-context(.dark) .qm-modal-body {
+  background: #0f172a;
+}
+
+:host-context(.theme-dark) .qm-meta-panel,
+:host-context(.dark) .qm-meta-panel {
+  background: #090d16;
+  border-color: #1e293b;
+}
+
+:host-context(.theme-dark) .qm-panel-title,
+:host-context(.dark) .qm-panel-title {
+  color: #f8fafc;
+}
+
+:host-context(.theme-dark) .qm-meta-card,
+:host-context(.dark) .qm-meta-card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+:host-context(.theme-dark) .qm-meta-value,
+:host-context(.dark) .qm-meta-value {
+  color: #f1f5f9;
+}
+
+:host-context(.theme-dark) .qm-check-card,
+:host-context(.dark) .qm-check-card {
+  background: #090d16;
+  border-color: #1e293b;
+}
+
+:host-context(.theme-dark) .qm-check-card:hover,
+:host-context(.dark) .qm-check-card:hover {
+  background: #111827;
+  border-color: #334155;
+}
+
+:host-context(.theme-dark) .qm-check-card.is-checked,
+:host-context(.dark) .qm-check-card.is-checked {
+  background: rgba(56, 189, 248, 0.06);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+:host-context(.theme-dark) .qm-checkbox-box,
+:host-context(.dark) .qm-checkbox-box {
+  background: #090d16;
+  border-color: #475569;
+}
+
+:host-context(.theme-dark) .qm-checkbox-custom input:checked + .qm-checkbox-box,
+:host-context(.dark) .qm-checkbox-custom input:checked + .qm-checkbox-box {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  color: #090d16;
+}
+
+:host-context(.theme-dark) .qm-check-label,
+:host-context(.dark) .qm-check-label {
+  color: #f1f5f9;
+}
+
+:host-context(.theme-dark) .qm-dropzone,
+:host-context(.dark) .qm-dropzone {
+  background: #090d16;
+  border-color: #334155;
+}
+:host-context(.theme-dark) .qm-dropzone-text strong,
+:host-context(.dark) .qm-dropzone-text strong {
+  color: #f1f5f9;
+}
+:host-context(.theme-dark) .qm-btn-browse,
+:host-context(.dark) .qm-btn-browse {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+:host-context(.theme-dark) .qm-file-badge,
+:host-context(.dark) .qm-file-badge {
+  background: #090d16;
+  border-color: #1e293b;
+}
+:host-context(.theme-dark) .qm-file-name,
+:host-context(.dark) .qm-file-name {
+  color: #f1f5f9;
+}
+
+:host-context(.theme-dark) .qm-field-label,
+:host-context(.dark) .qm-field-label {
+  color: #e2e8f0;
+}
+
+:host-context(.theme-dark) .qm-textarea,
+:host-context(.dark) .qm-textarea {
+  background: #090d16;
+  border-color: #1e293b;
+  color: #f8fafc;
+}
+
+:host-context(.theme-dark) .qm-modal-footer,
+:host-context(.dark) .qm-modal-footer {
+  background: #090d16;
+  border-color: #1e293b;
+}
+
+:host-context(.theme-dark) .qm-btn--ghost,
+:host-context(.dark) .qm-btn--ghost {
+  color: #94a3b8;
+  border-color: #334155;
+}

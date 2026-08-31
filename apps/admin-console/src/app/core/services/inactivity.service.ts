@@ -7,7 +7,6 @@ import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { fromEvent, merge, Subscription, timer, of } from 'rxjs';
-<<<<<<< HEAD
 import { switchMap, throttleTime, startWith, timeout, catchError } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
