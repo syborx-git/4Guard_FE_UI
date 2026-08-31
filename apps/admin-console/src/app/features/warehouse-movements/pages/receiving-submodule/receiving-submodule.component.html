@@ -286,11 +286,7 @@
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Cliente <span class="text-amber-500">*</span>
                   </label>
-                  <select
-                    [value]="checkInForm.get('clientCode')?.value"
-                    (change)="onClientSelect($any($event.target).value)"
-                    class="fg-input w-full font-bold"
-                  >
+                  <select [value]="checkInForm.get('clientCode')?.value" (change)="onClientSelect($any($event.target).value)" class="fg-input w-full font-bold">
                     <option value="">-- Selecciona cliente --</option>
                     @for (c of clients(); track c.code) {
                       <option [value]="c.code">{{ c.name }}</option>
@@ -303,11 +299,7 @@
                     Rampa de Asignación <span class="text-amber-500">*</span>
                   </label>
                   <div class="flex gap-1.5">
-                    <select
-                      [value]="checkInForm.get('rampCode')?.value"
-                      (change)="onRampSelect($any($event.target).value)"
-                      class="fg-input w-full font-bold"
-                    >
+                    <select [value]="checkInForm.get('rampCode')?.value" (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
                       <option value="">-- Selecciona rampa --</option>
                       @for (rm of ramps(); track rm.code) {
                         <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
@@ -321,11 +313,7 @@
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Montacarguista <span class="text-amber-500">*</span>
                   </label>
-                  <select
-                    [value]="checkInForm.get('forkliftOperatorCode')?.value"
-                    (change)="onForkliftOperatorSelect($any($event.target).value)"
-                    class="fg-input w-full font-bold"
-                  >
+                  <select [value]="checkInForm.get('forkliftOperatorCode')?.value" (change)="onForkliftOperatorSelect($any($event.target).value)" class="fg-input w-full font-bold">
                     <option value="">-- Selecciona montacarguista --</option>
                     @for (op of forkliftOperators(); track op.code) {
                       <option [value]="op.code">{{ op.name }}</option>
@@ -549,7 +537,7 @@
                   <select
                     [value]="altaForm.get('productId')?.value"
                     (change)="onProductSelect($any($event.target).value)"
-                    class="fg-input"
+                    class="fg-input font-bold"
                   >
                     <option value="">-- Selecciona producto / SKU --</option>
                     @for (p of products(); track p.id) {
@@ -565,7 +553,7 @@
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required">Tipo de Tarima</label>
-                  <select formControlName="selectedPalletType" class="fg-input">
+                  <select formControlName="selectedPalletType" class="fg-input font-bold">
                     @for (pt of palletTypes; track pt[0]) {
                       <option [value]="pt[0]">{{ pt[1] }}</option>
                     }
@@ -574,7 +562,7 @@
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required">Proveedor</label>
-                  <select formControlName="supplierName" class="fg-input">
+                  <select formControlName="supplierName" class="fg-input font-bold">
                     <option value="">-- Selecciona proveedor --</option>
                     @for (sup of suppliers(); track sup.code) {
                       <option [value]="sup.name">{{ sup.name }}</option>

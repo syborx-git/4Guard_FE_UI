@@ -1,0 +1,243 @@
+@if (isOpen() && item()) {
+<div class="qm-modal-backdrop" (click)="handleClose()">
+  <div class="qm-modal-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="modal-title" fgSpecularGlow>
+
+    <!-- HEADER DEL MODAL (FIJO EN LA PARTE SUPERIOR) -->
+    <header class="qm-modal-header">
+      <div class="qm-modal-header__left">
+        <div class="qm-modal-icon-badge">
+          <span class="material-symbols-outlined">verified_user</span>
+        </div>
+        <div>
+          <div class="qm-modal-eyebrow">
+            <span class="qm-client-badge">
+              <span class="material-symbols-outlined">corporate_fare</span>
+              {{ item()?.clientName }}
+            </span>
+            <span class="qm-status-chip" [class.qm-status-chip--quarantine]="item()?.status === 20" [class.qm-status-chip--blocked]="item()?.status === 70" [class.qm-status-chip--approved]="item()?.status === 30">
+              {{ getStatusLabel(item()!.status) }}
+            </span>
+          </div>
+          <h2 id="modal-title" class="qm-modal-title">
+            Inspección Técnica de Lote: <span class="qm-highlight-lote">{{ item()?.batchNumber }}</span>
+          </h2>
+        </div>
+      </div>
+
+      <div class="qm-modal-header__right">
+        <!-- Simulación visual de SSCC / Barcode -->
+        <div class="qm-sscc-badge">
+          <span class="material-symbols-outlined">barcode_scanner</span>
+          <div class="qm-sscc-info">
+            <span class="qm-sscc-label">SSCC / Código</span>
+            <span class="qm-sscc-code">{{ item()?.sscc || item()?.barcode }}</span>
+          </div>
+        </div>
+
+        <button type="button" class="qm-btn-close" (click)="handleClose()" aria-label="Cerrar modal de inspección">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- BARRA DE PROGRESO DEL CHECKLIST (COMPACTA Y FIJA) -->
+    <div class="qm-progress-bar-container">
+      <div class="qm-progress-text">
+        <span>
+          <span class="material-symbols-outlined icon-inline">task_alt</span> 
+          Progreso de Inspección: <strong>{{ completedCount() }} de {{ totalCount() }} criterios validados</strong>
+          <span class="qm-critical-indicator" [class.is-complete]="areCriticalChecksComplete()">
+            (Obligatorios: {{ completedCriticalCount() }}/{{ totalCriticalCount() }})
+          </span>
+        </span>
+        <span class="qm-progress-percent">{{ completionPercentage() }}%</span>
+      </div>
+      <div class="qm-progress-track">
+        <div class="qm-progress-fill" [style.width.%]="completionPercentage()" [class.is-complete]="isChecklistComplete()"></div>
+      </div>
+    </div>
+
+    <!-- CUERPO DEL MODAL (2 COLUMNAS CON SCROLL INTERNO PROPIO) -->
+    <div class="qm-modal-body">
+      
+      <!-- COLUMNA IZQUIERDA: METADATOS TÉCNICOS DE TRAZABILIDAD -->
+      <section class="qm-meta-panel">
+        <div class="qm-panel-title">
+          <span class="material-symbols-outlined">inventory_2</span>
+          <h3>Ficha Técnica del Lote</h3>
+        </div>
+
+        <div class="qm-meta-grid">
+          <div class="qm-meta-card">
+            <span class="qm-meta-label">SKU / Producto</span>
+            <span class="qm-meta-value qm-mono">{{ item()?.sku }}</span>
+            <span class="qm-meta-subtext">{{ item()?.description }}</span>
+          </div>
+
+          <div class="qm-meta-card">
+            <span class="qm-meta-label">Cantidad Recibida</span>
+            <span class="qm-meta-value">{{ item()?.quantity }} {{ item()?.unitOfMeasure }}</span>
+            <span class="qm-meta-subtext">Peso: {{ item()?.weightKg || 0 }} kg | Vol: {{ item()?.volumeM3 || 0 }} m³</span>
+          </div>
+
+          <div class="qm-meta-card">
+            <span class="qm-meta-label">Ubicación Actual</span>
+            <span class="qm-meta-value qm-accent-location">
+              <span class="material-symbols-outlined icon-small">location_on</span>
+              {{ item()?.locationId || 'Sin Ubicación' }}
+            </span>
+            <span class="qm-meta-subtext">Zona de Control Cuarentena QM</span>
+          </div>
+
+          <div class="qm-meta-card">
+            <span class="qm-meta-label">Fecha Caducidad</span>
+            <span class="qm-meta-value qm-warning-date">
+              <span class="material-symbols-outlined icon-small">event_upcoming</span>
+              {{ item()?.expiryDate | date:'dd MMM yyyy' }}
+            </span>
+            <span class="qm-meta-subtext">Ingreso: {{ item()?.receivedAt | date:'dd MMM yyyy, HH:mm' }}</span>
+          </div>
+        </div>
+
+        @if (item()?.notes) {
+          <div class="qm-initial-notes-box">
+            <span class="qm-notes-box-header">
+              <span class="material-symbols-outlined">sticky_note_2</span>
+              Observaciones de Recepción en Andén:
+            </span>
+            <p>{{ item()?.notes }}</p>
+          </div>
+        }
+      </section>
+
+      <!-- COLUMNA DERECHA: CHECKLIST INTERACTIVO & UPLOADER DE EVIDENCIA -->
+      <section class="qm-checklist-panel">
+        <div class="qm-panel-title qm-panel-title--between">
+          <div class="qm-panel-title__left">
+            <span class="material-symbols-outlined">checklist</span>
+            <h3>Checklist de Calidad Crítico</h3>
+          </div>
+          <div class="qm-checklist-actions">
+            <button type="button" class="qm-link-btn" (click)="selectAllChecklist()">Seleccionar Todos</button>
+            <span class="qm-divider">•</span>
+            <button type="button" class="qm-link-btn" (click)="resetChecklist()">Limpiar</button>
+          </div>
+        </div>
+
+        <!-- LISTA DE CHECKBOXES COMPACTOS -->
+        <div class="qm-checklist-group">
+          @for (chk of checklist(); track chk.id) {
+            <div class="qm-check-card" [class.is-checked]="chk.checked" (click)="toggleCheck(chk.id)">
+              <div class="qm-checkbox-custom">
+                <input type="checkbox" [id]="chk.id" [checked]="chk.checked" (change)="$event.stopPropagation(); toggleCheck(chk.id)">
+                <span class="qm-checkbox-box">
+                  <span class="material-symbols-outlined">check</span>
+                </span>
+              </div>
+              <div class="qm-check-content">
+                <div class="qm-check-title-row">
+                  <span class="qm-check-label">{{ chk.label }}</span>
+                  @if (chk.critical) {
+                    <span class="qm-critical-tag">OBLIGATORIO</span>
+                  }
+                </div>
+                <p class="qm-check-desc">{{ chk.description }}</p>
+              </div>
+              <div class="qm-check-status-badge" [class.is-checked]="chk.checked">
+                {{ chk.checked ? 'CONFORME' : 'PENDIENTE' }}
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- UPLOADER DE EVIDENCIAS Y CERTIFICADOS (CONSERVADO Y OPTIMIZADO) -->
+        <div class="qm-uploader-section">
+          <label class="qm-field-label">
+            <span class="material-symbols-outlined">cloud_upload</span>
+            <span>Soporte / Evidencia Fotográfica o Certificado PDF</span>
+          </label>
+
+          <div class="qm-dropzone" (click)="addSimulatedFile()">
+            <span class="material-symbols-outlined qm-dropzone-icon">upload_file</span>
+            <div class="qm-dropzone-text">
+              <strong>Arrastre evidencia fotográfica o certificado PDF aquí</strong>
+              <span>Formatos aceptados: JPG, PNG, PDF (Máx. 15MB)</span>
+            </div>
+            <button type="button" class="qm-btn-browse">
+              <span class="material-symbols-outlined icon-small">add_a_photo</span>
+              Adjuntar Evidencia
+            </button>
+          </div>
+
+          @if (attachedFiles().length > 0) {
+            <div class="qm-file-list">
+              @for (file of attachedFiles(); track file.id) {
+                <div class="qm-file-badge">
+                  <span class="material-symbols-outlined qm-file-icon">
+                    {{ file.type === 'image' ? 'image' : 'picture_as_pdf' }}
+                  </span>
+                  <div class="qm-file-info">
+                    <span class="qm-file-name">{{ file.name }}</span>
+                    <span class="qm-file-size">{{ file.size }}</span>
+                  </div>
+                  <button type="button" class="qm-file-remove" (click)="removeFile(file.id)" title="Eliminar evidencia">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- SECCIÓN DE OBSERVACIONES Y DICTAMEN DE INSPECTOR -->
+        <div class="qm-dictamen-section">
+          <label class="qm-field-label" for="dictamen-notes">
+            <span class="material-symbols-outlined">edit_note</span>
+            <span>Dictamen / Observaciones del Inspector QM</span>
+            <span class="qm-label-help">(Obligatorio para bloqueo por producto no conforme)</span>
+          </label>
+
+          <textarea id="dictamen-notes" rows="2" class="qm-textarea" placeholder="Describa el dictamen técnico, lote de prueba o motivo de rechazo..." [value]="notes()" (input)="notes.set($any($event.target).value)"></textarea>
+          
+          <div class="qm-textarea-counter">
+            <span>Mínimo 5 caracteres para bloqueo</span>
+            <span [class.is-valid]="isNotesValidForRejection()">{{ notes().length }} caracteres</span>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- FOOTER Y BOTONES DE ACCIÓN FIJOS EN LA PARTE INFERIOR -->
+    <footer class="qm-modal-footer">
+      <button type="button" class="qm-btn qm-btn--ghost" (click)="handleClose()">
+        <span class="material-symbols-outlined">cancel</span>
+        <span>Cancelar</span>
+      </button>
+
+      <div class="qm-footer-right">
+        @if (!areCriticalChecksComplete()) {
+          <span class="qm-mandatory-warning">
+            <span class="material-symbols-outlined icon-small">info</span>
+            Se requiere validar los 3 criterios OBLIGATORIOS ({{ completedCriticalCount() }}/3)
+          </span>
+        }
+
+        <!-- BOTÓN RECHAZAR / BLOQUEAR QM -->
+        <button type="button" class="qm-btn qm-btn--danger" (click)="handleBlock()" [disabled]="!isNotesValidForRejection()">
+          <span class="material-symbols-outlined">block</span>
+          <span>Bloquear Lote (No Conforme)</span>
+        </button>
+
+        <!-- BOTÓN APROBAR Y LIBERAR (HABILITADO SOLO CUANDO SE CUMPLEN LOS 3 OBLIGATORIOS) -->
+        <button type="button" class="qm-btn qm-btn--success" (click)="handleApprove()" [disabled]="!areCriticalChecksComplete()" [title]="!areCriticalChecksComplete() ? 'Debe validar todos los criterios OBLIGATORIOS (3/3) para liberar el lote' : 'Aprobar y Liberar Lote'">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span>Aprobar y Liberar Lote</span>
+        </button>
+      </div>
+    </footer>
+
+  </div>
+</div>
+}

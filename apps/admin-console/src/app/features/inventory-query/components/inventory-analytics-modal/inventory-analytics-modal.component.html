@@ -1,9 +1,9 @@
 @if (isOpen) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
-    <div class="bg-white border border-amber-500/30 rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden animate-fade-in">
+    <div class="bg-white border border-amber-500/30 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden animate-fade-in max-h-[90vh]">
       
       <!-- Header -->
-      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-amber-500/20 flex items-center justify-between">
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-amber-500/20 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
             <span class="material-symbols-outlined text-2xl">analytics</span>
@@ -16,17 +16,68 @@
           </div>
         </div>
 
-        <button
-          type="button"
-          (click)="onClose()"
-          class="w-9 h-9 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
-        >
-          <span class="material-symbols-outlined text-xl">close</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <!-- Botón Directo Generar Gráfica de Años -->
+          <button
+            type="button"
+            (click)="generateYearChart()"
+            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs flex items-center gap-2 transition-all shadow-md active:scale-95"
+            title="Generar visualización gráfica por años"
+          >
+            <span class="material-symbols-outlined text-lg">bar_chart</span>
+            <span>GENERAR GRÁFICA DE AÑOS</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="onClose()"
+            class="w-9 h-9 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
+          >
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Contenido -->
-      <div class="p-6 space-y-6 text-slate-800">
+      <!-- Barra de Navegación de Vistas / Pestañas -->
+      <div class="px-6 pt-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="activeTab.set('table')"
+            [class.bg-amber-500]="activeTab() === 'table'"
+            [class.text-slate-950]="activeTab() === 'table'"
+            [class.font-extrabold]="activeTab() === 'table'"
+            [class.text-slate-300]="activeTab() !== 'table'"
+            [class.hover:text-white]="activeTab() !== 'table'"
+            class="px-4 py-2 rounded-t-xl transition-all flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-base">table_rows</span>
+            <span>Tabla de Trazabilidad</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="generateYearChart()"
+            [class.bg-amber-500]="activeTab() === 'chart'"
+            [class.text-slate-950]="activeTab() === 'chart'"
+            [class.font-extrabold]="activeTab() === 'chart'"
+            [class.text-slate-300]="activeTab() !== 'chart'"
+            [class.hover:text-white]="activeTab() !== 'chart'"
+            class="px-4 py-2 rounded-t-xl transition-all flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-base">equalizer</span>
+            <span>Gráficas Anuales Comparativas</span>
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          </button>
+        </div>
+
+        <span class="text-[11px] text-amber-400/80 font-mono font-medium hidden sm:inline-block">
+          {{ inventoryService.analyticsData().length }} Años Analizados
+        </span>
+      </div>
+
+      <!-- Contenido Principal scrollable -->
+      <div class="p-6 space-y-6 text-slate-800 overflow-y-auto">
         
         <!-- Banner Informativo -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
@@ -39,46 +90,206 @@
           </div>
         </div>
 
-        <!-- Tabla / Grid de Ingresos por Año -->
-        <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-slate-50">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-800 text-slate-200 uppercase font-bold text-[10px] tracking-wider">
-              <tr>
-                <th class="p-3">Año Ingreso</th>
-                <th class="p-3">Rango de Folios (#)</th>
-                <th class="p-3 text-right">Total Palets</th>
-                <th class="p-3 text-right">Total Piezas</th>
-                <th class="p-3 text-center">Porcentaje Stock</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              @for (point of inventoryService.analyticsData(); track point.year) {
-                <tr class="hover:bg-amber-50/50 transition-colors">
-                  <td class="p-3 font-extrabold text-slate-900 flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                    {{ point.year }}
-                  </td>
-                  <td class="p-3 font-mono text-slate-600">{{ point.sampleFolioRange }}</td>
-                  <td class="p-3 text-right font-bold text-amber-700">{{ point.totalPallets }} Palets</td>
-                  <td class="p-3 text-right font-mono font-semibold">{{ point.totalPieces | number }} PZ</td>
-                  <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded-full bg-slate-200 font-bold text-slate-800 text-[10px]">
-                      {{ (point.totalPallets / (inventoryService.kpiSummary().totalPallets || 1)) * 100 | number:'1.0-1' }}%
-                    </span>
-                  </td>
+        <!-- VISTA 1: TABLA DE INGRESOS POR AÑO -->
+        @if (activeTab() === 'table') {
+          <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-slate-50">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-800 text-slate-200 uppercase font-bold text-[10px] tracking-wider">
+                <tr>
+                  <th class="p-3">Año Ingreso</th>
+                  <th class="p-3">Rango de Folios (#)</th>
+                  <th class="p-3 text-right">Total Palets</th>
+                  <th class="p-3 text-right">Total Piezas</th>
+                  <th class="p-3 text-center">Porcentaje Stock</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                @for (point of inventoryService.analyticsData(); track point.year) {
+                  <tr class="hover:bg-amber-50/50 transition-colors">
+                    <td class="p-3 font-extrabold text-slate-900 flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                      {{ point.year }}
+                    </td>
+                    <td class="p-3 font-mono text-slate-600">{{ point.sampleFolioRange }}</td>
+                    <td class="p-3 text-right font-bold text-amber-700">{{ point.totalPallets }} Palets</td>
+                    <td class="p-3 text-right font-mono font-semibold">{{ point.totalPieces | number }} PZ</td>
+                    <td class="p-3 text-center">
+                      <span class="px-2 py-0.5 rounded-full bg-slate-200 font-bold text-slate-800 text-[10px]">
+                        {{ (point.totalPallets / (inventoryService.kpiSummary().totalPallets || 1)) * 100 | number:'1.0-1' }}%
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- VISTA 2: GRÁFICAS ANUALES COMPARATIVAS (GENERADAS DINÁMICAMENTE) -->
+        @if (activeTab() === 'chart') {
+          <div class="space-y-6">
+            
+            <!-- Selector de Métrica para la Gráfica -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100 p-3 rounded-xl border border-slate-200">
+              <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <span class="material-symbols-outlined text-amber-600 text-lg">tune</span>
+                <span>Métrica de Gráfica:</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="chartMetric.set('pallets')"
+                  [class.bg-amber-500]="chartMetric() === 'pallets'"
+                  [class.text-slate-950]="chartMetric() === 'pallets'"
+                  [class.font-extrabold]="chartMetric() === 'pallets'"
+                  [class.bg-white]="chartMetric() !== 'pallets'"
+                  [class.text-slate-700]="chartMetric() !== 'pallets'"
+                  class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <span class="material-symbols-outlined text-sm">pallet</span>
+                  <span>Palets Registrados</span>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="chartMetric.set('pieces')"
+                  [class.bg-emerald-600]="chartMetric() === 'pieces'"
+                  [class.text-white]="chartMetric() === 'pieces'"
+                  [class.font-extrabold]="chartMetric() === 'pieces'"
+                  [class.bg-white]="chartMetric() !== 'pieces'"
+                  [class.text-slate-700]="chartMetric() !== 'pieces'"
+                  class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <span class="material-symbols-outlined text-sm">inventory_2</span>
+                  <span>Volumen en Piezas (PZ)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Contenedor Visual de Gráfica Anual -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 border border-amber-500/30 text-white shadow-xl space-y-6">
+              
+              <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-400 text-xl">bar_chart</span>
+                  <h3 class="text-sm font-extrabold tracking-wide uppercase text-amber-400">
+                    Gráfica Anual Comparativa — {{ chartMetric() === 'pallets' ? 'Total Palets' : 'Volumen de Piezas' }}
+                  </h3>
+                </div>
+                <span class="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40">
+                  Secuencia #563633
+                </span>
+              </div>
+
+              <!-- Barras de Gráfica por Año -->
+              <div class="space-y-5" [class.opacity-50]="isGenerating()">
+                @for (point of inventoryService.analyticsData(); track point.year) {
+                  <div class="space-y-1.5">
+                    <!-- Fila Superior: Año y Valores -->
+                    <div class="flex items-center justify-between text-xs">
+                      <div class="flex items-center gap-2.5">
+                        <span class="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-extrabold text-amber-300 text-xs font-mono">
+                          {{ point.year }}
+                        </span>
+                        <span class="text-slate-300 font-medium">Año {{ point.year }}</span>
+                        <span class="text-[10px] font-mono text-slate-400">({{ point.sampleFolioRange }})</span>
+                      </div>
+
+                      <div class="flex items-center gap-3 font-mono">
+                        <span class="text-amber-400 font-extrabold">
+                          {{ point.totalPallets }} Palets
+                        </span>
+                        <span class="text-slate-400 text-[11px]">|</span>
+                        <span class="text-emerald-400 font-bold">
+                          {{ point.totalPieces | number }} PZ
+                        </span>
+                        <span class="bg-slate-800 text-slate-200 text-[10px] px-2 py-0.5 rounded-full font-bold border border-slate-700">
+                          {{ getStockSharePercentage(point.totalPallets) | number:'1.0-1' }}% Stock
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Pista de la Barra (Track) -->
+                    <div class="h-6 w-full bg-slate-950/80 rounded-xl p-1 border border-slate-700/60 overflow-hidden relative flex items-center">
+                      <!-- Barra Relleno Animada -->
+                      <div
+                        class="h-full rounded-lg transition-all duration-700 ease-out flex items-center justify-end pr-2"
+                        [style.width.%]="getActivePercentage(point) > 8 ? getActivePercentage(point) : 8"
+                        [ngClass]="{
+                          'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 text-slate-950 font-black': chartMetric() === 'pallets',
+                          'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400 text-slate-950 font-black': chartMetric() === 'pieces'
+                        }"
+                      >
+                        <span class="text-[10px] font-mono tracking-tighter drop-shadow">
+                          {{ getActivePercentage(point) | number:'1.0-0' }}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Tarjetas Informativas de Resumen Anual -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                
+                <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-amber-400 block">Año Dominante</span>
+                  <div class="text-sm font-extrabold text-white font-mono flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-amber-400 text-base">military_tech</span>
+                    <span>Año {{ dominantYear()?.year || 2026 }}</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">
+                    Consentra el {{ ((dominantYear()?.totalPallets || 0) / (inventoryService.kpiSummary().totalPallets || 1)) * 100 | number:'1.0-1' }}% del stock activo
+                  </p>
+                </div>
+
+                <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-emerald-400 block">Secuencia de Folios</span>
+                  <div class="text-sm font-extrabold text-white font-mono flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-emerald-400 text-base">tag</span>
+                    <span>#563633 – #563639</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">
+                    Rango consecutivo histórico validado
+                  </p>
+                </div>
+
+                <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 space-y-1">
+                  <span class="text-[10px] uppercase font-bold text-blue-400 block">Volumen Total Acumulado</span>
+                  <div class="text-sm font-extrabold text-white font-mono flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-blue-400 text-base">database</span>
+                    <span>{{ inventoryService.kpiSummary().totalPallets }} Palets / {{ inventoryService.kpiSummary().totalPieces | number }} PZ</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">
+                    7 registros activos de inventario
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        }
+
       </div>
 
       <!-- Footer -->
-      <div class="px-6 py-4 bg-slate-100 border-t border-slate-200 flex justify-end">
+      <div class="px-6 py-4 bg-slate-100 border-t border-slate-200 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          (click)="generateYearChart()"
+          class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs transition-all shadow flex items-center gap-2 active:scale-95 cursor-pointer"
+        >
+          <span class="material-symbols-outlined text-lg">bar_chart</span>
+          <span>Generar Gráfica de Años</span>
+        </button>
+
         <button
           type="button"
           (click)="onClose()"
-          class="px-6 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-colors shadow"
+          class="px-5 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-colors shadow cursor-pointer"
         >
           Cerrar Analítica
         </button>
@@ -87,3 +298,4 @@
     </div>
   </div>
 }
+

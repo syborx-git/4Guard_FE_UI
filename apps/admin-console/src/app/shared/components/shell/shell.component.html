@@ -333,13 +333,96 @@
           </div>
         }
 
-        <!-- Badge alertas criticas -->
-        <div class="shell__alert-badge shell__alert-badge--critical">
-          <span class="material-symbols-outlined shell__alert-icon">warning</span>
-          <span class="shell__alert-text">
-            {{ criticalCount() }}
-            {{ criticalCount() === 1 ? 'ALERTA CRÍTICA' : 'ALERTAS CRÍTICAS' }}
-          </span>
+        <!-- Badge Alertas Críticas Interactivo -->
+        <div class="shell__reception-pill-container relative">
+          <button
+            type="button"
+            (click)="toggleCriticalAlertsModal($event)"
+            class="shell__alert-badge shell__alert-badge--critical cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform"
+            title="Ver alertas críticas activas del sistema"
+          >
+            <span class="material-symbols-outlined shell__alert-icon">warning</span>
+            <span class="shell__alert-text">
+              {{ criticalCount() }}
+              {{ criticalCount() === 1 ? 'ALERTA CRÍTICA' : 'ALERTAS CRÍTICAS' }}
+            </span>
+          </button>
+
+          <!-- Dropdown Flotante de Alertas Críticas (Executive Alert Center) -->
+          @if (showCriticalAlertsModal()) {
+            <div class="shell__reception-dropdown shadow-2xl animate-fade-up border-rose-500/30">
+              <!-- Header del Dropdown -->
+              <div class="reception-dropdown__header bg-rose-950/30 border-rose-500/20">
+                <div class="reception-dropdown__title-box">
+                  <div class="reception-dropdown__icon-wrap bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                    <span class="material-symbols-outlined text-xl">error</span>
+                  </div>
+                  <div>
+                    <h4 class="reception-dropdown__title text-rose-300">Alertas Críticas del Sistema</h4>
+                    <p class="reception-dropdown__subtitle">Atención prioritaria requerida en andén y almacén</p>
+                  </div>
+                </div>
+                <span class="reception-dropdown__badge bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                  {{ criticalCount() }} activas
+                </span>
+              </div>
+
+              <!-- Lista de Alertas Críticas Dummy -->
+              <div class="reception-dropdown__list p-3 space-y-2.5">
+                
+                <!-- Alerta 1: Retraso en Andén -->
+                <div class="reception-dropdown__card border-rose-500/30 bg-rose-950/15 hover:bg-rose-900/20 transition-colors">
+                  <div class="reception-dropdown__card-top">
+                    <span class="text-[11px] font-extrabold font-mono text-rose-400">ANDÉN R-04 · TIEMPO EXCEDIDO</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 font-mono">
+                      +45 min
+                    </span>
+                  </div>
+                  <div class="text-xs font-bold text-slate-100 mt-1">Recepción #ASN-2026-0888 (Plásticos y Envases)</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">
+                    Unidad en andén sobrepasa el límite de descarga permitido. Se requiere supervisión de logística.
+                  </div>
+                  <div class="reception-dropdown__card-footer mt-2 pt-2 border-t border-slate-700/50 flex justify-between items-center">
+                    <span class="text-[10px] font-mono text-slate-400">Hace 12 min</span>
+                    <button
+                      type="button"
+                      (click)="navigateFromAlert('/warehouse-movements/receiving')"
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 flex items-center gap-1 transition-all"
+                    >
+                      <span>Atender en Recepción</span>
+                      <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Alerta 2: Caducidad Próxima en Almacén -->
+                <div class="reception-dropdown__card border-amber-500/30 bg-amber-950/15 hover:bg-amber-900/20 transition-colors">
+                  <div class="reception-dropdown__card-top">
+                    <span class="text-[11px] font-extrabold font-mono text-amber-400">BODEGA A · REGLA CADUCIDAD QM</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 font-mono">
+                      < 30 DÍAS
+                    </span>
+                  </div>
+                  <div class="text-xs font-bold text-slate-100 mt-1">3 Tarimas Lote LOT-2026-N1 (Nestlé México)</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">
+                    Tarimas en bahía A-02-04 próximas a vencer. Regla preventiva exige despacho prioritario FEFO.
+                  </div>
+                  <div class="reception-dropdown__card-footer mt-2 pt-2 border-t border-slate-700/50 flex justify-between items-center">
+                    <span class="text-[10px] font-mono text-slate-400">Hace 35 min</span>
+                    <button
+                      type="button"
+                      (click)="navigateFromAlert('/inventory-query')"
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 flex items-center gap-1 transition-all"
+                    >
+                      <span>Ver en Inventario</span>
+                      <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Reloj y actualización en vivo -->

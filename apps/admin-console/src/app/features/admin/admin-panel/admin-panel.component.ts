@@ -167,7 +167,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       },
       sections: {
         categoryLabel: 'ESTRUCTURA DE ALMACÉN · MAESTROS',
-        title: 'Secciones de Almacén',
+        title: 'Almacén',
         description: 'Zonificación lógica y térmica de la red de almacenamiento. Defina pasillos, áreas de recibo, cámaras de congelado frío y zonas de cuarentena técnica.',
         icon: 'grid_view'
       },
@@ -185,13 +185,13 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       },
       skus: {
         categoryLabel: 'CATÁLOGOS DE MERCANCÍA · CONTROL',
-        title: 'Catálogo de Productos / SKUs',
+        title: 'Productos',
         description: 'Catálogo maestro de unidades de mantenimiento de stock (SKUs). Defina pesos, dimensiones, unidades de medida y clasificaciones.',
         icon: 'inventory'
       },
       users: {
         categoryLabel: 'SEGURIDAD Y CONTROL DE ACCESO',
-        title: 'Control de Usuarios y Seguridad',
+        title: 'Usuarios',
         description: 'Administración de cuentas de usuario, operadores, credenciales y estados de conexión. Gestione bloqueos por intentos fallidos.',
         icon: 'manage_accounts'
       },
@@ -581,19 +581,19 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     // Estructura
     { id: 'organizations', title: 'Organizaciones', icon: 'corporate_fare', description: 'Administra empresas y holdings raíz (Multi-Tenancy).', category: 'STRUCTURE' },
     { id: 'branches', title: 'Sucursales / Almacenes', icon: 'domain', description: 'Sedes físicas, zonas horarias e información de contacto.', category: 'STRUCTURE' },
-    { id: 'sections', title: 'Secciones de Almacén', icon: 'grid_view', description: 'Áreas lógicas del almacén (recibo, frío, pasillos).', category: 'STRUCTURE' },
+    { id: 'sections', title: 'ALMACÉN', icon: 'grid_view', description: 'Áreas lógicas del almacén (recibo, frío, pasillos).', category: 'STRUCTURE' },
     { id: 'locations', title: 'Ubicaciones físicas', icon: 'location_on', description: 'Coordenadas 3D, capacidades y bloqueos de posiciones.', category: 'STRUCTURE' },
     
     // Mercancía y Operatividad Logística
     { id: 'clients', title: 'Clientes / Owners', icon: 'partner_exchange', description: 'Dueños de mercancía y stock depositado (3PL).', category: 'MERCHANDISE' },
-    { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
+    { id: 'skus', title: 'PRODUCTOS', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
     { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
     { id: 'forklift-operators', title: 'Montacarguistas', icon: 'engineering', description: 'Alta, licenciamiento DC-3, asignación de turnos y disponibilidad en andén.', category: 'MERCHANDISE' },
     { id: 'currency-exchange', title: 'Divisas y Tipos de Cambio', icon: 'currency_exchange', description: 'Gestión multi-divisa, paridades cambiarias y valuación financiera.', category: 'MERCHANDISE' },
     
     // Seguridad
-    { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
+    { id: 'users', title: 'USUARIOS', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
     { id: 'shifts', title: 'Turnos y Horarios', icon: 'schedule', description: 'Configuración de jornadas operativas, horarios y disponibilidad de almacén.', category: 'SECURITY' },
     { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
