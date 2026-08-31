@@ -28,7 +28,7 @@
             <span class="users-header__eyebrow-sep">·</span>
             <span>Seguridad y Control</span>
           </div>
-          <h1 class="users-header__title">Control de Usuarios y Seguridad</h1>
+          <h1 class="users-header__title">Usuarios</h1>
           <p class="users-header__subtitle">
             Administra los accesos, roles, permisos y la auditoría de operarios y supervisores del WMS
           </p>
@@ -363,7 +363,7 @@
           @if (saveSuccess()) {
             <div class="users-alert users-alert--success" role="status" aria-live="polite">
               <span class="material-symbols-outlined">check_circle</span>
-              <span>Usuario guardado correctamente.</span>
+              <span>⚡ Usuario guardado y dado de alta exitosamente en el WMS.</span>
             </div>
           }
 
@@ -523,23 +523,22 @@
               <fieldset class="users-form-section">
                 <legend class="users-form-section__legend">
                   <span class="material-symbols-outlined">lock_reset</span>
-                  Seguridad & Credenciales (HU-003)
+                  Seguridad & Credenciales WMS
                 </legend>
 
                 <div class="users-security-card">
                   <div class="users-security-card__info">
-                    <div class="users-security-card__title">Contraseña Temporal</div>
+                    <div class="users-security-card__title">Contraseña de Acceso</div>
                     <div class="users-security-card__desc">
-                      Genera una clave de acceso temporal para enviar o entregar al usuario.
+                      Establece o actualiza la contraseña definitiva de acceso al sistema WMS para este usuario.
                     </div>
                   </div>
                   <button
                     class="users-btn users-btn--secondary"
                     type="button"
-                    [disabled]="isGenerating()"
-                    (click)="openGenerateConfirm()">
+                    (click)="openSetPasswordModal()">
                     <span class="material-symbols-outlined">key</span>
-                    🔑 Generar Clave Temporal
+                    🔑 Establecer Contraseña
                   </button>
                 </div>
               </fieldset>
@@ -716,4 +715,16 @@
     (confirmed)="onDeleteConfirmed()"
     (cancelled)="onDeleteCancelled()">
   </fg-confirm-dialog>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     Modal — Establecer / Cambiar Contraseña Definitiva con Repetición
+     ══════════════════════════════════════════════════════════ -->
+@if (showSetPasswordModal() && selectedUser()) {
+  <fg-set-password-modal
+    [userName]="selectedUser()!.firstName + ' ' + selectedUser()!.lastName"
+    [userEmail]="selectedUser()!.email"
+    (confirmed)="onPasswordConfirmed($event)"
+    (cancelled)="closeSetPasswordModal()">
+  </fg-set-password-modal>
 }

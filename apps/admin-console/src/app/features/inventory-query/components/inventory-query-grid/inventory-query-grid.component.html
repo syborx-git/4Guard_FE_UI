@@ -120,11 +120,21 @@
       <!-- Botón Innovación: Analytics por Año -->
       <button
         type="button"
-        (click)="openAnalytics()"
+        (click)="openAnalytics('table')"
         class="px-4 py-2.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 text-amber-900 font-extrabold text-xs transition-all border border-amber-300 shadow-sm flex items-center gap-2"
       >
         <span class="material-symbols-outlined text-lg text-amber-600">analytics</span>
         <span>VER ANALYTICS INGRESOS</span>
+      </button>
+
+      <!-- Botón Generar Gráficas de los Años -->
+      <button
+        type="button"
+        (click)="openAnalytics('chart')"
+        class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs transition-all shadow-md flex items-center gap-2 active:scale-95"
+      >
+        <span class="material-symbols-outlined text-lg">bar_chart</span>
+        <span>GENERAR GRÁFICA DE AÑOS</span>
       </button>
 
       <!-- Botón Acción Principal: EXPORTAR A EXCEL OFICIAL -->
@@ -296,5 +306,6 @@
 
 <fg-inventory-analytics-modal
   [isOpen]="isAnalyticsModalOpen()"
+  [initialView]="analyticsInitialView()"
   (closeModal)="closeAnalytics()"
 ></fg-inventory-analytics-modal>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file inactivity.service.ts
  * @description Servicio de detección de inactividad del usuario con auto-renovación y cierre de sesión seguro.
  */
@@ -7,7 +7,7 @@ import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { fromEvent, merge, Subscription, timer, of } from 'rxjs';
-import { switchMap, throttleTime, startWith } from 'rxjs/operators';
+import { switchMap, throttleTime, startWith, timeout, catchError } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
@@ -23,9 +23,9 @@ export class InactivityService implements OnDestroy {
 
   private readonly BASE_URL = `${environment.apiBaseUrl}/api/v1/auth`;
 
-  // Configuración de tiempos (15 minutos de inactividad real, 60 segundos de aviso previo)
-  private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutos
-  private readonly WARNING_TIME = 60; // 60 segundos
+  // Configuración de tiempos (15 minutos de inactividad real, 60 segundos de aviso)
+  private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutos de inactividad
+  private readonly WARNING_TIME = 60; // 60 segundos de aviso
 
   // Estado reactivo expuesto con signals
   readonly showWarning = signal<boolean>(false);
@@ -40,8 +40,10 @@ export class InactivityService implements OnDestroy {
   }
 
   /**
-   * Empieza a escuchar eventos globales del usuario para reiniciar el temporizador de inactividad.
-   * Utiliza startWith(0) y switchMap para que CADA interacción reinicie verdaderamente la cuenta de 15 min.
+   * Empieza a escuchar todos los eventos del usuario para reiniciar el temporizador de inactividad.
+   * Utiliza startWith(null) y switchMap() para garantizar que CADA interacción del usuario
+   * cancele el temporizador anterior y reinicie el conteo de 15 minutos desde cero.
+   * Solo si transcurren 15 minutos CONTINUOS de inactividad absoluta se desplegará la advertencia.
    */
   startTracking(): void {
     this.stopTracking();
@@ -51,17 +53,20 @@ export class InactivityService implements OnDestroy {
       fromEvent(window, 'keydown'),
       fromEvent(window, 'click'),
       fromEvent(window, 'scroll'),
-      fromEvent(window, 'touchstart')
+      fromEvent(window, 'touchstart'),
+      fromEvent(window, 'pointermove'),
+      fromEvent(window, 'wheel')
     ).pipe(
       throttleTime(1000)
     );
 
-    // switchMap reinicia el timer cada vez que el usuario interactúa
+    // Un solo flujo unificado: al iniciar o tras cada evento del usuario,
+    // switchMap CANCELA el temporizador anterior y arranca un NUEVO conteo de 15 minutos.
     this.activitySub = activityEvents$.pipe(
-      startWith(0),
+      startWith(null),
       switchMap(() => timer(this.INACTIVITY_TIME))
     ).subscribe(() => {
-      // Se cumplieron 15 minutos continuos de inactividad total sin mover el mouse ni teclear
+      // Se cumplió el tiempo de inactividad real si el usuario está autenticado y no hay advertencia previa
       if (this.authState.currentUser() && !this.showWarning()) {
         this.triggerWarning();
       }
@@ -107,6 +112,7 @@ export class InactivityService implements OnDestroy {
 
   /**
    * Mantiene la sesión activa extendiendo los tokens de forma transparente.
+   * Si la API tarda o falla (ej: entorno mock/local/latencia en Render), renueva la sesión localmente sin cerrar la cuenta ni atascar la UI.
    */
   keepSessionAlive(): void {
     if (this.isProcessing()) return;
@@ -119,7 +125,10 @@ export class InactivityService implements OnDestroy {
       return;
     }
 
-    this.http.post<any>(`${this.BASE_URL}/refresh`, { refreshToken }).subscribe({
+    this.http.post<any>(`${this.BASE_URL}/refresh`, { refreshToken }).pipe(
+      timeout(4000),
+      catchError(() => of(null))
+    ).subscribe({
       next: (response) => {
         if (response && response.success && response.data) {
           this.authState.setSession(response.data);

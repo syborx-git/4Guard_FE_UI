@@ -2,332 +2,293 @@
 
   <!-- ENCABEZADO PRINCIPAL -->
   <header class="quality-header">
-    <div class="quality-header__content">
+    <div class="quality-header__main">
       <div class="quality-header__eyebrow">
-        <span class="material-symbols-outlined">verified_user</span>
-        <span>Módulo QM · Gestión de inventario</span>
+        <span class="material-symbols-outlined icon-glow">verified_user</span>
+        <span>4GUARD WMS · Enterprise Quality Management</span>
       </div>
 
-      <h1 class="quality-header__title">Control de Calidad (QM)</h1>
+      <h1 class="quality-header__title">
+        Módulo QM — Control de Calidad y Producto No Conforme
+      </h1>
 
       <p class="quality-header__subtitle">
-        Gestione el estado de cuarentena y los bloqueos de calidad de los lotes
-        de inventario.
+        Gestión centralizada de lotes en cuarentena, insumos con no conformidad y liberación técnica de inventario para marcas globales.
       </p>
     </div>
 
-    <div class="quality-header__tools">
+    <!-- TARJETAS DE MÉTRICAS KPI -->
+    <div class="qm-kpi-grid">
+      <!-- KPI 1: CUARENTENA -->
+      <div class="qm-kpi-card qm-kpi-card--warning" (click)="setTab('quarantine')">
+        <div class="qm-kpi-card__icon">
+          <span class="material-symbols-outlined">hourglass_top</span>
+        </div>
+        <div class="qm-kpi-card__info">
+          <span class="qm-kpi-card__label">Por Inspeccionar</span>
+          <strong class="qm-kpi-card__value">{{ quarantineCount() }}</strong>
+          <span class="qm-kpi-card__sub">En andén / Cuarentena</span>
+        </div>
+      </div>
 
+      <!-- KPI 2: BLOQUEADOS -->
+      <div class="qm-kpi-card qm-kpi-card--danger" (click)="setTab('blocked')">
+        <div class="qm-kpi-card__icon">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="qm-kpi-card__info">
+          <span class="qm-kpi-card__label">Bloqueados por QM</span>
+          <strong class="qm-kpi-card__value">{{ blockedCount() }}</strong>
+          <span class="qm-kpi-card__sub">Producto no conforme</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: APROBADOS -->
+      <div class="qm-kpi-card qm-kpi-card--success" (click)="setTab('approved')">
+        <div class="qm-kpi-card__icon">
+          <span class="material-symbols-outlined">verified</span>
+        </div>
+        <div class="qm-kpi-card__info">
+          <span class="qm-kpi-card__label">Liberados y Aprobados</span>
+          <strong class="qm-kpi-card__value">{{ approvedCount() }}</strong>
+          <span class="qm-kpi-card__sub">Disponible para picking</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BARRA DE HERRAMIENTAS Y FILTROS -->
+  <div class="quality-toolbar">
+    <div class="quality-tabs-container">
+      <nav class="quality-tabs" role="tablist" aria-label="Estados de control de calidad">
+
+        <button type="button" class="quality-tab quality-tab--quarantine" role="tab"
+          [class.quality-tab--active]="activeTab() === 'quarantine'" [attr.aria-selected]="activeTab() === 'quarantine'"
+          (click)="setTab('quarantine')">
+          <span class="material-symbols-outlined quality-tab__icon">hourglass_top</span>
+          <span class="quality-tab__label">Pendientes / Cuarentena</span>
+          <span class="quality-tab__count quality-tab__count--warning">{{ quarantineCount() }}</span>
+        </button>
+
+        <button type="button" class="quality-tab quality-tab--blocked" role="tab"
+          [class.quality-tab--active]="activeTab() === 'blocked'" [attr.aria-selected]="activeTab() === 'blocked'"
+          (click)="setTab('blocked')">
+          <span class="material-symbols-outlined quality-tab__icon">block</span>
+          <span class="quality-tab__label">Bloqueados QM</span>
+          <span class="quality-tab__count quality-tab__count--danger">{{ blockedCount() }}</span>
+        </button>
+
+        <button type="button" class="quality-tab quality-tab--approved" role="tab"
+          [class.quality-tab--active]="activeTab() === 'approved'" [attr.aria-selected]="activeTab() === 'approved'"
+          (click)="setTab('approved')">
+          <span class="material-symbols-outlined quality-tab__icon">verified</span>
+          <span class="quality-tab__label">Aprobados y Liberados</span>
+          <span class="quality-tab__count quality-tab__count--success">{{ approvedCount() }}</span>
+        </button>
+
+      </nav>
+    </div>
+
+    <div class="quality-filters">
       <!-- BUSCADOR -->
       <label class="search-field" for="qm-search">
-        <span class="material-symbols-outlined search-field__icon">
-          search
-        </span>
-
-        <input id="qm-search" type="search" class="search-field__input" placeholder="Buscar por SKU o lote..."
+        <span class="material-symbols-outlined search-field__icon">search</span>
+        <input id="qm-search" type="search" class="search-field__input" placeholder="Buscar por SKU, Lote o Cliente..."
           [value]="filterText()" (input)="onFilterChange($event)" autocomplete="off">
       </label>
 
       <!-- FILTRO DE CLIENTE -->
       <label class="client-filter">
-        <span class="material-symbols-outlined client-filter__icon">
-          corporate_fare
-        </span>
-
+        <span class="material-symbols-outlined client-filter__icon">corporate_fare</span>
         <select class="client-filter__select" [value]="selectedClient()" (change)="onClientChange($event)"
           aria-label="Filtrar lotes por cliente">
-
-          <option value="">Todos los clientes</option>
-
+          <option value="">Todos los clientes (Lala, Nestlé, Bimbo)</option>
           @for (client of clients(); track client) {
-          <option [value]="client">{{ client }}</option>
+            <option [value]="client">{{ client }}</option>
           }
         </select>
-
-        <span class="material-symbols-outlined client-filter__arrow">
-          keyboard_arrow_down
-        </span>
+        <span class="material-symbols-outlined client-filter__arrow">keyboard_arrow_down</span>
       </label>
-
     </div>
-  </header>
+  </div>
 
-  <!-- NAVEGACIÓN POR ESTADOS -->
-  <nav class="quality-tabs" role="tablist" aria-label="Estados de control de calidad">
-
-    <button type="button" class="quality-tab quality-tab--quarantine" role="tab"
-      [class.quality-tab--active]="activeTab() === 'quarantine'" [attr.aria-selected]="activeTab() === 'quarantine'"
-      (click)="setTab('quarantine')">
-
-      <span class="material-symbols-outlined quality-tab__icon">
-        hourglass_top
-      </span>
-
-      <span class="quality-tab__label">Cuarentena</span>
-
-      <span class="quality-tab__count quality-tab__count--warning">
-        {{ quarantineCount() }}
-      </span>
-    </button>
-
-    <button type="button" class="quality-tab quality-tab--blocked" role="tab"
-      [class.quality-tab--active]="activeTab() === 'blocked'" [attr.aria-selected]="activeTab() === 'blocked'"
-      (click)="setTab('blocked')">
-
-      <span class="material-symbols-outlined quality-tab__icon">
-        block
-      </span>
-
-      <span class="quality-tab__label">Bloqueados QM</span>
-
-      <span class="quality-tab__count quality-tab__count--danger">
-        {{ blockedCount() }}
-      </span>
-    </button>
-
-    <button type="button" class="quality-tab quality-tab--approved" role="tab"
-      [class.quality-tab--active]="activeTab() === 'approved'" [attr.aria-selected]="activeTab() === 'approved'"
-      (click)="setTab('approved')">
-
-      <span class="material-symbols-outlined quality-tab__icon">
-        verified
-      </span>
-
-      <span class="quality-tab__label">Aprobados</span>
-
-      <span class="quality-tab__count quality-tab__count--success">
-        {{ approvedCount() }}
-      </span>
-    </button>
-
-  </nav>
-
-  <!-- TARJETA PRINCIPAL -->
-  <section class="quality-card">
-
+  <!-- TARJETA CONTENEDORA PRINCIPAL Y TABLA DE LOTES -->
+  <section class="quality-card" fgSpecularGlow>
     <div class="quality-card__top">
       <div>
         <span class="quality-card__eyebrow">
-          Inventario bajo control QM
+          <span class="material-symbols-outlined icon-small">inventory</span>
+          Bandeja de Entrada QM
         </span>
 
         <h2 class="quality-card__title">
           @switch (activeTab()) {
-          @case ('quarantine') {
-          Lotes pendientes de inspección
-          }
-
-          @case ('blocked') {
-          Lotes bloqueados por calidad
-          }
-
-          @case ('approved') {
-          Lotes aprobados y disponibles
-          }
+            @case ('quarantine') { Lotes Pendientes de Inspección Técnica }
+            @case ('blocked') { Lotes Bloqueados por No Conformidad }
+            @case ('approved') { Lotes Liberados y Disponibles }
           }
         </h2>
       </div>
 
       <div class="quality-card__result">
         <span class="material-symbols-outlined">inventory_2</span>
-
-        <span>
-          {{ filteredItems().length }}
-          {{ filteredItems().length === 1 ? 'resultado' : 'resultados' }}
-        </span>
+        <span><strong>{{ filteredItems().length }}</strong> {{ filteredItems().length === 1 ? 'registro' : 'registros' }}</span>
       </div>
     </div>
 
-    <!-- TABLA -->
+    <!-- TABLA ENTERPRISE DE CONTROL DE CALIDAD -->
     <div class="quality-table-wrapper">
-      <table class="quality-table" aria-label="Lotes de inventario en control de calidad">
-
+      <table class="quality-table" aria-label="Bandeja de entrada QM">
         <thead>
           <tr>
-            <th>SKU</th>
-            <th>Descripción</th>
-            <th>Lote</th>
-            <th>Cliente</th>
-            <th>Ubicación</th>
-            <th>Fecha de ingreso</th>
-            <th class="quality-table__actions-heading">Acciones</th>
+            <th>SKU & Cantidad</th>
+            <th>Descripción del Producto</th>
+            <th>Lote / SSCC</th>
+            <th>Cliente / Marca</th>
+            <th>Ubicación QM</th>
+            <th>Fecha Recepción</th>
+            <th>Estado QM</th>
+            <th class="quality-table__actions-heading">Acciones de Calidad</th>
           </tr>
         </thead>
 
         <tbody>
           @for (item of filteredItems(); track item.id) {
-          <tr>
-
-            <!-- SKU -->
-            <td>
-              <div class="sku-cell">
-                <span class="sku-cell__icon material-symbols-outlined">
-                  inventory
-                </span>
-
-                <div class="sku-cell__content">
-                  <strong>{{ item.sku }}</strong>
-                  <span>{{ item.quantity }} {{ item.unitOfMeasure }}</span>
+            <tr>
+              <!-- SKU -->
+              <td>
+                <div class="sku-cell">
+                  <span class="sku-cell__icon material-symbols-outlined">inventory_2</span>
+                  <div class="sku-cell__content">
+                    <strong class="sku-code">{{ item.sku }}</strong>
+                    <span class="sku-qty">{{ item.quantity }} {{ item.unitOfMeasure }}</span>
+                  </div>
                 </div>
-              </div>
-            </td>
+              </td>
 
-            <!-- DESCRIPCIÓN -->
-            <td>
-              <div class="description-cell">
-                <strong>{{ item.description }}</strong>
-
-                <span>
-                  {{ item.barcode || 'Sin código de barras' }}
-                </span>
-              </div>
-            </td>
-
-            <!-- LOTE -->
-            <td>
-              <span class="lot-chip">
-                {{ item.batchNumber }}
-              </span>
-            </td>
-
-            <!-- CLIENTE -->
-            <td>
-              <div class="client-cell">
-                <span class="material-symbols-outlined">
-                  business
-                </span>
-
-                <span>{{ item.clientName }}</span>
-              </div>
-            </td>
-
-            <!-- UBICACIÓN -->
-            <td>
-              <div class="location-cell">
-                <span class="material-symbols-outlined">
-                  location_on
-                </span>
-
-                <span>{{ item.locationId || 'Sin ubicación' }}</span>
-              </div>
-            </td>
-
-            <!-- FECHA -->
-            <td>
-              <div class="date-cell">
-                <span class="material-symbols-outlined">
-                  calendar_today
-                </span>
-
-                <span>
-                  {{ item.receivedAt | date:'dd MMM yyyy, HH:mm' }}
-                </span>
-              </div>
-            </td>
-
-            <!-- ACCIONES -->
-            <td class="quality-table__actions-cell">
-              <div class="action-menu">
-
-                <button type="button" class="table-action table-action--inspect" (click)="goToInspection(item.id)"
-                  [attr.aria-label]="'Inspeccionar lote ' + item.batchNumber">
-
-                  <span class="material-symbols-outlined">
-                    fact_check
+              <!-- DESCRIPCIÓN -->
+              <td>
+                <div class="description-cell">
+                  <strong class="desc-text">{{ item.description }}</strong>
+                  <span class="barcode-subtext">
+                    <span class="material-symbols-outlined icon-micro">barcode</span>
+                    {{ item.barcode || 'Sin EAN' }}
                   </span>
+                </div>
+              </td>
 
-                  <span>Inspeccionar</span>
-                </button>
+              <!-- LOTE / SSCC -->
+              <td>
+                <div class="lot-cell">
+                  <span class="lot-chip">{{ item.batchNumber }}</span>
+                  <span class="sscc-subtext">SSCC: {{ item.sscc || 'N/A' }}</span>
+                </div>
+              </td>
 
-                @if (activeTab() === 'quarantine') {
-                <button type="button" class="table-action table-action--approve" (click)="quickApprove(item)"
-                  [attr.aria-label]="'Aprobar lote ' + item.batchNumber">
+              <!-- CLIENTE -->
+              <td>
+                <div class="client-cell">
+                  <span class="material-symbols-outlined client-icon">corporate_fare</span>
+                  <span class="client-name">{{ item.clientName }}</span>
+                </div>
+              </td>
 
-                  <span class="material-symbols-outlined">
-                    check_circle
-                  </span>
+              <!-- UBICACIÓN -->
+              <td>
+                <div class="location-cell">
+                  <span class="material-symbols-outlined location-icon">location_on</span>
+                  <span class="location-code">{{ item.locationId || 'Sin asignar' }}</span>
+                </div>
+              </td>
 
-                  <span>Aprobar</span>
-                </button>
+              <!-- FECHA -->
+              <td>
+                <div class="date-cell">
+                  <span class="material-symbols-outlined date-icon">calendar_today</span>
+                  <span>{{ item.receivedAt | date:'dd MMM yyyy, HH:mm' }}</span>
+                </div>
+              </td>
 
-                <button type="button" class="table-action table-action--block" (click)="quickBlock(item)"
-                  [attr.aria-label]="'Bloquear lote ' + item.batchNumber">
+              <!-- ESTADO BADGE -->
+              <td>
+                <span class="qm-badge" [class.qm-badge--quarantine]="item.status === 20" [class.qm-badge--blocked]="item.status === 70" [class.qm-badge--approved]="item.status === 30">
+                  <span class="qm-badge__dot"></span>
+                  {{ getStatusLabel(item.status) }}
+                </span>
+              </td>
 
-                  <span class="material-symbols-outlined">
-                    block
-                  </span>
+              <!-- ACCIONES -->
+              <td class="quality-table__actions-cell">
+                <div class="action-menu">
+                  <!-- BOTÓN INSPECCIONAR (ABRE EL MODAL INTERACTIVO) -->
+                  <button type="button" class="table-action table-action--inspect" (click)="openInspectionModal(item)"
+                    [attr.aria-label]="'Inspeccionar lote ' + item.batchNumber">
+                    <span class="material-symbols-outlined">fact_check</span>
+                    <span>Inspeccionar</span>
+                  </button>
 
-                  <span>Bloquear</span>
-                </button>
-                }
+                  @if (activeTab() === 'quarantine') {
+                    <button type="button" class="table-action table-action--approve" (click)="quickApprove(item)"
+                      [attr.aria-label]="'Aprobar lote ' + item.batchNumber">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      <span>Aprobar</span>
+                    </button>
 
-                @if (activeTab() === 'blocked') {
-                <button type="button" class="table-action table-action--approve" (click)="releaseItem(item)"
-                  [attr.aria-label]="'Liberar lote ' + item.batchNumber">
+                    <button type="button" class="table-action table-action--block" (click)="quickBlock(item)"
+                      [attr.aria-label]="'Bloquear lote ' + item.batchNumber">
+                      <span class="material-symbols-outlined">block</span>
+                      <span>Bloquear</span>
+                    </button>
+                  }
 
-                  <span class="material-symbols-outlined">
-                    lock_open
-                  </span>
-
-                  <span>Liberar</span>
-                </button>
-
-                <button type="button" class="table-action table-action--block" (click)="scrapItem(item)"
-                  [attr.aria-label]="'Dar de baja lote ' + item.batchNumber">
-
-                  <span class="material-symbols-outlined">
-                    delete_forever
-                  </span>
-
-                  <span>Dar de baja</span>
-                </button>
-                }
-
-              </div>
-            </td>
-
-          </tr>
+                  @if (activeTab() === 'blocked') {
+                    <button type="button" class="table-action table-action--approve" (click)="releaseItem(item)"
+                      [attr.aria-label]="'Liberar lote ' + item.batchNumber">
+                      <span class="material-symbols-outlined">lock_open</span>
+                      <span>Liberar</span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
           } @empty {
-          <tr>
-            <td colspan="7" class="empty-state-cell">
-              <div class="empty-state">
-                <div class="empty-state__icon">
-                  <span class="material-symbols-outlined">
-                    inventory_2
-                  </span>
+            <tr>
+              <td colspan="8" class="empty-state-cell">
+                <div class="empty-state">
+                  <div class="empty-state__icon">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                  </div>
+                  <h3>No se encontraron lotes en la bandeja</h3>
+                  <p>No existen lotes que coincidan con la búsqueda o el filtro de cliente seleccionado.</p>
                 </div>
-
-                <h3>No se encontraron lotes</h3>
-
-                <p>
-                  No existen artículos que coincidan con el estado o los
-                  filtros seleccionados.
-                </p>
-              </div>
-            </td>
-          </tr>
+              </td>
+            </tr>
           }
         </tbody>
       </table>
     </div>
 
-    <!-- PIE DE TARJETA -->
+    <!-- PIE DE TARJETA CORPORATIVO -->
     <footer class="quality-card__footer">
       <div class="node-status">
         <span class="node-status__dot"></span>
-
-        <span>Nodo principal: LBP-03</span>
-
+        <span>Nodo QM: LBP-QM-03</span>
         <span class="node-status__separator">•</span>
-
-        <span>Licencia corporativa: OK</span>
+        <span>Inspección FSM Activa</span>
       </div>
 
       <span class="system-version">
-        SYNEXIA WMS v4.2.1-GOLDEN · PREMIUM EDITION
+        4GUARD WMS v4.2.1-GOLDEN · QM ENTERPRISE MODULE
       </span>
     </footer>
-
   </section>
 
 </div>
+
+<!-- MODAL INTERACTIVO DE INSPECCIÓN QM -->
+<fg-quality-inspection-modal
+  [item]="selectedItemForModal()"
+  [isOpen]="isModalOpen()"
+  (closeModal)="closeInspectionModal()"
+  (updateStatus)="handleStatusUpdate($event)">
+</fg-quality-inspection-modal>

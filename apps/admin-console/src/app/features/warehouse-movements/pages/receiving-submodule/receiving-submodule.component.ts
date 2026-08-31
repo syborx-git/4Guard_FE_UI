@@ -115,7 +115,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
   forkliftOperators = this.movementsService.forkliftOperators;
 
   suppliers = this.movementsService.suppliers;
-  products = signal<{ id: string; name: string; defaultPieces: number }[]>([]);
+
+  products = signal<{ id: string; name: string; defaultPieces: number }[]>([
+    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 480 },
+    { id: '12445890', name: 'NESCAFÉ CLÁSICO FRASCO 24X200G FEFO', defaultPieces: 360 },
+    { id: '12398112', name: 'LECHE ENTERA LALA UHT 12X1L CAJA', defaultPieces: 600 },
+    { id: '12884901', name: 'AGUA PURIFICADA CIEL 24X600ML PET', defaultPieces: 720 },
+    { id: '12663402', name: 'ACEITE VEGETAL CANOLA 12X1L BOTELLA', defaultPieces: 480 },
+  ]);
 
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
   checkInForm = this.fb.group({

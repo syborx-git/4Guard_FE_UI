@@ -35,7 +35,7 @@ export class CatalogsHubComponent {
     {
       id: 'users',
       index: '01',
-      title: 'USUARIOS Y SEGURIDAD',
+      title: 'USUARIOS',
       description: 'Registro de personal, asignación de roles RBAC, consulta de accesos y bitácora de auditoría.',
       icon: 'manage_accounts',
       route: '/catalogs/users',
@@ -53,7 +53,7 @@ export class CatalogsHubComponent {
     {
       id: 'products',
       index: '03',
-      title: 'CATÁLOGO DE SKUS',
+      title: 'PRODUCTOS',
       description: 'Maestro de artículos, selector de 20 proveedores oficiales, unidades de medida y trazabilidad NOM-251.',
       icon: 'inventory_2',
       route: '/catalogs/products',

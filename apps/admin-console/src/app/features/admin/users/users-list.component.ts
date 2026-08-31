@@ -13,6 +13,7 @@ import { BranchService } from '../services/branch.service';
 import { UserAuditLogDto } from '../../../core/models/user.models';
 import { TempPasswordModalComponent } from './temp-password-modal/temp-password-modal.component';
 import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
+import { SetPasswordModalComponent } from './set-password-modal/set-password-modal.component';
 
 import { RolePermissionService } from '../services/role-permission.service';
 
@@ -33,6 +34,7 @@ function noWhitespaceValidator(control: AbstractControl): ValidationErrors | nul
     RouterLink,
     TempPasswordModalComponent,
     ConfirmDialogComponent,
+    SetPasswordModalComponent,
   ],
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
@@ -70,6 +72,27 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly isGenerating = signal(false);
   protected readonly tempPassword = signal<string | null>(null);
   protected readonly tempPasswordUser = signal<UserAdminItem | null>(null);
+
+  // ── Estado: Establecer Contraseña Definitiva ───────────────
+  protected readonly showSetPasswordModal = signal(false);
+
+  protected openSetPasswordModal(): void {
+    this.showSetPasswordModal.set(true);
+  }
+
+  protected closeSetPasswordModal(): void {
+    this.showSetPasswordModal.set(false);
+  }
+
+  protected onPasswordConfirmed(newPassword: string): void {
+    this.showSetPasswordModal.set(false);
+    const user = this.selectedUser();
+    if (user) {
+      this.toastService.success(`⚡ Contraseña de "${user.firstName} ${user.lastName}" establecida con éxito`);
+      this.saveSuccess.set(true);
+      setTimeout(() => this.saveSuccess.set(false), 4000);
+    }
+  }
 
   // ── Estado: Eliminación de Usuario ───────────────────────
   protected readonly deletingUser = signal<UserAdminItem | null>(null);
@@ -305,17 +328,19 @@ export class UsersListComponent implements OnInit, OnDestroy {
         lockedUntil: null,
         permanentlyLocked: false
       }).pipe(takeUntil(this.destroy$)).subscribe({
-        next: (res) => {
+        next: () => {
           this.saveSuccess.set(true);
-          const createdItem = this.userAdminService.users().find(u => u.email === raw.email.trim().toLowerCase());
+          const emailTrimmed = raw.email.trim().toLowerCase();
+          const usernameTrimmed = raw.username.trim();
+          const createdItem = this.userAdminService.users().find(u => u.email === emailTrimmed || u.username === usernameTrimmed);
           if (createdItem) {
             this.selectedUser.set(createdItem);
             this.loadAuditLogs(createdItem.id);
           }
           this.formMode.set('edit');
           this.submitAttempted.set(false);
-          this.toastService.success('Usuario registrado con éxito.');
-          setTimeout(() => this.saveSuccess.set(false), 3500);
+          this.toastService.success(`⚡ Usuario "${raw.firstName} ${raw.lastName}" dado de alta con éxito`);
+          setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
           this.backendError.set(err?.error?.message || err?.message || 'Error al crear el usuario.');
@@ -343,8 +368,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.submitAttempted.set(false);
           this.form.markAsPristine();
           this.loadAuditLogs(userId);
-          this.toastService.success('Usuario actualizado con éxito.');
-          setTimeout(() => this.saveSuccess.set(false), 3500);
+          this.toastService.success(`⚡ Usuario "${raw.firstName} ${raw.lastName}" actualizado con éxito`);
+          setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
           this.backendError.set(err?.error?.message || err?.message || 'Error al actualizar el usuario.');
