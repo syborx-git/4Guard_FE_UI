@@ -2,8 +2,8 @@
 
 - **Módulo / Ámbito:** Transversal (`apps/admin-console/src/app`)
 - **Versión:** 1.0.0
-- **Servicio Core:** [`PrintService`](file:///c:/Users/lenovo/Documents/ProyectosSyborX/4Guard/4Guard_FE_UI/apps/admin-console/src/app/core/services/print.service.ts)
-- **ADR Relacionado:** [`ADR-012: Arquitectura Unificada de Generación, Descarga e Impresión de Comprobantes Oficiales PDF`](file:///c:/Users/lenovo/Documents/ProyectosSyborX/4Guard/4Guard_FE_UI/docs/adr/ADR-012-enterprise-pdf-print-export-service.md)
+- **Servicio Core:** [`PrintService`](file:4Guard_FE_UI/apps/admin-console/src/app/core/services/print.service.ts)
+- **ADR Relacionado:** [`ADR-012: Arquitectura Unificada de Generación, Descarga e Impresión de Comprobantes Oficiales PDF`](file:4Guard_FE_UI/docs/adr/ADR-012-enterprise-pdf-print-export-service.md)
 
 ---
 
