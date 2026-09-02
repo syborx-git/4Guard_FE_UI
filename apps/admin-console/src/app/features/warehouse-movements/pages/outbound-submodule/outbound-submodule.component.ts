@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
@@ -30,6 +31,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
   private readonly authState = inject(AuthState);
   private readonly router = inject(Router);
 
@@ -489,8 +491,21 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.selectedPrintOutbound.set(null);
   }
 
+  isGeneratingPdf = signal(false);
+
+  async downloadDirectPdf(): Promise<void> {
+    const folio = this.selectedPrintOutbound()?.folio || 'Doc';
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf('.fg-print-outbound', String(folio));
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
+  }
+
   triggerBrowserPrint(): void {
-    window.print();
+    const folio = this.selectedPrintOutbound()?.folio || 'Doc';
+    this.printService.printElement('.fg-print-outbound', String(folio));
   }
 
   // ── HELPERS ───────────────────────────────────────────────────────────────

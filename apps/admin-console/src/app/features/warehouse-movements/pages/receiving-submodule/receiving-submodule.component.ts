@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angu
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PrintService } from '../../../../core/services/print.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import {
@@ -40,6 +41,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -891,8 +893,25 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.showPrintModal.set(true);
   }
 
+  isGeneratingPdf = signal(false);
+
+  async downloadDirectPdf(): Promise<void> {
+    const isReception = this.printType() === 'RECEPTION';
+    const selector = isReception ? 'fg-print-reception-layout' : 'fg-print-cancellation-layout';
+    const recNumber = this.selectedPrintReception()?.folio || this.selectedPrintReception()?.checkIn?.docNumber || '26510';
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf(selector, String(recNumber));
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
+  }
+
   triggerBrowserPrint(): void {
-    window.print();
+    const isReception = this.printType() === 'RECEPTION';
+    const selector = isReception ? 'fg-print-reception-layout' : 'fg-print-cancellation-layout';
+    const recNumber = this.selectedPrintReception()?.folio || this.selectedPrintReception()?.checkIn?.docNumber || '26510';
+    this.printService.printElement(selector, String(recNumber));
   }
 
   closePrintModal(): void {
