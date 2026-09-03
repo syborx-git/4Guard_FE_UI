@@ -5,7 +5,7 @@
     <div class="quality-header__main">
       <div class="quality-header__eyebrow">
         <span class="material-symbols-outlined icon-glow">verified_user</span>
-        <span>4GUARD WMS · Enterprise Quality Management</span>
+        <span>4GUARD WMS · ENTERPRISE QUALITY MANAGEMENT</span>
       </div>
 
       <h1 class="quality-header__title">
@@ -20,36 +20,36 @@
     <!-- TARJETAS DE MÉTRICAS KPI -->
     <div class="qm-kpi-grid">
       <!-- KPI 1: CUARENTENA -->
-      <div class="qm-kpi-card qm-kpi-card--warning" (click)="setTab('quarantine')">
+      <div class="qm-kpi-card qm-kpi-card--warning" [class.qm-kpi-card--active]="activeTab() === 'quarantine'" (click)="setTab('quarantine')">
         <div class="qm-kpi-card__icon">
           <span class="material-symbols-outlined">hourglass_top</span>
         </div>
         <div class="qm-kpi-card__info">
-          <span class="qm-kpi-card__label">Por Inspeccionar</span>
+          <span class="qm-kpi-card__label">POR INSPECCIONAR</span>
           <strong class="qm-kpi-card__value">{{ quarantineCount() }}</strong>
           <span class="qm-kpi-card__sub">En andén / Cuarentena</span>
         </div>
       </div>
 
       <!-- KPI 2: BLOQUEADOS -->
-      <div class="qm-kpi-card qm-kpi-card--danger" (click)="setTab('blocked')">
+      <div class="qm-kpi-card qm-kpi-card--danger" [class.qm-kpi-card--active]="activeTab() === 'blocked'" (click)="setTab('blocked')">
         <div class="qm-kpi-card__icon">
           <span class="material-symbols-outlined">block</span>
         </div>
         <div class="qm-kpi-card__info">
-          <span class="qm-kpi-card__label">Bloqueados por QM</span>
+          <span class="qm-kpi-card__label">BLOQUEADOS POR QM</span>
           <strong class="qm-kpi-card__value">{{ blockedCount() }}</strong>
           <span class="qm-kpi-card__sub">Producto no conforme</span>
         </div>
       </div>
 
       <!-- KPI 3: APROBADOS -->
-      <div class="qm-kpi-card qm-kpi-card--success" (click)="setTab('approved')">
+      <div class="qm-kpi-card qm-kpi-card--success" [class.qm-kpi-card--active]="activeTab() === 'approved'" (click)="setTab('approved')">
         <div class="qm-kpi-card__icon">
           <span class="material-symbols-outlined">verified</span>
         </div>
         <div class="qm-kpi-card__info">
-          <span class="qm-kpi-card__label">Liberados y Aprobados</span>
+          <span class="qm-kpi-card__label">LIBERADOS Y APROBADOS</span>
           <strong class="qm-kpi-card__value">{{ approvedCount() }}</strong>
           <span class="qm-kpi-card__sub">Disponible para picking</span>
         </div>
@@ -117,8 +117,8 @@
     <div class="quality-card__top">
       <div>
         <span class="quality-card__eyebrow">
-          <span class="material-symbols-outlined icon-small">inventory</span>
-          Bandeja de Entrada QM
+          <span class="material-symbols-outlined icon-small">folder_open</span>
+          BANDEJA DE ENTRADA QM
         </span>
 
         <h2 class="quality-card__title">
@@ -158,7 +158,9 @@
               <!-- SKU -->
               <td>
                 <div class="sku-cell">
-                  <span class="sku-cell__icon material-symbols-outlined">inventory_2</span>
+                  <div class="sku-cell__icon">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                  </div>
                   <div class="sku-cell__content">
                     <strong class="sku-code">{{ item.sku }}</strong>
                     <span class="sku-qty">{{ item.quantity }} {{ item.unitOfMeasure }}</span>
