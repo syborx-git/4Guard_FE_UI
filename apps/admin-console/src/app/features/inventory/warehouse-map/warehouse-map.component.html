@@ -6,25 +6,22 @@
     <div>
       <h2 class="wmap__title">Topología Cromática</h2>
       <p class="wmap__subtitle">
-        Mapa interactivo de saturación por bahía logística
+        Mapa interactivo de saturación por almacén y bahía logística
       </p>
     </div>
 
     <div class="wmap__controls">
-
       <!-- Buscador -->
       <div class="wmap__search-wrap">
         <span class="material-symbols-outlined wmap__search-icon" aria-hidden="true">
           search
         </span>
-
         <input id="bay-search" type="text" class="wmap__search" placeholder="Buscar bahía..." [value]="searchCode()"
           (input)="searchCode.set($any($event.target).value)" aria-label="Buscar bahía por código">
       </div>
 
-      <!-- Filtros -->
+      <!-- Filtros por tipo de zona -->
       <div class="wmap__filter-group" role="group" aria-label="Filtrar por tipo">
-
         @for (opt of filterOptions; track opt.value) {
         <button type="button" class="wmap__filter-btn" [class.wmap__filter-btn--active]="filterType() === opt.value"
           (click)="filterType.set(opt.value)" [attr.aria-pressed]="filterType() === opt.value">
@@ -32,6 +29,40 @@
         </button>
         }
       </div>
+    </div>
+  </div>
+
+  <!-- BARRA DE SELECCIÓN DE ALMACENES OFICIALES (885 POSICIONES TOTALES) -->
+  <div class="wmap__wh-bar-wrap">
+    <div class="wmap__wh-bar-header">
+      <span class="wmap__wh-bar-label">
+        <span class="material-symbols-outlined text-amber-500 text-sm">domain</span>
+        Almacenes Reales de Planta (Capacidad Oficial):
+      </span>
+    </div>
+    <div class="wmap__wh-bar" role="tablist" aria-label="Seleccionar almacén real">
+      <button
+        type="button"
+        class="wmap__wh-tab"
+        [class.is-active]="selectedWarehouseId() === 'ALL'"
+        (click)="selectWarehouse('ALL')"
+      >
+        <span class="wmap__wh-tab-name">Consolidado Planta</span>
+        <span class="wmap__wh-chip chip-all">{{ totalPlantCapacity }} pos</span>
+      </button>
+
+      @for (wh of officialWarehouses; track wh.id) {
+        <button
+          type="button"
+          class="wmap__wh-tab"
+          [class.is-active]="selectedWarehouseId() === wh.id"
+          (click)="selectWarehouse(wh.id)"
+        >
+          <span class="wmap__wh-tab-code">{{ wh.code }}</span>
+          <span class="wmap__wh-tab-name">{{ wh.name }}</span>
+          <span class="wmap__wh-chip">{{ wh.nominalCapacity }} pos</span>
+        </button>
+      }
     </div>
   </div>
 
@@ -68,33 +99,62 @@
     </div>
   </div>
 
-  <!-- CONTADORES -->
-  <div class="wmap__stats">
-
-    <div class="map-stat">
+  <!-- CONTADORES COMO FILTROS INTERACTIVOS -->
+  <div class="wmap__stats" role="group" aria-label="Filtrar por nivel de saturación">
+    <button
+      type="button"
+      class="map-stat"
+      [class.is-active]="satFilter() === 'ALL'"
+      (click)="toggleSaturationFilter('ALL')"
+      title="Mostrar todas las bahías"
+    >
       <span class="map-stat__val">{{ stats().total }}</span>
       <span class="map-stat__lbl">Bahías total</span>
-    </div>
+    </button>
 
-    <div class="map-stat map-stat--high">
+    <button
+      type="button"
+      class="map-stat map-stat--high"
+      [class.is-active]="satFilter() === 'HIGH'"
+      (click)="toggleSaturationFilter('HIGH')"
+      title="Filtrar solo bahías con alta saturación (>85%)"
+    >
       <span class="map-stat__val">{{ stats().highOcc }}</span>
       <span class="map-stat__lbl">Alta saturación</span>
-    </div>
+    </button>
 
-    <div class="map-stat map-stat--mid">
+    <button
+      type="button"
+      class="map-stat map-stat--mid"
+      [class.is-active]="satFilter() === 'MID'"
+      (click)="toggleSaturationFilter('MID')"
+      title="Filtrar solo bahías con saturación media (40-85%)"
+    >
       <span class="map-stat__val">{{ stats().medOcc }}</span>
       <span class="map-stat__lbl">Saturación media</span>
-    </div>
+    </button>
 
-    <div class="map-stat map-stat--low">
+    <button
+      type="button"
+      class="map-stat map-stat--low"
+      [class.is-active]="satFilter() === 'LOW'"
+      (click)="toggleSaturationFilter('LOW')"
+      title="Filtrar solo bahías con baja saturación (<40%)"
+    >
       <span class="map-stat__val">{{ stats().lowOcc }}</span>
       <span class="map-stat__lbl">Baja saturación</span>
-    </div>
+    </button>
 
-    <div class="map-stat map-stat--blocked">
+    <button
+      type="button"
+      class="map-stat map-stat--blocked"
+      [class.is-active]="satFilter() === 'BLOCKED'"
+      (click)="toggleSaturationFilter('BLOCKED')"
+      title="Filtrar solo bahías bloqueadas por QM"
+    >
       <span class="map-stat__val">{{ stats().blocked }}</span>
       <span class="map-stat__lbl">Bloqueadas</span>
-    </div>
+    </button>
   </div>
 
   <!-- MAPA + DETALLE -->
