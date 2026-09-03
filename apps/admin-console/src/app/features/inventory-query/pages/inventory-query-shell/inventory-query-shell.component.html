@@ -1,28 +1,40 @@
-<div class="inventory-shell-wrapper font-sans p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+<!-- inventory-query-shell.component.html — Homologado con el Design System 4GUARD WMS -->
+<div class="inventory-page">
   
-  <!-- Banner Header Principal de Consulta de Inventarios -->
-  <div class="module-header-card shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-    <div class="flex items-center gap-4">
-      <div class="module-header-icon-wrap">
-        <span class="material-symbols-outlined text-3xl">inventory</span>
-      </div>
-      <div>
-        <div class="module-header-eyebrow">
-          <span class="material-symbols-outlined icon-glow">analytics</span>
-          <span>4GUARD WMS · CONTROL DE STOCK & EXISTENCIAS</span>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL HOMOLOGADO
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="inventory-header">
+
+    <div class="inventory-header__top">
+
+      <div class="inventory-header__left">
+        <div class="inventory-header__icon-wrap">
+          <span class="material-symbols-outlined inventory-header__icon">inventory</span>
         </div>
-        <div class="flex items-center gap-2">
-          <h1 class="module-header-title">Consulta de Inventarios y Exportación Excel</h1>
-          <span class="module-header-badge">
-            WMS 4GUARD
-          </span>
+
+        <div class="inventory-header__copy">
+          <div class="inventory-header__eyebrow">
+            <a routerLink="/dashboard" class="inventory-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="inventory-header__eyebrow-sep">·</span>
+            <span>Control de Stock & Existencias</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <h1 class="inventory-header__title">Consulta de Inventarios y Exportación Excel</h1>
+            <span class="inventory-header__badge">WMS 4GUARD</span>
+          </div>
+          <p class="inventory-header__subtitle">
+            Control de stock en tiempo real, filtros multicriterio, regla de caducidad a 30 días y motor de exportación a Excel.
+          </p>
         </div>
-        <p class="module-header-subtitle">
-          Control de stock en tiempo real, filtros multicriterio, regla de caducidad a 30 días y motor de exportación a Excel.
-        </p>
       </div>
+
     </div>
-  </div>
+
+  </header>
 
   <!-- Contenido Principal: Grid interactivo y KPIs -->
   <main class="inventory-main-content">

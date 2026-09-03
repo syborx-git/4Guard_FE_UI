@@ -1,226 +1,479 @@
-# SDD — Estándar de Diseño Visual & UI/UX (SynexIA Light Mode)
+# SDD — Estándar de Diseño Visual & UI/UX (4GUARD WMS Light Mode)
 
 **Proyecto:** 4GUARD WMS  
 **Documento:** Especificación Técnica de Diseño Visual Homologado (Light Mode)  
 **Tipo:** Estándar de Arquitectura UI/UX & Design Tokens  
-**Estado:** Activo & Obligatorio para Nuevos Módulos  
-**Versión:** 1.0 (Light Edition)  
-**Ámbito de Aplicación:** Exclusivamente Modo Claro (*Light Mode*). El modo oscuro no se encuentra en desarrollo activo de momento.  
-**Control de Versiones:** Trabajo estructurado por ramas (`feature branches` integradas hacia `develop` / rama activa de entrega).  
+**Estado:** Activo & Obligatorio para Todos los Módulos  
+**Versión:** 2.0 (Homologación Unificada)  
+**Ámbito:** Modo Claro (*Light Mode Enterprise Luxury / Minimalist Industrial*).  
+**Regla de Portabilidad:** Prohibidas rutas absolutas del SO (`c:/Users/...`). Todos los imports y referencias deben ser relativos (`../../`) o usar alias (`@4guard/shared-core`).
 
 ---
 
-## 1. Objetivo y Filosofía Visual
+## 1. Filosofía Visual y Principios Clave
 
-Este documento define la **norma gráfica y de experiencia de usuario (UI/UX)** para todos los módulos actuales y futuros de **4GUARD WMS**. Su propósito es garantizar una experiencia visual ejecutiva, pulcra, moderna y de alta gama (*Enterprise Luxury / Minimalist Industrial*), eliminando fondos blancos planos y estandarizando la tipografía, colores, tarjetas de métricas KPI y paneles de trabajo.
+Todo módulo en **4GUARD WMS** debe respetar una identidad visual uniforme, ergonómica y de alto impacto estético:
 
-### Principios Fundamentales:
-1. **Cero Fondos Planos:** Todo el sistema se monta sobre un canvas cálido degradado (Lino / Marfil), aportando profundidad visual.
-2. **Jerarquía Tipográfica Impecable:** Contraste armónico entre el dorado institucional (*Prestige Gold*), azul marino profundo (*Midnight Navy*) y grises de soporte.
-3. **Métricas KPI Horizontales y Compactas:** Sin barras toscas inferiores; disposición horizontal balanceada con iconos pastel redondeados.
-4. **Patrón Master-Detail en 12 Columnas:** Directorio lateral en `col-span-4` y área de trabajo / formularios en `col-span-8`.
-5. **Aislamiento de Clases CSS:** Utilizar selectores específicos para evitar colisiones con utilidades globales.
+1. **Cero Fondos Planos:** El canvas principal utiliza un gradiente lino/marfil cálido con un brillo radial dorado muy sutil.
+2. **Tipografía Jerárquica Homologada:**
+   - **Display / Títulos / Cifras:** `'Outfit', 'Inter', system-ui, sans-serif`
+   - **Cuerpo / Etiquetas / Tablas:** `'Inter', system-ui, sans-serif`
+   - **Identificadores Técnicos:** `'JetBrains Mono', 'Fira Code', monospace` (Folios, SSCC, Lotes, UAs, Rampas, UUIDs).
+3. **Ergonomía de Cabeceras (Header + Toolbar Unificado):**
+   - Fila 1: Icono Midnight Navy + Eyebrow institucional con link de retroceso al Dashboard + Título H1 + Subtítulo.
+   - Fila 2 (Barra de Control): **Slide de Pestañas (Pill Nav)** a la izquierda + **Botón de Acción Principal Dorado** a la derecha.
+4. **Regla de Signo `+` en Botones:**  
+   Los botones de acción que agreguen registros deben usar el icono Material `<span class="material-symbols-outlined">add</span>` y texto limpio sin caracteres `+` literales (`<span>Nuevo Registro</span>`), evitando el error de doble signo (`+ +`).
+5. **Métricas KPI Horizontales (4 Columnas):**  
+   Cuadrícula de 4 tarjetas inmediatamente debajo de la cabecera, con iconos en tonos pastel y números destacados.
+6. **Layout Master-Detail de 12 Columnas:**  
+   Directorio lateral en `col-span-4` y área de trabajo/detalle en `col-span-8`.
 
 ---
 
-## 2. Paleta de Colores & Design Tokens (Light Mode)
+## 2. Paleta de Colores & Design Tokens Globales
 
-### 2.1 Fondo de Pantalla (Canvas Lino / Marfil Cálido)
-Todo componente o contenedor principal (`:host`, `.page-container`, `.shell-wrapper`) debe implementar este fondo de canvas:
+Todos los módulos deben definir o consumir las siguientes variables CSS:
 
 ```css
-background:
-  radial-gradient(circle at top right, rgba(197, 157, 67, 0.09), transparent 30rem),
-  linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
-```
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100%;
 
-### 2.2 Tokens Tipográficos y Textos
+  /* ── Marca Institucional ── */
+  --navy:           #172033;
+  --navy-mid:       #25324a;
+  --navy-light:     #344463;
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
 
-| Elemento | Color Hex | Familia Tipográfica | Tamaño / Peso | Uso / Aplicación |
-| :--- | :--- | :--- | :--- | :--- |
-| **Eyebrow / Tag Superior** | `#b8860b` / `#9b7626` | `'DM Sans', sans-serif` | `0.72rem` · 700 Bold | Encabezado institucional superior con icono |
-| **Título Principal (H1 / H2)** | `#172033` (*Midnight Navy*) | `'DM Sans', sans-serif` | `clamp(1.85rem, 2.4vw, 2.35rem)` · 400 Regular | Título principal de módulo o pantalla |
-| **Subtítulo Descriptivo** | `#718096` (*Slate*) | `'DM Sans', sans-serif` | `0.82rem` · 450 Regular | Descripción funcional de la vista |
-| **KPI Valor Numérico** | `#172033` (*Midnight Navy*) | `'DM Sans', sans-serif` | `1.85rem` · 700 Bold | Cifra central de tarjetas de métricas |
-| **KPI Etiqueta Superior** | `#718096` (*Slate*) | `'DM Sans', sans-serif` | `0.68rem` · 700 Bold | Mayúsculas con espaciado (`letter-spacing: 0.08em`) |
-| **KPI Subtítulo Inferior** | `#94a3b8` (*Muted*) | `'DM Sans', sans-serif` | `0.72rem` · 500 Medium | Explicación breve bajo el valor |
-| **Identificadores Técnicos** | `#9b7626` / `#172033` | `'JetBrains Mono', monospace` | `0.75rem` · 700 Bold | Folios (`SAL-`, `REC-`), SSCC, Lotes, UAs, Rampas |
+  /* ── Canvas & Superficies ── */
+  --bg-page:        #f5f4f0;
+  --bg-card:        rgba(255, 255, 255, 0.92);
+  --border-card:    rgba(76, 86, 105, 0.10);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
-### 2.3 Superficies y Tarjetas
+  /* ── Textos ── */
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
 
-```css
-/* Tarjeta estándar de contenido / contenedor */
-.card-surface {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  /* ── Estados & Semáforos ── */
+  --c-success:      #208457;
+  --c-success-bg:   rgba(32, 132, 87, 0.09);
+  --c-success-bdr:  rgba(32, 132, 87, 0.20);
+  --c-warning:      #a96b13;
+  --c-warning-bg:   rgba(213, 145, 39, 0.10);
+  --c-warning-bdr:  rgba(213, 145, 39, 0.22);
+  --c-danger:       #c84949;
+  --c-danger-bg:    rgba(200, 73, 73, 0.09);
+  --c-danger-bdr:   rgba(200, 73, 73, 0.20);
+  --c-info:         #2d7dd2;
+  --c-info-bg:      rgba(45, 125, 210, 0.08);
+  --c-info-bdr:     rgba(45, 125, 210, 0.20);
+
+  /* ── Tipografía ── */
+  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:      'Inter', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Radios ── */
+  --radius-card:    18px;
+  --radius-input:   10px;
+  --radius-badge:   99px;
+  --radius-btn:     10px;
 }
-
-.card-surface:hover {
-  transform: translateY(-2px);
-  border-color: rgba(197, 168, 107, 0.4);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
-}
 ```
-
-### 2.4 Paleta de Estados y Semáforos (Badges e Iconos)
-
-* **Neutral / General (`--primary`):**
-  - Icono / Badge: Fondo `#f1f5f9` · Texto `#1e293b` · Borde `#e2e8f0`
-* **Precaución / Cuarentena / En Espera (`--warning`):**
-  - Icono / Badge: Fondo `#fefce8` · Texto `#b45309` · Borde `#fef08a`
-* **Éxito / Aprobado / Completado (`--success`):**
-  - Icono / Badge: Fondo `#ecfdf5` · Texto `#059669` · Borde `#a7f3d0`
-* **Peligro / Bloqueado / Cancelado (`--danger`):**
-  - Icono / Badge: Fondo `#fef2f2` · Texto `#dc2626` · Borde `#fecaca`
-* **Informativo / En Proceso (`--info`):**
-  - Icono / Badge: Fondo `#eff6ff` · Texto `#2563eb` · Borde `#bfdbfe`
 
 ---
 
-## 3. Componentes Estándar Reutilizables
+## 3. Estructura de Pantalla Estándar (Plantilla de Módulo)
 
-### 3.1 Cabecera de Módulo (Header)
+### 3.1 HTML Estándar del Componente de Módulo
 
 ```html
-<div class="flex items-center justify-between gap-4 flex-wrap pb-1">
-  <div>
-    <div class="module-header__eyebrow">
-      <span class="material-symbols-outlined icon-glow">verified_user</span>
-      <span>4GUARD WMS · [NOMBRE DE SUB-ÁREA]</span>
+<div class="module-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       1. CABECERA PRINCIPAL & BARRA DE CONTROL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="module-header">
+    
+    <!-- Fila 1: Icono, Eyebrow, Título y Subtítulo -->
+    <div class="module-header__top">
+      <div class="module-header__left">
+        <div class="module-header__icon-wrap">
+          <span class="material-symbols-outlined module-header__icon">inventory_2</span>
+        </div>
+
+        <div class="module-header__copy">
+          <div class="module-header__eyebrow">
+            <a routerLink="/dashboard" class="module-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="module-header__eyebrow-sep">·</span>
+            <span>Operaciones & Logística</span>
+          </div>
+          <h1 class="module-header__title">[Nombre del Módulo]</h1>
+          <p class="module-header__subtitle">
+            [Descripción funcional y concisa del módulo en tiempo real].
+          </p>
+        </div>
+      </div>
     </div>
-    <h2 class="module-header__title">[Nombre del Módulo]</h2>
-    <p class="module-header__subtitle">[Descripción breve y concisa de la operación en tiempo real].</p>
+
+    <!-- Fila 2: Slide de Pestañas (Izquierda) + Botón Acción Principal (Derecha) -->
+    <div class="module-toolbar-row">
+      <!-- Si el módulo contiene submódulos / tabs de navegación -->
+      <nav class="module-tabs-nav" aria-label="Navegación del módulo">
+        <a
+          routerLink="/modulo/submodulo-1"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="module-tab-btn"
+        >
+          <span class="material-symbols-outlined">move_to_inbox</span>
+          <span>1. Submódulo Uno</span>
+        </a>
+
+        <a
+          routerLink="/modulo/submodulo-2"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="module-tab-btn"
+        >
+          <span class="material-symbols-outlined">compare_arrows</span>
+          <span>2. Submódulo Dos</span>
+        </a>
+      </nav>
+
+      <!-- Botón de Acción Principal (Solo 1 signo '+' generado por el icono) -->
+      <button
+        type="button"
+        (click)="startPrimaryAction()"
+        class="btn-primary-gold"
+        aria-label="Registrar nueva operación"
+      >
+        <span class="material-symbols-outlined">add</span>
+        <span>Nueva Operación</span>
+      </button>
+    </div>
+
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       2. TARJETAS DE MÉTRICAS KPI (4 COLUMNAS)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="module-kpi-grid">
+    <!-- Total / General -->
+    <div class="module-kpi-card module-kpi-card--primary">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">analytics</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">TOTAL REGISTROS</span>
+        <strong class="module-kpi-card__value">{{ totalCount() }}</strong>
+        <span class="module-kpi-card__sub">En sistema / General</span>
+      </div>
+    </div>
+
+    <!-- Pendiente / Proceso -->
+    <div class="module-kpi-card module-kpi-card--warning">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">pending_actions</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">EN PROCESO</span>
+        <strong class="module-kpi-card__value">{{ pendingCount() }}</strong>
+        <span class="module-kpi-card__sub">En andén / Espera</span>
+      </div>
+    </div>
+
+    <!-- Completado / Exitoso -->
+    <div class="module-kpi-card module-kpi-card--success">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">COMPLETADOS</span>
+        <strong class="module-kpi-card__value">{{ completedCount() }}</strong>
+        <span class="module-kpi-card__sub">Procesados con éxito</span>
+      </div>
+    </div>
+
+    <!-- Bloqueado / Cancelado -->
+    <div class="module-kpi-card module-kpi-card--danger">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">cancel</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">BLOQUEADOS</span>
+        <strong class="module-kpi-card__value">{{ blockedCount() }}</strong>
+        <span class="module-kpi-card__sub">Rechazados / En ceros</span>
+      </div>
+    </div>
   </div>
-  
-  <!-- Botón de acción principal institucional -->
-  <button
-    type="button"
-    class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
-  >
-    <span class="material-symbols-outlined text-base">add</span>
-    <span>[Texto de Acción Principal]</span>
-  </button>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       3. ÁREA PRINCIPAL MASTER-DETAIL (12 COLUMNAS)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    
+    <!-- Columna Izquierda: Directorio & Búsqueda (4 Columnas) -->
+    <aside class="module-directory lg:col-span-4" aria-label="Directorio">
+      <!-- Buscador y Filtros -->
+      <div class="module-directory__filters">
+        <div class="module-search">
+          <span class="material-symbols-outlined module-search__icon">search</span>
+          <input
+            type="search"
+            class="module-search__input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por folio, cliente, lote..."
+          />
+        </div>
+      </div>
+
+      <!-- Lista de Items -->
+      <div class="module-directory__list">
+        @for (item of filteredItems(); track item.id) {
+          <div
+            (click)="selectItem(item)"
+            [class.item--selected]="selectedItem()?.id === item.id"
+            class="module-directory-item"
+          >
+            <!-- Detalle breve -->
+          </div>
+        }
+      </div>
+    </aside>
+
+    <!-- Columna Derecha: Panel de Trabajo / Detalle (8 Columnas) -->
+    <main class="lg:col-span-8 space-y-4">
+      <!-- Contenido / Formularios / Tablas de detalle -->
+    </main>
+
+  </div>
+
 </div>
 ```
 
+---
+
+### 3.2 CSS Estándar del Componente de Módulo
+
 ```css
-.module-header__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #b8860b;
-  margin-bottom: 4px;
+/* ── PÁGINA ── */
+.module-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  width: 100%;
+  padding: 1.75rem 2rem;
+  gap: 1.25rem;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.07), transparent 30rem),
+    var(--bg-page);
+  overflow-x: hidden;
 }
 
-.module-header__eyebrow .material-symbols-outlined {
-  font-size: 16px !important;
-  color: #b8860b;
+/* ── HEADER ── */
+.module-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.module-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.module-header__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1rem;
+}
+
+.module-header__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22);
+  flex-shrink: 0;
+}
+
+.module-header__icon {
+  color: #ffffff;
+  font-size: 26px;
+}
+
+.module-header__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.module-header__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-gold);
+}
+
+.module-header__eyebrow-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  border-radius: 5px;
+  padding: 1px 7px;
+  text-decoration: none;
+  color: var(--text-gold);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.module-header__eyebrow-tag:hover {
+  background: rgba(197, 168, 107, 0.20);
+}
+
+.module-header__eyebrow-sep {
+  opacity: 0.4;
 }
 
 .module-header__title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
   margin: 0;
-  color: #172033;
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: clamp(1.85rem, 2.4vw, 2.35rem) !important;
-  font-weight: 400 !important;
-  line-height: 1.15 !important;
-  letter-spacing: -0.035em !important;
+  line-height: 1.15;
 }
 
 .module-header__subtitle {
-  margin: 4px 0 0;
-  color: #718096;
   font-size: 0.82rem;
-  font-weight: 450;
-  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
 }
-```
 
----
+/* ── BARRA DE CONTROL (SLIDE DE PESTAÑAS + BOTÓN ACCIÓN) ── */
+.module-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
 
-### 3.2 Tarjetas KPI Horizontales (`.movement-kpi-grid` & `.movement-kpi-card`)
+/* ── SLIDE DE PESTAÑAS (PILL NAV) ── */
+.module-tabs-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #ffffff;
+  border: 1px solid var(--border-card);
+  padding: 0.35rem;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
 
-```html
-<div class="movement-kpi-grid">
+.module-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
 
-  <!-- KPI 1: General -->
-  <div class="movement-kpi-card movement-kpi-card--primary">
-    <div class="movement-kpi-card__icon">
-      <span class="material-symbols-outlined">inventory_2</span>
-    </div>
-    <div class="movement-kpi-card__info">
-      <span class="movement-kpi-card__label">TOTAL OPERACIONES</span>
-      <strong class="movement-kpi-card__value">{{ totalCount() }}</strong>
-      <span class="movement-kpi-card__sub">En sistema / General</span>
-    </div>
-  </div>
+.module-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(23, 32, 51, 0.05);
+}
 
-  <!-- KPI 2: En Proceso / Alerta -->
-  <div class="movement-kpi-card movement-kpi-card--warning">
-    <div class="movement-kpi-card__icon">
-      <span class="material-symbols-outlined">hourglass_top</span>
-    </div>
-    <div class="movement-kpi-card__info">
-      <span class="movement-kpi-card__label">PENDIENTES</span>
-      <strong class="movement-kpi-card__value">{{ pendingCount() }}</strong>
-      <span class="movement-kpi-card__sub">En andén / Proceso</span>
-    </div>
-  </div>
+.module-tab-btn.tab-active {
+  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.22);
+}
 
-  <!-- KPI 3: Exitoso / Completado -->
-  <div class="movement-kpi-card movement-kpi-card--success">
-    <div class="movement-kpi-card__icon">
-      <span class="material-symbols-outlined">check_circle</span>
-    </div>
-    <div class="movement-kpi-card__info">
-      <span class="movement-kpi-card__label">LIBERADOS</span>
-      <strong class="movement-kpi-card__value">{{ completedCount() }}</strong>
-      <span class="movement-kpi-card__sub">Inspección finalizada</span>
-    </div>
-  </div>
+.module-tab-btn.tab-active span.material-symbols-outlined {
+  color: var(--gold-light);
+}
 
-  <!-- KPI 4: No conforme / Cancelado -->
-  <div class="movement-kpi-card movement-kpi-card--danger">
-    <div class="movement-kpi-card__icon">
-      <span class="material-symbols-outlined">block</span>
-    </div>
-    <div class="movement-kpi-card__info">
-      <span class="movement-kpi-card__label">BLOQUEADOS</span>
-      <strong class="movement-kpi-card__value">{{ blockedCount() }}</strong>
-      <span class="movement-kpi-card__sub">No conformidades</span>
-    </div>
-  </div>
+/* ── BOTÓN DE ACCIÓN PRINCIPAL (PRESTIGE GOLD) ── */
+.btn-primary-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+  color: #0f172a;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(184, 134, 11, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-</div>
-```
+.btn-primary-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(184, 134, 11, 0.35);
+  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+}
 
-```css
-.movement-kpi-grid {
+/* ── TARJETAS KPI HORIZONTALES (4 COLUMNAS) ── */
+.module-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
 @media (max-width: 1024px) {
-  .movement-kpi-grid {
+  .module-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .movement-kpi-grid {
+  .module-kpi-grid {
     grid-template-columns: 1fr;
   }
 }
 
-.movement-kpi-card {
+.module-kpi-card {
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 18px;
@@ -234,13 +487,13 @@ background:
   box-sizing: border-box;
 }
 
-.movement-kpi-card:hover {
+.module-kpi-card:hover {
   transform: translateY(-2px);
   border-color: rgba(197, 168, 107, 0.4);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
 }
 
-.movement-kpi-card__icon {
+.module-kpi-card__icon {
   width: 48px;
   height: 48px;
   border-radius: 14px;
@@ -250,35 +503,35 @@ background:
   flex-shrink: 0;
 }
 
-.movement-kpi-card__icon .material-symbols-outlined {
+.module-kpi-card__icon .material-symbols-outlined {
   font-size: 24px !important;
   line-height: 1 !important;
 }
 
-.movement-kpi-card--primary .movement-kpi-card__icon {
+.module-kpi-card--primary .module-kpi-card__icon {
   background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0;
 }
-.movement-kpi-card--warning .movement-kpi-card__icon {
+.module-kpi-card--warning .module-kpi-card__icon {
   background: #fefce8; color: #b45309; border: 1px solid #fef08a;
 }
-.movement-kpi-card--success .movement-kpi-card__icon {
+.module-kpi-card--success .module-kpi-card__icon {
   background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;
 }
-.movement-kpi-card--danger .movement-kpi-card__icon {
+.module-kpi-card--danger .module-kpi-card__icon {
   background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
 }
-.movement-kpi-card--info .movement-kpi-card__icon {
+.module-kpi-card--info .module-kpi-card__icon {
   background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
 }
 
-.movement-kpi-card__info {
+.module-kpi-card__info {
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-width: 0;
 }
 
-.movement-kpi-card__label {
+.module-kpi-card__label {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -287,16 +540,16 @@ background:
   line-height: 1.2;
 }
 
-.movement-kpi-card__value {
+.module-kpi-card__value {
   font-size: 1.85rem;
   font-weight: 700;
-  font-family: 'DM Sans', sans-serif !important;
+  font-family: var(--font-display);
   line-height: 1.1;
-  color: #172033;
+  color: var(--text-primary);
   margin: 2px 0;
 }
 
-.movement-kpi-card__sub {
+.module-kpi-card__sub {
   font-size: 0.72rem;
   color: #94a3b8;
   font-weight: 500;
@@ -306,44 +559,15 @@ background:
 
 ---
 
-### 3.3 Estructura Master-Detail (Workbench de 12 Columnas)
+## 4. Checklist Obligatorio para Nuevos Módulos
 
-```html
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-  <!-- Columna Izquierda: Directorio (4 columnas) -->
-  <aside class="carriers-directory lg:col-span-4" aria-label="Directorio">
-    <div class="carriers-directory__filters">
-      <!-- Buscador -->
-    </div>
-    <div class="carriers-directory__list">
-      <!-- Items -->
-    </div>
-    <div class="carriers-directory__footer">
-      <!-- Conteo -->
-    </div>
-  </aside>
+Al crear un nuevo módulo, verificar estrictamente los siguientes puntos antes del commit:
 
-  <!-- Columna Derecha: Panel de Detalle o Formulario (8 columnas) -->
-  <main class="lg:col-span-8 space-y-4">
-    <!-- Estado Idle (Sin selección) / Create (Captura) / Detail (Consulta) -->
-  </main>
-</div>
-```
-
----
-
-## 4. Guía de Trabajo por Ramas (Git Workflow)
-
-1. **Creación de Rama de Característica:**  
-   Cada módulo nuevo o ajuste se trabaja en su rama dedicada (ejemplo: `feature/modulo-embarques`, `fix/calidad-tabla`, `edgar_remision`).
-2. **Preservar la Lógica Funcional:**  
-   Las tareas de homologación visual **nunca** deben alterar `Signals`, `Forms`, `Services`, `Events` o validaciones operativas.
-3. **Validación de Compilación Obligatoria:**  
-   Antes de dar por concluida una rama o preparar un merge:
-   ```bash
-   npm run build:admin
-   ```
-   El bundle de producción de Angular debe finalizar con **Exit code: 0** y sin errores de typescript o css.
-4. **Verificación de Reglas CSS:**  
-   - Verificar que no existan reglas globales sobreescritas (`.kpi-card` genérico).
-   - Verificar que el contenedor de módulo no fuerce `grid-template-columns` sobre el workbench completo.
+- [ ] **TypeScript Imports:** Si se usan `routerLinkActive` y `[routerLinkActiveOptions]`, incluir tanto `RouterLink` como `RouterLinkActive` en `imports: [...]`.
+- [ ] **Sin Rutas Absolutas:** Usar siempre imports relativos (`../../`) o alias (`@4guard/shared-core`).
+- [ ] **Estructura de Cabecera:**
+  - Fila 1: Icono Navy (`54x54px`), Eyebrow con link de retorno, Título H1 (`Outfit 1.7rem`), Subtítulo (`0.82rem`).
+  - Fila 2: Slide de pestañas a la izquierda + Botón dorado a la derecha.
+- [ ] **Botones de Registro:** El icono `add` es el único que proporciona el signo `+`. El texto del botón no debe tener `+` redundante.
+- [ ] **KPIs:** Disposición de 4 tarjetas horizontales con sus 4 variantes de color.
+- [ ] **Compilación Limpia:** Ejecutar `npm run build:admin` o `npx ng build admin-console --configuration development` y confirmar **0 errores**.

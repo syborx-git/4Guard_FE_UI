@@ -1,7 +1,7 @@
 import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
@@ -29,6 +29,8 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterLink,
+    RouterLinkActive,
     LeaderAuthModalComponent,
     PrintReceptionLayoutComponent,
     PrintCancellationLayoutComponent,

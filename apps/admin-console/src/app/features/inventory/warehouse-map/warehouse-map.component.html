@@ -1,17 +1,29 @@
 <!-- Inventario 2D — Topología Cromática -->
 <section class="wmap page-enter" aria-label="Mapa 2D del Almacén">
 
-  <!-- ENCABEZADO -->
-  <div class="wmap__header">
-    <div>
-      <div class="wmap__eyebrow">
-        <span class="material-symbols-outlined icon-glow">warehouse</span>
-        <span>4GUARD WMS · TOPOLOGÍA CROMÁTICA & CAPACIDAD</span>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ENCABEZADO PRINCIPAL HOMOLOGADO
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="wmap__header">
+    <div class="wmap__header-left">
+      <div class="wmap__icon-wrap">
+        <span class="material-symbols-outlined wmap__header-icon">inventory_2</span>
       </div>
-      <h2 class="wmap__title">Topología Cromática</h2>
-      <p class="wmap__subtitle">
-        Mapa interactivo de saturación por almacén y bahía logística en tiempo real
-      </p>
+
+      <div class="wmap__copy">
+        <div class="wmap__eyebrow">
+          <a routerLink="/dashboard" class="wmap__eyebrow-tag">
+            <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+            <span>Dashboard</span>
+          </a>
+          <span class="wmap__eyebrow-sep">·</span>
+          <span>Topología Cromática & Capacidad</span>
+        </div>
+        <h1 class="wmap__title">Inventario y Mapa 2D</h1>
+        <p class="wmap__subtitle">
+          Mapa interactivo de saturación por almacén y bahía logística en tiempo real
+        </p>
+      </div>
     </div>
 
     <div class="wmap__controls">
@@ -34,7 +46,7 @@
         }
       </div>
     </div>
-  </div>
+  </header>
 
   <!-- BARRA INTEGRADA DE ALMACENES & CLAVE CROMÁTICA -->
   <div class="wmap__toolbar-card">

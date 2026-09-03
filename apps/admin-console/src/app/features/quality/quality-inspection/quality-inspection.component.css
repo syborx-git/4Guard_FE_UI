@@ -6,6 +6,34 @@
 :host {
   display: block;
   min-height: 100%;
+
+  --navy:           #172033;
+  --navy-mid:       #25324a;
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+
+  --bg-page:        #f5f4f0;
+  --bg-card:        rgba(255, 255, 255, 0.95);
+  --border-card:    rgba(76, 86, 105, 0.12);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255,255,255,0.85);
+
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
+
+  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:      'Inter', 'DM Sans', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-card:    20px;
+  --radius-input:   10px;
+  --radius-badge:   99px;
+  --radius-btn:     10px;
+
+  font-family: var(--font-body);
 }
 
 .inspection-page {
@@ -14,8 +42,8 @@
   background:
     radial-gradient(circle at top right, rgba(197, 157, 67, 0.09), transparent 30rem),
     linear-gradient(180deg, #f8f6f1 0%, #f1eee7 100%);
-  color: #18243c;
-  font-family: 'DM Sans', sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-body);
 }
 
 .inspection-overlay {
@@ -30,7 +58,7 @@
   position: relative;
   width: min(1180px, 100%);
   overflow: hidden;
-  border: 1px solid rgba(23, 36, 61, 0.08);
+  border: 1px solid var(--border-card);
   border-radius: 28px;
   background:
     linear-gradient(145deg,
@@ -68,10 +96,10 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid rgba(23, 36, 61, 0.09);
+  border: 1px solid var(--border-card);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.76);
-  color: #748095;
+  color: var(--text-muted);
   cursor: pointer;
   transition:
     background 150ms ease,
@@ -82,7 +110,7 @@
 
 .inspection-close:hover {
   background: #ffffff;
-  color: #1d2b46;
+  color: var(--text-primary);
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(32, 45, 70, 0.08);
 }
@@ -98,7 +126,7 @@
   align-items: flex-start;
   gap: 1rem;
   padding: 1.6rem 4rem 1.35rem 1.6rem;
-  border-bottom: 1px solid rgba(23, 36, 61, 0.07);
+  border-bottom: 1px solid var(--border-card);
   background:
     linear-gradient(135deg,
       rgba(255, 255, 255, 0.92),
@@ -112,11 +140,11 @@
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
-  border: 1px solid rgba(174, 129, 37, 0.18);
+  border: 1px solid var(--gold-border);
   border-radius: 15px;
-  background: #fff7e6;
-  color: #a87d25;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  color: var(--gold-light);
+  box-shadow: 0 6px 16px rgba(23, 32, 51, 0.18);
 }
 
 .inspection-panel__icon .material-symbols-outlined {
@@ -133,7 +161,8 @@
   gap: 0.55rem;
   flex-wrap: wrap;
   margin-bottom: 0.35rem;
-  color: #8a95a7;
+  color: var(--text-muted);
+  font-family: var(--font-body);
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.11em;
@@ -147,9 +176,7 @@
   min-height: 20px;
   padding: 0.18rem 0.55rem;
   border-radius: 999px;
-  font-family:
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-mono);
   font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -163,22 +190,23 @@
 
 .inspection-panel__title {
   margin: 0;
-  color: #17243d;
-  font-family: 'DM Sans', sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: clamp(1.45rem, 2.2vw, 2rem);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.15;
 }
 
 .inspection-panel__title span {
-  color: #aa7e27;
+  color: var(--text-gold);
 }
 
 .inspection-panel__subtitle {
   max-width: 780px;
   margin: 0.55rem 0 0;
-  color: #788397;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
   font-size: 0.77rem;
   line-height: 1.55;
 }
