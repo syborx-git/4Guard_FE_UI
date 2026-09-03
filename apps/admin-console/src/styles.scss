@@ -616,3 +616,193 @@ Glass Components
   background: transparent;
 
 }
+
+// ============================================================
+// 13. ENTERPRISE PRINT ENGINE & PDF ISOLATION (4GUARD WMS)
+// ============================================================
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0 !important;
+  }
+
+  // 1. Reset base de impresión
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 12mm 15mm 12mm 15mm !important;
+    font-size: 11pt !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  // 2. Ocultar estrictamente toda la UI de navegación, shell y complementos
+  aside,
+  header,
+  nav,
+  footer:not(.print-footer),
+  .sidebar,
+  .shell__header,
+  .shell__topbar,
+  .shell__sidebar,
+  .shell__toggle,
+  .no-print,
+  .print\:hidden,
+  .print-hidden,
+  button,
+  fg-forbot-trigger-button,
+  fg-forbot-chat-drawer,
+  .forbot-avatar-container,
+  .modal-header,
+  .print-modal-header,
+  .modal-actions,
+  .print-modal-actions,
+  .driver-popover,
+  .toast-container,
+  #sidebar-toggle-btn {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  // 3. Desacoplar layouts de pantalla completa (Shell & Router Outlet)
+  .shell,
+  .shell__main,
+  .shell__content,
+  .shell--collapsed,
+  main,
+  router-outlet + * {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    min-height: auto !important;
+    transform: none !important;
+  }
+
+  // 4. Transformar los contenedores Modal en hojas de papel limpias
+  .modal-overlay,
+  .print-modal-overlay {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+  }
+
+  .modal-card,
+  .print-modal-card {
+    position: static !important;
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    border-radius: 0 !important;
+  }
+
+  .modal-body,
+  .print-modal-body {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  // 5. Estilos de Documento Oficial Imprimible
+  .print-container,
+  .official-print-document,
+  .fg-print-outbound,
+  fg-print-reception-layout,
+  fg-print-cancellation-layout,
+  fg-print-transfer-layout,
+  fg-print-dispatch-layout {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  // 6. Tablas, bordes y saltos de página inteligentes
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  .avoid-break,
+  .print-signatures,
+  .print-header,
+  .print-summary {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  // Respetar colores exactos en fondos de advertencias/comprobantes
+  .bg-rose-600 { background-color: #e11d48 !important; color: #ffffff !important; }
+  .bg-rose-50 { background-color: #fff1f2 !important; }
+  .border-rose-600 { border-color: #e11d48 !important; }
+  .text-rose-700 { color: #be123c !important; }
+
+  .bg-amber-500\/10 { background-color: #fef3c7 !important; }
+  .bg-emerald-500\/10 { background-color: #d1fae5 !important; }
+  .bg-slate-900 { background-color: #0f172a !important; color: #ffffff !important; }
+  .bg-slate-800 { background-color: #1e293b !important; color: #ffffff !important; }
+  .bg-slate-200 { background-color: #e2e8f0 !important; }
+  .bg-slate-100 { background-color: #f1f5f9 !important; }
+  .bg-slate-50 { background-color: #f8fafc !important; }
+}
