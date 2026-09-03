@@ -296,6 +296,9 @@
   flex-direction: column;
   padding: 18px 14px;
   overflow: hidden;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
 
   background:
     linear-gradient(145deg,
@@ -331,10 +334,41 @@
 
 .map-stat:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 168, 107, 0.16);
+  border-color: rgba(197, 168, 107, 0.25);
   box-shadow:
     0 16px 38px rgba(15, 23, 42, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.map-stat.is-active {
+  transform: translateY(-2px);
+  border-color: #0284c7 !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(224, 242, 254, 0.5)) !important;
+  box-shadow: 0 8px 25px rgba(2, 132, 199, 0.25), inset 0 0 0 2px #0284c7 !important;
+}
+
+.map-stat--high.is-active {
+  border-color: #22a99a !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(204, 251, 241, 0.5)) !important;
+  box-shadow: 0 8px 25px rgba(34, 169, 154, 0.35), inset 0 0 0 2px #22a99a !important;
+}
+
+.map-stat--mid.is-active {
+  border-color: #2d3748 !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(241, 245, 249, 0.8)) !important;
+  box-shadow: 0 8px 25px rgba(45, 55, 72, 0.35), inset 0 0 0 2px #2d3748 !important;
+}
+
+.map-stat--low.is-active {
+  border-color: #d97706 !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(254, 243, 199, 0.6)) !important;
+  box-shadow: 0 8px 25px rgba(217, 119, 6, 0.35), inset 0 0 0 2px #d97706 !important;
+}
+
+.map-stat--blocked.is-active {
+  border-color: #ef4444 !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(254, 226, 226, 0.6)) !important;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35), inset 0 0 0 2px #ef4444 !important;
 }
 
 .map-stat__val {
@@ -1996,4 +2030,117 @@
   .bay-detail {
     animation-duration: 0.01ms !important;
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BARRA DE SELECCIÓN DE ALMACENES OFICIALES (885 POSICIONES)
+   ══════════════════════════════════════════════════════════ */
+.wmap__wh-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.wmap__wh-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wmap__wh-bar-label {
+  font-size: 0.775rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wmap__wh-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.wmap__wh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.wmap__wh-tab:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.wmap__wh-tab.is-active {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.20);
+}
+
+.wmap__wh-tab-code {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #1e293b;
+}
+
+.wmap__wh-tab.is-active .wmap__wh-tab-code {
+  background: rgba(255, 255, 255, 0.20);
+  color: #ffffff;
+}
+
+.wmap__wh-chip {
+  font-size: 0.675rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(212, 175, 55, 0.30);
+}
+
+.wmap__wh-tab.is-active .wmap__wh-chip {
+  background: rgba(212, 175, 55, 0.30);
+  color: #fef3c7;
+  border-color: rgba(212, 175, 55, 0.60);
+}
+
+.chip-all {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0369a1;
+  border-color: rgba(2, 132, 199, 0.30);
+}
+
+.wmap__wh-tab.is-active .chip-all {
+  background: rgba(56, 189, 248, 0.25);
+  color: #e0f2fe;
+  border-color: rgba(56, 189, 248, 0.50);
 }
