@@ -6,11 +6,12 @@
   <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
   <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
     <div>
-      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">move_to_inbox</span>
-        <span>Recepción de Mercancía</span>
-      </h2>
-      <p class="text-xs text-slate-500">Control de arribo en caseta, inspección física y registro de tarimas</p>
+      <div class="receiving-header__eyebrow">
+        <span class="material-symbols-outlined icon-glow">move_to_inbox</span>
+        <span>4GUARD WMS · OPERACIONES DE RECEPCIÓN</span>
+      </div>
+      <h2 class="receiving-header__title">Recepción de Mercancía</h2>
+      <p class="receiving-header__subtitle">Control de arribo en caseta, inspección física y registro de tarimas en tiempo real.</p>
     </div>
 
     <!-- SWITCHER DE PESTAÑAS: WORKBENCH VS MONITOR DE UNIDADES EN PATIO -->
@@ -57,54 +58,54 @@
     </div>
   </div>
 
-  <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON TRANSPORTISTAS) ── -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" [class.hidden]="activePatioTab() === 'patio'">
+  <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
+  <div class="movement-kpi-grid" [class.hidden]="activePatioTab() === 'patio'">
     <!-- Total Recepciones -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white">
+    <div class="movement-kpi-card movement-kpi-card--primary">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">local_shipping</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value">{{ kpiTotal() }}</span>
-        <span class="kpi-card__label">Total Recepciones</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">TOTAL RECEPCIONES</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotal() }}</strong>
+        <span class="movement-kpi-card__sub">En sistema / General</span>
       </div>
-      <div class="kpi-card__bar bg-slate-800 dark:bg-slate-300"></div>
     </div>
 
     <!-- En Caseta / Registradas -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-amber-500/15 text-amber-600 dark:text-amber-400">
+    <div class="movement-kpi-card movement-kpi-card--warning">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">pending_actions</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-amber-600 dark:text-amber-400">{{ kpiRegistered() }}</span>
-        <span class="kpi-card__label">Registradas Caseta</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">REGISTRADAS CASETA</span>
+        <strong class="movement-kpi-card__value">{{ kpiRegistered() }}</strong>
+        <span class="movement-kpi-card__sub">En andén / Espera</span>
       </div>
-      <div class="kpi-card__bar bg-amber-500"></div>
     </div>
 
     <!-- Completadas / Cierres -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+    <div class="movement-kpi-card movement-kpi-card--success">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">check_circle</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">{{ kpiCompleted() }}</span>
-        <span class="kpi-card__label">Completadas</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">COMPLETADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiCompleted() }}</strong>
+        <span class="movement-kpi-card__sub">Inspección finalizada</span>
       </div>
-      <div class="kpi-card__bar bg-emerald-500"></div>
     </div>
 
     <!-- Canceladas -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-rose-500/15 text-rose-600 dark:text-rose-400">
+    <div class="movement-kpi-card movement-kpi-card--danger">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">cancel</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-rose-600 dark:text-rose-400">{{ kpiCancelled() }}</span>
-        <span class="kpi-card__label">Canceladas</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">CANCELADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiCancelled() }}</strong>
+        <span class="movement-kpi-card__sub">Rechazadas / Cero</span>
       </div>
-      <div class="kpi-card__bar bg-rose-500"></div>
     </div>
   </div>
 

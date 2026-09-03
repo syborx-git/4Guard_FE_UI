@@ -4,16 +4,17 @@
   Arquitectura Master-Detail unificada (Homologada con Recepción de Mercancía)
 -->
 
-<div class="space-y-5">
+<div class="transfer-workbench space-y-5">
 
   <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
   <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
     <div>
-      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">compare_arrows</span>
-        <span>Cambio de Almacén</span>
-      </h2>
-      <p class="text-xs text-slate-500">Reubicación de inventario en ceros (Putaway / Traspasos internos)</p>
+      <div class="transfer-header__eyebrow">
+        <span class="material-symbols-outlined icon-glow">compare_arrows</span>
+        <span>4GUARD WMS · REUBICACIÓN DE INVENTARIO</span>
+      </div>
+      <h2 class="transfer-header__title">Cambio de Almacén</h2>
+      <p class="transfer-header__subtitle">Reubicación de inventario en ceros (Putaway / Traspasos internos en tiempo real).</p>
     </div>
     <button
       type="button"
@@ -25,54 +26,54 @@
     </button>
   </div>
 
-  <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON RECEPCIÓN Y TRANSPORTISTAS) ── -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
+  <div class="movement-kpi-grid">
     <!-- Total Traspasos -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white">
+    <div class="movement-kpi-card movement-kpi-card--primary">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">swap_horiz</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value">{{ kpiTotalTransfers() }}</span>
-        <span class="kpi-card__label">Total Traspasos</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">TOTAL TRASPASOS</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotalTransfers() }}</strong>
+        <span class="movement-kpi-card__sub">En sistema / General</span>
       </div>
-      <div class="kpi-card__bar bg-slate-800 dark:bg-slate-300"></div>
     </div>
 
     <!-- Bahías Ocupadas -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-amber-500/15 text-amber-600 dark:text-amber-400">
+    <div class="movement-kpi-card movement-kpi-card--warning">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">warehouse</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-amber-600 dark:text-amber-400">{{ kpiOccupiedLocations() }}</span>
-        <span class="kpi-card__label">Bahías con Stock</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">BAHÍAS CON STOCK</span>
+        <strong class="movement-kpi-card__value">{{ kpiOccupiedLocations() }}</strong>
+        <span class="movement-kpi-card__sub">Ocupadas / Activas</span>
       </div>
-      <div class="kpi-card__bar bg-amber-500"></div>
     </div>
 
     <!-- Bahías Disponibles (En Ceros) -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+    <div class="movement-kpi-card movement-kpi-card--success">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">check_circle</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">{{ kpiAvailableLocations() }}</span>
-        <span class="kpi-card__label">Bahías en Ceros</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">BAHÍAS EN CEROS</span>
+        <strong class="movement-kpi-card__value">{{ kpiAvailableLocations() }}</strong>
+        <span class="movement-kpi-card__sub">Listas para putaway</span>
       </div>
-      <div class="kpi-card__bar bg-emerald-500"></div>
     </div>
 
     <!-- UAs Reubicadas -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-blue-500/15 text-blue-600 dark:text-blue-400">
+    <div class="movement-kpi-card movement-kpi-card--info">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">move_to_inbox</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-blue-600 dark:text-blue-400">{{ kpiTotalPalletsMoved() }}</span>
-        <span class="kpi-card__label">UAs Reubicadas</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">UAS REUBICADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotalPalletsMoved() }}</strong>
+        <span class="movement-kpi-card__sub">Tarimas transferidas</span>
       </div>
-      <div class="kpi-card__bar bg-blue-500"></div>
     </div>
   </div>
 

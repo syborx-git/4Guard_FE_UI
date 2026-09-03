@@ -5,16 +5,17 @@
   Folio institucional: SAL-YYYY-XXXXXX
 -->
 
-<div class="space-y-5">
+<div class="outbound-workbench space-y-5">
 
   <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
   <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
     <div>
-      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">local_shipping</span>
-        <span>Salidas de Almacén</span>
-      </h2>
-      <p class="text-xs text-slate-500">Despacho Outbound, asignación de transporte, precintos y control FIFO / FEFO</p>
+      <div class="outbound-header__eyebrow">
+        <span class="material-symbols-outlined icon-glow">local_shipping</span>
+        <span>4GUARD WMS · OPERACIONES DE SALIDA</span>
+      </div>
+      <h2 class="outbound-header__title">Salidas de Almacén</h2>
+      <p class="outbound-header__subtitle">Despacho Outbound, asignación de transporte, precintos y control FIFO / FEFO en tiempo real.</p>
     </div>
     <button
       type="button"
@@ -27,50 +28,56 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       KPI CARDS SUPERIORES (4 MÉTRICAS EN TIEMPO REAL)
+       KPI CARDS SUPERIORES (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT)
        ═══════════════════════════════════════════════════════════════════ -->
-  <div class="outbound-kpi-row">
-
-    <div class="outbound-kpi-card">
-      <div class="kpi-icon-box">
+  <div class="movement-kpi-grid">
+    <!-- Total Salidas -->
+    <div class="movement-kpi-card movement-kpi-card--primary">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">local_shipping</span>
       </div>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ kpiTotalOutbounds() }}</div>
-        <div class="kpi-label">Total Salidas</div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">TOTAL SALIDAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotalOutbounds() }}</strong>
+        <span class="movement-kpi-card__sub">En sistema / General</span>
       </div>
     </div>
 
-    <div class="outbound-kpi-card">
-      <div class="kpi-icon-box">
+    <!-- Tarimas Despachadas -->
+    <div class="movement-kpi-card movement-kpi-card--warning">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">inventory</span>
       </div>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ kpiTotalPallets() }}</div>
-        <div class="kpi-label">Tarimas Despachadas</div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">TARIMAS DESPACHADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotalPallets() }}</strong>
+        <span class="movement-kpi-card__sub">UAs embarcadas</span>
       </div>
     </div>
 
-    <div class="outbound-kpi-card">
-      <div class="kpi-icon-box">
+    <!-- Clientes Atendidos -->
+    <div class="movement-kpi-card movement-kpi-card--success">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">groups</span>
       </div>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ kpiClients() }}</div>
-        <div class="kpi-label">Clientes Atendidos</div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">CLIENTES ATENDIDOS</span>
+        <strong class="movement-kpi-card__value">{{ kpiClients() }}</strong>
+        <span class="movement-kpi-card__sub">Destinos activos</span>
       </div>
     </div>
 
-    <div class="outbound-kpi-card">
-      <div class="kpi-icon-box">
+    <!-- Piezas Despachadas -->
+    <div class="movement-kpi-card movement-kpi-card--info">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">scale</span>
       </div>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ kpiTotalPieces() | number }}</div>
-        <div class="kpi-label">Piezas Despachadas</div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">PIEZAS DESPACHADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotalPieces() | number }}</strong>
+        <span class="movement-kpi-card__sub">Unidades totales</span>
       </div>
     </div>
-
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════

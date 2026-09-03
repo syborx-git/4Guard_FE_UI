@@ -52,16 +52,16 @@
 
 /* Light Mode Override */
 :host-context(.theme-light) {
-  --ac-bg:         #f0f3f8;
+  --ac-bg:         radial-gradient(circle at top right, rgba(197, 157, 67, 0.09), transparent 30rem), linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
   --ac-surface:    #ffffff;
-  --ac-surface-2:  #f4f6fb;
-  --ac-surface-3:  #e8ecf3;
-  --ac-border:     rgba(0,0,0,.08);
-  --ac-border-mid: rgba(0,0,0,.13);
-  --ac-hover:      rgba(0,0,0,.03);
-  --ac-txt-1:      #1a2235;
-  --ac-txt-2:      #455270;
-  --ac-txt-3:      #7a8fa8;
+  --ac-surface-2:  #fbf9f4;
+  --ac-surface-3:  #f2ece0;
+  --ac-border:     rgba(15, 23, 42, 0.08);
+  --ac-border-mid: rgba(15, 23, 42, 0.12);
+  --ac-hover:      rgba(15, 23, 42, 0.03);
+  --ac-txt-1:      #172033;
+  --ac-txt-2:      #5a6477;
+  --ac-txt-3:      #718096;
 }
 
 /* ════════════════════════════════════════════════════════════════════════

@@ -8,6 +8,171 @@
 :host {
   display: block;
   width: 100%;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top right,
+      rgba(197, 157, 67, 0.09),
+      transparent 30rem),
+    linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
+}
+
+.outbound-workbench {
+  padding: 24px 28px;
+  max-width: 1560px;
+  margin: 0 auto;
+}
+
+.outbound-header__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #b8860b;
+  margin-bottom: 4px;
+}
+
+.outbound-header__eyebrow .material-symbols-outlined {
+  font-size: 16px !important;
+  color: #b8860b;
+}
+
+.outbound-header__title {
+  margin: 0;
+  color: #172033;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: clamp(1.85rem, 2.4vw, 2.35rem) !important;
+  font-weight: 400 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.outbound-header__subtitle {
+  margin: 4px 0 0;
+  color: #718096;
+  font-size: 0.82rem;
+  font-weight: 450;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   KPI CARDS GRID (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT)
+   ───────────────────────────────────────────────────────────── */
+.movement-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .movement-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .movement-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.movement-kpi-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 84px;
+  box-sizing: border-box;
+}
+
+.movement-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(197, 168, 107, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+.movement-kpi-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.movement-kpi-card__icon .material-symbols-outlined {
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+.movement-kpi-card--primary .movement-kpi-card__icon {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+}
+
+.movement-kpi-card--warning .movement-kpi-card__icon {
+  background: #fefce8;
+  color: #b45309;
+  border: 1px solid #fef08a;
+}
+
+.movement-kpi-card--success .movement-kpi-card__icon {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.movement-kpi-card--danger .movement-kpi-card__icon {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.movement-kpi-card--info .movement-kpi-card__icon {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.movement-kpi-card__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.movement-kpi-card__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #718096;
+  line-height: 1.2;
+}
+
+.movement-kpi-card__value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif !important;
+  line-height: 1.1;
+  color: #172033;
+  margin: 2px 0;
+}
+
+.movement-kpi-card__sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -186,12 +351,6 @@
 /* ─────────────────────────────────────────────────────────────
    WORKBENCH MASTER-DETAIL (12 COLS = 4 LEFT + 8 RIGHT)
    ───────────────────────────────────────────────────────────── */
-.outbound-workbench {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 1rem;
-  align-items: start;
-}
 
 /* ── PANEL IZQUIERDO — DIRECTORIO MASTER ── */
 .outbound-master-panel {

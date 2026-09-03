@@ -62,36 +62,6 @@
 
   <!-- BARRA DE HERRAMIENTAS Y FILTROS -->
   <div class="quality-toolbar">
-    <div class="quality-tabs-container">
-      <nav class="quality-tabs" role="tablist" aria-label="Estados de control de calidad">
-
-        <button type="button" class="quality-tab quality-tab--quarantine" role="tab"
-          [class.quality-tab--active]="activeTab() === 'quarantine'" [attr.aria-selected]="activeTab() === 'quarantine'"
-          (click)="setTab('quarantine')">
-          <span class="material-symbols-outlined quality-tab__icon">hourglass_top</span>
-          <span class="quality-tab__label">Pendientes / Cuarentena</span>
-          <span class="quality-tab__count quality-tab__count--warning">{{ quarantineCount() }}</span>
-        </button>
-
-        <button type="button" class="quality-tab quality-tab--blocked" role="tab"
-          [class.quality-tab--active]="activeTab() === 'blocked'" [attr.aria-selected]="activeTab() === 'blocked'"
-          (click)="setTab('blocked')">
-          <span class="material-symbols-outlined quality-tab__icon">block</span>
-          <span class="quality-tab__label">Bloqueados QM</span>
-          <span class="quality-tab__count quality-tab__count--danger">{{ blockedCount() }}</span>
-        </button>
-
-        <button type="button" class="quality-tab quality-tab--approved" role="tab"
-          [class.quality-tab--active]="activeTab() === 'approved'" [attr.aria-selected]="activeTab() === 'approved'"
-          (click)="setTab('approved')">
-          <span class="material-symbols-outlined quality-tab__icon">verified</span>
-          <span class="quality-tab__label">Aprobados y Liberados</span>
-          <span class="quality-tab__count quality-tab__count--success">{{ approvedCount() }}</span>
-        </button>
-
-      </nav>
-    </div>
-
     <div class="quality-filters">
       <!-- BUSCADOR -->
       <label class="search-field" for="qm-search">

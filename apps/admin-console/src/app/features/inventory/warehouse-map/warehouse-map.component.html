@@ -4,9 +4,13 @@
   <!-- ENCABEZADO -->
   <div class="wmap__header">
     <div>
+      <div class="wmap__eyebrow">
+        <span class="material-symbols-outlined icon-glow">warehouse</span>
+        <span>4GUARD WMS · TOPOLOGÍA CROMÁTICA & CAPACIDAD</span>
+      </div>
       <h2 class="wmap__title">Topología Cromática</h2>
       <p class="wmap__subtitle">
-        Mapa interactivo de saturación por almacén y bahía logística
+        Mapa interactivo de saturación por almacén y bahía logística en tiempo real
       </p>
     </div>
 
@@ -32,14 +36,38 @@
     </div>
   </div>
 
-  <!-- BARRA DE SELECCIÓN DE ALMACENES OFICIALES (885 POSICIONES TOTALES) -->
-  <div class="wmap__wh-bar-wrap">
-    <div class="wmap__wh-bar-header">
-      <span class="wmap__wh-bar-label">
+  <!-- BARRA INTEGRADA DE ALMACENES & CLAVE CROMÁTICA -->
+  <div class="wmap__toolbar-card">
+    <div class="wmap__toolbar-top">
+      <div class="wmap__wh-bar-header">
         <span class="material-symbols-outlined text-amber-500 text-sm">domain</span>
-        Almacenes Reales de Planta (Capacidad Oficial):
-      </span>
+        <span class="wmap__wh-bar-label">Almacenes Reales de Planta:</span>
+      </div>
+
+      <!-- Leyenda compacta en la misma barra superior -->
+      <div class="wmap__legend-inline" role="list" aria-label="Leyenda de colores">
+        <div class="legend-item" role="listitem">
+          <div class="legend-swatch legend-swatch--high" aria-hidden="true"></div>
+          <span>&gt;85% Alta</span>
+        </div>
+        <div class="legend-item" role="listitem">
+          <div class="legend-swatch legend-swatch--mid" aria-hidden="true"></div>
+          <span>40–85% Media</span>
+        </div>
+        <div class="legend-item" role="listitem">
+          <div class="legend-swatch legend-swatch--low" aria-hidden="true"></div>
+          <span>&lt;40% Baja</span>
+        </div>
+        <div class="legend-item" role="listitem">
+          <div class="legend-swatch legend-swatch--blocked" aria-hidden="true">
+            <span class="material-symbols-outlined">lock</span>
+          </div>
+          <span>Bloqueado QM</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Píldoras de almacenes en cinta horizontal fluida -->
     <div class="wmap__wh-bar" role="tablist" aria-label="Seleccionar almacén real">
       <button
         type="button"
@@ -63,39 +91,6 @@
           <span class="wmap__wh-chip">{{ wh.nominalCapacity }} pos</span>
         </button>
       }
-    </div>
-  </div>
-
-  <!-- CLAVE CROMÁTICA -->
-  <div class="wmap__legend" role="list" aria-label="Leyenda de colores">
-
-    <span class="wmap__legend-title">Clave cromática:</span>
-
-    <div class="wmap__legend-items">
-      <div class="legend-item" role="listitem">
-        <div class="legend-swatch legend-swatch--high" aria-hidden="true">
-        </div>
-        <span>Alta saturación (&gt;85%)</span>
-      </div>
-
-      <div class="legend-item" role="listitem">
-        <div class="legend-swatch legend-swatch--mid" aria-hidden="true">
-        </div>
-        <span>Media (40–85%)</span>
-      </div>
-
-      <div class="legend-item" role="listitem">
-        <div class="legend-swatch legend-swatch--low" aria-hidden="true">
-        </div>
-        <span>Baja (&lt;40%)</span>
-      </div>
-
-      <div class="legend-item" role="listitem">
-        <div class="legend-swatch legend-swatch--blocked" aria-hidden="true">
-          <span class="material-symbols-outlined">lock</span>
-        </div>
-        <span>Bloqueado QM</span>
-      </div>
     </div>
   </div>
 
