@@ -898,28 +898,37 @@
        MODAL 2: COMPROBANTE OFICIAL IMPRIMIBLE
        ════════════════════════════════════════════════════════════════ -->
   @if (showPrintModal() && selectedPrintTransfer()) {
-    <div class="modal-overlay">
-      <div class="modal-card max-w-4xl w-full shadow-2xl">
+    <div class="modal-overlay p-2 sm:p-4">
+      <div class="modal-card max-w-3xl w-full p-3 sm:p-4 space-y-2.5 max-h-[96vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
         
-        <!-- Header del Modal -->
-        <div class="modal-header flex items-center justify-between print:hidden">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-gold">print</span>
-            <span class="font-bold text-primary text-sm">Vista Previa de Impresión Oficial</span>
+        <!-- Header del Modal en UNA SOLA FILA -->
+        <div class="modal-header flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0 print:hidden">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-amber-500 text-base shrink-0">print</span>
+            <span class="font-black text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider truncate">Comprobante de Traspaso</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              (click)="downloadDirectPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all hover:scale-[1.02] whitespace-nowrap text-slate-900"
+            >
+              <span class="material-symbols-outlined text-sm">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + (selectedPrintTransfer()?.folio || 'Doc') + '.pdf)' }}</span>
+            </button>
             <button
               type="button"
               (click)="triggerBrowserPrint()"
-              class="btn-primary-gold px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              class="btn-secondary-outline px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 whitespace-nowrap border border-slate-300 dark:border-slate-700"
             >
               <span class="material-symbols-outlined text-sm">print</span>
-              <span>Imprimir Comprobante</span>
+              <span>Imprimir</span>
             </button>
             <button
               type="button"
               (click)="closePrintModal()"
-              class="btn-secondary-outline px-3 py-2 rounded-xl text-xs font-bold"
+              class="btn-secondary-outline px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
             >
               Cerrar
             </button>
@@ -927,7 +936,7 @@
         </div>
 
         <!-- Contenido Imprimible -->
-        <div class="modal-body">
+        <div class="modal-body flex-1 overflow-y-auto pr-0.5">
           <fg-print-transfer-layout [transfer]="selectedPrintTransfer()!"></fg-print-transfer-layout>
         </div>
 

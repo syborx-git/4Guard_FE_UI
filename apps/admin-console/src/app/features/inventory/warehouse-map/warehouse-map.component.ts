@@ -1,7 +1,7 @@
 /**
  * @file warehouse-map.component.ts
  * @description P5 — Inventario 2D (Topología Cromática) [HU-048].
- * Mapa interactivo de bahías con CSS Grid. Consume LocationService como SSOT para Muelles de Descarga.
+ * Mapa interactivo de bahías dinámicas por Almacén Real (885 posiciones consolidado planta).
  */
 
 import { Component, signal, computed, inject } from '@angular/core';
@@ -10,9 +10,18 @@ import { FormsModule } from '@angular/forms';
 import { LocationService } from '../../admin/services/location.service';
 import { AuthState } from '../../../core/auth/auth.state';
 
-interface Bay {
+export interface WarehouseDef {
   id: string;
   code: string;
+  name: string;
+  nominalCapacity: number;
+}
+
+export interface Bay {
+  id: string;
+  code: string;
+  warehouseId: string;
+  warehouseCode: string;
   type: 'RACK' | 'QUARANTINE_ZONE' | 'DOCK' | 'STAGING';
   row: number;
   col: number;
@@ -21,12 +30,13 @@ interface Bay {
   isBlocked: boolean;
 }
 
-interface SelectedBayInfo extends Bay {
+export interface SelectedBayInfo extends Bay {
   occupancyPct: number;
   colorClass: string;
 }
 
-type FilterType = 'ALL' | 'RACK' | 'QUARANTINE_ZONE' | 'DOCK' | 'STAGING';
+export type FilterType = 'ALL' | 'RACK' | 'QUARANTINE_ZONE' | 'DOCK' | 'STAGING';
+export type SaturationFilterType = 'ALL' | 'HIGH' | 'MID' | 'LOW' | 'BLOCKED';
 
 @Component({
   selector: 'fg-warehouse-map',
@@ -39,57 +49,89 @@ export class WarehouseMapComponent {
   private readonly locationService = inject(LocationService);
   private readonly authState = inject(AuthState);
 
+  // ── Almacenes Reales de la Planta (SSOT) ──────────────────────────────────
+  protected readonly officialWarehouses: WarehouseDef[] = [
+    { id: 'WH-A', code: 'A', name: 'Almacén A — Secos & PT', nominalCapacity: 170 },
+    { id: 'WH-E', code: 'E', name: 'Almacén E — Materia Prima', nominalCapacity: 38 },
+    { id: 'WH-F', code: 'F', name: 'Almacén F — Empaque & Vidrio', nominalCapacity: 120 },
+    { id: 'WH-G', code: 'G', name: 'Almacén G — General Central', nominalCapacity: 117 },
+    { id: 'WH-I', code: 'I', name: 'Almacén I — Insumos Especiales', nominalCapacity: 91 },
+    { id: 'WH-J', code: 'J', name: 'Almacén J — Granel & Tambores', nominalCapacity: 56 },
+    { id: 'WH-K', code: 'K', name: 'Almacén K — Racks Libres', nominalCapacity: 181 },
+    { id: 'WH-L', code: 'L', name: 'Almacén L — Cuarentena & Retenidos', nominalCapacity: 112 },
+  ];
+
+  // Total Consolidado Planta: 170+38+120+117+91+56+181+112 = 885 pos
+  protected readonly totalPlantCapacity = this.officialWarehouses.reduce(
+    (sum, w) => sum + w.nominalCapacity,
+    0
+  );
+
+  protected readonly selectedWarehouseId = signal<string>('ALL');
   protected readonly filterType = signal<FilterType>('ALL');
+  protected readonly satFilter = signal<SaturationFilterType>('ALL');
   protected readonly selectedBay = signal<SelectedBayInfo | null>(null);
-  protected readonly searchCode = signal('');
+  protected readonly searchCode = signal<string>('');
 
   protected readonly activeBranchId = computed(() => {
     return (this.authState as any).activeBranchId?.() || 'SUC-001';
   });
 
-  // Bahías estáticas de Racks, Cuarentena y Staging
-  private readonly staticBays = signal<Bay[]>([
-    { id: 'LOC-A1-01', code: 'A-1-01', type: 'RACK', row: 0, col: 0, capacity: 60,  occupied: 48,  isBlocked: false },
-    { id: 'LOC-A1-02', code: 'A-1-02', type: 'RACK', row: 0, col: 1, capacity: 60,  occupied: 36,  isBlocked: false },
-    { id: 'LOC-A1-03', code: 'A-1-03', type: 'RACK', row: 0, col: 2, capacity: 60,  occupied: 55,  isBlocked: false },
-    { id: 'LOC-A2-01', code: 'A-2-01', type: 'RACK', row: 0, col: 3, capacity: 60,  occupied: 48,  isBlocked: false },
-    { id: 'LOC-A2-02', code: 'A-2-02', type: 'RACK', row: 0, col: 4, capacity: 60,  occupied: 10,  isBlocked: false },
-    { id: 'LOC-A2-03', code: 'A-2-03', type: 'RACK', row: 0, col: 5, capacity: 60,  occupied: 0,   isBlocked: false },
-    { id: 'LOC-A3-01', code: 'A-3-01', type: 'RACK', row: 0, col: 6, capacity: 60,  occupied: 52,  isBlocked: false },
-    { id: 'LOC-A3-02', code: 'A-3-02', type: 'RACK', row: 0, col: 7, capacity: 60,  occupied: 60,  isBlocked: false },
-    { id: 'LOC-B1-01', code: 'B-1-01', type: 'RACK', row: 1, col: 0, capacity: 80,  occupied: 72,  isBlocked: false },
-    { id: 'LOC-B1-02', code: 'B-1-02', type: 'RACK', row: 1, col: 1, capacity: 80,  occupied: 80,  isBlocked: false },
-    { id: 'LOC-B1-03', code: 'B-1-03', type: 'RACK', row: 1, col: 2, capacity: 80,  occupied: 30,  isBlocked: false },
-    { id: 'LOC-B2-01', code: 'B-2-01', type: 'RACK', row: 1, col: 3, capacity: 80,  occupied: 25,  isBlocked: false },
-    { id: 'LOC-B2-02', code: 'B-2-02', type: 'RACK', row: 1, col: 4, capacity: 80,  occupied: 0,   isBlocked: false },
-    { id: 'LOC-B2-03', code: 'B-2-03', type: 'RACK', row: 1, col: 5, capacity: 80,  occupied: 80,  isBlocked: true  },
-    { id: 'LOC-B2-04', code: 'B-2-04', type: 'RACK', row: 1, col: 6, capacity: 80,  occupied: 96,  isBlocked: true  },
-    { id: 'LOC-B3-01', code: 'B-3-01', type: 'RACK', row: 1, col: 7, capacity: 80,  occupied: 70,  isBlocked: false },
-    { id: 'LOC-C1-01', code: 'C-1-01', type: 'RACK', row: 2, col: 0, capacity: 100, occupied: 95,  isBlocked: false },
-    { id: 'LOC-C1-02', code: 'C-1-02', type: 'RACK', row: 2, col: 1, capacity: 100, occupied: 88,  isBlocked: false },
-    { id: 'LOC-C2-01', code: 'C-2-01', type: 'RACK', row: 2, col: 2, capacity: 100, occupied: 45,  isBlocked: false },
-    { id: 'LOC-C2-02', code: 'C-2-02', type: 'RACK', row: 2, col: 3, capacity: 100, occupied: 20,  isBlocked: false },
-    { id: 'LOC-C3-01', code: 'C-3-01', type: 'RACK', row: 2, col: 4, capacity: 100, occupied: 72,  isBlocked: false },
-    { id: 'LOC-C3-02', code: 'C-3-02', type: 'RACK', row: 2, col: 5, capacity: 100, occupied: 0,   isBlocked: false },
-    { id: 'LOC-C4-01', code: 'C-4-01', type: 'RACK', row: 2, col: 6, capacity: 100, occupied: 60,  isBlocked: false },
-    { id: 'LOC-C4-02', code: 'C-4-02', type: 'RACK', row: 2, col: 7, capacity: 100, occupied: 100, isBlocked: false },
-    { id: 'LOC-D1-01', code: 'D-1-01', type: 'RACK', row: 3, col: 0, capacity: 120, occupied: 110, isBlocked: false },
-    { id: 'LOC-D1-02', code: 'D-1-02', type: 'RACK', row: 3, col: 1, capacity: 120, occupied: 60,  isBlocked: false },
-    { id: 'LOC-D2-01', code: 'D-2-01', type: 'RACK', row: 3, col: 2, capacity: 120, occupied: 30,  isBlocked: false },
-    { id: 'LOC-D2-02', code: 'D-2-02', type: 'RACK', row: 3, col: 3, capacity: 120, occupied: 5,   isBlocked: false },
-    { id: 'LOC-D3-01', code: 'D-3-01', type: 'RACK', row: 3, col: 4, capacity: 120, occupied: 90,  isBlocked: false },
-    { id: 'LOC-D3-02', code: 'D-3-02', type: 'RACK', row: 3, col: 5, capacity: 120, occupied: 120, isBlocked: false },
-    { id: 'LOC-D4-01', code: 'D-4-01', type: 'RACK', row: 3, col: 6, capacity: 120, occupied: 0,   isBlocked: false },
-    { id: 'LOC-D4-02', code: 'D-4-02', type: 'RACK', row: 3, col: 7, capacity: 120, occupied: 42,  isBlocked: false },
-    { id: 'LOC-E1-01', code: 'E-1-01', type: 'RACK', row: 4, col: 0, capacity: 80,  occupied: 80,  isBlocked: false },
-    { id: 'LOC-E2-01', code: 'E-2-01', type: 'RACK', row: 4, col: 1, capacity: 80,  occupied: 60,  isBlocked: false },
-    { id: 'LOC-E3-01', code: 'E-3-01', type: 'RACK', row: 4, col: 2, capacity: 80,  occupied: 35,  isBlocked: false },
-    { id: 'LOC-E4-01', code: 'E-4-01', type: 'RACK', row: 4, col: 3, capacity: 80,  occupied: 0,   isBlocked: false },
-    { id: 'LOC-Q-01',  code: 'Q-01',   type: 'QUARANTINE_ZONE', row: 5, col: 0, capacity: 50, occupied: 24, isBlocked: false },
-    { id: 'LOC-Q-02',  code: 'Q-02',   type: 'QUARANTINE_ZONE', row: 5, col: 1, capacity: 50, occupied: 48, isBlocked: false },
-    { id: 'LOC-STG-01',code: 'STG-01', type: 'STAGING', row: 6, col: 2, capacity: 300, occupied: 120, isBlocked: false },
-    { id: 'LOC-STG-02',code: 'STG-02', type: 'STAGING', row: 6, col: 3, capacity: 300, occupied: 0,   isBlocked: false },
-  ]);
+  // Generador de bahías dinámicas por Almacén Real (885 posiciones totales)
+  protected readonly plantBays = computed<Bay[]>(() => {
+    const list: Bay[] = [];
+    
+    this.officialWarehouses.forEach((wh) => {
+      const isQuarantineWh = wh.code === 'L';
+      const type: Bay['type'] = isQuarantineWh ? 'QUARANTINE_ZONE' : 'RACK';
+
+      for (let i = 1; i <= wh.nominalCapacity; i++) {
+        const rackNum = Math.ceil(i / 20);
+        const posNum = String((i - 1) % 20 + 1).padStart(2, '0');
+        const code = `${wh.code}-${rackNum}-${posNum}`;
+        const id = `LOC-${wh.code}-${i}`;
+        const row = rackNum - 1;
+        const col = (i - 1) % 20;
+
+        // Distribución determinista de saturación acorde a la planta
+        let occupied = 0;
+        const capacity = 100;
+        let isBlocked = false;
+
+        const hash = (wh.code.charCodeAt(0) * 31 + i) % 100;
+
+        if (hash < 12) {
+          // 12% Bloqueados por QM
+          isBlocked = true;
+          occupied = 90;
+        } else if (hash < 35) {
+          // Alta saturación (>85%)
+          occupied = 88 + (hash % 12);
+        } else if (hash < 75) {
+          // Saturación media (40-85%)
+          occupied = 45 + (hash % 38);
+        } else {
+          // Baja saturación (<40%)
+          occupied = 10 + (hash % 25);
+        }
+
+        list.push({
+          id,
+          code,
+          warehouseId: wh.id,
+          warehouseCode: wh.code,
+          type,
+          row,
+          col,
+          capacity,
+          occupied,
+          isBlocked,
+        });
+      }
+    });
+
+    return list;
+  });
 
   // Consumo Reactivo de Muelles desde LocationService (SSOT Físico)
   protected readonly dockBays = computed<Bay[]>(() => {
@@ -99,46 +141,100 @@ export class WarehouseMapComponent {
     const docks = this.locationService.getDocksForBranch(branchId);
     return docks.map((dock, index) => {
       let occupied = 0;
-      if (dock.operationalStatus === 'OCCUPIED') occupied = 200;
-      else if (dock.operationalStatus === 'RESERVED') occupied = 100;
+      if (dock.operationalStatus === 'OCCUPIED') occupied = 100;
+      else if (dock.operationalStatus === 'RESERVED') occupied = 50;
 
-      const isBlocked = dock.operationalStatus === 'MAINTENANCE' || dock.operationalStatus === 'BLOCKED' || dock.operationalStatus === 'OUT_OF_SERVICE';
+      const isBlocked =
+        dock.operationalStatus === 'MAINTENANCE' ||
+        dock.operationalStatus === 'BLOCKED' ||
+        dock.operationalStatus === 'OUT_OF_SERVICE';
 
       return {
         id: dock.id,
         code: dock.code,
+        warehouseId: 'WH-DOCKS',
+        warehouseCode: 'DOCK',
         type: 'DOCK',
-        row: 6,
+        row: 99,
         col: index,
-        capacity: 200,
+        capacity: 100,
         occupied,
         isBlocked,
       };
     });
   });
 
-  // Combinación reactiva unificada de todas las bahías
+  // Combinación reactiva unificada de todas las bahías de la planta
   protected readonly allBays = computed<Bay[]>(() => {
-    return [...this.staticBays(), ...this.dockBays()];
+    return [...this.plantBays(), ...this.dockBays()];
   });
 
+  // Filtrado reactivo por Almacén seleccionado, Tipo, Nivel de Saturación y Búsqueda por Código
   protected readonly displayBays = computed(() => {
-    const filter = this.filterType();
-    const search = this.searchCode().toLowerCase();
-    return this.allBays()
-      .filter((b) => filter === 'ALL' || b.type === filter)
-      .filter((b) => !search || b.code.toLowerCase().includes(search));
+    const whId = this.selectedWarehouseId();
+    const typeFilter = this.filterType();
+    const satFilter = this.satFilter();
+    const search = this.searchCode().trim().toLowerCase();
+
+    return this.allBays().filter((bay) => {
+      const matchWh = whId === 'ALL' || bay.warehouseId === whId;
+      const matchType = typeFilter === 'ALL' || bay.type === typeFilter;
+      const matchSearch = !search || bay.code.toLowerCase().includes(search);
+
+      let matchSat = true;
+      const pct = bay.capacity > 0 ? bay.occupied / bay.capacity : 0;
+
+      if (satFilter === 'HIGH') {
+        matchSat = !bay.isBlocked && pct > 0.85;
+      } else if (satFilter === 'MID') {
+        matchSat = !bay.isBlocked && pct >= 0.4 && pct <= 0.85;
+      } else if (satFilter === 'LOW') {
+        matchSat = !bay.isBlocked && pct < 0.4;
+      } else if (satFilter === 'BLOCKED') {
+        matchSat = bay.isBlocked;
+      }
+
+      return matchWh && matchType && matchSearch && matchSat;
+    });
   });
 
+  // Métricas dinámicas calculadas según el Almacén Activo
   protected readonly stats = computed(() => {
-    const bays  = this.allBays();
-    const total = bays.length;
-    const blocked   = bays.filter(b => b.isBlocked).length;
-    const highOcc   = bays.filter(b => !b.isBlocked && (b.occupied / b.capacity) > 0.85).length;
-    const medOcc    = bays.filter(b => !b.isBlocked && (b.occupied / b.capacity) >= 0.40 && (b.occupied / b.capacity) <= 0.85).length;
-    const lowOcc    = bays.filter(b => !b.isBlocked && (b.occupied / b.capacity) < 0.40).length;
+    const whId = this.selectedWarehouseId();
+    const activeBays = this.allBays().filter(
+      (b) => whId === 'ALL' || b.warehouseId === whId
+    );
+
+    const total = activeBays.length;
+    const blocked = activeBays.filter((b) => b.isBlocked).length;
+    const highOcc = activeBays.filter(
+      (b) => !b.isBlocked && b.occupied / b.capacity > 0.85
+    ).length;
+    const medOcc = activeBays.filter(
+      (b) =>
+        !b.isBlocked &&
+        b.occupied / b.capacity >= 0.4 &&
+        b.occupied / b.capacity <= 0.85
+    ).length;
+    const lowOcc = activeBays.filter(
+      (b) => !b.isBlocked && b.occupied / b.capacity < 0.4
+    ).length;
+
     return { total, blocked, highOcc, medOcc, lowOcc };
   });
+
+  protected selectWarehouse(whId: string): void {
+    this.selectedWarehouseId.set(whId);
+    this.selectedBay.set(null);
+  }
+
+  protected toggleSaturationFilter(filter: SaturationFilterType): void {
+    if (this.satFilter() === filter) {
+      this.satFilter.set('ALL');
+    } else {
+      this.satFilter.set(filter);
+    }
+  }
 
   protected occupancyPct(bay: Bay): number {
     if (bay.capacity === 0) return 0;
@@ -168,13 +264,16 @@ export class WarehouseMapComponent {
 
   protected typeLabel(type: string): string {
     const labels: Record<string, string> = {
-      RACK: 'Rack', QUARANTINE_ZONE: 'Cuarentena', DOCK: 'Muelle', STAGING: 'Staging',
+      RACK: 'Rack',
+      QUARANTINE_ZONE: 'Cuarentena',
+      DOCK: 'Muelle',
+      STAGING: 'Staging',
     };
     return labels[type] ?? type;
   }
 
   protected filterOptions: { value: FilterType; label: string }[] = [
-    { value: 'ALL', label: 'Todas' },
+    { value: 'ALL', label: 'Todas las Zonas' },
     { value: 'RACK', label: 'Racks' },
     { value: 'QUARANTINE_ZONE', label: 'Cuarentena' },
     { value: 'DOCK', label: 'Muelles' },

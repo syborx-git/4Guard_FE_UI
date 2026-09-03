@@ -9,20 +9,32 @@
       <p class="dashboard__subtitle">Vista general de operaciones en tiempo real</p>
     </div>
     <div class="dashboard__header-actions">
-      <!-- Badge de alertas críticas con animación parpadeante -->
+      <!-- Banner Condicional Inteligente: Alerta de Maniobras (>100%) -->
+      @if (hasManeuverRisk()) {
+        <button
+          type="button"
+          class="maneuver-risk-pill"
+          (click)="openBreakdownModal()"
+          title="Ver desglose de maniobras en pasillos"
+        >
+          <span class="maneuver-risk-pill__pulse"></span>
+          <span class="material-symbols-outlined text-sm">warning</span>
+          <span>Riesgo Maniobras (>100%)</span>
+          <span class="maneuver-risk-pill__badge">{{ maneuverRisks().length }}</span>
+        </button>
+      }
+
+      <!-- Badge de alertas críticas -->
       @if (criticalCount() > 0) {
-      <div class="alert-badge" role="status" aria-label="Alertas críticas">
-        <span class="alert-badge__dot" aria-hidden="true"></span>
-        <span class="alert-badge__count">{{ criticalCount() }}</span>
-        <span class="alert-badge__label">Crítica{{ criticalCount() > 1 ? 's' : '' }}</span>
-      </div>
+        <div class="alert-badge" role="status" aria-label="Alertas críticas">
+          <span class="alert-badge__dot" aria-hidden="true"></span>
+          <span class="alert-badge__count">{{ criticalCount() }}</span>
+          <span class="alert-badge__label">Crítica{{ criticalCount() > 1 ? 's' : '' }}</span>
+        </div>
       }
       <div class="dashboard__timestamp">
         <span class="dashboard__timestamp-dot"></span>
-
-        <span>
-          En vivo · actualización automática
-        </span>
+        <span>En vivo · actualización automática</span>
       </div>
     </div>
   </div>
@@ -42,10 +54,8 @@
       <div class="gauge-wrap" role="img"
         [attr.aria-label]="'Riesgo: ' + riskScore() + ' de 100, nivel ' + gaugeLabel()">
         <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
-          <!-- Track -->
           <circle class="gauge-track" cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.07)"
             stroke-width="10" stroke-linecap="round" />
-          <!-- Indicador -->
           <circle class="gauge-indicator" cx="60" cy="60" r="54" fill="none" [attr.stroke]="gaugeColor()"
             stroke-width="10" stroke-linecap="round" [attr.stroke-dasharray]="gaugeCircumference"
             [attr.stroke-dashoffset]="gaugeDashOffset()" transform="rotate(-90 60 60)"
@@ -59,7 +69,8 @@
 
       <p class="dash-card__footer-text">
         {{ riskScore() < 30 ? 'Operaciones estables' : riskScore() < 60 ? 'Monitoreo recomendado'
-          : 'Acción inmediata requerida' }} </p>
+          : 'Acción inmediata requerida' }}
+      </p>
     </div>
 
     <!-- ─ 2. Saturación del Almacén ──────────────── -->
@@ -107,6 +118,18 @@
           <span class="sat-stat__val">{{ totalBays() }}</span>
           <span class="sat-stat__lbl">Total bahías</span>
         </div>
+      </div>
+
+      <!-- BOTÓN DE ACCIÓN RÁPIDA: ABRIR MODAL DE DESGLOSE POR BODEGA -->
+      <div class="dash-card__action-bar" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="dash-card__breakdown-btn"
+          (click)="openBreakdownModal()"
+        >
+          <span class="material-symbols-outlined text-sm">tune</span>
+          <span>Desglose por Bodega & Empaque</span>
+        </button>
       </div>
     </div>
 
@@ -196,4 +219,135 @@
     </div>
 
   </div>
-</section>
+
+  <!-- ── MODAL LIMPIO: DESGLOSE POR BODEGA & TIPO DE EMPAQUE ────── -->
+  @if (isBreakdownModalOpen()) {
+    <div class="bd-modal-backdrop animate-fade-in" (click)="closeBreakdownModal()">
+      <div class="bd-modal-dialog animate-scale-up" (click)="$event.stopPropagation()" fgSpecularGlow>
+        
+        <!-- Header del Modal -->
+        <div class="bd-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="bd-modal-icon-wrap">
+              <span class="material-symbols-outlined">warehouse</span>
+            </div>
+            <div>
+              <h3 class="bd-modal-title">Desglose por Almacén & Parámetros de Empaque</h3>
+              <p class="bd-modal-subtitle">Análisis reactivo de densidad volumétrica y capacidad de pasillos</p>
+            </div>
+          </div>
+          <button type="button" class="bd-modal-close" (click)="closeBreakdownModal()" aria-label="Cerrar modal">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal -->
+        <div class="bd-modal-body space-y-6">
+
+          <!-- Sección 1: Selector de Tipo de Empaque en Turno -->
+          <div class="bd-section">
+            <div class="flex items-center justify-between mb-3">
+              <span class="bd-section-title">
+                <span class="material-symbols-outlined text-amber-500 text-sm">inventory_2</span>
+                Tipo de Empaque Predominante en Turno
+              </span>
+              <span class="bd-factor-badge">
+                Factor de Densidad: {{ currentPackagingConfig().factor }}x
+              </span>
+            </div>
+
+            <div class="bd-packaging-grid">
+              @for (opt of packagingOptions; track opt.id) {
+                <button
+                  type="button"
+                  class="bd-packaging-card"
+                  [class.is-selected]="selectedPackaging() === opt.id"
+                  (click)="selectPackaging(opt.id)"
+                >
+                  <span class="bd-pkg-icon">{{ opt.icon }}</span>
+                  <div class="bd-pkg-info">
+                    <span class="bd-pkg-label">{{ opt.label }}</span>
+                    <span class="bd-pkg-sub">{{ opt.unitLabel }} · {{ opt.factor }}x</span>
+                  </div>
+                  @if (selectedPackaging() === opt.id) {
+                    <span class="material-symbols-outlined bd-pkg-check">check_circle</span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Sección 2: Desglose por Bodega Individual -->
+          <div class="bd-section">
+            <span class="bd-section-title mb-3">
+              <span class="material-symbols-outlined text-sky-500 text-sm">domain</span>
+              Capacidad Nominal vs. Ocupación Real por Almacén
+            </span>
+
+            <div class="bd-warehouses-grid space-y-4">
+              @for (wh of calculatedWarehouses(); track wh.id) {
+                <div class="bd-wh-card" [class.is-critical]="wh.isCritical">
+                  <div class="bd-wh-header">
+                    <div class="flex items-center gap-2">
+                      <span class="bd-wh-code">{{ wh.code }}</span>
+                      <span class="bd-wh-name">{{ wh.name }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                      <span class="bd-wh-pct" [class.text-red-500]="wh.isCritical">
+                        {{ wh.occupancyPct }}%
+                      </span>
+                      @if (wh.isCritical) {
+                        <span class="bd-wh-badge status-critical">
+                          ⚠️ ALERTA RIESGO MANIOBRAS
+                        </span>
+                      } @else {
+                        <span class="bd-wh-badge status-normal">
+                          NORMAL
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Multi-layer Progress Bar -->
+                  <div class="bd-progress-wrap">
+                    <div class="bd-progress-bar">
+                      <div
+                        class="bd-progress-fill"
+                        [class.bg-red-500]="wh.isCritical"
+                        [style.width.%]="Math.min(wh.occupancyPct, 100)"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div class="bd-wh-meta">
+                    <span>Bahías nominales: <strong>{{ wh.nominalCapacity }}</strong></span>
+                    <span>Ocupación ajustada: <strong>{{ wh.adjustedOccupancy }} {{ currentPackagingConfig().unitLabel }}</strong></span>
+                    @if (wh.aisleOverflowCount > 0) {
+                      <span class="text-red-400 font-semibold">
+                        🚨 {{ wh.aisleOverflowCount }} palet{{ wh.aisleOverflowCount > 1 ? 's' : '' }} en pasillos (Retraso en rampas ~25 min)
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="bd-modal-footer">
+          <span class="text-xs text-slate-400">
+            Los factores de ocupación se recalculan en tiempo real según la mezcla de producto.
+          </span>
+          <button type="button" class="bd-btn-primary" (click)="closeBreakdownModal()">
+            Entendido
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</section>

@@ -64,6 +64,35 @@ export interface CheckInCasetaData {
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
+  economicNumber?: string;  // Número económico del vehículo
+  securityApproved?: boolean; // Visto bueno de seguridad patrimonial
+  securityApprovedAt?: string;
+  securityApprovedBy?: string;
+  dockAssignedAt?: string;
+  dischargeStartedAt?: string;
+  dischargeEndedAt?: string;
+}
+
+export interface PatioUnitMonitor {
+  id: string;
+  folio: string;
+  driverName: string;
+  carrierLine: string;
+  tractorPlates: string;
+  boxPlates: string;
+  economicNumber?: string;
+  registeredAt: string;
+  rampNumber?: number;
+  rampAssignedAt?: string;
+  dischargeStartedAt?: string;
+  dischargeEndedAt?: string;
+  status: 'CHECKED_IN' | 'RAMP_ASSIGNED' | 'DISCHARGING' | 'DISCHARGED_PENDING_EXIT' | 'COMPLETED';
+  forkliftOperator?: string;
+  palletType?: PalletType;
+  waitTimeMinutes: number;
+  dischargeTimeMinutes: number;
+  hasWaitAlert: boolean; // Alerta > 8 horas en espera
+  hasDischargeAlert: boolean; // Alerta > 2.5 horas en descarga
 }
 
 export interface ReceptionPalletItem {

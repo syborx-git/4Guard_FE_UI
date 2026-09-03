@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
@@ -35,6 +36,7 @@ export class TransferSubmoduleComponent implements OnInit {
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
   private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
   private readonly authState = inject(AuthState);
 
   // -- ESTADO DEL WORKBENCH UNIFICADO (MASTER-DETAIL) --
@@ -503,8 +505,21 @@ export class TransferSubmoduleComponent implements OnInit {
     this.selectedPrintTransfer.set(null);
   }
 
+  isGeneratingPdf = signal(false);
+
+  async downloadDirectPdf(): Promise<void> {
+    const folio = this.selectedPrintTransfer()?.folio || 'Doc';
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf('fg-print-transfer-layout', String(folio));
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
+  }
+
   triggerBrowserPrint(): void {
-    window.print();
+    const folio = this.selectedPrintTransfer()?.folio || 'Doc';
+    this.printService.printElement('fg-print-transfer-layout', String(folio));
   }
 
   // -- CANCELACION CON AUTORIZACION DE ADMINISTRADOR --
