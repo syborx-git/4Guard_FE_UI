@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -23,7 +23,7 @@ import { PrintDispatchLayoutComponent } from '../../components/print-layouts/pri
 @Component({
   selector: 'fg-outbound-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, PrintDispatchLayoutComponent],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, PrintDispatchLayoutComponent],
   templateUrl: './outbound-submodule.component.html',
   styleUrl: './outbound-submodule.component.css',
 })

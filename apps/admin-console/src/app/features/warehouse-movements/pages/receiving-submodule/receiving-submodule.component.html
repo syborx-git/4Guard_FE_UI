@@ -1,65 +1,85 @@
 <!-- ════════════════════════════════════════════════════════════════
-     RECEPCIONES WORKBENCH — FLUJO CONTINUO SIMPLIFICADO & INTUITIVO
+     RECEPCIÓN DE MERCANCÍA — 4GUARD WMS (HOMOLOGADO)
      ════════════════════════════════════════════════════════════════ -->
-<div class="receiving-workbench space-y-5">
+<div class="receiving-page">
 
-  <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
-  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
-    <div>
-      <div class="receiving-header__eyebrow">
-        <span class="material-symbols-outlined icon-glow">move_to_inbox</span>
-        <span>4GUARD WMS · OPERACIONES DE RECEPCIÓN</span>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="receiving-header">
+    <div class="receiving-header__top">
+
+      <div class="receiving-header__left">
+        <div class="receiving-header__icon-wrap">
+          <span class="material-symbols-outlined receiving-header__icon">move_to_inbox</span>
+        </div>
+
+        <div class="receiving-header__copy">
+          <div class="receiving-header__eyebrow">
+            <a routerLink="/dashboard" class="receiving-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="receiving-header__eyebrow-sep">·</span>
+            <span>Operaciones de Recepción</span>
+          </div>
+          <h1 class="receiving-header__title">Recepción de Mercancía</h1>
+          <p class="receiving-header__subtitle">
+            Control de arribo en caseta, inspección física y registro de tarimas en tiempo real.
+          </p>
+        </div>
       </div>
-      <h2 class="receiving-header__title">Recepción de Mercancía</h2>
-      <p class="receiving-header__subtitle">Control de arribo en caseta, inspección física y registro de tarimas en tiempo real.</p>
+
     </div>
 
-    <!-- SWITCHER DE PESTAÑAS: WORKBENCH VS MONITOR DE UNIDADES EN PATIO -->
-    <div class="flex items-center gap-2">
-      <button
-        type="button"
-        class="px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-        [class.bg-slate-900]="activePatioTab() === 'workbench'"
-        [class.text-white]="activePatioTab() === 'workbench'"
-        [class.bg-slate-100]="activePatioTab() !== 'workbench'"
-        [class.text-slate-700]="activePatioTab() !== 'workbench'"
-        (click)="activePatioTab.set('workbench')"
-      >
-        <span class="material-symbols-outlined text-base">fact_check</span>
-        <span>Workbench Recepciones</span>
-      </button>
+    <!-- ── BARRA DONDE ESTABA EL SLIDE ANTERIOR: TABS A LA IZQUIERDA Y BOTÓN ACCIÓN A LA DERECHA ── -->
+    <div class="movements-toolbar-row">
+      <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
+        <a
+          routerLink="/warehouse-movements/receiving"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">move_to_inbox</span>
+          <span>1. Recepción</span>
+        </a>
 
-      <button
-        type="button"
-        class="px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-sm relative"
-        [class.bg-slate-900]="activePatioTab() === 'patio'"
-        [class.text-white]="activePatioTab() === 'patio'"
-        [class.bg-slate-100]="activePatioTab() !== 'patio'"
-        [class.text-slate-700]="activePatioTab() !== 'patio'"
-        (click)="activePatioTab.set('patio')"
-      >
-        <span class="material-symbols-outlined text-base">monitor</span>
-        <span>Monitor de Patio & Rampas</span>
-        @if (patioWaitAlertsCount() + patioDischargeAlertsCount() > 0) {
-          <span class="bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full animate-pulse">
-            {{ patioWaitAlertsCount() + patioDischargeAlertsCount() }}
-          </span>
-        }
-      </button>
+        <a
+          routerLink="/warehouse-movements/transfers"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">compare_arrows</span>
+          <span>2. Cambio de Almacén</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/outbound"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">local_shipping</span>
+          <span>3. Salidas</span>
+        </a>
+      </nav>
 
       <button
         type="button"
         (click)="startNewReception()"
-        class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
+        class="btn-new-reception"
+        aria-label="Registrar nueva pre-recepción"
       >
-        <span class="material-symbols-outlined text-base">add</span>
+        <span class="material-symbols-outlined">add</span>
         <span>Pre-Recepción</span>
       </button>
     </div>
-  </div>
+  </header>
 
   <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
-  <div class="movement-kpi-grid" [class.hidden]="activePatioTab() === 'patio'">
+  <div class="movement-kpi-grid">
     <!-- Total Recepciones -->
     <div class="movement-kpi-card movement-kpi-card--primary">
       <div class="movement-kpi-card__icon">
@@ -110,7 +130,7 @@
   </div>
 
   <!-- ── 2. MAIN WORKBENCH GRID (MASTER-DETAIL) ── -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start" [class.hidden]="activePatioTab() === 'patio'">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
     <!-- ── 2A. LEFT PANEL: DIRECTORIO Y BÚSQUEDA MASTER (col-span-4) ── -->
     <aside class="carriers-directory lg:col-span-4" aria-label="Directorio de recepciones">

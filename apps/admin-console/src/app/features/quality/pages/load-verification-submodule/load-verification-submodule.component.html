@@ -1,0 +1,556 @@
+<div class="load-verif-page space-y-4">
+
+  <!-- ── 0. BARRA DE ACCIÓN SUPERIOR ── -->
+  <div class="flex items-center justify-end gap-2 flex-wrap pb-1">
+    <button
+      type="button"
+      class="btn-new-verif"
+      (click)="createNewVerification()"
+    >
+      <span class="material-symbols-outlined text-base">add</span>
+      <span>Nueva Verificación</span>
+    </button>
+
+    <button
+      type="button"
+      class="btn-secondary-action"
+      (click)="downloadPdfOfficialSheet()"
+      title="Descargar documento PDF 2x DPI listo para auditoría"
+    >
+      <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+      <span>Exportar PDF</span>
+    </button>
+
+    <button
+      type="button"
+      class="btn-secondary-action"
+      (click)="printOfficialSheet()"
+      title="Imprimir formato físico oficial"
+    >
+      <span class="material-symbols-outlined text-base">print</span>
+      <span>Imprimir F01</span>
+    </button>
+  </div>
+
+  <!-- ── 1. WORKBENCH MASTER-DETAIL (4 COL DIRECTORIO + 8 COL FORMULARIO) ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    
+    <!-- ── PANEL IZQUIERDO: DIRECTORIO DE REMISIONES / VERIFICACIONES ── -->
+    <aside class="verif-directory lg:col-span-4 card-surface" fgSpecularGlow>
+      
+      <!-- Buscador -->
+      <div class="verif-directory__search">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Buscar por Folio, Remisión o Cliente..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        >
+      </div>
+
+      <!-- Lista de Embarques -->
+      <div class="verif-list">
+        @for (v of filteredVerifications(); track v.id) {
+          <div
+            class="verif-card"
+            [class.verif-card--active]="selectedVerificationId() === v.id"
+            (click)="selectVerification(v)"
+          >
+            <div class="verif-card__top">
+              <span class="verif-card__folio">{{ v.folio }}</span>
+              <span
+                class="verif-card__status"
+                [class.status--approved]="v.status === 'APROBADO'"
+                [class.status--pending-clean]="v.status === 'LIMPIEZA_PENDIENTE'"
+                [class.status--pending-cond]="v.status === 'ACONDICIONAMIENTO_PENDIENTE'"
+                [class.status--rejected]="v.status === 'RECHAZADO'"
+                [class.status--process]="v.status === 'EN_PROCESO'"
+              >
+                {{ v.status === 'APROBADO' ? 'APROBADO' : v.status === 'LIMPIEZA_PENDIENTE' ? 'LIMPIEZA IT01' : v.status === 'ACONDICIONAMIENTO_PENDIENTE' ? 'ACOND. IT02' : v.status === 'RECHAZADO' ? 'RECHAZADO' : 'EN PROCESO' }}
+              </span>
+            </div>
+
+            <div class="verif-card__body">
+              <strong class="verif-card__remision">{{ v.remisionNumber }}</strong>
+              <span class="verif-card__client">{{ v.clientName }}</span>
+              <span class="verif-card__desc">{{ v.productDescription }}</span>
+            </div>
+
+            <div class="verif-card__bottom">
+              <span class="verif-card__ramp">
+                <span class="material-symbols-outlined icon-mini">dock</span>
+                {{ v.ramp }}
+              </span>
+              <span class="verif-card__date">{{ v.date }} · {{ v.time }}</span>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-list">
+            <span class="material-symbols-outlined">search_off</span>
+            <p>No se encontraron verificaciones</p>
+          </div>
+        }
+      </div>
+
+      <!-- Footer del Directorio -->
+      <div class="verif-directory__footer">
+        <span>Total: {{ filteredVerifications().length }} verificaciones</span>
+      </div>
+    </aside>
+
+    <!-- ── PANEL DERECHO: ESPACIO DE TRABAJO DEL FORMATO F01 ── -->
+    <main class="verif-workspace lg:col-span-8 space-y-4">
+      
+      <!-- Barra de Selector de Modo (Edición vs Vista Oficial) -->
+      <div class="workspace-mode-bar card-surface">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="mode-btn"
+            [class.mode-btn--active]="activeMode() === 'edit'"
+            (click)="activeMode.set('edit')"
+          >
+            <span class="material-symbols-outlined text-sm">edit_note</span>
+            <span>Formulario Interactivo</span>
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            [class.mode-btn--active]="activeMode() === 'preview'"
+            (click)="activeMode.set('preview')"
+          >
+            <span class="material-symbols-outlined text-sm">visibility</span>
+            <span>Vista Oficial Imprimible</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" class="btn-save-verif" (click)="saveVerification()">
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span>Guardar Cambios</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           MODO 1: FORMULARIO INTERACTIVO DE CAPTURA
+           ═══════════════════════════════════════════════════════════════ -->
+      @if (activeMode() === 'edit') {
+        
+        <!-- ALERTAS NORMATIVAS REACTIVAS (IT01 / IT02 / PLAGA) -->
+        @if (isPestDetected()) {
+          <div class="alert-banner alert-banner--danger">
+            <span class="material-symbols-outlined alert-icon">pest_control</span>
+            <div>
+              <strong>¡ALERTA CRÍTICA DE INOCUIDAD! PRESENCIA DE PLAGA DETECTADA</strong>
+              <p>Se bloquea el despacho de inmediato. Se debe generar reporte formal vía correo al cliente y Dirección General con evidencia fotográfica.</p>
+            </div>
+          </div>
+        }
+
+        @if (isDirtyPallet() && !activeForm().cleaningResponsible.isSigned) {
+          <div class="alert-banner alert-banner--warning">
+            <span class="material-symbols-outlined alert-icon">cleaning_services</span>
+            <div>
+              <strong>INSTRUCTIVO IT01-PO-GC-8.6-01: LIMPIEZA DE PALLET REQUERIDA</strong>
+              <p>Se detectó pallet sucio o con polvo. Se requiere realizar limpieza y firmar el campo de responsable de limpieza al pie del documento.</p>
+            </div>
+          </div>
+        }
+
+        @if (isConditioningRequired()) {
+          <div class="alert-banner alert-banner--info">
+            <span class="material-symbols-outlined alert-icon">build_circle</span>
+            <div>
+              <strong>INSTRUCTIVO IT02-PO-GC-8.6-02: ACONDICIONAMIENTO DE CARGA EN CURSO</strong>
+              <p>Se detectaron daños o inestabilidad en tarima/embalaje. Requiere acondicionamiento antes de la liberación final.</p>
+            </div>
+          </div>
+        }
+
+        <!-- TARJETA DEL FORMATO F01 INTERACTIVO -->
+        <div class="card-surface f01-form-card" fgSpecularGlow>
+          
+          <!-- Encabezado Institucional del Formato -->
+          <div class="f01-doc-header">
+            <div class="f01-doc-header__logo">
+              <span class="f01-shield-badge">4GUARD</span>
+            </div>
+            <div class="f01-doc-header__center">
+              <span class="f01-doc-subtitle">FORMATO</span>
+              <h3 class="f01-doc-title">VERIFICACIÓN DE CARGA</h3>
+              <span class="f01-doc-proc">Proceso: Liberación de carga · Dueño: Seguridad e Inocuidad</span>
+            </div>
+            <div class="f01-doc-header__meta">
+              <span><strong>No. de Control:</strong> F01-PO-GC-8.6-03</span>
+              <span><strong>No. de Revisión:</strong> 03</span>
+              <span><strong>Fecha de Revisión:</strong> 27/03/2026</span>
+              <span><strong>Emisión:</strong> 29/01/2025</span>
+            </div>
+          </div>
+
+          <!-- Campos de Cabecera Operativa -->
+          <div class="f01-meta-fields grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label class="meta-label">DESCRIPCIÓN DEL PRODUCTO</label>
+              <input type="text" class="meta-input" [ngModel]="activeForm().productDescription" (ngModelChange)="activeForm().productDescription = $event">
+            </div>
+            <div>
+              <label class="meta-label">NO. DE REMISIÓN</label>
+              <input type="text" class="meta-input font-mono text-amber-800" [ngModel]="activeForm().remisionNumber" (ngModelChange)="activeForm().remisionNumber = $event">
+            </div>
+            <div>
+              <label class="meta-label">FECHA & HORA</label>
+              <div class="flex gap-2">
+                <input type="date" class="meta-input" [ngModel]="activeForm().date" (ngModelChange)="activeForm().date = $event">
+                <input type="time" class="meta-input w-24" [ngModel]="activeForm().time" (ngModelChange)="activeForm().time = $event">
+              </div>
+            </div>
+            <div>
+              <label class="meta-label">RAMPA DE ANDÉN</label>
+              <input type="text" class="meta-input" [ngModel]="activeForm().ramp" (ngModelChange)="activeForm().ramp = $event">
+            </div>
+          </div>
+
+          <!-- ── TABLA 1: CRITERIOS DE PRODUCTO (8 CRITERIOS + OTROS) ── -->
+          <div class="f01-section">
+            <div class="f01-section-header">
+              <h4>CRITERIOS DE PRODUCTO (CONDICIONES GENERALES VISUALES)</h4>
+              <span class="text-xs text-slate-500">Marque con SI, NO o N/A según corresponda</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="f01-criteria-table">
+                <thead>
+                  <tr>
+                    <th style="width: 32%;">Criterio de Producto</th>
+                    <th style="width: 15%; text-align: center;">Evaluación</th>
+                    <th style="width: 25%;">Acción Normativa</th>
+                    <th style="width: 13%;">Responsable</th>
+                    <th style="width: 15%;">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (crit of activeForm().productCriteria; track crit.id) {
+                    <tr [class.row-warning]="crit.value === 'NO'">
+                      <!-- Criterio -->
+                      <td>
+                        <div class="criterion-label-box">
+                          <strong class="criterion-main-label">{{ crit.label }}</strong>
+                          @if (crit.instructionCode) {
+                            <span class="instruction-chip">{{ crit.instructionCode }}</span>
+                          }
+                        </div>
+                      </td>
+
+                      <!-- Evaluación SI / NO / N/A -->
+                      <td class="text-center">
+                        <div class="val-btn-group">
+                          <button
+                            type="button"
+                            class="val-btn val-btn--si"
+                            [class.is-active]="crit.value === 'SI'"
+                            (click)="setProductCriterionValue(crit.id, 'SI')"
+                          >SI</button>
+
+                          <button
+                            type="button"
+                            class="val-btn val-btn--no"
+                            [class.is-active]="crit.value === 'NO'"
+                            (click)="setProductCriterionValue(crit.id, 'NO')"
+                          >NO</button>
+
+                          <button
+                            type="button"
+                            class="val-btn val-btn--na"
+                            [class.is-active]="crit.value === 'NA'"
+                            (click)="setProductCriterionValue(crit.id, 'NA')"
+                          >N/A</button>
+                        </div>
+                      </td>
+
+                      <!-- Acción -->
+                      <td>
+                        <span class="action-text">{{ crit.actionIfNo }}</span>
+                      </td>
+
+                      <!-- Responsable -->
+                      <td>
+                        <span class="resp-text">{{ crit.responsible }}</span>
+                      </td>
+
+                      <!-- Observaciones -->
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          placeholder="Nota..."
+                          [ngModel]="crit.observations"
+                          (ngModelChange)="crit.observations = $event"
+                        >
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── TABLA 2: CRITERIOS DE TRANSPORTE (9 CRITERIOS) ── -->
+          <div class="f01-section">
+            <div class="f01-section-header">
+              <h4>CRITERIOS DE TRANSPORTE</h4>
+              <span class="text-xs text-slate-500">Evaluación del camión, lona, caja seca, plagas y aromas</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="f01-criteria-table">
+                <thead>
+                  <tr>
+                    <th style="width: 32%;">Criterio de Transporte</th>
+                    <th style="width: 15%; text-align: center;">Evaluación</th>
+                    <th style="width: 25%;">Acción Normativa</th>
+                    <th style="width: 13%;">Responsable</th>
+                    <th style="width: 15%;">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (crit of activeForm().transportCriteria; track crit.id) {
+                    <tr [class.row-warning]="crit.value === 'NO'">
+                      <!-- Criterio -->
+                      <td>
+                        <strong class="criterion-main-label">{{ crit.label }}</strong>
+                      </td>
+
+                      <!-- Evaluación SI / NO / N/A -->
+                      <td class="text-center">
+                        <div class="val-btn-group">
+                          <button
+                            type="button"
+                            class="val-btn val-btn--si"
+                            [class.is-active]="crit.value === 'SI'"
+                            (click)="setTransportCriterionValue(crit.id, 'SI')"
+                          >SI</button>
+
+                          <button
+                            type="button"
+                            class="val-btn val-btn--no"
+                            [class.is-active]="crit.value === 'NO'"
+                            (click)="setTransportCriterionValue(crit.id, 'NO')"
+                          >NO</button>
+
+                          <button
+                            type="button"
+                            class="val-btn val-btn--na"
+                            [class.is-active]="crit.value === 'NA'"
+                            (click)="setTransportCriterionValue(crit.id, 'NA')"
+                          >N/A</button>
+                        </div>
+                      </td>
+
+                      <!-- Acción -->
+                      <td>
+                        <span class="action-text">{{ crit.actionIfNo }}</span>
+                      </td>
+
+                      <!-- Responsable -->
+                      <td>
+                        <span class="resp-text">{{ crit.responsible }}</span>
+                      </td>
+
+                      <!-- Observaciones -->
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          placeholder="Nota..."
+                          [ngModel]="crit.observations"
+                          (ngModelChange)="crit.observations = $event"
+                        >
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── BLOQUE DE FIRMAS Y RESPONSABILIDADES ── -->
+          <div class="f01-signatures-section">
+            
+            <!-- Firma de Limpieza IT01 -->
+            <div class="signature-box" [class.signature-box--required]="isDirtyPallet() && !activeForm().cleaningResponsible.isSigned">
+              <label class="sig-label">Nombre y firma de quien realizó la limpieza (IT01-PO-GC-8.6-01):</label>
+              <div class="flex gap-2 items-center">
+                <input
+                  type="text"
+                  class="sig-input"
+                  placeholder="Nombre de quien realizó limpieza..."
+                  [ngModel]="activeForm().cleaningResponsible.name"
+                  (ngModelChange)="activeForm().cleaningResponsible.name = $event"
+                >
+                <button
+                  type="button"
+                  class="btn-sign"
+                  [class.btn-sign--signed]="activeForm().cleaningResponsible.isSigned"
+                  (click)="signCleaning()"
+                >
+                  {{ activeForm().cleaningResponsible.isSigned ? '✓ Firmado' : 'Firmar Limpieza' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Firma de Liberación de Carga -->
+            <div class="signature-box signature-box--release">
+              <label class="sig-label">Nombre y firma de quien realizó la liberación:</label>
+              <div class="flex gap-2 items-center">
+                <input
+                  type="text"
+                  class="sig-input"
+                  placeholder="Nombre del auditor de liberación..."
+                  [ngModel]="activeForm().releaseResponsible.name"
+                  (ngModelChange)="activeForm().releaseResponsible.name = $event"
+                >
+                <button
+                  type="button"
+                  class="btn-sign-release"
+                  [class.btn-sign-release--signed]="activeForm().releaseResponsible.isSigned"
+                  (click)="signRelease()"
+                >
+                  <span class="material-symbols-outlined text-sm">verified_user</span>
+                  <span>{{ activeForm().releaseResponsible.isSigned ? '✓ Carga Liberada' : 'Liberar y Firmar Carga' }}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      }
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           MODO 2: VISTA PREVIA OFICIAL IMPRIMIBLE (1:1 CON FORMATO FÍSICO)
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="printable-wrapper" [class.hidden]="activeMode() !== 'preview'">
+        <div id="official-f01-print-sheet" class="official-print-document">
+          
+          <!-- Encabezado Oficial -->
+          <table class="print-doc-header-table">
+            <tr>
+              <td class="logo-box" style="width: 15%; text-align: center;">
+                <div class="print-logo-text">4GUARD<br><small>WMS</small></div>
+              </td>
+              <td class="title-box" style="width: 55%; text-align: center;">
+                <div class="print-format-tag">FORMATO</div>
+                <div class="print-main-title">VERIFICACIÓN DE CARGA</div>
+              </td>
+              <td class="meta-box" style="width: 30%;">
+                <div class="print-meta-line"><strong>No. de Control:</strong> F01-PO-GC-8.6-03</div>
+                <div class="print-meta-line"><strong>No. de Revisión:</strong> 03</div>
+                <div class="print-meta-line"><strong>Fecha de Revisión:</strong> 27/03/2026</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Metadatos de Cabecera -->
+          <table class="print-meta-table">
+            <tr>
+              <td style="width: 30%;"><strong>Dueño:</strong> Seguridad e Inocuidad</td>
+              <td style="width: 25%;"><strong>Emisión:</strong> 29/01/2025</td>
+              <td style="width: 15%;" class="text-center"><strong>Elaboró</strong><br><small>{{ activeForm().elaboratedBy.name }}</small></td>
+              <td style="width: 15%;" class="text-center"><strong>Revisó</strong><br><small>{{ activeForm().reviewedBy.name }}</small></td>
+              <td style="width: 15%;" class="text-center"><strong>Aprobó</strong><br><small>{{ activeForm().approvedBy.name }}</small></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Proceso:</strong> Liberación de carga</td>
+              <td colspan="3" class="text-right"><strong>NO. DE REMISIÓN:</strong> {{ activeForm().remisionNumber }}</td>
+            </tr>
+            <tr>
+              <td colspan="5"><strong>DESCRIPCIÓN DEL PRODUCTO:</strong> {{ activeForm().productDescription }}</td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>FECHA:</strong> {{ activeForm().date }}</td>
+              <td colspan="2"><strong>HORA:</strong> {{ activeForm().time }}</td>
+              <td><strong>RAMPA:</strong> {{ activeForm().ramp }}</td>
+            </tr>
+          </table>
+
+          <div class="print-instructions">
+            <strong>CONDICIONES GENERALES VISUALES</strong> — Instrucciones: Marcar con una ✓ según corresponda o n/a.
+          </div>
+
+          <!-- Tabla 1 de Producto -->
+          <table class="print-criteria-table">
+            <thead>
+              <tr class="header-row">
+                <th style="width: 35%;">CRITERIOS DE PRODUCTO</th>
+                <th style="width: 6%; text-align: center;">SI</th>
+                <th style="width: 6%; text-align: center;">NO</th>
+                <th style="width: 28%;">ACCIÓN</th>
+                <th style="width: 12%;">RESPONSABLE</th>
+                <th style="width: 13%;">OBSERVACIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (crit of activeForm().productCriteria; track crit.id) {
+                <tr>
+                  <td>{{ crit.label }}</td>
+                  <td class="text-center font-bold">{{ crit.value === 'SI' ? '✓' : '' }}</td>
+                  <td class="text-center font-bold">{{ crit.value === 'NO' ? '✓' : '' }}</td>
+                  <td><small>{{ crit.actionIfNo }}</small></td>
+                  <td><small>{{ crit.responsible }}</small></td>
+                  <td><small>{{ crit.observations }}</small></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <!-- Tabla 2 de Transporte -->
+          <table class="print-criteria-table" style="margin-top: 6px;">
+            <thead>
+              <tr class="header-row">
+                <th style="width: 35%;">CRITERIOS DE TRANSPORTE</th>
+                <th style="width: 6%; text-align: center;">SI</th>
+                <th style="width: 6%; text-align: center;">NO</th>
+                <th style="width: 28%;">ACCIÓN</th>
+                <th style="width: 12%;">RESPONSABLE</th>
+                <th style="width: 13%;">OBSERVACIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (crit of activeForm().transportCriteria; track crit.id) {
+                <tr>
+                  <td>{{ crit.label }}</td>
+                  <td class="text-center font-bold">{{ crit.value === 'SI' ? '✓' : '' }}</td>
+                  <td class="text-center font-bold">{{ crit.value === 'NO' ? '✓' : '' }}</td>
+                  <td><small>{{ crit.actionIfNo }}</small></td>
+                  <td><small>{{ crit.responsible }}</small></td>
+                  <td><small>{{ crit.observations }}</small></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <!-- Firmas Oficiales de Pie -->
+          <div class="print-signatures-box">
+            <div class="print-sig-row">
+              <strong>Nombre y firma de quien realizó la limpieza:</strong>
+              <span class="print-sig-line">{{ activeForm().cleaningResponsible.name }} {{ activeForm().cleaningResponsible.isSigned ? '(Firmado digitalmente)' : '' }}</span>
+            </div>
+            <div class="print-sig-row" style="margin-top: 10px;">
+              <strong>Nombre y firma de quien realizó la liberación:</strong>
+              <span class="print-sig-line">{{ activeForm().releaseResponsible.name }} {{ activeForm().releaseResponsible.isSigned ? '(Firmado digitalmente)' : '' }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>

@@ -1,30 +1,82 @@
-<!--
-  transfer-submodule.component.html
-  Submódulo 2: Cambio de Almacén (Reubicación de Inventario / Putaway) — 4GUARD WMS
-  Arquitectura Master-Detail unificada (Homologada con Recepción de Mercancía)
--->
+<!-- ════════════════════════════════════════════════════════════════
+     CAMBIO DE ALMACÉN — 4GUARD WMS (HOMOLOGADO)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="transfer-page">
 
-<div class="transfer-workbench space-y-5">
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="transfer-header">
+    <div class="transfer-header__top">
 
-  <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
-  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
-    <div>
-      <div class="transfer-header__eyebrow">
-        <span class="material-symbols-outlined icon-glow">compare_arrows</span>
-        <span>4GUARD WMS · REUBICACIÓN DE INVENTARIO</span>
+      <div class="transfer-header__left">
+        <div class="transfer-header__icon-wrap">
+          <span class="material-symbols-outlined transfer-header__icon">compare_arrows</span>
+        </div>
+
+        <div class="transfer-header__copy">
+          <div class="transfer-header__eyebrow">
+            <a routerLink="/dashboard" class="transfer-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="transfer-header__eyebrow-sep">·</span>
+            <span>Reubicación de Inventario</span>
+          </div>
+          <h1 class="transfer-header__title">Cambio de Almacén</h1>
+          <p class="transfer-header__subtitle">
+            Reubicación de inventario en ceros (Putaway / Traspasos internos en tiempo real).
+          </p>
+        </div>
       </div>
-      <h2 class="transfer-header__title">Cambio de Almacén</h2>
-      <p class="transfer-header__subtitle">Reubicación de inventario en ceros (Putaway / Traspasos internos en tiempo real).</p>
+
     </div>
-    <button
-      type="button"
-      (click)="startNewTransfer()"
-      class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
-    >
-      <span class="material-symbols-outlined text-base">add</span>
-      <span>Nuevo Traspaso</span>
-    </button>
-  </div>
+
+    <!-- ── BARRA CON TABS A LA IZQUIERDA Y BOTÓN A LA DERECHA ── -->
+    <div class="movements-toolbar-row">
+      <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
+        <a
+          routerLink="/warehouse-movements/receiving"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">move_to_inbox</span>
+          <span>1. Recepción</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/transfers"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">compare_arrows</span>
+          <span>2. Cambio de Almacén</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/outbound"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">local_shipping</span>
+          <span>3. Salidas</span>
+        </a>
+      </nav>
+
+      <button
+        type="button"
+        (click)="startNewTransfer()"
+        class="btn-new-reception"
+        aria-label="Registrar nuevo traspaso"
+      >
+        <span class="material-symbols-outlined">add</span>
+        <span>Nuevo Traspaso</span>
+      </button>
+    </div>
+  </header>
 
   <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
   <div class="movement-kpi-grid">

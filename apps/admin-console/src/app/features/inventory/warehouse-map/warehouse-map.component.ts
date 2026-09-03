@@ -7,6 +7,7 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { LocationService } from '../../admin/services/location.service';
 import { AuthState } from '../../../core/auth/auth.state';
 
@@ -41,7 +42,7 @@ export type SaturationFilterType = 'ALL' | 'HIGH' | 'MID' | 'LOW' | 'BLOCKED';
 @Component({
   selector: 'fg-warehouse-map',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './warehouse-map.component.html',
   styleUrl: './warehouse-map.component.css',
 })

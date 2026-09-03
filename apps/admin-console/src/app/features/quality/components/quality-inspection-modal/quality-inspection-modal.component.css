@@ -4,7 +4,46 @@
 
 :host {
   display: block;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --navy:           #172033;
+  --navy-mid:       #25324a;
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+
+  --bg-page:        #f5f4f0;
+  --bg-card:        rgba(255, 255, 255, 0.95);
+  --border-card:    rgba(76, 86, 105, 0.12);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255,255,255,0.85);
+
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
+
+  --c-success:      #208457;
+  --c-success-bg:   rgba(32, 132, 87, 0.09);
+  --c-success-bdr:  rgba(32, 132, 87, 0.20);
+  --c-warning:      #a96b13;
+  --c-warning-bg:   rgba(213, 145, 39, 0.10);
+  --c-warning-bdr:  rgba(213, 145, 39, 0.22);
+  --c-danger:       #c84949;
+  --c-danger-bg:    rgba(200, 73, 73, 0.09);
+  --c-danger-bdr:   rgba(200, 73, 73, 0.20);
+  --c-info:         #2d7dd2;
+  --c-info-bg:      rgba(45, 125, 210, 0.08);
+
+  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:      'Inter', 'DM Sans', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-card:    20px;
+  --radius-input:   10px;
+  --radius-badge:   99px;
+  --radius-btn:     10px;
+
+  font-family: var(--font-body);
 }
 
 /* ── PROTECCIÓN GLOBAL DE FUENTE DE ICONOS MATERIAL SYMBOLS ─────────── */
@@ -27,27 +66,34 @@
   text-rendering: optimizeLegibility !important;
 }
 
-:host,
-.qm-modal-dialog,
 .qm-modal-dialog h1,
 .qm-modal-dialog h2,
 .qm-modal-dialog h3,
 .qm-modal-dialog h4,
 .qm-modal-dialog h5,
 .qm-modal-dialog h6,
+.qm-title-header {
+  font-family: var(--font-display) !important;
+  font-weight: 700;
+}
+
+.qm-modal-dialog,
 .qm-modal-dialog p,
-.qm-modal-dialog strong,
+.qm-modal-dialog label,
 .qm-modal-dialog button,
 .qm-modal-dialog input,
 .qm-modal-dialog textarea,
-.qm-modal-dialog span:not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-icons) {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+.qm-modal-dialog span:not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-icons):not(.qm-mono):not(.qm-highlight-lote):not(.qm-sscc-code) {
+  font-family: var(--font-body);
 }
 
 .qm-mono,
 .qm-highlight-lote,
-.qm-sscc-code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+.qm-sscc-code,
+.qm-sku-code,
+.qm-batch-code,
+.qm-location-code {
+  font-family: var(--font-mono) !important;
 }
 
 /* --------------------------------------------------------------------------

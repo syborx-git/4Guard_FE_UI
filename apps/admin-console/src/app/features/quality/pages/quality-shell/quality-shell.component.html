@@ -1,0 +1,131 @@
+<!-- quality-shell.component.html — Homologado con el Design System 4GUARD WMS -->
+<div class="quality-page">
+  
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL HOMOLOGADO
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="quality-header">
+
+    <div class="quality-header__top">
+
+      <div class="quality-header__left">
+        <div class="quality-header__icon-wrap">
+          <span class="material-symbols-outlined quality-header__icon">verified_user</span>
+        </div>
+
+        <div class="quality-header__copy">
+          <div class="quality-header__eyebrow">
+            <a routerLink="/dashboard" class="quality-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="quality-header__eyebrow-sep">·</span>
+            <span>Aseguramiento y Control de Calidad</span>
+          </div>
+          <h1 class="quality-header__title">Control de Calidad</h1>
+          <p class="quality-header__subtitle">
+            Gestión integral de producto no conforme, dictamen formal de liberaciones y verificación de carga F01-PO-GC-8.6-03
+          </p>
+        </div>
+      </div>
+
+      <!-- Pestañas Primarias del Módulo de Calidad -->
+      <nav class="quality-tabs-nav" aria-label="Navegación del módulo de calidad">
+        <a
+          routerLink="/quality/blocks"
+          routerLinkActive="tab-active"
+          class="quality-tab-btn"
+        >
+          <span class="material-symbols-outlined">block</span>
+          <span>1. Bloqueo</span>
+          @if (qualityState.kpiTotalActiveBlocks() > 0) {
+            <span class="tab-badge tab-badge--danger">{{ qualityState.kpiTotalActiveBlocks() }}</span>
+          }
+        </a>
+
+        <a
+          routerLink="/quality/releases"
+          routerLinkActive="tab-active"
+          class="quality-tab-btn"
+        >
+          <span class="material-symbols-outlined">lock_open</span>
+          <span>2. Liberaciones</span>
+          <span class="tab-badge tab-badge--success">{{ qualityState.kpiTotalReleases() }}</span>
+        </a>
+
+        <a
+          routerLink="/quality/load-verifications"
+          routerLinkActive="tab-active"
+          class="quality-tab-btn"
+        >
+          <span class="material-symbols-outlined">fact_check</span>
+          <span>3. Verificación F01</span>
+          @if (qualityState.kpiTotalVerifications() > 0) {
+            <span class="tab-badge tab-badge--info">{{ qualityState.kpiTotalVerifications() }}</span>
+          }
+        </a>
+      </nav>
+
+    </div>
+
+    <!-- ── KPI Cards Homologadas (4GRID con barra inferior) ─────────── -->
+    <div class="quality-kpi-grid" aria-label="Indicadores de calidad">
+
+      <!-- KPI 1: Bloqueados (No Conforme) -->
+      <div class="quality-kpi-card quality-kpi-card--danger">
+        <div class="quality-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <div class="quality-kpi-card__body">
+          <span class="quality-kpi-card__value">{{ qualityState.kpiTotalBlocked() }}</span>
+          <span class="quality-kpi-card__label">Producto No Conforme</span>
+        </div>
+        <div class="quality-kpi-card__bar quality-kpi-card__bar--danger"></div>
+      </div>
+
+      <!-- KPI 2: En Muestreo / Cuarentena -->
+      <div class="quality-kpi-card quality-kpi-card--warning">
+        <div class="quality-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">biotech</span>
+        </div>
+        <div class="quality-kpi-card__body">
+          <span class="quality-kpi-card__value">{{ qualityState.kpiTotalUnderInspection() }}</span>
+          <span class="quality-kpi-card__label">En Muestreo / Pruebas</span>
+        </div>
+        <div class="quality-kpi-card__bar quality-kpi-card__bar--warning"></div>
+      </div>
+
+      <!-- KPI 3: Liberaciones Totales -->
+      <div class="quality-kpi-card quality-kpi-card--success">
+        <div class="quality-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">verified</span>
+        </div>
+        <div class="quality-kpi-card__body">
+          <span class="quality-kpi-card__value">{{ qualityState.kpiTotalReleases() }}</span>
+          <span class="quality-kpi-card__label">Liberaciones Totales</span>
+        </div>
+        <div class="quality-kpi-card__bar quality-kpi-card__bar--success"></div>
+      </div>
+
+      <!-- KPI 4: Verificaciones de Carga F01 -->
+      <div class="quality-kpi-card quality-kpi-card--info">
+        <div class="quality-kpi-card__icon-wrap">
+          <span class="material-symbols-outlined">assignment_turned_in</span>
+        </div>
+        <div class="quality-kpi-card__body">
+          <span class="quality-kpi-card__value">{{ qualityState.kpiTotalVerifications() }}</span>
+          <span class="quality-kpi-card__label">Verificaciones F01</span>
+        </div>
+        <div class="quality-kpi-card__bar quality-kpi-card__bar--info"></div>
+      </div>
+
+    </div>
+
+  </header>
+
+  <!-- ── SUBMÓDULO ACTIVO (ROUTER OUTLET) ────────────────────────────── -->
+  <main class="quality-main-container">
+    <router-outlet></router-outlet>
+  </main>
+
+</div>

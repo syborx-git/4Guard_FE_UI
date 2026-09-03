@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -27,7 +28,7 @@ export interface ForkliftOperatorOption {
 @Component({
   selector: 'fg-transfer-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, PrintTransferLayoutComponent],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, PrintTransferLayoutComponent],
   templateUrl: './transfer-submodule.component.html',
   styleUrl: './transfer-submodule.component.css',
 })
