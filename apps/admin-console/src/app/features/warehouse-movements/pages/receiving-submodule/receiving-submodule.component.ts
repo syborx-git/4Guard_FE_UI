@@ -13,6 +13,7 @@ import {
   PalletType,
   PALLET_TYPE_LABELS,
   MovementAuditEntry,
+  PatioUnitMonitor,
 } from '../../models/warehouse-movements.models';
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
@@ -36,6 +37,7 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 })
 export class ReceivingSubmoduleComponent implements OnInit {
   protected readonly authState = inject(AuthState);
+  protected readonly Math      = Math;
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly fb = inject(FormBuilder);
@@ -144,7 +146,76 @@ export class ReceivingSubmoduleComponent implements OnInit {
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
     sealNumber: [''],
+    economicNumber: [''],
+    securityApproved: [true],
   });
+
+  // ── REINGENIERÍA: MONITOR DE UNIDADES EN PATIO Y CANDADO ANTI-DUPLICADOS ──
+  activePatioTab = signal<'workbench' | 'patio'>('workbench');
+  duplicateUaError = signal<string | null>(null);
+  expirationWarningAlert = signal<string | null>(null);
+
+  patioUnits = signal<PatioUnitMonitor[]>([
+    {
+      id: 'PATIO-001',
+      folio: 'REC-2026-000881',
+      driverName: 'Carlos Ramírez M.',
+      carrierLine: 'Transportes Castores',
+      tractorPlates: '88-AA-12',
+      boxPlates: '99-TC-01',
+      economicNumber: 'ECO-402',
+      registeredAt: new Date(Date.now() - 9.5 * 3600 * 1000).toISOString(),
+      status: 'CHECKED_IN',
+      waitTimeMinutes: 570,
+      dischargeTimeMinutes: 0,
+      hasWaitAlert: true,
+      hasDischargeAlert: false,
+    },
+    {
+      id: 'PATIO-002',
+      folio: 'REC-2026-000882',
+      driverName: 'Jorge Luis Morales',
+      carrierLine: 'Express Tresguerras',
+      tractorPlates: '77-BB-45',
+      boxPlates: '12-TG-88',
+      economicNumber: 'ECO-119',
+      registeredAt: new Date(Date.now() - 3.5 * 3600 * 1000).toISOString(),
+      rampNumber: 2,
+      rampAssignedAt: new Date(Date.now() - 3.2 * 3600 * 1000).toISOString(),
+      dischargeStartedAt: new Date(Date.now() - 3.0 * 3600 * 1000).toISOString(),
+      status: 'DISCHARGING',
+      forkliftOperator: 'Ignacio Morales',
+      palletType: 'TARIMA_CHEP',
+      waitTimeMinutes: 18,
+      dischargeTimeMinutes: 180,
+      hasWaitAlert: false,
+      hasDischargeAlert: true,
+    },
+    {
+      id: 'PATIO-003',
+      folio: 'REC-2026-000883',
+      driverName: 'Ernesto Zavala',
+      carrierLine: 'TUM Logística',
+      tractorPlates: '55-CD-99',
+      boxPlates: '33-TM-04',
+      economicNumber: 'ECO-88',
+      registeredAt: new Date(Date.now() - 1.2 * 3600 * 1000).toISOString(),
+      rampNumber: 4,
+      rampAssignedAt: new Date(Date.now() - 1.0 * 3600 * 1000).toISOString(),
+      dischargeStartedAt: new Date(Date.now() - 0.8 * 3600 * 1000).toISOString(),
+      dischargeEndedAt: new Date(Date.now() - 0.1 * 3600 * 1000).toISOString(),
+      status: 'DISCHARGED_PENDING_EXIT',
+      forkliftOperator: 'Miguel Ángel Ruiz',
+      palletType: 'PLASTICO',
+      waitTimeMinutes: 12,
+      dischargeTimeMinutes: 42,
+      hasWaitAlert: false,
+      hasDischargeAlert: false,
+    },
+  ]);
+
+  patioWaitAlertsCount = computed(() => this.patioUnits().filter(u => u.hasWaitAlert).length);
+  patioDischargeAlertsCount = computed(() => this.patioUnits().filter(u => u.hasDischargeAlert).length);
 
   isSubmitting = signal(false);
 
@@ -754,13 +825,40 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }
   }
 
-  // ── ESCÁNER Y CARGA RÁPIDA DE UAs (PASO 2) ──
+  // ── ESCÁNER Y CARGA RÁPIDA DE UAs CON CANDADO ANTI-DUPLICADOS & ORDEN DESCENDENTE ──
   onUaEnter(event?: Event): void {
     if (event) event.preventDefault();
+    this.duplicateUaError.set(null);
+    this.expirationWarningAlert.set(null);
+
     let code = this.uaCodeInput().trim();
     if (!code) {
-      // Auto-generar código si el usuario presiona [+]
       code = `03761304${Date.now().toString().slice(-10)}`;
+    }
+
+    const formattedCode = code.toUpperCase();
+
+    // 🛑 CANDADO ESTRICTO DE ESCANEO DUPLICADO
+    const isDuplicateInStream = this.palletStream().some((p) => p.palletCode === formattedCode);
+    if (isDuplicateInStream) {
+      const errorMsg = `🛑 BLOQUEO DE SEGURIDAD: La UA (${formattedCode}) ya fue escaneada previamente en esta recepción. Registro duplicado cancelado.`;
+      this.duplicateUaError.set(errorMsg);
+      this.toast.error(errorMsg);
+      return;
+    }
+
+    // ⚠️ VALIDACIÓN PARAMÉTRICA DE CADUCIDAD & VIDA ÚTIL
+    const expDateStr = this.altaForm.value.expirationDate || this.checkInForm.value.expirationDate;
+    if (expDateStr) {
+      const expDate = new Date(expDateStr).getTime();
+      const now = new Date().getTime();
+      const diffDays = Math.ceil((expDate - now) / (1000 * 3600 * 24));
+
+      if (diffDays < 30) {
+        const warnMsg = `⚠️ ALERTA DE VIDA ÚTIL CORTE: Este lote cuenta con solo ${diffDays} día(s) de vida útil remanente (<30 días). Requiere visto bueno del Líder.`;
+        this.expirationWarningAlert.set(warnMsg);
+        this.toast.warning(warnMsg);
+      }
     }
 
     const pzas = this.altaForm.value.piecesPerPallet || 480;
@@ -773,7 +871,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const newItem: ReceptionPalletItem = {
       id: `ua-${Date.now()}-${nextNum}`,
       palletNumber: nextNum,
-      palletCode: code.toUpperCase(),
+      palletCode: formattedCode,
       description: prodName,
       productId: prodId,
       supplierName: suppName,
@@ -783,7 +881,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
     };
 
-    this.palletStream.update((list) => [...list, newItem]);
+    // ⬇️ VISUALIZACIÓN DESCENDENTE: Los más recientes se agregan AL PRINCIPIO del arreglo (unshift)
+    this.palletStream.update((list) => [newItem, ...list]);
     this.uaCodeInput.set('');
     this.uaObsInput.set('');
 
