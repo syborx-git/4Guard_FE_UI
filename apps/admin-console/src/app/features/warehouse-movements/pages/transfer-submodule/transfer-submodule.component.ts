@@ -21,6 +21,7 @@ export interface ForkliftOperatorOption {
   id: string;
   name: string;
   badge: string;
+  jobTitle: string;
   shift: string;
   status: 'ACTIVO' | 'INACTIVO';
 }
@@ -80,6 +81,7 @@ export class TransferSubmoduleComponent implements OnInit {
       id: op.id,
       name: op.fullName,
       badge: op.licenseNumberDc3 || op.code,
+      jobTitle: op.jobTitle || 'Almacenista Montacargista',
       shift: op.shift || '',
       status: op.status,
     }));

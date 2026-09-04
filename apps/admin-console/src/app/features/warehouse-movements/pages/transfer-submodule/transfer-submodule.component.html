@@ -328,7 +328,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-surface-subtle p-3.5 rounded-xl border border-subtle items-center">
-              <div class="md:col-span-6 space-y-1">
+              <div class="md:col-span-5 space-y-1">
                 <label class="fg-label fg-label--required">Montacarguista Responsable de Maniobra</label>
                 <select
                   [ngModel]="selectedOperatorId()"
@@ -337,13 +337,17 @@
                 >
                   <option value="" disabled>-- Selecciona un montacarguista certificado --</option>
                   @for (op of forkliftOperators(); track op.id) {
-                    <option [value]="op.id">{{ op.name }} ({{ op.badge }})</option>
+                    <option [value]="op.id">{{ op.name }} ({{ op.jobTitle }} · {{ op.badge }})</option>
                   }
                 </select>
               </div>
 
-              <div class="md:col-span-6 flex flex-wrap items-center gap-3 text-xs">
-                <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs flex-1">
+              <div class="md:col-span-7 flex flex-wrap items-center gap-2.5 text-xs">
+                <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs flex-1 min-w-[120px]">
+                  <span class="text-secondary block text-[10px] uppercase font-bold">Puesto:</span>
+                  <span class="font-bold text-amber-600 truncate block">{{ selectedOperator()?.jobTitle || 'Almacenista Montacargista' }}</span>
+                </div>
+                <div class="bg-card px-3 py-2 rounded-lg border border-subtle shadow-2xs flex-1 min-w-[120px]">
                   <span class="text-secondary block text-[10px] uppercase font-bold">Turno:</span>
                   <span class="font-bold text-primary truncate block">{{ selectedOperator()?.shift || 'No asignado' }}</span>
                 </div>

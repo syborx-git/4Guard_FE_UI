@@ -269,9 +269,16 @@
               <!-- Info -->
               <div class="carrier-item__body">
                 <div class="carrier-item__name">{{ op.fullName }}</div>
-                <div class="carrier-item__business">
-                  <span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle; margin-right: 2px;">schedule</span>
-                  {{ op.shift || 'Sin turno asignado' }}
+                <div class="carrier-item__business" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 2px 0;">
+                  <span class="carrier-status-badge" style="background: rgba(197, 168, 107, 0.15); color: #9b7626; border-color: rgba(197, 168, 107, 0.3); font-size: 0.62rem; padding: 1px 6px;">
+                    <span class="material-symbols-outlined" style="font-size: 11px; margin-right: 2px;">badge</span>
+                    {{ op.jobTitle || 'Almacenista Montacargista' }}
+                  </span>
+                  <span style="color: var(--text-muted); font-size: 0.68rem;">·</span>
+                  <span style="font-size: 0.68rem; color: var(--text-secondary);">
+                    <span class="material-symbols-outlined" style="font-size: 12px; vertical-align: middle; margin-right: 1px;">schedule</span>
+                    {{ op.shift || 'Sin turno' }}
+                  </span>
                 </div>
                 <div class="carrier-item__meta">
                   <span class="carrier-item__rfc">{{ op.code }}</span>
@@ -351,6 +358,11 @@
               </div>
 
               @if (selectedOperator() && formMode() !== 'create') {
+                <span class="carrier-status-badge" style="background: rgba(197, 168, 107, 0.15); color: #9b7626; border-color: rgba(197, 168, 107, 0.3);">
+                  <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">badge</span>
+                  {{ selectedOperator()?.jobTitle || 'Almacenista Montacargista' }}
+                </span>
+
                 <span
                   class="carrier-status-badge"
                   [ngClass]="{
@@ -396,14 +408,27 @@
             autocomplete="off"
             class="carriers-form">
 
-            <!-- SECCIÓN 1 — Información Personal -->
+            <!-- SECCIÓN 1 — Información Personal & Puesto -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
                 <span class="material-symbols-outlined">badge</span>
-                Información Personal
+                Información Personal y Puesto
               </legend>
 
-              <div class="carriers-form-grid carriers-form-grid--3">
+              <div class="carriers-form-grid carriers-form-grid--4">
+
+                <div class="fg-field">
+                  <label class="fg-label" for="jobTitle">Puesto / Cargo Operativo</label>
+                  <input
+                    id="jobTitle"
+                    class="fg-input"
+                    type="text"
+                    formControlName="jobTitle"
+                    placeholder="Ej. Almacenista Montacargista, Líder de Turno..."
+                    maxlength="100"
+                  />
+                  <span class="fg-hint">Rol funcional en planta/almacén.</span>
+                </div>
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required" for="firstName">Nombre(s)</label>
