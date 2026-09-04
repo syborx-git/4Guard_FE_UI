@@ -4,21 +4,32 @@
  */
 
 export type PalletType =
+  | 'MADERA_OWENS'
+  | 'MADERA_ESTANDAR'
+  | 'PLASTICO_NEGRO_OWENS'
+  | 'PLASTICO_AZUL'
+  | 'TARIMA_CHEP_NACIONAL'
+  | 'TARIMA_CHEP_EXPORTACION'
+  | 'TARIMA_PLASTICO_NEGRO_ESTANDAR'
   | 'MADERA'
   | 'PLASTICO'
-  | 'PLASTICO_AZUL'
   | 'MADERA_EXPORTACION'
   | 'SIN_TARIMA'
-  | 'MADERA_ESTANDAR'
   | 'TARIMA_CHEP';
 
-export const PALLET_TYPE_LABELS: Record<PalletType, string> = {
+export const PALLET_TYPE_LABELS: Record<string, string> = {
+  MADERA_OWENS: 'Madera Owens',
+  MADERA_ESTANDAR: 'Madera Estándar',
+  PLASTICO_NEGRO_OWENS: 'Plástico Negro Owens',
+  PLASTICO_AZUL: 'Plástico Azul',
+  TARIMA_CHEP_NACIONAL: 'Tarima CHEP Nacional',
+  TARIMA_CHEP_EXPORTACION: 'Tarima CHEP Exportación',
+  TARIMA_PLASTICO_NEGRO_ESTANDAR: 'Tarima Plástico Negro Estándar',
+  // Compatibilidad legacy
   MADERA: 'Madera',
   PLASTICO: 'Plástico',
-  PLASTICO_AZUL: 'Plástico Azul',
   MADERA_EXPORTACION: 'Madera Exportación',
   SIN_TARIMA: 'Sin Tarima',
-  MADERA_ESTANDAR: 'Madera Estándar',
   TARIMA_CHEP: 'Tarima CHEP',
 };
 

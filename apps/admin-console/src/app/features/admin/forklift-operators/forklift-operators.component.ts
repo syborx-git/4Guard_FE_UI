@@ -111,6 +111,7 @@ export class ForkliftOperatorsComponent implements OnInit {
         !query ||
         op.fullName.toLowerCase().includes(query) ||
         op.code.toLowerCase().includes(query) ||
+        (op.jobTitle && op.jobTitle.toLowerCase().includes(query)) ||
         op.licenseNumberDc3.toLowerCase().includes(query);
 
       return matchesLic && matchesQuery;
@@ -119,6 +120,7 @@ export class ForkliftOperatorsComponent implements OnInit {
 
   // ─── Formulario Reactivo ────────────────────────────────────────────────────
   protected readonly operatorForm = this.fb.group({
+    jobTitle:              ['', [Validators.maxLength(100)]],
     firstName:             ['', [Validators.required, Validators.minLength(2)]],
     lastNamePaternal:      ['', [Validators.required, Validators.minLength(2)]],
     lastNameMaternal:      ['', [Validators.required, Validators.minLength(2)]],
@@ -233,6 +235,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     // Use shiftId for the form control; fall back to shiftId if available
     const shiftValue = op.shiftId || op.shift || '';
     this.operatorForm.patchValue({
+      jobTitle:              op.jobTitle || '',
       firstName:             op.firstName,
       lastNamePaternal:      op.lastNamePaternal,
       lastNameMaternal:      op.lastNameMaternal,
@@ -260,6 +263,7 @@ export class ForkliftOperatorsComponent implements OnInit {
       const request: UpdateForkliftOperatorRequest = {
         id:                    selectedId,
         organizationId:        currentOp?.organizationId || orgId,
+        jobTitle:              val.jobTitle || undefined,
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
         lastNameMaternal:      val.lastNameMaternal!,
@@ -285,6 +289,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     } else {
       const request: CreateForkliftOperatorRequest = {
         organizationId:        orgId,
+        jobTitle:              val.jobTitle || undefined,
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
         lastNameMaternal:      val.lastNameMaternal!,
@@ -324,7 +329,7 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.operatorForm.reset({ shift: '' });
+    this.operatorForm.reset({ shift: '', jobTitle: '' });
   }
 
   // ─── Toggle Estatus ─────────────────────────────────────────────────────────
