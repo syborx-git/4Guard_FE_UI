@@ -3,7 +3,7 @@
  * @description Submódulo 1 de Calidad: Gestión de Bloqueos y Producto No Conforme en 4 Etapas (Diagrama 1).
  */
 
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -53,6 +53,15 @@ export interface AvailableInventoryOption {
 export class BlocksSubmoduleComponent {
   protected readonly qualityState = inject(QualityStateService);
   private readonly router = inject(Router);
+
+  constructor() {
+    effect(() => {
+      const trigger = this.qualityState.openCreateModalTrigger();
+      if (trigger > 0) {
+        this.openCreateModal();
+      }
+    });
+  }
 
   // Filtros reactivos
   protected readonly selectedStage = signal<DetectionStage | 'ALL'>('ALL');
@@ -439,6 +448,17 @@ export class BlocksSubmoduleComponent {
       this.newBlockCategory.set(allowed[0].key);
     }
     this.selectedCriteriaList.set([]);
+  }
+
+  protected getOptionsBySource(source: 'INBOUND' | 'STORAGE' | 'OUTBOUND' | 'QA_TEST'): AvailableInventoryOption[] {
+    return this.unblockedInventoryOptions().filter(opt => opt.sourceType === source);
+  }
+
+  protected onInventorySelectChange(id: string): void {
+    const item = this.availableInventoryOptions.find(opt => opt.id === id);
+    if (item) {
+      this.selectInventoryItem(item);
+    }
   }
 
   // ── SELECCIÓN DE LOTE DEL INVENTARIO (CON BÚSQUEDA) ───────────

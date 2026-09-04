@@ -363,7 +363,16 @@ export class QualityStateService {
   );
 
   // ══════════════════════════════════════════════════════════════════
-  // 5. ACCIONES Y MUTACIONES DE ESTADO
+  // 5. EVENTOS GLOBALES DE UI / ACCIONES RÁPIDAS
+  // ══════════════════════════════════════════════════════════════════
+  readonly openCreateModalTrigger = signal<number>(0);
+
+  triggerOpenCreateModal(): void {
+    this.openCreateModalTrigger.update(n => n + 1);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // 6. ACCIONES Y MUTACIONES DE ESTADO
   // ══════════════════════════════════════════════════════════════════
 
   createBlock(newBlock: Omit<QualityBlockItem, 'id' | 'folio' | 'reportedAt'>): QualityBlockItem {

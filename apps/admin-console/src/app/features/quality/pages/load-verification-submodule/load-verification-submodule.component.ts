@@ -1,21 +1,22 @@
 /**
  * @file load-verification-submodule.component.ts
  * @description Submódulo 3 de Calidad: Formato Oficial de Verificación de Carga F01-PO-GC-8.6-03 Rev. 03.
- * Incluye validaciones normativas IT01/IT02, firmas digitales y exportación/impresión PDF 2x DPI.
+ * Incluye formulario directo homologado con Recepción, firmas normativas y modal oficial de impresión/descarga PDF 2x DPI.
  */
 
 import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QualityStateService } from '../../services/quality-state.service';
-import { LoadVerification, VerificationCriterion, CriterionValue } from '../../models/quality.models';
+import { LoadVerification, CriterionValue } from '../../models/quality.models';
 import { PrintService } from '../../../../core/services/print.service';
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+import { PrintVerificationLayoutComponent } from '../../components/print-layouts/print-verification-layout.component';
 
 @Component({
   selector: 'fg-load-verification-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, SpecularGlowDirective],
+  imports: [CommonModule, FormsModule, SpecularGlowDirective, PrintVerificationLayoutComponent],
   templateUrl: './load-verification-submodule.component.html',
   styleUrl: './load-verification-submodule.component.css'
 })
@@ -23,30 +24,37 @@ export class LoadVerificationSubmoduleComponent {
   protected readonly qualityState = inject(QualityStateService);
   private readonly printService = inject(PrintService);
 
-  // Workbench Mode: 'list' (Directorio/Resumen) | 'edit' (Edición del Formato F01) | 'preview' (Vista Imprimible Oficial)
-  protected readonly activeMode = signal<'edit' | 'preview'>('edit');
-
   // Verificación actualmente seleccionada
   protected readonly selectedVerificationId = signal<string>('ver-001');
 
   // Copia de trabajo activa en el formulario
   protected readonly activeForm = signal<LoadVerification>(this.getInitialVerificationCopy('ver-001'));
 
-  // Buscador del directorio lateral
+  // Buscador y filtros del directorio lateral
   protected readonly searchQuery = signal('');
+  protected readonly statusFilter = signal<string>('ALL');
 
-  // Directorio filtrado
+  // Estado del Modal de Impresión
+  protected readonly showPrintModal = signal<boolean>(false);
+  protected readonly isGeneratingPdf = signal<boolean>(false);
+
+  // Notificación / Toast tras guardar
+  protected readonly saveFeedback = signal<string | null>(null);
+
+  // Directorio filtrado por texto y por estatus
   protected readonly filteredVerifications = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
+    const status = this.statusFilter();
     return this.qualityState.loadVerifications().filter(v => {
-      if (!q) return true;
-      return (
+      const matchesQuery = !q || (
         v.folio.toLowerCase().includes(q) ||
         v.remisionNumber.toLowerCase().includes(q) ||
         v.clientName.toLowerCase().includes(q) ||
         v.productDescription.toLowerCase().includes(q) ||
         v.ramp.toLowerCase().includes(q)
       );
+      const matchesStatus = status === 'ALL' || v.status === status;
+      return matchesQuery && matchesStatus;
     });
   });
 
@@ -70,6 +78,7 @@ export class LoadVerificationSubmoduleComponent {
   protected selectVerification(v: LoadVerification): void {
     this.selectedVerificationId.set(v.id);
     this.activeForm.set(JSON.parse(JSON.stringify(v)));
+    this.saveFeedback.set(null);
   }
 
   private getInitialVerificationCopy(id: string): LoadVerification {
@@ -84,7 +93,7 @@ export class LoadVerificationSubmoduleComponent {
     const blank = this.createNewBlankVerification();
     this.selectedVerificationId.set(blank.id);
     this.activeForm.set(blank);
-    this.activeMode.set('edit');
+    this.saveFeedback.set(null);
   }
 
   private createNewBlankVerification(): LoadVerification {
@@ -209,20 +218,47 @@ export class LoadVerificationSubmoduleComponent {
 
     if (existing) {
       this.qualityState.updateLoadVerification(current);
-      alert(`¡Verificación ${current.folio} (Remisión: ${current.remisionNumber}) actualizada exitosamente!`);
+      this.saveFeedback.set(`¡Verificación ${current.folio} guardada exitosamente!`);
     } else {
       this.qualityState.createLoadVerification(current);
-      alert(`¡Verificación oficial ${current.folio} registrada en el sistema!`);
+      this.saveFeedback.set(`¡Verificación ${current.folio} registrada en el sistema!`);
+    }
+
+    setTimeout(() => {
+      this.saveFeedback.set(null);
+    }, 4000);
+  }
+
+  // ── CONTROL DEL MODAL OFICIAL DE IMPRESIÓN Y DESCARGA ──
+  protected openPrintModal(): void {
+    this.showPrintModal.set(true);
+  }
+
+  protected closePrintModal(): void {
+    this.showPrintModal.set(false);
+  }
+
+  protected async downloadDirectPdf(): Promise<void> {
+    this.isGeneratingPdf.set(true);
+    try {
+      const folio = this.activeForm().folio || 'F01-VERIFICACION';
+      await this.printService.downloadPdf('#official-f01-print-sheet', `${folio}_F01-PO-GC-8.6-03.pdf`);
+    } finally {
+      this.isGeneratingPdf.set(false);
     }
   }
 
-  // ── IMPRESIÓN Y DESCARGA EN PDF 1:1 CON EL DOCUMENTO OFICIAL ──
-  protected printOfficialSheet(): void {
-    this.printService.printElement('#official-f01-print-sheet');
+  protected triggerBrowserPrint(): void {
+    const folio = this.activeForm().folio || 'F01-VERIFICACION';
+    this.printService.printElement('#official-f01-print-sheet', `${folio} - Verificación de Carga`);
   }
 
-  protected downloadPdfOfficialSheet(): void {
-    const folio = this.activeForm().folio || 'F01-VERIFICACION';
-    this.printService.downloadPdf('#official-f01-print-sheet', `${folio}_F01-PO-GC-8.6-03.pdf`);
+  protected getInitials(name: string): string {
+    if (!name) return '4G';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   }
 }
