@@ -5,7 +5,7 @@
 
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { QualityStateService } from '../../services/quality-state.service';
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
 
@@ -18,4 +18,17 @@ import { SpecularGlowDirective } from '../../../../shared/directives/specular-gl
 })
 export class QualityShellComponent {
   protected readonly qualityState = inject(QualityStateService);
+  private readonly router = inject(Router);
+
+  onRegisterNoConformity(): void {
+    if (!this.router.url.includes('/quality/blocks')) {
+      this.router.navigate(['/quality/blocks']).then(() => {
+        setTimeout(() => {
+          this.qualityState.triggerOpenCreateModal();
+        }, 50);
+      });
+    } else {
+      this.qualityState.triggerOpenCreateModal();
+    }
+  }
 }

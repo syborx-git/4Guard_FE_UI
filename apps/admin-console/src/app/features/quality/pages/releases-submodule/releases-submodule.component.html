@@ -1,8 +1,7 @@
-<div class="releases-page space-y-4">
+<div class="releases-page">
 
-  <!-- ── 0. BARRA DE SELECTOR DE VISTA ── -->
-  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
-    <!-- Pestañas Internas de Vista -->
+  <!-- ── 0. BARRA DE SELECTOR DE VISTA (SEGMENTED CONTROL) ── -->
+  <div class="releases-view-header">
     <div class="view-tabs">
       <button
         type="button"
@@ -10,7 +9,7 @@
         [class.view-tab-btn--active]="activeTab() === 'completed'"
         (click)="activeTab.set('completed')"
       >
-        <span class="material-symbols-outlined text-base">history</span>
+        <span class="material-symbols-outlined">history</span>
         <span>Liberaciones Emitidas</span>
         <span class="tab-pill">{{ qualityState.kpiTotalReleases() }}</span>
       </button>
@@ -21,7 +20,7 @@
         [class.view-tab-btn--active]="activeTab() === 'pending'"
         (click)="activeTab.set('pending')"
       >
-        <span class="material-symbols-outlined text-base">pending_actions</span>
+        <span class="material-symbols-outlined">pending_actions</span>
         <span>Por Dictaminar (Retenidos)</span>
         @if (pendingBlocks().length > 0) {
           <span class="tab-pill tab-pill--danger">{{ pendingBlocks().length }}</span>
@@ -38,10 +37,12 @@
         <span class="material-symbols-outlined">local_shipping</span>
       </div>
       <div class="dest-card__info">
-        <span class="dest-card__tag">DESTINO 1</span>
-        <h4 class="dest-card__title">Liberado para Distribución</h4>
+        <div class="dest-card__top-line">
+          <span class="dest-card__tag">DESTINO 1</span>
+          <strong class="dest-card__count">{{ qualityState.kpiDistributionReleases() }} lotes</strong>
+        </div>
+        <h3 class="dest-card__title">Liberado para Distribución</h3>
         <p class="dest-card__desc">Retorna a estado Disponible para picking y surtido a clientes.</p>
-        <strong class="dest-card__count">{{ qualityState.kpiDistributionReleases() }} lotes</strong>
       </div>
     </div>
 
@@ -51,10 +52,12 @@
         <span class="material-symbols-outlined">delete_forever</span>
       </div>
       <div class="dest-card__info">
-        <span class="dest-card__tag">DESTINO 2</span>
-        <h4 class="dest-card__title">Liberado para Destrucción</h4>
+        <div class="dest-card__top-line">
+          <span class="dest-card__tag">DESTINO 2</span>
+          <strong class="dest-card__count">{{ qualityState.kpiDestructionReleases() }} lotes</strong>
+        </div>
+        <h3 class="dest-card__title">Liberado para Destrucción</h3>
         <p class="dest-card__desc">Merma o producto no conforme canalizado a desecho con acta.</p>
-        <strong class="dest-card__count">{{ qualityState.kpiDestructionReleases() }} lotes</strong>
       </div>
     </div>
 
@@ -64,10 +67,12 @@
         <span class="material-symbols-outlined">assignment_return</span>
       </div>
       <div class="dest-card__info">
-        <span class="dest-card__tag">DESTINO 3</span>
-        <h4 class="dest-card__title">Liberación para Devolución</h4>
+        <div class="dest-card__top-line">
+          <span class="dest-card__tag">DESTINO 3</span>
+          <strong class="dest-card__count">{{ qualityState.kpiReturnReleases() }} lotes</strong>
+        </div>
+        <h3 class="dest-card__title">Liberación para Devolución</h3>
         <p class="dest-card__desc">Retorno logístico formal al proveedor de origen o planta matriz.</p>
-        <strong class="dest-card__count">{{ qualityState.kpiReturnReleases() }} lotes</strong>
       </div>
     </div>
   </div>
@@ -128,8 +133,10 @@
                 <td>
                   <div class="sku-cell">
                     <strong class="sku-name">{{ rel.sku }}</strong>
-                    <span class="lot-badge">{{ rel.batchNumber }}</span>
-                    <span class="sku-qty">{{ rel.quantity }} {{ rel.unitOfMeasure }}</span>
+                    <div class="sku-meta-row">
+                      <span class="lot-badge">{{ rel.batchNumber }}</span>
+                      <span class="sku-qty">{{ rel.quantity }} {{ rel.unitOfMeasure }}</span>
+                    </div>
                   </div>
                 </td>
 
@@ -212,7 +219,7 @@
             <span class="material-symbols-outlined icon-small">pending_actions</span>
             Bandeja de Pendientes
           </span>
-          <h3 class="table-title">Lotes Retenidos Esperando Dictamen de Liberación</h3>
+          <h2 class="table-title">Lotes Retenidos Esperando Dictamen de Liberación</h2>
         </div>
       </div>
 
@@ -285,6 +292,9 @@
 <!-- ═══════════════════════════════════════════════════════════════════
      MODAL DE DICTAMEN FORMAL DE LIBERACIÓN (DIAGRAMA 2)
      ═══════════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════════
+     MODAL DE DICTAMEN FORMAL DE LIBERACIÓN (DIAGRAMA 2)
+     ═══════════════════════════════════════════════════════════════════ -->
 @if (isReleaseModalOpen() && selectedBlockToRelease()) {
   <div class="modal-backdrop" (click)="closeReleaseModal()">
     <div class="modal-card modal-card--lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" fgSpecularGlow>
@@ -296,17 +306,17 @@
             <span class="material-symbols-outlined">lock_open</span>
           </div>
           <div>
-            <span class="modal-eyebrow text-emerald-600">DICTAMEN FORMAL DE LIBERACIÓN</span>
+            <span class="modal-eyebrow modal-eyebrow--success">DICTAMEN FORMAL DE LIBERACIÓN</span>
             <h3 class="modal-title">Liberación Técnica de Lote: {{ selectedBlockToRelease()?.batchNumber }}</h3>
           </div>
         </div>
-        <button type="button" class="btn-close" (click)="closeReleaseModal()">
+        <button type="button" class="btn-close" (click)="closeReleaseModal()" title="Cerrar modal">
           <span class="material-symbols-outlined">close</span>
         </button>
       </header>
 
       <!-- Body -->
-      <div class="modal-body space-y-4">
+      <div class="modal-body">
         
         <!-- Ficha Técnica Resumen -->
         <div class="meta-banner">
@@ -324,14 +334,17 @@
           </div>
           <div>
             <span class="meta-label">Folio Bloqueo Origen</span>
-            <strong class="meta-val font-mono text-amber-700">{{ selectedBlockToRelease()?.folio }}</strong>
+            <strong class="meta-val meta-val--folio">{{ selectedBlockToRelease()?.folio }}</strong>
           </div>
         </div>
 
         <!-- 1. Estatus / Quien Autoriza (Diagrama 2) -->
-        <div>
-          <label class="form-label">1. Origen de la Autorización (Diagrama 2)</label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="modal-step-section">
+          <div class="step-header">
+            <div class="step-badge">1</div>
+            <span class="step-title">Origen de la Autorización (Diagrama 2)</span>
+          </div>
+          <div class="radio-cards-grid">
             <label
               class="radio-card"
               [class.is-selected]="authorizerType() === 'CLIENT'"
@@ -339,8 +352,8 @@
             >
               <input type="radio" name="authType" value="CLIENT" [checked]="authorizerType() === 'CLIENT'">
               <div>
-                <strong class="block text-sm font-bold text-slate-800">Liberado por el Cliente</strong>
-                <span class="text-xs text-slate-500">Autorización formal emitida por el cliente propietario.</span>
+                <strong class="radio-card__title">Liberado por el Cliente</strong>
+                <span class="radio-card__desc">Autorización formal emitida por el cliente propietario.</span>
               </div>
             </label>
 
@@ -351,45 +364,55 @@
             >
               <input type="radio" name="authType" value="QUALITY_4GUARD" [checked]="authorizerType() === 'QUALITY_4GUARD'">
               <div>
-                <strong class="block text-sm font-bold text-slate-800">Liberado por Calidad 4GUARD</strong>
-                <span class="text-xs text-slate-500">Dictamen técnico interno por superintendencia QM.</span>
+                <strong class="radio-card__title">Liberado por Calidad 4GUARD</strong>
+                <span class="radio-card__desc">Dictamen técnico interno por superintendencia QM.</span>
               </div>
             </label>
           </div>
         </div>
 
         <!-- 2. Soporte Documental (Diagrama 2) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="form-label" for="support-type">2. Tipo de Soporte Documental</label>
-            <select id="support-type" class="form-input" [ngModel]="supportType()" (ngModelChange)="supportType.set($event)">
-              <option value="EMAIL">Correo Electrónico Oficial</option>
-              <option value="ELECTRONIC_MEDIA">Medios de Comunicación Electrónicos (Ticket/Sistema)</option>
-              <option value="FORMAL_ACT">Acta / Oficio Formal Firmado</option>
-            </select>
+        <div class="modal-step-section">
+          <div class="step-header">
+            <div class="step-badge">2</div>
+            <span class="step-title">Soporte Documental y Datos del Autorizador</span>
           </div>
-          <div>
-            <label class="form-label" for="support-subject">Asunto / Folio del Correo o Ticket</label>
-            <input id="support-subject" type="text" class="form-input" [ngModel]="supportSubject()" (ngModelChange)="supportSubject.set($event)">
+
+          <div class="form-row-grid">
+            <div>
+              <label class="form-label" for="support-type">Tipo de Soporte Documental</label>
+              <select id="support-type" class="form-input" [ngModel]="supportType()" (ngModelChange)="supportType.set($event)">
+                <option value="EMAIL">Correo Electrónico Oficial</option>
+                <option value="ELECTRONIC_MEDIA">Medios Electrónicos (Ticket / Sistema)</option>
+                <option value="FORMAL_ACT">Acta / Oficio Formal Firmado</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="support-subject">Asunto / Folio del Correo o Ticket</label>
+              <input id="support-subject" type="text" class="form-input" [ngModel]="supportSubject()" (ngModelChange)="supportSubject.set($event)" placeholder="Ej. RE: Autorización liberación lote...">
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div>
+              <label class="form-label" for="auth-name">Nombre de Quién Autoriza</label>
+              <input id="auth-name" type="text" class="form-input" [ngModel]="authorizedByName()" (ngModelChange)="authorizedByName.set($event)" placeholder="Ej. Ing. Mariana Garza">
+            </div>
+            <div>
+              <label class="form-label" for="auth-pos">Puesto / Cargo del Autorizador</label>
+              <input id="auth-pos" type="text" class="form-input" [ngModel]="authorizedByPosition()" (ngModelChange)="authorizedByPosition.set($event)" placeholder="Ej. Gerente de Calidad">
+            </div>
           </div>
         </div>
 
-        <!-- 3. Datos del Autorizador (Nombre, Quién Autoriza, Puesto) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="form-label" for="auth-name">Nombre de Quién Autoriza</label>
-            <input id="auth-name" type="text" class="form-input" [ngModel]="authorizedByName()" (ngModelChange)="authorizedByName.set($event)" placeholder="Ej. Ing. Mariana Garza">
+        <!-- 3. Condiciones / 3 Destinos Finales (Diagrama 2) -->
+        <div class="modal-step-section">
+          <div class="step-header">
+            <div class="step-badge">3</div>
+            <span class="step-title">Condición y Destino Final del Producto</span>
           </div>
-          <div>
-            <label class="form-label" for="auth-pos">Puesto / Cargo del Autorizador</label>
-            <input id="auth-pos" type="text" class="form-input" [ngModel]="authorizedByPosition()" (ngModelChange)="authorizedByPosition.set($event)" placeholder="Ej. Gerente de Calidad Cliente">
-          </div>
-        </div>
 
-        <!-- 4. Condiciones / 3 Destinos Finales (Diagrama 2) -->
-        <div>
-          <label class="form-label">3. Condición y Destino Final del Producto (Diagrama 2)</label>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="dest-choices-grid">
             
             <!-- Destino A: Distribución -->
             <div
@@ -398,8 +421,8 @@
               (click)="setDestination('DISTRIBUTION')"
             >
               <span class="material-symbols-outlined text-2xl text-emerald-600">verified</span>
-              <strong class="dest-choice-title">Liberado para Distribución</strong>
-              <span class="dest-choice-sub">Regresa a DISPONIBLE para picking y venta.</span>
+              <strong class="dest-choice-title">Distribución</strong>
+              <span class="dest-choice-sub">Regresa a DISPONIBLE para picking.</span>
             </div>
 
             <!-- Destino B: Destrucción -->
@@ -409,8 +432,8 @@
               (click)="setDestination('DESTRUCTION')"
             >
               <span class="material-symbols-outlined text-2xl text-red-600">delete_forever</span>
-              <strong class="dest-choice-title">Liberado para Destrucción</strong>
-              <span class="dest-choice-sub">Baja definitiva de inventario por merma.</span>
+              <strong class="dest-choice-title">Destrucción</strong>
+              <span class="dest-choice-sub">Baja definitiva por merma con acta.</span>
             </div>
 
             <!-- Destino C: Devolución -->
@@ -420,14 +443,14 @@
               (click)="setDestination('RETURN')"
             >
               <span class="material-symbols-outlined text-2xl text-amber-600">assignment_return</span>
-              <strong class="dest-choice-title">Liberación para Devolución</strong>
-              <span class="dest-choice-sub">Preparar retorno físico a planta matriz.</span>
+              <strong class="dest-choice-title">Devolución</strong>
+              <span class="dest-choice-sub">Retorno logístico al proveedor.</span>
             </div>
 
           </div>
         </div>
 
-        <!-- 5. Dictamen / Observaciones Técnicas -->
+        <!-- 4. Dictamen / Observaciones Técnicas -->
         <div>
           <label class="form-label" for="decision-notes">4. Justificación Técnica y Observaciones del Dictamen</label>
           <textarea

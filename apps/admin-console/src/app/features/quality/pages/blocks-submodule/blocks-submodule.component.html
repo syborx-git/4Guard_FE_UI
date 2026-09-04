@@ -1,217 +1,152 @@
-<div class="blocks-page space-y-4">
+<div class="blocks-page">
 
-  <!-- ── 0. BARRA INTEGRADA: FILTROS POR ETAPA (SLIDER HORIZONTAL) + BOTÓN DE ACCIÓN EN LA MISMA LÍNEA ── -->
-  <div class="stage-toolbar-row">
-    <!-- Slider / Scroll horizontal de Pills por Etapa -->
-    <div class="stage-slider-container">
-      <div class="stage-pills-track" aria-label="Filtrar por etapa de detección">
-        @for (opt of stageFilterOptions; track opt.key) {
-          <button
-            type="button"
-            class="stage-pill"
-            [class.stage-pill--active]="selectedStage() === opt.key"
-            (click)="setStageFilter(opt.key)"
-          >
-            <span class="material-symbols-outlined stage-pill__icon">{{ opt.icon }}</span>
-            <span>{{ opt.label }}</span>
-          </button>
-        }
-      </div>
+  <!-- ── 0. BARRA PRINCIPAL (BUSCADOR + CLIENTE + BOTÓN REGISTRAR NO CONFORMIDAD DORADO) ── -->
+  <div class="unified-top-bar">
+    
+    <!-- Buscador Integrado -->
+    <div class="search-bar-box">
+      <span class="material-symbols-outlined search-icon">search</span>
+      <input
+        id="blocks-search"
+        type="search"
+        class="search-bar-input"
+        placeholder="Buscar por Folio, SKU, Lote, Cliente o Defecto..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        autocomplete="off"
+      >
+      @if (searchQuery()) {
+        <button type="button" class="search-clear-btn" (click)="searchQuery.set('')">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      }
     </div>
 
-    <!-- Botón Principal: Registrar No Conformidad (Fijo a la derecha sin salto de línea) -->
+    <!-- Filtro Rápido por Cliente -->
+    <div class="quick-filter-select-box">
+      <span class="material-symbols-outlined select-icon">corporate_fare</span>
+      <select
+        id="client-select"
+        class="quick-filter-select"
+        [ngModel]="selectedClient()"
+        (ngModelChange)="selectedClient.set($event)"
+      >
+        <option value="">Todos los Clientes</option>
+        @for (client of clientList(); track client) {
+          <option [value]="client">{{ client }}</option>
+        }
+      </select>
+      <span class="material-symbols-outlined select-arrow">keyboard_arrow_down</span>
+    </div>
+
+    <!-- Botón Principal: Registrar No Conformidad (Dorado Homologado) -->
     <button
       type="button"
-      class="btn-primary-action btn-primary-action--nowrap"
+      class="btn-new-quality-report"
       (click)="openCreateModal()"
+      aria-label="Registrar No Conformidad"
     >
-      <span class="material-symbols-outlined text-base">add_alert</span>
+      <span class="material-symbols-outlined">add</span>
       <span>Registrar No Conformidad</span>
     </button>
   </div>
 
-  <!-- ── 1. BARRA DE HERRAMIENTAS Y BÚSQUEDA ── -->
-  <div class="blocks-toolbar card-surface" fgSpecularGlow>
-    <div class="blocks-filters">
-      
-      <!-- Buscador General -->
-      <label class="search-field" for="blocks-search">
-        <span class="material-symbols-outlined search-field__icon">search</span>
-        <input
-          id="blocks-search"
-          type="search"
-          class="search-field__input"
-          placeholder="Buscar por Folio, SKU, Lote, Cliente o Defecto..."
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-          autocomplete="off"
-        >
-      </label>
-
-      <!-- Filtro por Categoría de Defecto -->
-      <label class="filter-select-label" for="category-select">
-        <span class="material-symbols-outlined filter-icon">category</span>
-        <select
-          id="category-select"
-          class="filter-select"
-          [ngModel]="selectedCategory()"
-          (ngModelChange)="selectedCategory.set($event)"
-        >
-          <option value="ALL">Todas las Categorías de Defecto</option>
-          <option value="MATERIAL">Defecto de Material</option>
-          <option value="TRANSPORT">Defecto de Transporte</option>
-          <option value="DOCUMENTATION">Documentación Incorrecta</option>
-          <option value="SPECIAL_TREATMENT">Tratamiento Especial / Prueba</option>
-        </select>
-        <span class="material-symbols-outlined select-arrow">keyboard_arrow_down</span>
-      </label>
-
-      <!-- Filtro por Cliente -->
-      <label class="filter-select-label" for="client-select">
-        <span class="material-symbols-outlined filter-icon">corporate_fare</span>
-        <select
-          id="client-select"
-          class="filter-select"
-          [ngModel]="selectedClient()"
-          (ngModelChange)="selectedClient.set($event)"
-        >
-          <option value="">Todos los Clientes</option>
-          @for (client of clientList(); track client) {
-            <option [value]="client">{{ client }}</option>
-          }
-        </select>
-        <span class="material-symbols-outlined select-arrow">keyboard_arrow_down</span>
-      </label>
-
-    </div>
-  </div>
-
-  <!-- ── 2. TABLA ENTERPRISE DE BLOQUEOS Y NO CONFORMIDADES ── -->
-  <section class="card-surface blocks-table-card" fgSpecularGlow>
-    <div class="blocks-table-card__top">
-      <div>
-        <span class="table-eyebrow">
-          <span class="material-symbols-outlined icon-small">inventory_2</span>
-          Bandeja de Bloqueos Activos
-        </span>
-      </div>
-
-      <div class="table-counter">
-        <span class="material-symbols-outlined">dataset</span>
-        <span><strong>{{ filteredBlocks().length }}</strong> {{ filteredBlocks().length === 1 ? 'lote' : 'lotes' }}</span>
-      </div>
-    </div>
-
-    <!-- Tabla -->
+  <!-- ── 1. TABLA MINIMALISTA DE BLOQUEOS (ESTILO MOCKUP) ── -->
+  <section class="blocks-table-container">
     <div class="table-responsive">
-      <table class="blocks-table" aria-label="Lotes bloqueados">
+      <table class="minimal-table" aria-label="Lotes bloqueados">
         <thead>
           <tr>
-            <th>Folio & Severidad</th>
-            <th>SKU & Descripción</th>
-            <th>Lote / SSCC</th>
-            <th>Cliente / Ubicación</th>
-            <th>Etapa del Proceso</th>
-            <th>Defectos & Criterios</th>
-            <th class="text-right">Acciones QM</th>
+            <th style="width: 15%;">ID / Folio</th>
+            <th style="width: 25%;">Producto / Lote</th>
+            <th style="width: 15%;">Cliente / Ubicación</th>
+            <th style="width: 14%;">Etapa</th>
+            <th style="width: 15%;">Estado / Severidad</th>
+            <th style="width: 16%; text-align: right;">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @for (block of filteredBlocks(); track block.id) {
             <tr>
-              <!-- Folio & Severidad -->
+              <!-- ID / Folio -->
               <td>
-                <div class="folio-cell">
-                  <strong class="folio-code">{{ block.folio }}</strong>
-                  <span
-                    class="severity-chip"
-                    [class.severity-chip--critical]="block.severity === 'CRITICAL'"
-                    [class.severity-chip--warning]="block.severity === 'WARNING'"
-                    [class.severity-chip--info]="block.severity === 'INFO'"
-                  >
-                    {{ block.severity === 'CRITICAL' ? 'CRÍTICO' : block.severity === 'WARNING' ? 'ADVERTENCIA' : 'INFORMATIVO' }}
-                  </span>
+                <div class="cell-folio">
+                  <strong class="folio-text">{{ block.folio }}</strong>
+                  <span class="cell-subtext">{{ block.createdAt | date:'yyyy-MM-dd' }}</span>
                 </div>
               </td>
 
-              <!-- SKU & Descripción -->
+              <!-- Producto / Lote -->
               <td>
-                <div class="sku-cell">
-                  <strong class="sku-name">{{ block.sku }}</strong>
-                  <span class="sku-desc">{{ block.description }}</span>
-                  <span class="sku-qty">{{ block.quantity }} {{ block.unitOfMeasure }}</span>
-                </div>
-              </td>
-
-              <!-- Lote / SSCC -->
-              <td>
-                <div class="lot-cell">
-                  <span class="lot-badge">{{ block.batchNumber }}</span>
-                  <span class="sscc-text">SSCC: {{ block.sscc }}</span>
+                <div class="cell-product">
+                  <span class="product-title font-mono">{{ block.sku }} · {{ block.description }}</span>
+                  <div class="product-sub-tags">
+                    <span class="lot-sub-badge">Lote: <strong>{{ block.batchNumber }}</strong></span>
+                    <span class="sscc-sub-badge">SSCC: {{ block.sscc }}</span>
+                    <span class="qty-sub-badge">{{ block.quantity }} {{ block.unitOfMeasure }}</span>
+                  </div>
                 </div>
               </td>
 
               <!-- Cliente / Ubicación -->
               <td>
-                <div class="client-cell">
-                  <span class="client-title">
-                    <span class="material-symbols-outlined icon-mini">corporate_fare</span>
-                    {{ block.clientName }}
-                  </span>
-                  <span class="location-badge">
+                <div class="cell-client">
+                  <span class="client-name-text">{{ block.clientName }}</span>
+                  <span class="loc-badge-text">
                     <span class="material-symbols-outlined icon-mini">location_on</span>
                     {{ block.locationId }}
                   </span>
                 </div>
               </td>
 
-              <!-- Etapa del Proceso -->
+              <!-- Etapa -->
               <td>
                 <span
-                  class="stage-badge"
-                  [class.stage-badge--inbound]="block.stage === 'INBOUND_UNLOAD'"
-                  [class.stage-badge--storage]="block.stage === 'STORAGE'"
-                  [class.stage-badge--outbound]="block.stage === 'OUTBOUND_LOAD'"
-                  [class.stage-badge--test]="block.stage === 'TEST_MATERIAL'"
+                  class="badge-stage"
+                  [class.badge-stage--inbound]="block.stage === 'INBOUND_UNLOAD'"
+                  [class.badge-stage--storage]="block.stage === 'STORAGE'"
+                  [class.badge-stage--outbound]="block.stage === 'OUTBOUND_LOAD'"
+                  [class.badge-stage--test]="block.stage === 'TEST_MATERIAL'"
                 >
                   {{ getStageLabel(block.stage) }}
                 </span>
               </td>
 
-              <!-- Defectos & Criterios -->
+              <!-- Estado / Severidad (Chips suaves pastel como en el Mockup) -->
               <td>
-                <div class="defects-cell">
-                  <span class="category-tag">{{ getCategoryLabel(block.defectCategory) }}</span>
-                  <div class="criteria-tags">
-                    @for (crit of block.defectCriteria; track crit) {
-                      <span class="criterion-chip" [title]="crit">{{ crit }}</span>
-                    }
-                  </div>
+                <div class="cell-status">
+                  <span
+                    class="status-chip-mockup"
+                    [class.chip--critical]="block.severity === 'CRITICAL'"
+                    [class.chip--warning]="block.severity === 'WARNING'"
+                    [class.chip--info]="block.severity === 'INFO'"
+                  >
+                    {{ block.severity === 'CRITICAL' ? 'Critical' : block.severity === 'WARNING' ? 'Warning' : 'Informativo' }}
+                  </span>
+                  <span class="defect-category-hint" [title]="block.defectCriteria.join(', ')">
+                    {{ getCategoryLabel(block.defectCategory) }}
+                  </span>
                 </div>
               </td>
 
-              <!-- Acciones QM -->
-              <td class="text-right">
-                <div class="actions-group">
-                  <!-- Botón Inspeccionar -->
+              <!-- Acciones (Botones redondeados limpios) -->
+              <td style="text-align: right;">
+                <div class="actions-cluster">
                   <button
                     type="button"
-                    class="action-btn action-btn--inspect"
+                    class="btn-mockup-action btn-mockup-action--inspect"
                     (click)="openInspectionModal(block)"
-                    title="Realizar inspección técnica y checklist"
+                    title="Inspeccionar lote y checklist"
                   >
-                    <span class="material-symbols-outlined">fact_check</span>
                     <span>Inspeccionar</span>
                   </button>
 
-                  <!-- Botón Liberar -->
                   <button
                     type="button"
-                    class="action-btn action-btn--release"
+                    class="btn-mockup-action btn-mockup-action--release"
                     (click)="navigateToReleases(block)"
-                    title="Iniciar flujo de liberación y dictamen"
+                    title="Dictaminar liberación"
                   >
-                    <span class="material-symbols-outlined">lock_open</span>
                     <span>Liberar</span>
                   </button>
                 </div>
@@ -219,11 +154,11 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="7" class="empty-state-cell">
-                <div class="empty-state">
-                  <span class="material-symbols-outlined empty-state__icon">verified</span>
-                  <h4>No se encontraron bloqueos en esta etapa</h4>
-                  <p>No existen lotes retenidos o producto no conforme con los filtros actuales.</p>
+              <td colspan="6" class="empty-state-cell">
+                <div class="empty-state-box">
+                  <span class="material-symbols-outlined empty-icon">check_circle</span>
+                  <h4>No se encontraron bloqueos</h4>
+                  <p>No existen lotes no conformes con los filtros seleccionados.</p>
                 </div>
               </td>
             </tr>
@@ -232,13 +167,10 @@
       </table>
     </div>
 
-    <!-- Pie de tabla -->
-    <footer class="blocks-table-footer">
-      <div class="footer-status">
-        <span class="status-dot"></span>
-        <span>Módulo de No Conformidades QM · Diagrama 1 Activo</span>
-      </div>
-      <span class="footer-system">4GUARD WMS Enterprise · Calidad v4.2</span>
+    <!-- Pie de tabla minimalista -->
+    <footer class="minimal-table-footer">
+      <span class="footer-note">Mostrando {{ filteredBlocks().length }} de {{ qualityState.blocks().length }} registros totales de calidad</span>
+      <span class="footer-badge">4GUARD WMS · Protocolo QM</span>
     </footer>
   </section>
 
@@ -251,7 +183,7 @@
   <div class="modal-backdrop" (click)="closeCreateModal()">
     <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" fgSpecularGlow>
       
-      <!-- Modal Header -->
+      <!-- Modal Header (Fijo) -->
       <header class="modal-header">
         <div class="modal-header__left">
           <div class="modal-icon-badge">
@@ -267,301 +199,243 @@
         </button>
       </header>
 
-      <!-- Modal Body -->
-      <div class="modal-body space-y-4">
+      <!-- Modal Body (Con Scroll Interno Limpio) -->
+      <div class="modal-body">
         
-        <!-- ── PASO 1: BÚSQUEDA RÁPIDA / ESCÁNER POR IDENTIFICADOR ÚNICO ── -->
-        <div class="inventory-scanner-section">
-          <div class="flex items-center justify-between gap-2 mb-1 flex-wrap">
-            <label class="form-label mb-0" for="form-search-identifier">
-              <span class="material-symbols-outlined label-icon">qr_code_scanner</span>
-              <span>1. Buscar o Escanear por SSCC, Lote, SKU o Proveedor</span>
+        <!-- ── PASO 1: BUSCADOR UNIFICADO Y ACCESIBLE (SKU, REMISIÓN/LOTE, SSCC, CLIENTE) ── -->
+        <div class="modal-step-section">
+          <div class="step-header">
+            <div class="step-badge">1</div>
+            <label class="step-title" for="modal-unified-search">
+              <span>Buscar Producto / Remisión / Lote / SKU</span>
             </label>
-            <button
-              type="button"
-              class="manual-mode-toggle"
-              (click)="isManualMode() ? selectInventoryItem(availableInventoryOptions[0]) : activateCatalogMode()"
-            >
-              <span class="material-symbols-outlined text-xs">{{ isManualMode() ? 'inventory_2' : 'menu_book' }}</span>
-              <span>{{ isManualMode() ? 'Volver al Buscador' : 'Catálogo de Claves / Proveedores' }}</span>
-            </button>
+            <span class="text-[11px] text-slate-500 font-medium">Detección Automática de Etapa</span>
           </div>
 
-          @if (!isManualMode()) {
-            <!-- Chips de Filtro Rápido por Proveedor -->
-            <div class="supplier-filter-chips" aria-label="Filtrar por proveedor">
+          <!-- Filtros Rápidos por Proveedor / Cliente -->
+          <div class="supplier-filter-chips mt-1" aria-label="Filtrar por proveedor">
+            <button
+              type="button"
+              class="supplier-chip"
+              [class.is-active]="modalSupplierFilter() === 'ALL'"
+              (click)="setModalSupplierFilter('ALL')"
+            >
+              Todos los Proveedores
+            </button>
+            @for (client of catalogClientsList(); track client) {
               <button
                 type="button"
                 class="supplier-chip"
-                [class.is-active]="modalSupplierFilter() === 'ALL'"
-                (click)="setModalSupplierFilter('ALL')"
+                [class.is-active]="modalSupplierFilter() === client"
+                (click)="setModalSupplierFilter(client)"
               >
-                Todos los Proveedores
+                {{ client.split(' ')[0] }}
               </button>
-              @for (client of catalogClientsList(); track client) {
-                <button
-                  type="button"
-                  class="supplier-chip"
-                  [class.is-active]="modalSupplierFilter() === client"
-                  (click)="setModalSupplierFilter(client)"
-                >
-                  {{ client.split(' ')[0] }}
-                </button>
-              }
-            </div>
-
-            <div class="scanner-input-box mt-2">
-              <span class="material-symbols-outlined scanner-icon">search</span>
-              <input
-                id="form-search-identifier"
-                type="search"
-                class="form-input form-input--scanner"
-                placeholder="Escanear SSCC (ej. 3750...), Lote (ej. LOT-2026...), SKU o Ubicación..."
-                [ngModel]="modalSearchTerm()"
-                (ngModelChange)="modalSearchTerm.set($event); isSearchDropdownOpen.set(true)"
-                (focus)="isSearchDropdownOpen.set(true)"
-                autocomplete="off"
-              />
-              @if (modalSearchTerm()) {
-                <button
-                  type="button"
-                  class="scanner-clear-btn"
-                  (click)="modalSearchTerm.set('')"
-                  title="Limpiar búsqueda"
-                >
-                  <span class="material-symbols-outlined">clear</span>
-                </button>
-              }
-            </div>
-
-            <!-- Desplegable reactivo de resultados en tiempo real -->
-            @if (isSearchDropdownOpen() && filteredModalInventoryOptions().length > 0) {
-              <div class="scanner-dropdown-results card-surface">
-                <div class="scanner-dropdown-header">
-                  <span>Resultados en Almacén ({{ filteredModalInventoryOptions().length }})</span>
-                  <button type="button" class="btn-text-close" (click)="isSearchDropdownOpen.set(false)">Cerrar</button>
-                </div>
-                <div class="scanner-results-list">
-                  @for (opt of filteredModalInventoryOptions(); track opt.id) {
-                    <div
-                      class="scanner-result-item"
-                      [class.is-active]="selectedInventoryId() === opt.id"
-                      (click)="selectInventoryItem(opt)"
-                    >
-                      <div class="result-item__main">
-                        <div class="result-item__top">
-                          <span class="result-sku">{{ opt.sku }}</span>
-                          <span class="result-lot">Lote: <strong>{{ opt.batchNumber }}</strong></span>
-                          <span class="result-sscc">SSCC: {{ opt.sscc }}</span>
-                        </div>
-                        <div class="result-item__desc">{{ opt.description }} · <strong>{{ opt.clientName }}</strong></div>
-                      </div>
-                      <div class="result-item__meta">
-                        <span class="result-stage-badge">{{ getStageLabel(opt.suggestedStage) }}</span>
-                        <span class="result-loc">Ubic: {{ opt.locationId }}</span>
-                        <span class="result-qty">{{ opt.availableQty }} {{ opt.unitOfMeasure === 'UNIT' ? 'Pzas' : 'Cajas' }}</span>
-                      </div>
-                    </div>
-                  }
-                </div>
-              </div>
             }
-          }
-        </div>
+          </div>
 
-        <!-- ── PASO 2: TARJETA RESUMEN DEL PRODUCTO SELECCIONADO ── -->
-        @if (!isManualMode() && selectedInventoryItem(); as item) {
-          <div class="selected-product-card card-surface" fgSpecularGlow>
-            <div class="selected-product-card__header">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="product-badge">{{ item.clientName }}</span>
-                <span class="location-badge">
-                  <span class="material-symbols-outlined" style="font-size: 13px;">location_on</span>
-                  {{ item.locationId }}
+          <!-- Input de Búsqueda Reactivo con Autocompletado -->
+          <div class="scanner-input-box mt-2">
+            <span class="material-symbols-outlined scanner-icon">search</span>
+            <input
+              id="modal-unified-search"
+              type="search"
+              class="form-input form-input--scanner"
+              placeholder="Buscar por SKU (ej. COFFEE, LALA), Lote o Remisión (ej. LOT-2026...), SSCC o Cliente..."
+              [ngModel]="modalSearchTerm()"
+              (ngModelChange)="modalSearchTerm.set($event); isSearchDropdownOpen.set(true)"
+              (focus)="isSearchDropdownOpen.set(true)"
+              autocomplete="off"
+            />
+            @if (modalSearchTerm()) {
+              <button
+                type="button"
+                class="scanner-clear-btn"
+                (click)="modalSearchTerm.set('')"
+                title="Limpiar búsqueda"
+              >
+                <span class="material-symbols-outlined">clear</span>
+              </button>
+            }
+          </div>
+
+          <!-- Desplegable Reactivo de Resultados en Tiempo Real -->
+          @if (isSearchDropdownOpen() && filteredModalInventoryOptions().length > 0) {
+            <div class="scanner-dropdown-results">
+              <div class="scanner-dropdown-header">
+                <span>Resultados Disponibles ({{ filteredModalInventoryOptions().length }})</span>
+                <button type="button" class="btn-text-close" (click)="isSearchDropdownOpen.set(false)">Cerrar</button>
+              </div>
+              <div class="scanner-results-list">
+                @for (opt of filteredModalInventoryOptions(); track opt.id) {
+                  <div
+                    class="scanner-result-item"
+                    [class.is-active]="selectedInventoryId() === opt.id"
+                    (click)="selectInventoryItem(opt)"
+                  >
+                    <div class="result-item__main">
+                      <div class="result-item__top">
+                        <span class="result-sku">{{ opt.sku }}</span>
+                        <span class="result-lot">Lote/Remisión: <strong>{{ opt.batchNumber }}</strong></span>
+                        <span class="result-sscc">SSCC: {{ opt.sscc }}</span>
+                      </div>
+                      <div class="result-item__desc">{{ opt.description }} · <strong>{{ opt.clientName }}</strong></div>
+                    </div>
+                    <div class="result-item__meta">
+                      <span class="result-stage-badge">{{ getStageLabel(opt.suggestedStage) }}</span>
+                      <span class="result-loc">Ubic: {{ opt.locationId }}</span>
+                      <span class="result-qty">{{ opt.availableQty }} {{ opt.unitOfMeasure === 'UNIT' ? 'Pzas' : 'Cajas' }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Tarjeta Resumen del Producto Seleccionado y Etapa Detectada -->
+          @if (selectedInventoryItem(); as item) {
+            <div class="selected-product-card mt-2">
+              <div class="selected-product-card__header">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="product-badge">{{ item.clientName }}</span>
+                  <span class="location-badge">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">location_on</span>
+                    {{ item.locationId }}
+                  </span>
+                </div>
+
+                <!-- Etapa Detectada Automáticamente -->
+                <span class="stage-tag stage-tag--auto">
+                  <span class="material-symbols-outlined" style="font-size: 13px;">my_location</span>
+                  Etapa Detectada: <strong>{{ getStageLabel(newBlockStage()) }}</strong>
                 </span>
               </div>
 
-              <!-- Etapa Autoresuelta por el sistema según la ubicación -->
-              <span class="stage-tag stage-tag--auto">
-                <span class="material-symbols-outlined" style="font-size: 14px;">my_location</span>
-                Etapa: <strong>{{ getStageLabel(item.suggestedStage) }}</strong>
+              <div class="selected-product-card__body">
+                <div class="product-main-info">
+                  <span class="product-sku">{{ item.sku }}</span>
+                  <h4 class="product-desc">{{ item.description }}</h4>
+                </div>
+
+                <div class="product-lot-tags">
+                  <div class="lot-tag">
+                    <span class="lot-tag__lbl">LOTE / REMISIÓN</span>
+                    <strong class="lot-tag__val">{{ item.batchNumber }}</strong>
+                  </div>
+                  <div class="lot-tag">
+                    <span class="lot-tag__lbl">SSCC</span>
+                    <strong class="lot-tag__val">{{ item.sscc }}</strong>
+                  </div>
+                  <div class="lot-tag">
+                    <span class="lot-tag__lbl">STOCK DISPONIBLE</span>
+                    <strong class="lot-tag__val">{{ item.availableQty }} {{ item.unitOfMeasure === 'UNIT' ? 'Pzas' : 'Cajas' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- ── PASO 2: TIPIFICACIÓN DE DEFECTO SEGÚN LA ETAPA (DIAGRAMA) ── -->
+        <div class="modal-step-section">
+          <div class="step-header">
+            <div class="step-badge">2</div>
+            <div class="flex items-center justify-between w-full">
+              <span class="step-title">
+                Defectos Aplicables en Etapa: <strong>{{ getStageLabel(newBlockStage()) }}</strong>
               </span>
-            </div>
-
-            <div class="selected-product-card__body">
-              <div class="product-main-info">
-                <span class="product-sku">{{ item.sku }}</span>
-                <h4 class="product-desc">{{ item.description }}</h4>
-              </div>
-
-              <div class="product-lot-tags">
-                <div class="lot-tag">
-                  <span class="lot-tag__lbl">LOTE:</span>
-                  <strong class="lot-tag__val">{{ item.batchNumber }}</strong>
-                </div>
-                <div class="lot-tag">
-                  <span class="lot-tag__lbl">SSCC:</span>
-                  <strong class="lot-tag__val">{{ item.sscc }}</strong>
-                </div>
-                <div class="lot-tag">
-                  <span class="lot-tag__lbl">STOCK DISPONIBLE:</span>
-                  <strong class="lot-tag__val">{{ item.availableQty }} {{ item.unitOfMeasure === 'UNIT' ? 'Pzas' : 'Cajas' }}</strong>
-                </div>
-              </div>
+              <span class="text-xs text-slate-500 font-medium">Reglas de Calidad</span>
             </div>
           </div>
-        }
 
-        <!-- ── MODO CATÁLOGO DE CLAVES / PROVEEDOR (AUTOCOMPLETADO) ── -->
-        @if (isManualMode()) {
-          <div class="catalog-mode-box card-surface p-3.5 space-y-3 bg-amber-50/40 rounded-xl border border-amber-200">
-            <div class="catalog-mode-header flex items-center justify-between">
-              <span class="text-xs font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">menu_book</span>
-                Registro por Catálogo de Claves de Producto
-              </span>
-              <span class="text-xs text-slate-500">Autocompletado Activo</span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <!-- Selector de Proveedor / Cliente -->
-              <div>
-                <label class="form-label" for="form-cat-client">1. Seleccionar Proveedor / Cliente</label>
-                <select
-                  id="form-cat-client"
-                  class="form-input font-semibold"
-                  [ngModel]="modalCatalogClient()"
-                  (ngModelChange)="onCatalogClientChange($event)"
-                >
-                  @for (client of catalogClientsList(); track client) {
-                    <option [value]="client">{{ client }}</option>
+          <div class="space-y-3 mt-2">
+            <!-- Categoría de Defecto -->
+            <div>
+              <label class="form-label text-xs">Categoría de Defecto</label>
+              @if (allowedCategoriesForStage().length > 1) {
+                <div class="category-selection-tabs">
+                  @for (cat of allowedCategoriesForStage(); track cat.key) {
+                    <button
+                      type="button"
+                      class="category-tab-btn"
+                      [class.is-active]="newBlockCategory() === cat.key"
+                      (click)="setCategory(cat.key)"
+                    >
+                      <span class="material-symbols-outlined text-sm">{{ cat.icon }}</span>
+                      <span>{{ cat.label }}</span>
+                    </button>
                   }
-                </select>
-              </div>
-
-              <!-- Selector de Clave de Producto / SKU -->
-              <div>
-                <label class="form-label" for="form-cat-sku">2. Seleccionar Clave / SKU del Catálogo</label>
-                <select
-                  id="form-cat-sku"
-                  class="form-input font-mono font-bold text-amber-900"
-                  [ngModel]="modalCatalogSku()"
-                  (ngModelChange)="onCatalogSkuChange($event)"
-                >
-                  @for (prod of catalogSkusForSelectedClient(); track prod.sku) {
-                    <option [value]="prod.sku">{{ prod.sku }} · {{ prod.description }}</option>
-                  }
-                </select>
-              </div>
-
-              <!-- Número de Lote -->
-              <div>
-                <label class="form-label" for="form-batch">3. Número de Lote</label>
-                <input id="form-batch" type="text" class="form-input font-mono" [ngModel]="newBlockBatch()" (ngModelChange)="newBlockBatch.set($event)" placeholder="Ej. LOT-2026-901">
-              </div>
-
-              <!-- Código SSCC / Tarima -->
-              <div>
-                <label class="form-label" for="form-sscc">4. Código SSCC / Tarima</label>
-                <input id="form-sscc" type="text" class="form-input font-mono" [ngModel]="newBlockSscc()" (ngModelChange)="newBlockSscc.set($event)" placeholder="Ej. 375010203040500018">
-              </div>
-
-              <!-- Ubicación Actual -->
-              <div>
-                <label class="form-label" for="form-location">5. Ubicación en Almacén</label>
-                <input id="form-location" type="text" class="form-input font-mono" [ngModel]="newBlockLocation()" (ngModelChange)="newBlockLocation.set($event)" placeholder="Ej. LOC-QM-DOCK-01">
-              </div>
-
-              <!-- Etapa de Detección -->
-              <div>
-                <label class="form-label" for="form-stage-manual">6. Etapa de Detección</label>
-                <select id="form-stage-manual" class="form-input" [ngModel]="newBlockStage()" (ngModelChange)="onManualStageChange($event)">
-                  <option value="INBOUND_UNLOAD">1. Descarga (Inbound)</option>
-                  <option value="STORAGE">2. Almacenamiento (Rack)</option>
-                  <option value="OUTBOUND_LOAD">3. Carga (Outbound)</option>
-                  <option value="TEST_MATERIAL">4. Material de Prueba</option>
-                </select>
-              </div>
+                </div>
+              } @else {
+                <div class="single-category-pill">
+                  <span class="material-symbols-outlined text-base text-amber-700">{{ allowedCategoriesForStage()[0].icon }}</span>
+                  <div>
+                    <span class="block text-xs font-bold text-navy">{{ allowedCategoriesForStage()[0].label }}</span>
+                    <span class="block text-[10.5px] text-slate-500">Única tipificación normativa en etapa de {{ getStageLabel(newBlockStage()) }}</span>
+                  </div>
+                </div>
+              }
             </div>
-          </div>
-        }
 
-        <!-- ── PASO 3: CANTIDAD A BLOQUEAR & TIPIFICACIÓN DE DEFECTO FILTRADA POR ETAPA ── -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="form-label" for="form-qty">Cantidad a Bloquear</label>
-            <input id="form-qty" type="number" class="form-input font-bold" [ngModel]="newBlockQty()" (ngModelChange)="newBlockQty.set($event)">
-          </div>
-
-          <div>
-            <label class="form-label">
-              2. Tipificación de Defecto
-              <span class="text-[11px] text-slate-500 font-normal">({{ allowedCategoriesForStage().length }} {{ allowedCategoriesForStage().length === 1 ? 'categoría aplicable' : 'categorías posibles para esta etapa' }})</span>
-            </label>
-
-            @if (allowedCategoriesForStage().length > 1) {
-              <div class="category-selection-tabs">
-                @for (cat of allowedCategoriesForStage(); track cat.key) {
-                  <button
-                    type="button"
-                    class="category-tab-btn"
-                    [class.is-active]="newBlockCategory() === cat.key"
-                    (click)="setCategory(cat.key)"
+            <!-- Criterios Específicos de Desviación con Checkboxes -->
+            <div>
+              <label class="form-label text-xs">Criterios Específicos Detectados (Seleccione aplicables)</label>
+              <div class="criteria-grid mt-1">
+                @for (crit of defectCriteriaOptions(); track crit) {
+                  <div
+                    class="criterion-checkbox-card"
+                    [class.is-selected]="isCriterionSelected(crit)"
+                    (click)="toggleCriterion(crit)"
                   >
-                    <span class="material-symbols-outlined text-sm">{{ cat.icon }}</span>
-                    <span>{{ cat.label }}</span>
-                  </button>
+                    <div class="custom-checkbox">
+                      <span class="material-symbols-outlined check-icon">
+                        {{ isCriterionSelected(crit) ? 'check_box' : 'check_box_outline_blank' }}
+                      </span>
+                    </div>
+                    <span class="criterion-text">{{ crit }}</span>
+                  </div>
                 }
               </div>
-            } @else {
-              <div class="single-category-pill">
-                <span class="material-symbols-outlined text-base text-amber-700">{{ allowedCategoriesForStage()[0].icon }}</span>
-                <div>
-                  <span class="block text-xs font-bold text-navy">{{ allowedCategoriesForStage()[0].label }}</span>
-                  <span class="block text-[10.5px] text-slate-500">Única tipificación normativa en {{ getStageLabel(newBlockStage()) }}</span>
-                </div>
-              </div>
-            }
+            </div>
           </div>
         </div>
 
-        <!-- ── PASO 4: CRITERIOS ESPECÍFICOS DE DESVIACIÓN (SEGÚN DIAGRAMA) ── -->
-        <div>
-          <label class="form-label">3. Criterios Específicos de Desviación (Seleccione los aplicables)</label>
-          <div class="criteria-grid">
-            @for (crit of defectCriteriaOptions(); track crit) {
-              <div
-                class="criterion-checkbox-card"
-                [class.is-selected]="isCriterionSelected(crit)"
-                (click)="toggleCriterion(crit)"
+        <!-- ── PASO 3: CANTIDAD Y OBSERVACIONES ── -->
+        <div class="modal-step-section">
+          <div class="step-header">
+            <div class="step-badge">3</div>
+            <span class="step-title">Cantidad a Bloquear y Observaciones</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2 items-start">
+            <div>
+              <label class="form-label" for="form-qty">Cantidad a Bloquear</label>
+              <input
+                id="form-qty"
+                type="number"
+                class="form-input font-bold text-slate-800"
+                [ngModel]="newBlockQty()"
+                (ngModelChange)="newBlockQty.set($event)"
               >
-                <div class="custom-checkbox">
-                  <span class="material-symbols-outlined check-icon">
-                    {{ isCriterionSelected(crit) ? 'check_box' : 'check_box_outline_blank' }}
-                  </span>
-                </div>
-                <span class="criterion-text">{{ crit }}</span>
-              </div>
-            }
-          </div>
-        </div>
+            </div>
 
-        <!-- Observaciones -->
-        <div>
-          <label class="form-label" for="form-notes">Observaciones del Inspector</label>
-          <textarea
-            id="form-notes"
-            rows="2"
-            class="form-input"
-            [ngModel]="newBlockNotes()"
-            (ngModelChange)="newBlockNotes.set($event)"
-            placeholder="Describa el hallazgo físico, impacto o acción inmediata..."
-          ></textarea>
+            <div class="md:col-span-2">
+              <label class="form-label" for="form-notes">Observaciones del Inspector</label>
+              <input
+                id="form-notes"
+                type="text"
+                class="form-input"
+                [ngModel]="newBlockNotes()"
+                (ngModelChange)="newBlockNotes.set($event)"
+                placeholder="Hallazgo físico, causa de desviación o acción inmediata..."
+              >
+            </div>
+          </div>
         </div>
 
       </div>
 
-      <!-- Modal Footer -->
+      <!-- Modal Footer (Siempre Fijo y Visible) -->
       <footer class="modal-footer">
         <button type="button" class="btn-cancel" (click)="closeCreateModal()">Cancelar</button>
         <button type="button" class="btn-confirm-danger" (click)="saveNewBlock()">
