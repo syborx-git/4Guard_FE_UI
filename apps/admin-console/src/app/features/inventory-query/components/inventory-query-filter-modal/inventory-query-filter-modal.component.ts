@@ -31,15 +31,15 @@ export class InventoryQueryFilterModalComponent implements OnInit {
 
   protected filterForm!: FormGroup;
 
-  // Opciones de Dropdowns oficiales 4GUARD
+  // Opciones de Dropdowns oficiales 4GUARD (7 tipos maestros)
   protected readonly palletTypes: PalletType[] = [
-    'CHEP',
-    'MADERA',
-    'PLASTICO',
-    'SUPERIOR',
-    'EURO',
-    'RETORNABLE',
-    'ESTANDAR'
+    'MADERA OWENS',
+    'MADERA ESTANDAR',
+    'PLASTICO NEGRO OWENS',
+    'PLASTICO AZUL',
+    'TARIMA CHEP NACIONAL',
+    'TARIMA CHEP EXPORTACION',
+    'TARIMA PLASTICO NEGRO ESTANDAR',
   ];
 
   protected readonly labeledStatuses: LabeledStatus[] = [

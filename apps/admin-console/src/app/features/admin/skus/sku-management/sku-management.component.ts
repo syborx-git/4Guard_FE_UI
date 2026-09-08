@@ -97,9 +97,18 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
     const list = this.clientService.clients();
     if (list && list.length > 0) return list;
     return [
-      { id: '55c89bd2-24e5-42da-b1af-c39434c251dc', name: 'Nestlé México' }
+      { id: '00000001-0000-0000-0000-000000000001', name: 'MARCAS NESTLE S.A. DE C.V.' },
+      { id: '00000002-0000-0000-0000-000000000002', name: 'NESTLE MEXICO S.A. DE C.V.' },
+      { id: '00000003-0000-0000-0000-000000000003', name: 'QUALAMEX S.A. DE C.V.' }
     ];
   });
+
+  /** Retorna los primeros 8 dígitos (#00001001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
 
   // ─── Computed Lista Filtrada ────────────────────────────────────────────────
 
@@ -115,7 +124,9 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
         const nameMatch = (s.name || '').toLowerCase().includes(search);
         const descMatch = (s.description || '').toLowerCase().includes(search);
         const clientMatch = (s.clientName || '').toLowerCase().includes(search);
-        return codeMatch || nameMatch || descMatch || clientMatch;
+        const shortId = this.getShortId(s.id).toLowerCase();
+        const idMatch = (s.id || '').toLowerCase().includes(search) || shortId.includes(search);
+        return codeMatch || nameMatch || descMatch || clientMatch || idMatch;
       });
     }
 

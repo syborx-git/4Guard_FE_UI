@@ -98,6 +98,13 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     ];
   });
 
+  /** Retorna los primeros 8 dígitos (#00000001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
+
   // ─── Computed Lista Filtrada ────────────────────────────────────────────────
 
   protected readonly filteredClients = computed(() => {
@@ -139,7 +146,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     name: ['', [Validators.required, Validators.maxLength(150), noWhitespaceValidator]],
     externalId: ['', [Validators.required, Validators.maxLength(50), noWhitespaceValidator]],
     address: ['', [Validators.required, noWhitespaceValidator]],
-    phone: ['', [Validators.required, noWhitespaceValidator]],
+    phone: [''],
     email: ['', [Validators.email]],
     webPortalPassword: ['4GuardTemp#2026'],
     status: ['ACTIVE', [Validators.required]],
@@ -197,7 +204,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
       id: [contact?.id || null],
       name: [contact?.name || '', [Validators.required, noWhitespaceValidator]],
       department: [contact?.department || '', [Validators.required]],
-      phone: [contact?.phone || '', [Validators.required, noWhitespaceValidator]],
+      phone: [contact?.phone || ''],
       email: [contact?.email || '', [Validators.required, Validators.email]],
       isPrimary: [contact?.isPrimary || false],
     });

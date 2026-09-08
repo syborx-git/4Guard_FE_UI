@@ -114,6 +114,13 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
     return result.sort((a, b) => a.groupName.localeCompare(b.groupName));
   });
 
+  /** Retorna los primeros 8 dígitos (#00000001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
+
   // ─── Computed Lista Filtrada de Roles ────────────────────────────────────────
 
   protected readonly filteredRoles = computed(() => {

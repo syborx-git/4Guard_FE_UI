@@ -479,6 +479,22 @@
   padding: 1px 5px;
 }
 
+.sku-item__sku-label {
+  color: var(--gold);
+  margin-right: 2px;
+}
+
+.sku-item__id-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(23, 32, 51, 0.05);
+  border: 1px solid rgba(23, 32, 51, 0.09);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
 .sku-item__unit-tag {
   font-family: var(--font-mono);
   font-size: 0.62rem;
@@ -884,6 +900,23 @@
 .skus-readonly-field { display: flex; flex-direction: column; gap: 0.2rem; }
 .skus-readonly-field__label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
 .skus-readonly-field__value { font-size: 0.83rem; font-weight: 500; color: var(--text-primary); }
+.skus-readonly-field__value--id {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--navy);
+  font-weight: 700;
+  background: rgba(23, 32, 51, 0.06);
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  letter-spacing: 0.05em;
+}
+.skus-readonly-field__value--sku {
+  color: var(--gold-dark, #a37f2c);
+  font-size: 0.88rem;
+}
 
 /* Timeline Box */
 

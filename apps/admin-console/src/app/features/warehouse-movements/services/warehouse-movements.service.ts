@@ -66,9 +66,9 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
     totalPallets: 3,
     totalPieces: 1440,
     pallets: [
-      { id: 'pal-dummy-201', palletNumber: 1, palletCode: '0376130492001', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
-      { id: 'pal-dummy-202', palletNumber: 2, palletCode: '0376130492002', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
-      { id: 'pal-dummy-203', palletNumber: 3, palletCode: '0376130492003', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
+      { id: 'pal-dummy-201', palletNumber: 1, palletCode: '0376130492001', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
+      { id: 'pal-dummy-202', palletNumber: 2, palletCode: '0376130492002', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
+      { id: 'pal-dummy-203', palletNumber: 3, palletCode: '0376130492003', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
     ],
   },
   'C-05-N1': {

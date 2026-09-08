@@ -453,8 +453,16 @@
 
                 <div class="branches-readonly-grid">
                   <div class="branches-readonly-field">
-                    <span class="branches-readonly-field__label">ID de Sucursal (UUID)</span>
-                    <span class="branches-readonly-field__value font-mono">{{ selectedBranch()!.id }}</span>
+                    <span class="branches-readonly-field__label">ID de Sistema (8 dígitos)</span>
+                    <span class="branches-readonly-field__value font-mono font-bold text-slate-800" [title]="'UUID Completo en BD: ' + selectedBranch()!.id">
+                      #{{ getShortId(selectedBranch()!.id) }}
+                    </span>
+                  </div>
+                  <div class="branches-readonly-field">
+                    <span class="branches-readonly-field__label">Código de Sucursal</span>
+                    <span class="branches-readonly-field__value font-mono font-bold text-amber-700">
+                      {{ selectedBranch()!.code }}
+                    </span>
                   </div>
                   <div class="branches-readonly-field">
                     <span class="branches-readonly-field__label">Fecha de creación</span>
@@ -480,7 +488,7 @@
                     <div class="branches-timeline-header">
                       <div class="branches-timeline-title">
                         <span class="material-symbols-outlined">history</span>
-                        <span>Historial de Cambios de Auditoría (GET /api/v1/branches/&#123;id&#125;/audit)</span>
+                        <span>Historial de Cambios y Auditoría</span>
                       </div>
                       <button
                         type="button"

@@ -505,8 +505,16 @@
 
                 <div class="roles-readonly-grid">
                   <div class="roles-readonly-field">
-                    <span class="roles-readonly-field__label">ID de Rol (UUID)</span>
-                    <span class="roles-readonly-field__value font-mono">{{ selectedRole()!.id }}</span>
+                    <span class="roles-readonly-field__label">ID de Sistema (8 dígitos)</span>
+                    <span class="roles-readonly-field__value font-mono font-bold text-slate-800" [title]="'UUID Completo en BD: ' + selectedRole()!.id">
+                      #{{ getShortId(selectedRole()!.id) }}
+                    </span>
+                  </div>
+                  <div class="roles-readonly-field">
+                    <span class="roles-readonly-field__label">Código de Rol</span>
+                    <span class="roles-readonly-field__value font-mono font-bold text-amber-700">
+                      {{ selectedRole()!.code }}
+                    </span>
                   </div>
                   <div class="roles-readonly-field">
                     <span class="roles-readonly-field__label">Fecha de creación</span>
@@ -532,7 +540,7 @@
                     <div class="roles-timeline-header">
                       <div class="roles-timeline-title">
                         <span class="material-symbols-outlined">history</span>
-                        <span>Historial de Cambios de Auditoría (GET /api/v1/roles/&#123;id&#125;/audit)</span>
+                        <span>Historial de Cambios y Auditoría</span>
                       </div>
                       <button
                         type="button"
