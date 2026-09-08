@@ -135,13 +135,25 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   suppliers = this.movementsService.suppliers;
 
-  products = signal<{ id: string; name: string; defaultPieces: number }[]>([
-    { id: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', defaultPieces: 480 },
-    { id: '12445890', name: 'NESCAFÉ CLÁSICO FRASCO 24X200G FEFO', defaultPieces: 360 },
-    { id: '12398112', name: 'LECHE ENTERA LALA UHT 12X1L CAJA', defaultPieces: 600 },
-    { id: '12884901', name: 'AGUA PURIFICADA CIEL 24X600ML PET', defaultPieces: 720 },
-    { id: '12663402', name: 'ACEITE VEGETAL CANOLA 12X1L BOTELLA', defaultPieces: 480 },
+  products = signal<{ id: string; code: string; name: string; defaultPieces: number }[]>([
+    { id: '00001070-0000-0000-0000-000000001070', code: '8500297', name: 'NESCAFE CLASICO 5KG MX', defaultPieces: 480 },
+    { id: '00001054-0000-0000-0000-000000001054', code: '8501911', name: 'LA LECHERA CONDENSADA LECHE BOLSA 11KG MX', defaultPieces: 480 },
+    { id: '00001049-0000-0000-0000-000000001049', code: '8505641', name: 'ABUELITA TABLETA 24X540G MX', defaultPieces: 480 },
+    { id: '00001059-0000-0000-0000-000000001059', code: '12182894', name: 'LA LECHERA LCA BOTELLA SQUEEZE 18X335GMX', defaultPieces: 480 },
+    { id: '00001080-0000-0000-0000-000000001080', code: '12574922', name: 'COFFEE-MATE ORIGINAL 12X640G N1MX', defaultPieces: 480 },
   ]);
+
+  // ── AUTOCOMPLETE PREDICTIVO DE PRODUCTO (SKU) ──
+  skuSearchQuery = signal<string>('');
+  isSkuDropdownOpen = signal<boolean>(false);
+  filteredProducts = computed(() => {
+    const q = this.skuSearchQuery().toLowerCase().trim();
+    const list = this.products();
+    if (!q) return list;
+    return list.filter(
+      (p) => p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)
+    );
+  });
 
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
   checkInForm = this.fb.group({
@@ -250,7 +262,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     productName: [''],
     supplierName: ['', [Validators.required]],
     piecesPerPallet: [0, [Validators.required, Validators.min(1)]],
-    selectedPalletType: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
+    selectedPalletType: ['' as any, [Validators.required]],
     observations: [''],
   });
 
@@ -262,8 +274,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     productId: ['', [Validators.required]],
     description: ['', [Validators.required]],
     supplierName: [''],
-    palletTypeId: ['MADERA_ESTANDAR' as PalletType, [Validators.required]],
-    pieces: [480, [Validators.required, Validators.min(1)]],
+    palletTypeId: ['' as any, [Validators.required]],
+    pieces: [0, [Validators.required, Validators.min(1)]],
     observations: [''],
   });
 
@@ -319,13 +331,27 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.movementsService.movementsApi.getProductSkus().subscribe({
       next: (prods: any) => {
         if (prods && prods.length > 0) {
-          this.products.set(
-            prods.map((p: any) => ({
-              id: p.id || p.code,
+          const sorted = prods
+            .map((p: any) => ({
+              id: p.id,
+              code: String(p.code || p.id).trim(),
               name: p.name || p.description || p.code,
-              defaultPieces: p.piecesPerPallet || 480,
+              defaultPieces: p.piecesPerPallet || (p.weight ? Math.round(Number(p.weight)) : 480),
             }))
-          );
+            .sort((a: any, b: any) => {
+              const numA = parseInt(a.code, 10);
+              const numB = parseInt(b.code, 10);
+              if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+              }
+              return a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+          this.products.set(sorted);
+          const currentRec = this.selectedReception();
+          if (currentRec) {
+            this.patchAltaFormWithReception(currentRec);
+          }
         }
       },
       error: () => {},
@@ -373,6 +399,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.sealList.set([]);
   }
 
+  resetAltaForm(): void {
+    this.altaForm.reset({
+      lotNumber: '',
+      expirationDate: '',
+      forkliftOperator: '',
+      rampNumber: 1,
+      productId: '',
+      productName: '',
+      supplierName: '',
+      piecesPerPallet: 0,
+      selectedPalletType: '' as any,
+      observations: '',
+    });
+    this.skuSearchQuery.set('');
+    this.isSkuDropdownOpen.set(false);
+  }
+
   // Iniciar registro de nueva pre-recepción en el panel (sin modal)
   startNewReception(): void {
     this.movementsService.reloadCarriers();
@@ -380,6 +423,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.selectedReception.set(null);
     localStorage.removeItem('4g_active_reception_folio');
     this.resetCheckInForm();
+    this.resetAltaForm();
   }
 
   // Restablecer a estado inicial (Sin selección)
@@ -387,6 +431,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.formMode.set('idle');
     this.selectedReception.set(null);
     localStorage.removeItem('4g_active_reception_folio');
+    this.resetAltaForm();
   }
 
   // ── OPERACIONES DEL WORKBENCH ──
@@ -417,20 +462,47 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   patchAltaFormWithReception(rec: ReceptionHeader): void {
-    const defaultSupplier = rec.supplierName || (this.suppliers().length > 0 ? this.suppliers()[0].name : '');
     const defaultOperator = rec.checkIn?.forkliftOperator || (this.forkliftOperators().length > 0 ? this.forkliftOperators()[0].name : '');
-    const defaultProduct = this.products().find((p) => p.id === rec.productId || p.name === rec.productName) || (this.products().length > 0 ? this.products()[0] : null);
+    let currentProdId = rec.productId || rec.skuCode || '';
+    if (currentProdId.startsWith('00000000-0000-0000-0007-')) {
+      const num = parseInt(currentProdId.slice(-4), 10);
+      if (!isNaN(num)) {
+        const v10 = (1000 + num).toString().padStart(4, '0');
+        currentProdId = `0000${v10}-0000-0000-0000-00000000${v10}`;
+      }
+    }
+
+    const matchedProduct = (currentProdId || rec.productName)
+      ? this.products().find(
+          (p) =>
+            p.code === currentProdId ||
+            p.id === currentProdId ||
+            (p.name && rec.productName && p.name.trim().toLowerCase() === rec.productName.trim().toLowerCase()) ||
+            (p.code && rec.productName && rec.productName.includes(p.code))
+        )
+      : null;
+
+    if (matchedProduct) {
+      this.skuSearchQuery.set(`${matchedProduct.code} - ${matchedProduct.name}`);
+    } else if (currentProdId) {
+      this.skuSearchQuery.set(rec.productName ? `${currentProdId} - ${rec.productName}` : currentProdId);
+    } else {
+      this.skuSearchQuery.set('');
+    }
+
+    const hasConfiguredProduct = !!(rec.productId || rec.skuCode || (rec.pallets && rec.pallets.length > 0));
+    const palletTypeValue = hasConfiguredProduct ? (rec.selectedPalletType || ('' as any)) : ('' as any);
 
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
       expirationDate: rec.expirationDate || rec.checkIn?.expirationDate || '',
       forkliftOperator: defaultOperator,
       rampNumber: rec.checkIn?.rampNumber || 1,
-      productId: rec.productId || (defaultProduct ? defaultProduct.id : ''),
-      productName: rec.productName || (defaultProduct ? defaultProduct.name : ''),
-      supplierName: defaultSupplier,
-      piecesPerPallet: rec.piecesPerPallet || (defaultProduct ? defaultProduct.defaultPieces : 480),
-      selectedPalletType: rec.selectedPalletType || 'MADERA_ESTANDAR',
+      productId: matchedProduct ? matchedProduct.code : (rec.skuCode || rec.productId || ''),
+      productName: rec.productName || (matchedProduct ? matchedProduct.name : ''),
+      supplierName: rec.supplierName || '',
+      piecesPerPallet: rec.piecesPerPallet != null ? Number(rec.piecesPerPallet) : 0,
+      selectedPalletType: palletTypeValue,
       observations: (rec.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
     });
   }
@@ -728,23 +800,60 @@ export class ReceivingSubmoduleComponent implements OnInit {
       ? 'Gerencia Operativa (Administrador)'
       : `${user} (Admin Autorizado)`;
 
-    const cancelled = this.movementsService.cancelReception(
-      current.folio,
-      reason,
-      adminLabel
-    );
+    if (current.id && pass) {
+      this.movementsApi
+        .cancelReception(current.id, {
+          adminUsername: user,
+          adminPassword: pass,
+          reason,
+        })
+        .subscribe({
+          next: () => {
+            this.isCancelling.set(false);
+            this.showCancelModal.set(false);
 
-    this.isCancelling.set(false);
-    this.showCancelModal.set(false);
+            const cancelled = this.movementsService.cancelReception(
+              current.folio,
+              reason,
+              adminLabel
+            );
 
-    if (cancelled) {
-      this.selectReception(cancelled);
-      this.selectedPrintReception.set(cancelled);
-      this.printType.set('CANCELLATION');
-      this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
-      this.showPrintModal.set(true);
+            if (cancelled) {
+              this.selectReception(cancelled);
+              this.selectedPrintReception.set(cancelled);
+              this.printType.set('CANCELLATION');
+              this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
+              this.showPrintModal.set(true);
+            }
+          },
+          error: (err: any) => {
+            this.isCancelling.set(false);
+            const msg =
+              err.error?.message ||
+              err.message ||
+              'Error al validar credenciales de Administrador o cancelar en el servidor.';
+            this.cancelErrorMessage.set(msg);
+          },
+        });
     } else {
-      this.toast.error('No se pudo procesar la cancelación de la recepción.');
+      const cancelled = this.movementsService.cancelReception(
+        current.folio,
+        reason,
+        adminLabel
+      );
+
+      this.isCancelling.set(false);
+      this.showCancelModal.set(false);
+
+      if (cancelled) {
+        this.selectReception(cancelled);
+        this.selectedPrintReception.set(cancelled);
+        this.printType.set('CANCELLATION');
+        this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
+        this.showPrintModal.set(true);
+      } else {
+        this.toast.error('No se pudo procesar la cancelación de la recepción.');
+      }
     }
   }
 
@@ -902,14 +1011,54 @@ export class ReceivingSubmoduleComponent implements OnInit {
       });
   }
 
-  onProductSelect(productId: string): void {
-    const prod = this.products().find((p) => p.id === productId);
-    if (prod) {
+  onSkuInput(value: string): void {
+    this.skuSearchQuery.set(value);
+    this.isSkuDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
       this.altaForm.patchValue({
-        productId: prod.id,
-        productName: prod.name,
-        piecesPerPallet: prod.defaultPieces,
+        productId: '',
+        productName: '',
       });
+      return;
+    }
+
+    const exact = this.products().find((p) => p.code === val || p.id === val);
+    if (exact) {
+      this.altaForm.patchValue({
+        productId: exact.code || exact.id,
+        productName: exact.name,
+      });
+    }
+  }
+
+  selectProductSku(prod: { id: string; code: string; name: string; defaultPieces: number }): void {
+    this.altaForm.patchValue({
+      productId: prod.code || prod.id,
+      productName: prod.name,
+    });
+    this.skuSearchQuery.set(`${prod.code} - ${prod.name}`);
+    this.isSkuDropdownOpen.set(false);
+  }
+
+  clearSkuSelection(): void {
+    this.altaForm.patchValue({
+      productId: '',
+      productName: '',
+    });
+    this.skuSearchQuery.set('');
+    this.isSkuDropdownOpen.set(false);
+  }
+
+  onProductSelect(productId: string): void {
+    if (!productId) {
+      this.clearSkuSelection();
+      return;
+    }
+    const prod = this.products().find((p) => p.code === productId || p.id === productId);
+    if (prod) {
+      this.selectProductSku(prod);
     }
   }
 
@@ -918,6 +1067,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (event) event.preventDefault();
     this.duplicateUaError.set(null);
     this.expirationWarningAlert.set(null);
+
+    if (!this.altaForm.value.productId) {
+      this.toast.warning('Por favor selecciona un Producto (SKU) antes de escanear tarimas.');
+      return;
+    }
+    if (!this.altaForm.value.selectedPalletType) {
+      this.toast.warning('Por favor selecciona un Tipo de Tarima antes de escanear tarimas.');
+      return;
+    }
+    if (!this.altaForm.value.supplierName) {
+      this.toast.warning('Por favor selecciona un Proveedor antes de escanear tarimas.');
+      return;
+    }
+    if (!this.altaForm.value.piecesPerPallet || Number(this.altaForm.value.piecesPerPallet) <= 0) {
+      this.toast.warning('Por favor especifica las Piezas por Tarima (> 0) antes de escanear tarimas.');
+      return;
+    }
 
     let code = this.uaCodeInput().trim();
     if (!code) {
@@ -949,11 +1115,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    const pzas = this.altaForm.value.piecesPerPallet || 480;
+    const pzas = Number(this.altaForm.value.piecesPerPallet) || 480;
     const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
-    const prodId = this.altaForm.value.productId || '12572733';
-    const prodName = this.altaForm.value.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1';
-    const suppName = this.altaForm.value.supplierName || 'LE MEXICO S.A DE C.V';
+    const prodId = this.altaForm.value.productId || '';
+    const prodName = this.altaForm.value.productName || this.altaForm.value.productId || '';
+    const suppName = this.altaForm.value.supplierName || '';
     const nextNum = this.palletStream().length + 1;
 
     const newItem: ReceptionPalletItem = {
@@ -1084,9 +1250,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const isReception = this.printType() === 'RECEPTION';
     const selector = isReception ? 'fg-print-reception-layout' : 'fg-print-cancellation-layout';
     const recNumber = this.selectedPrintReception()?.folio || this.selectedPrintReception()?.checkIn?.docNumber || '26510';
+    const pdfFilename = isReception ? `Recepcion_${recNumber}` : `Cancelacion_${recNumber}`;
     this.isGeneratingPdf.set(true);
     try {
-      await this.printService.downloadPdf(selector, String(recNumber));
+      await this.printService.downloadPdf(selector, pdfFilename);
     } finally {
       this.isGeneratingPdf.set(false);
     }
@@ -1096,7 +1263,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const isReception = this.printType() === 'RECEPTION';
     const selector = isReception ? 'fg-print-reception-layout' : 'fg-print-cancellation-layout';
     const recNumber = this.selectedPrintReception()?.folio || this.selectedPrintReception()?.checkIn?.docNumber || '26510';
-    this.printService.printElement(selector, String(recNumber));
+    const printDocTitle = isReception ? `Recepción #${recNumber}` : `Cancelación #${recNumber}`;
+    this.printService.printElement(selector, printDocTitle);
   }
 
   closePrintModal(): void {
