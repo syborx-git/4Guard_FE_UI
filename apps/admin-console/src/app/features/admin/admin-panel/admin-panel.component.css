@@ -1,21 +1,40 @@
-/* Variables locales del panel de admin — NO redefinir las del tema global */
-:root {
-  --color-bg-main: #0B0A0E;
-  --color-bg-card: rgba(18, 16, 26, 0.78);
-  --color-bg-hover: rgba(255, 255, 255, 0.04);
-  /* --color-border: redefinida en _dark.scss — NO sobreescribir aquí */
+/* Variables locales del panel de admin — Homologadas al SDD 4GUARD WMS */
+:host {
+  --color-bg-main: var(--bg-page, #f5f4f0);
+  --color-bg-card: var(--bg-card, rgba(255, 255, 255, 0.95));
+  --color-bg-hover: var(--bg-subtle, rgba(23, 32, 51, 0.04));
+  --color-border: var(--border-card, rgba(76, 86, 105, 0.12));
 
-  --color-text-main: #E4E2DE;
-  --color-text-muted: rgba(255, 255, 255, 0.38);
-  --color-text-dim: rgba(255, 255, 255, 0.6);
+  --color-text-main: var(--text-primary, #1c2940);
+  --color-text-muted: var(--text-muted, #8b94a3);
+  --color-text-dim: var(--text-secondary, #5a6477);
 
-  --color-gold: #EAC349;
-  --color-gold-hover: #F5D76E;
-  --color-purple: #B39DDB;
-  --color-purple-hover: #D1C4E9;
+  --color-gold: #c5a86b;
+  --color-gold-hover: #e0c87a;
+  --color-purple: #172033;
+  --color-purple-hover: #25324a;
 
-  --font-family: 'DM Sans', sans-serif;
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-family: var(--font-body);
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --color-bg-main: #080e18;
+  --color-bg-card: rgba(15, 23, 42, 0.95);
+  --color-bg-hover: rgba(255, 255, 255, 0.04);
+  --color-border: rgba(255, 255, 255, 0.10);
+
+  --color-text-main: #f1f5f9;
+  --color-text-muted: #64748b;
+  --color-text-dim: #94a3b8;
+
+  --color-gold: #d0af67;
+  --color-gold-hover: #e1c47c;
+  --color-purple: #0f172a;
+  --color-purple-hover: #1e293b;
 }
 
 /* ── Page wrapper ─────────────────────────────────────────── */
@@ -25,7 +44,7 @@
   height: 100%;
   background: var(--color-bg-main);
   color: var(--color-text-main);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   animation: adminFadeIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
   overflow: hidden;
 }
@@ -1664,9 +1683,9 @@ select.field-group__input:disabled {
 .admin-hero__title {
   margin: 0;
   color: var(--color-text-primary, #202633);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-display, 'Outfit', 'Inter', system-ui, sans-serif);
   font-size: clamp(1.75rem, 2.8vw, 2.55rem);
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.035em;
 }
@@ -1675,6 +1694,7 @@ select.field-group__input:disabled {
   max-width: 780px;
   margin: 0.55rem 0 0;
   color: var(--color-text-secondary, #747985);
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   font-size: 0.82rem;
   line-height: 1.65;
 }
@@ -1740,7 +1760,7 @@ select.field-group__input:disabled {
 .admin-category__heading h2 {
   margin: 0;
   color: var(--color-accent, #a98942);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-display, 'Outfit', 'Inter', system-ui, sans-serif);
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
@@ -2090,20 +2110,20 @@ select.field-group__input:disabled {
 :host-context(.dark) .admin-dashboard,
 :host-context([data-theme="dark"]) .admin-dashboard,
 :host-context(.theme-dark) .admin-dashboard {
-  --color-text-primary: #f0edf5;
-  --color-text-secondary: #aaa6b4;
-  --color-text-tertiary: #777381;
-  --color-accent: #d6b667;
-  --glass-border: rgba(255, 255, 255, 0.09);
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-accent: #d0af67;
+  --glass-border: rgba(255, 255, 255, 0.10);
 
   background:
     radial-gradient(circle at 8% 4%,
-      rgba(214, 182, 103, 0.11),
+      rgba(208, 175, 103, 0.10),
       transparent 30rem),
     radial-gradient(circle at 92% 18%,
-      rgba(117, 88, 169, 0.12),
+      rgba(15, 23, 42, 0.5),
       transparent 30rem),
-    #0d0b12;
+    #080e18;
 }
 
 :host-context(.dark) .admin-dashboard::before,
@@ -2125,37 +2145,35 @@ select.field-group__input:disabled {
 :host-context(.theme-dark) .admin-module-card {
   background:
     linear-gradient(145deg,
-      rgba(35, 31, 44, 0.82),
-      rgba(18, 16, 24, 0.66));
-  border-color: rgba(255, 255, 255, 0.085);
+      rgba(15, 23, 42, 0.95),
+      rgba(11, 18, 32, 0.92));
+  border-color: rgba(255, 255, 255, 0.10);
   box-shadow:
-    0 18px 42px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    0 18px 42px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 :host-context(.dark) .admin-module-card:hover,
 :host-context([data-theme="dark"]) .admin-module-card:hover,
 :host-context(.theme-dark) .admin-module-card:hover {
-  border-color: rgba(214, 182, 103, 0.32);
+  border-color: rgba(208, 175, 103, 0.35);
   background:
     linear-gradient(145deg,
-      rgba(42, 37, 53, 0.93),
-      rgba(23, 20, 30, 0.79));
+      rgba(23, 35, 60, 0.95),
+      rgba(15, 23, 42, 0.92));
   box-shadow:
-    0 24px 52px rgba(0, 0, 0, 0.34),
+    0 24px 52px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 :host-context(.dark) .admin-module-card__icon,
 :host-context([data-theme="dark"]) .admin-module-card__icon,
 :host-context(.theme-dark) .admin-module-card__icon {
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.065),
-      rgba(214, 182, 103, 0.08));
-  border-color: rgba(214, 182, 103, 0.2);
+  background: rgba(208, 175, 103, 0.12);
+  border-color: rgba(208, 175, 103, 0.25);
+  color: #d0af67;
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.18),
+    0 8px 18px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
