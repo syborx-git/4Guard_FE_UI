@@ -10,14 +10,9 @@ export type PalletType =
   | 'PLASTICO_AZUL'
   | 'TARIMA_CHEP_NACIONAL'
   | 'TARIMA_CHEP_EXPORTACION'
-  | 'TARIMA_PLASTICO_NEGRO_ESTANDAR'
-  | 'MADERA'
-  | 'PLASTICO'
-  | 'MADERA_EXPORTACION'
-  | 'SIN_TARIMA'
-  | 'TARIMA_CHEP';
+  | 'TARIMA_PLASTICO_NEGRO_ESTANDAR';
 
-export const PALLET_TYPE_LABELS: Record<string, string> = {
+export const PALLET_TYPE_LABELS: Record<PalletType, string> = {
   MADERA_OWENS: 'Madera Owens',
   MADERA_ESTANDAR: 'Madera Estándar',
   PLASTICO_NEGRO_OWENS: 'Plástico Negro Owens',
@@ -25,12 +20,6 @@ export const PALLET_TYPE_LABELS: Record<string, string> = {
   TARIMA_CHEP_NACIONAL: 'Tarima CHEP Nacional',
   TARIMA_CHEP_EXPORTACION: 'Tarima CHEP Exportación',
   TARIMA_PLASTICO_NEGRO_ESTANDAR: 'Tarima Plástico Negro Estándar',
-  // Compatibilidad legacy
-  MADERA: 'Madera',
-  PLASTICO: 'Plástico',
-  MADERA_EXPORTACION: 'Madera Exportación',
-  SIN_TARIMA: 'Sin Tarima',
-  TARIMA_CHEP: 'Tarima CHEP',
 };
 
 export interface CarrierLineItem {
