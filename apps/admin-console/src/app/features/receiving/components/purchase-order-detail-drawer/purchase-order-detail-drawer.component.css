@@ -1,3 +1,54 @@
+:host {
+  display: block;
+
+  /* ── 1. Tokens Modo Claro ── */
+  --ac-bg:          #f5f4f0;
+  --ac-surface:     rgba(255, 255, 255, 0.96);
+  --ac-surface-2:   #f5f4f0;
+  --ac-surface-3:   #ebe7dc;
+  --ac-border:      rgba(76, 86, 105, 0.12);
+  --ac-border-mid:  rgba(197, 168, 107, 0.30);
+  --ac-hover:       rgba(197, 168, 107, 0.08);
+
+  --ac-gold:        #c5a86b;
+  --ac-gold-lt:     #e0c87a;
+  --ac-gold-bg:     rgba(197, 168, 107, 0.10);
+
+  --ac-txt-1:       #1c2940;
+  --ac-txt-2:       #5a6477;
+  --ac-txt-3:       #8b94a3;
+
+  --ac-critical:    #c84949;
+  --ac-warning:     #a96b13;
+  --ac-success:     #208457;
+  --ac-info:        #2d7dd2;
+}
+
+:host-context(.theme-dark),
+:host-context(.dark) {
+  /* ── 2. Tokens Modo Oscuro ── */
+  --ac-bg:          #0b1119;
+  --ac-surface:     rgba(17, 26, 38, 0.96);
+  --ac-surface-2:   rgba(23, 35, 50, 0.98);
+  --ac-surface-3:   #1f2d3e;
+  --ac-border:      rgba(255, 255, 255, 0.08);
+  --ac-border-mid:  rgba(208, 175, 103, 0.25);
+  --ac-hover:       rgba(255, 255, 255, 0.04);
+
+  --ac-gold:        #d0af67;
+  --ac-gold-lt:     #e1c47c;
+  --ac-gold-bg:     rgba(208, 175, 103, 0.12);
+
+  --ac-txt-1:       #edf1f5;
+  --ac-txt-2:       #9aa6b4;
+  --ac-txt-3:       #667585;
+
+  --ac-critical:    #ef7773;
+  --ac-warning:     #e0aa4f;
+  --ac-success:     #67c78b;
+  --ac-info:        #77a8df;
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    PURCHASE ORDER DETAIL DRAWER (HU-029 EVOLUCIÓN V2)
    Width: min(720px, 92vw) · Drag & Drop · Document Viewer · Versioning
@@ -6,8 +57,8 @@
 .po-doc-drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
+  background: rgba(11, 17, 25, 0.70);
+  backdrop-filter: blur(6px);
   z-index: 890;
   animation: po-fade-in 0.2s ease;
 }
@@ -19,9 +70,9 @@
   bottom: 0;
   width: min(720px, 92vw);
   max-width: 100vw;
-  background: var(--ac-surface, #0f172a);
-  border-left: 1px solid var(--ac-border-mid, rgba(201, 168, 96, 0.25));
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  background: var(--ac-surface);
+  border-left: 1px solid var(--ac-border-mid);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45);
   z-index: 900;
   display: flex;
   flex-direction: column;
