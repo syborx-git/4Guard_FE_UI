@@ -118,6 +118,7 @@ export interface ReceptionHeader {
   elaborationDate: string;
   expirationDate: string;
   productId: string;
+  skuCode?: string;          // Código de 8 dígitos del producto
   productName: string;
   supplierName?: string;     // Nombre del proveedor seleccionado
   storageLocation?: string;  // Lugar de almacenaje (ej. Bodega M 98)

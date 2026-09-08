@@ -322,13 +322,13 @@ export class WarehouseMovementsService {
         sealNumber: `SL-${Math.floor(Math.random() * 89999 + 10000)}`,
       },
       lotNumber: `LOT-2026-${String.fromCharCode(65 + Math.floor(Math.random() * 6))}${Math.floor(Math.random() * 9 + 1)}`,
-      elaborationDate: '2026-01-15',
-      expirationDate: '2026-12-30',
-      productId: '12572733',
-      productName: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: 480,
-      selectedPalletType: 'MADERA_ESTANDAR',
+      elaborationDate: '',
+      expirationDate: '',
+      productId: '',
+      productName: '',
+      supplierName: '',
+      piecesPerPallet: 0,
+      selectedPalletType: '' as any,
       observations: `Ingreso registrado en caseta andén ${randomRamp}`,
       pallets: [],
       createdAt: randomTime,
@@ -763,14 +763,14 @@ export class WarehouseMovementsService {
             carrierLine: res.carrierName || data.carrierLine,
             client: res.clientName || data.client,
           },
-          lotNumber: res.lotNumber || data.lotNumber || 'LOT-2026-A1',
-          elaborationDate: res.elaborationDate || data.elaborationDate || '2026-01-15',
-          expirationDate: res.expirationDate || data.expirationDate || '2026-11-15',
-          productId: res.productSku || '12572733',
-          productName: res.productDescription || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-          supplierName: res.supplierName || 'LE MEXICO S.A DE C.V',
-          piecesPerPallet: res.piecesPerPallet || 480,
-          selectedPalletType: (res.palletType as PalletType) || 'MADERA_ESTANDAR',
+          lotNumber: res.lotNumber || data.lotNumber || '',
+          elaborationDate: res.elaborationDate || data.elaborationDate || '',
+          expirationDate: res.expirationDate || data.expirationDate || '',
+          productId: res.skuCode || res.productSku || '',
+          productName: res.productDescription || res.productName || '',
+          supplierName: res.supplierName || '',
+          piecesPerPallet: res.piecesPerPallet != null ? Number(res.piecesPerPallet) : 0,
+          selectedPalletType: (res.palletType as PalletType) || ('' as any),
           observations: res.observations || '',
           pallets: (res.pallets || []).map((p: any) => ({
             id: p.id,
@@ -813,7 +813,8 @@ export class WarehouseMovementsService {
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
     if (!r) return {} as ReceptionHeader;
-    const pType = (r.palletType as PalletType) || (r.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
+    const hasSkuOrPallets = !!(r.skuId || r.skuCode || r.productSku || r.productId || (r.pallets && r.pallets.length > 0));
+    const pType = hasSkuOrPallets ? ((r.palletType as PalletType) || (r.selectedPalletType as PalletType) || ('' as any)) : ('' as any);
     const pallets = (r.pallets || []).map((p: any) => ({
       id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
       palletNumber: p.palletNumber,
@@ -822,8 +823,8 @@ export class WarehouseMovementsService {
       description: p.description || p.productDescription || r.productName || '',
       supplierName: p.supplierName || r.supplierName || '',
       pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
-      palletTypeId: p.palletTypeId || p.palletType || pType,
-      palletTypeLabel: p.palletTypeLabel || PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+      palletTypeId: p.palletTypeId || p.palletType || pType || 'MADERA_ESTANDAR',
+      palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
       observations: p.observations || '',
       status: p.status || 'SCANNED',
     }));
@@ -863,9 +864,10 @@ export class WarehouseMovementsService {
       elaborationDate: r.elaborationDate || r.checkIn?.elaborationDate || '',
       expirationDate: r.expirationDate || r.checkIn?.expirationDate || '',
       productId: r.skuCode || r.skuId || r.productId || '',
+      skuCode: r.skuCode || '',
       productName: r.productName || '',
       supplierName: r.supplierName || '',
-      piecesPerPallet: r.piecesPerPallet || (pallets.length > 0 ? pallets[0].pieces : 480),
+      piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
       storageLocation: r.storageLocationCode || r.storageLocation || '',
       observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
@@ -887,23 +889,52 @@ export class WarehouseMovementsService {
     productsList: any[],
     suppliersList: any[]
   ): Observable<ReceptionHeader> {
-    const prodItem = productsList.find((p) => p.id === formVals.productId || p.name === formVals.productName);
-    const skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
+    const prodItem = productsList.find(
+      (p) =>
+        (formVals.productId && (p.code === formVals.productId || p.id === formVals.productId)) ||
+        (p.name && formVals.productName && p.name.trim().toLowerCase() === formVals.productName.trim().toLowerCase()) ||
+        (p.code && formVals.productName && formVals.productName.includes(p.code))
+    );
+    let skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
       ? prodItem.id
       : (formVals.productId && formVals.productId.includes('-') ? formVals.productId : null);
 
-    const supItem = suppliersList.find((s) => s.name === formVals.supplierName || s.code === formVals.supplierName);
-    const supplierId = (supItem && supItem.code && supItem.code.includes('-'))
-      ? supItem.code
-      : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null);
+    if (skuId && skuId.startsWith('00000000-0000-0000-0007-')) {
+      const num = parseInt(skuId.slice(-4), 10);
+      if (!isNaN(num)) {
+        const v10 = (1000 + num).toString().padStart(4, '0');
+        skuId = `0000${v10}-0000-0000-0000-00000000${v10}`;
+      }
+    }
+
+    const supItem = suppliersList.find(
+      (s) =>
+        s.name === formVals.supplierName ||
+        s.commercialName === formVals.supplierName ||
+        s.code === formVals.supplierName ||
+        s.id === formVals.supplierId
+    );
+    let supplierId = (supItem && supItem.id && supItem.id.includes('-'))
+      ? supItem.id
+      : (supItem && supItem.code && supItem.code.includes('-')
+          ? supItem.code
+          : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null));
+
+    if (supplierId && supplierId.startsWith('00000000-0000-0000-0003-')) {
+      const num = parseInt(supplierId.slice(-4), 10);
+      if (!isNaN(num)) {
+        const v10 = (30 + num).toString().padStart(2, '0');
+        supplierId = `000000${v10}-0000-0000-0000-0000000000${v10}`;
+      }
+    }
 
     const paramPayload = {
       skuId: skuId,
       supplierId: supplierId,
       lotNumber: formVals.lotNumber,
       expirationDate: formVals.expirationDate || null,
-      piecesPerPallet: Number(formVals.piecesPerPallet) || 480,
-      palletType: formVals.selectedPalletType || 'MADERA_ESTANDAR',
+      piecesPerPallet: formVals.piecesPerPallet != null ? Number(formVals.piecesPerPallet) : 0,
+      palletType: formVals.selectedPalletType || null,
       observations: formVals.observations || '',
     };
 
@@ -926,7 +957,7 @@ export class WarehouseMovementsService {
       concatMap(() => this.movementsApi.getReceptionById(receptionId)),
       map((freshRec: any) => {
         const mapped = this.mapReceptionResponseToHeader(freshRec);
-        this.updateReception(receptionId, mapped);
+        this.updateReception(receptionId, mapped, true);
         return mapped;
       })
     );
@@ -957,7 +988,7 @@ export class WarehouseMovementsService {
         mapped.status = 'COMPLETED';
         mapped.completedAt = mapped.completedAt || new Date().toLocaleString('es-MX');
         mapped.leaderAuthorizedBy = leaderName || mapped.leaderAuthorizedBy;
-        this.updateReception(receptionId, mapped);
+        this.updateReception(receptionId, mapped, true);
         this.addReceptionAudit(mapped.folio, {
           id: `aud-rec-comp-${Date.now()}`,
           action: 'RECEPCION_COMPLETADA',
@@ -980,14 +1011,14 @@ export class WarehouseMovementsService {
       folio: assignedFolio,
       status: 'REGISTERED',
       checkIn: data,
-      lotNumber: data.lotNumber || 'LOT-2026-A1',
-      elaborationDate: data.elaborationDate || '2026-01-15',
-      expirationDate: data.expirationDate || '2026-11-15',
-      productId: '12572733',
-      productName: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: 480,
-      selectedPalletType: 'MADERA_ESTANDAR',
+      lotNumber: data.lotNumber || '',
+      elaborationDate: data.elaborationDate || '',
+      expirationDate: data.expirationDate || '',
+      productId: '',
+      productName: '',
+      supplierName: '',
+      piecesPerPallet: 0,
+      selectedPalletType: '' as any,
       observations: '',
       pallets: [],
       createdAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
@@ -1013,7 +1044,7 @@ export class WarehouseMovementsService {
   }
 
   // Actualiza datos de una recepción en progreso (por folio o id)
-  updateReception(folioOrId: string, partial: Partial<ReceptionHeader>): ReceptionHeader | null {
+  updateReception(folioOrId: string, partial: Partial<ReceptionHeader>, skipAudit = false): ReceptionHeader | null {
     const list = this.receptionsSignal();
     const cleanKey = (folioOrId || '').trim();
     const index = list.findIndex(
@@ -1038,17 +1069,19 @@ export class WarehouseMovementsService {
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
 
-    this.addReceptionAudit(updated.folio, {
-      id: `aud-rec-upd-${Date.now()}`,
-      action: 'RECEPCION_ACTUALIZADA',
-      actionLabel: 'Actualización de Datos de Recepción',
-      username: partial.capturedBy || 'Operador WMS',
-      timestamp: new Date().toLocaleString('es-MX'),
-      details: [
-        { fieldName: 'Lugar de Almacenaje', newValue: partial.storageLocation || '' },
-        { fieldName: 'Total Tarimas', newValue: partial.pallets?.length.toString() || '0' },
-      ],
-    });
+    if (!skipAudit && partial.storageLocation) {
+      this.addReceptionAudit(updated.folio, {
+        id: `aud-rec-upd-${Date.now()}`,
+        action: 'RECEPCION_ACTUALIZADA',
+        actionLabel: 'Actualización de Datos de Recepción',
+        username: partial.capturedBy || updated.capturedBy || 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Lugar de Almacenaje', newValue: partial.storageLocation || 'Andén / Rampa' },
+          { fieldName: 'Total Tarimas', newValue: String(updated.pallets?.length || 0) },
+        ],
+      });
+    }
 
     return updated;
   }
@@ -1130,12 +1163,16 @@ export class WarehouseMovementsService {
     if (!rec) return null;
 
     const oldDoc = rec.checkIn?.docNumber || 'N/A';
-    const updated = this.updateReception(folio, {
-      checkIn: {
-        ...rec.checkIn,
-        docNumber: newDocNumber,
+    const updated = this.updateReception(
+      folio,
+      {
+        checkIn: {
+          ...rec.checkIn,
+          docNumber: newDocNumber,
+        },
       },
-    });
+      true // skipAudit = true para no duplicar el evento genérico antes de REMISION_MODIFICADA
+    );
 
     this.addReceptionAudit(folio, {
       id: `aud-rec-rem-${Date.now()}`,

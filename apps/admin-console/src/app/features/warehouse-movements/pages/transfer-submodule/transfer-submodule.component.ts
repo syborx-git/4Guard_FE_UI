@@ -74,6 +74,18 @@ export class TransferSubmoduleComponent implements OnInit {
   // -- CATALOGO DE MONTACARGUISTAS (desde BE via ForkliftOperatorAdminService) --
   isLoadingOperators = signal(false);
 
+  // Formateador para limpiar CDMX de los turnos
+  formatShift(shift?: string): string {
+    if (!shift) return 'No asignado';
+    return shift.replace(/\bcdmx\b/gi, '').replace(/\s+/g, ' ').trim() || 'Turno Regular';
+  }
+
+  // Formateador para limpiar CDMX de los almacenes
+  formatWarehouse(name?: string): string {
+    if (!name) return 'CEDIS Central';
+    return name.replace(/\bcdmx\b/gi, '').replace(/\s+/g, ' ').trim() || 'CEDIS Central';
+  }
+
   // Computed que toma operadores activos del servicio admin (cargados desde BE)
   forkliftOperators = computed<ForkliftOperatorOption[]>(() => {
     const adminOps = this.forkliftAdminService.activeOperators();
@@ -82,7 +94,7 @@ export class TransferSubmoduleComponent implements OnInit {
       name: op.fullName,
       badge: op.licenseNumberDc3 || op.code,
       jobTitle: op.jobTitle || 'Almacenista Montacargista',
-      shift: op.shift || '',
+      shift: this.formatShift(op.shift),
       status: op.status,
     }));
   });
@@ -90,38 +102,316 @@ export class TransferSubmoduleComponent implements OnInit {
   // Catalogo de Motivos de Reubicacion
   transferReasons: TransferReasonItem[] = TRANSFER_REASONS;
 
-  // -- PASO 1: MONTACARGUISTA --
-  selectedOperatorId = signal('');
+  // ── 1. ASIGNACIÓN DE MONTACARGUISTA ──
+  selectedOperatorId = signal<string>('');
+  operatorSearchQuery = signal<string>('');
+  isOperatorDropdownOpen = signal<boolean>(false);
+
+  // Disponibilidad de operador (Verifica si tiene recepciones o traspasos/despachos activos en curso)
+  getOperatorAvailability(op: ForkliftOperatorOption): {
+    status: 'DISPONIBLE' | 'EN_RECEPCION' | 'EN_DESPACHO' | 'INACTIVO';
+    label: string;
+    dotClass: string;
+    badgeClass: string;
+  } {
+    if (op.status === 'INACTIVO') {
+      return {
+        status: 'INACTIVO',
+        label: 'Inactivo en Sistema',
+        dotClass: 'bg-rose-500',
+        badgeClass: 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300',
+      };
+    }
+
+    // Verificar si el montacarguista está en recepciones activas (status: REGISTERED)
+    const activeReception = this.movementsService.receptions().find(
+      (r) =>
+        r.status === 'REGISTERED' &&
+        (r.checkIn?.forkliftOperator?.toLowerCase().includes(op.name.toLowerCase()) ||
+          r.checkIn?.forkliftOperatorCode === op.id ||
+          r.checkIn?.forkliftOperatorCode === op.badge)
+    );
+    if (activeReception) {
+      return {
+        status: 'EN_RECEPCION',
+        label: `En Recepción (#${activeReception.folio})`,
+        dotClass: 'bg-amber-500',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+      };
+    }
+
+    // Verificar si está en despacho / salida activa
+    const activeOutbound = this.movementsService.outbounds().find(
+      (o) =>
+        (o.status as string) !== 'COMPLETED' &&
+        (o.status as string) !== 'CANCELLED' &&
+        (o.driverName?.toLowerCase().includes(op.name.toLowerCase()) ||
+          o.dispatchedBy?.toLowerCase().includes(op.name.toLowerCase()))
+    );
+    if (activeOutbound) {
+      return {
+        status: 'EN_DESPACHO',
+        label: `En Despacho (#${activeOutbound.folio})`,
+        dotClass: 'bg-amber-500',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+      };
+    }
+
+    return {
+      status: 'DISPONIBLE',
+      label: 'Disponible para maniobra',
+      dotClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
+    };
+  }
+
+  filteredForkliftOperators = computed(() => {
+    const ops = this.forkliftOperators();
+    const q = this.operatorSearchQuery().toLowerCase().trim();
+    if (!q) return ops;
+    return ops.filter((op) => {
+      const matchName = op.name.toLowerCase().includes(q);
+      const matchBadge = op.badge.toLowerCase().includes(q);
+      const matchJob = op.jobTitle.toLowerCase().includes(q);
+      const matchShift = op.shift.toLowerCase().includes(q);
+      const avail = this.getOperatorAvailability(op);
+      const matchStatus = avail.label.toLowerCase().includes(q) || avail.status.toLowerCase().includes(q);
+      return matchName || matchBadge || matchJob || matchShift || matchStatus;
+    });
+  });
+
   selectedOperator = computed<ForkliftOperatorOption | undefined>(() =>
     this.forkliftOperators().find((op) => op.id === this.selectedOperatorId())
-      ?? this.forkliftOperators()[0]
   );
 
-  // -- PASO 2: BAHIA ORIGEN E INVENTARIO --
+  onOperatorSelect(id: string): void {
+    this.selectedOperatorId.set(id);
+    const op = this.forkliftOperators().find((o) => o.id === id);
+    if (op) {
+      this.operatorSearchQuery.set(op.name);
+    } else {
+      this.operatorSearchQuery.set('');
+    }
+  }
+
+  onOperatorInput(val: string): void {
+    this.operatorSearchQuery.set(val);
+    this.isOperatorDropdownOpen.set(true);
+    const exact = this.forkliftOperators().find(
+      (op) => op.name.toLowerCase() === val.toLowerCase().trim() || op.badge.toLowerCase() === val.toLowerCase().trim()
+    );
+    if (exact) {
+      this.selectedOperatorId.set(exact.id);
+    }
+  }
+
+  selectOperator(op: ForkliftOperatorOption): void {
+    this.selectedOperatorId.set(op.id);
+    this.operatorSearchQuery.set(op.name);
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  clearOperatorSelection(): void {
+    this.selectedOperatorId.set('');
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  // ── 2. BUSCADOR & AUTOCOMPLETE DE BAHÍA ORIGEN (CON STOCK Y REMISIÓN) ──
+  originSearchQuery = signal<string>('');
+  isOriginDropdownOpen = signal<boolean>(false);
   selectedOriginCode = signal('');
   selectedPalletIds = signal<string[]>([]);
-
-  originStock = computed<LocationStockInfo>(() =>
-    this.movementsService.getLocationInfo(this.selectedOriginCode())
-  );
-
-  // -- PASO 3: BAHIA DESTINO --
-  selectedDestinationCode = signal('');
-
-  destStock = computed<LocationStockInfo>(() =>
-    this.movementsService.getLocationInfo(this.selectedDestinationCode())
-  );
 
   // Bahias Ocupadas y Disponibles
   occupiedLocations = this.movementsService.occupiedLocations;
   availableLocations = this.movementsService.availableLocations;
 
+  // Obtiene los números de remisión asociados a las tarimas de una bahía
+  getLocationRemisiones(locationCode: string): string[] {
+    const cleanCode = (locationCode || '').toUpperCase().trim();
+    if (!cleanCode) return [];
+
+    const remisiones = new Set<string>();
+
+    // 1. Buscar en inventoryBatches por locationCode
+    const batches = this.movementsService.inventoryBatches();
+    batches.forEach((b) => {
+      if (b.locationCode && b.locationCode.toUpperCase().trim() === cleanCode && b.remisionNo) {
+        remisiones.add(b.remisionNo);
+      }
+    });
+
+    // 2. Buscar en recepciones por storageLocation
+    const receptions = this.movementsService.receptions();
+    receptions.forEach((r) => {
+      if (r.storageLocation && r.storageLocation.toUpperCase().trim() === cleanCode && r.checkIn?.docNumber) {
+        remisiones.add(r.checkIn.docNumber);
+      }
+    });
+
+    // 3. Revisar los pallets de la ubicación
+    const locInfo = this.movementsService.getLocationInfo(cleanCode);
+    if (locInfo && locInfo.pallets) {
+      locInfo.pallets.forEach((p) => {
+        if (p.observations && p.observations.includes('REM-')) {
+          const match = p.observations.match(/REM-[\w-]+/);
+          if (match) remisiones.add(match[0]);
+        }
+      });
+    }
+
+    return Array.from(remisiones);
+  }
+
+  filteredOccupiedLocations = computed(() => {
+    const list = this.occupiedLocations();
+    const q = this.originSearchQuery().toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((loc) => {
+      const matchCode = loc.locationCode.toLowerCase().includes(q);
+      const matchZone = loc.zone ? loc.zone.toLowerCase().includes(q) : false;
+      const matchRack = loc.rack ? loc.rack.toLowerCase().includes(q) : false;
+      const remisiones = this.getLocationRemisiones(loc.locationCode);
+      const matchRemision = remisiones.some((rem) => rem.toLowerCase().includes(q));
+      const matchPallet = loc.pallets?.some(
+        (p) =>
+          p.palletCode.toLowerCase().includes(q) ||
+          p.productId.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.supplierName && p.supplierName.toLowerCase().includes(q))
+      ) ?? false;
+      return matchCode || matchZone || matchRack || matchRemision || matchPallet;
+    });
+  });
+
+  originStock = computed<LocationStockInfo>(() =>
+    this.movementsService.getLocationInfo(this.selectedOriginCode())
+  );
+
+  onOriginInput(val: string): void {
+    this.originSearchQuery.set(val);
+    this.isOriginDropdownOpen.set(true);
+    const exact = this.occupiedLocations().find(
+      (l) => l.locationCode.toLowerCase() === val.toLowerCase().trim()
+    );
+    if (exact) {
+      this.selectOriginLocation(exact.locationCode);
+    }
+  }
+
+  selectOriginLocation(code: string): void {
+    this.selectedOriginCode.set(code);
+    this.originSearchQuery.set(code);
+    this.isOriginDropdownOpen.set(false);
+    const stock = this.movementsService.getLocationInfo(code);
+    this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
+  }
+
+  clearOriginSelection(): void {
+    this.selectedOriginCode.set('');
+    this.originSearchQuery.set('');
+    this.selectedPalletIds.set([]);
+    this.isOriginDropdownOpen.set(false);
+  }
+
+  // ── 3. BUSCADOR & AUTOCOMPLETE DE BAHÍA DESTINO (MÁQUINA DE ESTADOS) ──
+  destSearchQuery = signal<string>('');
+  isDestDropdownOpen = signal<boolean>(false);
+  selectedDestinationCode = signal('');
+
+  allWarehouseLocations = computed(() => Object.values(this.movementsService.locations()));
+
+  // Evaluación de estado según la máquina de estados WMS
+  getLocationState(loc: LocationStockInfo): {
+    state: 'DISPONIBLE' | 'CON_STOCK' | 'BLOQUEADA';
+    label: string;
+    badgeClass: string;
+    dotClass: string;
+    description: string;
+    isSelectableForDest: boolean;
+  } {
+    if (loc.isBlocked) {
+      return {
+        state: 'BLOQUEADA',
+        label: 'Bloqueada',
+        badgeClass: 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300',
+        dotClass: 'bg-rose-500',
+        description: loc.blockReason || 'Bloqueada por Calidad / Mantenimiento',
+        isSelectableForDest: false,
+      };
+    }
+    if (loc.totalPallets > 0) {
+      return {
+        state: 'CON_STOCK',
+        label: `Con Stock (${loc.totalPallets} UAs)`,
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+        dotClass: 'bg-amber-500',
+        description: `Ocupada (${loc.totalPallets} de ${loc.capacity} UAs)`,
+        isSelectableForDest: false,
+      };
+    }
+    return {
+      state: 'DISPONIBLE',
+      label: 'Disponible (En Ceros)',
+      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
+      dotClass: 'bg-emerald-500',
+      description: '0 UAs · Lista para Putaway / Reubicación',
+      isSelectableForDest: true,
+    };
+  }
+
+  filteredDestLocations = computed(() => {
+    const list = this.allWarehouseLocations();
+    const q = this.destSearchQuery().toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((loc) => {
+      const matchCode = loc.locationCode.toLowerCase().includes(q);
+      const matchZone = loc.zone ? loc.zone.toLowerCase().includes(q) : false;
+      const matchWarehouse = loc.warehouseName ? loc.warehouseName.toLowerCase().includes(q) : false;
+      const st = this.getLocationState(loc);
+      const matchState = st.label.toLowerCase().includes(q) || st.state.toLowerCase().includes(q);
+      return matchCode || matchZone || matchWarehouse || matchState;
+    });
+  });
+
+  destStock = computed<LocationStockInfo>(() =>
+    this.movementsService.getLocationInfo(this.selectedDestinationCode())
+  );
+
+  onDestInput(val: string): void {
+    this.destSearchQuery.set(val);
+    this.isDestDropdownOpen.set(true);
+    const exact = this.allWarehouseLocations().find(
+      (l) => l.locationCode.toLowerCase() === val.toLowerCase().trim()
+    );
+    if (exact) {
+      this.selectDestinationLocation(exact.locationCode);
+    }
+  }
+
+  selectDestinationLocation(code: string): void {
+    this.selectedDestinationCode.set(code);
+    this.destSearchQuery.set(code);
+    this.isDestDropdownOpen.set(false);
+  }
+
+  clearDestSelection(): void {
+    this.selectedDestinationCode.set('');
+    this.destSearchQuery.set('');
+    this.isDestDropdownOpen.set(false);
+  }
+
   // -- PASO 4: MOTIVO Y OBSERVACIONES --
-  selectedReasonId = signal('OPT_ESPACIO');
+  selectedReasonId = signal('');
   observations = signal('');
 
   selectedReason = computed(() =>
-    this.transferReasons.find((r) => r.id === this.selectedReasonId()) || this.transferReasons[0]
+    this.transferReasons.find((r) => r.id === this.selectedReasonId()) || {
+      id: '',
+      label: '-- Selecciona Motivo de Reubicación --',
+      description: 'Selecciona el motivo que justifica el movimiento interno de inventario.',
+    }
   );
 
   // -- TOTALIZADORES REACTIVOS DE LA SELECCION --
@@ -150,12 +440,15 @@ export class TransferSubmoduleComponent implements OnInit {
   // Validaciones
   isDestinationEmpty = computed(() => {
     const dest = this.destStock();
-    return dest.totalPallets === 0 && !dest.isBlocked;
+    return !!this.selectedDestinationCode() && dest.totalPallets === 0 && !dest.isBlocked;
   });
 
   canProceedToConfirm = computed(() => {
     return (
       !!this.selectedOperator() &&
+      !!this.selectedOriginCode() &&
+      !!this.selectedDestinationCode() &&
+      !!this.selectedReasonId() &&
       this.selectedPalletIds().length > 0 &&
       this.isDestinationEmpty() &&
       this.selectedOriginCode() !== this.selectedDestinationCode()
@@ -211,16 +504,13 @@ export class TransferSubmoduleComponent implements OnInit {
   private _loadForkliftOperators(): void {
     this.isLoadingOperators.set(true);
     this.forkliftAdminService.loadOperators(undefined, { status: 'ACTIVO' }).subscribe({
-      next: (ops) => {
+      next: () => {
         this.isLoadingOperators.set(false);
-        // Autoseleccionar el primer operador si no hay ninguno seleccionado
-        if (!this.selectedOperatorId() && ops && ops.length > 0) {
-          this.selectedOperatorId.set(ops[0].id);
-        }
+        // Mantener deseleccionado inicialmente para mostrar el placeholder de selección
       },
       error: () => {
         this.isLoadingOperators.set(false);
-        this.toast.error('No se pudo cargar el catalogo de montacarguistas.');
+        this.toast.error('No se pudo cargar el catálogo de montacarguistas.');
       },
     });
   }
@@ -231,28 +521,18 @@ export class TransferSubmoduleComponent implements OnInit {
     this.selectedTransfer.set(null);
     localStorage.removeItem('4g_active_transfer_folio');
 
-    const occupied = this.occupiedLocations();
-    const defaultOrigin = occupied.length > 0 ? occupied[0].locationCode : '';
-    this.selectedOriginCode.set(defaultOrigin);
+    this.selectedOriginCode.set('');
+    this.originSearchQuery.set('');
 
-    const available = this.availableLocations();
-    const defaultDest = available.length > 0 ? available[0].locationCode : '';
-    this.selectedDestinationCode.set(defaultDest);
+    this.selectedDestinationCode.set('');
+    this.destSearchQuery.set('');
 
-    this.selectedReasonId.set('OPT_ESPACIO');
+    this.selectedOperatorId.set('');
+    this.operatorSearchQuery.set('');
+
+    this.selectedReasonId.set('');
     this.observations.set('');
-
-    // Seleccionar primer operador disponible si no hay uno seleccionado
-    if (!this.selectedOperatorId() && this.forkliftOperators().length > 0) {
-      this.selectedOperatorId.set(this.forkliftOperators()[0].id);
-    }
-
-    if (defaultOrigin) {
-      const stock = this.movementsService.getLocationInfo(defaultOrigin);
-      this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
-    } else {
-      this.selectedPalletIds.set([]);
-    }
+    this.selectedPalletIds.set([]);
   }
 
   // Volver a estado inicial (Sin seleccion)
@@ -273,7 +553,6 @@ export class TransferSubmoduleComponent implements OnInit {
   // Carga logs de auditoria desde el Backend usando el ID del traspaso
   loadAuditLogs(transfer: WarehouseTransfer): void {
     if (!transfer.id) {
-      // Sin ID del BE: usar datos locales en memoria
       const logs = this.movementsService.getTransferAuditLogs(transfer.folio);
       this.auditEntries.set(logs || []);
       return;
@@ -298,14 +577,12 @@ export class TransferSubmoduleComponent implements OnInit {
           }));
           this.auditEntries.set(mapped);
         } else {
-          // Fallback: datos locales si el BE no devuelve registros
           const localLogs = this.movementsService.getTransferAuditLogs(transfer.folio);
           this.auditEntries.set(localLogs || []);
         }
       },
       error: () => {
         this.isLoadingAudit.set(false);
-        // Fallback: datos locales si falla la llamada al BE
         const localLogs = this.movementsService.getTransferAuditLogs(transfer.folio);
         this.auditEntries.set(localLogs || []);
       },
@@ -332,23 +609,11 @@ export class TransferSubmoduleComponent implements OnInit {
 
   getAuditSummary(action: string): string {
     switch (action) {
-      case 'TRASPASO_REGISTRADO': return 'Reubicacion de Inventario Confirmada';
-      case 'TRASPASO_COMPLETADO': return 'Traspaso Concluido en Bahia Destino';
-      case 'TRASPASO_CANCELADO':  return 'Cancelacion Extraordinaria de Traspaso';
+      case 'TRASPASO_REGISTRADO': return 'Reubicación de Inventario Confirmada';
+      case 'TRASPASO_COMPLETADO': return 'Traspaso Concluido en Bahía Destino';
+      case 'TRASPASO_CANCELADO':  return 'Cancelación Extraordinaria de Traspaso';
       default:                    return action;
     }
-  }
-
-  // Seleccion de Bahia Origen
-  selectOriginLocation(code: string): void {
-    this.selectedOriginCode.set(code);
-    const stock = this.movementsService.getLocationInfo(code);
-    this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
-  }
-
-  // Seleccion de Bahia Destino
-  selectDestinationLocation(code: string): void {
-    this.selectedDestinationCode.set(code);
   }
 
   // Toggle de seleccion de tarima individual
@@ -393,111 +658,87 @@ export class TransferSubmoduleComponent implements OnInit {
     const user = this.authState.currentUser();
     const transferredBy = user?.username || user?.email || 'admin@4guard.com';
 
-    if (!operator) {
-      this.isExecuting.set(false);
-      this.toast.error('Selecciona un montacarguista antes de confirmar.');
-      return;
-    }
+    const origin = this.selectedOriginCode();
+    const destination = this.selectedDestinationCode();
+    const obs = this.observations();
 
-    // Resolver UUIDs de las ubicaciones desde el estado local (cargadas del BE via getLocations)
-    const originInfo = this.movementsService.getLocationInfo(this.selectedOriginCode());
-    const destInfo = this.movementsService.getLocationInfo(this.selectedDestinationCode());
-
-    if (!originInfo.locationId) {
-      this.isExecuting.set(false);
-      this.toast.error(`La bahía origen ${this.selectedOriginCode()} no tiene un ID de ubicación válido.`);
-      return;
-    }
-
-    if (!destInfo.locationId) {
-      this.isExecuting.set(false);
-      this.toast.error(`La bahía destino ${this.selectedDestinationCode()} no tiene un ID de ubicación válido.`);
-      return;
-    }
-
-    // Filtrar/obtener los UUIDs válidos de los ítems de inventario
-    const selectedIds = this.selectedPalletIds();
-    if (selectedIds.length === 0) {
-      this.isExecuting.set(false);
-      this.toast.error('Debes seleccionar al menos una tarima para el cambio de almacén.');
-      return;
-    }
-
-    const payload = {
+    // Payload para Backend WMS
+    const bePayload = {
       organizationId: session.organizationId,
       branchId: session.branchId,
-      forkliftOperatorId: operator.id,
-      originLocationId: originInfo.locationId,
-      destinationLocationId: destInfo.locationId,
-      selectedItemIds: selectedIds,
+      originLocationCode: origin,
+      destinationLocationCode: destination,
+      palletIds: this.selectedPalletIds(),
+      forkliftOperatorId: operator?.id,
+      forkliftOperatorName: operator?.name || 'Operador',
       reasonCode: reason.id,
-      reasonLabel: reason.label,
-      observations: this.observations() || '',
+      reasonDescription: reason.label,
+      observations: obs,
+      transferredBy,
+      totalPallets: this.selectedTotalPallets(),
+      totalPieces: this.selectedTotalPieces(),
     };
 
-    this.movementsApi.createTransfer(payload).subscribe({
+    this.movementsApi.createTransfer(bePayload).subscribe({
       next: (res: any) => {
         this.isExecuting.set(false);
         this.showConfirmModal.set(false);
 
-        // Mapear la respuesta del BE al modelo local
-        const transfer: WarehouseTransfer = {
-          id: res.id,
-          folio: res.folio,
-          status: res.status || 'COMPLETED',
-          forkliftOperator: res.forkliftOperatorName || operator.name,
-          forkliftOperatorId: res.forkliftOperatorId || operator.id,
-          originLocation: res.originLocationCode || this.selectedOriginCode(),
-          destinationLocation: res.destinationLocationCode || this.selectedDestinationCode(),
-          reasonId: res.reasonCode || reason.id,
-          reasonLabel: res.reasonLabel || reason.label,
-          observations: res.observations || this.observations(),
-          pallets: [],
-          totalPallets: res.totalPallets || this.selectedPalletIds().length,
-          totalPieces: res.totalPieces || this.selectedTotalPieces(),
-          distinctSkus: res.distinctSkus || this.selectedDistinctSkus(),
-          transferredAt: res.createdAt
-            ? new Date(res.createdAt).toLocaleString('es-MX')
-            : new Date().toLocaleString('es-MX'),
-          transferredBy: res.createdBy || transferredBy,
-        };
+        // Actualizar el estado reactivo en memoria local
+        const executedTransfer = this.movementsService.executeDetailedTransfer({
+          originLocationCode: origin,
+          destinationLocationCode: destination,
+          selectedPalletIds: this.selectedPalletIds(),
+          forkliftOperator: operator?.name || 'Operador',
+          forkliftOperatorId: operator?.id,
+          reasonId: reason.id,
+          reasonLabel: reason.label,
+          observations: obs,
+          transferredBy,
+        });
 
-        // Actualizar estado local de bahias y lista de traspasos
-        try {
-          this.movementsService.executeDetailedTransfer({
-            originLocationCode: this.selectedOriginCode(),
-            destinationLocationCode: this.selectedDestinationCode(),
-            selectedPalletIds: this.selectedPalletIds(),
-            forkliftOperator: operator.name,
-            forkliftOperatorId: operator.id,
-            reasonId: reason.id,
-            reasonLabel: reason.label,
-            observations: this.observations(),
-            transferredBy,
-          });
-        } catch (_) {
-          // El BE ya confirmo el traspaso; ignorar error de validacion local de bahias
+        if (executedTransfer) {
+          if (res?.folio) {
+            executedTransfer.folio = res.folio;
+            executedTransfer.id = res.id;
+          }
+          this.selectTransferItem(executedTransfer);
+          this.toast.success(`Cambio de Almacén #${executedTransfer.folio} ejecutado con éxito.`);
+          this.openPrintPreview(executedTransfer);
+        } else {
+          this.toast.success('Reubicación completada exitosamente.');
+          this.resetToIdle();
         }
-
-        this.toast.success(`Cambio de Almacen ${transfer.folio} ejecutado exitosamente.`);
-        this.selectedTransfer.set(transfer);
-        this.formMode.set('detail');
-        this.loadAuditLogs(transfer);
-        this.selectedPrintTransfer.set(transfer);
-        this.showPrintModal.set(true);
       },
-      error: (err: any) => {
+      error: () => {
+        // Fallback local garantizado si el backend se encuentra offline
         this.isExecuting.set(false);
-        const msg =
-          err?.error?.message ||
-          err?.message ||
-          'Error al confirmar el cambio de almacen. Intentalo de nuevo.';
-        this.toast.error(msg);
+        this.showConfirmModal.set(false);
+
+        const executedTransfer = this.movementsService.executeDetailedTransfer({
+          originLocationCode: origin,
+          destinationLocationCode: destination,
+          selectedPalletIds: this.selectedPalletIds(),
+          forkliftOperator: operator?.name || 'Operador',
+          forkliftOperatorId: operator?.id,
+          reasonId: reason.id,
+          reasonLabel: reason.label,
+          observations: obs,
+          transferredBy,
+        });
+
+        if (executedTransfer) {
+          this.selectTransferItem(executedTransfer);
+          this.toast.success(`Cambio de Almacén #${executedTransfer.folio} ejecutado localmente.`);
+          this.openPrintPreview(executedTransfer);
+        } else {
+          this.toast.error('Ocurrió un error al procesar la reubicación.');
+        }
       },
     });
   }
 
-  // Vista Previa / Impresion
+  // ── IMPRESIÓN Y DESCARGA DIRECTA DE COMPROBANTE ──
   openPrintPreview(transfer: WarehouseTransfer): void {
     this.selectedPrintTransfer.set(transfer);
     this.showPrintModal.set(true);
@@ -508,31 +749,38 @@ export class TransferSubmoduleComponent implements OnInit {
     this.selectedPrintTransfer.set(null);
   }
 
+  triggerBrowserPrint(): void {
+    window.print();
+  }
+
   isGeneratingPdf = signal(false);
 
-  async downloadDirectPdf(): Promise<void> {
-    const folio = this.selectedPrintTransfer()?.folio || 'Doc';
+  downloadDirectPdf(): void {
+    const transfer = this.selectedPrintTransfer();
+    if (!transfer) return;
+
     this.isGeneratingPdf.set(true);
-    try {
-      await this.printService.downloadPdf('fg-print-transfer-layout', String(folio));
-    } finally {
-      this.isGeneratingPdf.set(false);
-    }
+    const filename = `Comprobante_Traspaso_${transfer.folio}.pdf`;
+
+    this.printService.downloadPdf('#print-transfer-document', filename)
+      .then(() => {
+        this.isGeneratingPdf.set(false);
+        this.toast.success(`PDF descargado exitosamente: ${filename}`);
+      })
+      .catch((err: any) => {
+        this.isGeneratingPdf.set(false);
+        console.error('Error al generar PDF de traspaso:', err);
+        this.toast.error('No se pudo generar el PDF automáticamente. Utiliza el botón Imprimir.');
+      });
   }
 
-  triggerBrowserPrint(): void {
-    const folio = this.selectedPrintTransfer()?.folio || 'Doc';
-    this.printService.printElement('fg-print-transfer-layout', String(folio));
-  }
-
-  // -- CANCELACION CON AUTORIZACION DE ADMINISTRADOR --
+  // ── MODAL CANCELACIÓN / REVOCACIÓN ──
   openCancelModal(): void {
-    const user = this.authState.currentUser();
+    const currUser = this.authState.currentUser();
     this.cancelReason.set('');
-    this.cancelAdminUser.set(user ? user.username || user.email : 'admin@4guard.com');
+    this.cancelAdminUser.set(currUser?.email || currUser?.username || 'admin@4guard.com');
     this.cancelAdminPassword.set('');
     this.cancelErrorMessage.set(null);
-    this.showCancelPassword.set(false);
     this.showCancelModal.set(true);
   }
 
@@ -542,81 +790,61 @@ export class TransferSubmoduleComponent implements OnInit {
   }
 
   confirmCancelTransfer(): void {
+    const curr = this.selectedTransfer();
+    if (!curr) return;
+
     const reason = this.cancelReason().trim();
-    if (!reason || reason.length < 5) {
-      this.cancelErrorMessage.set('Debes ingresar un motivo de cancelacion detallado (minimo 5 caracteres).');
+    const user = this.cancelAdminUser().trim();
+    const pass = this.cancelAdminPassword().trim();
+
+    if (!reason) {
+      this.cancelErrorMessage.set('Debes ingresar un motivo o justificación obligatoria para la cancelación.');
       return;
     }
-
-    const username = this.cancelAdminUser().trim();
-    const password = this.cancelAdminPassword().trim();
-
-    if (!username || !password) {
-      this.cancelErrorMessage.set('Debes ingresar las credenciales del Administrador.');
+    if (!user || !pass) {
+      this.cancelErrorMessage.set('Debes ingresar las credenciales del Administrador para autorizar.');
       return;
     }
-
-    const current = this.selectedTransfer();
-    if (!current) return;
 
     this.isCancelling.set(true);
     this.cancelErrorMessage.set(null);
 
+    const session = this.movementsApi.getSessionOrg();
     const cancelPayload = {
-      adminUsername: username,
-      adminPassword: password,
-      reason: reason,
+      organizationId: session.organizationId,
+      branchId: session.branchId,
+      reason,
+      adminUsername: user,
+      adminPassword: pass,
+      cancelledBy: this.authState.userFullName() || user,
     };
 
-    if (current.id) {
-      // Cancelacion integrada con el Backend
-      this.movementsApi.cancelTransfer(current.id, cancelPayload).subscribe({
-        next: (_res: any) => {
+    // Si tiene ID del BE, llamar al endpoint de cancelación
+    if (curr.id) {
+      this.movementsApi.cancelTransfer(curr.id, cancelPayload).subscribe({
+        next: (updatedBe) => {
           this.isCancelling.set(false);
-
-          // Actualizar estado local del traspaso cancelado
-          const updatedLocal = this.movementsService.cancelTransfer(current.folio, reason, username);
-          const updated: WarehouseTransfer = updatedLocal
-            ? updatedLocal
-            : {
-                ...current,
-                status: 'CANCELLED',
-                cancellationReason: reason,
-                cancelledAt: new Date().toLocaleString('es-MX'),
-                cancelledBy: username,
-              };
-
-          this.selectedTransfer.set(updated);
-          this.loadAuditLogs(updated);
           this.showCancelModal.set(false);
-          this.toast.success(`Cambio de Almacen ${current.folio} ha sido cancelado.`);
+          const cancelled = this.movementsService.cancelTransfer(curr.folio, reason, cancelPayload.cancelledBy);
+          if (cancelled) {
+            this.selectTransferItem({ ...cancelled, ...updatedBe });
+            this.toast.success(`Traspaso #${curr.folio} cancelado exitosamente.`);
+          }
         },
         error: (err: any) => {
           this.isCancelling.set(false);
-          const msg =
-            err?.error?.message ||
-            err?.message ||
-            'Error de autenticacion o validacion de cancelacion.';
+          const msg = err.error?.message || err.message || 'Error al validar credenciales o cancelar en el servidor.';
           this.cancelErrorMessage.set(msg);
         },
       });
     } else {
-      // Traspaso sin ID del BE -- cancelacion solo local
-      try {
-        const updated = this.movementsService.cancelTransfer(current.folio, reason, username);
-        this.isCancelling.set(false);
-
-        if (updated) {
-          this.selectedTransfer.set(updated);
-          this.loadAuditLogs(updated);
-          this.showCancelModal.set(false);
-          this.toast.success(`Cambio de Almacen ${current.folio} ha sido cancelado.`);
-        } else {
-          this.cancelErrorMessage.set('No se pudo cancelar el traspaso. Folio no encontrado.');
-        }
-      } catch (err: any) {
-        this.isCancelling.set(false);
-        this.cancelErrorMessage.set(err.message || 'Error al cancelar el traspaso.');
+      // Fallback local
+      this.isCancelling.set(false);
+      this.showCancelModal.set(false);
+      const cancelled = this.movementsService.cancelTransfer(curr.folio, reason, cancelPayload.cancelledBy);
+      if (cancelled) {
+        this.selectTransferItem(cancelled);
+        this.toast.success(`Traspaso #${curr.folio} cancelado exitosamente.`);
       }
     }
   }
