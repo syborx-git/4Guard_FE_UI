@@ -90,15 +90,24 @@
   --ac-ease:  160ms ease;
 }
 
-:host-context(.theme-dark) {
-  --bg-page:        #0b101d;
-  --bg-card:        rgba(17, 24, 39, 0.95);
-  --border-card:    rgba(255, 255, 255, 0.08);
-  --shadow-card:    0 12px 32px rgba(0, 0, 0, 0.45);
-  --text-primary:   #eaeff8;
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --navy:           #080e18;
+  --navy-mid:       #0f172a;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --bg-page:        #080e18;
+  --bg-card:        rgba(15, 23, 42, 0.95);
+  --border-card:    rgba(255, 255, 255, 0.10);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted:     #5c6e8c;
-  --text-gold:      #dfc07e;
+  --text-muted:     #64748b;
+  --text-gold:      #d0af67;
 }
 
 .carriers-page {
@@ -1052,8 +1061,9 @@
   to   { transform: translateX(0); }
 }
 
-:host-context(.theme-dark) .carriers-dialog {
-  background: rgba(26, 31, 46, 0.98);
-  border-color: var(--border-card);
+:host-context(.theme-dark) .carriers-dialog,
+:host-context(.dark) .carriers-dialog {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(255, 255, 255, 0.10);
   color: var(--text-primary);
 }

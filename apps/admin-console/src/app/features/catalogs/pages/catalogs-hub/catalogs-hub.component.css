@@ -89,7 +89,7 @@
 .admin-hero__title {
   margin: 0;
   color: #202633;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
   font-size: clamp(1.75rem, 2.8vw, 2.4rem);
   font-weight: 700;
   line-height: 1.1;
@@ -254,7 +254,7 @@
 .admin-module-card__title {
   margin: 0;
   color: #0F172A;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
   font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -304,14 +304,14 @@
 
 :host-context(.theme-dark) .admin-hero__icon,
 :host-context(.dark) .admin-hero__icon {
-  background: linear-gradient(145deg, rgba(35, 31, 44, 0.9), rgba(18, 16, 24, 0.7));
-  border-color: rgba(234, 195, 73, 0.3);
-  color: #EAC349;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(8, 14, 24, 0.85));
+  border-color: rgba(208, 175, 103, 0.3);
+  color: #d0af67;
 }
 
 :host-context(.theme-dark) .admin-module-card,
 :host-context(.dark) .admin-module-card {
-  background: linear-gradient(145deg, rgba(30, 27, 40, 0.85), rgba(15, 13, 22, 0.75));
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(8, 14, 24, 0.85));
   border-color: rgba(255, 255, 255, 0.08);
   color: #F1F5F9;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
@@ -319,8 +319,8 @@
 
 :host-context(.theme-dark) .admin-module-card:hover,
 :host-context(.dark) .admin-module-card:hover {
-  border-color: rgba(234, 195, 73, 0.45);
-  background: linear-gradient(145deg, rgba(40, 35, 52, 0.95), rgba(22, 19, 31, 0.85));
+  border-color: rgba(208, 175, 103, 0.45);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.90));
   box-shadow: 0 24px 52px rgba(0, 0, 0, 0.45);
 }
 
@@ -336,14 +336,14 @@
 
 :host-context(.theme-dark) .admin-module-card__icon,
 :host-context(.dark) .admin-module-card__icon {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(234, 195, 73, 0.12));
-  border-color: rgba(234, 195, 73, 0.3);
-  color: #EAC349;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(208, 175, 103, 0.12));
+  border-color: rgba(208, 175, 103, 0.3);
+  color: #d0af67;
 }
 
 :host-context(.theme-dark) .admin-module-card__index,
 :host-context(.dark) .admin-module-card__index,
 :host-context(.theme-dark) .admin-module-card__footer,
 :host-context(.dark) .admin-module-card__footer {
-  color: #EAC349;
+  color: #d0af67;
 }
