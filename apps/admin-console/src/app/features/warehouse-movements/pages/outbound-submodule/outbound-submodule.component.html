@@ -881,13 +881,13 @@
                       @if (log.details && log.details.length > 0) {
                         <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
                           @for (d of log.details; track d.fieldName) {
-                            <div class="carriers-tl-diff flex items-center gap-1.5 text-xs flex-wrap">
-                              <span class="carriers-tl-diff__field font-semibold text-secondary">{{ d.fieldName }}:</span>
-                              @if (d.oldValue) {
-                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px]">{{ d.oldValue }}</span>
-                                <span class="carriers-tl-diff__arrow text-muted">→</span>
+                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                              <span class="carriers-tl-diff__field font-semibold text-secondary">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
                               }
-                              <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px]">{{ d.newValue }}</span>
+                              <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                             </div>
                           }
                         </div>

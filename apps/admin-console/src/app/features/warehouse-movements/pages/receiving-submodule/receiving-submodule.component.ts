@@ -455,6 +455,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
           this.patchAltaFormWithReception(mapped);
           this.movementsService.updateReception(mapped.id || mapped.folio, mapped);
+          this.loadAuditLogs(mapped.id || mapped.folio);
         },
         error: () => {},
       });
@@ -507,9 +508,78 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
   }
 
-  loadAuditLogs(folio: string): void {
-    const logs = this.movementsService.getReceptionAuditLogs(folio);
-    this.auditEntries.set(logs || []);
+  loadAuditLogs(folioOrId: string): void {
+    const rec = this.selectedReception() || this.movementsService.findReceptionByFolio(folioOrId);
+    const id = rec?.id || (folioOrId.includes('-') ? folioOrId : null);
+    const folio = rec?.folio || folioOrId;
+
+    if (id) {
+      this.movementsApi.getReceptionAudit(id).subscribe({
+        next: (logs) => {
+          if (logs && logs.length > 0) {
+            const mapped: MovementAuditEntry[] = logs.map((l: any) => ({
+              id: l.id || `aud-${Date.now()}-${Math.random()}`,
+              action: l.action,
+              actionLabel: l.actionLabel || this.getAuditSummary(l.action),
+              username: l.username || 'Usuario',
+              timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : (l.timestamp || new Date().toLocaleString('es-MX')),
+              details: (l.details || []).map((d: any) => ({
+                fieldName: this.formatFieldLabel(d.fieldName),
+                oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                newValue: this.formatFieldValue(d.fieldName, d.newValue),
+              })),
+              reason: l.reason || '',
+              authorizedBy: l.authorizedBy || '',
+            }));
+            const sorted = this.sortAuditEntries(mapped);
+            this.auditEntries.set(sorted);
+            this.movementsService.setReceptionAuditLogs(folio, sorted);
+            return;
+          }
+          const localLogs = this.movementsService.getReceptionAuditLogs(folio);
+          this.auditEntries.set(this.sortAuditEntries(localLogs));
+        },
+        error: () => {
+          const localLogs = this.movementsService.getReceptionAuditLogs(folio);
+          this.auditEntries.set(this.sortAuditEntries(localLogs));
+        },
+      });
+    } else {
+      const logs = this.movementsService.getReceptionAuditLogs(folio);
+      this.auditEntries.set(this.sortAuditEntries(logs || []));
+    }
+  }
+
+  // Ordenamiento cronológico inverso: el evento más reciente arriba (top), el más antiguo abajo
+  sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
+    if (!entries || entries.length === 0) return [];
+    return [...entries].sort((a, b) => {
+      const parseDate = (ts?: string) => {
+        if (!ts) return 0;
+        const direct = new Date(ts).getTime();
+        if (!isNaN(direct) && direct > 0) return direct;
+        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (match) {
+          const day = parseInt(match[1], 10);
+          const month = parseInt(match[2], 10) - 1;
+          const year = parseInt(match[3], 10);
+          const hour = match[4] ? parseInt(match[4], 10) : 0;
+          const min = match[5] ? parseInt(match[5], 10) : 0;
+          const sec = match[6] ? parseInt(match[6], 10) : 0;
+          return new Date(year, month, day, hour, min, sec).getTime();
+        }
+        return 0;
+      };
+      return parseDate(b.timestamp) - parseDate(a.timestamp);
+    });
+  }
+
+  formatFieldLabel(field: string): string {
+    return this.movementsService.formatFieldLabel(field);
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    return this.movementsService.formatFieldValue(field, value);
   }
 
   getAuditIcon(action: string): string {
@@ -539,11 +609,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
   getAuditSummary(action: string): string {
     switch (action) {
       case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
-      case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cerrada en WMS';
-      case 'REMISION_MODIFICADA':  return 'Modificación de No. de Remisión con Autorización';
-      case 'TARIMA_EDITADA':       return 'Modificación Manual de Tarima/UA';
-      case 'RECEPCION_ACTUALIZADA':return 'Actualización de Datos de Recepción';
-      case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria de Recepción';
+      case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cierre F01';
+      case 'REMISION_MODIFICADA':  return 'Modificación de No. de Remisión';
+      case 'TARIMA_EDITADA':       return 'Ajuste de Tarima Individual';
+      case 'RECEPCION_ACTUALIZADA':return 'Actualización de Parámetros de Recepción';
+      case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria con Autorización';
       default:                     return action;
     }
   }

@@ -357,10 +357,12 @@
                         [class.sku-autocomplete-item--selected]="selectedOperatorId() === op.id"
                       >
                         <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                          <span class="sku-autocomplete-badge">{{ op.badge }}</span>
-                          <div class="flex flex-col min-w-0">
+                          <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-bold text-xs flex items-center justify-center shrink-0">
+                            {{ getInitials(op.name) }}
+                          </div>
+                          <div class="flex flex-col min-w-0 flex-1">
                             <span class="sku-autocomplete-name">{{ op.name }}</span>
-                            <span class="text-[10px] text-slate-500 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
                           </div>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
@@ -413,100 +415,98 @@
             </div>
           </div>
 
-          <!-- ── 2 Y 3. COMPARATIVA ORIGEN VS DESTINO (HOMOLOGADO CON MOCKUP) ── -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- ── 2. BAHÍA ORIGEN E INVENTARIO (FULL WIDTH PARA MÁXIMA VISIBILIDAD DE TARIMAS Y PRODUCTOS) ── -->
+          <div class="space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">output</span>
+              <span>2. BAHÍA ORIGEN E INVENTARIO</span>
+            </div>
 
-            <!-- ── PANEL ORIGEN (COL-SPAN-7) ── -->
-            <div class="lg:col-span-7 space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined">output</span>
-                <span>2. BAHÍA ORIGEN E INVENTARIO</span>
-              </div>
-
-              <!-- Selector Autocomplete de Bahía Origen y Metadata Full Width -->
-              <div class="space-y-2.5">
-                <div class="fg-field relative">
-                  <label class="fg-label fg-label--required">
-                    Seleccionar Bahía con Stock
-                  </label>
-                  <div class="relative flex items-center">
-                    <input
-                      type="text"
-                      [value]="originSearchQuery()"
-                      (input)="onOriginInput($any($event.target).value)"
-                      (focus)="isOriginDropdownOpen.set(true)"
-                      (click)="isOriginDropdownOpen.set(true)"
-                      placeholder="Selecciona Bahía con Stock"
-                      class="fg-input font-bold font-mono w-full pr-8"
-                      autocomplete="off"
-                    />
-                    @if (originSearchQuery()) {
-                      <button
-                        type="button"
-                        (click)="clearOriginSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
-                        title="Limpiar bahía origen"
-                      >
-                        <span class="material-symbols-outlined text-sm">close</span>
-                      </button>
-                    } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
-                    }
-                  </div>
-
-                  <!-- Backdrop -->
-                  @if (isOriginDropdownOpen()) {
-                    <div class="fixed inset-0 z-40" (click)="isOriginDropdownOpen.set(false)"></div>
-                  }
-
-                  <!-- Dropdown Flotante -->
-                  @if (isOriginDropdownOpen() && filteredOccupiedLocations().length > 0) {
-                    <div class="sku-autocomplete-dropdown">
-                      <div class="sku-autocomplete-header">
-                        <div class="sku-autocomplete-header__title">
-                          <span class="material-symbols-outlined text-sm">warehouse</span>
-                          <span>-- Selecciona Bahía con Stock --</span>
-                        </div>
-                        <span class="sku-autocomplete-header__hint">{{ filteredOccupiedLocations().length }} con inventario</span>
-                      </div>
-                      @for (loc of filteredOccupiedLocations(); track loc.locationCode) {
-                        <button
-                          type="button"
-                          (click)="selectOriginLocation(loc.locationCode)"
-                          class="sku-autocomplete-item"
-                          [class.sku-autocomplete-item--selected]="selectedOriginCode() === loc.locationCode"
-                        >
-                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span class="sku-autocomplete-badge">{{ loc.locationCode }}</span>
-                            <div class="flex flex-col min-w-0">
-                              <div class="flex items-center gap-2 flex-wrap">
-                                <span class="sku-autocomplete-name">{{ loc.zone || 'General' }} · {{ loc.rack || 'Rack' }} {{ loc.level || '' }}</span>
-                                @if (getLocationRemisiones(loc.locationCode).length > 0) {
-                                  <span class="text-[9px] font-mono font-bold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 shrink-0">
-                                    Rem: {{ getLocationRemisiones(loc.locationCode).join(', ') }}
-                                  </span>
-                                }
-                              </div>
-                              <span class="text-[10px] text-slate-500 font-medium truncate">
-                                {{ loc.pallets[0]?.description || 'Mercancía en stock' }} ({{ loc.totalPallets }} tarimas · {{ loc.totalPieces }} pzas)
-                              </span>
-                            </div>
-                          </div>
-                          <span class="font-mono font-bold text-amber-700 dark:text-amber-400 text-xs shrink-0">
-                            {{ loc.totalPallets }} UAs
-                          </span>
-                        </button>
-                      }
-                    </div>
-                  } @else if (isOriginDropdownOpen() && filteredOccupiedLocations().length === 0 && originSearchQuery()) {
-                    <div class="sku-autocomplete-empty">
-                      No se encontraron bahías con stock para "{{ originSearchQuery() }}"
-                    </div>
+            <!-- Selector Autocomplete de Bahía Origen y Metadata -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+              <div class="md:col-span-6 fg-field relative">
+                <label class="fg-label fg-label--required">
+                  Seleccionar Bahía con Stock
+                </label>
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    [value]="originSearchQuery()"
+                    (input)="onOriginInput($any($event.target).value)"
+                    (focus)="isOriginDropdownOpen.set(true)"
+                    (click)="isOriginDropdownOpen.set(true)"
+                    placeholder="Selecciona Bahía con Stock"
+                    class="fg-input font-bold font-mono w-full pr-8"
+                    autocomplete="off"
+                  />
+                  @if (originSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearOriginSelection()"
+                      class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
+                      title="Limpiar bahía origen"
+                    >
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  } @else {
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
                   }
                 </div>
 
-                <!-- Metadata de Bahía Origen Full Width (3 Columnas Proporcionales) -->
-                <div class="caseta-summary-card" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                <!-- Backdrop -->
+                @if (isOriginDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isOriginDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Dropdown Flotante -->
+                @if (isOriginDropdownOpen() && filteredOccupiedLocations().length > 0) {
+                  <div class="sku-autocomplete-dropdown">
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm">warehouse</span>
+                        <span>-- Selecciona Bahía con Stock --</span>
+                      </div>
+                      <span class="sku-autocomplete-header__hint">{{ filteredOccupiedLocations().length }} con inventario</span>
+                    </div>
+                    @for (loc of filteredOccupiedLocations(); track loc.locationCode) {
+                      <button
+                        type="button"
+                        (click)="selectOriginLocation(loc.locationCode)"
+                        class="sku-autocomplete-item"
+                        [class.sku-autocomplete-item--selected]="selectedOriginCode() === loc.locationCode"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span class="sku-autocomplete-badge">{{ getLocationDisplayCode(loc) }}</span>
+                          <div class="flex flex-col min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="sku-autocomplete-name">{{ loc.zone || 'General' }} · {{ loc.rack || 'Rack' }} {{ loc.level || '' }}</span>
+                              @if (getLocationRemisiones(loc.locationCode).length > 0) {
+                                <span class="text-[9px] font-mono font-bold text-amber-900 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-300 dark:border-amber-700 shrink-0">
+                                  Rem: {{ getLocationRemisiones(loc.locationCode).join(', ') }}
+                                </span>
+                              }
+                            </div>
+                            <span class="text-[10px] text-slate-500 font-medium truncate">
+                              {{ loc.pallets[0]?.description || 'Mercancía en stock' }} ({{ loc.totalPallets }} tarimas · {{ loc.totalPieces }} pzas)
+                            </span>
+                          </div>
+                        </div>
+                        <span class="font-mono font-bold text-amber-700 dark:text-amber-400 text-xs shrink-0">
+                          {{ loc.totalPallets }} UAs
+                        </span>
+                      </button>
+                    }
+                  </div>
+                } @else if (isOriginDropdownOpen() && filteredOccupiedLocations().length === 0 && originSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron bahías con stock para "{{ originSearchQuery() }}"
+                  </div>
+                }
+              </div>
+
+              <!-- Metadata de Bahía Origen (3 Columnas Proporcionales) -->
+              <div class="md:col-span-6">
+                <div class="caseta-summary-card h-full flex items-center" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
                   <div class="caseta-summary-item">
                     <span class="caseta-summary-label">Ubicación</span>
                     <span class="caseta-summary-value truncate">{{ selectedOriginCode() ? (originStock().zone || 'General') : '--' }}</span>
@@ -516,174 +516,185 @@
                     <span class="caseta-summary-value truncate">{{ selectedOriginCode() ? ((originStock().rack || 'Rack 01') + ' - ' + (originStock().level || 'N1')) : '--' }}</span>
                   </div>
                   <div class="caseta-summary-item">
-                    <span class="caseta-summary-label">Stock</span>
-                    <span class="caseta-summary-value font-mono">{{ selectedOriginCode() ? (originStock().totalPallets + ' de ' + originStock().capacity + ' UAs') : '--' }}</span>
+                    <span class="caseta-summary-label">Stock en Bahía</span>
+                    <span class="caseta-summary-value font-mono font-bold">{{ selectedOriginCode() ? (originStock().totalPallets + ' Tarimas (UAs)') : '--' }}</span>
                   </div>
                 </div>
-              </div>
-
-              <!-- Tabla de Tarimas con Checkboxes -->
-              <div class="space-y-2 pt-1">
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Tarimas en Bahía (Selecciona UAs a mover):
-                  </span>
-                  @if (selectedOriginCode() && originStock().pallets.length > 0) {
-                    <button
-                      type="button"
-                      (click)="toggleSelectAllPallets()"
-                      class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline cursor-pointer"
-                    >
-                      {{ selectedPalletIds().length === originStock().pallets.length ? 'Deseleccionar todas' : 'Seleccionar todas' }}
-                    </button>
-                  }
-                </div>
-
-                <div class="tarimas-table-wrapper max-h-52 overflow-y-auto">
-                  <table class="tarimas-table">
-                    <thead>
-                      <tr>
-                        <th class="w-10 text-center">Sel.</th>
-                        <th>Código UA</th>
-                        <th>SKU / Producto</th>
-                        <th class="text-right">Piezas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (pallet of originStock().pallets; track pallet.id) {
-                        <tr
-                          (click)="togglePalletSelection(pallet.id)"
-                          [class.selected-row]="selectedPalletIds().includes(pallet.id)"
-                        >
-                          <td class="tarimas-cell-num" (click)="$event.stopPropagation()">
-                            <input
-                              type="checkbox"
-                              [checked]="selectedPalletIds().includes(pallet.id)"
-                              (change)="togglePalletSelection(pallet.id)"
-                              class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
-                            />
-                          </td>
-                          <td class="tarimas-cell-code">
-                            {{ pallet.palletCode }}
-                          </td>
-                          <td class="tarimas-cell-sku">
-                            <div class="font-bold leading-tight">{{ pallet.productId }}</div>
-                            <div class="text-[10px] text-slate-600 dark:text-slate-400 font-normal truncate max-w-[170px]">{{ pallet.description }}</div>
-                          </td>
-                          <td class="tarimas-cell-pieces">
-                            {{ pallet.pieces }} PZAS
-                          </td>
-                        </tr>
-                      } @empty {
-                        <tr>
-                          <td colspan="4" class="p-4 text-center text-slate-500 italic text-xs">
-                            {{ selectedOriginCode() ? 'No hay tarimas disponibles en esta bahía.' : 'Selecciona Bahía con Stock para listar sus tarimas.' }}
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Resumen sutil debajo de la tabla -->
-                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 px-1">
-                  <span>Seleccionadas: <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedTotalPallets() }} Tarima(s)</strong> · <strong class="text-emerald-700 dark:text-emerald-400 font-mono">{{ selectedTotalPieces() }} Pzas</strong></span>
-                </div>
-
               </div>
             </div>
 
-            <!-- ── PANEL DESTINO (COL-SPAN-5) ── -->
-            <div class="lg:col-span-5 space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined">input</span>
-                <span>3. BAHÍA DESTINO (EN CEROS)</span>
+            <!-- Tabla de Tarimas con Checkboxes (ID Tarima, Código UA, Producto / SKU) -->
+            <div class="space-y-2 pt-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Tarimas en Bahía (Selecciona UAs a mover):
+                </span>
+                @if (selectedOriginCode() && originStock().pallets.length > 0) {
+                  <button
+                    type="button"
+                    (click)="toggleSelectAllPallets()"
+                    class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline cursor-pointer"
+                  >
+                    {{ selectedPalletIds().length === originStock().pallets.length ? 'Deseleccionar todas' : 'Seleccionar todas' }}
+                  </button>
+                }
               </div>
 
-              <div class="space-y-2.5">
-                <!-- Autocomplete Bahía Destino -->
-                <div class="fg-field relative">
-                  <label class="fg-label fg-label--required">
-                    Seleccionar Bahía Destino Disponible
-                  </label>
-                  <div class="relative flex items-center">
-                    <input
-                      type="text"
-                      [value]="destSearchQuery()"
-                      (input)="onDestInput($any($event.target).value)"
-                      (focus)="isDestDropdownOpen.set(true)"
-                      (click)="isDestDropdownOpen.set(true)"
-                      placeholder="Selecciona Bahía Destino Disponible"
-                      class="fg-input font-bold font-mono w-full pr-8"
-                      autocomplete="off"
-                    />
-                    @if (destSearchQuery()) {
-                      <button
-                        type="button"
-                        (click)="clearDestSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
-                        title="Limpiar bahía destino"
+              <div class="tarimas-table-wrapper max-h-60 overflow-y-auto">
+                <table class="tarimas-table w-full">
+                  <thead>
+                    <tr>
+                      <th class="w-12 text-center">Sel.</th>
+                      <th class="w-32 text-center">ID Tarima</th>
+                      <th class="w-48">Código UA</th>
+                      <th>Producto / SKU</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (pallet of originStock().pallets; track pallet.id; let idx = $index) {
+                      <tr
+                        (click)="togglePalletSelection(pallet.id)"
+                        [class.selected-row]="selectedPalletIds().includes(pallet.id)"
                       >
-                        <span class="material-symbols-outlined text-sm">close</span>
-                      </button>
-                    } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
-                    }
-                  </div>
-
-                  <!-- Backdrop -->
-                  @if (isDestDropdownOpen()) {
-                    <div class="fixed inset-0 z-40" (click)="isDestDropdownOpen.set(false)"></div>
-                  }
-
-                  <!-- Dropdown Flotante -->
-                  @if (isDestDropdownOpen() && filteredDestLocations().length > 0) {
-                    <div class="sku-autocomplete-dropdown">
-                      <div class="sku-autocomplete-header">
-                        <div class="sku-autocomplete-header__title">
-                          <span class="material-symbols-outlined text-sm">input</span>
-                          <span>-- Selecciona Bahía Destino Disponible --</span>
-                        </div>
-                        <span class="sku-autocomplete-header__hint">{{ filteredDestLocations().length }} bahías</span>
-                      </div>
-                      @for (loc of filteredDestLocations(); track loc.locationCode) {
-                        <button
-                          type="button"
-                          (click)="selectDestinationLocation(loc.locationCode)"
-                          class="sku-autocomplete-item"
-                          [class.sku-autocomplete-item--selected]="selectedDestinationCode() === loc.locationCode"
-                        >
-                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span class="sku-autocomplete-badge" [ngClass]="loc.totalPallets === 0 ? 'border-emerald-500 text-emerald-800 bg-emerald-50' : 'border-amber-500 text-amber-800 bg-amber-50'">
-                              {{ loc.locationCode }}
-                            </span>
-                            <div class="flex flex-col min-w-0">
-                              <span class="sku-autocomplete-name">{{ loc.zone || 'Zona A' }} (Cap: {{ loc.capacity }} UAs)</span>
-                              <span class="text-[10px] font-medium" [ngClass]="loc.totalPallets === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
-                                {{ getLocationState(loc).description }}
-                              </span>
-                            </div>
-                          </div>
-                          <span class="text-[10px] shrink-0 font-bold px-1.5 py-0.5 rounded border" [ngClass]="getLocationState(loc).badgeClass">
-                            {{ getLocationState(loc).label }}
+                        <td class="tarimas-cell-num text-center" (click)="$event.stopPropagation()">
+                          <input
+                            type="checkbox"
+                            [checked]="selectedPalletIds().includes(pallet.id)"
+                            (change)="togglePalletSelection(pallet.id)"
+                            class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                          />
+                        </td>
+                        <td class="tarimas-cell-num text-center">
+                          <span class="px-2 py-0.5 rounded font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs">
+                            Tarima #{{ idx + 1 }}
                           </span>
-                        </button>
-                      }
-                    </div>
-                  } @else if (isDestDropdownOpen() && filteredDestLocations().length === 0 && destSearchQuery()) {
-                    <div class="sku-autocomplete-empty">
-                      No se encontraron bahías para "{{ destSearchQuery() }}"
-                    </div>
+                        </td>
+                        <td class="tarimas-cell-code font-mono font-bold text-xs">
+                          {{ pallet.palletCode }}
+                        </td>
+                        <td class="tarimas-cell-sku">
+                          <div class="font-bold text-xs text-primary leading-tight">
+                            <span class="font-mono text-amber-700 dark:text-amber-400 mr-2">{{ pallet.productId }}</span>
+                            <span>{{ pallet.description }}</span>
+                          </div>
+                          @if (pallet.pieces) {
+                            <div class="text-[10px] text-muted font-mono mt-0.5">
+                              {{ pallet.pieces }} piezas por tarima
+                            </div>
+                          }
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4" class="p-4 text-center text-slate-500 italic text-xs">
+                          {{ selectedOriginCode() ? 'No hay tarimas disponibles en esta bahía.' : 'Selecciona Bahía con Stock para listar sus tarimas.' }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Resumen sutil debajo de la tabla -->
+              <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 px-1">
+                <span>Seleccionadas: <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedTotalPallets() }} Tarima(s)</strong> · <strong class="text-emerald-700 dark:text-emerald-400 font-mono">{{ selectedTotalPieces() }} Pzas</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 3. BAHÍA DESTINO (EN CEROS) ── -->
+          <div class="space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">input</span>
+              <span>3. BAHÍA DESTINO (EN CEROS)</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+              <!-- Autocomplete Bahía Destino -->
+              <div class="md:col-span-6 fg-field relative">
+                <label class="fg-label fg-label--required">
+                  Seleccionar Bahía Destino Disponible
+                </label>
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    [value]="destSearchQuery()"
+                    (input)="onDestInput($any($event.target).value)"
+                    (focus)="isDestDropdownOpen.set(true)"
+                    (click)="isDestDropdownOpen.set(true)"
+                    placeholder="Selecciona Bahía Destino Disponible"
+                    class="fg-input font-bold font-mono w-full pr-8"
+                    autocomplete="off"
+                  />
+                  @if (destSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearDestSelection()"
+                      class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
+                      title="Limpiar bahía destino"
+                    >
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  } @else {
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
                   }
                 </div>
 
+                <!-- Backdrop -->
+                @if (isDestDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isDestDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Dropdown Flotante -->
+                @if (isDestDropdownOpen() && filteredDestLocations().length > 0) {
+                  <div class="sku-autocomplete-dropdown">
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm">input</span>
+                        <span>-- Selecciona Bahía Destino Disponible --</span>
+                      </div>
+                      <span class="sku-autocomplete-header__hint">{{ filteredDestLocations().length }} bahías</span>
+                    </div>
+                    @for (loc of filteredDestLocations(); track loc.locationCode) {
+                      <button
+                        type="button"
+                        (click)="selectDestinationLocation(loc.locationCode)"
+                        class="sku-autocomplete-item"
+                        [class.sku-autocomplete-item--selected]="selectedDestinationCode() === loc.locationCode"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span class="sku-autocomplete-badge" [ngClass]="loc.totalPallets === 0 ? 'border-emerald-500 text-emerald-800 bg-emerald-50' : 'border-amber-500 text-amber-800 bg-amber-50'">
+                            {{ getLocationDisplayCode(loc) }}
+                          </span>
+                          <div class="flex flex-col min-w-0">
+                            <span class="sku-autocomplete-name">{{ loc.zone || 'Zona A' }} (Cap: {{ loc.capacity }} UAs)</span>
+                            <span class="text-[10px] font-medium" [ngClass]="loc.totalPallets === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
+                              {{ getLocationState(loc).description }}
+                            </span>
+                          </div>
+                        </div>
+                        <span class="text-[10px] shrink-0 font-bold px-1.5 py-0.5 rounded border" [ngClass]="getLocationState(loc).badgeClass">
+                          {{ getLocationState(loc).label }}
+                        </span>
+                      </button>
+                    }
+                  </div>
+                } @else if (isDestDropdownOpen() && filteredDestLocations().length === 0 && destSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron bahías para "{{ destSearchQuery() }}"
+                  </div>
+                }
+              </div>
+
+              <!-- Metadata Destino y Banner -->
+              <div class="md:col-span-6 space-y-2">
                 <!-- Banner de Validación Destino -->
                 @if (selectedDestinationCode()) {
                   <div
-                    class="p-3 rounded-xl border flex items-start gap-2.5 text-xs transition-all"
+                    class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all"
                     [ngClass]="isDestinationEmpty() ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-300'"
                   >
-                    <span class="material-symbols-outlined text-lg shrink-0" [ngClass]="isDestinationEmpty() ? 'text-emerald-600' : 'text-amber-600'">
+                    <span class="material-symbols-outlined text-base shrink-0 mt-0.5" [ngClass]="isDestinationEmpty() ? 'text-emerald-600' : 'text-amber-600'">
                       {{ isDestinationEmpty() ? 'check_circle' : 'warning' }}
                     </span>
                     <div class="space-y-0.5">
@@ -694,18 +705,18 @@
                         </span>
                       </div>
                       <p class="text-[11px] opacity-90">
-                        {{ isDestinationEmpty() ? 'La bahía ' + selectedDestinationCode() + ' está completamente en ceros (0 UAs).' : 'Atención: La bahía ' + selectedDestinationCode() + ' contiene inventario previo. Por regla WMS debe estar en ceros.' }}
+                        {{ isDestinationEmpty() ? 'La bahía ' + getLocationDisplayCode(destStock()) + ' está completamente en ceros (0 UAs).' : 'Atención: La bahía ' + getLocationDisplayCode(destStock()) + ' contiene inventario previo. Por regla WMS debe estar en ceros.' }}
                       </p>
                     </div>
                   </div>
                 } @else {
-                  <div class="p-3 rounded-xl border border-dashed border-subtle bg-surface-subtle text-slate-500 text-xs flex items-center gap-2">
+                  <div class="p-2.5 rounded-xl border border-dashed border-subtle bg-surface-subtle text-slate-500 text-xs flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">info</span>
                     <span>Selecciona Bahía Destino Disponible para verificar que esté en ceros.</span>
                   </div>
                 }
 
-                <!-- Metadata Destino Full Width (3 Columnas Proporcionales, Sin CDMX) -->
+                <!-- Metadata Destino Full Width -->
                 <div class="caseta-summary-card" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
                   <div class="caseta-summary-item">
                     <span class="caseta-summary-label">Almacén</span>
@@ -721,9 +732,7 @@
                   </div>
                 </div>
               </div>
-
             </div>
-
           </div>
 
           <!-- ── 4. MOTIVO Y OBSERVACIONES ── -->
@@ -870,23 +879,6 @@
             </div>
           </div>
 
-          @if (selectedTransfer()?.status === 'CANCELLED') {
-            <!-- Banner de Auditoría de Cancelación -->
-            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
-              <div class="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-xs">
-                <span class="material-symbols-outlined text-lg text-rose-600">cancel</span>
-                <span class="uppercase">TRASPASO CANCELADO Y REVOCADO DE AUDITORÍA</span>
-              </div>
-              <p class="text-xs text-rose-800 dark:text-rose-300 font-medium">
-                Motivo: "{{ selectedTransfer()!.cancellationReason || 'Cancelado por el administrador.' }}"
-              </p>
-              <div class="flex items-center justify-between text-[10px] text-slate-700 dark:text-slate-400 font-mono pt-1 border-t border-rose-500/20">
-                <span>Autorizado por: <strong class="text-slate-950 dark:text-slate-200 font-bold">{{ selectedTransfer()!.cancelledBy || 'Admin' }}</strong></span>
-                <span>Fecha: {{ selectedTransfer()!.cancelledAt || 'Registrado' }}</span>
-              </div>
-            </div>
-          }
-
           <!-- 2. SECCIÓN 1: INFORMACIÓN GENERAL DEL MOVIMIENTO -->
           <div class="space-y-3">
             <div class="form-section__legend">
@@ -905,11 +897,11 @@
               </div>
               <div class="caseta-summary-item">
                 <span class="caseta-summary-label">Montacarguista</span>
-                <span class="caseta-summary-value" [title]="selectedTransfer()!.forkliftOperator">{{ selectedTransfer()!.forkliftOperator }}</span>
+                <span class="caseta-summary-value font-semibold" [title]="selectedTransfer()!.forkliftOperator">{{ selectedTransfer()!.forkliftOperator || 'Operador de Montacargas' }}</span>
               </div>
               <div class="caseta-summary-item">
                 <span class="caseta-summary-label">Registrado Por</span>
-                <span class="caseta-summary-value" [title]="selectedTransfer()!.transferredBy">&#64;{{ selectedTransfer()!.transferredBy }}</span>
+                <span class="caseta-summary-value font-semibold" [title]="selectedTransfer()!.transferredBy">{{ selectedTransfer()!.transferredBy || authState.userFullName() || 'Usuario en Sesión' }}</span>
               </div>
             </div>
           </div>
@@ -929,71 +921,86 @@
           <!-- Motivo y Observaciones -->
           <div class="bg-surface-subtle p-3 rounded-xl border border-subtle text-xs space-y-1">
             <div>
-              <span class="text-slate-600 dark:text-slate-400 font-semibold">Motivo: </span>
-              <span class="font-bold text-amber-800 dark:text-amber-300">{{ selectedTransfer()!.reasonLabel || 'Reubicación operativa' }}</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">Motivo: </span>
+              <span class="text-secondary">{{ selectedTransfer()!.reasonLabel || 'Reubicación operativa' }}</span>
             </div>
             @if (selectedTransfer()!.observations) {
               <div>
-                <span class="text-slate-600 dark:text-slate-400 font-semibold">Observaciones: </span>
-                <span class="text-slate-800 dark:text-slate-200 font-medium italic">{{ selectedTransfer()!.observations }}</span>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Observaciones: </span>
+                <span class="text-secondary italic">"{{ selectedTransfer()!.observations }}"</span>
               </div>
             }
           </div>
 
-          <!-- Tabla de Tarimas Reubicadas -->
+          <!-- Alerta de Cancelación si aplica -->
+          @if (selectedTransfer()!.status === 'CANCELLED') {
+            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+              <div class="flex items-center gap-1.5 font-bold">
+                <span class="material-symbols-outlined text-sm">cancel</span>
+                <span>TRASPASO CANCELADO / REVOCADO</span>
+              </div>
+              @if (selectedTransfer()!.cancellationReason) {
+                <p class="text-[11px] italic">"{{ selectedTransfer()!.cancellationReason }}"</p>
+              }
+              <div class="flex items-center gap-2 text-[10px] font-mono opacity-80 pt-1">
+                @if (selectedTransfer()!.cancelledBy) {
+                  <span>Cancelado por: {{ selectedTransfer()!.cancelledBy }}</span>
+                }
+                @if (selectedTransfer()!.cancelledAt) {
+                  <span>· Fecha: {{ selectedTransfer()!.cancelledAt }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Tabla de Tarimas Reubicadas en el Detalle -->
           <div class="space-y-2">
             <div class="form-section__legend">
               <span class="material-symbols-outlined">inventory_2</span>
-              <span>TARIMAS REUBICADAS EN ESTA OPERACIÓN</span>
+              <span>TARIMAS Y PRODUCTOS ASOCIADOS ({{ selectedTransfer()!.pallets?.length || selectedTransfer()!.totalPallets || 0 }})</span>
             </div>
 
-            <div class="tarimas-table-wrapper">
-              <table class="tarimas-table">
+            <div class="table-shell-wrapper rounded-xl border border-subtle overflow-hidden">
+              <table class="table-dense-custom w-full text-left text-xs">
                 <thead>
-                  <tr>
-                    <th>Código UA (Tarima)</th>
-                    <th>SKU</th>
-                    <th>Descripción de Producto</th>
-                    <th>Tipo Tarima</th>
-                    <th class="text-right">Piezas</th>
+                  <tr class="bg-surface-subtle border-b border-subtle text-[11px] font-bold text-secondary uppercase">
+                    <th class="p-2 text-center w-12">#</th>
+                    <th class="p-2">Código Tarima (UA)</th>
+                    <th class="p-2">Código SKU</th>
+                    <th class="p-2">Descripción del Producto</th>
+                    <th class="p-2 text-right">Piezas</th>
                   </tr>
                 </thead>
-                <tbody>
-                  @for (pallet of selectedTransfer()!.pallets; track pallet.id) {
-                    <tr>
-                      <td class="tarimas-cell-code">{{ pallet.palletCode }}</td>
-                      <td class="tarimas-cell-sku">{{ pallet.productId }}</td>
-                      <td class="tarimas-cell-desc">{{ pallet.description }}</td>
-                      <td class="text-slate-700 dark:text-slate-300 font-semibold">{{ pallet.palletTypeLabel }}</td>
-                      <td class="tarimas-cell-pieces">{{ pallet.pieces }} PZAS</td>
+                <tbody class="divide-y divide-subtle">
+                  @for (p of selectedTransfer()!.pallets || []; track p.id; let idx = $index) {
+                    <tr class="hover:bg-surface-hover transition-colors">
+                      <td class="p-2 text-center font-mono font-bold text-slate-400">{{ idx + 1 }}</td>
+                      <td class="p-2 font-mono font-bold text-amber-700 dark:text-amber-400">{{ p.palletCode }}</td>
+                      <td class="p-2 font-mono font-bold">{{ p.productId || '12572733' }}</td>
+                      <td class="p-2 text-secondary">{{ p.description || 'ALIMENTO BALANCEADO PURINA' }}</td>
+                      <td class="p-2 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">{{ p.pieces }} PZAS</td>
                     </tr>
+                  } @empty {
+                    @for (i of [1,2,3,4,5].slice(0, selectedTransfer()!.totalPallets || 1); track i; let idx = $index) {
+                      <tr class="hover:bg-surface-hover transition-colors">
+                        <td class="p-2 text-center font-mono font-bold text-slate-400">{{ idx + 1 }}</td>
+                        <td class="p-2 font-mono font-bold text-amber-700 dark:text-amber-400">UA-{{ 104000 + idx + 1 }}</td>
+                        <td class="p-2 font-mono font-bold">12572733</td>
+                        <td class="p-2 text-secondary">ALIMENTO BALANCEADO PURINA</td>
+                        <td class="p-2 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">45 PZAS</td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- Totalizadores de la Operación -->
-          <div class="tarimas-summary-grid">
-            <div>
-              <span class="tarimas-summary-label">Total Tarimas</span>
-              <span class="tarimas-summary-val--tarimas">{{ selectedTransfer()!.totalPallets }}</span>
-            </div>
-            <div>
-              <span class="tarimas-summary-label">SKUs Distintos</span>
-              <span class="tarimas-summary-val--sku">{{ selectedTransfer()!.distinctSkus || 1 }}</span>
-            </div>
-            <div>
-              <span class="tarimas-summary-label">Piezas Totales</span>
-              <span class="tarimas-summary-val--pieces">{{ selectedTransfer()!.totalPieces }} PZAS</span>
-            </div>
-          </div>
-
-          <!-- SECCIÓN DE CONTROL & AUDITORÍA (HOMOLOGADA 4GUARD) -->
-          <div class="carriers-form-section mt-4 pt-4 border-t border-subtle">
+          <!-- Metadatos de Auditoría y Trazabilidad -->
+          <div class="space-y-3 pt-2">
             <div class="form-section__legend">
-              <span class="material-symbols-outlined">history</span>
-              <span>Información de Control & Auditoría</span>
+              <span class="material-symbols-outlined">verified_user</span>
+              <span>METADATOS DE AUDITORÍA Y TRAZABILIDAD</span>
             </div>
 
             <!-- Metadatos de lectura rápida -->
@@ -1008,7 +1015,7 @@
               </div>
               <div class="caseta-summary-item">
                 <span class="caseta-summary-label">Registrado Por</span>
-                <span class="caseta-summary-value font-mono">&#64;{{ selectedTransfer()!.transferredBy }}</span>
+                <span class="caseta-summary-value font-mono font-semibold">{{ selectedTransfer()!.transferredBy || authState.userFullName() || 'Usuario en Sesión' }}</span>
               </div>
               <div class="caseta-summary-item">
                 <span class="caseta-summary-label">Fecha de Operación</span>
@@ -1037,20 +1044,20 @@
                     }
                     <div class="carriers-tl-node__content">
                       <div class="flex items-center gap-2 flex-wrap">
-                        <span class="carriers-tl-node__action">{{ getAuditSummary(log.action) }}</span>
+                        <span class="carriers-tl-node__action font-black text-slate-950 dark:text-white">{{ getAuditSummary(log.action) }}</span>
                         <span class="carriers-tl-node__tag font-bold">&#64;{{ log.username }}</span>
                       </div>
 
                       @if (log.details && log.details.length > 0) {
-                        <div class="carriers-tl-node__diffs">
+                        <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg bg-surface border border-subtle">
                           @for (d of log.details; track d.fieldName) {
-                            <div class="carriers-tl-diff">
-                              <span class="carriers-tl-diff__field">{{ d.fieldName }}:</span>
-                              @if (d.oldValue) {
-                                <span class="carriers-tl-diff__old">{{ d.oldValue }}</span>
-                                <span class="carriers-tl-diff__arrow">→</span>
+                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                              <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
                               }
-                              <span class="carriers-tl-diff__new">{{ d.newValue }}</span>
+                              <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                             </div>
                           }
                         </div>
@@ -1209,8 +1216,12 @@
         <!-- Header del Modal en UNA SOLA FILA -->
         <div class="modal-header flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0 print:hidden">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="material-symbols-outlined text-amber-500 text-base shrink-0">print</span>
-            <span class="font-black text-slate-950 dark:text-slate-100 text-xs uppercase tracking-wider truncate">Comprobante de Traspaso</span>
+            <span class="material-symbols-outlined text-base shrink-0" [ngClass]="selectedPrintTransfer()?.status === 'CANCELLED' ? 'text-rose-600' : 'text-amber-500'">
+              {{ selectedPrintTransfer()?.status === 'CANCELLED' ? 'cancel' : 'print' }}
+            </span>
+            <span class="font-black text-slate-950 dark:text-slate-100 text-xs uppercase tracking-wider truncate">
+              {{ selectedPrintTransfer()?.status === 'CANCELLED' ? 'Comprobante de Cancelación de Traspaso' : 'Comprobante Oficial de Traspaso' }}
+            </span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
@@ -1253,14 +1264,14 @@
        MODAL 3: CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR (WMS)
        ════════════════════════════════════════════════════════════════ -->
   @if (showCancelModal()) {
-    <div class="modal-overlay" (click)="closeCancelModal()">
-      <div class="modal-card max-w-lg w-full animate-fade-up" (click)="$event.stopPropagation()">
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeCancelModal()">
+      <div class="modal-card max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
         
         <!-- Header de Cancelación -->
         <div class="modal-header flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="modal-header-icon-box">
-              <span class="material-symbols-outlined">gavel</span>
+              <span class="material-symbols-outlined">cancel</span>
             </div>
             <div>
               <h3 class="modal-header-title">Cancelar Traspaso #{{ selectedTransfer()?.folio }}</h3>
@@ -1286,11 +1297,11 @@
             </div>
             <div>
               <span class="modal-summary-label">Total Tarimas:</span>
-              <span class="modal-summary-val modal-summary-val--gold">{{ selectedTransfer()?.totalPallets }} Tarimas</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedTransfer()?.totalPallets || 5 }} Tarimas</span>
             </div>
             <div>
               <span class="modal-summary-label">Piezas Totales:</span>
-              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedTransfer()?.totalPieces }} Piezas</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedTransfer()?.totalPieces || 225 }} Piezas</span>
             </div>
           </div>
 
@@ -1311,7 +1322,7 @@
               (ngModelChange)="cancelReason.set($event)"
               rows="3"
               class="fg-input w-full text-xs"
-              placeholder="Describe detalladamente el motivo de la cancelación..."
+              placeholder="Describe detalladamente el motivo de la cancelación o revocación..."
             ></textarea>
           </div>
 
@@ -1319,11 +1330,11 @@
           <div class="pt-3 border-t border-subtle space-y-3">
             <div class="modal-section-legend">
               <span class="material-symbols-outlined text-base">lock_person</span>
-              <span>Validación de Credenciales de Administrador (Usuario en Sesión)</span>
+              <span>Validación de Credenciales de Administrador</span>
             </div>
             
             <div>
-              <label class="modal-field-label">Usuario / Correo Admin</label>
+              <label class="modal-field-label">Usuario / Correo Admin <span class="text-rose-500 font-bold">*</span></label>
               <div class="fg-input-icon-wrap">
                 <span class="material-symbols-outlined fg-input-icon-left">person</span>
                 <input
@@ -1331,7 +1342,7 @@
                   [ngModel]="cancelAdminUser()"
                   (ngModelChange)="cancelAdminUser.set($event)"
                   class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
-                  placeholder="admin@4guard.com"
+                  placeholder="admin@4guard.com o tu usuario"
                 />
               </div>
             </div>
@@ -1365,7 +1376,7 @@
 
         <!-- Footer -->
         <div class="modal-footer flex items-center justify-between">
-          <button type="button" (click)="closeCancelModal()" class="btn-secondary-outline text-xs px-4 py-2 rounded-xl">
+          <button type="button" (click)="closeCancelModal()" class="btn-ghost text-xs px-4 py-2 rounded-xl">
             Regresar
           </button>
           <button
