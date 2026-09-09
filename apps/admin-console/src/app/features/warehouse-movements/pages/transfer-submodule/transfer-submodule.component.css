@@ -1512,6 +1512,67 @@
   color: #ffffff !important;
 }
 
+.carriers-tl-node__diffs {
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  margin: 0.4rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+:host-context(.theme-dark) .carriers-tl-node__diffs,
+:host-context(.dark) .carriers-tl-node__diffs {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.carriers-tl-diff {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  flex-wrap: wrap;
+}
+
+.carriers-tl-diff__field {
+  font-weight: 800;
+  color: #334155 !important;
+  margin-right: 0.25rem;
+}
+
+:host-context(.theme-dark) .carriers-tl-diff__field,
+:host-context(.dark) .carriers-tl-diff__field {
+  color: #cbd5e1 !important;
+}
+
+.carriers-tl-diff__new {
+  font-weight: 900;
+  color: #059669 !important;
+  font-family: var(--font-mono, monospace);
+}
+
+:host-context(.theme-dark) .carriers-tl-diff__new,
+:host-context(.dark) .carriers-tl-diff__new {
+  color: #34d399 !important;
+}
+
+.carriers-tl-diff__old {
+  font-weight: 800;
+  color: #e11d48 !important;
+  text-decoration: line-through;
+  font-family: var(--font-mono, monospace);
+  margin-right: 0.25rem;
+}
+
+.carriers-tl-diff__arrow {
+  color: #64748b !important;
+  font-weight: 900;
+  margin: 0 0.35rem;
+}
+
 /* ─────────────────────────────────────────────────────────────
    DIRECTORIO
    ───────────────────────────────────────────────────────────── */

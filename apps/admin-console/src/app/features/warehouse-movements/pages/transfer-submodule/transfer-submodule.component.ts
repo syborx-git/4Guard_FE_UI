@@ -14,6 +14,7 @@ import {
   TransferReasonItem,
   TRANSFER_REASONS,
   MovementAuditEntry,
+  ReceptionPalletItem,
 } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
 
@@ -39,7 +40,7 @@ export class TransferSubmoduleComponent implements OnInit {
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
-  private readonly authState = inject(AuthState);
+  public readonly authState = inject(AuthState);
 
   // -- ESTADO DEL WORKBENCH UNIFICADO (MASTER-DETAIL) --
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
@@ -227,36 +228,100 @@ export class TransferSubmoduleComponent implements OnInit {
   occupiedLocations = this.movementsService.occupiedLocations;
   availableLocations = this.movementsService.availableLocations;
 
-  // Obtiene los números de remisión asociados a las tarimas de una bahía
+  // Formato legible para código de bahía (elimina "N/A" mostrando nombre de bahía/rack real)
+  getLocationDisplayCode(locOrCode: LocationStockInfo | string | undefined | null): string {
+    if (!locOrCode) return '--';
+    if (typeof locOrCode === 'string') {
+      const trimmed = locOrCode.trim();
+      if (!trimmed || trimmed.toUpperCase() === 'N/A') {
+        const loc = this.movementsService.getLocationInfo(trimmed);
+        if (loc && loc.zone && loc.zone !== 'General') return `Bahía ${loc.zone}`;
+        if (loc && loc.rack && loc.level) return `${loc.rack} - ${loc.level}`;
+        return 'Bahía de Entrada';
+      }
+      return trimmed;
+    }
+    const code = (locOrCode.locationCode || '').trim();
+    if (!code || code.toUpperCase() === 'N/A') {
+      if (locOrCode.rack && locOrCode.level) return `${locOrCode.rack} - ${locOrCode.level}`;
+      if (locOrCode.zone && locOrCode.zone !== 'General') return `Bahía ${locOrCode.zone}`;
+      return 'Bahía de Entrada';
+    }
+    return code;
+  }
+
+  // Obtiene los números de remisión actualizados asociados a las tarimas de una bahía
   getLocationRemisiones(locationCode: string): string[] {
     const cleanCode = (locationCode || '').toUpperCase().trim();
     if (!cleanCode) return [];
 
     const remisiones = new Set<string>();
-
-    // 1. Buscar en inventoryBatches por locationCode
-    const batches = this.movementsService.inventoryBatches();
-    batches.forEach((b) => {
-      if (b.locationCode && b.locationCode.toUpperCase().trim() === cleanCode && b.remisionNo) {
-        remisiones.add(b.remisionNo);
-      }
-    });
-
-    // 2. Buscar en recepciones por storageLocation
     const receptions = this.movementsService.receptions();
-    receptions.forEach((r) => {
-      if (r.storageLocation && r.storageLocation.toUpperCase().trim() === cleanCode && r.checkIn?.docNumber) {
-        remisiones.add(r.checkIn.docNumber);
-      }
-    });
-
-    // 3. Revisar los pallets de la ubicación
     const locInfo = this.movementsService.getLocationInfo(cleanCode);
-    if (locInfo && locInfo.pallets) {
+
+    // 1. Prioridad: Buscar recepciones activas que coincidan con los pallets o productos en esta bahía
+    if (locInfo && locInfo.pallets && locInfo.pallets.length > 0) {
       locInfo.pallets.forEach((p) => {
-        if (p.observations && p.observations.includes('REM-')) {
-          const match = p.observations.match(/REM-[\w-]+/);
-          if (match) remisiones.add(match[0]);
+        // Coincidencia por código de tarima / SSCC
+        const matchByPallet = receptions.find(
+          (r) =>
+            r.status !== 'CANCELLED' &&
+            r.pallets?.some((rp) => rp.palletCode === p.palletCode || rp.id === p.id)
+        );
+        if (matchByPallet && matchByPallet.checkIn?.docNumber) {
+          remisiones.add(matchByPallet.checkIn.docNumber);
+          return;
+        }
+
+        // Coincidencia por SKU o Descripción de producto
+        const matchByProduct = receptions.find(
+          (r) =>
+            r.status !== 'CANCELLED' &&
+            ((r.skuCode && p.productId && r.skuCode.toUpperCase().trim() === p.productId.toUpperCase().trim()) ||
+              (r.productId && p.productId && r.productId.toUpperCase().trim() === p.productId.toUpperCase().trim()) ||
+              (r.productName && p.description && r.productName.toUpperCase().trim() === p.description.toUpperCase().trim()))
+        );
+        if (matchByProduct && matchByProduct.checkIn?.docNumber) {
+          remisiones.add(matchByProduct.checkIn.docNumber);
+        }
+      });
+    }
+
+    // 2. Buscar en recepciones por storageLocation (ignorar canceladas)
+    if (remisiones.size === 0) {
+      receptions.forEach((r) => {
+        if (
+          r.status !== 'CANCELLED' &&
+          r.storageLocation &&
+          r.storageLocation.toUpperCase().trim() === cleanCode &&
+          r.checkIn?.docNumber
+        ) {
+          remisiones.add(r.checkIn.docNumber);
+        }
+      });
+    }
+
+    // 3. Fallback secundario en inventoryBatches
+    if (remisiones.size === 0) {
+      const batches = this.movementsService.inventoryBatches();
+      batches.forEach((b) => {
+        const matchBatchLoc = b.locationCode && b.locationCode.toUpperCase().trim() === cleanCode;
+        const matchPalletLoc = b.pallets?.some(
+          (p: any) => p.locationCode && p.locationCode.toUpperCase().trim() === cleanCode
+        );
+        if (matchBatchLoc || matchPalletLoc) {
+          // Verificar si el batch tiene una recepción actualizada
+          const recForBatch = receptions.find(
+            (r) =>
+              r.status !== 'CANCELLED' &&
+              ((b.productId && (r.skuCode === b.productId || r.productId === b.productId)) ||
+                (b.productName && r.productName && r.productName.toUpperCase().trim() === b.productName.toUpperCase().trim()))
+          );
+          if (recForBatch && recForBatch.checkIn?.docNumber) {
+            remisiones.add(recForBatch.checkIn.docNumber);
+          } else if (b.remisionNo && b.remisionNo !== 'N/A') {
+            remisiones.add(b.remisionNo);
+          }
         }
       });
     }
@@ -269,7 +334,8 @@ export class TransferSubmoduleComponent implements OnInit {
     const q = this.originSearchQuery().toLowerCase().trim();
     if (!q) return list;
     return list.filter((loc) => {
-      const matchCode = loc.locationCode.toLowerCase().includes(q);
+      const displayCode = this.getLocationDisplayCode(loc).toLowerCase();
+      const matchCode = loc.locationCode.toLowerCase().includes(q) || displayCode.includes(q);
       const matchZone = loc.zone ? loc.zone.toLowerCase().includes(q) : false;
       const matchRack = loc.rack ? loc.rack.toLowerCase().includes(q) : false;
       const remisiones = this.getLocationRemisiones(loc.locationCode);
@@ -293,7 +359,9 @@ export class TransferSubmoduleComponent implements OnInit {
     this.originSearchQuery.set(val);
     this.isOriginDropdownOpen.set(true);
     const exact = this.occupiedLocations().find(
-      (l) => l.locationCode.toLowerCase() === val.toLowerCase().trim()
+      (l) =>
+        l.locationCode.toLowerCase() === val.toLowerCase().trim() ||
+        this.getLocationDisplayCode(l).toLowerCase() === val.toLowerCase().trim()
     );
     if (exact) {
       this.selectOriginLocation(exact.locationCode);
@@ -302,7 +370,8 @@ export class TransferSubmoduleComponent implements OnInit {
 
   selectOriginLocation(code: string): void {
     this.selectedOriginCode.set(code);
-    this.originSearchQuery.set(code);
+    const loc = this.movementsService.getLocationInfo(code);
+    this.originSearchQuery.set(this.getLocationDisplayCode(loc || code));
     this.isOriginDropdownOpen.set(false);
     const stock = this.movementsService.getLocationInfo(code);
     this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
@@ -319,6 +388,13 @@ export class TransferSubmoduleComponent implements OnInit {
   destSearchQuery = signal<string>('');
   isDestDropdownOpen = signal<boolean>(false);
   selectedDestinationCode = signal('');
+
+  selectDestinationLocation(code: string): void {
+    this.selectedDestinationCode.set(code);
+    const loc = this.movementsService.getLocationInfo(code);
+    this.destSearchQuery.set(this.getLocationDisplayCode(loc || code));
+    this.isDestDropdownOpen.set(false);
+  }
 
   allWarehouseLocations = computed(() => Object.values(this.movementsService.locations()));
 
@@ -390,11 +466,6 @@ export class TransferSubmoduleComponent implements OnInit {
     }
   }
 
-  selectDestinationLocation(code: string): void {
-    this.selectedDestinationCode.set(code);
-    this.destSearchQuery.set(code);
-    this.isDestDropdownOpen.set(false);
-  }
 
   clearDestSelection(): void {
     this.selectedDestinationCode.set('');
@@ -548,13 +619,59 @@ export class TransferSubmoduleComponent implements OnInit {
     this.selectedTransfer.set(transfer);
     localStorage.setItem('4g_active_transfer_folio', transfer.folio);
     this.loadAuditLogs(transfer);
+
+    if (transfer.id) {
+      this.movementsApi.getTransferById(transfer.id).subscribe({
+        next: (fullTransfer: any) => {
+          if (fullTransfer) {
+            const mappedPallets: ReceptionPalletItem[] = (fullTransfer.items || []).map((it: any, idx: number) => ({
+              id: it.itemId || it.id || `plt-${idx}`,
+              palletNumber: idx + 1,
+              palletCode: it.palletCode || `UA-${idx + 1}`,
+              description: it.skuDescription || 'ALIMENTO BALANCEADO PURINA',
+              productId: it.skuCode || '12572733',
+              supplierName: 'PURINA PETCARE MEXICO',
+              pieces: it.pieces != null ? Number(it.pieces) : 45,
+              palletTypeId: 'STD',
+              palletTypeLabel: 'Estándar (Tarima Completa)',
+            }));
+
+            const merged: WarehouseTransfer = {
+              ...transfer,
+              id: fullTransfer.id || transfer.id,
+              folio: fullTransfer.folio || transfer.folio,
+              status: fullTransfer.status || transfer.status,
+              forkliftOperator: fullTransfer.forkliftOperatorName || transfer.forkliftOperator,
+              forkliftOperatorId: fullTransfer.forkliftOperatorId || transfer.forkliftOperatorId,
+              originLocation: fullTransfer.originLocationCode || transfer.originLocation,
+              destinationLocation: fullTransfer.destinationLocationCode || transfer.destinationLocation,
+              reasonId: fullTransfer.reasonCode || transfer.reasonId,
+              reasonLabel: fullTransfer.reasonLabel || transfer.reasonLabel,
+              observations: fullTransfer.observations || transfer.observations,
+              totalPallets: fullTransfer.totalPallets || (mappedPallets.length > 0 ? mappedPallets.length : transfer.totalPallets),
+              totalPieces: fullTransfer.totalPieces != null ? Number(fullTransfer.totalPieces) : transfer.totalPieces,
+              distinctSkus: fullTransfer.distinctSkus || transfer.distinctSkus,
+              transferredAt: fullTransfer.createdAt ? new Date(fullTransfer.createdAt).toLocaleString('es-MX') : transfer.transferredAt,
+              transferredBy: fullTransfer.createdBy || transfer.transferredBy || this.authState.userFullName() || this.authState.currentUser()?.fullName || this.authState.currentUser()?.username || 'Usuario en Sesión',
+              cancellationReason: fullTransfer.cancellationReason || transfer.cancellationReason,
+              cancelledAt: fullTransfer.cancelledAt ? new Date(fullTransfer.cancelledAt).toLocaleString('es-MX') : transfer.cancelledAt,
+              cancelledBy: fullTransfer.cancelledBy || transfer.cancelledBy,
+              pallets: mappedPallets.length > 0 ? mappedPallets : (transfer.pallets && transfer.pallets.length > 0 ? transfer.pallets : []),
+            };
+
+            this.selectedTransfer.set(merged);
+          }
+        },
+        error: () => {},
+      });
+    }
   }
 
   // Carga logs de auditoria desde el Backend usando el ID del traspaso
   loadAuditLogs(transfer: WarehouseTransfer): void {
     if (!transfer.id) {
       const logs = this.movementsService.getTransferAuditLogs(transfer.folio);
-      this.auditEntries.set(logs || []);
+      this.auditEntries.set(this.sortAuditEntries(logs || []));
       return;
     }
 
@@ -564,29 +681,66 @@ export class TransferSubmoduleComponent implements OnInit {
         this.isLoadingAudit.set(false);
         if (logs && logs.length > 0) {
           const mapped: MovementAuditEntry[] = logs.map((log: any) => ({
-            id: log.id || log.auditId,
+            id: log.id || log.auditId || `aud-${Date.now()}-${Math.random()}`,
             action: log.action || log.eventType || 'TRASPASO_REGISTRADO',
-            actionLabel: log.actionLabel || log.description || log.action,
+            actionLabel: log.actionLabel || log.description || this.getAuditSummary(log.action),
             username: log.username || log.performedBy || log.createdBy || 'Sistema',
             timestamp: log.timestamp
               ? new Date(log.timestamp).toLocaleString('es-MX')
               : (log.createdAt ? new Date(log.createdAt).toLocaleString('es-MX') : ''),
-            details: log.details || log.changes || [],
+            details: (log.details || log.changes || []).map((d: any) => ({
+              fieldName: this.formatFieldLabel(d.fieldName),
+              oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+              newValue: this.formatFieldValue(d.fieldName, d.newValue),
+            })),
             reason: log.reason || log.cancellationReason,
             authorizedBy: log.authorizedBy,
           }));
-          this.auditEntries.set(mapped);
+          const sorted = this.sortAuditEntries(mapped);
+          this.auditEntries.set(sorted);
+          this.movementsService.setTransferAuditLogs(transfer.folio, sorted);
         } else {
           const localLogs = this.movementsService.getTransferAuditLogs(transfer.folio);
-          this.auditEntries.set(localLogs || []);
+          this.auditEntries.set(this.sortAuditEntries(localLogs || []));
         }
       },
       error: () => {
         this.isLoadingAudit.set(false);
         const localLogs = this.movementsService.getTransferAuditLogs(transfer.folio);
-        this.auditEntries.set(localLogs || []);
+        this.auditEntries.set(this.sortAuditEntries(localLogs || []));
       },
     });
+  }
+
+  sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
+    if (!entries || entries.length === 0) return [];
+    return [...entries].sort((a, b) => {
+      const parseDate = (ts?: string) => {
+        if (!ts) return 0;
+        const direct = new Date(ts).getTime();
+        if (!isNaN(direct) && direct > 0) return direct;
+        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (match) {
+          const day = parseInt(match[1], 10);
+          const month = parseInt(match[2], 10) - 1;
+          const year = parseInt(match[3], 10);
+          const hour = match[4] ? parseInt(match[4], 10) : 0;
+          const min = match[5] ? parseInt(match[5], 10) : 0;
+          const sec = match[6] ? parseInt(match[6], 10) : 0;
+          return new Date(year, month, day, hour, min, sec).getTime();
+        }
+        return 0;
+      };
+      return parseDate(b.timestamp) - parseDate(a.timestamp);
+    });
+  }
+
+  formatFieldLabel(field: string): string {
+    return this.movementsService.formatFieldLabel(field);
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    return this.movementsService.formatFieldValue(field, value);
   }
 
   getAuditIcon(action: string): string {
@@ -609,9 +763,9 @@ export class TransferSubmoduleComponent implements OnInit {
 
   getAuditSummary(action: string): string {
     switch (action) {
-      case 'TRASPASO_REGISTRADO': return 'Reubicación de Inventario Confirmada';
+      case 'TRASPASO_REGISTRADO': return 'Reubicación de Tarima (Traspaso / Putaway)';
       case 'TRASPASO_COMPLETADO': return 'Traspaso Concluido en Bahía Destino';
-      case 'TRASPASO_CANCELADO':  return 'Cancelación Extraordinaria de Traspaso';
+      case 'TRASPASO_CANCELADO':  return 'Cancelación Extraordinaria con Autorización';
       default:                    return action;
     }
   }
@@ -647,6 +801,28 @@ export class TransferSubmoduleComponent implements OnInit {
     this.showConfirmModal.set(false);
   }
 
+  // Resuelve determinísticamente el UUID de una bahía para la API del Backend
+  resolveLocationUuid(locCode: string, isDest = false): string {
+    const clean = (locCode || '').toUpperCase().trim();
+    const loc = this.movementsService.getLocationInfo(clean);
+    if (loc?.locationId && /^[0-9a-fA-F-]{36}$/.test(loc.locationId)) {
+      return loc.locationId;
+    }
+    const all: LocationStockInfo[] = Object.values(this.movementsService.locations() || {});
+    const found = all.find(
+      (l: LocationStockInfo) =>
+        (l.locationCode && l.locationCode.toUpperCase().trim() === clean) ||
+        (l.locationId && /^[0-9a-fA-F-]{36}$/.test(l.locationId))
+    );
+    if (found?.locationId && /^[0-9a-fA-F-]{36}$/.test(found.locationId)) {
+      return found.locationId;
+    }
+    // Fallbacks deterministas válidos a los UUIDs sembrados en wms.locations
+    return isDest
+      ? '00000000-0000-0000-0006-000000000005'
+      : '00000000-0000-0000-0006-000000000001';
+  }
+
   // Ejecutar el Cambio de Almacen -- integrado con el Backend
   executeTransferAction(): void {
     if (!this.canProceedToConfirm()) return;
@@ -655,24 +831,34 @@ export class TransferSubmoduleComponent implements OnInit {
     const operator = this.selectedOperator();
     const reason = this.selectedReason();
     const session = this.movementsApi.getSessionOrg();
-    const user = this.authState.currentUser();
-    const transferredBy = user?.username || user?.email || 'admin@4guard.com';
+    const transferredBy = this.authState.userFullName() || this.authState.currentUser()?.fullName || this.authState.currentUser()?.username || 'Usuario en Sesión';
 
     const origin = this.selectedOriginCode();
     const destination = this.selectedDestinationCode();
     const obs = this.observations();
 
-    // Payload para Backend WMS
+    const originStock = this.originStock();
+    const locOriginId = this.resolveLocationUuid(origin, false);
+    const locDestId = this.resolveLocationUuid(destination, true);
+    const selectedPallets = originStock.pallets.filter((p) =>
+      this.selectedPalletIds().includes(p.id)
+    );
+
+    // Payload para Backend WMS conforme al contrato de CreateTransferRequest
     const bePayload = {
       organizationId: session.organizationId,
       branchId: session.branchId,
+      originLocationId: locOriginId,
       originLocationCode: origin,
+      destinationLocationId: locDestId,
       destinationLocationCode: destination,
+      selectedItemIds: this.selectedPalletIds().filter((id) => /^[0-9a-fA-F-]{36}$/.test(id)),
+      palletCodes: selectedPallets.map((p) => p.palletCode),
       palletIds: this.selectedPalletIds(),
-      forkliftOperatorId: operator?.id,
+      forkliftOperatorId: operator?.id && /^[0-9a-fA-F-]{36}$/.test(operator.id) ? operator.id : undefined,
       forkliftOperatorName: operator?.name || 'Operador',
       reasonCode: reason.id,
-      reasonDescription: reason.label,
+      reasonLabel: reason.label,
       observations: obs,
       transferredBy,
       totalPallets: this.selectedTotalPallets(),
@@ -701,39 +887,29 @@ export class TransferSubmoduleComponent implements OnInit {
           if (res?.folio) {
             executedTransfer.folio = res.folio;
             executedTransfer.id = res.id;
+            executedTransfer.transferredBy = res.createdBy || transferredBy;
           }
+          localStorage.setItem('4g_active_transfer_folio', executedTransfer.folio);
           this.selectTransferItem(executedTransfer);
-          this.toast.success(`Cambio de Almacén #${executedTransfer.folio} ejecutado con éxito.`);
+          this.toast.success(`Cambio de Almacén #${executedTransfer.folio} registrado y guardado con éxito en el servidor.`);
           this.openPrintPreview(executedTransfer);
         } else {
           this.toast.success('Reubicación completada exitosamente.');
           this.resetToIdle();
         }
+
+        // Sincronizar datos frescos del Backend (ADR-007)
+        this.movementsService.reloadTransfers();
+        this.movementsService.reloadInventoryBatches();
       },
-      error: () => {
-        // Fallback local garantizado si el backend se encuentra offline
+      error: (err: any) => {
         this.isExecuting.set(false);
         this.showConfirmModal.set(false);
-
-        const executedTransfer = this.movementsService.executeDetailedTransfer({
-          originLocationCode: origin,
-          destinationLocationCode: destination,
-          selectedPalletIds: this.selectedPalletIds(),
-          forkliftOperator: operator?.name || 'Operador',
-          forkliftOperatorId: operator?.id,
-          reasonId: reason.id,
-          reasonLabel: reason.label,
-          observations: obs,
-          transferredBy,
-        });
-
-        if (executedTransfer) {
-          this.selectTransferItem(executedTransfer);
-          this.toast.success(`Cambio de Almacén #${executedTransfer.folio} ejecutado localmente.`);
-          this.openPrintPreview(executedTransfer);
-        } else {
-          this.toast.error('Ocurrió un error al procesar la reubicación.');
-        }
+        const msg =
+          err.error?.message ||
+          err.message ||
+          'Error al procesar y guardar el cambio de almacén en el servidor.';
+        this.toast.error(msg);
       },
     });
   }
@@ -750,35 +926,40 @@ export class TransferSubmoduleComponent implements OnInit {
   }
 
   triggerBrowserPrint(): void {
-    window.print();
+    const transfer = this.selectedPrintTransfer();
+    if (!transfer) return;
+    const folio = transfer.folio || 'Doc';
+    const isCancelled = transfer.status === 'CANCELLED';
+    const printDocTitle = isCancelled ? `Cancelación Traspaso #${folio}` : `Traspaso #${folio}`;
+    this.printService.printElement('fg-print-transfer-layout', printDocTitle);
   }
 
   isGeneratingPdf = signal(false);
 
-  downloadDirectPdf(): void {
+  async downloadDirectPdf(): Promise<void> {
     const transfer = this.selectedPrintTransfer();
     if (!transfer) return;
 
-    this.isGeneratingPdf.set(true);
-    const filename = `Comprobante_Traspaso_${transfer.folio}.pdf`;
+    const folio = transfer.folio || 'Doc';
+    const isCancelled = transfer.status === 'CANCELLED';
+    const filename = isCancelled ? `Cancelacion_Traspaso_${folio}` : `Comprobante_Traspaso_${folio}`;
 
-    this.printService.downloadPdf('#print-transfer-document', filename)
-      .then(() => {
-        this.isGeneratingPdf.set(false);
-        this.toast.success(`PDF descargado exitosamente: ${filename}`);
-      })
-      .catch((err: any) => {
-        this.isGeneratingPdf.set(false);
-        console.error('Error al generar PDF de traspaso:', err);
-        this.toast.error('No se pudo generar el PDF automáticamente. Utiliza el botón Imprimir.');
-      });
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf('fg-print-transfer-layout', filename);
+      this.toast.success(`PDF descargado exitosamente: ${filename}.pdf`);
+    } catch (err: any) {
+      console.error('Error al generar PDF de traspaso:', err);
+      this.toast.error('No se pudo generar el PDF automáticamente. Utiliza el botón Imprimir.');
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
   }
 
   // ── MODAL CANCELACIÓN / REVOCACIÓN ──
   openCancelModal(): void {
-    const currUser = this.authState.currentUser();
     this.cancelReason.set('');
-    this.cancelAdminUser.set(currUser?.email || currUser?.username || 'admin@4guard.com');
+    this.cancelAdminUser.set('');
     this.cancelAdminPassword.set('');
     this.cancelErrorMessage.set(null);
     this.showCancelModal.set(true);
@@ -822,14 +1003,25 @@ export class TransferSubmoduleComponent implements OnInit {
     // Si tiene ID del BE, llamar al endpoint de cancelación
     if (curr.id) {
       this.movementsApi.cancelTransfer(curr.id, cancelPayload).subscribe({
-        next: (updatedBe) => {
+        next: (updatedBe: any) => {
           this.isCancelling.set(false);
           this.showCancelModal.set(false);
           const cancelled = this.movementsService.cancelTransfer(curr.folio, reason, cancelPayload.cancelledBy);
-          if (cancelled) {
-            this.selectTransferItem({ ...cancelled, ...updatedBe });
-            this.toast.success(`Traspaso #${curr.folio} cancelado exitosamente.`);
-          }
+
+          // Sincronizar de inmediato datos frescos del Backend (ADR-007)
+          this.movementsService.reloadTransfers();
+          this.movementsService.reloadInventoryBatches();
+
+          const merged: WarehouseTransfer = {
+            ...(cancelled || curr),
+            status: 'CANCELLED',
+            cancelledAt: updatedBe?.cancelledAt ? new Date(updatedBe.cancelledAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX'),
+            cancelledBy: updatedBe?.cancelledBy || cancelPayload.cancelledBy,
+            cancellationReason: reason,
+          };
+          this.selectedTransfer.set(merged);
+          this.toast.success(`Traspaso #${curr.folio} cancelado exitosamente.`);
+          this.loadAuditLogs(merged);
         },
         error: (err: any) => {
           this.isCancelling.set(false);

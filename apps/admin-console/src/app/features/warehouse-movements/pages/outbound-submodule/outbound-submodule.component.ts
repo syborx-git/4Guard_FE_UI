@@ -257,32 +257,75 @@ export class OutboundSubmoduleComponent implements OnInit {
   loadAuditLogs(idOrFolio: string): void {
     const target = this.selectedOutbound();
     const targetId = (target && target.id && target.id.includes('-')) ? target.id : (idOrFolio.includes('-') ? idOrFolio : null);
+    const folio = target?.folio || idOrFolio;
+
     if (targetId) {
       this.movementsApi.getOutboundAudit(targetId).subscribe({
         next: (logs: any[]) => {
-          this.auditEntries.set(
-            (logs || []).map((l: any) => ({
-              id: l.id,
+          if (logs && logs.length > 0) {
+            const mapped: MovementAuditEntry[] = logs.map((l: any) => ({
+              id: l.id || `aud-${Date.now()}-${Math.random()}`,
               action: l.action,
               actionLabel: this.getAuditSummary(l.action),
-              username: l.username || l.authorizedBy || 'Admin',
+              username: l.username || l.authorizedBy || 'Operador WMS',
               timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : '',
-              details: l.details || [],
+              details: (l.details || []).map((d: any) => ({
+                fieldName: this.formatFieldLabel(d.fieldName),
+                oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                newValue: this.formatFieldValue(d.fieldName, d.newValue),
+              })),
               reason: l.reason || '',
               authorizedBy: l.authorizedBy || '',
               observations: l.observations || '',
-            }))
-          );
+            }));
+            const sorted = this.sortAuditEntries(mapped);
+            this.auditEntries.set(sorted);
+            this.svc.setOutboundAuditLogs(folio, sorted);
+            return;
+          }
+          const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
+          this.auditEntries.set(this.sortAuditEntries(fallback || []));
         },
         error: () => {
           const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
-          this.auditEntries.set(fallback || []);
+          this.auditEntries.set(this.sortAuditEntries(fallback || []));
         },
       });
     } else {
       const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
-      this.auditEntries.set(fallback || []);
+      this.auditEntries.set(this.sortAuditEntries(fallback || []));
     }
+  }
+
+  sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
+    if (!entries || entries.length === 0) return [];
+    return [...entries].sort((a, b) => {
+      const parseDate = (ts?: string) => {
+        if (!ts) return 0;
+        const direct = new Date(ts).getTime();
+        if (!isNaN(direct) && direct > 0) return direct;
+        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (match) {
+          const day = parseInt(match[1], 10);
+          const month = parseInt(match[2], 10) - 1;
+          const year = parseInt(match[3], 10);
+          const hour = match[4] ? parseInt(match[4], 10) : 0;
+          const min = match[5] ? parseInt(match[5], 10) : 0;
+          const sec = match[6] ? parseInt(match[6], 10) : 0;
+          return new Date(year, month, day, hour, min, sec).getTime();
+        }
+        return 0;
+      };
+      return parseDate(b.timestamp) - parseDate(a.timestamp);
+    });
+  }
+
+  formatFieldLabel(field: string): string {
+    return this.svc.formatFieldLabel(field);
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    return this.svc.formatFieldValue(field, value);
   }
 
   getAuditIcon(action: string): string {
@@ -307,7 +350,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     switch (action) {
       case 'SALIDA_REGISTRADA': return 'Despacho Outbound Confirmado';
       case 'SALIDA_DESPACHADA': return 'Salida Física y Tránsito Confirmado';
-      case 'SALIDA_CANCELADA':  return 'Cancelación Extraordinaria de Despacho';
+      case 'SALIDA_CANCELADA':  return 'Cancelación Extraordinaria con Autorización';
       default:                  return action;
     }
   }

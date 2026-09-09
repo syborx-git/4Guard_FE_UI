@@ -36,6 +36,7 @@ import { WarehouseMovementsApiService } from './warehouse-movements-api.service'
 const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   'A-01-N1': {
     locationCode: 'A-01-N1',
+    locationId: '00000000-0000-0000-0006-000000000001',
     warehouseName: 'Almacén Central',
     zone: 'Andén Recibo A',
     aisle: 'Pasillo A1',
@@ -55,6 +56,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'B-03-N2': {
     locationCode: 'B-03-N2',
+    locationId: '00000000-0000-0000-0006-000000000002',
     warehouseName: 'Almacén Central',
     zone: 'Rack Principal B',
     aisle: 'Pasillo B2',
@@ -73,6 +75,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'C-05-N1': {
     locationCode: 'C-05-N1',
+    locationId: '00000000-0000-0000-0006-000000000003',
     warehouseName: 'Almacén Central',
     zone: 'Cámara Alta Rotación C',
     aisle: 'Pasillo C1',
@@ -90,6 +93,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'D-02-N3': {
     locationCode: 'D-02-N3',
+    locationId: '00000000-0000-0000-0006-000000000004',
     warehouseName: 'Almacén Central',
     zone: 'Almacenaje General D',
     aisle: 'Pasillo D3',
@@ -110,6 +114,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'E-01-N1': {
     locationCode: 'E-01-N1',
+    locationId: '00000000-0000-0000-0006-000000000005',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres E',
     aisle: 'Pasillo E1',
@@ -124,6 +129,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'E-02-N1': {
     locationCode: 'E-02-N1',
+    locationId: '00000000-0000-0000-0006-000000000006',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres E',
     aisle: 'Pasillo E1',
@@ -138,6 +144,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'F-04-N2': {
     locationCode: 'F-04-N2',
+    locationId: '00000000-0000-0000-0006-000000000007',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres F',
     aisle: 'Pasillo F2',
@@ -241,6 +248,7 @@ export class WarehouseMovementsService {
 
   // Bahías y su stock (inicia con datos dummy para Cambio de Almacén)
   private readonly locationsSignal = signal<Record<string, LocationStockInfo>>(INITIAL_DUMMY_LOCATIONS);
+  private lastFetchedLocations: any[] = [];
 
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
@@ -390,56 +398,18 @@ export class WarehouseMovementsService {
     });
 
     // 4. Ubicaciones / Bahías y 5. Lotes de inventario (FIFO/FEFO)
-    let fetchedLocations: any[] = [];
-    let fetchedBatches: any[] = [];
-
     this.movementsApi.getLocations().subscribe({
       next: (locs: any) => {
-        fetchedLocations = locs || [];
-        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
+        this.lastFetchedLocations = locs || [];
+        this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
       },
       error: () => {},
     });
 
-    this.movementsApi.getInventoryBatches().subscribe({
-      next: (batches: any) => {
-        fetchedBatches = (batches || []).map((b: any) => ({
-          remisionNo: b.remisionNo || 'REM-S/N',
-          client: b.clientName || 'Cliente WMS',
-          productId: b.skuCode || '',
-          productName: b.productName || 'Producto',
-          lotNumber: b.lotNumber || '',
-          elaborationDate: b.manufacturingDate || '',
-          expirationDate: b.expirationDate || '',
-          availablePallets: b.availablePallets || (b.pallets ? b.pallets.length : 0),
-          totalPieces: b.totalPieces || 0,
-          locationCode: b.locationCode || '',
-          isFifoSuggested: !!b.isFifoSuggested,
-          pallets: (b.pallets || []).map((p: any) => ({
-            id: p.itemId || p.id,
-            palletCode: p.palletCode || p.sscc || '',
-            description: p.description || b.productName || '',
-            productId: p.skuCode || b.skuCode || '',
-            pieces: p.pieces || 0,
-            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
-            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
-          })),
-        }));
-        this.inventoryBatchesSignal.set(fetchedBatches);
-        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
-      },
-      error: () => {},
-    });
+    this.reloadInventoryBatches();
 
     // 6. Recepciones
-    this.movementsApi.getReceptions().subscribe({
-      next: (receptions: any) => {
-        this.receptionsSignal.set(
-          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
-        );
-      },
-      error: () => {},
-    });
+    this.reloadReceptions();
 
     // 7. Traspasos
     this.movementsApi.getTransfers().subscribe({
@@ -530,6 +500,93 @@ export class WarehouseMovementsService {
             }))
           );
         }
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadInventoryBatches(): void {
+    this.movementsApi.getInventoryBatches().subscribe({
+      next: (batches: any) => {
+        const receptions = this.receptionsSignal();
+        const fetchedBatches = (batches || []).map((b: any) => {
+          let rem = b.remisionNo || 'REM-S/N';
+          // Buscar si existe una recepción activa que tenga un número de remisión actualizado para este producto/lote/bahía
+          const recMatch = receptions.find(
+            (r) =>
+              r.status !== 'CANCELLED' &&
+              ((b.productId && (r.skuCode === b.productId || r.productId === b.productId)) ||
+                (b.skuCode && (r.skuCode === b.skuCode || r.productId === b.skuCode)) ||
+                (b.productName && r.productName && r.productName.toLowerCase().trim() === b.productName.toLowerCase().trim()) ||
+                (b.locationCode && r.storageLocation && r.storageLocation.toUpperCase() === b.locationCode.toUpperCase()))
+          );
+          if (recMatch && recMatch.checkIn?.docNumber) {
+            rem = recMatch.checkIn.docNumber;
+          }
+
+          return {
+            remisionNo: rem,
+            client: b.clientName || 'Cliente WMS',
+            productId: b.skuCode || b.productId || '',
+            productName: b.productName || 'Producto',
+            lotNumber: b.lotNumber || '',
+            elaborationDate: b.manufacturingDate || '',
+            expirationDate: b.expirationDate || '',
+            availablePallets: b.availablePallets || (b.pallets ? b.pallets.length : 0),
+            totalPieces: b.totalPieces || 0,
+            locationCode: b.locationCode || '',
+            isFifoSuggested: !!b.isFifoSuggested,
+            pallets: (b.pallets || []).map((p: any) => ({
+              id: p.itemId || p.id,
+              palletCode: p.palletCode || p.sscc || '',
+              description: p.description || b.productName || '',
+              productId: p.skuCode || b.skuCode || '',
+              pieces: p.pieces || 0,
+              palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+              palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+            })),
+          };
+        });
+        this.inventoryBatchesSignal.set(fetchedBatches);
+        this.syncLocationsAndInventory(this.lastFetchedLocations, fetchedBatches);
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadReceptions(): void {
+    this.movementsApi.getReceptions().subscribe({
+      next: (receptions: any) => {
+        this.receptionsSignal.set(
+          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
+        );
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadTransfers(): void {
+    this.movementsApi.getTransfers().subscribe({
+      next: (transfers: any) => {
+        this.transfersSignal.set(
+          (transfers || []).map((t: any) => ({
+            id: t.id,
+            folio: t.folio,
+            status: t.status,
+            forkliftOperator: t.forkliftOperatorName || '',
+            forkliftOperatorId: t.forkliftOperatorId,
+            originLocation: t.originLocationCode || '',
+            destinationLocation: t.destinationLocationCode || '',
+            reasonId: t.reasonCode,
+            reasonLabel: t.reasonLabel || t.reasonCode,
+            pallets: [],
+            totalPallets: t.totalPallets || 0,
+            totalPieces: t.totalPieces || 0,
+            distinctSkus: t.distinctSkus || 0,
+            transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
+            transferredBy: t.createdBy || '',
+          }))
+        );
       },
       error: () => {},
     });
@@ -631,19 +688,27 @@ export class WarehouseMovementsService {
       {
         id: `aud-default-${folio}`,
         action: 'RECEPCION_CREADA',
-        actionLabel: 'Registro de Movimiento en WMS',
-        username: 'Operador WMS',
+        actionLabel: 'Pre-Recepción Registrada en Caseta',
+        username: 'Caseta de Seguridad',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio', newValue: folio }],
+        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
       },
     ];
+  }
+
+  setReceptionAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
+    this.receptionAuditMap.update((map) => {
+      const key = folio.trim();
+      return { ...map, [key]: entries };
+    });
   }
 
   addReceptionAudit(folio: string, entry: MovementAuditEntry): void {
     this.receptionAuditMap.update((map) => {
       const key = folio.trim();
       const current = map[key] || [];
-      return { ...map, [key]: [entry, ...current] };
+      const filtered = current.filter((e) => e.id !== entry.id);
+      return { ...map, [key]: [entry, ...filtered] };
     });
   }
 
@@ -653,19 +718,27 @@ export class WarehouseMovementsService {
       {
         id: `aud-default-${folio}`,
         action: 'TRASPASO_REGISTRADO',
-        actionLabel: 'Reubicación Registrada en Catálogo',
+        actionLabel: 'Reubicación de Tarima Registrada',
         username: 'Operador WMS',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio', newValue: folio }],
+        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
       },
     ];
+  }
+
+  setTransferAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
+    this.transferAuditMap.update((map) => {
+      const key = folio.trim();
+      return { ...map, [key]: entries };
+    });
   }
 
   addTransferAudit(folio: string, entry: MovementAuditEntry): void {
     this.transferAuditMap.update((map) => {
       const key = folio.trim();
       const current = map[key] || [];
-      return { ...map, [key]: [entry, ...current] };
+      const filtered = current.filter((e) => e.id !== entry.id);
+      return { ...map, [key]: [entry, ...filtered] };
     });
   }
 
@@ -675,20 +748,120 @@ export class WarehouseMovementsService {
       {
         id: `aud-default-${folio}`,
         action: 'SALIDA_REGISTRADA',
-        actionLabel: 'Despacho Registrado en WMS',
+        actionLabel: 'Despacho Outbound Registrado',
         username: 'Operador WMS',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio', newValue: folio }],
+        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
       },
     ];
+  }
+
+  setOutboundAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
+    this.outboundAuditMap.update((map) => {
+      const key = folio.trim();
+      return { ...map, [key]: entries };
+    });
   }
 
   addOutboundAudit(folio: string, entry: MovementAuditEntry): void {
     this.outboundAuditMap.update((map) => {
       const key = folio.trim();
       const current = map[key] || [];
-      return { ...map, [key]: [entry, ...current] };
+      const filtered = current.filter((e) => e.id !== entry.id);
+      return { ...map, [key]: [entry, ...filtered] };
     });
+  }
+
+  // Traducción y formateo profesional de campos para auditores
+  formatFieldLabel(field: string): string {
+    if (!field) return 'Dato';
+    const clean = field.trim();
+    const map: Record<string, string> = {
+      docNumber: 'No. de Remisión / Documento',
+      doc_number: 'No. de Remisión / Documento',
+      remisionNo: 'No. de Remisión / Documento',
+      remision: 'No. de Remisión / Documento',
+      status: 'Estado Operativo',
+      reason: 'Motivo / Justificación',
+      cancellationReason: 'Motivo de Cancelación',
+      authorizedBy: 'Autorizado Por (Supervisor)',
+      authorized_by: 'Autorizado Por (Supervisor)',
+      cancelledBy: 'Cancelado Por',
+      client: 'Cliente / Propietario',
+      clientId: 'Cliente / Propietario',
+      clientName: 'Cliente / Propietario',
+      supplier: 'Proveedor',
+      supplierId: 'Proveedor',
+      supplierName: 'Proveedor',
+      driver: 'Operador del Transporte',
+      driverName: 'Operador del Transporte',
+      plates: 'Placas (Tractor / Caja)',
+      tractorPlates: 'Placas del Tracto',
+      boxPlates: 'Placas de la Caja',
+      carrier: 'Línea Transportista',
+      carrierId: 'Línea Transportista',
+      carrierName: 'Línea Transportista',
+      storageLocation: 'Bahía Asignada de Almacenaje',
+      storageLocationId: 'Bahía Asignada de Almacenaje',
+      locationCode: 'Ubicación de Almacén',
+      sourceLocation: 'Ubicación Origen',
+      source_location: 'Ubicación Origen',
+      origin: 'Ubicación Origen',
+      targetLocation: 'Ubicación Destino',
+      target_location: 'Ubicación Destino',
+      destination: 'Ubicación Destino',
+      palletCode: 'Código de Tarima (UA)',
+      pallet_code: 'Código de Tarima (UA)',
+      lotNumber: 'Número de Lote',
+      lot_number: 'Número de Lote',
+      lot: 'Número de Lote',
+      piecesPerPallet: 'Piezas por Tarima',
+      pieces_per_pallet: 'Piezas por Tarima',
+      totalPallets: 'Tarimas Totales (UAs)',
+      pallets: 'Tarimas Totales (UAs)',
+      totalPieces: 'Piezas Totales',
+      pieces: 'Piezas Totales',
+      leader: 'Líder de Turno Responsable',
+      leaderAuthorizedBy: 'Líder de Turno Responsable',
+      sku: 'Código SKU / Producto',
+      skuId: 'Código SKU / Producto',
+      skuCode: 'Código SKU / Producto',
+      palletType: 'Tipo de Tarima',
+      pallet_type: 'Tipo de Tarima',
+      observations: 'Observaciones',
+      folio: 'Folio de Operación',
+      transferredBy: 'Operador Responsable',
+      transferred_by: 'Operador Responsable',
+      forkliftOperator: 'Operador de Montacargas',
+      operator: 'Operador de Montacargas',
+      elaborationDate: 'Fecha de Elaboración',
+      expirationDate: 'Fecha de Caducidad',
+      sealNumber: 'Número de Sello / Marchamo',
+    };
+    return map[clean] || clean;
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null' || value === 'N/A') {
+      return 'Sin especificar';
+    }
+    const str = String(value).trim();
+    const map: Record<string, string> = {
+      REGISTERED: 'En Proceso / Registrado en Caseta',
+      COMPLETED: 'Descarga Finalizada / En Stock',
+      CANCELLED: 'Cancelado',
+      DRAFT: 'Borrador Guardado',
+      PENDING: 'Pendiente',
+      IN_PROGRESS: 'En Tránsito / En Curso',
+      DISPATCHED: 'Despachado / Salida Confirmada',
+      MADERA_ESTANDAR: 'Madera Estándar (40x48)',
+      PLASTICO: 'Plástico Higiénico',
+      CHEP: 'Tarima CHEP Azul',
+      EURO: 'Euro-Tarima',
+      true: 'Sí / Conforme',
+      false: 'No / Sin registro',
+    };
+    return map[str] || str;
   }
 
   // Genera un Folio Consecutivo de Recepción (ej. 26510)
@@ -1174,21 +1347,50 @@ export class WarehouseMovementsService {
       true // skipAudit = true para no duplicar el evento genérico antes de REMISION_MODIFICADA
     );
 
+    // 1. Actualizar lotes de inventario (inventoryBatchesSignal) en memoria de inmediato
+    this.inventoryBatchesSignal.update((batches) =>
+      batches.map((b) => {
+        if (b.remisionNo === oldDoc || (rec.storageLocation && b.locationCode === rec.storageLocation)) {
+          return { ...b, remisionNo: newDocNumber };
+        }
+        return b;
+      })
+    );
+
+    // 2. Actualizar ubicaciones / bahías (locationsSignal)
+    const locs = { ...this.locationsSignal() };
+    Object.keys(locs).forEach((locCode) => {
+      const loc = locs[locCode];
+      let changed = false;
+      const updatedPallets = loc.pallets.map((p) => {
+        if (p.observations && p.observations.includes(oldDoc)) {
+          changed = true;
+          return { ...p, observations: p.observations.replace(oldDoc, newDocNumber) };
+        }
+        return p;
+      });
+      if (changed) {
+        locs[locCode] = { ...loc, pallets: updatedPallets };
+      }
+    });
+    this.locationsSignal.set(locs);
+
     this.addReceptionAudit(folio, {
       id: `aud-rec-rem-${Date.now()}`,
       action: 'REMISION_MODIFICADA',
-      actionLabel: 'Modificación de No. de Remisión con Autorización',
+      actionLabel: 'Modificación de No. de Remisión',
       username: adminUser,
       authorizedBy: adminUser,
       reason: reason,
       timestamp: new Date().toLocaleString('es-MX'),
       details: [
-        { fieldName: 'No. Remisión Anterior', oldValue: oldDoc },
-        { fieldName: 'Nuevo No. Remisión', newValue: newDocNumber },
-        { fieldName: 'Justificación / Motivo', newValue: reason },
-        { fieldName: 'Autorizado Por', newValue: adminUser },
+        { fieldName: 'No. de Remisión / Documento', oldValue: oldDoc, newValue: newDocNumber },
       ],
     });
+
+    // 3. Re-consultar el backend para actualizar inventory batches y recepciones frescas
+    this.reloadInventoryBatches();
+    this.reloadReceptions();
 
     return updated;
   }
