@@ -73,9 +73,16 @@ import { AuthState } from '../../../../core/auth/auth.state';
           </div>
 
           <div class="flex justify-between items-start gap-2 border-b border-slate-200 pb-0.5">
-            <span class="font-bold text-slate-700 shrink-0">NO. ECONÓMICO / TIPO:</span>
+            <span class="font-bold text-slate-700 shrink-0">NO. ECONÓMICO (TRACTO / CAJA):</span>
             <span class="font-mono font-semibold text-black text-right break-words flex-1 min-w-0 leading-tight">
-              {{ outbound.economicNumber || '-' }} ({{ formatTransportType(outbound.transportType) }})
+              {{ outbound.economicNumber || '-' }} / {{ outbound.boxEconomicNumber || '-' }}
+            </span>
+          </div>
+
+          <div class="flex justify-between items-start gap-2 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">TIPO DE CAMIÓN:</span>
+            <span class="font-semibold text-black text-right break-words flex-1 min-w-0 leading-tight">
+              {{ formatTransportType(outbound.transportType) }}
             </span>
           </div>
 
@@ -134,7 +141,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
               <th class="py-1 px-2 border-r border-black font-mono">LOTE</th>
               <th class="py-1 px-2 border-r border-black font-mono">CADUCIDAD</th>
               <th class="py-1 px-2 border-r border-black">TIPO TARIMA</th>
-              <th class="py-1 px-2 border-r border-black font-mono">UBICACIÓN</th>
+              <th class="py-1 px-2 border-r border-black font-mono">BAHÍA ORIGEN</th>
               <th class="py-1 px-2 text-right font-mono">CANT X TARIMA</th>
             </tr>
           </thead>

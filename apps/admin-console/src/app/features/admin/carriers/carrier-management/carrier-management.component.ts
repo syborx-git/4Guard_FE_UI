@@ -148,14 +148,15 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       const digitsSearch = search.replace(/\D/g, '');
       list = list.filter(c => {
         const matchText =
-          c.tradeName.toLowerCase().includes(search)    ||
-          c.businessName.toLowerCase().includes(search) ||
-          c.rfc.toLowerCase().includes(search)          ||
-          c.contactName.toLowerCase().includes(search)  ||
-          c.email.toLowerCase().includes(search);
+          (c.tradeName || '').toLowerCase().includes(search)    ||
+          (c.businessName || '').toLowerCase().includes(search) ||
+          (c.rfc || '').toLowerCase().includes(search)          ||
+          (c.contactName || '').toLowerCase().includes(search)  ||
+          (c.email || '').toLowerCase().includes(search)        ||
+          (c.notes || '').toLowerCase().includes(search);
         const matchPhone =
           digitsSearch.length > 0 &&
-          c.phone.replace(/\D/g, '').includes(digitsSearch);
+          (c.phone || '').replace(/\D/g, '').includes(digitsSearch);
         return matchText || matchPhone;
       });
     }
@@ -187,23 +188,21 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   // ─── Formulario reactivo ─────────────────────────────────────────────────────
 
   protected readonly form: FormGroup = this.fb.group({
-    // Sección 1 — Información General
+    // Sección 1 — Información Principal de la Línea de Transporte
     businessName: ['', [Validators.required, Validators.maxLength(200), noWhitespaceValidator]],
     tradeName:    ['', [Validators.required, Validators.maxLength(150), noWhitespaceValidator]],
-    rfc:          ['', [Validators.required, Validators.maxLength(13), rfcValidator]],
-    carrierType:  ['', Validators.required],
     status:       ['ACTIVE', Validators.required],
-
-    // Sección 2 — Contacto Principal
-    contactName:  ['', [Validators.required, Validators.maxLength(100), noWhitespaceValidator]],
-    phone:        ['', [Validators.required, phoneValidator]],
-    email:        ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-
-    // Sección 3 — Información Operativa
-    serviceType:  ['', Validators.required],
-    coverage:     ['', [Validators.required, Validators.maxLength(300), noWhitespaceValidator]],
-    permitNumber: ['', Validators.maxLength(80)],
     notes:        ['', Validators.maxLength(1000)],
+
+    // Sección 2 — Información Complementaria Opcional
+    carrierType:  ['EXTERNAL'],
+    rfc:          ['', [Validators.maxLength(13), rfcValidator]],
+    contactName:  ['', [Validators.maxLength(100)]],
+    phone:        ['', [phoneValidator]],
+    email:        ['', [Validators.email, Validators.maxLength(150)]],
+    serviceType:  ['FTL'],
+    coverage:     ['', [Validators.maxLength(300)]],
+    permitNumber: ['', Validators.maxLength(80)],
   });
 
   /** Capacidades de vehículos seleccionadas (manejadas por separado). */
@@ -320,7 +319,20 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   protected startNewCarrier(): void {
     this.selectedCarrier.set(null);
     this.formMode.set('new');
-    this.form.reset({ status: 'ACTIVE' });
+    this.form.reset({
+      status: 'ACTIVE',
+      carrierType: 'EXTERNAL',
+      serviceType: 'FTL',
+      businessName: '',
+      tradeName: '',
+      notes: '',
+      rfc: '',
+      contactName: '',
+      phone: '',
+      email: '',
+      coverage: '',
+      permitNumber: ''
+    });
     this.selectedVehicleTypes.clear();
     this.submitAttempted.set(false);
     this.backendError.set(null);
@@ -351,20 +363,20 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   private populateForm(carrier: Carrier): void {
     this.form.patchValue({
-      businessName: carrier.businessName,
-      tradeName:    carrier.tradeName,
-      rfc:          carrier.rfc,
-      carrierType:  carrier.carrierType,
-      status:       carrier.status,
-      contactName:  carrier.contactName,
-      phone:        carrier.phone,
-      email:        carrier.email,
-      serviceType:  carrier.serviceType,
-      coverage:     carrier.coverage,
+      businessName: carrier.businessName || '',
+      tradeName:    carrier.tradeName || '',
+      rfc:          carrier.rfc || '',
+      carrierType:  carrier.carrierType || 'EXTERNAL',
+      status:       carrier.status || 'ACTIVE',
+      contactName:  carrier.contactName || '',
+      phone:        carrier.phone || '',
+      email:        carrier.email || '',
+      serviceType:  carrier.serviceType || 'FTL',
+      coverage:     carrier.coverage || '',
       permitNumber: carrier.permitNumber || '',
       notes:        carrier.notes || '',
     });
-    this.selectedVehicleTypes = new Set(carrier.supportedVehicleTypes);
+    this.selectedVehicleTypes = new Set(carrier.supportedVehicleTypes || []);
     this.rfcValidating.set(false);
     this.rfcAvailable.set(null);
     this.form.markAsPristine();
@@ -375,7 +387,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   protected onRfcBlur(): void {
     const ctrl = this.form.get('rfc');
-    if (!ctrl || !ctrl.value) {
+    if (!ctrl || !ctrl.value || !ctrl.value.trim()) {
       this.rfcAvailable.set(null);
       return;
     }
@@ -448,14 +460,15 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   /** Obtiene las iniciales del nombre comercial para el avatar circular. */
   protected getInitials(carrier: Carrier): string {
-    const words = carrier.tradeName.trim().split(/\s+/).filter(Boolean);
+    const name = carrier.tradeName || carrier.businessName || '';
+    const words = name.trim().split(/\s+/).filter(Boolean);
     if (words.length === 0) return '?';
     if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
     return (words[0][0] + words[1][0]).toUpperCase();
   }
 
   /** Retorna la clase CSS del avatar según el tipo de transportista. */
-  protected getAvatarClass(type: CarrierType): string {
+  protected getAvatarClass(type?: CarrierType): string {
     const map: Record<CarrierType, string> = {
       EXTERNAL:        'avatar--external',
       CLIENT_TRANSPORT:'avatar--client',
@@ -463,7 +476,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       THIRD_PARTY_3PL: 'avatar--3pl',
       PARCEL:          'avatar--parcel',
     };
-    return map[type] ?? 'avatar--external';
+    return (type && map[type]) ? map[type] : 'avatar--external';
   }
 
   /** Verifica si un campo del formulario tiene errores visibles al usuario. */
@@ -519,19 +532,19 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
     const raw = this.form.getRawValue();
     const dto: CreateCarrierRequest = {
-      businessName:          raw.businessName.trim(),
-      tradeName:             raw.tradeName.trim(),
-      rfc:                   raw.rfc.trim().toUpperCase(),
-      carrierType:           raw.carrierType,
-      status:                raw.status,
-      contactName:           raw.contactName.trim(),
-      phone:                 raw.phone.trim(),
-      email:                 raw.email.trim().toLowerCase(),
-      serviceType:           raw.serviceType,
-      coverage:              raw.coverage.trim(),
+      businessName:          raw.businessName?.trim() || '',
+      tradeName:             raw.tradeName?.trim() || '',
+      status:                raw.status || 'ACTIVE',
       supportedVehicleTypes: Array.from(this.selectedVehicleTypes),
-      permitNumber:          raw.permitNumber?.trim() || undefined,
       notes:                 raw.notes?.trim() || undefined,
+      rfc:                   raw.rfc?.trim() ? raw.rfc.trim().toUpperCase() : undefined,
+      carrierType:           raw.carrierType || 'EXTERNAL',
+      contactName:           raw.contactName?.trim() || undefined,
+      phone:                 raw.phone?.trim() || undefined,
+      email:                 raw.email?.trim() ? raw.email.trim().toLowerCase() : undefined,
+      serviceType:           raw.serviceType || 'FTL',
+      coverage:              raw.coverage?.trim() || undefined,
+      permitNumber:          raw.permitNumber?.trim() || undefined,
     };
 
     const mode = this.formMode();

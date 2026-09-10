@@ -223,6 +223,7 @@ export class TransferSubmoduleComponent implements OnInit {
   isOriginDropdownOpen = signal<boolean>(false);
   selectedOriginCode = signal('');
   selectedPalletIds = signal<string[]>([]);
+  quantityToMoveInput = signal<number>(1);
 
   // Bahias Ocupadas y Disponibles
   occupiedLocations = this.movementsService.occupiedLocations;
@@ -375,13 +376,32 @@ export class TransferSubmoduleComponent implements OnInit {
     this.isOriginDropdownOpen.set(false);
     const stock = this.movementsService.getLocationInfo(code);
     this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
+    this.quantityToMoveInput.set(stock.pallets.length > 0 ? stock.pallets.length : 1);
   }
 
   clearOriginSelection(): void {
     this.selectedOriginCode.set('');
     this.originSearchQuery.set('');
     this.selectedPalletIds.set([]);
+    this.quantityToMoveInput.set(1);
     this.isOriginDropdownOpen.set(false);
+  }
+
+  // Selección rápida de cantidad numérica de tarimas (UAs)
+  setQuantityToMove(count: number): void {
+    const stock = this.originStock();
+    const max = stock.pallets.length;
+    const safeCount = Math.max(1, Math.min(count, max));
+    this.quantityToMoveInput.set(safeCount);
+    const selected = stock.pallets.slice(0, safeCount).map((p) => p.id);
+    this.selectedPalletIds.set(selected);
+  }
+
+  onQuantityInputChange(val: any): void {
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num > 0) {
+      this.setQuantityToMove(num);
+    }
   }
 
   // ── 3. BUSCADOR & AUTOCOMPLETE DE BAHÍA DESTINO (MÁQUINA DE ESTADOS) ──
@@ -514,15 +534,20 @@ export class TransferSubmoduleComponent implements OnInit {
     return !!this.selectedDestinationCode() && dest.totalPallets === 0 && !dest.isBlocked;
   });
 
+  // Checklist reactivo (Revise que la operación sea correcta)
+  isOperatorStepValid = computed(() => !!this.selectedOperator());
+  isOriginStepValid = computed(() => !!this.selectedOriginCode() && this.originStock().pallets.length > 0);
+  isQuantityStepValid = computed(() => this.selectedPalletIds().length > 0);
+  isDestStepValid = computed(() => !!this.selectedDestinationCode() && this.isDestinationEmpty() && this.selectedOriginCode() !== this.selectedDestinationCode());
+  isReasonStepValid = computed(() => !!this.selectedReasonId());
+
   canProceedToConfirm = computed(() => {
     return (
-      !!this.selectedOperator() &&
-      !!this.selectedOriginCode() &&
-      !!this.selectedDestinationCode() &&
-      !!this.selectedReasonId() &&
-      this.selectedPalletIds().length > 0 &&
-      this.isDestinationEmpty() &&
-      this.selectedOriginCode() !== this.selectedDestinationCode()
+      this.isOperatorStepValid() &&
+      this.isOriginStepValid() &&
+      this.isQuantityStepValid() &&
+      this.isDestStepValid() &&
+      this.isReasonStepValid()
     );
   });
 
@@ -547,9 +572,12 @@ export class TransferSubmoduleComponent implements OnInit {
     });
   });
 
-  // Modales
+  // Modales y Diálogos
   showConfirmModal = signal(false);
   isExecuting = signal(false);
+
+  showPrintPromptModal = signal(false);
+  lastCompletedTransfer = signal<WarehouseTransfer | null>(null);
 
   showPrintModal = signal(false);
   selectedPrintTransfer = signal<WarehouseTransfer | null>(null);
@@ -890,9 +918,10 @@ export class TransferSubmoduleComponent implements OnInit {
             executedTransfer.transferredBy = res.createdBy || transferredBy;
           }
           localStorage.setItem('4g_active_transfer_folio', executedTransfer.folio);
-          this.selectTransferItem(executedTransfer);
+          this.lastCompletedTransfer.set(executedTransfer);
           this.toast.success(`Cambio de Almacén #${executedTransfer.folio} registrado y guardado con éxito en el servidor.`);
-          this.openPrintPreview(executedTransfer);
+          // Diálogo interactivo: ¿Desea imprimir documento? (Sí/No)
+          this.showPrintPromptModal.set(true);
         } else {
           this.toast.success('Reubicación completada exitosamente.');
           this.resetToIdle();
@@ -912,6 +941,19 @@ export class TransferSubmoduleComponent implements OnInit {
         this.toast.error(msg);
       },
     });
+  }
+
+  // Manejo del diálogo ¿Desea imprimir documento? (Sí/No)
+  onConfirmPrintPrompt(printNow: boolean): void {
+    const transfer = this.lastCompletedTransfer();
+    this.showPrintPromptModal.set(false);
+    if (!transfer) return;
+    if (printNow) {
+      this.selectTransferItem(transfer);
+      this.openPrintPreview(transfer);
+    } else {
+      this.selectTransferItem(transfer);
+    }
   }
 
   // ── IMPRESIÓN Y DESCARGA DIRECTA DE COMPROBANTE ──

@@ -270,6 +270,7 @@ export interface WarehouseOutbound {
   forkliftOperatorId?: string;
   driverName: string;
   economicNumber: string;
+  boxEconomicNumber?: string;
   tractorPlates: string;
   boxPlates: string;
   transportType: TransportType;

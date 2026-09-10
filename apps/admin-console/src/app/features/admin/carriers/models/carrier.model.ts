@@ -77,65 +77,24 @@ export type VehicleCapabilityType =
 export interface Carrier {
   id: string;
 
-  // Sección 1 — Información General
-  businessName: string;          // Razón social (legal)
-  tradeName: string;             // Nombre comercial (marca)
-  rfc: string;                   // RFC o Tax ID fiscal
-  carrierType: CarrierType;
-  status: CarrierStatus;
+  // Sección 1 — Información General de la Línea
+  businessName: string;          // Razón social de la línea transportista
+  tradeName: string;             // Sobre nombre (alias / nombre comercial)
+  status: CarrierStatus;         // Estado operativo (ACTIVE, SUSPENDED, INACTIVE)
+  supportedVehicleTypes: VehicleCapabilityType[]; // Tipo de unidad (capacidades generales)
+  notes?: string;               // Observaciones operativas
 
-  // Sección 2 — Contacto Principal
-  contactName: string;           // Nombre del contacto principal
-  phone: string;                 // Teléfono con formato validado
-  email: string;                 // Correo electrónico del contacto
-
-  // Sección 3 — Información Operativa
-  serviceType: ServiceType;
-
-  /**
-   * Descripción textual de la cobertura geográfica del transportista.
-   * Complementa `coverageRegions` cuando se requiere texto libre.
-   */
-  coverage: string;
-
-  /**
-   * Regiones o estados/entidades federativas cubiertos por el transportista.
-   * Preparado para integración con un catálogo geográfico en el futuro.
-   * Ejemplo: ['NL', 'CDMX', 'QRO', 'GTO']
-   */
+  // Campos Complementarios Opcionales
+  rfc?: string;                  // RFC o Tax ID fiscal (opcional)
+  carrierType?: CarrierType;     // Clasificación del transportista (default: EXTERNAL)
+  contactName?: string;          // Nombre del contacto principal
+  phone?: string;                // Teléfono de contacto
+  email?: string;                // Correo electrónico
+  serviceType?: ServiceType;     // Tipo de servicio (default: FTL)
+  coverage?: string;             // Cobertura geográfica
   coverageRegions?: string[];
-
-  /** Capacidades generales de tipos de unidades que el transportista puede manejar. */
-  supportedVehicleTypes: VehicleCapabilityType[];
-
-  /**
-   * Número de permiso SCT u otro registro oficial, si aplica.
-   * Futuro: vincular con tabla de permisos y vigencias.
-   */
-  permitNumber?: string;
-
-  /**
-   * Clientes del WMS con los que este transportista trabaja de forma preferente.
-   * Será consumido por el módulo de Programación de Ventanas para sugerir
-   * transportistas disponibles al programar citas de un cliente específico.
-   * Formato: array de nombres de cliente (legible); las relaciones reales
-   * serán gestionadas por los módulos consumidores.
-   */
-  preferredClients?: string[];
-
-  notes?: string;               // Observaciones operativas adicionales
-
-  // ── Campos futuros para documentación del transportista ──────────────────
-  // Los siguientes campos están preparados para ser implementados en historias
-  // posteriores cuando el backend soporte el módulo de gestión documental.
-  // Se incluyen comentados para facilitar la extensión del modelo:
-  //
-  // insurancePolicyNumber?: string;   // Número de póliza de seguro de carga
-  // insuranceExpiryDate?: string;     // Fecha de vencimiento del seguro (ISO 8601)
-  // insuranceCompany?: string;        // Aseguradora
-  // permitExpiryDate?: string;        // Fecha de vencimiento del permiso SCT (ISO 8601)
-  // certifications?: string[];        // Certificaciones (ISO, CTPAT, OEA, etc.)
-  // documentUrls?: string[];          // URLs de documentos digitalizados
+  permitNumber?: string;         // Número de permiso SCT u oficial
+  preferredClients?: string[];   // Clientes preferentes
 
   // Sección 4 — Control (solo lectura)
   createdAt: string;            // ISO 8601
@@ -155,24 +114,23 @@ export interface Carrier {
 /**
  * Payload para crear un nuevo transportista.
  * POST /api/v1/carriers
- * La auditoría es generada por el backend en la misma transacción.
  */
 export interface CreateCarrierRequest {
   businessName: string;
   tradeName: string;
-  rfc: string;
-  carrierType: CarrierType;
   status: CarrierStatus;
-  contactName: string;
-  phone: string;
-  email: string;
-  serviceType: ServiceType;
-  coverage: string;
-  coverageRegions?: string[];
   supportedVehicleTypes: VehicleCapabilityType[];
+  notes?: string;
+  rfc?: string;
+  carrierType?: CarrierType;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  serviceType?: ServiceType;
+  coverage?: string;
+  coverageRegions?: string[];
   permitNumber?: string;
   preferredClients?: string[];
-  notes?: string;
 }
 
 /**

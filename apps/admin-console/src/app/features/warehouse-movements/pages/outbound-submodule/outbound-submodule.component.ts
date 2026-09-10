@@ -149,10 +149,18 @@ export class OutboundSubmoduleComponent implements OnInit {
   selectedCarrierCode = signal('');
   driverName = signal('');
   economicNumber = signal('');
+  boxEconomicNumber = signal('');
   tractorPlates = signal('');
   boxPlates = signal('');
   selectedTransportType = signal<TransportType>('TRAILER');
   sealNumber = signal('');
+
+  // Filtro por Bahía de Origen (Paso 2)
+  selectedOriginBayFilter = signal<string>('ALL');
+
+  // Diálogo interactivo post-éxito: ¿Desea imprimir documento? (Sí/No)
+  showPrintPromptModal = signal(false);
+  lastCompletedOutbound = signal<WarehouseOutbound | null>(null);
 
   // Computed: Cliente seleccionado
   selectedClient = computed(() =>
@@ -569,10 +577,23 @@ export class OutboundSubmoduleComponent implements OnInit {
   selectedPalletIds = signal<string[]>([]);
   requestedPalletsCount = signal<number>(0);
 
-  // Lista plana de tarimas disponibles (filtradas por SKU si se seleccionó uno)
+  // Lista plana de tarimas disponibles (filtradas por SKU y Bahía de Origen si se seleccionaron)
+  uniqueOriginBays = computed<string[]>(() => {
+    const batches = this.availableBatches();
+    const bays = new Set<string>();
+    for (const b of batches) {
+      if (b.locationCode) bays.add(b.locationCode);
+      for (const p of b.pallets || []) {
+        if (p.locationCode) bays.add(p.locationCode);
+      }
+    }
+    return Array.from(bays).sort();
+  });
+
   allAvailablePalletsForCurrentView = computed<OutboundPalletItem[]>(() => {
     const batches = this.availableBatches();
     const targetSku = this.selectedSkuCode();
+    const bayFilter = this.selectedOriginBayFilter();
 
     const filteredBatches = targetSku
       ? batches.filter((b) => b.productId === targetSku)
@@ -584,25 +605,28 @@ export class OutboundSubmoduleComponent implements OnInit {
       for (const p of b.pallets || []) {
         const expDate = p.expirationDate || b.expirationDate;
         const pablo = this.getPabloStatus(expDate);
+        const loc = p.locationCode || b.locationCode || 'A-01-N1';
 
-        palletsList.push({
-          id: p.id,
-          palletCode: p.palletCode,
-          productId: p.productId || b.productId,
-          description: p.description || b.productName,
-          lotNumber: p.lotNumber || b.lotNumber,
-          remisionNo: b.remisionNo,
-          expirationDate: expDate,
-          pieces: p.pieces,
-          palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
-          palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
-          locationCode: p.locationCode || b.locationCode || 'A-01-N1',
-          daysRemaining: pablo.daysRemaining,
-          pabloStatus: pablo.status,
-          pabloLabel: pablo.label,
-          pabloColor: pablo.color,
-          isSuggestedFefo: false,
-        });
+        if (bayFilter === 'ALL' || loc === bayFilter) {
+          palletsList.push({
+            id: p.id,
+            palletCode: p.palletCode,
+            productId: p.productId || b.productId,
+            description: p.description || b.productName,
+            lotNumber: p.lotNumber || b.lotNumber,
+            remisionNo: b.remisionNo,
+            expirationDate: expDate,
+            pieces: p.pieces,
+            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+            locationCode: loc,
+            daysRemaining: pablo.daysRemaining,
+            pabloStatus: pablo.status,
+            pabloLabel: pablo.label,
+            pabloColor: pablo.color,
+            isSuggestedFefo: false,
+          });
+        }
       }
     }
 
@@ -831,12 +855,14 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.selectedCarrierCode.set('');
     this.driverName.set('');
     this.economicNumber.set('');
+    this.boxEconomicNumber.set('');
     this.tractorPlates.set('');
     this.boxPlates.set('');
     this.selectedTransportType.set('TRAILER');
     this.sealNumber.set('');
 
     // Resetear Paso 2
+    this.selectedOriginBayFilter.set('ALL');
     this.selectedOperatorId.set('');
     this.operatorSearchQuery.set('');
     this.selectedSkuCode.set('');
@@ -884,6 +910,7 @@ export class OutboundSubmoduleComponent implements OnInit {
             const updated: WarehouseOutbound = {
               ...outbound,
               economicNumber: full.economicNumber || outbound.economicNumber || '',
+              boxEconomicNumber: full.boxEconomicNumber || outbound.boxEconomicNumber || '',
               destinationAddress: full.destinationAddress || outbound.destinationAddress || '',
               dispatchedBy: full.createdBy || outbound.dispatchedBy || currentLoggedIn,
               items: mappedItems.length > 0 ? mappedItems : outbound.items,
@@ -1123,6 +1150,7 @@ export class OutboundSubmoduleComponent implements OnInit {
       transportType: this.selectedTransportType(),
       driverName: this.driverName(),
       economicNumber: this.economicNumber() || '',
+      boxEconomicNumber: this.boxEconomicNumber() || '',
       tractorPlates: this.tractorPlates(),
       boxPlates: this.boxPlates(),
       sealNumber: this.sealNumber(),
@@ -1170,6 +1198,7 @@ export class OutboundSubmoduleComponent implements OnInit {
           forkliftOperatorId: res.forkliftOperatorId || operator?.id || '',
           driverName: res.driverName || this.driverName(),
           economicNumber: res.economicNumber || this.economicNumber() || '',
+          boxEconomicNumber: res.boxEconomicNumber || this.boxEconomicNumber() || '',
           tractorPlates: res.tractorPlates || this.tractorPlates(),
           boxPlates: res.boxPlates || this.boxPlates(),
           transportType: (res.transportType || this.selectedTransportType()) as TransportType,
@@ -1188,10 +1217,10 @@ export class OutboundSubmoduleComponent implements OnInit {
         this.svc.loadInitialBackendData();
 
         this.selectedOutbound.set(result);
+        this.lastCompletedOutbound.set(result);
         this.formMode.set('detail');
         this.loadAuditLogs(result.id || result.folio);
-        this.selectedPrintOutbound.set(result);
-        this.showPrintModal.set(true);
+        this.showPrintPromptModal.set(true);
         this.toast.success(`Salida ${result.folio} registrada exitosamente en el servidor.`);
       },
       error: (err: any) => {
@@ -1209,6 +1238,7 @@ export class OutboundSubmoduleComponent implements OnInit {
             forkliftOperatorId: operator?.id,
             driverName: this.driverName(),
             economicNumber: this.economicNumber(),
+            boxEconomicNumber: this.boxEconomicNumber(),
             tractorPlates: this.tractorPlates(),
             boxPlates: this.boxPlates(),
             transportType: this.selectedTransportType(),
@@ -1221,10 +1251,10 @@ export class OutboundSubmoduleComponent implements OnInit {
           this.isExecuting.set(false);
           this.showConfirmModal.set(false);
           this.selectedOutbound.set(localResult);
+          this.lastCompletedOutbound.set(localResult);
           this.formMode.set('detail');
           this.loadAuditLogs(localResult.folio);
-          this.selectedPrintOutbound.set(localResult);
-          this.showPrintModal.set(true);
+          this.showPrintPromptModal.set(true);
           this.toast.success(`Salida ${localResult.folio} registrada localmente.`);
         } catch (localErr: any) {
           this.isExecuting.set(false);
@@ -1233,6 +1263,16 @@ export class OutboundSubmoduleComponent implements OnInit {
         }
       },
     });
+  }
+
+  // Manejo del diálogo interactivo: ¿Desea imprimir documento? (Sí/No)
+  onConfirmPrintPrompt(printNow: boolean): void {
+    const outbound = this.lastCompletedOutbound();
+    this.showPrintPromptModal.set(false);
+    if (!outbound) return;
+    if (printNow) {
+      this.openPrintPreview(outbound);
+    }
   }
 
   // ── IMPRESIÓN ─────────────────────────────────────────────────────────────
