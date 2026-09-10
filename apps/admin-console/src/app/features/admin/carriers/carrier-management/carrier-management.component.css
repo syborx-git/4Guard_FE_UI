@@ -772,6 +772,21 @@
 
 .carriers-form-section__legend .material-symbols-outlined { font-size: 16px; }
 
+.carriers-section-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-badge);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: rgba(23, 32, 51, 0.05);
+  border: 1px solid var(--border-card);
+}
+
 .carriers-form-grid {
   display: grid;
   gap: 1rem;
@@ -1412,6 +1427,13 @@
 :host-context(.theme-dark) .carriers-form-section--readonly,
 :host-context(.dark) .carriers-form-section--readonly {
   background: rgba(255, 255, 255, 0.015);
+}
+
+:host-context(.theme-dark) .carriers-section-tag,
+:host-context(.dark) .carriers-section-tag {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: var(--text-secondary);
 }
 
 :host-context(.theme-dark) .carriers-checkbox-item,

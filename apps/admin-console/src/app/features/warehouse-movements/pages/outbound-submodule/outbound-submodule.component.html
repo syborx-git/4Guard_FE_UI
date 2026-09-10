@@ -349,12 +349,12 @@
             <div class="form-section">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined">local_shipping</span>
-                2. Línea Transportista y Datos del Vehículo
+                2. Línea Transportista, Operador y Vehículo
               </div>
 
-              <div class="fg-grid-3">
-                <!-- Transportista -->
-                <div class="fg-field">
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start mt-2">
+                <!-- Línea Transportista -->
+                <div class="md:col-span-4 fg-field">
                   <label class="fg-label">Línea Transportista <span class="req">*</span></label>
                   <div class="flex gap-1.5 items-center">
                     <select
@@ -378,8 +378,8 @@
                   </div>
                 </div>
 
-                <!-- Nombre del Chofer -->
-                <div class="fg-field">
+                <!-- Nombre del Operador (Chofer) -->
+                <div class="md:col-span-4 fg-field">
                   <label class="fg-label">Nombre del Operador (Chofer) <span class="req">*</span></label>
                   <input
                     type="text"
@@ -390,9 +390,24 @@
                   />
                 </div>
 
-                <!-- Número Económico -->
-                <div class="fg-field">
-                  <label class="fg-label">Número Económico <span class="req">*</span></label>
+                <!-- Tipo de Camión -->
+                <div class="md:col-span-4 fg-field">
+                  <label class="fg-label">Tipo de Camión <span class="req">*</span></label>
+                  <select
+                    class="fg-select"
+                    [ngModel]="selectedTransportType()"
+                    (ngModelChange)="selectedTransportType.set($event)"
+                  >
+                    <option value="">-- Selecciona el Tipo de Camión --</option>
+                    @for (t of transportTypes; track t.id) {
+                      <option [value]="t.id">{{ t.label }}</option>
+                    }
+                  </select>
+                </div>
+
+                <!-- Eco de Tracto -->
+                <div class="md:col-span-3 fg-field">
+                  <label class="fg-label">Eco de Tracto</label>
                   <input
                     type="text"
                     class="fg-input mono"
@@ -402,9 +417,9 @@
                   />
                 </div>
 
-                <!-- Placas Tractor -->
-                <div class="fg-field">
-                  <label class="fg-label">Placas Tractor</label>
+                <!-- Placas de Tracto -->
+                <div class="md:col-span-3 fg-field">
+                  <label class="fg-label">Placas de Tracto <span class="req">*</span></label>
                   <input
                     type="text"
                     class="fg-input mono"
@@ -414,9 +429,21 @@
                   />
                 </div>
 
+                <!-- Eco Caja -->
+                <div class="md:col-span-3 fg-field">
+                  <label class="fg-label">Eco Caja</label>
+                  <input
+                    type="text"
+                    class="fg-input mono"
+                    [ngModel]="boxEconomicNumber()"
+                    (ngModelChange)="boxEconomicNumber.set($event)"
+                    placeholder="BOX-402"
+                  />
+                </div>
+
                 <!-- Placas Caja -->
-                <div class="fg-field">
-                  <label class="fg-label">Placas Caja</label>
+                <div class="md:col-span-3 fg-field">
+                  <label class="fg-label">Placas Caja <span class="req">*</span></label>
                   <input
                     type="text"
                     class="fg-input mono"
@@ -425,33 +452,18 @@
                     placeholder="78-BB-90"
                   />
                 </div>
-
-                <!-- Tipo de Transporte -->
-                <div class="fg-field">
-                  <label class="fg-label">Tipo de Transporte</label>
-                  <select
-                    class="fg-select"
-                    [ngModel]="selectedTransportType()"
-                    (ngModelChange)="selectedTransportType.set($event)"
-                  >
-                    <option value="">-- Selecciona el Tipo de Transporte --</option>
-                    @for (t of transportTypes; track t.id) {
-                      <option [value]="t.id">{{ t.label }}</option>
-                    }
-                  </select>
-                </div>
               </div>
             </div>
 
-            <!-- Sección: Número de Sello -->
+            <!-- Sección: Número de Sello o Cincho -->
             <div class="form-section">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined">lock</span>
-                3. No. Sello / Cincho Oficial
+                3. Número de Sello o Cincho Oficial
               </div>
               <div class="fg-grid-2">
                 <div class="fg-field">
-                  <label class="fg-label">Número de Sello / Cincho <span class="req">*</span></label>
+                  <label class="fg-label">Número de Sello o Cincho <span class="req">*</span></label>
                   <input
                     type="text"
                     class="fg-input mono gold-accent"
@@ -463,8 +475,8 @@
                 </div>
                 <div class="fg-field" style="justify-content:flex-end;align-self:flex-end;">
                   <p style="font-size:0.72rem;color:var(--text-muted);font-style:italic;">
-                    El número de sello es obligatorio para toda salida de almacén.<br/>
-                    Se registra como parte del comprobante oficial.
+                    El número de sello o cincho es obligatorio para toda salida de almacén.<br/>
+                    Se registra como parte del comprobante oficial de auditoría.
                   </p>
                 </div>
               </div>
@@ -860,29 +872,48 @@
             <div class="form-section">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined">pallet</span>
-                <span>4. TARIMAS / UAS DISPONIBLES PARA LIBERACIÓN</span>
+                <span>4. TARIMAS / UAS DISPONIBLES PARA LIBERACIÓN (POR BAHÍA DE ORIGEN)</span>
                 <span class="text-xs text-slate-400 font-normal" style="margin-left:auto;">
                   Mostrando {{ allAvailablePalletsForCurrentView().length }} tarima(s)
                 </span>
               </div>
 
-              <!-- Encabezado de la tabla con toggle-all -->
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;margin-top:0.4rem;">
-                <span style="font-size:0.75rem;color:var(--text-muted);">
-                  Seleccionadas para despacho: <strong style="color:var(--text-gold);font-size:0.85rem;">{{ totalSelectedPallets() }}</strong> de {{ allAvailablePalletsForCurrentView().length }} tarimas
-                </span>
-                <button type="button" class="toggle-all-btn" (click)="toggleAllPallets()">
-                  <span class="material-symbols-outlined" style="font-size:0.8rem;">
-                    {{ areAllPalletsSelected() ? 'deselect' : 'select_all' }}
+              <!-- Toolbar: Filtro por Bahía de Origen + toggle-all -->
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 my-2.5 p-2.5 bg-slate-500/5 rounded-xl border border-slate-500/20">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm text-amber-500">pin_drop</span>
+                    Bahía de Origen:
                   </span>
-                  {{ areAllPalletsSelected() ? 'Deseleccionar todas' : 'Seleccionar todas' }}
-                </button>
+                  <select
+                    class="fg-select text-xs py-1 px-2.5 w-auto font-mono font-bold"
+                    [ngModel]="selectedOriginBayFilter()"
+                    (ngModelChange)="selectedOriginBayFilter.set($event)"
+                  >
+                    <option value="ALL">-- Todas las Bahías de Origen --</option>
+                    @for (bay of uniqueOriginBays(); track bay) {
+                      <option [value]="bay">Bahía {{ bay }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="flex items-center gap-3 ml-auto">
+                  <span style="font-size:0.75rem;color:var(--text-muted);">
+                    Seleccionadas: <strong style="color:var(--text-gold);font-size:0.85rem;">{{ totalSelectedPallets() }}</strong> de {{ allAvailablePalletsForCurrentView().length }} UAs
+                  </span>
+                  <button type="button" class="toggle-all-btn" (click)="toggleAllPallets()">
+                    <span class="material-symbols-outlined" style="font-size:0.8rem;">
+                      {{ areAllPalletsSelected() ? 'deselect' : 'select_all' }}
+                    </span>
+                    {{ areAllPalletsSelected() ? 'Deseleccionar todas' : 'Seleccionar todas' }}
+                  </button>
+                </div>
               </div>
 
               @if (allAvailablePalletsForCurrentView().length === 0) {
                 <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.8rem;">
                   <span class="material-symbols-outlined" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;color:var(--text-muted);">inventory_2</span>
-                  No se encontraron tarimas disponibles para el cliente o producto seleccionado.
+                  No se encontraron tarimas disponibles para el cliente, producto o bahía de origen seleccionada.
                 </div>
               } @else {
                 <div class="ua-table-wrapper">
@@ -891,7 +922,7 @@
                       <tr>
                         <th style="width:40px;text-align:center;">Sel.</th>
                         <th>UA / SSCC</th>
-                        <th>Ubicación Rack</th>
+                        <th>Bahía de Origen</th>
                         <th>Descripción Producto</th>
                         <th>Lote</th>
                         <th>Caducidad / Regla de Pablo</th>
@@ -959,6 +990,76 @@
                   </table>
                 </div>
               }
+            </div>
+
+            <!-- ── SECCIÓN 5: REVISE QUE LA OPERACIÓN SEA CORRECTA (PRE-VALIDACIÓN) ── -->
+            <div class="form-section">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined text-amber-500">checklist</span>
+                <span>5. REVISE QUE LA OPERACIÓN SEA CORRECTA</span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+                <!-- Checklist 1: Cliente y Destino -->
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
+                  <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
+                  <div class="flex flex-col text-xs min-w-0">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Cliente & Destino</span>
+                    <span class="text-[11px] text-slate-500 truncate">{{ selectedClient()?.name || '--' }} → {{ selectedDestination()?.name || '--' }}</span>
+                  </div>
+                </div>
+
+                <!-- Checklist 2: Transporte y Chofer -->
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
+                  <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
+                  <div class="flex flex-col text-xs min-w-0">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Transporte & Operador</span>
+                    <span class="text-[11px] text-slate-500 truncate">{{ selectedCarrier()?.name }} · {{ driverName() || '--' }} ({{ getTransportLabel(selectedTransportType()) }})</span>
+                  </div>
+                </div>
+
+                <!-- Checklist 3: Unidades y Sello -->
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
+                  <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
+                  <div class="flex flex-col text-xs min-w-0">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Eco/Placas & Sello Oficial</span>
+                    <span class="text-[11px] text-slate-500 font-mono truncate">Tracto: {{ economicNumber() || '-' }}/{{ tractorPlates() || '-' }} · Caja: {{ boxEconomicNumber() || '-' }}/{{ boxPlates() || '-' }} · 🔒 {{ sealNumber() }}</span>
+                  </div>
+                </div>
+
+                <!-- Checklist 4: Tarimas y Piezas -->
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
+                  <span class="material-symbols-outlined text-base shrink-0 mt-0.5" [ngClass]="totalSelectedPallets() > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
+                    {{ totalSelectedPallets() > 0 ? 'check_circle' : 'cancel' }}
+                  </span>
+                  <div class="flex flex-col text-xs min-w-0">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Mercancía & Bahías de Origen</span>
+                    <span class="text-[11px] text-slate-500 font-mono">{{ totalSelectedPallets() }} UA(s) · {{ totalSelectedPieces() | number }} pzas · {{ totalSelectedSkus() }} SKU(s)</span>
+                  </div>
+                </div>
+
+                <!-- Checklist 5: Montacarguista -->
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
+                  <span class="material-symbols-outlined text-base shrink-0 mt-0.5" [ngClass]="selectedOperator() ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
+                    {{ selectedOperator() ? 'check_circle' : 'cancel' }}
+                  </span>
+                  <div class="flex flex-col text-xs min-w-0">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Montacarguista Certificado</span>
+                    <span class="text-[11px]" [ngClass]="selectedOperator() ? 'text-slate-500' : 'text-rose-500 font-bold'">
+                      {{ selectedOperator() ? (selectedOperator()!.name + ' (' + selectedOperator()!.badge + ')') : 'Asignación obligatoria' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Checklist 6: Criterio FEFO -->
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
+                  <span class="material-symbols-outlined text-amber-500 text-base shrink-0 mt-0.5">auto_awesome</span>
+                  <div class="flex flex-col text-xs min-w-0">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Políticas de Rotación</span>
+                    <span class="text-[11px] text-slate-500">FEFO y Regla de Pablo validadas</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- ── BARRA DE TOTALIZADORES EN VIVO Y CONFIRMACIÓN ── -->
@@ -1112,35 +1213,43 @@
           <div class="form-section">
             <div class="form-section__legend">
               <span class="material-symbols-outlined">local_shipping</span>
-              Datos del Transporte (Snapshot)
+              Datos del Transporte & Unidad (Snapshot)
             </div>
             <div class="detail-info-grid">
               <div class="detail-field">
-                <span class="fg-label">Transportista</span>
+                <span class="fg-label">Línea Transportista</span>
                 <span class="fg-value">{{ selectedOutbound()!.carrierName }}</span>
               </div>
               <div class="detail-field">
-                <span class="fg-label">Operador / Chofer</span>
+                <span class="fg-label">Nombre del Operador (Chofer)</span>
                 <span class="fg-value">{{ selectedOutbound()!.driverName }}</span>
               </div>
               <div class="detail-field">
-                <span class="fg-label">Número Económico</span>
+                <span class="fg-label">Tipo de Camión</span>
+                <span class="fg-value">{{ getTransportLabel(selectedOutbound()!.transportType) }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Eco de Tracto</span>
                 <span class="fg-value mono">{{ selectedOutbound()!.economicNumber || '--' }}</span>
               </div>
               <div class="detail-field">
-                <span class="fg-label">Placas Tractor</span>
+                <span class="fg-label">Placas de Tracto</span>
                 <span class="fg-value mono">{{ selectedOutbound()!.tractorPlates }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="fg-label">Eco Caja</span>
+                <span class="fg-value mono">{{ selectedOutbound()!.boxEconomicNumber || '--' }}</span>
               </div>
               <div class="detail-field">
                 <span class="fg-label">Placas Caja</span>
                 <span class="fg-value mono">{{ selectedOutbound()!.boxPlates }}</span>
               </div>
               <div class="detail-field">
-                <span class="fg-label">Tipo de Transporte</span>
-                <span class="fg-value">{{ getTransportLabel(selectedOutbound()!.transportType) }}</span>
+                <span class="fg-label">Montacarguista Asignado</span>
+                <span class="fg-value">{{ selectedOutbound()!.forkliftOperator || 'Operador WMS' }}</span>
               </div>
               <div class="detail-field" style="grid-column:span 3;">
-                <span class="fg-label">No. Sello / Cincho</span>
+                <span class="fg-label">Número de Sello o Cincho</span>
                 <span class="seal-chip" style="margin-top:0.2rem;">
                   <span class="material-symbols-outlined" style="font-size:0.8rem;">lock</span>
                   {{ selectedOutbound()!.sealNumber }}
@@ -1164,6 +1273,7 @@
                 <thead>
                   <tr>
                     <th>UA / SSCC</th>
+                    <th>Bahía de Origen</th>
                     <th>SKU</th>
                     <th>Descripción</th>
                     <th>Lote</th>
@@ -1175,6 +1285,12 @@
                   @for (item of selectedOutbound()!.items; track item.id || $index) {
                     <tr>
                       <td class="mono gold font-bold">{{ item.palletCode || '--' }}</td>
+                      <td>
+                        <span class="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300">
+                          <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
+                          {{ item.locationCode || 'N/A' }}
+                        </span>
+                      </td>
                       <td class="mono muted font-semibold">{{ item.productId || '--' }}</td>
                       <td class="font-medium">{{ item.description || '--' }}</td>
                       <td class="mono muted">{{ item.lotNumber || '--' }}</td>
@@ -1185,7 +1301,7 @@
                 </tbody>
                 <tfoot>
                   <tr style="background:var(--bg-subtle);font-weight:700;">
-                    <td colspan="5" style="padding:0.5rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
+                    <td colspan="6" style="padding:0.5rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
                       Totales: {{ selectedOutbound()!.totalPallets }} Tarima(s) · {{ selectedOutbound()!.distinctSkus }} SKU(s)
                     </td>
                     <td style="text-align:right;padding:0.5rem 0.8rem;font-family:var(--font-mono);font-size:0.85rem;font-weight:800;color:var(--gold);">
@@ -1356,7 +1472,7 @@
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">Destino:</span>
+              <span class="confirm-data-label">Planta / Destino:</span>
               <span class="confirm-data-val font-semibold text-slate-800 dark:text-slate-200">
                 {{ selectedDestination()?.name || '--' }}
               </span>
@@ -1370,14 +1486,35 @@
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">Chofer / Unidad:</span>
-              <span class="confirm-data-val font-mono text-xs">
-                {{ driverName() || '--' }} <span class="confirm-sep">·</span> Eco: {{ economicNumber() || '--' }} <span class="confirm-sep">·</span> Placas: {{ tractorPlates() || '--' }} / {{ boxPlates() || '--' }}
+              <span class="confirm-data-label">Nombre del Operador (Chofer):</span>
+              <span class="confirm-data-val font-medium text-slate-900 dark:text-slate-100">
+                {{ driverName() || '--' }}
               </span>
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">No. Sello Oficial:</span>
+              <span class="confirm-data-label">Tipo de Camión:</span>
+              <span class="confirm-data-val font-semibold text-amber-700 dark:text-amber-400">
+                {{ getTransportLabel(selectedTransportType()) }}
+              </span>
+            </div>
+
+            <div class="confirm-data-row">
+              <span class="confirm-data-label">Tracto (Eco / Placas):</span>
+              <span class="confirm-data-val font-mono text-xs">
+                Eco: {{ economicNumber() || '--' }} <span class="confirm-sep">·</span> Placas: {{ tractorPlates() || '--' }}
+              </span>
+            </div>
+
+            <div class="confirm-data-row">
+              <span class="confirm-data-label">Caja (Eco / Placas):</span>
+              <span class="confirm-data-val font-mono text-xs">
+                Eco: {{ boxEconomicNumber() || '--' }} <span class="confirm-sep">·</span> Placas: {{ boxPlates() || '--' }}
+              </span>
+            </div>
+
+            <div class="confirm-data-row">
+              <span class="confirm-data-label">Número de Sello o Cincho:</span>
               <div class="confirm-data-val">
                 <span class="confirm-seal-badge font-mono">
                   🔒 {{ sealNumber() || '--' }}
@@ -1386,14 +1523,14 @@
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">Montacarguista:</span>
+              <span class="confirm-data-label">Montacarguista Responsable:</span>
               <span class="confirm-data-val font-bold text-slate-900 dark:text-slate-100">
                 {{ selectedOperator()?.name || 'No asignado' }} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">({{ selectedOperator()?.badge || '--' }})</span>
               </span>
             </div>
 
             <div class="confirm-data-row confirm-data-row--highlight">
-              <span class="confirm-data-label">Remisión / Doc:</span>
+              <span class="confirm-data-label">Remisión / Documento:</span>
               <span class="confirm-data-val font-mono font-bold text-amber-800 dark:text-amber-300">
                 {{ primaryRemisionNo() }}
               </span>
@@ -1401,7 +1538,7 @@
 
             @if (selectedSku()) {
               <div class="confirm-data-row">
-                <span class="confirm-data-label">Producto:</span>
+                <span class="confirm-data-label">Producto Seleccionado:</span>
                 <span class="confirm-data-val font-mono font-bold text-slate-900 dark:text-slate-100">
                   {{ selectedSku()?.skuCode }} — {{ selectedSku()?.productName }}
                 </span>
@@ -1440,6 +1577,71 @@
           </button>
         </div>
 
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MODAL 2: ¿DESEA IMPRIMIR DOCUMENTO? (SÍ / NO) — POST-CONFIRMACIÓN
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (showPrintPromptModal() && lastCompletedOutbound()) {
+    <div class="modal-overlay" (click)="onConfirmPrintPrompt(false)">
+      <div class="modal-card max-w-md w-full animate-fade-up p-5 text-center shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" (click)="$event.stopPropagation()">
+        <div class="w-14 h-14 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+          <span class="material-symbols-outlined text-3xl">check_circle</span>
+        </div>
+        
+        <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight mb-1">
+          Salida de Almacén Registrada
+        </h3>
+        <p class="text-xs text-slate-500 mb-3 font-mono">
+          Folio Oficial: <strong class="text-amber-600 dark:text-amber-400 font-bold">#{{ lastCompletedOutbound()?.folio }}</strong>
+        </p>
+
+        <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1 text-left mb-4">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Cliente:</span>
+            <span class="font-bold text-slate-900 dark:text-slate-100 truncate ml-2">{{ lastCompletedOutbound()?.clientName }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Destino:</span>
+            <span class="font-semibold truncate ml-2">{{ lastCompletedOutbound()?.destinationName }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Transportista:</span>
+            <span class="font-semibold truncate ml-2">{{ lastCompletedOutbound()?.carrierName }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Tarimas / Piezas:</span>
+            <span class="font-mono font-bold">{{ lastCompletedOutbound()?.totalPallets }} UAs ({{ lastCompletedOutbound()?.totalPieces | number }} pzas)</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Sello / Cincho:</span>
+            <span class="font-mono font-bold text-amber-700 dark:text-amber-300">🔒 {{ lastCompletedOutbound()?.sealNumber }}</span>
+          </div>
+        </div>
+
+        <p class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-4">
+          ¿Desea imprimir documento oficial de la operación?
+        </p>
+
+        <div class="flex items-center justify-center gap-2.5">
+          <button
+            type="button"
+            (click)="onConfirmPrintPrompt(false)"
+            class="btn-secondary-outline px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            No, finalizar
+          </button>
+          <button
+            type="button"
+            (click)="onConfirmPrintPrompt(true)"
+            class="btn-primary-gold px-5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md text-slate-950"
+          >
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Sí, Imprimir Documento</span>
+          </button>
+        </div>
       </div>
     </div>
   }

@@ -1762,6 +1762,7 @@ export class WarehouseMovementsService {
     forkliftOperatorId?: string;
     driverName: string;
     economicNumber: string;
+    boxEconomicNumber?: string;
     tractorPlates: string;
     boxPlates: string;
     transportType: TransportType;
@@ -1795,6 +1796,7 @@ export class WarehouseMovementsService {
       forkliftOperatorId: dto.forkliftOperatorId,
       driverName: dto.driverName,
       economicNumber: dto.economicNumber,
+      boxEconomicNumber: dto.boxEconomicNumber,
       tractorPlates: dto.tractorPlates,
       boxPlates: dto.boxPlates,
       transportType: dto.transportType,
