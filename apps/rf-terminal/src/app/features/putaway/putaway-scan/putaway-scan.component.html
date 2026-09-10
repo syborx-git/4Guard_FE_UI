@@ -1,7 +1,7 @@
 <!-- apps/rf-terminal/src/app/features/putaway/putaway-scan/putaway-scan.component.html -->
-<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de escaneo de putaway (ubicación)">
+<div class="putaway-page" role="main" (click)="focusScanInput()" aria-label="Módulo de Ubicación en Rack Putaway">
 
-  <!-- Input OCULTO — captura el láser industrial -->
+  <!-- Input Oculto para Lector Láser Físico -->
   <input
     #scanInput
     type="text"
@@ -15,78 +15,217 @@
     aria-hidden="true"
     tabindex="-1">
 
-  <!-- ── Header ──────────────────────────────────────────── -->
-  <div class="rscan__header">
-    <div>
-      <h1 class="rscan__title">📦 Ubicación (Putaway)</h1>
-      <p class="rscan__sub">Rack Principal · Operario 01</p>
+  <!-- ── 1. Header con Información de Recepción Asignada ───── -->
+  <header class="putaway-header">
+    <div class="putaway-header__left">
+      <button type="button" class="btn-back" (click)="goBack()" aria-label="Volver al Menú">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <div class="task-info">
+        <div class="task-badge-row">
+          <span class="chip-ramp">
+            <span class="material-symbols-outlined">rv_hookup</span>
+            <span>{{ assignedTask().rampCode }}</span>
+          </span>
+          <span class="chip-coordinator">Asignado por: {{ assignedTask().assignedBy }}</span>
+        </div>
+        <h1 class="task-folio">{{ assignedTask().folio }}</h1>
+      </div>
     </div>
-    <div class="rscan__progress" role="status"
-      [attr.aria-label]="completedCount() + ' de ' + expectedTotal() + ' ubicados'">
-      <span class="rscan__progress-val">{{ completedCount() }}<span class="rscan__progress-sep">/</span>{{ expectedTotal() }}</span>
-      <span class="rscan__progress-lbl">Ubicados</span>
+
+    <!-- Contador de Progreso -->
+    <div class="putaway-progress" role="status" [attr.aria-label]="storedCount() + ' de ' + totalCount() + ' tarimas ubicadas'">
+      <span class="progress-val">{{ storedCount() }}<span class="progress-sep">/</span>{{ totalCount() }}</span>
+      <span class="progress-lbl">Ubicados</span>
     </div>
-  </div>
+  </header>
 
-  <!-- ── Scan zone ──────────────────────────────────────── -->
-  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
-    [class.rscan__zone--processing]="isProcessing()"
-    aria-label="Zona de escaneo — apunta el lector al SSCC del pallet">
-    <span class="rscan__zone-icon" aria-hidden="true">
-      {{ isProcessing() ? '⟳' : '⬛' }}
-    </span>
-    <span class="rscan__zone-text">
-      {{ isProcessing() ? 'Procesando…' : 'Escanea el SSCC del Pallet' }}
-    </span>
-    <span class="rscan__zone-sub">o haz clic para enfocar</span>
-  </div>
-
-  <!-- Botón de simulación de scan -->
-  <button
-    id="rf-sim-putaway-btn"
-    class="rscan__sim-btn"
-    (click)="simulateScan(); $event.stopPropagation()">
-    📷 Simular Escaneo
-  </button>
-
-  <!-- Error message -->
+  <!-- ── 2. Mensajes de Error y Bloqueo ─────────────────────── -->
   @if (lastError()) {
-    <div class="rscan__error" role="alert" aria-live="assertive">
-      {{ lastError() }}
+    <div class="error-banner" role="alert" aria-live="assertive">
+      <span class="material-symbols-outlined error-icon">error</span>
+      <div class="error-text">{{ lastError() }}</div>
     </div>
   }
 
-  <!-- ── Buffer de Ubicación ──────────────────────────────── -->
-  <div class="rscan__buffer">
-    <h2 class="rscan__buffer-title">
-      Pallets Ubicados
-      @if (completedCount() > 0) {
-        <span class="rscan__buffer-count" aria-hidden="true">{{ completedCount() }}</span>
-      }
-    </h2>
+  <!-- ── 3. Indicador de Flujo en 2 Pasos (Regla de Pablo) ──── -->
+  <div class="flow-indicator" role="region" aria-label="Etapas de ubicación">
+    <div class="flow-step" [class.flow-step--active]="currentStep() === 'SCAN_PALLET'" [class.flow-step--done]="currentStep() === 'SCAN_RACK' || currentStep() === 'BATCH_COMPLETED'">
+      <span class="step-num">1</span>
+      <span class="step-title">Recoger en Rampa</span>
+    </div>
+    <div class="flow-arrow">➔</div>
+    <div class="flow-step" [class.flow-step--active]="currentStep() === 'SCAN_RACK'" [class.flow-step--done]="currentStep() === 'BATCH_COMPLETED'">
+      <span class="step-num">2</span>
+      <span class="step-title">Guardar en Rack Asignado</span>
+    </div>
+  </div>
 
-    <div class="buffer-list" role="list" aria-label="Pallets ubicados">
-      @for (item of buffer(); track item.sscc) {
-        <div class="buffer-item" role="listitem">
-          <div class="buffer-item__code">{{ item.sscc }}</div>
-          <div class="buffer-item__info">
-            <span class="buffer-item__sku">{{ item.sku }}</span>
-            <span class="buffer-item__desc">{{ item.description }}</span>
+  <!-- ── 4. Vista PASO 1: Escaneo de Tarima en Rampa ─────────── -->
+  @if (currentStep() === 'SCAN_PALLET') {
+    <section class="step-card" aria-label="Paso 1: Escanear Tarima en Rampa">
+      <div class="scan-target-box" [class.scan-target-box--processing]="isProcessing()">
+        <span class="material-symbols-outlined scan-icon" aria-hidden="true">
+          {{ isProcessing() ? 'hourglass_top' : 'barcode_scanner' }}
+        </span>
+        <h2 class="scan-title">
+          {{ isProcessing() ? 'Identificando Tarima…' : 'Escanear SSCC en Rampa 03' }}
+        </h2>
+        <p class="scan-subtitle">Apunta el lector láser al código SSCC de la tarima</p>
+      </div>
+
+      <!-- Simulador de Escaneo Paso 1 -->
+      <div class="simulation-bar">
+        <button
+          id="rf-sim-pallet-btn"
+          type="button"
+          class="btn-sim btn-sim--primary"
+          (click)="simulateScanNextPallet(); $event.stopPropagation()">
+          <span class="material-symbols-outlined">auto_fix_high</span>
+          <span>Simular Escaneo SSCC Tarima ({{ pendingPallets()[0]?.sku || 'Siguiente' }})</span>
+        </button>
+      </div>
+
+      <!-- Lista de Tarimas Pendientes en esta Recepción -->
+      <div class="pending-section">
+        <h3 class="section-subtitle">
+          <span class="material-symbols-outlined">pending_actions</span>
+          <span>Tarimas Asignadas en Rampa ({{ pendingPallets().length }} pendientes)</span>
+        </h3>
+
+        <div class="pending-list" role="list">
+          @for (pallet of pendingPallets(); track pallet.sscc) {
+            <div class="pending-item" (click)="handleScannedCode(pallet.sscc); $event.stopPropagation()" role="button" tabindex="0">
+              <div class="pending-item__left">
+                <span class="item-sku">{{ pallet.sku }}</span>
+                <span class="item-desc">{{ pallet.description }}</span>
+                <span class="item-sscc">{{ pallet.sscc }}</span>
+              </div>
+              <div class="pending-item__right">
+                <span class="badge-dest-rack">{{ pallet.assignedRack }}</span>
+                <span class="item-pieces">{{ pallet.pieces }} pzas</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ── 5. Vista PASO 2: Confirmación en Rack Asignado ──────── -->
+  @if (currentStep() === 'SCAN_RACK' && activePallet(); as active) {
+    <section class="step-card step-card--in-transit" aria-label="Paso 2: Confirmación de Rack Destino">
+      
+      <!-- Banner de Destino Preasignado por Pablo -->
+      <div class="assigned-dest-card">
+        <div class="dest-header">
+          <span class="material-symbols-outlined">gite</span>
+          <span class="dest-tag">UBICACIÓN PREASIGNADA POR PABLO</span>
+        </div>
+
+        <div class="dest-rack-hero">
+          <span class="rack-code-hero">{{ active.assignedRack }}</span>
+          <span class="rack-level-hero">{{ active.levelInfo }}</span>
+        </div>
+
+        <div class="pallet-in-transit-info">
+          <span class="material-symbols-outlined">inventory_2</span>
+          <div class="transit-info-text">
+            <strong>{{ active.sku }}</strong> • {{ active.description }} ({{ active.pieces }} piezas)
           </div>
-          <div class="buffer-item__right">
-            <span class="status-badge status-badge--location">
-              {{ item.targetLocation }}
-            </span>
-            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
+        </div>
+      </div>
+
+      <!-- Zona de Escaneo de Código de Barra del Rack -->
+      <div class="scan-target-box scan-target-box--rack" [class.scan-target-box--processing]="isProcessing()">
+        <span class="material-symbols-outlined scan-icon" aria-hidden="true">
+          {{ isProcessing() ? 'hourglass_top' : 'shelves' }}
+        </span>
+        <h2 class="scan-title">
+          {{ isProcessing() ? 'Validando Ubicación…' : 'Escanear Etiqueta de Rack' }}
+        </h2>
+        <p class="scan-subtitle">
+          Coloca el pallet físicamente en <strong>{{ active.assignedRack }}</strong> y escanea el código del rack
+        </p>
+      </div>
+
+      <!-- Simuladores de Escaneo Paso 2 (Prueba de Acierto / Error) -->
+      <div class="rack-sim-buttons">
+        <button
+          id="rf-sim-correct-rack-btn"
+          type="button"
+          class="btn-sim btn-sim--success"
+          (click)="simulateScanCorrectRack(); $event.stopPropagation()">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span>Simular Rack Asignado Correcto ({{ active.assignedRack }})</span>
+        </button>
+
+        <button
+          id="rf-sim-wrong-rack-btn"
+          type="button"
+          class="btn-sim btn-sim--warning"
+          (click)="simulateScanWrongRack(); $event.stopPropagation()"
+          title="Prueba la validación y sonido de error">
+          <span class="material-symbols-outlined">block</span>
+          <span>Simular Rack Incorrecto (RACK B-99-99)</span>
+        </button>
+      </div>
+
+      <button type="button" class="btn-cancel-transit" (click)="cancelCurrentTransit(); $event.stopPropagation()">
+        <span class="material-symbols-outlined">undo</span>
+        <span>Cancelar y Regresar a Rampa</span>
+      </button>
+    </section>
+  }
+
+  <!-- ── 6. Vista Recepción Completada ───────────────────────── -->
+  @if (currentStep() === 'BATCH_COMPLETED') {
+    <section class="completed-card" role="status">
+      <div class="completed-icon-box">
+        <span class="material-symbols-outlined">task_alt</span>
+      </div>
+      <h2 class="completed-title">¡Recepción Ubicada al 100%!</h2>
+      <p class="completed-desc">
+        Todas las tarimas de <strong>{{ assignedTask().folio }}</strong> en <strong>{{ assignedTask().rampCode }}</strong> han sido almacenadas exitosamente en sus racks asignados.
+      </p>
+
+      <button type="button" class="btn-finish" (click)="goBack()">
+        <span class="material-symbols-outlined">home</span>
+        <span>Volver al Menú Maestro</span>
+      </button>
+    </section>
+  }
+
+  <!-- ── 7. Historial / Buffer de Tarimas Ubicadas ───────────── -->
+  <section class="stored-section" aria-label="Historial de tarimas ubicadas">
+    <h3 class="stored-title">
+      <span>Pallets Almacenados en esta Sesión</span>
+      <span class="stored-count-badge">{{ storedCount() }}</span>
+    </h3>
+
+    <div class="stored-list" role="list">
+      @for (item of storedBuffer(); track item.sscc) {
+        <div class="stored-item" role="listitem">
+          <div class="stored-item__code">
+            <span class="material-symbols-outlined done-icon">check_circle</span>
+            <span class="sscc-text">{{ item.sscc }}</span>
+          </div>
+          <div class="stored-item__desc">
+            <span class="sku-name">{{ item.sku }}</span>
+            <span class="desc-name">{{ item.description }}</span>
+          </div>
+          <div class="stored-item__rack">
+            <span class="badge-rack-placed">{{ item.assignedRack }}</span>
+            <span class="time-text">{{ formatTime(item.scannedAt) }}</span>
           </div>
         </div>
       } @empty {
-        <div class="buffer-empty">
-          <span aria-hidden="true">📭</span>
-          <span>Sin pallets ubicados en esta sesión.</span>
+        <div class="stored-empty">
+          <span class="material-symbols-outlined">inbox</span>
+          <span>Aún no has ubicado tarimas en esta sesión.</span>
         </div>
       }
     </div>
-  </div>
+  </section>
 
 </div>

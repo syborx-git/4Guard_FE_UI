@@ -11,9 +11,10 @@
 @use '../../../admin-console/src/styles/abstracts/animations' as *;
 @use '../../../admin-console/src/styles/themes/dark';
 
-// ── Touch targets mínimos: 44px ───────────────────────────────
-$rf-touch-min:  44px;
-$rf-touch-lg:   56px;
+// ── Touch targets industriales para guantes y montacargas (ADR-012) ──
+$rf-touch-min:  56px; // Altura mínima para guantes
+$rf-touch-lg:   64px; // Botones primarios de confirmación
+$rf-touch-gap:  12px; // Margen de seguridad inter-botón
 
 // ── Reset + base táctil ───────────────────────────────────────
 *,
