@@ -1304,9 +1304,24 @@
   border: 1px solid #e2e8f0;
   border-radius: 20px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
-  max-width: 520px;
   width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+.modal-card--confirm {
+  max-width: 560px;
+}
+
+.modal-card--print {
+  max-width: 880px !important;
+  max-height: 94vh;
+}
+
+.modal-card--cancel {
+  max-width: 520px;
 }
 
 :host-context(.theme-dark) .modal-card,
@@ -1343,6 +1358,290 @@
 :host-context(.theme-dark) .modal-header h3,
 :host-context(.dark) .modal-header h3 {
   color: #eef1f6;
+}
+
+/* ── CONFIRM MODAL DESIGN SYSTEM ── */
+.confirm-header-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+:host-context(.dark) .confirm-header-icon-box,
+:host-context(.theme-dark) .confirm-header-icon-box {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.confirm-modal-title {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+:host-context(.dark) .confirm-modal-title,
+:host-context(.theme-dark) .confirm-modal-title {
+  color: #ffffff;
+}
+
+.confirm-modal-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  margin: 0.15rem 0 0;
+}
+
+:host-context(.dark) .confirm-modal-subtitle,
+:host-context(.theme-dark) .confirm-modal-subtitle {
+  color: #94a3b8;
+}
+
+.confirm-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.confirm-metric-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.confirm-metric-card--amber {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.confirm-metric-card--emerald {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+:host-context(.dark) .confirm-metric-card--amber,
+:host-context(.theme-dark) .confirm-metric-card--amber {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+:host-context(.dark) .confirm-metric-card--emerald,
+:host-context(.theme-dark) .confirm-metric-card--emerald {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.confirm-metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.confirm-metric-card--amber .confirm-metric-icon {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+
+.confirm-metric-card--emerald .confirm-metric-icon {
+  background: rgba(5, 150, 105, 0.15);
+  color: #047857;
+}
+
+:host-context(.dark) .confirm-metric-card--amber .confirm-metric-icon,
+:host-context(.theme-dark) .confirm-metric-card--amber .confirm-metric-icon {
+  color: #fbbf24;
+}
+
+:host-context(.dark) .confirm-metric-card--emerald .confirm-metric-icon,
+:host-context(.theme-dark) .confirm-metric-card--emerald .confirm-metric-icon {
+  color: #34d399;
+}
+
+.confirm-metric-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.confirm-metric-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+:host-context(.dark) .confirm-metric-label,
+:host-context(.theme-dark) .confirm-metric-label {
+  color: #94a3b8;
+}
+
+.confirm-metric-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.confirm-metric-card--amber .confirm-metric-val {
+  color: #92400e;
+}
+
+.confirm-metric-card--emerald .confirm-metric-val {
+  color: #065f46;
+}
+
+:host-context(.dark) .confirm-metric-card--amber .confirm-metric-val,
+:host-context(.theme-dark) .confirm-metric-card--amber .confirm-metric-val {
+  color: #fbbf24;
+}
+
+:host-context(.dark) .confirm-metric-card--emerald .confirm-metric-val,
+:host-context(.theme-dark) .confirm-metric-card--emerald .confirm-metric-val {
+  color: #34d399;
+}
+
+/* ── CONFIRM DATA CARD ── */
+.confirm-data-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+:host-context(.dark) .confirm-data-card,
+:host-context(.theme-dark) .confirm-data-card {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.confirm-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.confirm-data-row--highlight {
+  padding-top: 0.35rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
+:host-context(.dark) .confirm-data-row--highlight,
+:host-context(.theme-dark) .confirm-data-row--highlight {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.confirm-data-label {
+  font-weight: 700;
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  width: 140px;
+}
+
+:host-context(.dark) .confirm-data-label,
+:host-context(.theme-dark) .confirm-data-label {
+  color: #94a3b8;
+}
+
+.confirm-data-val {
+  flex: 1;
+  text-align: right;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.confirm-sep {
+  color: #94a3b8;
+  padding: 0 2px;
+}
+
+.confirm-seal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+:host-context(.dark) .confirm-seal-badge,
+:host-context(.theme-dark) .confirm-seal-badge {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* ── NOTICE BOX ── */
+.confirm-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.95rem;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.22);
+  border-radius: 12px;
+  color: #78350f;
+}
+
+:host-context(.dark) .confirm-notice-box,
+:host-context(.theme-dark) .confirm-notice-box {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+}
+
+.confirm-notice-icon {
+  font-size: 1.15rem;
+  color: #b45309;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+:host-context(.dark) .confirm-notice-icon,
+:host-context(.theme-dark) .confirm-notice-icon {
+  color: #fbbf24;
+}
+
+.confirm-notice-text {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.confirm-notice-text strong {
+  font-weight: 800;
 }
 
 .modal-close-btn {
@@ -1421,6 +1720,58 @@
 :host-context(.theme-dark) .modal-footer,
 :host-context(.dark) .modal-footer {
   background: #1e2d45;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  background: transparent;
+  color: #334155;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-secondary-outline:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+:host-context(.dark) .btn-secondary-outline,
+:host-context(.theme-dark) .btn-secondary-outline {
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+:host-context(.dark) .btn-secondary-outline:hover:not(:disabled),
+:host-context(.theme-dark) .btn-secondary-outline:hover:not(:disabled) {
+  background: #1e293b;
+  border-color: #64748b;
+  color: #ffffff;
+}
+
+.bg-surface-subtle {
+  background: #f8fafc;
+}
+
+:host-context(.dark) .bg-surface-subtle,
+:host-context(.theme-dark) .bg-surface-subtle {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.border-subtle {
+  border-color: #e2e8f0;
+}
+
+:host-context(.dark) .border-subtle,
+:host-context(.theme-dark) .border-subtle {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -2742,4 +3093,369 @@
 :host-context(.dark) .btn-secondary:hover {
   background: #1e293b;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   AUTOCOMPLETE PREDICTIVO (MONTACARGUISTA & PRODUCTOS/SKUS)
+   ───────────────────────────────────────────────────────────── */
+.sku-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1.5px solid #dbe2ea;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sku-autocomplete-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.85rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sku-autocomplete-header__title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sku-autocomplete-header__hint {
+  font-family: var(--font-mono, monospace);
+  color: #94a3b8;
+}
+
+.sku-autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.sku-autocomplete-item:hover {
+  background: #f8fafc;
+}
+
+.sku-autocomplete-item--selected {
+  background: #fefce8 !important;
+}
+
+.sku-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.sku-autocomplete-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  flex-shrink: 0;
+}
+
+.sku-autocomplete-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.25;
+}
+
+.sku-autocomplete-empty {
+  padding: 1.25rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-style: italic;
+  background: #ffffff;
+}
+
+/* Modo Oscuro para Autocomplete */
+:host-context(.dark) .sku-autocomplete-dropdown,
+:host-context(.theme-dark) .sku-autocomplete-dropdown {
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.5);
+}
+
+:host-context(.dark) .sku-autocomplete-header,
+:host-context(.theme-dark) .sku-autocomplete-header {
+  background: #1e293b;
+  border-bottom-color: #334155;
+  color: #94a3b8;
+}
+
+:host-context(.dark) .sku-autocomplete-item,
+:host-context(.theme-dark) .sku-autocomplete-item {
+  border-bottom-color: #1e293b;
+}
+
+:host-context(.dark) .sku-autocomplete-item:hover,
+:host-context(.theme-dark) .sku-autocomplete-item:hover {
+  background: #1e293b;
+}
+
+:host-context(.dark) .sku-autocomplete-item--selected,
+:host-context(.theme-dark) .sku-autocomplete-item--selected {
+  background: #1e293b !important;
+}
+
+:host-context(.dark) .sku-autocomplete-badge,
+:host-context(.theme-dark) .sku-autocomplete-badge {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+:host-context(.dark) .sku-autocomplete-name,
+:host-context(.theme-dark) .sku-autocomplete-name {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .sku-autocomplete-empty,
+:host-context(.theme-dark) .sku-autocomplete-empty {
+  background: #0f172a;
+  color: #64748b;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CASETA SUMMARY CARD (MONTACARGUISTA METADATA)
+   ───────────────────────────────────────────────────────────── */
+.caseta-summary-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+}
+
+:host-context(.dark) .caseta-summary-card,
+:host-context(.theme-dark) .caseta-summary-card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.caseta-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.caseta-summary-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+:host-context(.dark) .caseta-summary-label,
+:host-context(.theme-dark) .caseta-summary-label {
+  color: #94a3b8;
+}
+
+.caseta-summary-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host-context(.dark) .caseta-summary-value,
+:host-context(.theme-dark) .caseta-summary-value {
+  color: #f8fafc;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SKU SEARCH INPUT & ICON ALIGNMENT (PREVENT OVERLAP)
+   ───────────────────────────────────────────────────────────── */
+.sku-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.sku-search-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 1.15rem;
+  pointer-events: none;
+  z-index: 2;
+  transition: color 0.15s ease;
+}
+
+.sku-search-input {
+  padding-left: 2.75rem !important;
+  padding-right: 2.5rem !important;
+}
+
+.sku-search-clear {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+  z-index: 3;
+}
+
+.sku-search-clear:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+:host-context(.dark) .sku-search-clear:hover,
+:host-context(.theme-dark) .sku-search-clear:hover {
+  color: #f8fafc;
+  background: #1e293b;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   STEPPER COUNTER COMPONENT (PABLO / FEFO RELEASE MOTOR)
+   ───────────────────────────────────────────────────────────── */
+.stepper-counter {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.stepper-counter:focus-within {
+  border-color: #b58b37;
+  box-shadow: 0 0 0 3px rgba(181, 139, 55, 0.18);
+}
+
+:host-context(.dark) .stepper-counter,
+:host-context(.theme-dark) .stepper-counter {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:host-context(.dark) .stepper-counter:focus-within,
+:host-context(.theme-dark) .stepper-counter:focus-within {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
+}
+
+.stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: scale(1.05);
+}
+
+.stepper-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+:host-context(.dark) .stepper-btn,
+:host-context(.theme-dark) .stepper-btn {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+:host-context(.dark) .stepper-btn:hover:not(:disabled),
+:host-context(.theme-dark) .stepper-btn:hover:not(:disabled) {
+  background: #334155;
+  color: #f8fafc;
+}
+
+.stepper-input {
+  width: 52px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono, monospace);
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: center;
+  color: #0f172a;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.stepper-input::-webkit-outer-spin-button,
+.stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:host-context(.dark) .stepper-input,
+:host-context(.theme-dark) .stepper-input {
+  color: #f8fafc;
+}
+
+
 

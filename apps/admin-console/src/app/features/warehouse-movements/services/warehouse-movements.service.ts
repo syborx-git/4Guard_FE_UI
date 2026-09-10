@@ -449,22 +449,35 @@ export class WarehouseMovementsService {
             clientName: o.clientName || '',
             destinationId: o.destinationId || '',
             destinationName: o.destinationName || '',
-            destinationAddress: '',
+            destinationAddress: o.destinationAddress || '',
             carrierCode: o.carrierId || '',
             carrierName: o.carrierName || '',
+            forkliftOperator: o.forkliftOperatorName || '',
+            forkliftOperatorId: o.forkliftOperatorId || '',
             driverName: o.driverName || '',
-            economicNumber: '',
+            economicNumber: o.economicNumber || '',
             tractorPlates: o.tractorPlates || '',
             boxPlates: o.boxPlates || '',
             transportType: o.transportType || 'TRAILER',
             sealNumber: o.sealNumber || '',
             remisionNo: o.remisionNo || '',
-            items: [],
+            items: (o.items || []).map((it: any) => ({
+              id: it.id || it.itemId,
+              palletCode: it.palletCode,
+              productId: it.skuCode || it.productId || '',
+              description: it.skuDescription || it.description || '',
+              lotNumber: it.lotNumber || '',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : '',
+              pieces: it.pieces || 0,
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              locationCode: it.locationCode || 'N/A',
+            })),
             totalPallets: o.totalPallets || 0,
             totalPieces: o.totalPieces || 0,
             distinctSkus: o.distinctSkus || 0,
             dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
-            dispatchedBy: o.createdBy || '',
+            dispatchedBy: o.createdBy || 'Admin',
             timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
           }))
         );
@@ -505,8 +518,12 @@ export class WarehouseMovementsService {
     });
   }
 
-  public reloadInventoryBatches(): void {
-    this.movementsApi.getInventoryBatches().subscribe({
+  public reloadInventoryBatches(clientId?: string): void {
+    const options: any = {};
+    if (clientId && clientId.includes('-')) {
+      options.clientId = clientId;
+    }
+    this.movementsApi.getInventoryBatches(options).subscribe({
       next: (batches: any) => {
         const receptions = this.receptionsSignal();
         const fetchedBatches = (batches || []).map((b: any) => {
@@ -1472,8 +1489,9 @@ export class WarehouseMovementsService {
     const index = list.findIndex((o) => o.folio.trim() === folio.trim());
     if (index === -1) return null;
 
+    const target = list[index];
     const updated: WarehouseOutbound = {
-      ...list[index],
+      ...target,
       status: 'CANCELLED',
       cancellationReason: justification,
       cancelledAt: new Date().toLocaleString('es-MX'),
@@ -1483,6 +1501,61 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.outboundsSignal.set(newArr);
+
+    // Reintegrar UAs/Tarimas canceladas a stock disponible en memoria
+    if (target.items && target.items.length > 0) {
+      this.inventoryBatchesSignal.update((batches) => {
+        const updatedBatches = [...batches];
+        for (const item of target.items) {
+          const existingBatch = updatedBatches.find(
+            (b) =>
+              b.productId === item.productId &&
+              (b.lotNumber === item.lotNumber || !item.lotNumber)
+          );
+          if (existingBatch) {
+            if (!existingBatch.pallets.some((p) => p.id === item.id || p.palletCode === item.palletCode)) {
+              existingBatch.pallets.push({
+                id: item.id,
+                palletCode: item.palletCode,
+                description: item.description,
+                productId: item.productId,
+                pieces: item.pieces,
+                palletTypeId: (item.palletTypeId as PalletType) || 'MADERA_ESTANDAR',
+                palletTypeLabel: item.palletTypeLabel || 'Madera Estándar',
+              });
+              existingBatch.availablePallets = existingBatch.pallets.length;
+              existingBatch.totalPieces = existingBatch.pallets.reduce((s, p) => s + p.pieces, 0);
+            }
+          } else {
+            updatedBatches.push({
+              remisionNo: target.remisionNo || 'REM-RESTITUIDA',
+              client: target.clientName || 'Cliente',
+              productId: item.productId,
+              productName: item.description,
+              lotNumber: item.lotNumber || 'LOTE-RESTITUIDO',
+              elaborationDate: '',
+              expirationDate: item.expirationDate || '',
+              availablePallets: 1,
+              totalPieces: item.pieces,
+              locationCode: item.locationCode || 'A-01-N1',
+              isFifoSuggested: false,
+              pallets: [
+                {
+                  id: item.id,
+                  palletCode: item.palletCode,
+                  description: item.description,
+                  productId: item.productId,
+                  pieces: item.pieces,
+                  palletTypeId: (item.palletTypeId as PalletType) || 'MADERA_ESTANDAR',
+                  palletTypeLabel: item.palletTypeLabel || 'Madera Estándar',
+                },
+              ],
+            });
+          }
+        }
+        return updatedBatches;
+      });
+    }
 
     this.addOutboundAudit(folio, {
       id: `aud-out-canc-${Date.now()}`,
@@ -1495,8 +1568,12 @@ export class WarehouseMovementsService {
       details: [
         { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
         { fieldName: 'Motivo de Cancelación', newValue: justification },
+        { fieldName: 'UAs Reintegradas a Stock', newValue: (target.items?.length || 0).toString() },
       ],
     });
+
+    // Sincronizar con el backend
+    this.reloadInventoryBatches();
 
     return updated;
   }
@@ -1681,6 +1758,8 @@ export class WarehouseMovementsService {
     destinationAddress?: string;
     carrierCode: string;
     carrierName: string;
+    forkliftOperator?: string;
+    forkliftOperatorId?: string;
     driverName: string;
     economicNumber: string;
     tractorPlates: string;
@@ -1712,6 +1791,8 @@ export class WarehouseMovementsService {
       destinationAddress: dto.destinationAddress,
       carrierCode: dto.carrierCode,
       carrierName: dto.carrierName,
+      forkliftOperator: dto.forkliftOperator,
+      forkliftOperatorId: dto.forkliftOperatorId,
       driverName: dto.driverName,
       economicNumber: dto.economicNumber,
       tractorPlates: dto.tractorPlates,
