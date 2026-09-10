@@ -107,6 +107,9 @@ export interface ReceptionPalletItem {
   palletTypeId: PalletType; // Tipo Tarima key
   palletTypeLabel: string;  // Tipo Tarima nombre legible
   status?: string;          // Estado de la tarima (ej. SCANNED, STORED, DISPATCHED)
+  locationCode?: string;    // Ubicación física de la tarima
+  lotNumber?: string;       // Lote
+  expirationDate?: string;  // Fecha de caducidad
 }
 
 export interface ReceptionHeader {
@@ -263,6 +266,8 @@ export interface WarehouseOutbound {
   // Transportista / Vehículo (Snapshot)
   carrierCode: string;
   carrierName: string;
+  forkliftOperator?: string;
+  forkliftOperatorId?: string;
   driverName: string;
   economicNumber: string;
   tractorPlates: string;
