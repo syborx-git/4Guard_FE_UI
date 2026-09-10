@@ -1,13 +1,86 @@
-<!-- apps/rf-terminal/.../shared/components/rf-shell/rf-shell.component.html -->
-<!-- RF Shell — Layout contenedor con router-outlet y barra de navegación -->
+<!-- ================================================================
+     RF Shell — Layout Maestro PWA con Header Industrial y Nav Táctil
+     ================================================================ -->
 <div class="rf-shell">
 
-  <!-- ── Contenido principal (router-outlet) ────────────────────── -->
-  <main class="rf-shell__main">
+  <!-- ── 1. Top Industrial Header ──────────────────────────────── -->
+  <header class="rf-header" role="banner">
+    <!-- Brand / Title -->
+    <div class="rf-header__brand">
+      <a routerLink="/menu" class="rf-header__logo" aria-label="Ir al Menú Principal">
+        <span class="logo-badge">4G</span>
+        <div class="logo-text">
+          <span class="logo-title">4GUARD</span>
+          <span class="logo-subtitle">Terminal RF</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Central Status / Zone Lease Status (HU-155) -->
+    <div class="rf-header__status-bar">
+      <!-- Zone Lease Badge -->
+      <div 
+        class="lease-badge" 
+        [class.lease-badge--warning]="isLeaseWarning()"
+        title="Arrendamiento de Pasillo Activo (Zone Lease HU-155)">
+        <span class="material-symbols-outlined lease-icon">lock_clock</span>
+        <span class="lease-text">{{ activeZoneName() }}</span>
+        <span class="lease-timer">{{ leaseMinutesLeft() }}m</span>
+      </div>
+
+      <!-- Network / Sync Badge -->
+      @if (syncState.hasPending()) {
+        <div class="net-badge net-badge--pending" routerLink="/sync" title="Operaciones pendientes de sincronización">
+          <span class="pulse-dot"></span>
+          <span>{{ syncState.pendingCount() }} pend.</span>
+        </div>
+      } @else {
+        <div class="net-badge net-badge--online" title="Conexión en línea con servidor central">
+          <span class="material-symbols-outlined net-icon">wifi</span>
+          <span class="net-text">En Línea</span>
+        </div>
+      }
+    </div>
+
+    <!-- Right Controls: Theme Switcher + Scan Simulator + User Avatar -->
+    <div class="rf-header__actions">
+      <!-- Fast Scan Simulator Trigger -->
+      <button 
+        type="button" 
+        class="action-btn action-btn--scan" 
+        (click)="openScanSimulator()"
+        title="Simulador de Escáner Láser">
+        <span class="material-symbols-outlined">barcode_scanner</span>
+        <span class="action-btn__label">Simular</span>
+      </button>
+
+      <!-- Theme Switcher (Dark/Light) -->
+      <button 
+        type="button" 
+        class="action-btn action-btn--theme" 
+        (click)="toggleTheme()"
+        [title]="themeService.currentTheme() === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
+        [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Modo Claro' : 'Modo Oscuro'">
+        <span class="material-symbols-outlined">
+          {{ themeService.currentTheme() === 'dark' ? 'light_mode' : 'dark_mode' }}
+        </span>
+      </button>
+
+      <!-- User Operator Avatar / Badge -->
+      <div class="operator-chip" routerLink="/menu" title="Operador en Turno">
+        <div class="operator-avatar">
+          {{ authState.userInitials() || 'AG' }}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── 2. Main Content Area (Router Outlet) ──────────────────── -->
+  <main class="rf-shell__main" role="main">
     <router-outlet />
   </main>
 
-  <!-- ── Bottom Navigation Bar ─────────────────────────────────── -->
+  <!-- ── 3. Bottom Industrial Navigation Bar ───────────────────── -->
   <nav class="rf-shell__nav" role="navigation" aria-label="Navegación principal RF">
     @for (item of navItems; track item.path) {
       <a
@@ -15,10 +88,76 @@
         routerLinkActive="rf-shell__nav-item--active"
         class="rf-shell__nav-item"
         [attr.aria-label]="item.label">
-        <span class="rf-shell__nav-icon" aria-hidden="true">{{ item.icon }}</span>
+        <span class="material-symbols-outlined rf-shell__nav-icon" aria-hidden="true">{{ item.icon }}</span>
         <span class="rf-shell__nav-label">{{ item.label }}</span>
+        @if (item.badge) {
+          <span class="nav-item-badge">{{ item.badge }}</span>
+        }
       </a>
     }
   </nav>
+
+  <!-- ── 4. Modal Simulador de Escáner Láser ───────────────────── -->
+  @if (showScanModal()) {
+    <div class="scan-modal-backdrop" (click)="closeScanSimulator()">
+      <div class="scan-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="scan-modal__header">
+          <div class="modal-title-wrap">
+            <span class="material-symbols-outlined modal-icon">barcode_reader</span>
+            <h2 id="modal-title" class="scan-modal__title">Simulador de Escáner Láser</h2>
+          </div>
+          <button type="button" class="modal-close-btn" (click)="closeScanSimulator()" aria-label="Cerrar modal">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <p class="scan-modal__desc">
+          Dispara ráfagas de lectura automáticas para probar flujos de escaneo en navegadores sin hardware físico.
+        </p>
+
+        <div class="scan-presets">
+          <span class="presets-label">Códigos Predefinidos:</span>
+          <div class="presets-grid">
+            <button type="button" class="preset-chip" (click)="triggerSimulatedScan('SSCC-175012345000000018')">
+              <span class="preset-type">SSCC Tarima</span>
+              <span class="preset-code">...000018</span>
+            </button>
+            <button type="button" class="preset-chip" (click)="triggerSimulatedScan('SSCC-175012345000000025')">
+              <span class="preset-type">SSCC Tarima</span>
+              <span class="preset-code">...000025</span>
+            </button>
+            <button type="button" class="preset-chip preset-chip--loc" (click)="triggerSimulatedScan('A-01-01')">
+              <span class="preset-type">Ubicación</span>
+              <span class="preset-code">A-01-01</span>
+            </button>
+            <button type="button" class="preset-chip preset-chip--loc" (click)="triggerSimulatedScan('BAHIA-ANDEN-02')">
+              <span class="preset-type">Andén</span>
+              <span class="preset-code">ANDEN-02</span>
+            </button>
+            <button type="button" class="preset-chip preset-chip--sku" (click)="triggerSimulatedScan('7501055300012')">
+              <span class="preset-type">EAN SKU</span>
+              <span class="preset-code">Aceite 1L</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="custom-scan-wrap">
+          <label for="custom-barcode" class="custom-label">Código Personalizado:</label>
+          <div class="custom-input-group">
+            <input 
+              id="custom-barcode" 
+              type="text" 
+              [(ngModel)]="simulatedBarcode" 
+              placeholder="Ingresa código o SSCC..." 
+              class="custom-input" />
+            <button type="button" class="custom-fire-btn" (click)="triggerSimulatedScan(simulatedBarcode())">
+              <span class="material-symbols-outlined">bolt</span>
+              Disparar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 
 </div>
