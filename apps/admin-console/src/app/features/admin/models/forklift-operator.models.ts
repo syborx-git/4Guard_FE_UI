@@ -30,6 +30,9 @@ export interface ForkliftOperator {
   /** Código operativo auto-generado: MC-001, MC-002, etc. */
   code: string;
 
+  /** Puesto / Cargo operativo (e.g. Almacenista Montacargista, Líder de Turno, Mesa de Control). */
+  jobTitle?: string;
+
   firstName: string;
   lastNamePaternal: string;
   lastNameMaternal: string;
@@ -70,6 +73,7 @@ export interface ForkliftOperator {
 export interface CreateForkliftOperatorRequest {
   organizationId: string;
   branchId?: string;
+  jobTitle?: string;
   firstName: string;
   lastNamePaternal: string;
   lastNameMaternal: string;
@@ -83,6 +87,7 @@ export interface UpdateForkliftOperatorRequest {
   id: string;
   organizationId: string;
   branchId?: string;
+  jobTitle?: string;
   firstName: string;
   lastNamePaternal: string;
   lastNameMaternal: string;

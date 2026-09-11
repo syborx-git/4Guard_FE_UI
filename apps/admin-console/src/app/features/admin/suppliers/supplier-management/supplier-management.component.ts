@@ -214,7 +214,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     contactFullName: ['', [Validators.required, Validators.maxLength(150), noWhitespaceValidator]],
     contactJobTitle: ['', [Validators.maxLength(100)]],
     contactEmail:    ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-    contactPhone:    ['', [Validators.required, phoneValidator]],
+    contactPhone:    ['', [phoneValidator]],
     contactAltPhone: ['', [phoneValidator]],
 
     // Sección 4 — Dirección

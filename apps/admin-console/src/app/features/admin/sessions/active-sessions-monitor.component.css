@@ -7,6 +7,36 @@
   display: block;
   width: 100%;
   min-height: 100%;
+
+  --navy:           #172033;
+  --navy-mid:       #25324a;
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-subtle:    rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+
+  --app-bg-start:   #f8f6f1;
+  --app-bg-end:     #f2efe8;
+  --surface-card:   #ffffff;
+  --surface-secondary: #f4f6fb;
+  --surface-card-hover: rgba(197, 168, 107, 0.06);
+  --border:         rgba(76, 86, 105, 0.12);
+  --border-subtle:  rgba(76, 86, 105, 0.08);
+
+  --text-primary:   #17243d;
+  --text-secondary: #5a6477;
+  --text-tertiary:  #8b94a3;
+
+  --success:        #208457;
+  --success-bg:     rgba(32, 132, 87, 0.09);
+  --warning:        #a96b13;
+  --warning-bg:     rgba(213, 145, 39, 0.10);
+  --danger:         #c84949;
+  --danger-bg:      rgba(200, 73, 73, 0.09);
+
+  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:      'Inter', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 }
 
 /* ================================================================
@@ -23,8 +53,8 @@
       rgba(197, 157, 67, 0.09),
       transparent 31rem),
     linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
-  color: #17243d;
-  font-family: 'DM Sans', sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-body);
   animation: sessionsPageEnter 320ms ease both;
 }
 
@@ -997,7 +1027,35 @@
    Compatible con Angular View Encapsulation
    ================================================================ */
 
-:host-context(.theme-dark) {
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --navy:           #080e18;
+  --navy-mid:       #0f172a;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-subtle:    rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --app-bg-start:   #080e18;
+  --app-bg-end:     #0b1220;
+  --surface-card:   rgba(15, 23, 42, 0.95);
+  --surface-secondary: rgba(255, 255, 255, 0.04);
+  --surface-card-hover: rgba(208, 175, 103, 0.08);
+  --border:         rgba(255, 255, 255, 0.10);
+  --border-subtle:  rgba(255, 255, 255, 0.07);
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary:  #64748b;
+
+  --glass-bg:       rgba(15, 23, 42, 0.95);
+  --glass-bg-strong: rgba(15, 23, 42, 0.98);
+  --glass-border:   rgba(255, 255, 255, 0.10);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40);
+  --divider:        rgba(255, 255, 255, 0.08);
+
   color: var(--text-primary);
 }
 

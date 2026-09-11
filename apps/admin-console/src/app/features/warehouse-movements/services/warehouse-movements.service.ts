@@ -36,6 +36,7 @@ import { WarehouseMovementsApiService } from './warehouse-movements-api.service'
 const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   'A-01-N1': {
     locationCode: 'A-01-N1',
+    locationId: '00000000-0000-0000-0006-000000000001',
     warehouseName: 'Almacén Central',
     zone: 'Andén Recibo A',
     aisle: 'Pasillo A1',
@@ -55,6 +56,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'B-03-N2': {
     locationCode: 'B-03-N2',
+    locationId: '00000000-0000-0000-0006-000000000002',
     warehouseName: 'Almacén Central',
     zone: 'Rack Principal B',
     aisle: 'Pasillo B2',
@@ -66,13 +68,14 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
     totalPallets: 3,
     totalPieces: 1440,
     pallets: [
-      { id: 'pal-dummy-201', palletNumber: 1, palletCode: '0376130492001', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
-      { id: 'pal-dummy-202', palletNumber: 2, palletCode: '0376130492002', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
-      { id: 'pal-dummy-203', palletNumber: 3, palletCode: '0376130492003', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP', palletTypeLabel: 'Tarima CHEP', pieces: 480 },
+      { id: 'pal-dummy-201', palletNumber: 1, palletCode: '0376130492001', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
+      { id: 'pal-dummy-202', palletNumber: 2, palletCode: '0376130492002', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
+      { id: 'pal-dummy-203', palletNumber: 3, palletCode: '0376130492003', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
     ],
   },
   'C-05-N1': {
     locationCode: 'C-05-N1',
+    locationId: '00000000-0000-0000-0006-000000000003',
     warehouseName: 'Almacén Central',
     zone: 'Cámara Alta Rotación C',
     aisle: 'Pasillo C1',
@@ -90,6 +93,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'D-02-N3': {
     locationCode: 'D-02-N3',
+    locationId: '00000000-0000-0000-0006-000000000004',
     warehouseName: 'Almacén Central',
     zone: 'Almacenaje General D',
     aisle: 'Pasillo D3',
@@ -110,6 +114,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'E-01-N1': {
     locationCode: 'E-01-N1',
+    locationId: '00000000-0000-0000-0006-000000000005',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres E',
     aisle: 'Pasillo E1',
@@ -124,6 +129,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'E-02-N1': {
     locationCode: 'E-02-N1',
+    locationId: '00000000-0000-0000-0006-000000000006',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres E',
     aisle: 'Pasillo E1',
@@ -138,6 +144,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'F-04-N2': {
     locationCode: 'F-04-N2',
+    locationId: '00000000-0000-0000-0006-000000000007',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres F',
     aisle: 'Pasillo F2',
@@ -169,9 +176,22 @@ export class WarehouseMovementsService {
   private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
   private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
-  // Catálogos Reactivos (inician vacíos hasta cargar del BE)
-  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([]);
-  private readonly clientsSignal = signal<ClientItem[]>([]);
+  // Catálogos Reactivos (con fallback de datos demo)
+  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([
+    { code: 'TR-01', name: 'TransNoreste Express' },
+    { code: 'TR-02', name: 'Fletes Directos de Puebla' },
+    { code: 'TR-03', name: 'Transportes Castores' },
+    { code: 'TR-04', name: 'Logística Flecha Amarilla' },
+    { code: 'TR-05', name: 'Transportes Norte de México' },
+  ]);
+
+  private readonly clientsSignal = signal<ClientItem[]>([
+    { code: 'CLI-01', name: 'Lala S.A. de C.V.' },
+    { code: 'CLI-02', name: 'Plásticos y Envases de México' },
+    { code: 'CLI-03', name: 'Grupo Bimbo S.A.B.' },
+    { code: 'CLI-04', name: 'Nestlé México S.A.' },
+    { code: 'CLI-05', name: 'Comercializadora Alpura' },
+  ]);
 
   private readonly rampsSignal = signal<RampItem[]>([
     { code: 'R-01', rampNumber: 1, name: 'Rampa 01' },
@@ -188,8 +208,20 @@ export class WarehouseMovementsService {
     { code: 'R-12', rampNumber: 12, name: 'Rampa 12' },
   ]);
 
-  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
-  private readonly suppliersSignal = signal<{ code: string; name: string }[]>([]);
+  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([
+    { code: 'OP-01', name: 'Pablo Hernández (Montacargas M-01)' },
+    { code: 'OP-02', name: 'Carlos Ruiz (Montacargas M-02)' },
+    { code: 'OP-03', name: 'Juan Pérez (Montacargas M-03)' },
+    { code: 'OP-04', name: 'Roberto Gómez (Montacargas M-04)' },
+    { code: 'OP-05', name: 'Miguel Torres (Montacargas M-05)' },
+  ]);
+  private readonly suppliersSignal = signal<{ code: string; name: string }[]>([
+    { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
+    { code: 'SUP-02', name: 'ENVASES Y PLÁSTICOS INTERNACIONALES' },
+    { code: 'SUP-03', name: 'PRODUCTOS LÁCTEOS DE PUEBLA' },
+    { code: 'SUP-04', name: 'DISTRIBUIDORA AGROALIMENTARIA S.A.' },
+    { code: 'SUP-05', name: 'EMBALAJES Y EMPAQUES DEL NORTE' },
+  ]);
 
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();
@@ -216,6 +248,7 @@ export class WarehouseMovementsService {
 
   // Bahías y su stock (inicia con datos dummy para Cambio de Almacén)
   private readonly locationsSignal = signal<Record<string, LocationStockInfo>>(INITIAL_DUMMY_LOCATIONS);
+  private lastFetchedLocations: any[] = [];
 
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
@@ -297,13 +330,13 @@ export class WarehouseMovementsService {
         sealNumber: `SL-${Math.floor(Math.random() * 89999 + 10000)}`,
       },
       lotNumber: `LOT-2026-${String.fromCharCode(65 + Math.floor(Math.random() * 6))}${Math.floor(Math.random() * 9 + 1)}`,
-      elaborationDate: '2026-01-15',
-      expirationDate: '2026-12-30',
-      productId: '12572733',
-      productName: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: 480,
-      selectedPalletType: 'MADERA_ESTANDAR',
+      elaborationDate: '',
+      expirationDate: '',
+      productId: '',
+      productName: '',
+      supplierName: '',
+      piecesPerPallet: 0,
+      selectedPalletType: '' as any,
       observations: `Ingreso registrado en caseta andén ${randomRamp}`,
       pallets: [],
       createdAt: randomTime,
@@ -365,56 +398,18 @@ export class WarehouseMovementsService {
     });
 
     // 4. Ubicaciones / Bahías y 5. Lotes de inventario (FIFO/FEFO)
-    let fetchedLocations: any[] = [];
-    let fetchedBatches: any[] = [];
-
     this.movementsApi.getLocations().subscribe({
       next: (locs: any) => {
-        fetchedLocations = locs || [];
-        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
+        this.lastFetchedLocations = locs || [];
+        this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
       },
       error: () => {},
     });
 
-    this.movementsApi.getInventoryBatches().subscribe({
-      next: (batches: any) => {
-        fetchedBatches = (batches || []).map((b: any) => ({
-          remisionNo: b.remisionNo || 'REM-S/N',
-          client: b.clientName || 'Cliente WMS',
-          productId: b.skuCode || '',
-          productName: b.productName || 'Producto',
-          lotNumber: b.lotNumber || '',
-          elaborationDate: b.manufacturingDate || '',
-          expirationDate: b.expirationDate || '',
-          availablePallets: b.availablePallets || (b.pallets ? b.pallets.length : 0),
-          totalPieces: b.totalPieces || 0,
-          locationCode: b.locationCode || '',
-          isFifoSuggested: !!b.isFifoSuggested,
-          pallets: (b.pallets || []).map((p: any) => ({
-            id: p.itemId || p.id,
-            palletCode: p.palletCode || p.sscc || '',
-            description: p.description || b.productName || '',
-            productId: p.skuCode || b.skuCode || '',
-            pieces: p.pieces || 0,
-            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
-            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
-          })),
-        }));
-        this.inventoryBatchesSignal.set(fetchedBatches);
-        this.syncLocationsAndInventory(fetchedLocations, fetchedBatches);
-      },
-      error: () => {},
-    });
+    this.reloadInventoryBatches();
 
     // 6. Recepciones
-    this.movementsApi.getReceptions().subscribe({
-      next: (receptions: any) => {
-        this.receptionsSignal.set(
-          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
-        );
-      },
-      error: () => {},
-    });
+    this.reloadReceptions();
 
     // 7. Traspasos
     this.movementsApi.getTransfers().subscribe({
@@ -454,22 +449,35 @@ export class WarehouseMovementsService {
             clientName: o.clientName || '',
             destinationId: o.destinationId || '',
             destinationName: o.destinationName || '',
-            destinationAddress: '',
+            destinationAddress: o.destinationAddress || '',
             carrierCode: o.carrierId || '',
             carrierName: o.carrierName || '',
+            forkliftOperator: o.forkliftOperatorName || '',
+            forkliftOperatorId: o.forkliftOperatorId || '',
             driverName: o.driverName || '',
-            economicNumber: '',
+            economicNumber: o.economicNumber || '',
             tractorPlates: o.tractorPlates || '',
             boxPlates: o.boxPlates || '',
             transportType: o.transportType || 'TRAILER',
             sealNumber: o.sealNumber || '',
             remisionNo: o.remisionNo || '',
-            items: [],
+            items: (o.items || []).map((it: any) => ({
+              id: it.id || it.itemId,
+              palletCode: it.palletCode,
+              productId: it.skuCode || it.productId || '',
+              description: it.skuDescription || it.description || '',
+              lotNumber: it.lotNumber || '',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : '',
+              pieces: it.pieces || 0,
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              locationCode: it.locationCode || 'N/A',
+            })),
             totalPallets: o.totalPallets || 0,
             totalPieces: o.totalPieces || 0,
             distinctSkus: o.distinctSkus || 0,
             dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
-            dispatchedBy: o.createdBy || '',
+            dispatchedBy: o.createdBy || 'Admin',
             timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
           }))
         );
@@ -505,6 +513,97 @@ export class WarehouseMovementsService {
             }))
           );
         }
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadInventoryBatches(clientId?: string): void {
+    const options: any = {};
+    if (clientId && clientId.includes('-')) {
+      options.clientId = clientId;
+    }
+    this.movementsApi.getInventoryBatches(options).subscribe({
+      next: (batches: any) => {
+        const receptions = this.receptionsSignal();
+        const fetchedBatches = (batches || []).map((b: any) => {
+          let rem = b.remisionNo || 'REM-S/N';
+          // Buscar si existe una recepción activa que tenga un número de remisión actualizado para este producto/lote/bahía
+          const recMatch = receptions.find(
+            (r) =>
+              r.status !== 'CANCELLED' &&
+              ((b.productId && (r.skuCode === b.productId || r.productId === b.productId)) ||
+                (b.skuCode && (r.skuCode === b.skuCode || r.productId === b.skuCode)) ||
+                (b.productName && r.productName && r.productName.toLowerCase().trim() === b.productName.toLowerCase().trim()) ||
+                (b.locationCode && r.storageLocation && r.storageLocation.toUpperCase() === b.locationCode.toUpperCase()))
+          );
+          if (recMatch && recMatch.checkIn?.docNumber) {
+            rem = recMatch.checkIn.docNumber;
+          }
+
+          return {
+            remisionNo: rem,
+            client: b.clientName || 'Cliente WMS',
+            productId: b.skuCode || b.productId || '',
+            productName: b.productName || 'Producto',
+            lotNumber: b.lotNumber || '',
+            elaborationDate: b.manufacturingDate || '',
+            expirationDate: b.expirationDate || '',
+            availablePallets: b.availablePallets || (b.pallets ? b.pallets.length : 0),
+            totalPieces: b.totalPieces || 0,
+            locationCode: b.locationCode || '',
+            isFifoSuggested: !!b.isFifoSuggested,
+            pallets: (b.pallets || []).map((p: any) => ({
+              id: p.itemId || p.id,
+              palletCode: p.palletCode || p.sscc || '',
+              description: p.description || b.productName || '',
+              productId: p.skuCode || b.skuCode || '',
+              pieces: p.pieces || 0,
+              palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+              palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+            })),
+          };
+        });
+        this.inventoryBatchesSignal.set(fetchedBatches);
+        this.syncLocationsAndInventory(this.lastFetchedLocations, fetchedBatches);
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadReceptions(): void {
+    this.movementsApi.getReceptions().subscribe({
+      next: (receptions: any) => {
+        this.receptionsSignal.set(
+          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
+        );
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadTransfers(): void {
+    this.movementsApi.getTransfers().subscribe({
+      next: (transfers: any) => {
+        this.transfersSignal.set(
+          (transfers || []).map((t: any) => ({
+            id: t.id,
+            folio: t.folio,
+            status: t.status,
+            forkliftOperator: t.forkliftOperatorName || '',
+            forkliftOperatorId: t.forkliftOperatorId,
+            originLocation: t.originLocationCode || '',
+            destinationLocation: t.destinationLocationCode || '',
+            reasonId: t.reasonCode,
+            reasonLabel: t.reasonLabel || t.reasonCode,
+            pallets: [],
+            totalPallets: t.totalPallets || 0,
+            totalPieces: t.totalPieces || 0,
+            distinctSkus: t.distinctSkus || 0,
+            transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
+            transferredBy: t.createdBy || '',
+          }))
+        );
       },
       error: () => {},
     });
@@ -606,19 +705,27 @@ export class WarehouseMovementsService {
       {
         id: `aud-default-${folio}`,
         action: 'RECEPCION_CREADA',
-        actionLabel: 'Registro de Movimiento en WMS',
-        username: 'Operador WMS',
+        actionLabel: 'Pre-Recepción Registrada en Caseta',
+        username: 'Caseta de Seguridad',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio', newValue: folio }],
+        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
       },
     ];
+  }
+
+  setReceptionAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
+    this.receptionAuditMap.update((map) => {
+      const key = folio.trim();
+      return { ...map, [key]: entries };
+    });
   }
 
   addReceptionAudit(folio: string, entry: MovementAuditEntry): void {
     this.receptionAuditMap.update((map) => {
       const key = folio.trim();
       const current = map[key] || [];
-      return { ...map, [key]: [entry, ...current] };
+      const filtered = current.filter((e) => e.id !== entry.id);
+      return { ...map, [key]: [entry, ...filtered] };
     });
   }
 
@@ -628,19 +735,27 @@ export class WarehouseMovementsService {
       {
         id: `aud-default-${folio}`,
         action: 'TRASPASO_REGISTRADO',
-        actionLabel: 'Reubicación Registrada en Catálogo',
+        actionLabel: 'Reubicación de Tarima Registrada',
         username: 'Operador WMS',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio', newValue: folio }],
+        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
       },
     ];
+  }
+
+  setTransferAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
+    this.transferAuditMap.update((map) => {
+      const key = folio.trim();
+      return { ...map, [key]: entries };
+    });
   }
 
   addTransferAudit(folio: string, entry: MovementAuditEntry): void {
     this.transferAuditMap.update((map) => {
       const key = folio.trim();
       const current = map[key] || [];
-      return { ...map, [key]: [entry, ...current] };
+      const filtered = current.filter((e) => e.id !== entry.id);
+      return { ...map, [key]: [entry, ...filtered] };
     });
   }
 
@@ -650,20 +765,120 @@ export class WarehouseMovementsService {
       {
         id: `aud-default-${folio}`,
         action: 'SALIDA_REGISTRADA',
-        actionLabel: 'Despacho Registrado en WMS',
+        actionLabel: 'Despacho Outbound Registrado',
         username: 'Operador WMS',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio', newValue: folio }],
+        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
       },
     ];
+  }
+
+  setOutboundAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
+    this.outboundAuditMap.update((map) => {
+      const key = folio.trim();
+      return { ...map, [key]: entries };
+    });
   }
 
   addOutboundAudit(folio: string, entry: MovementAuditEntry): void {
     this.outboundAuditMap.update((map) => {
       const key = folio.trim();
       const current = map[key] || [];
-      return { ...map, [key]: [entry, ...current] };
+      const filtered = current.filter((e) => e.id !== entry.id);
+      return { ...map, [key]: [entry, ...filtered] };
     });
+  }
+
+  // Traducción y formateo profesional de campos para auditores
+  formatFieldLabel(field: string): string {
+    if (!field) return 'Dato';
+    const clean = field.trim();
+    const map: Record<string, string> = {
+      docNumber: 'No. de Remisión / Documento',
+      doc_number: 'No. de Remisión / Documento',
+      remisionNo: 'No. de Remisión / Documento',
+      remision: 'No. de Remisión / Documento',
+      status: 'Estado Operativo',
+      reason: 'Motivo / Justificación',
+      cancellationReason: 'Motivo de Cancelación',
+      authorizedBy: 'Autorizado Por (Supervisor)',
+      authorized_by: 'Autorizado Por (Supervisor)',
+      cancelledBy: 'Cancelado Por',
+      client: 'Cliente / Propietario',
+      clientId: 'Cliente / Propietario',
+      clientName: 'Cliente / Propietario',
+      supplier: 'Proveedor',
+      supplierId: 'Proveedor',
+      supplierName: 'Proveedor',
+      driver: 'Operador del Transporte',
+      driverName: 'Operador del Transporte',
+      plates: 'Placas (Tractor / Caja)',
+      tractorPlates: 'Placas del Tracto',
+      boxPlates: 'Placas de la Caja',
+      carrier: 'Línea Transportista',
+      carrierId: 'Línea Transportista',
+      carrierName: 'Línea Transportista',
+      storageLocation: 'Bahía Asignada de Almacenaje',
+      storageLocationId: 'Bahía Asignada de Almacenaje',
+      locationCode: 'Ubicación de Almacén',
+      sourceLocation: 'Ubicación Origen',
+      source_location: 'Ubicación Origen',
+      origin: 'Ubicación Origen',
+      targetLocation: 'Ubicación Destino',
+      target_location: 'Ubicación Destino',
+      destination: 'Ubicación Destino',
+      palletCode: 'Código de Tarima (UA)',
+      pallet_code: 'Código de Tarima (UA)',
+      lotNumber: 'Número de Lote',
+      lot_number: 'Número de Lote',
+      lot: 'Número de Lote',
+      piecesPerPallet: 'Piezas por Tarima',
+      pieces_per_pallet: 'Piezas por Tarima',
+      totalPallets: 'Tarimas Totales (UAs)',
+      pallets: 'Tarimas Totales (UAs)',
+      totalPieces: 'Piezas Totales',
+      pieces: 'Piezas Totales',
+      leader: 'Líder de Turno Responsable',
+      leaderAuthorizedBy: 'Líder de Turno Responsable',
+      sku: 'Código SKU / Producto',
+      skuId: 'Código SKU / Producto',
+      skuCode: 'Código SKU / Producto',
+      palletType: 'Tipo de Tarima',
+      pallet_type: 'Tipo de Tarima',
+      observations: 'Observaciones',
+      folio: 'Folio de Operación',
+      transferredBy: 'Operador Responsable',
+      transferred_by: 'Operador Responsable',
+      forkliftOperator: 'Operador de Montacargas',
+      operator: 'Operador de Montacargas',
+      elaborationDate: 'Fecha de Elaboración',
+      expirationDate: 'Fecha de Caducidad',
+      sealNumber: 'Número de Sello / Marchamo',
+    };
+    return map[clean] || clean;
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null' || value === 'N/A') {
+      return 'Sin especificar';
+    }
+    const str = String(value).trim();
+    const map: Record<string, string> = {
+      REGISTERED: 'En Proceso / Registrado en Caseta',
+      COMPLETED: 'Descarga Finalizada / En Stock',
+      CANCELLED: 'Cancelado',
+      DRAFT: 'Borrador Guardado',
+      PENDING: 'Pendiente',
+      IN_PROGRESS: 'En Tránsito / En Curso',
+      DISPATCHED: 'Despachado / Salida Confirmada',
+      MADERA_ESTANDAR: 'Madera Estándar (40x48)',
+      PLASTICO: 'Plástico Higiénico',
+      CHEP: 'Tarima CHEP Azul',
+      EURO: 'Euro-Tarima',
+      true: 'Sí / Conforme',
+      false: 'No / Sin registro',
+    };
+    return map[str] || str;
   }
 
   // Genera un Folio Consecutivo de Recepción (ej. 26510)
@@ -738,14 +953,14 @@ export class WarehouseMovementsService {
             carrierLine: res.carrierName || data.carrierLine,
             client: res.clientName || data.client,
           },
-          lotNumber: res.lotNumber || data.lotNumber || 'LOT-2026-A1',
-          elaborationDate: res.elaborationDate || data.elaborationDate || '2026-01-15',
-          expirationDate: res.expirationDate || data.expirationDate || '2026-11-15',
-          productId: res.productSku || '12572733',
-          productName: res.productDescription || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-          supplierName: res.supplierName || 'LE MEXICO S.A DE C.V',
-          piecesPerPallet: res.piecesPerPallet || 480,
-          selectedPalletType: (res.palletType as PalletType) || 'MADERA_ESTANDAR',
+          lotNumber: res.lotNumber || data.lotNumber || '',
+          elaborationDate: res.elaborationDate || data.elaborationDate || '',
+          expirationDate: res.expirationDate || data.expirationDate || '',
+          productId: res.skuCode || res.productSku || '',
+          productName: res.productDescription || res.productName || '',
+          supplierName: res.supplierName || '',
+          piecesPerPallet: res.piecesPerPallet != null ? Number(res.piecesPerPallet) : 0,
+          selectedPalletType: (res.palletType as PalletType) || ('' as any),
           observations: res.observations || '',
           pallets: (res.pallets || []).map((p: any) => ({
             id: p.id,
@@ -787,54 +1002,67 @@ export class WarehouseMovementsService {
 
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
-    const pType = (r.palletType as PalletType) || 'MADERA_ESTANDAR';
+    if (!r) return {} as ReceptionHeader;
+    const hasSkuOrPallets = !!(r.skuId || r.skuCode || r.productSku || r.productId || (r.pallets && r.pallets.length > 0));
+    const pType = hasSkuOrPallets ? ((r.palletType as PalletType) || (r.selectedPalletType as PalletType) || ('' as any)) : ('' as any);
     const pallets = (r.pallets || []).map((p: any) => ({
-      id: p.id,
+      id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
       palletNumber: p.palletNumber,
-      palletCode: p.palletCode,
-      productId: p.skuCode || r.skuCode || '',
+      palletCode: p.palletCode || p.sscc || '',
+      productId: p.skuCode || r.skuCode || r.productId || '',
       description: p.description || p.productDescription || r.productName || '',
       supplierName: p.supplierName || r.supplierName || '',
       pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
-      palletTypeId: p.palletTypeId || p.palletType || pType,
-      palletTypeLabel: p.palletTypeLabel || PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+      palletTypeId: p.palletTypeId || p.palletType || pType || 'MADERA_ESTANDAR',
+      palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
       observations: p.observations || '',
       status: p.status || 'SCANNED',
     }));
+
+    const resolvedDoc =
+      r.docNumber ||
+      r.doc_number ||
+      r.checkIn?.docNumber ||
+      r.checkIn?.doc_number ||
+      r.remisionNo ||
+      r.remision_no ||
+      r.documentNumber ||
+      '';
 
     return {
       id: r.id,
       folio: r.folio || '',
       status: r.status || 'REGISTERED',
       checkIn: {
-        carrierLine: r.carrierName || '',
-        carrierLineCode: r.carrierId || '',
-        receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : '',
-        docNumber: r.docNumber || '',
-        docDate: r.docDate || '',
-        client: r.clientName || '',
-        clientCode: r.clientId || '',
-        rampNumber: r.rampName ? (parseInt(r.rampName.replace(/\D/g, ''), 10) || 4) : 4,
-        rampCode: r.rampId || '',
-        forkliftOperator: r.forkliftOperatorName || '',
-        forkliftOperatorCode: r.forkliftOperatorId || '',
-        driverName: r.driverName || '',
-        tractorPlates: r.tractorPlates || '',
-        boxPlates: r.boxPlates || '',
-        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers[0] : (r.sealNumber || ''),
+        carrierLine: r.carrierName || r.carrierLine || r.checkIn?.carrierLine || '',
+        carrierLineCode: r.carrierId || r.carrierLineCode || r.checkIn?.carrierLineCode || '',
+        receptionTime: r.receptionTime ? String(r.receptionTime).substring(0, 5) : (r.checkIn?.receptionTime || ''),
+        docNumber: String(resolvedDoc || '').trim(),
+        docDate: r.docDate || r.checkIn?.docDate || '',
+        client: r.clientName || r.client || r.checkIn?.client || '',
+        clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
+        rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 4) : (r.rampNumber || r.checkIn?.rampNumber || 4),
+        rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
+        forkliftOperator: r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '',
+        forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
+        driverName: r.driverName || r.checkIn?.driverName || '',
+        tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
+        boxPlates: r.boxPlates || r.checkIn?.boxPlates || '',
+        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers[0] : (r.sealNumber || r.checkIn?.sealNumber || ''),
       },
-      lotNumber: r.lotNumber || '',
-      elaborationDate: r.elaborationDate || '',
-      expirationDate: r.expirationDate || '',
-      productId: r.skuCode || r.skuId || '',
+      lotNumber: r.lotNumber || r.checkIn?.lotNumber || '',
+      elaborationDate: r.elaborationDate || r.checkIn?.elaborationDate || '',
+      expirationDate: r.expirationDate || r.checkIn?.expirationDate || '',
+      productId: r.skuCode || r.skuId || r.productId || '',
+      skuCode: r.skuCode || '',
       productName: r.productName || '',
       supplierName: r.supplierName || '',
-      piecesPerPallet: r.piecesPerPallet || (pallets.length > 0 ? pallets[0].pieces : 480),
+      piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
-      storageLocation: r.storageLocationCode || '',
-      observations: r.observations || '',
+      storageLocation: r.storageLocationCode || r.storageLocation || '',
+      observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
       pallets: pallets,
-      createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : '',
+      createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : (r.checkIn?.receptionTime || ''),
       completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
       cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
       capturedBy: r.capturedBy || '',
@@ -851,23 +1079,52 @@ export class WarehouseMovementsService {
     productsList: any[],
     suppliersList: any[]
   ): Observable<ReceptionHeader> {
-    const prodItem = productsList.find((p) => p.id === formVals.productId || p.name === formVals.productName);
-    const skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
+    const prodItem = productsList.find(
+      (p) =>
+        (formVals.productId && (p.code === formVals.productId || p.id === formVals.productId)) ||
+        (p.name && formVals.productName && p.name.trim().toLowerCase() === formVals.productName.trim().toLowerCase()) ||
+        (p.code && formVals.productName && formVals.productName.includes(p.code))
+    );
+    let skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
       ? prodItem.id
       : (formVals.productId && formVals.productId.includes('-') ? formVals.productId : null);
 
-    const supItem = suppliersList.find((s) => s.name === formVals.supplierName || s.code === formVals.supplierName);
-    const supplierId = (supItem && supItem.code && supItem.code.includes('-'))
-      ? supItem.code
-      : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null);
+    if (skuId && skuId.startsWith('00000000-0000-0000-0007-')) {
+      const num = parseInt(skuId.slice(-4), 10);
+      if (!isNaN(num)) {
+        const v10 = (1000 + num).toString().padStart(4, '0');
+        skuId = `0000${v10}-0000-0000-0000-00000000${v10}`;
+      }
+    }
+
+    const supItem = suppliersList.find(
+      (s) =>
+        s.name === formVals.supplierName ||
+        s.commercialName === formVals.supplierName ||
+        s.code === formVals.supplierName ||
+        s.id === formVals.supplierId
+    );
+    let supplierId = (supItem && supItem.id && supItem.id.includes('-'))
+      ? supItem.id
+      : (supItem && supItem.code && supItem.code.includes('-')
+          ? supItem.code
+          : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null));
+
+    if (supplierId && supplierId.startsWith('00000000-0000-0000-0003-')) {
+      const num = parseInt(supplierId.slice(-4), 10);
+      if (!isNaN(num)) {
+        const v10 = (30 + num).toString().padStart(2, '0');
+        supplierId = `000000${v10}-0000-0000-0000-0000000000${v10}`;
+      }
+    }
 
     const paramPayload = {
       skuId: skuId,
       supplierId: supplierId,
       lotNumber: formVals.lotNumber,
       expirationDate: formVals.expirationDate || null,
-      piecesPerPallet: Number(formVals.piecesPerPallet) || 480,
-      palletType: formVals.selectedPalletType || 'MADERA_ESTANDAR',
+      piecesPerPallet: formVals.piecesPerPallet != null ? Number(formVals.piecesPerPallet) : 0,
+      palletType: formVals.selectedPalletType || null,
       observations: formVals.observations || '',
     };
 
@@ -890,7 +1147,7 @@ export class WarehouseMovementsService {
       concatMap(() => this.movementsApi.getReceptionById(receptionId)),
       map((freshRec: any) => {
         const mapped = this.mapReceptionResponseToHeader(freshRec);
-        this.updateReception(receptionId, mapped);
+        this.updateReception(receptionId, mapped, true);
         return mapped;
       })
     );
@@ -921,7 +1178,7 @@ export class WarehouseMovementsService {
         mapped.status = 'COMPLETED';
         mapped.completedAt = mapped.completedAt || new Date().toLocaleString('es-MX');
         mapped.leaderAuthorizedBy = leaderName || mapped.leaderAuthorizedBy;
-        this.updateReception(receptionId, mapped);
+        this.updateReception(receptionId, mapped, true);
         this.addReceptionAudit(mapped.folio, {
           id: `aud-rec-comp-${Date.now()}`,
           action: 'RECEPCION_COMPLETADA',
@@ -944,14 +1201,14 @@ export class WarehouseMovementsService {
       folio: assignedFolio,
       status: 'REGISTERED',
       checkIn: data,
-      lotNumber: data.lotNumber || 'LOT-2026-A1',
-      elaborationDate: data.elaborationDate || '2026-01-15',
-      expirationDate: data.expirationDate || '2026-11-15',
-      productId: '12572733',
-      productName: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: 'LE MEXICO S.A DE C.V',
-      piecesPerPallet: 480,
-      selectedPalletType: 'MADERA_ESTANDAR',
+      lotNumber: data.lotNumber || '',
+      elaborationDate: data.elaborationDate || '',
+      expirationDate: data.expirationDate || '',
+      productId: '',
+      productName: '',
+      supplierName: '',
+      piecesPerPallet: 0,
+      selectedPalletType: '' as any,
       observations: '',
       pallets: [],
       createdAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
@@ -977,7 +1234,7 @@ export class WarehouseMovementsService {
   }
 
   // Actualiza datos de una recepción en progreso (por folio o id)
-  updateReception(folioOrId: string, partial: Partial<ReceptionHeader>): ReceptionHeader | null {
+  updateReception(folioOrId: string, partial: Partial<ReceptionHeader>, skipAudit = false): ReceptionHeader | null {
     const list = this.receptionsSignal();
     const cleanKey = (folioOrId || '').trim();
     const index = list.findIndex(
@@ -1002,17 +1259,19 @@ export class WarehouseMovementsService {
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
 
-    this.addReceptionAudit(updated.folio, {
-      id: `aud-rec-upd-${Date.now()}`,
-      action: 'RECEPCION_ACTUALIZADA',
-      actionLabel: 'Actualización de Datos de Recepción',
-      username: partial.capturedBy || 'Operador WMS',
-      timestamp: new Date().toLocaleString('es-MX'),
-      details: [
-        { fieldName: 'Lugar de Almacenaje', newValue: partial.storageLocation || '' },
-        { fieldName: 'Total Tarimas', newValue: partial.pallets?.length.toString() || '0' },
-      ],
-    });
+    if (!skipAudit && partial.storageLocation) {
+      this.addReceptionAudit(updated.folio, {
+        id: `aud-rec-upd-${Date.now()}`,
+        action: 'RECEPCION_ACTUALIZADA',
+        actionLabel: 'Actualización de Datos de Recepción',
+        username: partial.capturedBy || updated.capturedBy || 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Lugar de Almacenaje', newValue: partial.storageLocation || 'Andén / Rampa' },
+          { fieldName: 'Total Tarimas', newValue: String(updated.pallets?.length || 0) },
+        ],
+      });
+    }
 
     return updated;
   }
@@ -1083,22 +1342,72 @@ export class WarehouseMovementsService {
     return updated;
   }
 
-  // Modifica el número de remisión/documento de la recepción
-  changeRemision(folio: string, newDocNumber: string, reason: string): ReceptionHeader | null {
+  // Modifica el número de remisión/documento de la recepción con autorización
+  changeRemision(
+    folio: string,
+    newDocNumber: string,
+    reason: string,
+    adminUser: string
+  ): ReceptionHeader | null {
     const rec = this.findReceptionByFolio(folio);
     if (!rec) return null;
 
-    const updated = this.updateReception(folio, {
-      checkIn: {
-        ...rec.checkIn,
-        docNumber: newDocNumber,
+    const oldDoc = rec.checkIn?.docNumber || 'N/A';
+    const updated = this.updateReception(
+      folio,
+      {
+        checkIn: {
+          ...rec.checkIn,
+          docNumber: newDocNumber,
+        },
       },
-      observations: `${rec.observations || ''} | Cambio Remisión: ${rec.checkIn?.docNumber} -> ${newDocNumber} (${reason})`.trim(),
+      true // skipAudit = true para no duplicar el evento genérico antes de REMISION_MODIFICADA
+    );
+
+    // 1. Actualizar lotes de inventario (inventoryBatchesSignal) en memoria de inmediato
+    this.inventoryBatchesSignal.update((batches) =>
+      batches.map((b) => {
+        if (b.remisionNo === oldDoc || (rec.storageLocation && b.locationCode === rec.storageLocation)) {
+          return { ...b, remisionNo: newDocNumber };
+        }
+        return b;
+      })
+    );
+
+    // 2. Actualizar ubicaciones / bahías (locationsSignal)
+    const locs = { ...this.locationsSignal() };
+    Object.keys(locs).forEach((locCode) => {
+      const loc = locs[locCode];
+      let changed = false;
+      const updatedPallets = loc.pallets.map((p) => {
+        if (p.observations && p.observations.includes(oldDoc)) {
+          changed = true;
+          return { ...p, observations: p.observations.replace(oldDoc, newDocNumber) };
+        }
+        return p;
+      });
+      if (changed) {
+        locs[locCode] = { ...loc, pallets: updatedPallets };
+      }
+    });
+    this.locationsSignal.set(locs);
+
+    this.addReceptionAudit(folio, {
+      id: `aud-rec-rem-${Date.now()}`,
+      action: 'REMISION_MODIFICADA',
+      actionLabel: 'Modificación de No. de Remisión',
+      username: adminUser,
+      authorizedBy: adminUser,
+      reason: reason,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'No. de Remisión / Documento', oldValue: oldDoc, newValue: newDocNumber },
+      ],
     });
 
-    if (rec.id) {
-      this.movementsApi.changeRemision(rec.id, { newDocNumber, reason }).subscribe({ error: (_: any) => {} });
-    }
+    // 3. Re-consultar el backend para actualizar inventory batches y recepciones frescas
+    this.reloadInventoryBatches();
+    this.reloadReceptions();
 
     return updated;
   }
@@ -1180,8 +1489,9 @@ export class WarehouseMovementsService {
     const index = list.findIndex((o) => o.folio.trim() === folio.trim());
     if (index === -1) return null;
 
+    const target = list[index];
     const updated: WarehouseOutbound = {
-      ...list[index],
+      ...target,
       status: 'CANCELLED',
       cancellationReason: justification,
       cancelledAt: new Date().toLocaleString('es-MX'),
@@ -1191,6 +1501,61 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.outboundsSignal.set(newArr);
+
+    // Reintegrar UAs/Tarimas canceladas a stock disponible en memoria
+    if (target.items && target.items.length > 0) {
+      this.inventoryBatchesSignal.update((batches) => {
+        const updatedBatches = [...batches];
+        for (const item of target.items) {
+          const existingBatch = updatedBatches.find(
+            (b) =>
+              b.productId === item.productId &&
+              (b.lotNumber === item.lotNumber || !item.lotNumber)
+          );
+          if (existingBatch) {
+            if (!existingBatch.pallets.some((p) => p.id === item.id || p.palletCode === item.palletCode)) {
+              existingBatch.pallets.push({
+                id: item.id,
+                palletCode: item.palletCode,
+                description: item.description,
+                productId: item.productId,
+                pieces: item.pieces,
+                palletTypeId: (item.palletTypeId as PalletType) || 'MADERA_ESTANDAR',
+                palletTypeLabel: item.palletTypeLabel || 'Madera Estándar',
+              });
+              existingBatch.availablePallets = existingBatch.pallets.length;
+              existingBatch.totalPieces = existingBatch.pallets.reduce((s, p) => s + p.pieces, 0);
+            }
+          } else {
+            updatedBatches.push({
+              remisionNo: target.remisionNo || 'REM-RESTITUIDA',
+              client: target.clientName || 'Cliente',
+              productId: item.productId,
+              productName: item.description,
+              lotNumber: item.lotNumber || 'LOTE-RESTITUIDO',
+              elaborationDate: '',
+              expirationDate: item.expirationDate || '',
+              availablePallets: 1,
+              totalPieces: item.pieces,
+              locationCode: item.locationCode || 'A-01-N1',
+              isFifoSuggested: false,
+              pallets: [
+                {
+                  id: item.id,
+                  palletCode: item.palletCode,
+                  description: item.description,
+                  productId: item.productId,
+                  pieces: item.pieces,
+                  palletTypeId: (item.palletTypeId as PalletType) || 'MADERA_ESTANDAR',
+                  palletTypeLabel: item.palletTypeLabel || 'Madera Estándar',
+                },
+              ],
+            });
+          }
+        }
+        return updatedBatches;
+      });
+    }
 
     this.addOutboundAudit(folio, {
       id: `aud-out-canc-${Date.now()}`,
@@ -1203,8 +1568,12 @@ export class WarehouseMovementsService {
       details: [
         { fieldName: 'Estatus', oldValue: 'COMPLETED', newValue: 'CANCELLED' },
         { fieldName: 'Motivo de Cancelación', newValue: justification },
+        { fieldName: 'UAs Reintegradas a Stock', newValue: (target.items?.length || 0).toString() },
       ],
     });
+
+    // Sincronizar con el backend
+    this.reloadInventoryBatches();
 
     return updated;
   }
@@ -1222,7 +1591,6 @@ export class WarehouseMovementsService {
               ...rec.checkIn,
               docNumber: newRemision,
             },
-            observations: (rec.observations || '') + ` | Cambio de Remisión: ${oldRemision} -> ${newRemision} (${justification})`,
           };
         }
         return rec;
@@ -1390,8 +1758,11 @@ export class WarehouseMovementsService {
     destinationAddress?: string;
     carrierCode: string;
     carrierName: string;
+    forkliftOperator?: string;
+    forkliftOperatorId?: string;
     driverName: string;
     economicNumber: string;
+    boxEconomicNumber?: string;
     tractorPlates: string;
     boxPlates: string;
     transportType: TransportType;
@@ -1421,8 +1792,11 @@ export class WarehouseMovementsService {
       destinationAddress: dto.destinationAddress,
       carrierCode: dto.carrierCode,
       carrierName: dto.carrierName,
+      forkliftOperator: dto.forkliftOperator,
+      forkliftOperatorId: dto.forkliftOperatorId,
       driverName: dto.driverName,
       economicNumber: dto.economicNumber,
+      boxEconomicNumber: dto.boxEconomicNumber,
       tractorPlates: dto.tractorPlates,
       boxPlates: dto.boxPlates,
       transportType: dto.transportType,

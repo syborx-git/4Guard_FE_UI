@@ -1,9 +1,9 @@
-/**
+﻿/**
  * @file auth.service.ts
  * @description Servicio principal de Autenticación JWT que interactúa con la API del Backend.
  *
  * Implementa la lógica de renovación de sesión transparente (Refresh Token) y proactivo
- * temporizado 5 minutos antes de que el token expire.
+ * temporizado 5 minutos antes de que el token expire, con protección ante caídas de red.
  */
 
 import { Injectable, inject } from '@angular/core';
@@ -44,7 +44,7 @@ export class AuthService {
    * Endpoint: PUT /api/v1/users/change-password
    */
   changePassword(data: any): Observable<any> {
-    const usersApiUrl = 'http://localhost:8080/api/v1/users';
+    const usersApiUrl = `${environment.apiBaseUrl}/api/v1/users`;
     return this.http.put(`${usersApiUrl}/change-password`, data);
   }
 
@@ -65,7 +65,10 @@ export class AuthService {
         }
       }),
       catchError(error => {
-        this.clearSessionAndRedirect('session_expired');
+        // Solo expulsar si el token realmente ya expiró por fecha
+        if (this.isTokenExpired()) {
+          this.clearSessionAndRedirect('session_expired');
+        }
         return throwError(() => error);
       })
     );
@@ -122,7 +125,9 @@ export class AuthService {
       )
       .subscribe({
         error: () => {
-          this.clearSessionAndRedirect('session_expired');
+          if (this.isTokenExpired()) {
+            this.clearSessionAndRedirect('session_expired');
+          }
         }
       });
   }
@@ -147,16 +152,13 @@ export class AuthService {
   }
 
   /**
-   * Cierra la sesión activa llamando al endpoint POST /auth/logout del backend,
-   * enviando el refreshToken en el body y el accessToken como Authorization header.
-   * La sesión local se limpia siempre (error o éxito) para garantizar la seguridad.
+   * Cierra la sesión activa llamando al endpoint POST /auth/logout del backend.
    */
   logout(): void {
     const refreshToken = this.getRefreshToken();
     const accessToken  = this.getAccessToken();
 
     if (!refreshToken || !accessToken) {
-      // No hay sesión activa — solo limpiar localmente
       this.clearSessionAndRedirect();
       return;
     }
@@ -167,7 +169,6 @@ export class AuthService {
       .post<any>(`${this.API_URL}/logout`, { refreshToken }, { headers })
       .pipe(
         finalize(() => {
-          // Limpieza local garantizada independientemente de la respuesta del BE
           this.clearSessionAndRedirect();
         })
       )

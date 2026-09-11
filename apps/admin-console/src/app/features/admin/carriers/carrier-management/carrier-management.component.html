@@ -140,10 +140,10 @@
             id="carrier-search"
             class="carriers-search__input"
             type="search"
-            placeholder="Razón social, RFC, contacto, teléfono…"
+            placeholder="Sobre nombre, razón social, notas…"
             [(ngModel)]="filterText"
             (ngModelChange)="onFilterChange()"
-            aria-label="Buscar transportista por nombre, RFC, contacto, teléfono o correo"
+            aria-label="Buscar transportista por sobre nombre, razón social, notas o RFC"
             autocomplete="off"
           />
         </div>
@@ -195,7 +195,7 @@
         <!-- Sugerencia de búsqueda extendida -->
         <p class="carriers-search__hint">
           <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Busca por nombre, RFC, contacto, teléfono o correo
+          Busca por sobre nombre, razón social, notas o RFC
         </p>
       </div>
 
@@ -274,8 +274,15 @@
                 <div class="carrier-item__name">{{ carrier.tradeName }}</div>
                 <div class="carrier-item__business">{{ carrier.businessName }}</div>
                 <div class="carrier-item__meta">
-                  <span class="carrier-item__rfc">{{ carrier.rfc }}</span>
-                  <span class="carrier-item__type">{{ carrierTypeLabels[carrier.carrierType] }}</span>
+                  @if (carrier.supportedVehicleTypes && carrier.supportedVehicleTypes.length > 0) {
+                    <span class="carrier-item__type" style="display: inline-flex; align-items: center; gap: 3px;">
+                      <span class="material-symbols-outlined" style="font-size: 13px;">rv_hookup</span>
+                      {{ carrier.supportedVehicleTypes.length }} unid.
+                    </span>
+                  }
+                  @if (carrier.rfc) {
+                    <span class="carrier-item__rfc">{{ carrier.rfc }}</span>
+                  }
                 </div>
               </div>
 
@@ -365,9 +372,8 @@
                 id="btn-audit-history"
                 class="carriers-btn carriers-btn--ghost carriers-btn--sm"
                 type="button"
-                title="Ver historial de cambios como línea de tiempo (próximamente)"
-                aria-label="Ver historial de auditoría del transportista"
-                disabled>
+                title="Ver historial de cambios como línea de tiempo"
+                aria-label="Ver historial de auditoría del transportista">
                 <span class="material-symbols-outlined">timeline</span>
                 Ver historial
               </button>
@@ -399,17 +405,17 @@
             autocomplete="off"
             class="carriers-form">
 
-            <!-- SECCIÓN 1 — Información General ──────────────────── -->
+            <!-- SECCIÓN 1 — Información Principal de la Línea ──────── -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
                 <span class="material-symbols-outlined">apartment</span>
-                Información General
+                Información de la Línea Transportista
               </legend>
 
               <div class="carriers-form-grid carriers-form-grid--2">
 
                 <div class="fg-field fg-field--full">
-                  <label class="fg-label fg-label--required" for="businessName">Razón Social</label>
+                  <label class="fg-label fg-label--required" for="businessName">Razón Social de la Línea Transportista</label>
                   <input
                     id="businessName"
                     class="fg-input"
@@ -426,76 +432,20 @@
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="tradeName">Nombre Comercial</label>
+                  <label class="fg-label fg-label--required" for="tradeName">Sobre Nombre</label>
                   <input
                     id="tradeName"
                     class="fg-input"
                     [class.fg-input--error]="fieldHasError('tradeName')"
                     type="text"
                     formControlName="tradeName"
-                    placeholder="Ej. TransNoreste"
+                    placeholder="Ej. TransNoreste (Alias comercial)"
                     maxlength="150"
                     aria-required="true"
                   />
+                  <span class="fg-hint">Nombre comercial o sobrenombre con el que se identifica la línea.</span>
                   @if (fieldHasError('tradeName')) {
                     <span class="fg-error" role="alert">{{ getFieldError('tradeName') }}</span>
-                  }
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="rfc">RFC / Tax ID</label>
-                  <div class="fg-input-wrap">
-                    <input
-                      id="rfc"
-                      class="fg-input fg-input--mono"
-                      [class.fg-input--error]="fieldHasError('rfc')"
-                      [class.fg-input--success]="rfcAvailable() === true"
-                      type="text"
-                      formControlName="rfc"
-                      placeholder="Ej. TNO890314AB2"
-                      maxlength="13"
-                      aria-required="true"
-                      aria-describedby="rfc-hint"
-                      (blur)="onRfcBlur()"
-                      (input)="onRfcInput()"
-                    />
-                    @if (rfcValidating()) {
-                      <span class="fg-input-spinner material-symbols-outlined spinner" title="Validando disponibilidad de RFC...">sync</span>
-                    } @else if (rfcAvailable() === true) {
-                      <span class="fg-input-icon fg-input-icon--success material-symbols-outlined" title="RFC disponible">check_circle</span>
-                    } @else if (rfcAvailable() === false || fieldHasError('rfc')) {
-                      <span class="fg-input-icon fg-input-icon--error material-symbols-outlined" title="RFC no disponible o inválido">cancel</span>
-                    }
-                  </div>
-                  <span id="rfc-hint" class="fg-hint">12 caracteres (persona moral) o 13 (física).</span>
-                  @if (rfcValidating()) {
-                    <span class="fg-info" role="status">Validando RFC en el servidor...</span>
-                  } @else if (rfcAvailable() === true) {
-                    <span class="fg-success" role="status">
-                      <span class="material-symbols-outlined">check_circle</span>
-                      El RFC está disponible
-                    </span>
-                  }
-                  @if (fieldHasError('rfc')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('rfc') }}</span>
-                  }
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="carrierType">Tipo de Transportista</label>
-                  <select
-                    id="carrierType"
-                    class="fg-select"
-                    [class.fg-input--error]="fieldHasError('carrierType')"
-                    formControlName="carrierType"
-                    aria-required="true">
-                    <option value="">Selecciona un tipo…</option>
-                    @for (t of carrierTypes; track t.value) {
-                      <option [value]="t.value">{{ t.label }}</option>
-                    }
-                  </select>
-                  @if (fieldHasError('carrierType')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('carrierType') }}</span>
                   }
                 </div>
 
@@ -510,143 +460,28 @@
                     <option value="SUSPENDED">Suspendido</option>
                     <option value="INACTIVE">Inactivo</option>
                   </select>
+                  <span class="fg-hint">Determina si la línea está habilitada para programar viajes y citas.</span>
                 </div>
 
               </div>
             </fieldset>
 
-            <!-- SECCIÓN 2 — Contacto Principal ──────────────────── -->
+            <!-- SECCIÓN 2 — Tipo de Unidad y Operación ─────────────── -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
-                <span class="material-symbols-outlined">contact_phone</span>
-                Contacto Principal
-              </legend>
-
-              <div class="carriers-form-grid carriers-form-grid--3">
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="contactName">Nombre del Contacto</label>
-                  <input
-                    id="contactName"
-                    class="fg-input"
-                    [class.fg-input--error]="fieldHasError('contactName')"
-                    type="text"
-                    formControlName="contactName"
-                    placeholder="Ej. Roberto Garza"
-                    maxlength="100"
-                    aria-required="true"
-                  />
-                  @if (fieldHasError('contactName')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('contactName') }}</span>
-                  }
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="phone">Teléfono</label>
-                  <input
-                    id="phone"
-                    class="fg-input"
-                    [class.fg-input--error]="fieldHasError('phone')"
-                    type="tel"
-                    formControlName="phone"
-                    placeholder="Ej. 8181234567"
-                    aria-required="true"
-                  />
-                  @if (fieldHasError('phone')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('phone') }}</span>
-                  }
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="email">Correo Electrónico</label>
-                  <input
-                    id="email"
-                    class="fg-input"
-                    [class.fg-input--error]="fieldHasError('email')"
-                    type="email"
-                    formControlName="email"
-                    placeholder="Ej. contacto@transportista.mx"
-                    maxlength="150"
-                    aria-required="true"
-                  />
-                  @if (fieldHasError('email')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('email') }}</span>
-                  }
-                </div>
-
-              </div>
-            </fieldset>
-
-            <!-- SECCIÓN 3 — Información Operativa ───────────────── -->
-            <fieldset class="carriers-form-section">
-              <legend class="carriers-form-section__legend">
-                <span class="material-symbols-outlined">route</span>
-                Información Operativa
+                <span class="material-symbols-outlined">rv_hookup</span>
+                Tipo de Unidad y Operación
               </legend>
 
               <div class="carriers-form-grid carriers-form-grid--2">
 
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="serviceType">Tipo de Servicio</label>
-                  <select
-                    id="serviceType"
-                    class="fg-select"
-                    [class.fg-input--error]="fieldHasError('serviceType')"
-                    formControlName="serviceType"
-                    aria-required="true">
-                    <option value="">Selecciona un servicio…</option>
-                    @for (s of serviceTypes; track s.value) {
-                      <option [value]="s.value">{{ s.label }}</option>
-                    }
-                  </select>
-                  @if (fieldHasError('serviceType')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('serviceType') }}</span>
-                  }
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label" for="permitNumber">No. de Permiso / Registro</label>
-                  <input
-                    id="permitNumber"
-                    class="fg-input fg-input--mono"
-                    type="text"
-                    formControlName="permitNumber"
-                    placeholder="Ej. SCT-NL-00234-2022 (opcional)"
-                    maxlength="80"
-                  />
-                  <span class="fg-hint">Número de permiso SCT u otro registro oficial.</span>
-                </div>
-
+                <!-- Capacidades de Unidades (Tipo de unidad) -->
                 <div class="fg-field fg-field--full">
-                  <label class="fg-label fg-label--required" for="coverage">Cobertura Geográfica</label>
-                  <input
-                    id="coverage"
-                    class="fg-input"
-                    [class.fg-input--error]="fieldHasError('coverage')"
-                    type="text"
-                    formControlName="coverage"
-                    placeholder="Ej. Noreste y Bajío (NL, CDMX, QRO, GTO)"
-                    maxlength="300"
-                    aria-required="true"
-                  />
-                  <span class="fg-hint">
-                    Describe las regiones o estados que cubre este transportista.
-                    La integración con el catálogo geográfico se implementará en una historia posterior.
-                  </span>
-                  @if (fieldHasError('coverage')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('coverage') }}</span>
-                  }
-                </div>
-
-                <!-- Capacidades de Unidades -->
-                <div class="fg-field fg-field--full">
-                  <span class="fg-label" id="vehicle-caps-label">
-                    Capacidades de Unidades Generales
+                  <span class="fg-label fg-label--required" id="vehicle-caps-label">
+                    Tipo de Unidad
                   </span>
                   <p class="fg-hint">
-                    Tipos de unidades que este transportista puede manejar en general.
-                    No representa unidades vehiculares individuales registradas
-                    (esas pertenecen al módulo de Control de Patio).
+                    Selecciona los tipos de unidades que opera o dispone esta línea transportista.
                   </p>
                   <div
                     class="carriers-checkbox-grid"
@@ -671,6 +506,169 @@
                   </div>
                 </div>
 
+                <!-- Observaciones -->
+                <div class="fg-field fg-field--full">
+                  <label class="fg-label" for="notes">Observaciones</label>
+                  <textarea
+                    id="notes"
+                    class="fg-textarea"
+                    formControlName="notes"
+                    placeholder="Observaciones operativas, acuerdos, condiciones de servicio o notas adicionales…"
+                    rows="3"
+                    maxlength="1000">
+                  </textarea>
+                  <span class="fg-hint fg-hint--right">
+                    {{ form.get('notes')?.value?.length ?? 0 }} / 1000
+                  </span>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Datos Complementarios (Opcionales) ────── -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">contact_page</span>
+                <span>Datos Complementarios</span>
+                <span class="carriers-section-tag">Opcional</span>
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label" for="rfc">RFC / Tax ID</label>
+                  <div class="fg-input-wrap">
+                    <input
+                      id="rfc"
+                      class="fg-input fg-input--mono"
+                      [class.fg-input--error]="fieldHasError('rfc')"
+                      [class.fg-input--success]="rfcAvailable() === true"
+                      type="text"
+                      formControlName="rfc"
+                      placeholder="Ej. TNO890314AB2 (opcional)"
+                      maxlength="13"
+                      aria-describedby="rfc-hint"
+                      (blur)="onRfcBlur()"
+                      (input)="onRfcInput()"
+                    />
+                    @if (rfcValidating()) {
+                      <span class="fg-input-spinner material-symbols-outlined spinner" title="Validando disponibilidad de RFC...">sync</span>
+                    } @else if (rfcAvailable() === true) {
+                      <span class="fg-input-icon fg-input-icon--success material-symbols-outlined" title="RFC disponible">check_circle</span>
+                    } @else if (rfcAvailable() === false || fieldHasError('rfc')) {
+                      <span class="fg-input-icon fg-input-icon--error material-symbols-outlined" title="RFC no disponible o inválido">cancel</span>
+                    }
+                  </div>
+                  <span id="rfc-hint" class="fg-hint">12 caracteres (moral) o 13 (física).</span>
+                  @if (rfcValidating()) {
+                    <span class="fg-info" role="status">Validando RFC en el servidor...</span>
+                  } @else if (rfcAvailable() === true) {
+                    <span class="fg-success" role="status">
+                      <span class="material-symbols-outlined">check_circle</span>
+                      El RFC está disponible
+                    </span>
+                  }
+                  @if (fieldHasError('rfc')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('rfc') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="carrierType">Clasificación de Transportista</label>
+                  <select
+                    id="carrierType"
+                    class="fg-select"
+                    formControlName="carrierType">
+                    @for (t of carrierTypes; track t.value) {
+                      <option [value]="t.value">{{ t.label }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="contactName">Nombre del Contacto</label>
+                  <input
+                    id="contactName"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('contactName')"
+                    type="text"
+                    formControlName="contactName"
+                    placeholder="Ej. Roberto Garza (opcional)"
+                    maxlength="100"
+                  />
+                  @if (fieldHasError('contactName')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('contactName') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="phone">Teléfono de Contacto</label>
+                  <input
+                    id="phone"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('phone')"
+                    type="tel"
+                    formControlName="phone"
+                    placeholder="Ej. 8181234567 (opcional)"
+                  />
+                  @if (fieldHasError('phone')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('phone') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="email">Correo Electrónico</label>
+                  <input
+                    id="email"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('email')"
+                    type="email"
+                    formControlName="email"
+                    placeholder="Ej. contacto@transportista.mx (opcional)"
+                    maxlength="150"
+                  />
+                  @if (fieldHasError('email')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('email') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="serviceType">Tipo de Servicio</label>
+                  <select
+                    id="serviceType"
+                    class="fg-select"
+                    formControlName="serviceType">
+                    @for (s of serviceTypes; track s.value) {
+                      <option [value]="s.value">{{ s.label }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="permitNumber">No. de Permiso / Registro</label>
+                  <input
+                    id="permitNumber"
+                    class="fg-input fg-input--mono"
+                    type="text"
+                    formControlName="permitNumber"
+                    placeholder="Ej. SCT-NL-00234-2022 (opcional)"
+                    maxlength="80"
+                  />
+                  <span class="fg-hint">Número de permiso SCT u otro registro oficial.</span>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="coverage">Cobertura Geográfica</label>
+                  <input
+                    id="coverage"
+                    class="fg-input"
+                    type="text"
+                    formControlName="coverage"
+                    placeholder="Ej. Noreste y Bajío (NL, CDMX, QRO, GTO) (opcional)"
+                    maxlength="300"
+                  />
+                </div>
+
                 <!-- Clientes Preferentes -->
                 @if (formMode() === 'edit' && selectedCarrier()?.preferredClients?.length) {
                   <div class="fg-field fg-field--full">
@@ -678,8 +676,7 @@
                       Clientes Preferentes
                     </span>
                     <p class="fg-hint">
-                      Consumido por el módulo de Programación de Ventanas para sugerir
-                      transportistas disponibles al programar citas de un cliente específico.
+                      Consumido por Programación de Ventanas para sugerir transportistas preferentes del cliente.
                     </p>
                     <div class="carriers-tags" role="list" aria-labelledby="preferred-clients-label">
                       @for (client of selectedCarrier()!.preferredClients!; track client) {
@@ -691,22 +688,6 @@
                     </div>
                   </div>
                 }
-
-                <!-- Observaciones -->
-                <div class="fg-field fg-field--full">
-                  <label class="fg-label" for="notes">Observaciones</label>
-                  <textarea
-                    id="notes"
-                    class="fg-textarea"
-                    formControlName="notes"
-                    placeholder="Información adicional relevante sobre el transportista…"
-                    rows="3"
-                    maxlength="1000">
-                  </textarea>
-                  <span class="fg-hint fg-hint--right">
-                    {{ form.get('notes')?.value?.length ?? 0 }} / 1000
-                  </span>
-                </div>
 
               </div>
             </fieldset>

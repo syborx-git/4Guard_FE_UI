@@ -25,3 +25,5 @@
 | **ADR-008** | Estándar de Contratos API (`ApiResponse<T>`, UUID, ISO-8601 UTC) | ✅ Aceptado | 2026-07 | Backend Contracts | [`ADR-008-api-contracts-uuid-utc.md`](./ADR-008-api-contracts-uuid-utc.md) |
 | **ADR-009** | Intercepción HTTP Transparente para Refresh Token JWT | ✅ Aceptado | 2026-07 | Auth & HTTP Client | [`ADR-009-http-auth-refresh-token.md`](./ADR-009-http-auth-refresh-token.md) |
 | **ADR-010** | Adopción del Flujo Spec-Driven Development (SDD) | ✅ Aceptado | 2026-07 | Metodología & AI | [`ADR-010-spec-driven-development.md`](./ADR-010-spec-driven-development.md) |
+| **ADR-011** | Consolidación de Navegación y Vistas Transaccionales en Movimientos | ✅ Aceptado | 2026-08 | Warehouse Movements | [`ADR-011-consolidacion-movimientos-almacen.md`](./ADR-011-consolidacion-movimientos-almacen.md) |
+| **ADR-012** | Arquitectura Offline-First, Protocolo Zone Lease, Impresión ZPL y UX Industrial para Terminal RF PWA | ✅ Aceptado | 2026-09 | RF Terminal / PWA / Hardware | [`ADR-012-rf-terminal-pwa-offline-first.md`](./ADR-012-rf-terminal-pwa-offline-first.md) |

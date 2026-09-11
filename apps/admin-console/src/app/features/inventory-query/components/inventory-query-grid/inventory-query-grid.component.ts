@@ -31,6 +31,7 @@ export class InventoryQueryGridComponent {
   // Modales
   protected isFilterModalOpen = signal(false);
   protected isAnalyticsModalOpen = signal(false);
+  protected analyticsInitialView = signal<'table' | 'chart'>('table');
 
   // Búsqueda rápida local en la tabla
   protected searchTerm = signal('');
@@ -87,7 +88,8 @@ export class InventoryQueryGridComponent {
     this.isFilterModalOpen.set(false);
   }
 
-  protected openAnalytics(): void {
+  protected openAnalytics(view: 'table' | 'chart' = 'table'): void {
+    this.analyticsInitialView.set(view);
     this.isAnalyticsModalOpen.set(true);
   }
 

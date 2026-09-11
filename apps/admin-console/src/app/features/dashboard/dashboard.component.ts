@@ -18,6 +18,25 @@ import { Router } from '@angular/router';
 import { InventoryState, InventoryStatus, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
 import { SpecularGlowDirective } from '../../shared/directives/specular-glow.directive';
 
+export type PackagingType = 'FRASCOS' | 'BARRILES' | 'PRODUCTO_TERMINADO';
+
+export interface PackagingOption {
+  id: PackagingType;
+  label: string;
+  factor: number;
+  icon: string;
+  unitLabel: string;
+}
+
+export interface WarehouseOccupancy {
+  id: string;
+  name: string;
+  code: string;
+  nominalCapacity: number;
+  currentOccupancy: number;
+  aisleOverflowCount: number;
+}
+
 interface KpiCard {
   id: string;
   label: string;
@@ -50,6 +69,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   protected readonly InventoryStatus       = InventoryStatus;
   protected readonly INVENTORY_STATUS_LABELS = INVENTORY_STATUS_LABELS;
+  protected readonly Math                  = Math;
+
+  // ── Modal & Desglose por Bodega ─────────────────────────────────────────
+  protected readonly isBreakdownModalOpen = signal<boolean>(false);
+  protected readonly selectedPackaging = signal<PackagingType>('PRODUCTO_TERMINADO');
+
+  protected readonly packagingOptions: PackagingOption[] = [
+    { id: 'PRODUCTO_TERMINADO', label: 'Producto Terminado (PT)', factor: 1.0, icon: '📦', unitLabel: 'Palets Estándar' },
+    { id: 'FRASCOS', label: 'Frascos / Vidrio', factor: 1.15, icon: '🫙', unitLabel: 'Cajas / Tarimas' },
+    { id: 'BARRILES', label: 'Barriles / Contenedores', factor: 0.85, icon: '🛢️', unitLabel: 'Tambores' },
+  ];
+
+  protected readonly rawWarehouses = signal<WarehouseOccupancy[]>([
+    { id: 'WH-A', name: 'Bodega A — Secos & PT', code: 'B-01', nominalCapacity: 24, currentOccupancy: 18, aisleOverflowCount: 0 },
+    { id: 'WH-B', name: 'Bodega B — Almacén Central', code: 'B-02', nominalCapacity: 24, currentOccupancy: 26, aisleOverflowCount: 2 },
+    { id: 'WH-C', name: 'Bodega C — Refrigerados / QM', code: 'B-03', nominalCapacity: 16, currentOccupancy: 10, aisleOverflowCount: 0 },
+  ]);
+
+  protected readonly currentPackagingConfig = computed(() =>
+    this.packagingOptions.find(p => p.id === this.selectedPackaging()) ?? this.packagingOptions[0]
+  );
+
+  protected readonly calculatedWarehouses = computed(() => {
+    const factor = this.currentPackagingConfig().factor;
+    return this.rawWarehouses().map(wh => {
+      const adjustedOccupancy = Math.round(wh.currentOccupancy * factor);
+      const occupancyPct = Math.round((adjustedOccupancy / wh.nominalCapacity) * 100);
+      const isCritical = occupancyPct > 100 || wh.aisleOverflowCount > 0;
+      return {
+        ...wh,
+        adjustedOccupancy,
+        occupancyPct,
+        isCritical,
+      };
+    });
+  });
+
+  protected readonly maneuverRisks = computed(() =>
+    this.calculatedWarehouses().filter(w => w.isCritical)
+  );
+
+  protected readonly hasManeuverRisk = computed(() =>
+    this.maneuverRisks().length > 0
+  );
 
   // ── KPIs simulados ───────────────────────────────────────────────────────
   protected readonly riskScore   = signal(34);
@@ -181,6 +244,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (mins < 60) return `hace ${mins} min`;
     const hrs  = Math.floor(mins / 60);
     return `hace ${hrs}h`;
+  }
+
+  protected openBreakdownModal(): void {
+    this.isBreakdownModalOpen.set(true);
+  }
+
+  protected closeBreakdownModal(): void {
+    this.isBreakdownModalOpen.set(false);
+  }
+
+  protected selectPackaging(type: PackagingType): void {
+    this.selectedPackaging.set(type);
   }
 
   private simulateSseAlert(): void {

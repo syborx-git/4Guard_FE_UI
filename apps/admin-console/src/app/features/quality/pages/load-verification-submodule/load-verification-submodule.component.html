@@ -1,0 +1,522 @@
+<div class="load-verif-page">
+
+  <!-- ── 1. WORKBENCH MASTER-DETAIL (4 COL DIRECTORIO + 8 COL FORMULARIO) ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    
+    <!-- ── PANEL IZQUIERDO: DIRECTORIO Y BÚSQUEDA MASTER (col-span-4) ── -->
+    <aside class="verif-directory lg:col-span-4 card-surface" fgSpecularGlow aria-label="Directorio de verificaciones">
+      
+      <!-- Cabecera del Directorio con botón de Nueva Verificación -->
+      <div class="verif-directory__top">
+        <div class="verif-dir-title">
+          <span class="material-symbols-outlined icon-small text-gold">fact_check</span>
+          <h3>Verificaciones F01</h3>
+        </div>
+        <button
+          type="button"
+          class="btn-new-verif-mini"
+          (click)="createNewVerification()"
+          title="Crear nueva verificación de carga"
+        >
+          <span class="material-symbols-outlined">add</span>
+          <span>Nueva</span>
+        </button>
+      </div>
+
+      <!-- Buscador y Filtro por Estatus -->
+      <div class="verif-directory__search-box">
+        <div class="search-input-wrap">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            type="search"
+            class="search-input"
+            placeholder="Buscar por Folio, Remisión o Cliente..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+          />
+        </div>
+
+        <select
+          class="status-filter-select"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event)"
+          aria-label="Filtrar por estatus"
+        >
+          <option value="ALL">Todos los estatus</option>
+          <option value="APROBADO">Aprobados</option>
+          <option value="LIMPIEZA_PENDIENTE">Limpieza IT01</option>
+          <option value="ACONDICIONAMIENTO_PENDIENTE">Acondicionamiento IT02</option>
+          <option value="RECHAZADO">Rechazados</option>
+          <option value="EN_PROCESO">En Proceso</option>
+        </select>
+      </div>
+
+      <!-- Lista de Embarques / Verificaciones -->
+      <div class="verif-list">
+        @for (v of filteredVerifications(); track v.id) {
+          <div
+            class="verif-card"
+            [class.verif-card--active]="selectedVerificationId() === v.id"
+            (click)="selectVerification(v)"
+          >
+            <!-- Avatar Iniciales -->
+            <div class="verif-avatar">
+              {{ getInitials(v.clientName) }}
+            </div>
+
+            <div class="verif-card__body">
+              <div class="verif-card__header">
+                <span class="verif-card__folio font-mono">#{{ v.folio }}</span>
+                <span
+                  class="verif-card__status"
+                  [class.status--approved]="v.status === 'APROBADO'"
+                  [class.status--pending-clean]="v.status === 'LIMPIEZA_PENDIENTE'"
+                  [class.status--pending-cond]="v.status === 'ACONDICIONAMIENTO_PENDIENTE'"
+                  [class.status--rejected]="v.status === 'RECHAZADO'"
+                  [class.status--process]="v.status === 'EN_PROCESO'"
+                >
+                  {{ v.status === 'APROBADO' ? 'Aprobado' : v.status === 'LIMPIEZA_PENDIENTE' ? 'Limpieza IT01' : v.status === 'ACONDICIONAMIENTO_PENDIENTE' ? 'Acond. IT02' : v.status === 'RECHAZADO' ? 'Rechazado' : 'En Proceso' }}
+                </span>
+              </div>
+
+              <strong class="verif-card__remision">{{ v.remisionNumber }}</strong>
+              <span class="verif-card__client">{{ v.clientName }}</span>
+              <span class="verif-card__desc truncate">{{ v.productDescription }}</span>
+
+              <div class="verif-card__bottom">
+                <span class="verif-card__ramp">
+                  <span class="material-symbols-outlined icon-mini">dock</span>
+                  {{ v.ramp }}
+                </span>
+                <span class="verif-card__date font-mono">{{ v.date }}</span>
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-list">
+            <span class="material-symbols-outlined">search_off</span>
+            <p>No se encontraron verificaciones</p>
+          </div>
+        }
+      </div>
+
+      <!-- Footer del Directorio -->
+      <div class="verif-directory__footer">
+        <span>{{ filteredVerifications().length }} verificaciones registradas</span>
+      </div>
+    </aside>
+
+    <!-- ── PANEL DERECHO: FORMULARIO INTERACTIVO DIGITAL DIRECTO (col-span-8) ── -->
+    <main class="verif-workspace lg:col-span-8 space-y-4">
+      
+      <!-- Barra Superior de Acciones de la Verificación Seleccionada -->
+      <div class="workspace-action-bar card-surface">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+          <span class="material-symbols-outlined text-gold">verified</span>
+          <span class="font-bold text-sm text-slate-800">{{ activeForm().clientName }}</span>
+          <span class="font-mono text-xs font-bold text-gold px-2 py-0.5 rounded bg-gold-bg border border-gold-border">
+            {{ activeForm().folio }}
+          </span>
+          <span
+            class="verif-card__status"
+            [class.status--approved]="activeForm().status === 'APROBADO'"
+            [class.status--pending-clean]="activeForm().status === 'LIMPIEZA_PENDIENTE'"
+            [class.status--pending-cond]="activeForm().status === 'ACONDICIONAMIENTO_PENDIENTE'"
+            [class.status--rejected]="activeForm().status === 'RECHAZADO'"
+            [class.status--process]="activeForm().status === 'EN_PROCESO'"
+          >
+            {{ activeForm().status === 'APROBADO' ? 'Aprobado' : activeForm().status === 'LIMPIEZA_PENDIENTE' ? 'Limpieza IT01' : activeForm().status === 'ACONDICIONAMIENTO_PENDIENTE' ? 'Acond. IT02' : activeForm().status === 'RECHAZADO' ? 'Rechazado' : 'En Proceso' }}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            class="btn-print-action"
+            (click)="openPrintModal()"
+            title="Abrir vista oficial para imprimir o descargar PDF"
+          >
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Imprimir / PDF</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-save-verif"
+            (click)="saveVerification()"
+          >
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span>Guardar Cambios</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toast / Feedback tras guardar -->
+      @if (saveFeedback()) {
+        <div class="save-toast-banner animate-fade-in">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span>{{ saveFeedback() }}</span>
+        </div>
+      }
+
+      <!-- ALERTAS NORMATIVAS REACTIVAS (IT01 / IT02 / PLAGA) -->
+      @if (isPestDetected()) {
+        <div class="alert-banner alert-banner--danger">
+          <span class="material-symbols-outlined alert-icon">pest_control</span>
+          <div>
+            <strong>¡ALERTA CRÍTICA DE INOCUIDAD! PRESENCIA DE PLAGA DETECTADA</strong>
+            <p>Se bloquea el despacho de inmediato. Se debe generar reporte formal vía correo al cliente y Dirección General con evidencia fotográfica.</p>
+          </div>
+        </div>
+      }
+
+      @if (isDirtyPallet()) {
+        <div class="alert-banner alert-banner--warning">
+          <span class="material-symbols-outlined alert-icon">cleaning_services</span>
+          <div>
+            <strong>INSTRUCTIVO IT01-PO-GC-8.6-01: LIMPIEZA DE PALLET REQUERIDA</strong>
+            <p>Se detectó pallet sucio o con polvo. Ingrese el responsable de limpieza para plasmarlo en el acta física de salida.</p>
+          </div>
+        </div>
+      }
+
+      @if (isConditioningRequired()) {
+        <div class="alert-banner alert-banner--info">
+          <span class="material-symbols-outlined alert-icon">build_circle</span>
+          <div>
+            <strong>INSTRUCTIVO IT02-PO-GC-8.6-02: ACONDICIONAMIENTO DE CARGA EN CURSO</strong>
+            <p>Se detectaron daños o inestabilidad en tarima/embalaje. Requiere acondicionamiento antes de la liberación final.</p>
+          </div>
+        </div>
+      }
+
+      <!-- TARJETA DEL FORMULARIO DE CAPTURA DIGITAL -->
+      <div class="card-surface form-capture-card" fgSpecularGlow>
+        
+        <!-- ── BLOQUE 1: DATOS GENERALES DE LA CARGA ── -->
+        <div class="form-block-section">
+          <div class="form-block-header">
+            <span class="material-symbols-outlined icon-small text-gold">inventory_2</span>
+            <h4>Datos Generales de la Carga</h4>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="sm:col-span-2">
+              <label class="form-label">DESCRIPCIÓN DEL PRODUCTO</label>
+              <input type="text" class="form-input" [ngModel]="activeForm().productDescription" (ngModelChange)="activeForm().productDescription = $event" placeholder="Ej. Leche Entera UHT 1L">
+            </div>
+            <div>
+              <label class="form-label">NO. DE REMISIÓN</label>
+              <input type="text" class="form-input font-mono font-bold text-amber-800" [ngModel]="activeForm().remisionNumber" (ngModelChange)="activeForm().remisionNumber = $event" placeholder="REM-2026-XXXX">
+            </div>
+            <div>
+              <label class="form-label">CLIENTE</label>
+              <input type="text" class="form-input" [ngModel]="activeForm().clientName" (ngModelChange)="activeForm().clientName = $event" placeholder="Ej. Lala S.A. de C.V.">
+            </div>
+            <div>
+              <label class="form-label">FECHA DE INSPECCIÓN</label>
+              <input type="date" class="form-input font-mono" [ngModel]="activeForm().date" (ngModelChange)="activeForm().date = $event">
+            </div>
+            <div>
+              <label class="form-label">HORA</label>
+              <input type="time" class="form-input font-mono" [ngModel]="activeForm().time" (ngModelChange)="activeForm().time = $event">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="form-label">RAMPA DE ANDÉN ASIGNADA</label>
+              <input type="text" class="form-input" [ngModel]="activeForm().ramp" (ngModelChange)="activeForm().ramp = $event" placeholder="Ej. Rampa 04 (Andén Refrigerado)">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── BLOQUE 2: RESPONSABLES Y PERSONAL DE INSPECCIÓN ── -->
+        <div class="form-block-section">
+          <div class="form-block-header">
+            <span class="material-symbols-outlined icon-small text-gold">badge</span>
+            <h4>Personal y Responsables de la Inspección</h4>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div>
+              <label class="form-label">ELABORÓ (MONTACARGUISTA / ANDÉN)</label>
+              <input
+                type="text"
+                class="form-input"
+                [ngModel]="activeForm().elaboratedBy.name"
+                (ngModelChange)="activeForm().elaboratedBy.name = $event"
+                placeholder="Nombre del montacarguista..."
+              >
+            </div>
+            <div>
+              <label class="form-label">REVISÓ (AUDITOR DE CALIDAD QM)</label>
+              <input
+                type="text"
+                class="form-input"
+                [ngModel]="activeForm().reviewedBy.name"
+                (ngModelChange)="activeForm().reviewedBy.name = $event"
+                placeholder="Nombre del auditor de calidad..."
+              >
+            </div>
+            <div>
+              <label class="form-label">APROBÓ (SUPERINTENDENCIA / JEFE QM)</label>
+              <input
+                type="text"
+                class="form-input"
+                [ngModel]="activeForm().approvedBy.name"
+                (ngModelChange)="activeForm().approvedBy.name = $event"
+                placeholder="Nombre de quien aprueba..."
+              >
+            </div>
+            <div class="sm:col-span-3">
+              <label class="form-label">RESPONSABLE DE LIMPIEZA (IT01-PO-GC-8.6-01)</label>
+              <input
+                type="text"
+                class="form-input"
+                [ngModel]="activeForm().cleaningResponsible.name"
+                (ngModelChange)="activeForm().cleaningResponsible.name = $event"
+                placeholder="Nombre de quien realizó limpieza física (si aplica)..."
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- ── BLOQUE 3: TABLA 1: CRITERIOS DE PRODUCTO (8 CRITERIOS) ── -->
+        <div class="form-block-section">
+          <div class="form-block-header">
+            <span class="material-symbols-outlined icon-small text-emerald-600">checklist</span>
+            <h4>1. Criterios de Producto (Condiciones Generales Visuales)</h4>
+          </div>
+
+          <div class="table-responsive">
+            <table class="criteria-interactive-table">
+              <thead>
+                <tr>
+                  <th style="width: 35%;">Criterio a Evaluar</th>
+                  <th style="width: 15%; text-align: center;">Evaluación</th>
+                  <th style="width: 25%;">Acción Normativa</th>
+                  <th style="width: 10%;">Responsable</th>
+                  <th style="width: 15%;">Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (crit of activeForm().productCriteria; track crit.id) {
+                  <tr [class.row-warning]="crit.value === 'NO'">
+                    <!-- Criterio -->
+                    <td>
+                      <div class="criterion-label-box">
+                        <strong class="criterion-main-label">{{ crit.label }}</strong>
+                        @if (crit.instructionCode) {
+                          <span class="instruction-chip">{{ crit.instructionCode }}</span>
+                        }
+                      </div>
+                    </td>
+
+                    <!-- Evaluación SI / NO / N/A -->
+                    <td class="text-center">
+                      <div class="val-btn-group">
+                        <button
+                          type="button"
+                          class="val-btn val-btn--si"
+                          [class.is-active]="crit.value === 'SI'"
+                          (click)="setProductCriterionValue(crit.id, 'SI')"
+                        >SI</button>
+
+                        <button
+                          type="button"
+                          class="val-btn val-btn--no"
+                          [class.is-active]="crit.value === 'NO'"
+                          (click)="setProductCriterionValue(crit.id, 'NO')"
+                        >NO</button>
+
+                        <button
+                          type="button"
+                          class="val-btn val-btn--na"
+                          [class.is-active]="crit.value === 'NA'"
+                          (click)="setProductCriterionValue(crit.id, 'NA')"
+                        >N/A</button>
+                      </div>
+                    </td>
+
+                    <!-- Acción -->
+                    <td>
+                      <span class="action-text">{{ crit.actionIfNo }}</span>
+                    </td>
+
+                    <!-- Responsable -->
+                    <td>
+                      <span class="resp-text">{{ crit.responsible }}</span>
+                    </td>
+
+                    <!-- Observaciones -->
+                    <td>
+                      <input
+                        type="text"
+                        class="obs-input"
+                        placeholder="Nota..."
+                        [ngModel]="crit.observations"
+                        (ngModelChange)="crit.observations = $event"
+                      >
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── BLOQUE 4: TABLA 2: CRITERIOS DE TRANSPORTE (9 CRITERIOS) ── -->
+        <div class="form-block-section">
+          <div class="form-block-header">
+            <span class="material-symbols-outlined icon-small text-info">local_shipping</span>
+            <h4>2. Criterios de Transporte (Unidad / Caja / Tracto)</h4>
+          </div>
+
+          <div class="table-responsive">
+            <table class="criteria-interactive-table">
+              <thead>
+                <tr>
+                  <th style="width: 35%;">Criterio de Transporte</th>
+                  <th style="width: 15%; text-align: center;">Evaluación</th>
+                  <th style="width: 25%;">Acción Normativa</th>
+                  <th style="width: 10%;">Responsable</th>
+                  <th style="width: 15%;">Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (crit of activeForm().transportCriteria; track crit.id) {
+                  <tr [class.row-warning]="crit.value === 'NO'">
+                    <!-- Criterio -->
+                    <td>
+                      <strong class="criterion-main-label">{{ crit.label }}</strong>
+                    </td>
+
+                    <!-- Evaluación SI / NO / N/A -->
+                    <td class="text-center">
+                      <div class="val-btn-group">
+                        <button
+                          type="button"
+                          class="val-btn val-btn--si"
+                          [class.is-active]="crit.value === 'SI'"
+                          (click)="setTransportCriterionValue(crit.id, 'SI')"
+                        >SI</button>
+
+                        <button
+                          type="button"
+                          class="val-btn val-btn--no"
+                          [class.is-active]="crit.value === 'NO'"
+                          (click)="setTransportCriterionValue(crit.id, 'NO')"
+                        >NO</button>
+
+                        <button
+                          type="button"
+                          class="val-btn val-btn--na"
+                          [class.is-active]="crit.value === 'NA'"
+                          (click)="setTransportCriterionValue(crit.id, 'NA')"
+                        >N/A</button>
+                      </div>
+                    </td>
+
+                    <!-- Acción -->
+                    <td>
+                      <span class="action-text">{{ crit.actionIfNo }}</span>
+                    </td>
+
+                    <!-- Responsable -->
+                    <td>
+                      <span class="resp-text">{{ crit.responsible }}</span>
+                    </td>
+
+                    <!-- Observaciones -->
+                    <td>
+                      <input
+                        type="text"
+                        class="obs-input"
+                        placeholder="Nota..."
+                        [ngModel]="crit.observations"
+                        (ngModelChange)="crit.observations = $event"
+                      >
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── BLOQUE 5: OBSERVACIONES GENERALES / DICTAMEN TÉCNICO ── -->
+        <div class="form-block-section">
+          <div class="form-block-header">
+            <span class="material-symbols-outlined icon-small text-gold">comment</span>
+            <h4>3. Observaciones Generales y Dictamen Final de Carga</h4>
+          </div>
+
+          <div>
+            <textarea
+              rows="3"
+              class="form-input"
+              [ngModel]="activeForm().generalObservations"
+              (ngModelChange)="activeForm().generalObservations = $event"
+              placeholder="Detalle de observaciones generales, condiciones especiales de empaque o parámetros validados para la liberación de carga..."
+            ></textarea>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MODAL OFICIAL DE IMPRESIÓN Y DESCARGA (ESTÁNDAR SDD-PRINT-001)
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (showPrintModal()) {
+    <div class="print-modal-overlay" (click)="closePrintModal()">
+      <div class="print-modal-card" (click)="$event.stopPropagation()">
+        
+        <!-- Header del Modal -->
+        <div class="print-modal-header no-print">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-gold">print</span>
+            <span class="font-black text-xs text-slate-800 uppercase tracking-wider truncate">
+              Formato F01-PO-GC-8.6-03 · Verificación de Carga
+            </span>
+          </div>
+
+          <div class="print-modal-actions flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              (click)="downloadDirectPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="btn-download-pdf"
+            >
+              <span class="material-symbols-outlined text-sm">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando PDF...' : 'Descargar PDF (' + (activeForm().folio || 'F01') + '.pdf)' }}</span>
+            </button>
+            <button
+              type="button"
+              (click)="triggerBrowserPrint()"
+              class="btn-browser-print"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir</span>
+            </button>
+            <button
+              type="button"
+              (click)="closePrintModal()"
+              class="btn-close-modal"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Cuerpo del Modal con el Layout Oficial Imprimible -->
+        <div class="print-modal-body">
+          <fg-print-verification-layout [verification]="activeForm()"></fg-print-verification-layout>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

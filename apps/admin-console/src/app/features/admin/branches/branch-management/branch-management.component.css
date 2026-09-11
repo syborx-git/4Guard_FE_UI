@@ -1053,68 +1053,97 @@
 .branches-dialog__actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.5rem; background: rgba(23, 32, 51, 0.02); border-top: 1px solid var(--border-card); }
 
 /* ─────────────────────────────────────────────────────────────
-   DARK MODE — :host-context(.theme-dark)
+   DARK MODE — :host-context(.theme-dark), :host-context(.dark)
    ───────────────────────────────────────────────────────────── */
 
-:host-context(.theme-dark) {
-  --bg-page:       #0d0b12;
-  --bg-card:       rgba(33, 29, 42, 0.90);
-  --border-card:   rgba(255,255,255,0.07);
-  --shadow-card:   0 18px 42px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04);
-  --text-primary:  #eceaf1;
-  --text-secondary:#9d99a8;
-  --text-muted:    #6a6577;
-  --text-gold:     #d6b667;
-  --gold-bg:       rgba(214, 182, 103, 0.08);
-  --gold-border:   rgba(214, 182, 103, 0.20);
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --navy:           #080e18;
+  --navy-mid:       #0f172a;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --bg-page:        #080e18;
+  --bg-card:        rgba(15, 23, 42, 0.95);
+  --border-card:    rgba(255, 255, 255, 0.10);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-gold:      #d0af67;
 }
 
-:host-context(.theme-dark) .branches-page {
+:host-context(.theme-dark) .branches-page,
+:host-context(.dark) .branches-page {
   background:
-    radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.07), transparent 30rem),
+    radial-gradient(circle at 90% 5%, rgba(208, 175, 103, 0.07), transparent 30rem),
     var(--bg-page);
   color: var(--text-primary);
 }
 
 :host-context(.theme-dark) .branches-kpi-card,
+:host-context(.dark) .branches-kpi-card,
 :host-context(.theme-dark) .branches-directory,
-:host-context(.theme-dark) .branches-detail {
+:host-context(.dark) .branches-directory,
+:host-context(.theme-dark) .branches-detail,
+:host-context(.dark) .branches-detail {
   background: var(--bg-card);
   border-color: var(--border-card);
   box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .branches-search__input,
+:host-context(.dark) .branches-search__input,
 :host-context(.theme-dark) .branches-filter-select,
+:host-context(.dark) .branches-filter-select,
 :host-context(.theme-dark) .fg-input,
-:host-context(.theme-dark) .fg-select {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.09);
+:host-context(.dark) .fg-input,
+:host-context(.theme-dark) .fg-select,
+:host-context(.dark) .fg-select {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
   color: var(--text-primary);
 }
 
 :host-context(.theme-dark) .branches-search__input:focus,
+:host-context(.dark) .branches-search__input:focus,
 :host-context(.theme-dark) .fg-input:focus,
-:host-context(.theme-dark) .fg-select:focus {
-  background: rgba(255,255,255,0.07);
+:host-context(.dark) .fg-input:focus,
+:host-context(.theme-dark) .fg-select:focus,
+:host-context(.dark) .fg-select:focus {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--gold);
 }
 
-:host-context(.theme-dark) .branch-item:hover     { background: rgba(214, 182, 103, 0.04); }
-:host-context(.theme-dark) .branch-item--selected { background: rgba(214, 182, 103, 0.07) !important; }
+:host-context(.theme-dark) .branch-item:hover,
+:host-context(.dark) .branch-item:hover {
+  background: rgba(208, 175, 103, 0.06);
+}
 
-:host-context(.theme-dark) .branches-form-header {
-  background: rgba(24, 21, 30, 0.7);
+:host-context(.theme-dark) .branch-item--selected,
+:host-context(.dark) .branch-item--selected {
+  background: rgba(208, 175, 103, 0.10) !important;
+}
+
+:host-context(.theme-dark) .branches-form-header,
+:host-context(.dark) .branches-form-header {
+  background: rgba(15, 23, 42, 0.85);
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .branches-form-actions {
-  background: rgba(255,255,255,0.025);
+:host-context(.theme-dark) .branches-form-actions,
+:host-context(.dark) .branches-form-actions {
+  background: rgba(15, 23, 42, 0.60);
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .branches-dialog {
-  background: rgba(30, 26, 40, 0.98);
-  border-color: rgba(255,255,255,0.09);
+:host-context(.theme-dark) .branches-dialog,
+:host-context(.dark) .branches-dialog {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 /* ─────────────────────────────────────────────────────────────

@@ -30,7 +30,7 @@
             <span class="skus-header__eyebrow-sep">·</span>
             <span>Catálogos de Mercancía</span>
           </div>
-          <h1 class="skus-header__title">Catálogo de Productos / SKUs</h1>
+          <h1 class="skus-header__title">Productos</h1>
           <p class="skus-header__subtitle">
             Gestión maestra de artículos, unidades de medida, peso y clientes depositantes titulares
           </p>
@@ -125,10 +125,10 @@
             id="sku-search"
             class="skus-search__input"
             type="search"
-            placeholder="Buscar por código SKU, nombre, cliente..."
+            placeholder="Buscar por SKU (ej. 43211385), nombre o cliente..."
             [ngModel]="filterText()"
             (ngModelChange)="updateFilterText($event)"
-            aria-label="Buscar producto"
+            aria-label="Buscar producto por SKU o nombre"
             autocomplete="off"
           />
         </div>
@@ -243,7 +243,8 @@
               <div class="sku-item__body">
                 <div class="sku-item__name">{{ sku.name }}</div>
                 <div class="sku-item__meta">
-                  <span class="sku-item__code">{{ sku.code }}</span>
+                  <span class="sku-item__code" title="Código de Producto / SKU"><strong class="sku-item__sku-label">SKU:</strong> {{ sku.code }}</span>
+                  <span class="sku-item__id-tag font-mono" [title]="'ID Interno de Sistema: ' + sku.id">#{{ getShortId(sku.id) }}</span>
                   <span class="sku-item__unit-tag">{{ sku.unit }}</span>
                   <span
                     class="sku-item__status-badge"
@@ -527,8 +528,16 @@
 
                 <div class="skus-readonly-grid">
                   <div class="skus-readonly-field">
-                    <span class="skus-readonly-field__label">ID de Producto (UUID)</span>
-                    <span class="skus-readonly-field__value font-mono">{{ selectedSku()!.id }}</span>
+                    <span class="skus-readonly-field__label">ID de Sistema (8 dígitos)</span>
+                    <span class="skus-readonly-field__value skus-readonly-field__value--id font-mono" [title]="'UUID Completo en BD: ' + selectedSku()!.id">
+                      #{{ getShortId(selectedSku()!.id) }}
+                    </span>
+                  </div>
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Código SKU de Búsqueda</span>
+                    <span class="skus-readonly-field__value font-mono font-bold skus-readonly-field__value--sku">
+                      {{ selectedSku()!.code }}
+                    </span>
                   </div>
                   <div class="skus-readonly-field">
                     <span class="skus-readonly-field__label">Estatus Actual en BD</span>
@@ -542,6 +551,10 @@
                     </span>
                   </div>
                   <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Versión de Registro</span>
+                    <span class="skus-readonly-field__value font-mono">v{{ selectedSku()!.version || 1 }}</span>
+                  </div>
+                  <div class="skus-readonly-field">
                     <span class="skus-readonly-field__label">Fecha de creación</span>
                     <span class="skus-readonly-field__value">
                       {{ selectedSku()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
@@ -553,10 +566,6 @@
                       {{ selectedSku()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
                     </span>
                   </div>
-                  <div class="skus-readonly-field">
-                    <span class="skus-readonly-field__label">Versión de Registro</span>
-                    <span class="skus-readonly-field__value font-mono">v{{ selectedSku()!.version || 1 }}</span>
-                  </div>
                 </div>
 
                 <!-- ── Línea de Tiempo de Auditoría BE ── -->
@@ -565,7 +574,7 @@
                     <div class="skus-timeline-header">
                       <div class="skus-timeline-title">
                         <span class="material-symbols-outlined">history</span>
-                        <span>Historial de Cambios de Auditoría (GET /api/v1/product-skus/&#123;id&#125;/audit)</span>
+                        <span>Historial de Cambios y Auditoría</span>
                       </div>
                       <button
                         type="button"

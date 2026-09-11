@@ -445,6 +445,21 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   /** Conteo de alertas criticas (demo: 2) */
   protected readonly criticalCount = signal(2);
+  protected readonly showCriticalAlertsModal = signal(false);
+
+  protected toggleCriticalAlertsModal(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.showCriticalAlertsModal.update((v) => !v);
+  }
+
+  protected closeCriticalAlertsModal(): void {
+    this.showCriticalAlertsModal.set(false);
+  }
+
+  protected navigateFromAlert(route: string): void {
+    this.showCriticalAlertsModal.set(false);
+    this.router.navigateByUrl(route);
+  }
 
   /** Texto de ultima actualizacion */
   protected readonly lastUpdated = signal('ahora');

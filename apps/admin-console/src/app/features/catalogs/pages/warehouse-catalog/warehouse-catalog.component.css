@@ -65,10 +65,10 @@
 }
 
 .catalog-title {
-  font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif !important;
   font-size: clamp(1.5rem, 2vw, 1.9rem) !important;
-  font-weight: 350 !important;
-  letter-spacing: -0.045em !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.025em !important;
   color: #0F172A !important;
   margin: 0;
   line-height: 1.08;

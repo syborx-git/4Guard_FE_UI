@@ -1,75 +1,131 @@
 <!-- ════════════════════════════════════════════════════════════════
-     RECEPCIONES WORKBENCH — FLUJO CONTINUO SIMPLIFICADO & INTUITIVO
+     RECEPCIÓN DE MERCANCÍA — 4GUARD WMS (HOMOLOGADO)
      ════════════════════════════════════════════════════════════════ -->
-<div class="receiving-workbench space-y-5">
+<div class="receiving-page">
 
-  <!-- ── 0. CABECERA HOMOLOGADA CON BOTÓN DE ACCIÓN ── -->
-  <div class="flex items-center justify-between gap-4 flex-wrap pb-1">
-    <div>
-      <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">move_to_inbox</span>
-        <span>Recepción de Mercancía</span>
-      </h2>
-      <p class="text-xs text-slate-500">Control de arribo en caseta, inspección física y registro de tarimas</p>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="receiving-header">
+    <div class="receiving-header__top">
+
+      <div class="receiving-header__left">
+        <div class="receiving-header__icon-wrap">
+          <span class="material-symbols-outlined receiving-header__icon">move_to_inbox</span>
+        </div>
+
+        <div class="receiving-header__copy">
+          <div class="receiving-header__eyebrow">
+            <a routerLink="/dashboard" class="receiving-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="receiving-header__eyebrow-sep">·</span>
+            <span>Operaciones de Recepción</span>
+          </div>
+          <h1 class="receiving-header__title">Recepción de Mercancía</h1>
+          <p class="receiving-header__subtitle">
+            Control de arribo en caseta, inspección física y registro de tarimas en tiempo real.
+          </p>
+        </div>
+      </div>
+
     </div>
-    <button
-      type="button"
-      (click)="startNewReception()"
-      class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
-    >
-      <span class="material-symbols-outlined text-base">add</span>
-      <span>Pre-Recepción</span>
-    </button>
-  </div>
 
-  <!-- ── 1. KPI CARDS HEADER (HOMOLOGADO CON TRANSPORTISTAS) ── -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- ── BARRA DONDE ESTABA EL SLIDE ANTERIOR: TABS A LA IZQUIERDA Y BOTÓN ACCIÓN A LA DERECHA ── -->
+    <div class="movements-toolbar-row">
+      <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
+        <a
+          routerLink="/warehouse-movements/receiving"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">move_to_inbox</span>
+          <span>1. Recepción</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/transfers"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">compare_arrows</span>
+          <span>2. Cambio de Almacén</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/outbound"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">local_shipping</span>
+          <span>3. Salidas</span>
+        </a>
+      </nav>
+
+      <button
+        type="button"
+        (click)="startNewReception()"
+        class="btn-new-reception"
+        aria-label="Registrar nueva pre-recepción"
+      >
+        <span class="material-symbols-outlined">add</span>
+        <span>Pre-Recepción</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
+  <div class="movement-kpi-grid">
     <!-- Total Recepciones -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white">
+    <div class="movement-kpi-card movement-kpi-card--primary">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">local_shipping</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value">{{ kpiTotal() }}</span>
-        <span class="kpi-card__label">Total Recepciones</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">TOTAL RECEPCIONES</span>
+        <strong class="movement-kpi-card__value">{{ kpiTotal() }}</strong>
+        <span class="movement-kpi-card__sub">En sistema / General</span>
       </div>
-      <div class="kpi-card__bar bg-slate-800 dark:bg-slate-300"></div>
     </div>
 
     <!-- En Caseta / Registradas -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-amber-500/15 text-amber-600 dark:text-amber-400">
+    <div class="movement-kpi-card movement-kpi-card--warning">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">pending_actions</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-amber-600 dark:text-amber-400">{{ kpiRegistered() }}</span>
-        <span class="kpi-card__label">Registradas Caseta</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">REGISTRADAS CASETA</span>
+        <strong class="movement-kpi-card__value">{{ kpiRegistered() }}</strong>
+        <span class="movement-kpi-card__sub">En andén / Espera</span>
       </div>
-      <div class="kpi-card__bar bg-amber-500"></div>
     </div>
 
     <!-- Completadas / Cierres -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+    <div class="movement-kpi-card movement-kpi-card--success">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">check_circle</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">{{ kpiCompleted() }}</span>
-        <span class="kpi-card__label">Completadas</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">COMPLETADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiCompleted() }}</strong>
+        <span class="movement-kpi-card__sub">Inspección finalizada</span>
       </div>
-      <div class="kpi-card__bar bg-emerald-500"></div>
     </div>
 
     <!-- Canceladas -->
-    <div class="kpi-card">
-      <div class="kpi-card__icon-wrap bg-rose-500/15 text-rose-600 dark:text-rose-400">
+    <div class="movement-kpi-card movement-kpi-card--danger">
+      <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">cancel</span>
       </div>
-      <div class="kpi-card__body">
-        <span class="kpi-card__value text-rose-600 dark:text-rose-400">{{ kpiCancelled() }}</span>
-        <span class="kpi-card__label">Canceladas</span>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">CANCELADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiCancelled() }}</strong>
+        <span class="movement-kpi-card__sub">Rechazadas / Cero</span>
       </div>
-      <div class="kpi-card__bar bg-rose-500"></div>
     </div>
   </div>
 
@@ -286,11 +342,7 @@
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Cliente <span class="text-amber-500">*</span>
                   </label>
-                  <select
-                    [value]="checkInForm.get('clientCode')?.value"
-                    (change)="onClientSelect($any($event.target).value)"
-                    class="fg-input w-full font-bold"
-                  >
+                  <select [value]="checkInForm.get('clientCode')?.value" (change)="onClientSelect($any($event.target).value)" class="fg-input w-full font-bold">
                     <option value="">-- Selecciona cliente --</option>
                     @for (c of clients(); track c.code) {
                       <option [value]="c.code">{{ c.name }}</option>
@@ -303,11 +355,7 @@
                     Rampa de Asignación <span class="text-amber-500">*</span>
                   </label>
                   <div class="flex gap-1.5">
-                    <select
-                      [value]="checkInForm.get('rampCode')?.value"
-                      (change)="onRampSelect($any($event.target).value)"
-                      class="fg-input w-full font-bold"
-                    >
+                    <select [value]="checkInForm.get('rampCode')?.value" (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
                       <option value="">-- Selecciona rampa --</option>
                       @for (rm of ramps(); track rm.code) {
                         <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
@@ -321,11 +369,7 @@
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Montacarguista <span class="text-amber-500">*</span>
                   </label>
-                  <select
-                    [value]="checkInForm.get('forkliftOperatorCode')?.value"
-                    (change)="onForkliftOperatorSelect($any($event.target).value)"
-                    class="fg-input w-full font-bold"
-                  >
+                  <select [value]="checkInForm.get('forkliftOperatorCode')?.value" (change)="onForkliftOperatorSelect($any($event.target).value)" class="fg-input w-full font-bold">
                     <option value="">-- Selecciona montacarguista --</option>
                     @for (op of forkliftOperators(); track op.code) {
                       <option [value]="op.code">{{ op.name }}</option>
@@ -431,10 +475,10 @@
           <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
             <div class="flex items-center gap-2 flex-wrap text-xs">
-              <span class="material-symbols-outlined text-base text-secondary">local_shipping</span>
-              <span class="text-secondary font-medium">Movimientos</span>
-              <span class="material-symbols-outlined text-xs text-muted">chevron_right</span>
-              <strong class="text-primary font-bold text-sm">{{ rec.checkIn.client }}</strong>
+              <span class="material-symbols-outlined text-base text-slate-700 dark:text-slate-300">local_shipping</span>
+              <span class="text-slate-700 dark:text-slate-300 font-bold">Movimientos</span>
+              <span class="material-symbols-outlined text-xs text-slate-400">chevron_right</span>
+              <strong class="text-slate-950 dark:text-slate-50 font-black text-sm">{{ rec.checkIn.client }}</strong>
               <span class="font-mono text-xs font-bold text-gold px-2.5 py-0.5 rounded-md bg-gold/10 border border-gold/30">FOLIO #{{ rec.folio }}</span>
               <span
                 class="transportistas-status-badge"
@@ -448,6 +492,16 @@
 
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
             <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="openChangeRemisionModal()"
+                class="btn-gold-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm"
+                title="Cambiar número de remisión con autorización de supervisor"
+              >
+                <span class="material-symbols-outlined text-sm">edit_document</span>
+                <span>Cambiar Remisión</span>
+              </button>
+
               @if (rec.status !== 'CANCELLED') {
                 <button
                   type="button"
@@ -458,15 +512,6 @@
                   <span>Cancelar</span>
                 </button>
               }
-
-              <button
-                type="button"
-                (click)="openPrintPreview(rec)"
-                class="btn-primary-gold text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm text-slate-900"
-              >
-                <span class="material-symbols-outlined text-sm">print</span>
-                <span>Imprimir Pauta</span>
-              </button>
             </div>
           </div>
 
@@ -477,22 +522,22 @@
               <span>INFORMACIÓN GENERAL DE CASETA</span>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-subtle p-3.5 rounded-xl border border-subtle">
-              <div class="fg-field">
-                <label class="fg-label">No. Remisión</label>
-                <span class="font-mono font-bold text-primary text-xs">{{ rec.checkIn.docNumber }}</span>
+            <div class="caseta-summary-card">
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">No. Remisión</span>
+                <span class="caseta-summary-value font-mono">{{ rec.checkIn.docNumber }}</span>
               </div>
-              <div class="fg-field">
-                <label class="fg-label">Hora de Llegada</label>
-                <span class="font-mono font-medium text-primary text-xs">{{ rec.checkIn.receptionTime }}</span>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Hora de Llegada</span>
+                <span class="caseta-summary-value font-mono">{{ rec.checkIn.receptionTime }}</span>
               </div>
-              <div class="fg-field">
-                <label class="fg-label">Línea Transportadora</label>
-                <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn.carrierLine }}</span>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Línea Transportadora</span>
+                <span class="caseta-summary-value" [title]="rec.checkIn.carrierLine">{{ rec.checkIn.carrierLine }}</span>
               </div>
-              <div class="fg-field">
-                <label class="fg-label">Chofer & Placas</label>
-                <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn.driverName }} ({{ rec.checkIn.tractorPlates }})</span>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Chofer &amp; Placas</span>
+                <span class="caseta-summary-value" [title]="rec.checkIn.driverName + ' (' + rec.checkIn.tractorPlates + ')'">{{ rec.checkIn.driverName }} ({{ rec.checkIn.tractorPlates }})</span>
               </div>
             </div>
           </div>
@@ -505,66 +550,122 @@
                 <span>PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO</span>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                <div class="fg-field">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
+                <div class="fg-field lg:col-span-3">
                   <label class="fg-label fg-label--required">Lote de Recepción</label>
-                  <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase" placeholder="Ej. LOT-2026-A1" />
+                  <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="Ej. LOT-2026-A1" />
                 </div>
 
-                <div class="fg-field">
+                <div class="fg-field lg:col-span-3">
                   <label class="fg-label fg-label--required">Fecha de Caducidad</label>
-                  <input type="date" formControlName="expirationDate" class="fg-input" />
+                  <input type="date" formControlName="expirationDate" class="fg-input font-bold !text-slate-950" />
                 </div>
 
-                <div class="fg-field">
+                <div class="fg-field lg:col-span-3">
                   <label class="fg-label fg-label--required">Montacarguista</label>
-                  <select formControlName="forkliftOperator" class="fg-input">
+                  <select formControlName="forkliftOperator" class="fg-input font-bold !text-slate-950">
                     @for (op of forkliftOperators(); track op.code) {
                       <option [value]="op.name">{{ op.name }}</option>
                     }
                   </select>
                 </div>
 
-                <div class="fg-field">
+                <div class="fg-field lg:col-span-3">
                   <label class="fg-label fg-label--required">Rampa de Recepción</label>
-                  <select formControlName="rampNumber" class="fg-input">
+                  <select formControlName="rampNumber" class="fg-input font-bold !text-slate-950">
                     @for (rm of ramps(); track rm.code) {
                       <option [value]="rm.rampNumber">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
                     }
                   </select>
                 </div>
 
-                <div class="fg-field">
+                <!-- FILA 2: Producto (SKU) cupo 4, Piezas cupo 3, Tipo Tarima cupo 2, Proveedor cupo 3 -->
+                <div class="fg-field relative col-span-1 sm:col-span-2 lg:col-span-4">
                   <label class="fg-label fg-label--required">Producto (SKU)</label>
-                  <select
-                    [value]="altaForm.get('productId')?.value"
-                    (change)="onProductSelect($any($event.target).value)"
-                    class="fg-input"
-                  >
-                    <option value="">-- Selecciona producto / SKU --</option>
-                    @for (p of products(); track p.id) {
-                      <option [value]="p.id">{{ p.id }} - {{ p.name }}</option>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="skuSearchQuery()"
+                      (input)="onSkuInput($any($event.target).value)"
+                      (focus)="isSkuDropdownOpen.set(true)"
+                      placeholder="Escribe dígitos del SKU (ej. 4321)..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      autocomplete="off"
+                    />
+                    @if (skuSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="clearSkuSelection()"
+                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded"
+                        title="Limpiar SKU seleccionado"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
                     }
-                  </select>
+                  </div>
+
+                  <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
+                  @if (isSkuDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isSkuDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de SKUs (Fondo blanco limpio, borde dorado/ámbar, texto negro de alto contraste) -->
+                  @if (isSkuDropdownOpen() && filteredProducts().length > 0) {
+                    <div class="sku-autocomplete-dropdown">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">inventory_2</span>
+                          <span>Coincidencias ({{ filteredProducts().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (p of filteredProducts(); track (p.code || p.id)) {
+                        <button
+                          type="button"
+                          (click)="selectProductSku(p)"
+                          class="sku-autocomplete-item"
+                          [class.sku-autocomplete-item--selected]="altaForm.get('productId')?.value === p.code || altaForm.get('productId')?.value === p.id"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span class="sku-autocomplete-badge">{{ p.code }}</span>
+                            <span class="sku-autocomplete-name">{{ p.name }}</span>
+                          </div>
+                          @if (altaForm.get('productId')?.value === p.code || altaForm.get('productId')?.value === p.id) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isSkuDropdownOpen() && filteredProducts().length === 0 && skuSearchQuery()) {
+                    <div class="sku-autocomplete-empty">
+                      No se encontraron productos con SKU o nombre "{{ skuSearchQuery() }}"
+                    </div>
+                  }
                 </div>
 
-                <div class="fg-field">
+                <!-- Piezas por Tarima: 3 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-3">
                   <label class="fg-label fg-label--required">Piezas por Tarima</label>
-                  <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono" placeholder="480" />
+                  <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono text-center font-black !text-slate-950" placeholder="0" />
                 </div>
 
-                <div class="fg-field">
+                <!-- Tipo de Tarima: 2 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-2">
                   <label class="fg-label fg-label--required">Tipo de Tarima</label>
-                  <select formControlName="selectedPalletType" class="fg-input">
+                  <select formControlName="selectedPalletType" class="fg-input font-bold !text-slate-950">
+                    <option value="">-- Selecciona tipo de tarima --</option>
                     @for (pt of palletTypes; track pt[0]) {
                       <option [value]="pt[0]">{{ pt[1] }}</option>
                     }
                   </select>
                 </div>
 
-                <div class="fg-field">
+                <!-- Proveedor: 3 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-2 lg:col-span-3">
                   <label class="fg-label fg-label--required">Proveedor</label>
-                  <select formControlName="supplierName" class="fg-input">
+                  <select formControlName="supplierName" class="fg-input font-bold !text-slate-950">
                     <option value="">-- Selecciona proveedor --</option>
                     @for (sup of suppliers(); track sup.code) {
                       <option [value]="sup.name">{{ sup.name }}</option>
@@ -572,9 +673,10 @@
                   </select>
                 </div>
 
-                <div class="fg-field sm:col-span-2 lg:col-span-4">
+                <!-- Observaciones: 12 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-2 lg:col-span-12">
                   <label class="fg-label">Observaciones de la Descarga</label>
-                  <input type="text" formControlName="observations" class="fg-input" placeholder="Ej. Ingreso directo andén 4 sin incidentes..." />
+                  <input type="text" formControlName="observations" class="fg-input font-medium !text-slate-950" placeholder="Ej. Ingreso directo andén 4 sin incidentes..." />
                 </div>
               </div>
             </form>
@@ -586,44 +688,44 @@
                 <span>PARÁMETROS DE LA RECEPCIÓN (REGISTRO FINALIZADO)</span>
               </div>
 
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-subtle p-4 rounded-xl border border-subtle">
-                <div class="fg-field">
-                  <label class="fg-label">Lote de Recepción</label>
-                  <span class="font-mono font-bold text-primary text-xs">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
+              <div class="reception-readonly-grid">
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Lote de Recepción</span>
+                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
                 </div>
-                <div class="fg-field">
-                  <label class="fg-label">Fecha de Caducidad</label>
-                  <span class="font-mono font-medium text-primary text-xs">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Fecha de Caducidad</span>
+                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
                 </div>
-                <div class="fg-field">
-                  <label class="fg-label">Montacarguista</label>
-                  <span class="text-primary text-xs font-medium truncate">{{ rec.checkIn?.forkliftOperator || altaForm.value.forkliftOperator }}</span>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Montacarguista</span>
+                  <span class="reception-readonly-val truncate" [title]="rec.checkIn?.forkliftOperator || altaForm.value.forkliftOperator">{{ rec.checkIn?.forkliftOperator || altaForm.value.forkliftOperator }}</span>
                 </div>
-                <div class="fg-field">
-                  <label class="fg-label">Rampa de Recepción</label>
-                  <span class="text-primary text-xs font-bold">Rampa {{ rec.checkIn?.rampNumber || altaForm.value.rampNumber || 4 }}</span>
-                </div>
-
-                <div class="fg-field sm:col-span-2">
-                  <label class="fg-label">Producto / SKU</label>
-                  <span class="text-primary text-xs font-bold truncate">{{ rec.productId }} — {{ rec.productName }}</span>
-                </div>
-                <div class="fg-field">
-                  <label class="fg-label">Piezas x Tarima</label>
-                  <span class="font-mono text-emerald-600 font-bold text-xs">{{ rec.piecesPerPallet }} PZAS</span>
-                </div>
-                <div class="fg-field">
-                  <label class="fg-label">Tipo de Tarima</label>
-                  <span class="text-primary text-xs font-medium">{{ rec.selectedPalletType }}</span>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Rampa de Recepción</span>
+                  <span class="reception-readonly-val">Rampa {{ rec.checkIn?.rampNumber || altaForm.value.rampNumber || 4 }}</span>
                 </div>
 
-                <div class="fg-field sm:col-span-2">
-                  <label class="fg-label">Proveedor</label>
-                  <span class="text-primary text-xs font-medium truncate">{{ rec.supplierName }}</span>
+                <div class="reception-readonly-item sm:col-span-2">
+                  <span class="reception-readonly-label">Producto / SKU</span>
+                  <span class="reception-readonly-val truncate" [title]="rec.productId + ' — ' + rec.productName">{{ rec.productId }} — {{ rec.productName }}</span>
                 </div>
-                <div class="fg-field sm:col-span-2">
-                  <label class="fg-label">Observaciones</label>
-                  <span class="text-secondary text-xs italic truncate">{{ rec.observations || 'Sin incidentes registrados en andén.' }}</span>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Piezas x Tarima</span>
+                  <span class="reception-readonly-val reception-readonly-val--pieces">{{ rec.piecesPerPallet }} PZAS</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Tipo de Tarima</span>
+                  <span class="reception-readonly-val">{{ rec.selectedPalletType }}</span>
+                </div>
+
+                <div class="reception-readonly-item sm:col-span-2">
+                  <span class="reception-readonly-label">Proveedor</span>
+                  <span class="reception-readonly-val truncate" [title]="rec.supplierName">{{ rec.supplierName }}</span>
+                </div>
+                <div class="reception-readonly-item sm:col-span-2">
+                  <span class="reception-readonly-label">Observaciones</span>
+                  <span class="reception-readonly-val reception-readonly-val--italic truncate" [title]="rec.observations || 'Sin incidentes registrados en andén.'">{{ rec.observations || 'Sin incidentes registrados en andén.' }}</span>
                 </div>
               </div>
             </div>
@@ -682,22 +784,53 @@
                   <span>Agregar Tarima</span>
                 </button>
               </div>
+
+              <!-- ALERTA DE CANDADO ANTI-DUPLICADOS -->
+              @if (duplicateUaError()) {
+                <div class="p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-bold flex items-center justify-between gap-2 animate-pulse">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg text-red-500">gpp_bad</span>
+                    <span>{{ duplicateUaError() }}</span>
+                  </div>
+                  <button type="button" (click)="duplicateUaError.set(null)" class="text-red-500 hover:text-red-700 font-extrabold cursor-pointer">✕</button>
+                </div>
+              }
+
+              <!-- ADVERTENCIA PARAMÉTRICA DE CADUCIDAD & VIDA ÚTIL -->
+              @if (expirationWarningAlert()) {
+                <div class="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg text-amber-500">warning</span>
+                    <span>{{ expirationWarningAlert() }}</span>
+                  </div>
+                  <button type="button" (click)="expirationWarningAlert.set(null)" class="text-amber-500 hover:text-amber-700 font-extrabold cursor-pointer">✕</button>
+                </div>
+              }
             </div>
           } @else if (rec.status === 'COMPLETED') {
-            <!-- Banner Informativo de Folio Finalizado -->
-            <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
-              <div class="flex items-center gap-2.5">
-                <span class="material-symbols-outlined text-xl text-emerald-500 shrink-0">check_circle</span>
-                <span>
-                  <strong>Recepción Finalizada y Cerrada</strong> — Las <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> fueron registradas en almacén. Operación completada; sólo puedes consultar e imprimir el comprobante oficial.
-                </span>
+            <!-- Banner Informativo de Folio Finalizado (Diseño Elegante) -->
+            <div class="reception-completed-banner">
+              <div class="reception-completed-banner__content">
+                <div class="reception-completed-banner__badge-icon">
+                  <span class="material-symbols-outlined">check_circle</span>
+                </div>
+                <div class="reception-completed-banner__info">
+                  <div class="reception-completed-banner__title">
+                    <span>Recepción Finalizada y Cerrada</span>
+                    <span class="reception-completed-banner__pill">Completado</span>
+                  </div>
+                  <p class="reception-completed-banner__desc">
+                    Las <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> fueron registradas e ingresadas a inventario exitosamente.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 (click)="openPrintPreview(rec)"
-                class="btn-primary-gold text-[11px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-900 shadow-sm shrink-0 self-end sm:self-auto"
+                class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 self-end sm:self-auto flex items-center gap-1.5"
               >
-                Imprimir Documento
+                <span class="material-symbols-outlined text-base">print</span>
+                <span>Imprimir Documento</span>
               </button>
             </div>
           }
@@ -710,53 +843,53 @@
             </div>
 
             <!-- TOTALIZADORES EN VIVO -->
-            <div class="grid grid-cols-3 gap-3 bg-surface-subtle p-3.5 rounded-xl text-center border border-subtle">
+            <div class="tarimas-summary-grid">
               <div>
-                <span class="text-secondary block text-[11px] uppercase font-bold">Total Tarimas</span>
-                <span class="font-mono text-lg sm:text-xl font-bold text-gold">{{ totalTarimas() }}</span>
+                <span class="tarimas-summary-label">Total Tarimas</span>
+                <span class="tarimas-summary-val--tarimas">{{ totalTarimas() }}</span>
               </div>
               <div>
-                <span class="text-secondary block text-[11px] uppercase font-bold">Productos (SKU)</span>
-                <span class="font-mono text-lg sm:text-xl font-bold text-primary">{{ totalProductos() }}</span>
+                <span class="tarimas-summary-label">Productos (SKU)</span>
+                <span class="tarimas-summary-val--sku">{{ totalProductos() }}</span>
               </div>
               <div>
-                <span class="text-secondary block text-[11px] uppercase font-bold">Piezas Totales</span>
-                <span class="font-mono text-lg sm:text-xl font-bold text-emerald-600">{{ totalPiezas() }} PZAS</span>
+                <span class="tarimas-summary-label">Piezas Totales</span>
+                <span class="tarimas-summary-val--pieces">{{ totalPiezas() }} PZAS</span>
               </div>
             </div>
           </div>
 
           <!-- 6. TABLA DE TARIMAS DESCARGADAS -->
-          <div class="overflow-x-auto border border-subtle rounded-xl shadow-sm">
-            <table class="w-full text-xs text-left">
-              <thead class="bg-surface-subtle text-slate-700 dark:text-slate-300 uppercase text-[11px] font-black border-b border-subtle">
+          <div class="tarimas-table-wrapper">
+            <table class="tarimas-table">
+              <thead>
                 <tr>
-                  <th class="p-3 text-center w-12">N. Tarima</th>
-                  <th class="p-3">Código Tarima</th>
-                  <th class="p-3">SKU</th>
-                  <th class="p-3">Descripción</th>
-                  <th class="p-3">Proveedor</th>
-                  <th class="p-3">Tipo Tarima</th>
-                  <th class="p-3 text-right">Cant x Tarima</th>
-                  <th class="p-3">Observaciones</th>
+                  <th class="text-center w-14">N. Tarima</th>
+                  <th>Código Tarima</th>
+                  <th>SKU</th>
+                  <th>Descripción</th>
+                  <th>Proveedor</th>
+                  <th>Tipo Tarima</th>
+                  <th class="text-right">Cant x Tarima</th>
+                  <th>Observaciones</th>
                   @if (rec.status === 'REGISTERED') {
-                    <th class="p-3 text-center w-24">Acciones</th>
+                    <th class="text-center w-24">Acciones</th>
                   }
                 </tr>
               </thead>
-              <tbody class="divide-y divide-subtle font-medium">
+              <tbody>
                 @for (pallet of palletStream(); track pallet.id) {
-                  <tr class="hover:bg-surface-subtle/70 font-mono">
-                    <td class="p-3 text-center font-black text-slate-700 dark:text-slate-300">{{ pallet.palletNumber }}</td>
-                    <td class="p-3 font-black text-amber-600 dark:text-amber-400">{{ pallet.palletCode }}</td>
-                    <td class="p-3 font-bold text-slate-900 dark:text-slate-100">{{ pallet.productId }}</td>
-                    <td class="p-3 font-bold text-slate-900 dark:text-slate-100 font-sans">{{ pallet.description }}</td>
-                    <td class="p-3 text-slate-700 dark:text-slate-300 font-sans uppercase">{{ pallet.supplierName || '-' }}</td>
-                    <td class="p-3 text-slate-700 dark:text-slate-300 font-sans">{{ pallet.palletTypeLabel }}</td>
-                    <td class="p-3 text-right font-black text-emerald-600 dark:text-emerald-400">{{ pallet.pieces }} PZAS</td>
-                    <td class="p-3 text-slate-600 dark:text-slate-400 italic font-sans">{{ pallet.observations || '-' }}</td>
+                  <tr>
+                    <td class="tarimas-cell-num">{{ pallet.palletNumber }}</td>
+                    <td class="tarimas-cell-code">{{ pallet.palletCode }}</td>
+                    <td class="tarimas-cell-sku">{{ pallet.productId }}</td>
+                    <td class="tarimas-cell-desc">{{ pallet.description }}</td>
+                    <td class="tarimas-cell-supplier">{{ pallet.supplierName || '-' }}</td>
+                    <td class="tarimas-cell-type">{{ pallet.palletTypeLabel }}</td>
+                    <td class="tarimas-cell-pieces">{{ pallet.pieces }} PZAS</td>
+                    <td class="tarimas-cell-obs">{{ pallet.observations || '-' }}</td>
                     @if (rec.status === 'REGISTERED') {
-                      <td class="p-3 text-center">
+                      <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
                             type="button"
@@ -780,10 +913,12 @@
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="9" class="text-center py-8 text-slate-500 dark:text-slate-400">
-                      <span class="material-symbols-outlined text-3xl opacity-40 mb-1">inventory_2</span>
-                      <p class="text-xs font-bold text-slate-700 dark:text-slate-300">No hay tarimas registradas en este folio.</p>
-                      <p class="text-[11px] text-slate-500">Ingresa el código arriba o haz clic en [+ Agregar Tarima].</p>
+                    <td colspan="9" class="p-0">
+                      <div class="tarimas-table-empty">
+                        <span class="material-symbols-outlined tarimas-table-empty__icon">inventory_2</span>
+                        <p class="tarimas-table-empty__title">No hay tarimas registradas en este folio.</p>
+                        <p class="tarimas-table-empty__hint">Ingresa el código arriba o haz clic en [+ Agregar Tarima].</p>
+                      </div>
                     </td>
                   </tr>
                 }
@@ -800,81 +935,81 @@
 
             <!-- Metadatos de lectura rápida -->
             <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
-                <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Folio de Recepción</span>
-                <span class="carriers-readonly-field__value font-mono font-bold text-xs text-primary">#{{ rec.folio }}</span>
+              <div class="carriers-readonly-field">
+                <span class="carriers-readonly-field__label">Folio de Recepción</span>
+                <span class="carriers-readonly-field__value font-mono font-black text-xs">#{{ rec.folio }}</span>
               </div>
-              <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
-                <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Organización</span>
-                <span class="carriers-readonly-field__value text-xs text-primary font-medium">4GUARD LOGISTICS CORP</span>
+              <div class="carriers-readonly-field">
+                <span class="carriers-readonly-field__label">Organización</span>
+                <span class="carriers-readonly-field__value text-xs font-black">4GUARD LOGISTICS CORP</span>
               </div>
-              <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
-                <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Registrado Por</span>
-                <span class="carriers-readonly-field__value font-mono text-xs text-primary">&#64;{{ rec.capturedBy || 'Caseta' }}</span>
+              <div class="carriers-readonly-field">
+                <span class="carriers-readonly-field__label">Registrado Por</span>
+                <span class="carriers-readonly-field__value font-mono text-xs font-black">&#64;{{ rec.capturedBy || 'Caseta' }}</span>
               </div>
-              <div class="carriers-readonly-field p-2.5 rounded-lg border border-subtle bg-surface-subtle">
-                <span class="carriers-readonly-field__label block text-[10px] uppercase font-bold text-muted mb-0.5">Fecha de Registro</span>
-                <span class="carriers-readonly-field__value text-xs text-primary font-mono">{{ rec.createdAt }}</span>
+              <div class="carriers-readonly-field">
+                <span class="carriers-readonly-field__label">Fecha de Registro</span>
+                <span class="carriers-readonly-field__value text-xs font-mono font-black">{{ rec.createdAt }}</span>
               </div>
             </div>
 
             <!-- Línea de Tiempo de Auditoría -->
-            <div class="carriers-timeline-preview rounded-xl border border-subtle bg-surface-subtle overflow-hidden">
-              <div class="carriers-timeline-preview__header flex items-center justify-between p-3 border-b border-subtle bg-gold/5">
-                <div class="flex items-center gap-2 text-xs font-bold text-gold uppercase tracking-wider">
+            <div class="carriers-timeline-preview">
+              <div class="carriers-timeline-preview__header">
+                <div class="carriers-timeline-preview__title">
                   <span class="material-symbols-outlined text-base">timeline</span>
                   <span>Línea de Tiempo de Auditoría</span>
                 </div>
-                <span class="text-[11px] font-mono text-muted">{{ auditEntries().length }} evento(s)</span>
+                <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
               </div>
 
-              <div class="carriers-timeline-preview__nodes p-4 space-y-4">
+              <div class="carriers-timeline-preview__nodes">
                 @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
-                  <div class="carriers-tl-node flex items-start gap-3 relative" [ngClass]="getAuditColorClass(log.action)">
-                    <div class="carriers-tl-node__dot flex items-center justify-center w-8 h-8 rounded-full border shrink-0 z-10">
+                  <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action)">
+                    <div class="carriers-tl-node__dot">
                       <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
                     </div>
                     @if (!isLast) {
-                      <div class="carriers-tl-node__line absolute left-4 top-8 bottom-[-16px] w-[2px] bg-slate-300 dark:bg-slate-700"></div>
+                      <div class="carriers-tl-node__line"></div>
                     }
-                    <div class="carriers-tl-node__content flex-1 min-w-0">
-                      <div class="carriers-tl-node__header flex items-center gap-2 flex-wrap mb-1">
-                        <span class="carriers-tl-node__action font-bold text-xs text-primary">{{ getAuditSummary(log.action) }}</span>
-                        <span class="carriers-tl-node__tag font-mono text-[10px] px-2 py-0.5 rounded bg-surface border border-subtle text-muted">&#64;{{ log.username }}</span>
+                    <div class="carriers-tl-node__content">
+                      <div class="carriers-tl-node__header">
+                        <span class="carriers-tl-node__action">{{ getAuditSummary(log.action) }}</span>
+                        <span class="carriers-tl-node__tag">&#64;{{ log.username }}</span>
                       </div>
 
                       @if (log.details && log.details.length > 0) {
-                        <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
+                        <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2 rounded-lg bg-surface border border-subtle">
                           @for (d of log.details; track d.fieldName) {
-                            <div class="carriers-tl-diff flex items-center gap-1.5 text-xs flex-wrap">
-                              <span class="carriers-tl-diff__field font-semibold text-secondary">{{ d.fieldName }}:</span>
-                              @if (d.oldValue) {
-                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px]">{{ d.oldValue }}</span>
-                                <span class="carriers-tl-diff__arrow text-muted">→</span>
+                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                              <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
                               }
-                              <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px]">{{ d.newValue }}</span>
+                              <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                             </div>
                           }
                         </div>
                       }
 
                       @if (log.reason) {
-                        <p class="text-xs text-rose-500 font-medium italic mt-1">
+                        <p class="text-xs text-rose-600 dark:text-rose-400 font-bold italic mt-1">
                           Motivo: "{{ log.reason }}"
                         </p>
                       }
 
-                      <span class="carriers-tl-node__meta text-[11px] text-muted flex items-center gap-1 mt-1 font-mono">
+                      <span class="carriers-tl-node__meta">
                         <span class="material-symbols-outlined text-[13px]">schedule</span>
                         <span>{{ log.timestamp }}</span>
                         @if (log.authorizedBy) {
-                          <span class="ml-2 font-normal">· Autorizado por: <strong class="text-primary font-bold">{{ log.authorizedBy }}</strong></span>
+                          <span class="ml-2 font-bold">· Autorizado por: <strong class="carriers-tl-node__author">{{ log.authorizedBy }}</strong></span>
                         }
                       </span>
                     </div>
                   </div>
                 } @empty {
-                  <div class="text-xs text-secondary italic text-center py-3">
+                  <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-3">
                     No hay eventos de auditoría registrados para este folio.
                   </div>
                 }
@@ -933,14 +1068,175 @@
           class="branches-btn--primary"
           type="button"
           (click)="startNewReception()"
-          aria-label="Registrar nueva pre-recepción"
         >
-          <span class="material-symbols-outlined">add</span>
-          <span>Nueva pre-recepción</span>
+          <span class="material-symbols-outlined text-base">add</span>
+          <span>Registrar Pre-Recepción</span>
         </button>
       </div>
     }
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MONITOR DE ESTATUS DE UNIDADES EN PATIO Y RAMPAS (REINGENIERÍA)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (activePatioTab() === 'patio') {
+    <div class="space-y-4 animate-fade-in">
+      
+      <!-- CARDS DE MÉTRICAS DE PATIO -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="kpi-card">
+          <div class="kpi-card__icon-wrap bg-sky-500/15 text-sky-600 dark:text-sky-400">
+            <span class="material-symbols-outlined">directions_bus</span>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value text-sky-600 dark:text-sky-400">{{ patioUnits().length }}</span>
+            <span class="kpi-card__label">Unidades en Patio</span>
+          </div>
+          <div class="kpi-card__bar bg-sky-500"></div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__icon-wrap bg-amber-500/15 text-amber-600 dark:text-amber-400">
+            <span class="material-symbols-outlined">hourglass_top</span>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value text-amber-600 dark:text-amber-400">{{ patioWaitAlertsCount() }}</span>
+            <span class="kpi-card__label">Retraso Espera (&gt;8h)</span>
+          </div>
+          <div class="kpi-card__bar bg-amber-500"></div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__icon-wrap bg-red-500/15 text-red-600 dark:text-red-400">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value text-red-600 dark:text-red-400">{{ patioDischargeAlertsCount() }}</span>
+            <span class="kpi-card__label">Retraso Descarga (&gt;2.5h)</span>
+          </div>
+          <div class="kpi-card__bar bg-red-500"></div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__icon-wrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+            <span class="material-symbols-outlined">dock</span>
+          </div>
+          <div class="kpi-card__body">
+            <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">4</span>
+            <span class="kpi-card__label">Rampas Habilitadas</span>
+          </div>
+          <div class="kpi-card__bar bg-emerald-500"></div>
+        </div>
+      </div>
+
+      <!-- TABLA DEL MONITOR DE RAMPAS Y PATIO -->
+      <div class="bg-surface p-4 rounded-2xl border border-subtle space-y-3 shadow-sm">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-600 text-base">monitor</span>
+            <span>Monitor de Rampas y Permanencia de Vehículos</span>
+          </h3>
+          <span class="text-xs text-slate-500 font-medium">Actualización automática cada 60s</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold border-b border-subtle">
+                <th class="p-3">Folio / Chofer</th>
+                <th class="p-3">Línea & Placas</th>
+                <th class="p-3">Estado Patio</th>
+                <th class="p-3">Rampa</th>
+                <th class="p-3">Montacarguista / Tarima</th>
+                <th class="p-3 text-right">Tiempo Espera</th>
+                <th class="p-3 text-right">Tiempo Descarga</th>
+                <th class="p-3 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-subtle">
+              @for (unit of patioUnits(); track unit.id) {
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td class="p-3 font-medium">
+                    <span class="font-mono font-bold text-slate-900 dark:text-white block">{{ unit.folio }}</span>
+                    <span class="text-slate-500 text-[11px]">{{ unit.driverName }}</span>
+                  </td>
+                  <td class="p-3">
+                    <span class="font-bold text-slate-700 dark:text-slate-200 block">{{ unit.carrierLine }}</span>
+                    <span class="font-mono text-slate-500 text-[11px]">Tracto: {{ unit.tractorPlates }} | Caja: {{ unit.boxPlates }}</span>
+                  </td>
+                  <td class="p-3">
+                    @switch (unit.status) {
+                      @case ('CHECKED_IN') {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                          En Espera Rampa
+                        </span>
+                      }
+                      @case ('DISCHARGING') {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+                          <span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                          Enrampado / Descargando
+                        </span>
+                      }
+                      @case ('DISCHARGED_PENDING_EXIT') {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                          Descarga Finalizada (Retiro Andén)
+                        </span>
+                      }
+                      @default {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          Completado
+                        </span>
+                      }
+                    }
+                  </td>
+                  <td class="p-3">
+                    @if (unit.rampNumber) {
+                      <span class="font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-md">
+                        Rampa {{ unit.rampNumber }}
+                      </span>
+                    } @else {
+                      <span class="text-slate-400 italic">Sin asignar</span>
+                    }
+                  </td>
+                  <td class="p-3">
+                    <span class="text-slate-800 dark:text-slate-200 font-medium block">{{ unit.forkliftOperator || 'Pendiente' }}</span>
+                    <span class="text-slate-500 text-[11px]">{{ unit.palletType || 'Standard' }}</span>
+                  </td>
+                  <td class="p-3 text-right font-mono font-bold">
+                    <span [class.text-red-500]="unit.hasWaitAlert" [class.animate-pulse]="unit.hasWaitAlert">
+                      {{ Math.floor(unit.waitTimeMinutes / 60) }}h {{ unit.waitTimeMinutes % 60 }}m
+                    </span>
+                    @if (unit.hasWaitAlert) {
+                      <span class="block text-[10px] text-red-500 font-bold">🚨 EXCESO &gt;8h</span>
+                    }
+                  </td>
+                  <td class="p-3 text-right font-mono font-bold">
+                    <span [class.text-red-500]="unit.hasDischargeAlert" [class.animate-pulse]="unit.hasDischargeAlert">
+                      {{ Math.floor(unit.dischargeTimeMinutes / 60) }}h {{ unit.dischargeTimeMinutes % 60 }}m
+                    </span>
+                    @if (unit.hasDischargeAlert) {
+                      <span class="block text-[10px] text-red-500 font-bold">🚨 RETRASO &gt;2.5h</span>
+                    }
+                  </td>
+                  <td class="p-3 text-center">
+                    <button
+                      type="button"
+                      (click)="loadFromNotification(unit.folio); activePatioTab.set('workbench')"
+                      class="px-2.5 py-1 bg-slate-900 text-white rounded-lg font-bold text-[11px] hover:bg-slate-800 cursor-pointer"
+                    >
+                      Atender
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
+  }
   </div>
 
   <!-- ── 4. MODAL: EDICIÓN DE TARIMA INDIVIDUAL (ADMINISTRADOR) ── -->
@@ -960,34 +1256,34 @@
         <form [formGroup]="editPalletForm" (ngSubmit)="saveEditedPallet()" class="flex flex-col flex-1 min-h-0">
           <div class="modal-body space-y-3.5 text-xs">
             <div>
-              <label class="font-bold text-secondary uppercase block mb-1">CÓDIGO TARIMA (UA):</label>
-              <input type="text" formControlName="palletCode" class="fg-input font-mono uppercase w-full font-bold" />
+              <label class="font-bold !text-amber-900 uppercase block mb-1">CÓDIGO TARIMA (UA):</label>
+              <input type="text" formControlName="palletCode" class="fg-input font-mono uppercase w-full font-bold !text-slate-950" />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="font-bold text-secondary uppercase block mb-1">SKU:</label>
-                <input type="text" formControlName="productId" class="fg-input font-mono w-full" />
+                <label class="font-bold !text-amber-900 uppercase block mb-1">SKU:</label>
+                <input type="text" formControlName="productId" class="fg-input font-mono w-full font-bold !text-slate-950" />
               </div>
               <div>
-                <label class="font-bold text-secondary uppercase block mb-1">CANT X TARIMA:</label>
-                <input type="number" formControlName="pieces" class="fg-input font-mono w-full font-bold" />
+                <label class="font-bold !text-amber-900 uppercase block mb-1">CANT X TARIMA:</label>
+                <input type="number" formControlName="pieces" class="fg-input font-mono w-full font-bold !text-slate-950" />
               </div>
             </div>
 
             <div>
-              <label class="font-bold text-secondary uppercase block mb-1">DESCRIPCIÓN SKU:</label>
-              <input type="text" formControlName="description" class="fg-input w-full" />
+              <label class="font-bold !text-amber-900 uppercase block mb-1">DESCRIPCIÓN SKU:</label>
+              <input type="text" formControlName="description" class="fg-input w-full font-bold !text-slate-950" />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="font-bold text-secondary uppercase block mb-1">PROVEEDOR:</label>
-                <input type="text" formControlName="supplierName" class="fg-input w-full uppercase" />
+                <label class="font-bold !text-amber-900 uppercase block mb-1">PROVEEDOR:</label>
+                <input type="text" formControlName="supplierName" class="fg-input w-full uppercase font-bold !text-slate-950" />
               </div>
               <div>
-                <label class="font-bold text-secondary uppercase block mb-1">TIPO TARIMA:</label>
-                <select formControlName="palletTypeId" class="fg-input w-full font-bold">
+                <label class="font-bold !text-amber-900 uppercase block mb-1">TIPO TARIMA:</label>
+                <select formControlName="palletTypeId" class="fg-input w-full font-bold !text-slate-950">
                   @for (pt of palletTypes; track pt[0]) {
                     <option [value]="pt[0]">{{ pt[1] }}</option>
                   }
@@ -996,8 +1292,8 @@
             </div>
 
             <div>
-              <label class="font-bold text-secondary uppercase block mb-1">OBSERVACIONES:</label>
-              <input type="text" formControlName="observations" class="fg-input w-full" placeholder="Observación específica de esta tarima..." />
+              <label class="font-bold !text-amber-900 uppercase block mb-1">OBSERVACIONES:</label>
+              <input type="text" formControlName="observations" class="fg-input w-full font-medium !text-slate-950" placeholder="Observación específica de esta tarima..." />
             </div>
           </div>
 
@@ -1010,56 +1306,14 @@
     </div>
   }
 
-  <!-- ── 5. MODAL: CAMBIO DE REMISIÓN ── -->
-  @if (showChangeRemisionModal()) {
-    <div class="modal-overlay">
-      <div class="modal-card max-w-md w-full p-6 space-y-4 shadow-2xl animate-fade-up">
-        <div class="flex items-center justify-between border-b border-subtle pb-3">
-          <h3 class="font-bold text-sm text-primary uppercase">CAMBIAR NÚMERO DE REMISIÓN</h3>
-          <button type="button" (click)="closeChangeRemisionModal()" class="text-secondary hover:text-primary">
-            <span class="material-symbols-outlined text-sm">close</span>
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="font-bold text-secondary block mb-1">NUEVO NÚMERO DE REMISIÓN:</label>
-            <input
-              type="text"
-              [ngModel]="newRemisionInput()"
-              (ngModelChange)="newRemisionInput.set($event)"
-              class="fg-input font-mono uppercase w-full"
-            />
-          </div>
-
-          <div>
-            <label class="font-bold text-secondary block mb-1">JUSTIFICACIÓN DEL CAMBIO:</label>
-            <textarea
-              [ngModel]="changeJustification()"
-              (ngModelChange)="changeJustification.set($event)"
-              rows="3"
-              placeholder="Explicación requerida por auditoría..."
-              class="fg-input w-full"
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
-          <button type="button" (click)="closeChangeRemisionModal()" class="btn-ghost text-xs px-3 py-1.5 rounded-lg">Cancelar</button>
-          <button type="button" (click)="submitChangeRemision()" class="btn-save text-xs px-4 py-1.5 rounded-lg font-bold">Guardar Cambio</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ── 6. MODAL DE CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ── -->
+  <!-- Modal Cancelación Extraordinaria (Con Autorización de Seguridad) -->
   @if (showCancelModal()) {
-    <div class="modal-overlay" (click)="closeCancelModal()">
-      <div class="modal-card max-w-lg w-full animate-fade-up" (click)="$event.stopPropagation()">
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeCancelModal()">
+      <div class="modal-card max-w-lg w-full max-h-[82vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
         
         <!-- Header del Modal -->
         <div class="modal-header flex items-center justify-between">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5">
             <div class="modal-header-icon-box">
               <span class="material-symbols-outlined">cancel</span>
             </div>
@@ -1074,9 +1328,9 @@
         </div>
 
         <!-- Body del Modal -->
-        <div class="modal-body space-y-4 text-xs">
+        <div class="modal-body space-y-3 text-xs">
           <!-- Resumen de lo que se cancelará -->
-          <div class="modal-summary-box grid grid-cols-2 gap-3">
+          <div class="modal-summary-box grid grid-cols-2 gap-2">
             <div>
               <span class="modal-summary-label">Cliente:</span>
               <span class="modal-summary-val truncate block">{{ selectedReception()?.checkIn?.client }}</span>
@@ -1097,7 +1351,7 @@
 
           <!-- Mensaje de Error si aplica -->
           @if (cancelErrorMessage()) {
-            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
               <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
               <span>{{ cancelErrorMessage() }}</span>
             </div>
@@ -1111,17 +1365,17 @@
             <textarea
               [ngModel]="cancelReason()"
               (ngModelChange)="cancelReason.set($event)"
-              rows="3"
+              rows="2"
               placeholder="Describe detalladamente el motivo de la revocación (ej. Error en remisión, daño de mercancía, orden duplicada)..."
               class="fg-input w-full text-xs"
             ></textarea>
           </div>
 
           <!-- Credenciales del ADMIN (Login actual) -->
-          <div class="pt-3 border-t border-subtle space-y-3">
+          <div class="pt-2.5 border-t border-subtle space-y-2.5">
             <div class="modal-section-legend">
               <span class="material-symbols-outlined text-base">lock_person</span>
-              <span>Validación de Credenciales de Administrador (Usuario en Sesión)</span>
+              <span>Validación de Credenciales de Administrador</span>
             </div>
 
             <div>
@@ -1170,7 +1424,7 @@
           <button
             type="button"
             (click)="closeCancelModal()"
-            class="btn-ghost text-xs px-4 py-2 rounded-xl"
+            class="btn-ghost text-xs px-3.5 py-1.5 rounded-xl"
           >
             Regresar
           </button>
@@ -1178,7 +1432,7 @@
             type="button"
             (click)="confirmCancelReception()"
             [disabled]="isCancelling()"
-            class="carriers-btn carriers-btn--danger text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+            class="carriers-btn carriers-btn--danger text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
           >
             <span class="material-symbols-outlined text-base">security_update_warning</span>
             <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
@@ -1189,22 +1443,200 @@
     </div>
   }
 
-  @if (showPrintModal() && selectedPrintReception(); as printRec) {
-    <div class="modal-overlay">
-      <div class="modal-card max-w-4xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between no-print border-b border-subtle pb-3">
-          <h3 class="font-bold text-sm text-primary uppercase">VISTA PREVIA DE IMPRESIÓN</h3>
-          <div class="flex items-center gap-2">
-            <button type="button" (click)="triggerBrowserPrint()" class="btn-save text-xs px-3 py-1.5 rounded-lg font-bold">Imprimir Documento</button>
-            <button type="button" (click)="closePrintModal()" class="btn-ghost text-xs px-3 py-1.5 rounded-lg">Cerrar</button>
+  <!-- Modal Cambio de No. de Remisión (Con Autorización de Rango Superior) -->
+  @if (showChangeRemisionModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeChangeRemisionModal()">
+      <div class="modal-card max-w-lg w-full max-h-[82vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+
+        <!-- Header del Modal (Idéntico a Cancelar) -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-header-icon-box" style="background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.28);">
+              <span class="material-symbols-outlined">edit_document</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Cambio de Remisión #{{ selectedReception()?.folio }}</h3>
+              <p class="modal-header-subtitle" style="color: #b45309;">Modificación de documento con autorización Supervisor/Admin</p>
+            </div>
+          </div>
+          <button (click)="closeChangeRemisionModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal (Idéntico a Cancelar) -->
+        <div class="modal-body space-y-3 text-xs">
+          <!-- Resumen de lo que se modificará (Mismo bloque de Cancelar) -->
+          <div class="modal-summary-box grid grid-cols-2 gap-2">
+            <div>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block">{{ selectedReception()?.checkIn?.client }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Remisión Actual:</span>
+              <span class="modal-summary-val font-mono font-bold text-amber-600 dark:text-amber-400">{{ selectedReception()?.checkIn?.docNumber }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ totalTarimas() }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ totalPiezas() }} Piezas</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (changeRemisionError()) {
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ changeRemisionError() }}</span>
+            </div>
+          }
+
+          <!-- Nuevo No. de Remisión -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Nuevo Número de Remisión / Documento <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <input
+              type="text"
+              [ngModel]="newRemisionInput()"
+              (ngModelChange)="newRemisionInput.set($event)"
+              placeholder="EJ. REM-2026-9901"
+              class="fg-input font-mono font-bold uppercase text-xs w-full"
+              autofocus
+            />
+          </div>
+
+          <!-- Motivo de modificación obligatorio -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Motivo o Justificación Obligatoria del Cambio <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <textarea
+              [ngModel]="changeRemisionReason()"
+              (ngModelChange)="changeRemisionReason.set($event)"
+              rows="2"
+              placeholder="Describe detalladamente el motivo de la modificación (ej. Error de captura en caseta, corrección de remisión del proveedor)..."
+              class="fg-input w-full text-xs"
+            ></textarea>
+          </div>
+
+          <!-- Credenciales de Rango Superior (Supervisor / Administrador) -->
+          <div class="pt-2.5 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">verified_user</span>
+              <span>Validación de Credenciales de Supervisor o Administrador</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Usuario / Correo Supervisor o Admin <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="changeRemisionAdminUser()"
+                  (ngModelChange)="changeRemisionAdminUser.set($event)"
+                  placeholder="supervisor@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Autorización <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showChangeRemisionPassword() ? 'text' : 'password'"
+                  [ngModel]="changeRemisionAdminPassword()"
+                  (ngModelChange)="changeRemisionAdminPassword.set($event)"
+                  (keyup.enter)="confirmChangeRemision()"
+                  placeholder="Ingresa la contraseña de autorización"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowChangeRemisionPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showChangeRemisionPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        @if (printType() === 'RECEPTION') {
-          <fg-print-reception-layout [reception]="printRec"></fg-print-reception-layout>
-        } @else {
-          <fg-print-cancellation-layout [reception]="printRec"></fg-print-cancellation-layout>
-        }
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeChangeRemisionModal()"
+            class="btn-ghost text-xs px-3.5 py-1.5 rounded-xl"
+          >
+            Regresar
+          </button>
+          <button
+            type="button"
+            (click)="confirmChangeRemision()"
+            [disabled]="isChangingRemision()"
+            class="carriers-btn carriers-btn--gold text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+          >
+            <span class="material-symbols-outlined text-base">published_with_changes</span>
+            <span>{{ isChangingRemision() ? 'Actualizando...' : 'Confirmar Cambio de Remisión' }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  @if (showPrintModal() && selectedPrintReception(); as printRec) {
+    <div class="modal-overlay p-2 sm:p-4">
+      <div class="modal-card max-w-3xl w-full p-2.5 sm:p-3 space-y-2 max-h-[76vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        
+        <!-- Header en UNA SOLA FILA limpia sin salto -->
+        <div class="flex items-center justify-between gap-3 no-print border-b border-slate-200 dark:border-slate-800 pb-2 flex-shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-base shrink-0" [class.text-amber-500]="printType() === 'RECEPTION'" [class.text-rose-600]="printType() === 'CANCELLATION'">print</span>
+            <span class="font-black text-xs text-slate-800 dark:text-slate-100 uppercase tracking-wider truncate">
+              {{ printType() === 'RECEPTION' ? 'Pauta de Recepción' : 'Hoja de Cancelación' }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              (click)="downloadDirectPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="btn-save text-xs px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all hover:scale-[1.02] whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined text-sm">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + (printType() === 'RECEPTION' ? 'Recepción #' : 'Cancelación #') + (selectedPrintReception()?.folio || 'Doc') + '.pdf)' }}</span>
+            </button>
+            <button
+              type="button"
+              (click)="triggerBrowserPrint()"
+              class="btn-ghost text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir</span>
+            </button>
+            <button type="button" (click)="closePrintModal()" class="btn-ghost text-xs px-2.5 py-1.5 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">Cerrar</button>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto pr-0.5">
+          @if (printType() === 'RECEPTION') {
+            <fg-print-reception-layout [reception]="printRec"></fg-print-reception-layout>
+          } @else {
+            <fg-print-cancellation-layout [reception]="printRec"></fg-print-cancellation-layout>
+          }
+        </div>
       </div>
     </div>
   }

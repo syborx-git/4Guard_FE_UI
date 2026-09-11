@@ -479,6 +479,22 @@
   padding: 1px 5px;
 }
 
+.sku-item__sku-label {
+  color: var(--gold);
+  margin-right: 2px;
+}
+
+.sku-item__id-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(23, 32, 51, 0.05);
+  border: 1px solid rgba(23, 32, 51, 0.09);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
 .sku-item__unit-tag {
   font-family: var(--font-mono);
   font-size: 0.62rem;
@@ -884,6 +900,23 @@
 .skus-readonly-field { display: flex; flex-direction: column; gap: 0.2rem; }
 .skus-readonly-field__label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
 .skus-readonly-field__value { font-size: 0.83rem; font-weight: 500; color: var(--text-primary); }
+.skus-readonly-field__value--id {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--navy);
+  font-weight: 700;
+  background: rgba(23, 32, 51, 0.06);
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  letter-spacing: 0.05em;
+}
+.skus-readonly-field__value--sku {
+  color: var(--gold-dark, #a37f2c);
+  font-size: 0.88rem;
+}
 
 /* Timeline Box */
 
@@ -1147,71 +1180,104 @@
    DARK MODE — :host-context(.theme-dark)
    ───────────────────────────────────────────────────────────── */
 
-:host-context(.theme-dark) {
-  --bg-page:       #0d0b12;
-  --bg-card:       rgba(33, 29, 42, 0.90);
-  --border-card:   rgba(255,255,255,0.07);
-  --shadow-card:   0 18px 42px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04);
-  --text-primary:  #eceaf1;
-  --text-secondary:#9d99a8;
-  --text-muted:    #6a6577;
-  --text-gold:     #d6b667;
-  --gold-bg:       rgba(214, 182, 103, 0.08);
-  --gold-border:   rgba(214, 182, 103, 0.20);
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --navy:           #080e18;
+  --navy-mid:       #0f172a;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --bg-page:        #080e18;
+  --bg-card:        rgba(15, 23, 42, 0.95);
+  --border-card:    rgba(255, 255, 255, 0.10);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-gold:      #d0af67;
 }
 
-:host-context(.theme-dark) .skus-page {
+:host-context(.theme-dark) .skus-page,
+:host-context(.dark) .skus-page {
   background:
-    radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.07), transparent 30rem),
+    radial-gradient(circle at 90% 5%, rgba(208, 175, 103, 0.07), transparent 30rem),
     var(--bg-page);
   color: var(--text-primary);
 }
 
 :host-context(.theme-dark) .skus-kpi-card,
+:host-context(.dark) .skus-kpi-card,
 :host-context(.theme-dark) .skus-directory,
-:host-context(.theme-dark) .skus-detail {
+:host-context(.dark) .skus-directory,
+:host-context(.theme-dark) .skus-detail,
+:host-context(.dark) .skus-detail {
   background: var(--bg-card);
   border-color: var(--border-card);
   box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .skus-search__input,
+:host-context(.dark) .skus-search__input,
 :host-context(.theme-dark) .skus-filter-select,
+:host-context(.dark) .skus-filter-select,
 :host-context(.theme-dark) .fg-input,
+:host-context(.dark) .fg-input,
 :host-context(.theme-dark) .fg-select,
-:host-context(.theme-dark) .fg-textarea {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.09);
+:host-context(.dark) .fg-select,
+:host-context(.theme-dark) .fg-textarea,
+:host-context(.dark) .fg-textarea {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
   color: var(--text-primary);
 }
 
 :host-context(.theme-dark) .skus-search__input:focus,
+:host-context(.dark) .skus-search__input:focus,
 :host-context(.theme-dark) .fg-input:focus,
+:host-context(.dark) .fg-input:focus,
 :host-context(.theme-dark) .fg-select:focus,
-:host-context(.theme-dark) .fg-textarea:focus {
-  background: rgba(255,255,255,0.07);
+:host-context(.dark) .fg-select:focus,
+:host-context(.theme-dark) .fg-textarea:focus,
+:host-context(.dark) .fg-textarea:focus {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--gold);
 }
 
-:host-context(.theme-dark) .sku-item:hover     { background: rgba(214, 182, 103, 0.04); }
-:host-context(.theme-dark) .sku-item--selected { background: rgba(214, 182, 103, 0.07) !important; }
+:host-context(.theme-dark) .sku-item:hover,
+:host-context(.dark) .sku-item:hover {
+  background: rgba(208, 175, 103, 0.06);
+}
 
-:host-context(.theme-dark) .skus-form-header {
-  background: rgba(24, 21, 30, 0.7);
+:host-context(.theme-dark) .sku-item--selected,
+:host-context(.dark) .sku-item--selected {
+  background: rgba(208, 175, 103, 0.10) !important;
+}
+
+:host-context(.theme-dark) .skus-form-header,
+:host-context(.dark) .skus-form-header {
+  background: rgba(15, 23, 42, 0.85);
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .skus-form-actions {
-  background: rgba(255,255,255,0.025);
+:host-context(.theme-dark) .skus-form-actions,
+:host-context(.dark) .skus-form-actions {
+  background: rgba(15, 23, 42, 0.60);
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .skus-dialog {
-  background: rgba(30, 26, 40, 0.98);
-  border-color: rgba(255,255,255,0.09);
+:host-context(.theme-dark) .skus-dialog,
+:host-context(.dark) .skus-dialog {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 :host-context(.theme-dark) .skus-pagination__select,
-:host-context(.theme-dark) .skus-pagination__btn {
+:host-context(.dark) .skus-pagination__select,
+:host-context(.theme-dark) .skus-pagination__btn,
+:host-context(.dark) .skus-pagination__btn {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.10);
   color: var(--text-primary);

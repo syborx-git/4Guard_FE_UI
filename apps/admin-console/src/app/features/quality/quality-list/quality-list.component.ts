@@ -1,17 +1,19 @@
 /**
  * @file quality-list.component.ts
- * @description Listado de control de calidad (QM) con filtrado por estado y cliente.
+ * @description Listado de control de calidad (QM) con filtrado por estado, cliente y Modal Interactivo de Inspección.
  */
 
 import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Item, InventoryStatus, UnitOfMeasure } from '@4guard/shared-core';
+import { Item, InventoryStatus, UnitOfMeasure, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
+import { QualityInspectionModalComponent } from '../components/quality-inspection-modal/quality-inspection-modal.component';
+import { SpecularGlowDirective } from '../../../shared/directives/specular-glow.directive';
 
 @Component({
   selector: 'fg-quality-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, QualityInspectionModalComponent, SpecularGlowDirective],
   templateUrl: './quality-list.component.html',
   styleUrl: './quality-list.component.css'
 })
@@ -22,71 +24,120 @@ export class QualityListComponent {
   protected readonly filterText = signal('');
   protected readonly selectedClient = signal('');
 
+  // Estado del Modal Interactivo de Inspección QM
+  protected readonly isModalOpen = signal(false);
+  protected readonly selectedItemForModal = signal<Item | null>(null);
+
+  // Lotes Dummy Enriquecidos con datos corporativos de Lala, Nestlé, Bimbo
   protected readonly items = signal<Item[]>([
     {
       id: 'item-001',
       sku: 'LALA-MILK-1L',
-      description: 'Leche Lala Entera 1 Litro',
+      description: 'Leche Lala Entera UHT 1 Litro (Caja 12 pzas)',
       clientId: 'cli-01',
-      clientName: 'Lala S.A.',
-      batchNumber: 'LOT-2026-A12',
-      expiryDate: '2026-09-15T00:00:00Z',
+      clientName: 'Lala S.A. de C.V.',
+      batchNumber: 'LOT-2026-LALA-901',
+      expiryDate: '2026-11-20T00:00:00Z',
       quantity: 120,
       unitOfMeasure: UnitOfMeasure.BOX,
-      locationId: 'LOC-DOCK-02',
+      locationId: 'LOC-QM-DOCK-02',
       status: InventoryStatus.QUARANTINE,
       branchId: '1',
-      weightKg: 1200,
-      volumeM3: 1.5,
+      weightKg: 1440,
+      volumeM3: 1.8,
       barcode: '7501020304051',
       sscc: '375010203040500018',
-      receivedAt: '2026-06-22T10:30:00Z',
-      lastStatusChangeAt: '2026-06-22T10:35:00Z',
-      notes: 'Pendiente de muestreo microbiológico',
+      receivedAt: '2026-08-30T10:30:00Z',
+      lastStatusChangeAt: '2026-08-30T10:35:00Z',
+      notes: 'Requiere verificación de temperatura de andén (cadena de frío 4°C)',
       metadata: null
     },
     {
       id: 'item-002',
       sku: 'NESP-CAPS-10P',
-      description: 'Cápsulas Nespresso Ristretto x10',
+      description: 'Cápsulas Nespresso Ristretto Intenso x10 (Caja Master 50U)',
       clientId: 'cli-02',
-      clientName: 'Nestlé México',
-      batchNumber: 'LOT-NES-883',
-      expiryDate: '2027-06-01T00:00:00Z',
+      clientName: 'Nestlé México S.A.',
+      batchNumber: 'LOT-NES-2026-883',
+      expiryDate: '2027-08-15T00:00:00Z',
       quantity: 450,
       unitOfMeasure: UnitOfMeasure.BOX,
-      locationId: 'LOC-STG-04',
+      locationId: 'LOC-QM-STG-04',
       status: InventoryStatus.QUARANTINE,
       branchId: '1',
-      weightKg: 90,
-      volumeM3: 0.4,
+      weightKg: 225,
+      volumeM3: 0.6,
       barcode: '7613036987654',
       sscc: '376130369876500025',
-      receivedAt: '2026-06-22T11:15:00Z',
-      lastStatusChangeAt: '2026-06-22T11:20:00Z',
-      notes: 'Caja externa ligeramente húmeda en andén 4',
+      receivedAt: '2026-08-30T11:15:00Z',
+      lastStatusChangeAt: '2026-08-30T11:20:00Z',
+      notes: 'Tarima secundaria con leve raspadura en empaque exterior',
       metadata: null
     },
     {
       id: 'item-003',
       sku: 'BIMBO-BREAD-680G',
-      description: 'Pan Cero Cero Bimbo 680g',
+      description: 'Pan Cero Cero Bimbo 680g (Tarima 80 Cajas)',
       clientId: 'cli-03',
-      clientName: 'Bimbo de México',
-      batchNumber: 'LOT-BIM-902',
-      expiryDate: '2026-07-05T00:00:00Z',
+      clientName: 'Bimbo de México S.A.',
+      batchNumber: 'LOT-BIM-2026-902',
+      expiryDate: '2026-09-12T00:00:00Z',
       quantity: 80,
       unitOfMeasure: UnitOfMeasure.BOX,
-      locationId: 'LOC-QM-01',
+      locationId: 'LOC-QM-ISO-01',
       status: InventoryStatus.QM_BLOCKED,
       branchId: '1',
       weightKg: 54.4,
       volumeM3: 0.8,
       barcode: '7501008003123',
       sscc: '375010080031200032',
-      receivedAt: '2026-06-20T08:00:00Z',
-      lastStatusChangeAt: '2026-06-20T09:45:00Z',
-      notes: 'Bloqueado por presencia de etiquetas incorrectas en el pallet',
+      receivedAt: '2026-08-29T08:00:00Z',
+      lastStatusChangeAt: '2026-08-29T09:45:00Z',
+      notes: 'Bloqueado por inconformidad en código EAN impreso en caja externa',
+      metadata: null
+    },
+    {
+      id: 'item-004',
+      sku: 'LALA-YOG-250G',
+      description: 'Yogurt Griego Lala Fresa 250g (Sixpack x 8)',
+      clientId: 'cli-01',
+      clientName: 'Lala S.A. de C.V.',
+      batchNumber: 'LOT-2026-LALA-905',
+      expiryDate: '2026-10-05T00:00:00Z',
+      quantity: 320,
+      unitOfMeasure: UnitOfMeasure.BOX,
+      locationId: 'LOC-QM-COLD-01',
+      status: InventoryStatus.QUARANTINE,
+      branchId: '1',
+      weightKg: 640,
+      volumeM3: 0.9,
+      barcode: '7501020304999',
+      sscc: '375010203040500099',
+      receivedAt: '2026-08-30T14:20:00Z',
+      lastStatusChangeAt: '2026-08-30T14:25:00Z',
+      notes: 'Verificación microbiológica de laboratorio en curso',
+      metadata: null
+    },
+    {
+      id: 'item-005',
+      sku: 'NESP-MILK-POWDER',
+      description: 'Leche en Polvo Nido Entera 800g (Caja 12 Latas)',
+      clientId: 'cli-02',
+      clientName: 'Nestlé México S.A.',
+      batchNumber: 'LOT-NES-2026-441',
+      expiryDate: '2028-01-30T00:00:00Z',
+      quantity: 210,
+      unitOfMeasure: UnitOfMeasure.BOX,
+      locationId: 'LOC-STORAGE-A12',
+      status: InventoryStatus.AVAILABLE,
+      branchId: '1',
+      weightKg: 2016,
+      volumeM3: 2.1,
+      barcode: '7613036123456',
+      sscc: '376130369876500077',
+      receivedAt: '2026-08-28T09:10:00Z',
+      lastStatusChangeAt: '2026-08-28T16:00:00Z',
+      notes: 'Aprobado y liberado sin observaciones',
       metadata: null
     }
   ]);
@@ -96,15 +147,15 @@ export class QualityListComponent {
     return Array.from(new Set(list));
   });
 
-  protected readonly quarantineCount = computed(() => 
+  protected readonly quarantineCount = computed(() =>
     this.items().filter(i => i.status === InventoryStatus.QUARANTINE).length
   );
 
-  protected readonly blockedCount = computed(() => 
+  protected readonly blockedCount = computed(() =>
     this.items().filter(i => i.status === InventoryStatus.QM_BLOCKED).length
   );
 
-  protected readonly approvedCount = computed(() => 
+  protected readonly approvedCount = computed(() =>
     this.items().filter(i => i.status === InventoryStatus.AVAILABLE).length
   );
 
@@ -122,7 +173,10 @@ export class QualityListComponent {
       if (i.status !== expectedStatus) return false;
       if (client && i.clientName !== client) return false;
       if (query) {
-        return i.sku.toLowerCase().includes(query) || i.batchNumber.toLowerCase().includes(query) || i.description.toLowerCase().includes(query);
+        return i.sku.toLowerCase().includes(query) ||
+               i.batchNumber.toLowerCase().includes(query) ||
+               i.description.toLowerCase().includes(query) ||
+               i.clientName.toLowerCase().includes(query);
       }
       return true;
     });
@@ -146,39 +200,62 @@ export class QualityListComponent {
     }
   }
 
-  protected goToInspection(id: string): void {
-    this.router.navigate(['/quality', id]);
+  // Abre el Modal Interactivo en lugar de cambiar de página inmediatamente
+  protected openInspectionModal(item: Item): void {
+    this.selectedItemForModal.set(item);
+    this.isModalOpen.set(true);
+  }
+
+  protected closeInspectionModal(): void {
+    this.isModalOpen.set(false);
+    this.selectedItemForModal.set(null);
+  }
+
+  // Actualiza el estado del lote en tiempo real tras dictamen en el modal
+  protected handleStatusUpdate(event: { itemId: string; newStatus: InventoryStatus; notes: string }): void {
+    this.items.update(list =>
+      list.map(i => {
+        if (i.id === event.itemId) {
+          return {
+            ...i,
+            status: event.newStatus,
+            notes: event.notes,
+            lastStatusChangeAt: new Date().toISOString()
+          };
+        }
+        return i;
+      })
+    );
+
+    const actionText = event.newStatus === InventoryStatus.AVAILABLE ? 'APROBADO Y LIBERADO' : 'BLOQUEADO POR QM';
+    console.log(`Lote ${event.itemId} actualizado a status ${event.newStatus} (${actionText})`);
   }
 
   protected quickApprove(item: Item): void {
-    if (confirm(`¿Aprobar rápidamente el lote ${item.batchNumber} de ${item.description}?`)) {
-      this.items.update(list => list.map(i => 
-        i.id === item.id ? { ...i, status: InventoryStatus.AVAILABLE, notes: 'Aprobación rápida por supervisor' } : i
+    if (confirm(`¿Aprobar rápidamente el lote ${item.batchNumber} de ${item.clientName}?`)) {
+      this.items.update(list => list.map(i =>
+        i.id === item.id ? { ...i, status: InventoryStatus.AVAILABLE, notes: 'Aprobación rápida por supervisor QM' } : i
       ));
     }
   }
 
   protected quickBlock(item: Item): void {
     if (confirm(`¿Bloquear por QM el lote ${item.batchNumber}?`)) {
-      this.items.update(list => list.map(i => 
-        i.id === item.id ? { ...i, status: InventoryStatus.QM_BLOCKED, notes: 'Bloqueo rápido por supervisor' } : i
+      this.items.update(list => list.map(i =>
+        i.id === item.id ? { ...i, status: InventoryStatus.QM_BLOCKED, notes: 'Bloqueo rápido por inspección' } : i
       ));
     }
   }
 
   protected releaseItem(item: Item): void {
-    if (confirm(`¿Liberar el lote bloqueado ${item.batchNumber}?`)) {
-      this.items.update(list => list.map(i => 
-        i.id === item.id ? { ...i, status: InventoryStatus.AVAILABLE, notes: 'Liberación de control de calidad' } : i
+    if (confirm(`¿Liberar lote bloqueado ${item.batchNumber}?`)) {
+      this.items.update(list => list.map(i =>
+        i.id === item.id ? { ...i, status: InventoryStatus.AVAILABLE, notes: 'Liberado tras corrección de no conformidad' } : i
       ));
     }
   }
 
-  protected scrapItem(item: Item): void {
-    if (confirm(`¿Está seguro de dar de BAJA (ajuste destructivo) el lote ${item.batchNumber}? Esta acción no se puede deshacer.`)) {
-      this.items.update(list => list.map(i => 
-        i.id === item.id ? { ...i, status: InventoryStatus.WRITTEN_OFF, notes: 'Dado de baja por merma' } : i
-      ));
-    }
+  protected getStatusLabel(status: InventoryStatus): string {
+    return INVENTORY_STATUS_LABELS[status] || String(status);
   }
 }

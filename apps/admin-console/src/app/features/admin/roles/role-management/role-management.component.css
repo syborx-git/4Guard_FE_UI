@@ -1231,77 +1231,103 @@
 .roles-dialog__actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.5rem; background: rgba(23, 32, 51, 0.02); border-top: 1px solid var(--border-card); }
 
 /* ─────────────────────────────────────────────────────────────
-   DARK MODE — :host-context(.theme-dark)
+   DARK MODE — :host-context(.theme-dark), :host-context(.dark)
    ───────────────────────────────────────────────────────────── */
 
-:host-context(.theme-dark) {
-  --bg-page:       #0d0b12;
-  --bg-card:       rgba(33, 29, 42, 0.90);
-  --border-card:   rgba(255,255,255,0.07);
-  --shadow-card:   0 18px 42px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04);
-  --text-primary:  #eceaf1;
-  --text-secondary:#9d99a8;
-  --text-muted:    #6a6577;
-  --text-gold:     #d6b667;
-  --gold-bg:       rgba(214, 182, 103, 0.08);
-  --gold-border:   rgba(214, 182, 103, 0.20);
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --bg-page:        #080e18;
+  --bg-card:        rgba(15, 23, 42, 0.95);
+  --border-card:    rgba(255, 255, 255, 0.10);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-gold:      #d0af67;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
 }
 
-:host-context(.theme-dark) .roles-page {
+:host-context(.theme-dark) .roles-page,
+:host-context(.dark) .roles-page {
   background:
-    radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.07), transparent 30rem),
+    radial-gradient(circle at 90% 5%, rgba(208, 175, 103, 0.08), transparent 30rem),
     var(--bg-page);
   color: var(--text-primary);
 }
 
 :host-context(.theme-dark) .roles-kpi-card,
+:host-context(.dark) .roles-kpi-card,
 :host-context(.theme-dark) .roles-directory,
-:host-context(.theme-dark) .roles-detail {
+:host-context(.dark) .roles-directory,
+:host-context(.theme-dark) .roles-detail,
+:host-context(.dark) .roles-detail {
   background: var(--bg-card);
   border-color: var(--border-card);
   box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .roles-search__input,
+:host-context(.dark) .roles-search__input,
 :host-context(.theme-dark) .roles-filter-select,
+:host-context(.dark) .roles-filter-select,
 :host-context(.theme-dark) .fg-input,
+:host-context(.dark) .fg-input,
 :host-context(.theme-dark) .fg-select,
-:host-context(.theme-dark) .fg-textarea {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.09);
+:host-context(.dark) .fg-select,
+:host-context(.theme-dark) .fg-textarea,
+:host-context(.dark) .fg-textarea {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
   color: var(--text-primary);
 }
 
 :host-context(.theme-dark) .roles-perm-card,
-:host-context(.theme-dark) .roles-perm-item {
+:host-context(.dark) .roles-perm-card,
+:host-context(.theme-dark) .roles-perm-item,
+:host-context(.dark) .roles-perm-item {
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-:host-context(.theme-dark) .roles-perm-card__header {
+:host-context(.theme-dark) .roles-perm-card__header,
+:host-context(.dark) .roles-perm-card__header {
   background: rgba(255, 255, 255, 0.05);
 }
 
-:host-context(.theme-dark) .role-item:hover     { background: rgba(214, 182, 103, 0.04); }
-:host-context(.theme-dark) .role-item--selected { background: rgba(214, 182, 103, 0.07) !important; }
+:host-context(.theme-dark) .role-item:hover,
+:host-context(.dark) .role-item:hover {
+  background: rgba(208, 175, 103, 0.05);
+}
 
-:host-context(.theme-dark) .roles-form-header {
-  background: rgba(24, 21, 30, 0.7);
+:host-context(.theme-dark) .role-item--selected,
+:host-context(.dark) .role-item--selected {
+  background: rgba(208, 175, 103, 0.10) !important;
+}
+
+:host-context(.theme-dark) .roles-form-header,
+:host-context(.dark) .roles-form-header {
+  background: rgba(15, 23, 42, 0.95);
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .roles-form-actions {
-  background: rgba(255,255,255,0.025);
+:host-context(.theme-dark) .roles-form-actions,
+:host-context(.dark) .roles-form-actions {
+  background: rgba(15, 23, 42, 0.95);
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .roles-dialog {
-  background: rgba(30, 26, 40, 0.98);
-  border-color: rgba(255,255,255,0.09);
+:host-context(.theme-dark) .roles-dialog,
+:host-context(.dark) .roles-dialog {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
 }
 
 :host-context(.theme-dark) .roles-pagination__select,
-:host-context(.theme-dark) .roles-pagination__btn {
+:host-context(.dark) .roles-pagination__select,
+:host-context(.theme-dark) .roles-pagination__btn,
+:host-context(.dark) .roles-pagination__btn {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.10);
   color: var(--text-primary);

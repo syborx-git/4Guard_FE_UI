@@ -424,15 +424,14 @@
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="phone">Teléfono Corporativo Principal</label>
+                  <label class="fg-label" for="phone">Teléfono Corporativo Principal (Opcional)</label>
                   <input
                     id="phone"
                     class="fg-input"
                     [class.fg-input--error]="fieldHasError('phone')"
                     type="text"
                     formControlName="phone"
-                    placeholder="Ej. 55 5268 2000"
-                    aria-required="true"
+                    placeholder="Ej. 55 5268 2000 (Opcional)"
                   />
                   @if (fieldHasError('phone')) {
                     <span class="fg-error" role="alert">{{ getFieldError('phone') }}</span>
@@ -534,11 +533,11 @@
                         />
                       </div>
                       <div class="fg-field">
-                        <label class="fg-label fg-label--required">Teléfono Directo</label>
+                        <label class="fg-label">Teléfono Directo (Opcional)</label>
                         <input
                           type="text"
                           formControlName="phone"
-                          placeholder="Ej. 55 1234 5678"
+                          placeholder="Ej. 55 1234 5678 (Opcional)"
                           class="fg-input fg-input--sm"
                         />
                       </div>
@@ -660,8 +659,16 @@
 
                 <div class="clients-readonly-grid">
                   <div class="clients-readonly-field">
-                    <span class="clients-readonly-field__label">ID de Cliente (UUID)</span>
-                    <span class="clients-readonly-field__value font-mono">{{ selectedClient()!.id }}</span>
+                    <span class="clients-readonly-field__label">ID de Sistema (8 dígitos)</span>
+                    <span class="clients-readonly-field__value font-mono font-bold text-slate-800" [title]="'UUID Completo en BD: ' + selectedClient()!.id">
+                      #{{ getShortId(selectedClient()!.id) }}
+                    </span>
+                  </div>
+                  <div class="clients-readonly-field">
+                    <span class="clients-readonly-field__label">Código Externo / ERP</span>
+                    <span class="clients-readonly-field__value font-mono font-bold text-amber-700">
+                      {{ selectedClient()!.externalId }}
+                    </span>
                   </div>
                   <div class="clients-readonly-field">
                     <span class="clients-readonly-field__label">Fecha de creación</span>
@@ -687,7 +694,7 @@
                     <div class="clients-timeline-header">
                       <div class="clients-timeline-title">
                         <span class="material-symbols-outlined">history</span>
-                        <span>Historial de Cambios de Auditoría (GET /api/v1/clients/&#123;id&#125;/audit)</span>
+                        <span>Historial de Cambios y Auditoría</span>
                       </div>
                       <button
                         type="button"

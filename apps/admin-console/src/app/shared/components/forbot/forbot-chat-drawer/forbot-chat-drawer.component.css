@@ -1,4 +1,4 @@
-:host {
+﻿:host {
   display: contents;
 }
 
@@ -35,4 +35,136 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ALTO CONTRASTE PARA CAJAS DE ALERTA PROACTIVA ("MANO DERECHA")
+══════════════════════════════════════════════════════════ */
+.proactive-alert-box {
+  background-color: #fef3c7 !important; /* Ámbar claro */
+  border: 1.5px solid #d97706 !important; /* Borde ámbar sólido */
+  color: #451a03 !important; /* Marrón oscuro / Café profundo para máximo contraste */
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.proactive-alert-box p,
+.proactive-alert-box span,
+.proactive-alert-box strong {
+  color: #451a03 !important;
+  font-weight: 800 !important;
+  line-height: 1.45;
+}
+
+/* Modo Oscuro para la caja proactiva */
+:host-context(.dark) .proactive-alert-box,
+.dark .proactive-alert-box,
+.dark-theme .proactive-alert-box {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
+  color: #fef08a !important;
+}
+
+:host-context(.dark) .proactive-alert-box p,
+.dark .proactive-alert-box p,
+.dark-theme .proactive-alert-box p {
+  color: #fef08a !important;
+  font-weight: 700 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ALTO CONTRASTE TIPOGRÁFICO GENERAL
+══════════════════════════════════════════════════════════ */
+.forbot-msg-light {
+  color: #0f172a !important;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.forbot-msg-light strong,
+.forbot-msg-light b {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+.forbot-msg-dark {
+  color: #f1f5f9 !important;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.forbot-msg-dark strong,
+.forbot-msg-dark b {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* Estilos Temáticos para Popovers de Driver.js en 4GUARD WMS */
+::ng-deep .driver-popover {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85) !important;
+  padding: 16px !important;
+  font-family: inherit !important;
+
+  .driver-popover-title {
+    color: #f59e0b !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .driver-popover-description {
+    color: #cbd5e1 !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+  }
+
+  .driver-popover-progress-text {
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+    font-family: monospace !important;
+  }
+
+  .driver-popover-next-btn,
+  .driver-popover-done-btn {
+    background-color: #1b2b4b !important;
+    color: #ffffff !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    padding: 6px 14px !important;
+    text-shadow: none !important;
+    cursor: pointer !important;
+
+    &:hover {
+      background-color: #243a66 !important;
+    }
+  }
+
+  .driver-popover-prev-btn {
+    background-color: #1e293b !important;
+    color: #94a3b8 !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 6px 12px !important;
+    cursor: pointer !important;
+
+    &:hover {
+      color: #ffffff !important;
+      background-color: #334155 !important;
+    }
+  }
+
+  .driver-popover-close-btn {
+    color: #94a3b8 !important;
+    &:hover {
+      color: #ffffff !important;
+    }
+  }
 }

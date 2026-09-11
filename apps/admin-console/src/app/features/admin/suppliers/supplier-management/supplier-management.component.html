@@ -614,14 +614,14 @@
 
               <!-- Teléfono principal -->
               <div class="supplier-field">
-                <label class="supplier-field__label" for="contact-phone">Teléfono Principal *</label>
+                <label class="supplier-field__label" for="contact-phone">Teléfono Principal (Opcional)</label>
                 <input
                   id="contact-phone"
                   class="supplier-field__input"
                   [class.supplier-field__input--error]="fieldHasError('contactPhone')"
                   type="tel"
                   formControlName="contactPhone"
-                  placeholder="8183456789"
+                  placeholder="Ej. 8183456789 (Opcional)"
                 />
                 @if (fieldHasError('contactPhone')) {
                   <span class="supplier-field__error">{{ getFieldError('contactPhone') }}</span>
@@ -946,8 +946,8 @@
             @if (canViewAudit()) {
               <div class="supplier-timeline-preview" style="border-style: solid; margin-top: 1.25rem;">
                 <div class="supplier-timeline-preview__header" style="border-bottom-style: solid; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;">
-                  <span class="material-symbols-outlined" style="font-size: 16px;">timeline</span>
-                  <span>Historial de cambios (Audit Timeline)</span>
+                  <span class="material-symbols-outlined" style="font-size: 16px;">history</span>
+                  <span>Historial de Cambios y Auditoría</span>
                 </div>
 
                 @if (auditEntries().length === 0) {

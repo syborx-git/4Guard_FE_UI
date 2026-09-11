@@ -4,22 +4,22 @@
  */
 
 export type PalletType =
-  | 'MADERA'
-  | 'PLASTICO'
-  | 'PLASTICO_AZUL'
-  | 'MADERA_EXPORTACION'
-  | 'SIN_TARIMA'
+  | 'MADERA_OWENS'
   | 'MADERA_ESTANDAR'
-  | 'TARIMA_CHEP';
+  | 'PLASTICO_NEGRO_OWENS'
+  | 'PLASTICO_AZUL'
+  | 'TARIMA_CHEP_NACIONAL'
+  | 'TARIMA_CHEP_EXPORTACION'
+  | 'TARIMA_PLASTICO_NEGRO_ESTANDAR';
 
 export const PALLET_TYPE_LABELS: Record<PalletType, string> = {
-  MADERA: 'Madera',
-  PLASTICO: 'Plástico',
-  PLASTICO_AZUL: 'Plástico Azul',
-  MADERA_EXPORTACION: 'Madera Exportación',
-  SIN_TARIMA: 'Sin Tarima',
+  MADERA_OWENS: 'Madera Owens',
   MADERA_ESTANDAR: 'Madera Estándar',
-  TARIMA_CHEP: 'Tarima CHEP',
+  PLASTICO_NEGRO_OWENS: 'Plástico Negro Owens',
+  PLASTICO_AZUL: 'Plástico Azul',
+  TARIMA_CHEP_NACIONAL: 'Tarima CHEP Nacional',
+  TARIMA_CHEP_EXPORTACION: 'Tarima CHEP Exportación',
+  TARIMA_PLASTICO_NEGRO_ESTANDAR: 'Tarima Plástico Negro Estándar',
 };
 
 export interface CarrierLineItem {
@@ -64,6 +64,35 @@ export interface CheckInCasetaData {
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
+  economicNumber?: string;  // Número económico del vehículo
+  securityApproved?: boolean; // Visto bueno de seguridad patrimonial
+  securityApprovedAt?: string;
+  securityApprovedBy?: string;
+  dockAssignedAt?: string;
+  dischargeStartedAt?: string;
+  dischargeEndedAt?: string;
+}
+
+export interface PatioUnitMonitor {
+  id: string;
+  folio: string;
+  driverName: string;
+  carrierLine: string;
+  tractorPlates: string;
+  boxPlates: string;
+  economicNumber?: string;
+  registeredAt: string;
+  rampNumber?: number;
+  rampAssignedAt?: string;
+  dischargeStartedAt?: string;
+  dischargeEndedAt?: string;
+  status: 'CHECKED_IN' | 'RAMP_ASSIGNED' | 'DISCHARGING' | 'DISCHARGED_PENDING_EXIT' | 'COMPLETED';
+  forkliftOperator?: string;
+  palletType?: PalletType;
+  waitTimeMinutes: number;
+  dischargeTimeMinutes: number;
+  hasWaitAlert: boolean; // Alerta > 8 horas en espera
+  hasDischargeAlert: boolean; // Alerta > 2.5 horas en descarga
 }
 
 export interface ReceptionPalletItem {
@@ -78,6 +107,9 @@ export interface ReceptionPalletItem {
   palletTypeId: PalletType; // Tipo Tarima key
   palletTypeLabel: string;  // Tipo Tarima nombre legible
   status?: string;          // Estado de la tarima (ej. SCANNED, STORED, DISPATCHED)
+  locationCode?: string;    // Ubicación física de la tarima
+  lotNumber?: string;       // Lote
+  expirationDate?: string;  // Fecha de caducidad
 }
 
 export interface ReceptionHeader {
@@ -89,6 +121,7 @@ export interface ReceptionHeader {
   elaborationDate: string;
   expirationDate: string;
   productId: string;
+  skuCode?: string;          // Código de 8 dígitos del producto
   productName: string;
   supplierName?: string;     // Nombre del proveedor seleccionado
   storageLocation?: string;  // Lugar de almacenaje (ej. Bodega M 98)
@@ -233,8 +266,11 @@ export interface WarehouseOutbound {
   // Transportista / Vehículo (Snapshot)
   carrierCode: string;
   carrierName: string;
+  forkliftOperator?: string;
+  forkliftOperatorId?: string;
   driverName: string;
   economicNumber: string;
+  boxEconomicNumber?: string;
   tractorPlates: string;
   boxPlates: string;
   transportType: TransportType;
