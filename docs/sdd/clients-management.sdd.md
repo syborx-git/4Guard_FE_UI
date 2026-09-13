@@ -103,6 +103,19 @@ El servicio implementa validación de formato UUID antes de emitir cualquier pet
 * **Cancelar:** Restablece el formulario al estado original o descarta cambios.
 * **Suspender / Activar:** Botón contextual (amarillo/verde) que dispara el modal de confirmación para `PATCH /status`.
 
+### 5.3 Normativa de Homologación de Componentes (ADR-013)
+
+| Componente | Especificación en Gestión de Clientes | Estándar Requerido |
+|---|---|---|
+| **Hero Header** | `.hero-header` | Icono navy 52x52px (`corporate_fare`), breadcrumb con `.btn-back-admin` hacia `/admin`, eyebrow `DEPOSITANTES & 3PL` en monospace dorado, H1 `Gestión de Clientes Depositantes`. |
+| **KPI Cards Grid** | `.carriers-kpi-grid` (4 cards) | Total Clientes, Clientes Activos (verde), Inactivos (gris), Bodegas de Destino Físicas (dorado). |
+| **Directorio Split-View**| `.carriers-directory` (30% / 320px) | Buscador en tiempo real por Razón Social o RFC, chips de estado y lista con avatar circular. |
+| **Data Table de Contactos** | `.table-container`, `.data-table` | Columnas: Nombre, Área/Puesto, Teléfono, Correo, Principal (chip dorado) y Acciones rápidas. |
+| **Data Table de Bodegas** | `.table-container`, `.data-table` | Columnas: Código Destino (`.td-mono`), Nombre Bodega, Responsable, Teléfono y Botón de Baja. |
+| **Selectores & Dropdowns** | `.form-select` | Selectores de estatus (`ACTIVE`, `INACTIVE`) y área de contacto (`LOGISTICA`, `COMPRAS`, etc.). |
+| **Datepickers** | `.fg-datepicker` | Fecha de alta y fecha de vigencia de contratos en formato `DD/MM/YYYY` (persiste ISO-8601 UTC). |
+| **Diálogo de Confirmación**| `<fg-confirm-dialog>` | Modal desacoplado para confirmación de suspensión o eliminación de bodegas vinculadas. |
+
 ---
 
 ## 6. Visualización de Auditoría (Timeline)
@@ -123,3 +136,4 @@ Cada nodo del timeline renderiza:
 1. Resumen en lenguaje natural de la acción realizada.
 2. Usuario responsable (`performedBy`) y timestamp con formato `dd/MM/yyyy HH:mm:ss`.
 3. Lista de diferencias (*deltas*): `campo: valor_anterior ➔ valor_nuevo`.
+

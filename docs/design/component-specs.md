@@ -494,4 +494,450 @@ Queda **estrictamente prohibido** utilizar `window.confirm()` o `window.alert()`
   background: rgba(23,32,51,0.022);  /* light */
   /* dark: rgba(255,255,255,0.025) */
 }
+
+---
+
+## 5. Normativa Contractual de Homologación por Componentes (ADR-013)
+
+> **REGLA DE ORO:** Todo nuevo módulo o refactorización de pantalla en 4GUARD WMS DEBE cumplir de manera estricta con estas especificaciones para garantizar coherencia visual, accesibilidad y cero degradación estética entre temas (`.theme-dark` y `.theme-light`).
+
+---
+
+### 5.1 Data Table Homologada (`.table-container`, `.data-table`)
+
+La tabla de datos de 4GUARD WMS está diseñada para ofrecer alta densidad informativa, legibilidad industrial y ordenamiento ágil sin sobrecargar la vista.
+
+#### A) Estructura HTML Requerida
+```html
+<div class="table-container" role="region" aria-label="Tabla de Registros">
+  <table class="data-table">
+    <!-- 1. Cabecera con Columnas Ordenables -->
+    <thead>
+      <tr>
+        <th class="sortable" (click)="sortBy('code')">
+          <div class="th-content">
+            <span>CÓDIGO</span>
+            <span class="material-symbols-outlined sort-icon">
+              {{ sortField === 'code' ? (sortAsc ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+            </span>
+          </div>
+        </th>
+        <th class="sortable" (click)="sortBy('name')">
+          <div class="th-content">
+            <span>NOMBRE / DESCRIPCIÓN</span>
+            <span class="material-symbols-outlined sort-icon">
+              {{ sortField === 'name' ? (sortAsc ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+            </span>
+          </div>
+        </th>
+        <th>CATEGORÍA</th>
+        <th class="td-center">ESTADO</th>
+        <th class="td-actions">ACCIONES</th>
+      </tr>
+    </thead>
+
+    <!-- 2. Cuerpo de la Tabla -->
+    <tbody>
+      <!-- Estado de Carga: Skeleton Rows -->
+      @if (isLoading()) {
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <tr class="table-skeleton-row">
+            <td><div class="skeleton-cell skeleton-cell--short"></div></td>
+            <td><div class="skeleton-cell skeleton-cell--wide"></div></td>
+            <td><div class="skeleton-cell"></div></td>
+            <td class="td-center"><div class="skeleton-cell skeleton-cell--short" style="margin: 0 auto;"></div></td>
+            <td class="td-actions"><div class="skeleton-cell skeleton-cell--short"></div></td>
+          </tr>
+        }
+      } @else if (items().length === 0) {
+        <!-- Estado Vacío -->
+        <tr>
+          <td colspan="5">
+            <div class="table-empty">
+              <span class="material-symbols-outlined">inbox</span>
+              <p class="table-empty__title">No se encontraron registros</p>
+              <p class="table-empty__desc">Prueba ajustando los filtros o añade un nuevo registro.</p>
+            </div>
+          </td>
+        </tr>
+      } @else {
+        <!-- Filas de Datos -->
+        @for (item of pagedItems(); track item.id) {
+          <tr [class.is-selected]="selectedId() === item.id" (click)="selectItem(item)">
+            <!-- Celda Monospace (Códigos, IDs, RFC) -->
+            <td class="td-mono">{{ item.code }}</td>
+
+            <!-- Celda Primaria -->
+            <td class="td-primary">
+              <span class="row-title">{{ item.name }}</span>
+              <span class="row-subtitle">{{ item.subtitle }}</span>
+            </td>
+
+            <!-- Celda Estándar -->
+            <td>{{ item.category }}</td>
+
+            <!-- Celda de Estatus con Badge -->
+            <td class="td-center">
+              <span class="carrier-status-badge carrier-status-badge--{{ item.status.toLowerCase() }}">
+                {{ item.statusLabel }}
+              </span>
+            </td>
+
+            <!-- Celda de Acciones Rápidas -->
+            <td class="td-actions" (click)="$event.stopPropagation()">
+              <button
+                type="button"
+                class="btn-icon"
+                title="Editar registro"
+                (click)="editItem(item)">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button
+                type="button"
+                class="btn-icon btn-icon--danger"
+                title="Eliminar registro"
+                (click)="deleteItem(item)">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+
+  <!-- 3. Barra de Paginación Integrada -->
+  <div class="table-pagination">
+    <!-- Información de conteo -->
+    <div class="pagination-info">
+      Mostrando <strong>{{ pageStart() }}</strong> a <strong>{{ pageEnd() }}</strong> de <strong>{{ totalItems() }}</strong> registros
+    </div>
+
+    <!-- Controles de navegación y tamaño -->
+    <div class="pagination-controls">
+      <!-- Selector de Tamaño de Página -->
+      <div class="pagination-size">
+        <label for="page-size" class="sr-only">Filas por página</label>
+        <select
+          id="page-size"
+          class="form-select pagination-size__select"
+          [value]="pageSize()"
+          (change)="onPageSizeChange($event)">
+          <option [value]="10">10 / pág</option>
+          <option [value]="25">25 / pág</option>
+          <option [value]="50">50 / pág</option>
+          <option [value]="100">100 / pág</option>
+        </select>
+      </div>
+
+      <!-- Botón Página Anterior -->
+      <button
+        type="button"
+        class="pagination-btn"
+        [disabled]="currentPage() === 1"
+        (click)="goToPage(currentPage() - 1)"
+        aria-label="Página anterior">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+
+      <!-- Páginas Numeradas -->
+      @for (page of visiblePages(); track page) {
+        <button
+          type="button"
+          class="pagination-btn"
+          [class.is-active]="currentPage() === page"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+      }
+
+      <!-- Botón Página Siguiente -->
+      <button
+        type="button"
+        class="pagination-btn"
+        [disabled]="currentPage() === totalPages()"
+        (click)="goToPage(currentPage() + 1)"
+        aria-label="Página siguiente">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+  </div>
+</div>
+```
+
+#### B) Tokens CSS de la Tabla
+```css
+/* Altura de fila: 44px */
+/* Cabecera: background: var(--bg-card); font-family: Outfit; font-size: 0.72rem; text-transform: uppercase; font-weight: 700 */
+/* Hover de fila: background: rgba(197, 168, 107, 0.06) en light, rgba(214, 182, 103, 0.08) en dark */
+/* Fila seleccionada: border-left: 3px solid var(--gold); background: rgba(197, 168, 107, 0.12) */
+```
+
+---
+
+### 5.2 Selectores y Dropdowns Homologados (`.form-select`, `.fg-select-searchable`)
+
+Los selectores deben presentar bordes precisos, flechas sutiles en SVG y anillo de foco dorado.
+
+#### A) Selector Estándar (Single Select)
+```html
+<div class="form-group">
+  <label for="select-branch" class="form-label form-label--required">Sucursal Operativa</label>
+  <select
+    id="select-branch"
+    formControlName="branchId"
+    class="form-select"
+    [class.is-error]="branchControl.invalid && branchControl.touched">
+    <option value="" disabled selected>Selecciona una sucursal…</option>
+    @for (branch of branches(); track branch.id) {
+      <option [value]="branch.id">{{ branch.code }} — {{ branch.name }}</option>
+    }
+  </select>
+  @if (branchControl.invalid && branchControl.touched) {
+    <span class="form-error">
+      <span class="material-symbols-outlined">error</span>
+      Debes seleccionar una sucursal válida
+    </span>
+  }
+</div>
+```
+
+#### B) Searchable Select / Typeahead (Catálogos > 8 Elementos)
+Para entidades como SKUs, Clientes u Operadores, se implementa el patrón con filtro instantáneo:
+```html
+<div class="fg-searchable-select" [class.is-open]="isDropdownOpen()">
+  <!-- Input Visible con Icono -->
+  <div class="fg-searchable-select__trigger" (click)="toggleDropdown()">
+    <span class="material-symbols-outlined fg-searchable-select__icon">search</span>
+    <input
+      type="text"
+      class="fg-searchable-select__input"
+      [placeholder]="selectedLabel() || 'Buscar o seleccionar…'"
+      [value]="searchTerm()"
+      (input)="onSearchInput($event)"
+      (focus)="openDropdown()"
+    />
+    <span class="material-symbols-outlined fg-searchable-select__chevron">expand_more</span>
+  </div>
+
+  <!-- Menú Flotante con Glassmorphism -->
+  @if (isDropdownOpen()) {
+    <ul class="fg-searchable-select__menu" role="listbox">
+      @for (opt of filteredOptions(); track opt.value) {
+        <li
+          class="fg-searchable-select__option"
+          [class.is-selected]="opt.value === selectedValue()"
+          (click)="selectOption(opt)">
+          <div class="option-content">
+            <span class="option-code">{{ opt.code }}</span>
+            <span class="option-label">{{ opt.label }}</span>
+          </div>
+          @if (opt.value === selectedValue()) {
+            <span class="material-symbols-outlined option-check">check</span>
+          }
+        </li>
+      }
+      @if (filteredOptions().length === 0) {
+        <li class="fg-searchable-select__empty">No hay coincidencias</li>
+      }
+    </ul>
+  }
+</div>
+```
+
+---
+
+### 5.3 Datepicker Industrial y Selector de Rango (`.fg-datepicker`)
+
+Toda captura de fechas DEBE usar formato `DD/MM/YYYY` en vista y emitir `ISO-8601 UTC` al backend.
+
+#### A) Datepicker de Fecha Única
+```html
+<div class="form-group">
+  <label for="input-expiration-date" class="form-label form-label--required">Fecha de Expiración</label>
+  <div class="fg-datepicker-wrap">
+    <span class="material-symbols-outlined fg-datepicker__icon">calendar_today</span>
+    <input
+      id="input-expiration-date"
+      type="date"
+      class="form-input fg-datepicker__input"
+      formControlName="expirationDate"
+      [min]="todayIsoString"
+    />
+  </div>
+  <span class="form-hint">Formato legal: DD/MM/AAAA. Vigencia mínima requerida.</span>
+</div>
+```
+
+#### B) Selector de Rango de Fechas con Chips de Acceso Rápido
+```html
+<div class="fg-daterange-container">
+  <!-- Chips de Accesos Directos -->
+  <div class="fg-daterange-chips">
+    <button type="button" class="ce-chip" [class.ce-chip--active]="activeRangeChip() === 'TODAY'" (click)="setRangePreset('TODAY')">Hoy</button>
+    <button type="button" class="ce-chip" [class.ce-chip--active]="activeRangeChip() === 'YESTERDAY'" (click)="setRangePreset('YESTERDAY')">Ayer</button>
+    <button type="button" class="ce-chip" [class.ce-chip--active]="activeRangeChip() === 'LAST_7_DAYS'" (click)="setRangePreset('LAST_7_DAYS')">Últimos 7 días</button>
+    <button type="button" class="ce-chip" [class.ce-chip--active]="activeRangeChip() === 'THIS_MONTH'" (click)="setRangePreset('THIS_MONTH')">Este mes</button>
+  </div>
+
+  <!-- Inputs Inicio / Fin -->
+  <div class="fg-daterange-inputs">
+    <div class="form-group">
+      <label class="form-label" for="date-start">Fecha Inicial</label>
+      <input id="date-start" type="date" class="form-input" [(ngModel)]="startDate" (change)="onRangeChange()" />
+    </div>
+    <span class="fg-daterange-sep">➔</span>
+    <div class="form-group">
+      <label class="form-label" for="date-end">Fecha Final</label>
+      <input id="date-end" type="date" class="form-input" [(ngModel)]="endDate" (change)="onRangeChange()" />
+    </div>
+  </div>
+</div>
+```
+
+---
+
+### 5.4 Diálogos y Modales Desacoplados (`<fg-confirm-dialog>`, `.dialog`)
+
+Para evitar recargas o envíos accidentales del formulario padre, los modales se declaran sin etiqueta `<form>` envolvente y controlan el evento con `preventDefault()`.
+
+#### Estructura Canónica del Modal
+```html
+@if (isModalOpen()) {
+  <div class="overlay" (click)="closeModalOnBackdrop($event)" (keydown.escape)="closeModal()">
+    <div class="dialog dialog--medium" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <!-- Cabecera -->
+      <div class="dialog__header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span class="material-symbols-outlined dialog__icon" style="color: var(--gold);">warning</span>
+          <h2 class="dialog__title">{{ modalTitle }}</h2>
+        </div>
+        <button type="button" class="btn-icon" (click)="closeModal()" aria-label="Cerrar modal">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Cuerpo Scrollable (sin tag <form>) -->
+      <div class="dialog__body">
+        <p class="dialog__message">{{ modalMessage }}</p>
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="input-reason" class="form-label form-label--required">Motivo / Justificación</label>
+          <textarea id="input-reason" class="form-textarea" [(ngModel)]="actionReason" placeholder="Describe la causa operativa…"></textarea>
+        </div>
+      </div>
+
+      <!-- Barra de Acciones Sticky -->
+      <div class="dialog__footer">
+        <button type="button" class="carriers-btn carriers-btn--ghost" (click)="closeModal()" [disabled]="isSaving()">
+          Cancelar
+        </button>
+        <button type="button" class="carriers-btn carriers-btn--danger" (click)="confirmAction($event)" [disabled]="isSaving() || !actionReason.trim()">
+          @if (isSaving()) {
+            <span class="material-symbols-outlined spinner">sync</span>
+            Procesando…
+          } @else {
+            <span class="material-symbols-outlined">check</span>
+            Confirmar Acción
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+```
+
+---
+
+### 5.5 Hero Header Golden Standard con Navegación `/admin` (`.hero-header`)
+
+```html
+<header class="hero-header">
+  <!-- 1. Icon Box Navy (52x52px) -->
+  <div class="hero-header__icon-box">
+    <span class="material-symbols-outlined">{{ iconName }}</span>
+  </div>
+
+  <!-- 2. Contenido -->
+  <div class="hero-header__content">
+    <div class="hero-header__breadcrumb">
+      <a routerLink="/admin" class="btn-back-admin" title="Regresar a Administración WMS">
+        <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+      </a>
+      <span class="breadcrumb-dot">·</span>
+      <span class="hero-header__eyebrow">{{ categoryEyebrow }}</span>
+    </div>
+
+    <h1 class="hero-header__title">{{ screenTitle }}</h1>
+    <p class="hero-header__subtitle">{{ screenSubtitle }}</p>
+  </div>
+
+  <!-- 3. Acciones Primarias de Pantalla -->
+  <div class="hero-header__actions">
+    @if (canCreate()) {
+      <button type="button" class="carriers-btn carriers-btn--primary" (click)="onCreateNew()">
+        <span class="material-symbols-outlined">add</span>
+        {{ createButtonLabel }}
+      </button>
+    }
+  </div>
+</header>
+```
+
+---
+
+### 5.6 KPI Metric Cards Grid (`.carriers-kpi-grid`, `.kpi-card`)
+
+Cuadrícula responsiva de 4 columnas para métricas clave:
+```html
+<div class="carriers-kpi-grid" role="region" aria-label="Métricas Principales">
+  <!-- 1. Total (Midnight Navy) -->
+  <div class="carriers-kpi-card carriers-kpi-card--total">
+    <div class="carriers-kpi-card__icon-wrap">
+      <span class="material-symbols-outlined">inventory_2</span>
+    </div>
+    <div class="carriers-kpi-card__body">
+      <span class="carriers-kpi-card__value">{{ totalMetric() }}</span>
+      <span class="carriers-kpi-card__label">Total Registrados</span>
+    </div>
+    <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+  </div>
+
+  <!-- 2. Activos (Verde Éxito) -->
+  <div class="carriers-kpi-card carriers-kpi-card--active">
+    <div class="carriers-kpi-card__icon-wrap">
+      <span class="material-symbols-outlined">check_circle</span>
+    </div>
+    <div class="carriers-kpi-card__body">
+      <span class="carriers-kpi-card__value">{{ activeMetric() }}</span>
+      <span class="carriers-kpi-card__label">Activos / Operativos</span>
+    </div>
+    <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+  </div>
+
+  <!-- 3. En Espera / Suspendidos (Dorado / Ámbar) -->
+  <div class="carriers-kpi-card carriers-kpi-card--suspended">
+    <div class="carriers-kpi-card__icon-wrap">
+      <span class="material-symbols-outlined">hourglass_top</span>
+    </div>
+    <div class="carriers-kpi-card__body">
+      <span class="carriers-kpi-card__value">{{ pendingMetric() }}</span>
+      <span class="carriers-kpi-card__label">Pendientes / Alerta</span>
+    </div>
+    <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+  </div>
+
+  <!-- 4. Inactivos / Bloqueados (Gris Muted / Rojo) -->
+  <div class="carriers-kpi-card carriers-kpi-card--inactive">
+    <div class="carriers-kpi-card__icon-wrap">
+      <span class="material-symbols-outlined">cancel</span>
+    </div>
+    <div class="carriers-kpi-card__body">
+      <span class="carriers-kpi-card__value">{{ inactiveMetric() }}</span>
+      <span class="carriers-kpi-card__label">Inactivos / Bajas</span>
+    </div>
+    <div class="carriers-kpi-card__bar carriers-kpi-card__bar--inactive"></div>
+  </div>
+</div>
+```
+
 ```

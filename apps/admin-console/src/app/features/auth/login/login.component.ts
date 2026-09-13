@@ -61,7 +61,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   // ── Formulario reactivo ──────────────────────────────────
   protected readonly form = this.fb.group({
-    email:    ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)]],
+    email:    ['', [Validators.required, Validators.pattern(/^\s*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\s*$/)]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 

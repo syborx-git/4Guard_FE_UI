@@ -102,6 +102,9 @@
             "assets": [
               { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" }
             ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["apps/admin-console/src/styles"]
+            },
             "styles": ["apps/admin-console/src/styles.scss"],
             "scripts": []
           }
