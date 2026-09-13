@@ -7,7 +7,7 @@
 ## 📌 Guía de Uso
 
 1. **Antes de proponer un cambio estructural:** Revisa esta lista para asegurarte de que no contradice un ADR existente.
-2. **Si requieres proponer una nueva decisión:** Copia [`template.md`](./template.md), numéralo en secuencia (ej. `ADR-011-nombre.md`) y solicita revisión del equipo.
+2. **Si requieres proponer una nueva decisión:** Copia [`template.md`](./template.md), numéralo en secuencia (ej. `ADR-016-nombre.md`) y solicita revisión del equipo.
 
 ---
 
@@ -27,3 +27,6 @@
 | **ADR-010** | Adopción del Flujo Spec-Driven Development (SDD) | ✅ Aceptado | 2026-07 | Metodología & AI | [`ADR-010-spec-driven-development.md`](./ADR-010-spec-driven-development.md) |
 | **ADR-011** | Consolidación de Navegación y Vistas Transaccionales en Movimientos | ✅ Aceptado | 2026-08 | Warehouse Movements | [`ADR-011-consolidacion-movimientos-almacen.md`](./ADR-011-consolidacion-movimientos-almacen.md) |
 | **ADR-012** | Arquitectura Offline-First, Protocolo Zone Lease, Impresión ZPL y UX Industrial para Terminal RF PWA | ✅ Aceptado | 2026-09 | RF Terminal / PWA / Hardware | [`ADR-012-rf-terminal-pwa-offline-first.md`](./ADR-012-rf-terminal-pwa-offline-first.md) |
+| **ADR-013** | Estándar Universal de Homologación de Componentes de UI (Data Tables, Selects Dinámicos, Datepickers, Modales y Hero Header) | ✅ Aceptado | 2026-09 | Design System / UI Standards | [`ADR-013-homologacion-componentes-ui.md`](./ADR-013-homologacion-componentes-ui.md) |
+| **ADR-014** | Arquitectura Backend Hexagonal (Ports & Adapters), Aislamiento Multi-tenant por Organización y Motor de Auditoría con Deltas | ✅ Aceptado | 2026-09 | Backend Architecture / DDD | [`ADR-014-arquitectura-backend-hexagonal-multitenant-audit.md`](./ADR-014-arquitectura-backend-hexagonal-multitenant-audit.md) |
+| **ADR-015** | Motor Documental para Generación de Boletas de Recepción, Traspasos, Despachos Outbound y Códigos Industriales (PDF & ZPL) | ✅ Aceptado | 2026-09 | Export Engine / Hardware | [`ADR-015-motor-documental-pdf-zpl-export.md`](./ADR-015-motor-documental-pdf-zpl-export.md) |

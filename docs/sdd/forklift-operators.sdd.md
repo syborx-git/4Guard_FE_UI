@@ -141,7 +141,20 @@ export interface ForkliftOperator {
 
 ---
 
-## 9. Manejo de Errores
+## 9. Normativa de Homologación de Componentes (ADR-013)
+
+| Componente | Especificación en Operadores de Montacargas | Estándar Requerido |
+|---|---|---|
+| **Hero Header** | `.hero-header` | Icono navy 52x52px (`forklift` / `precision_manufacturing`), breadcrumb con `.btn-back-admin` hacia `/admin`, eyebrow `PERSONAL OPERATIVO` en monospace dorado, H1 `Gestión de Montacarguistas`. |
+| **KPI Cards Grid** | `.carriers-kpi-grid` (4 cards) | Total, Activos (verde), DC-3 Vigentes (dorado), Licencias en Alerta (rojo). |
+| **Directorio Split-View**| `.carriers-directory` (35%) | Buscador reactivo por código (`MC-XXX`) o nombre, filtro de estatus y lista con badges DC-3. |
+| **Datepickers** | `.fg-datepicker` | Fecha de expedición y fecha de vigencia DC-3 en formato `DD/MM/YYYY` (persiste ISO-8601 UTC). |
+| **Selectores & Dropdowns** | `.form-select` | Selector de turno (`Shift`) obtenido de `/api/v1/shifts` y selector de estatus (`ACTIVO`, `INACTIVO`). |
+| **Diálogo de Confirmación**| `<fg-confirm-dialog>` | Modal desacoplado con motivo de suspensión o desactivación de operador. |
+
+---
+
+## 10. Manejo de Errores
 
 - **404**: Toast rojo "El montacarguista solicitado no fue encontrado."
 - **400**: Toast rojo con el `message` del backend (ej. "DC-3 duplicado")
@@ -150,9 +163,11 @@ export interface ForkliftOperator {
 
 ---
 
-## 10. Changelog
+## 11. Changelog
 
 | Versión | Cambio | Fecha |
 |---|---|---|
 | 1.0.0 | Implementación inicial con localStorage y datos mock | 2026-01 |
 | 2.0.0 | Migración completa a HTTP real (Cero Mocks — ADR-007) | 2026-08-18 |
+| 2.1.0 | Homologación con ADR-013 (Hero Header, Datepicker DC-3, Signals) | 2026-09-12 |
+
