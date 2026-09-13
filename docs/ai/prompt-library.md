@@ -308,11 +308,142 @@ Requisitos (HU-148 / SDD Level 5):
 4. Notificar mediante ToastService la confirmación de la cotización recibida.
 ```
 
+```
+
+---
+
+## 📊 Crear Data Table Homologada 4GUARD WMS (ADR-013)
+
+```
+Crea una tabla de datos (Data Table) homologada para la entidad [Entidad] en el módulo [Módulo].
+
+Cumplimiento estricto (ADR-013 / component-specs.md):
+1. Estructura HTML:
+   - Contenedor <div class="table-container"> envolviendo la tabla.
+   - Tabla <table class="data-table"> con thead y tbody.
+   - Cabecera con columnas ordenables (th.sortable) e icono de dirección sort-icon (arrow_upward/arrow_downward/unfold_more).
+   - Columnas especializadas:
+     * Código / Identificador: td.td-mono (fuente JetBrains Mono)
+     * Título / Descripción: td.td-primary (con título y subtítulo en 2 líneas)
+     * Estatus: td.td-center con <span class="carrier-status-badge carrier-status-badge--[status]">
+     * Acciones: td.td-actions con botones de 32x32px (.btn-icon) para editar y eliminar
+2. Estados de tabla:
+   - Carga: 5 filas esqueleto con shimmer (.table-skeleton-row > .skeleton-cell) cuando isLoading() es true.
+   - Vacío: .table-empty con icono Material ('inbox'), título y descripción cuando la lista esté vacía.
+3. Barra de paginación (.table-pagination):
+   - Texto informativo: "Mostrando X a Y de Z registros"
+   - Selector de tamaño de página (.form-select .pagination-size__select con opciones 10, 25, 50, 100)
+   - Botón anterior (.pagination-btn con chevron_left, disabled en página 1)
+   - Páginas numeradas con estado .is-active dorado
+   - Botón siguiente (.pagination-btn con chevron_right, disabled en última página)
+4. Reactividad con Signals:
+   - page = signal(1), pageSize = signal(10), sortField = signal('[campo]'), sortAsc = signal(true)
+   - pagedItems = computed(() => ...) aplicando ordenamiento y paginación en memoria o conectando con API Pageable.
+```
+
+---
+
+## 🔽 Crear Selector / Searchable Dropdown Homologado (ADR-013)
+
+```
+Implementa un selector dinámico homologado para [Entidad / Catálogo] en el formulario de [Módulo].
+
+Requisitos (ADR-013 / Synexia Design System):
+1. Si el catálogo tiene <= 8 opciones:
+   - Usar <select class="form-select"> dentro de un <div class="form-group">
+   - Label superior <label class="form-label form-label--required">
+   - Opción inicial deshabilitada <option value="" disabled selected>Selecciona una opción…</option>
+   - Enfoque con resplandor dorado (box-shadow: 0 0 0 3px rgba(234, 195, 73, 0.12))
+   - Mensaje de validación .form-error con icono Material 'error' si el control es inválido y touched
+2. Si el catálogo tiene > 8 opciones (Searchable Dropdown / Typeahead):
+   - Contenedor .fg-searchable-select con clase .is-open condicional
+   - Input de búsqueda interactiva con icono de lupa (search) y chevron (expand_more)
+   - Menú flotante con glassmorphism (.fg-searchable-select__menu) con lista de opciones
+   - Opción con código en mono (.option-code) y nombre (.option-label), e icono check si está seleccionada
+   - Estado vacío .fg-searchable-select__empty cuando no haya coincidencias
+   - Soporte para navegación con teclado y cierre al hacer clic fuera (click-outside)
+```
+
+---
+
+## 📅 Crear Datepicker Industrial con Rangos y Presets Rápidos (ADR-013)
+
+```
+Implementa un selector de fechas / selector de rango homologado para [Fecha / Operación] en [Módulo].
+
+Requisitos (ADR-008 / ADR-013):
+1. Presentación en UI:
+   - Formato visible estricto: DD/MM/YYYY
+   - Contenedor .fg-datepicker-wrap con icono Material 'calendar_today'
+   - Input accesible con placeholder "DD/MM/AAAA"
+2. Persistencia en Backend:
+   - Al emitir el DTO hacia la API REST, formatear a ISO-8601 UTC (YYYY-MM-DD o YYYY-MM-DDTHH:mm:ssZ)
+3. Si es selector de rango (.fg-daterange-container):
+   - Barra superior con chips de acceso rápido (.ce-chip): "Hoy", "Ayer", "Últimos 7 días", "Este mes"
+   - Dos inputs: Fecha Inicial y Fecha Final con separador visual (➔)
+   - Validación reactiva: startDate <= endDate. Mostrar .form-error si la fecha final es menor que la inicial.
+4. Soporte temático:
+   - Popover de calendario adaptable a .theme-dark y .theme-light con colores de acento dorado en el día seleccionado.
+```
+
+---
+
+## 📝 Generar Documento de Diseño de Software (SDD) Completo
+
+```
+Genera el documento SDD completo y estandarizado para el módulo de [Módulo / Entidad].
+
+Ubicación del archivo: docs/sdd/[modulo].sdd.md (y docs/sdd/[modulo].sdd.md en backend si aplica).
+
+El SDD debe incluir OBLIGATORIAMENTE las siguientes 7 secciones estructuradas:
+1. Objetivo y Alcance (Propósito de negocio, usuarios beneficiados, capacidades operativas).
+2. Estructura de Archivos del Módulo (Árbol de componentes, servicios, modelos y rutas).
+3. Normativa de Homologación de Componentes (ADR-013) (Tabla detallada con: Hero Header con /admin, KPI Cards Grid, Split-View 35/65, Data Tables, Selectores, Datepickers y Diálogos de Confirmación).
+4. Estado Reactivo del Componente (Tabla de Signals: WritableSignal, ComputedSignal, tipos y descripciones).
+5. Modelos de Datos TypeScript (Interfaces completas homologadas 1:1 con DTOs de Java).
+6. Contrato HTTP REST (Tabla de verbos, endpoints /api/v1/..., DTOs de petición y respuesta).
+7. Validaciones, Notificaciones (ToastService) y Auditoría (Timeline con deltas campo: anterior ➔ nuevo).
+```
+
+---
+
+## ✨ Homologación Completa de Pantalla Existente al Estándar Golden (Split-View 35/65)
+
+```
+Homologa integralmente la pantalla del módulo [Módulo] al estándar Golden Standard (Transportistas / Alertas).
+
+Ruta del componente: apps/admin-console/src/app/features/[feature]/
+
+Aplica la arquitectura Split-View 35/65 y el Design System Synexia:
+1. Hero Header (.hero-header):
+   - Icono Midnight Navy en caja de 52x52px con esquinas redondeadas
+   - Breadcrumb con botón .btn-back-admin (enlace a /admin) y eyebrow de categoría en monospace dorado
+   - Título H1 (1.7rem - 2.1rem) y subtítulo descriptivo
+   - Botón primario de acción (ej. "Nuevo registro")
+2. KPI Cards Grid (.carriers-kpi-grid):
+   - 4 tarjetas con métricas operativas (Total, Activos, Pendientes/Alerta, Inactivos)
+   - Barra semántica inferior de 3px y animación hover
+3. Columna Izquierda — Directorio (35% / ~340px):
+   - Buscador interactivo con debounce
+   - Chips de filtrado rápido por estatus (Todas / Activas / Inactivas)
+   - Lista con scroll independiente, badges de estado y estados de carga esqueleto
+4. Columna Derecha — Detalle / Formulario (65%):
+   - Cabecera sticky con migas de pan internas
+   - Agrupación por secciones con leyendas doradas (.section-legend)
+   - Controles de formulario (inputs de 40px, selects y datepickers homologados)
+   - Acordeón de trazabilidad de auditoría en tiempo real con deltas
+   - Barra de acciones sticky inferior (.carriers-form-actions) con botones Descartar y Guardar
+5. Diálogo Desacoplado:
+   - Todo flujo destructivo debe usar <fg-confirm-dialog> sin etiquetas <form> envolventes
+6. Cero degradación: Mantener intacta la lógica de negocio y los servicios HTTP.
+```
+
 ---
 
 ## 💡 Tips de uso
 
 1. **Siempre especifica el módulo objetivo** — "en el módulo de Sucursales" es más preciso que "en el sistema".
-2. **Menciona la pantalla de referencia** — "homologado con carrier-management o shift-management" activa el design system correcto.
+2. **Menciona la pantalla de referencia** — "homologado con carrier-management o alerts-config" activa el design system correcto.
 3. **Cita el archivo del contrato BE** — "Lee docs/api/modules/alerts-config.md" evita que se inventen endpoints.
 4. **Para bugs**, incluir la ruta exacta del archivo y una descripción del comportamiento esperado vs actual.
+
