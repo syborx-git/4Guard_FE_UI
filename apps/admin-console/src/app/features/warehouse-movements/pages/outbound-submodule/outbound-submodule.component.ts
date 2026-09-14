@@ -36,6 +36,8 @@ export interface AvailableSkuOption {
   skuCode: string;
   productName: string;
   category?: string;
+  clientName?: string;
+  clientCode?: string;
   totalAvailablePallets: number;
   totalAvailablePieces: number;
   batchesCount: number;
@@ -49,8 +51,10 @@ export interface AvailableSkuOption {
 export interface OutboundPalletItem {
   id: string;
   palletCode: string;
+  palletNumber?: number;
   productId: string;
   description: string;
+  clientName?: string;
   lotNumber: string;
   remisionNo: string;
   expirationDate: string;
@@ -152,7 +156,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   boxEconomicNumber = signal('');
   tractorPlates = signal('');
   boxPlates = signal('');
-  selectedTransportType = signal<TransportType>('TRAILER');
+  selectedTransportType = signal<TransportType | ''>('');
   sealNumber = signal('');
 
   // Filtro por Bahía de Origen (Paso 2)
@@ -167,16 +171,15 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.clients().find((c) => c.code === this.selectedClientCode()) || null
   );
 
-  // Computed: Destinos del cliente activo
-  destinationsForClient = computed(() => {
-    const code = this.selectedClientCode();
-    if (!code) return [];
-    return this.svc.getDestinationsForClient(code);
-  });
+  // Catálogo completo de destinos (desacoplado y reactivo)
+  readonly allDestinations = this.svc.allDestinations;
 
-  // Computed: Destino seleccionado
+  // Computed: Destinos disponibles (catálogo completo de plantas y centros de entrega)
+  destinationsForClient = computed(() => this.allDestinations());
+
+  // Computed: Destino seleccionado (resuelve tanto de la lista global como de específicos)
   selectedDestination = computed(() =>
-    this.destinationsForClient().find((d) => d.id === this.selectedDestinationId()) || null
+    this.allDestinations().find((d) => d.id === this.selectedDestinationId()) || null
   );
 
   // Computed: Transportista seleccionado
@@ -184,13 +187,18 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.carriers().find((c) => c.code === this.selectedCarrierCode()) || null
   );
 
-  // Validación Paso 1
+  // Validación Paso 1 (Estricta para todos los campos marcados como obligatorios)
   isStep1Valid = computed(() =>
-    !!this.selectedClientCode() &&
-    !!this.selectedDestinationId() &&
-    !!this.selectedCarrierCode() &&
-    !!this.driverName().trim() &&
-    !!this.sealNumber().trim()
+    Boolean(
+      this.selectedClientCode() &&
+      this.selectedDestinationId() &&
+      this.selectedCarrierCode() &&
+      this.driverName()?.trim() &&
+      this.selectedTransportType() &&
+      this.tractorPlates()?.trim() &&
+      this.boxPlates()?.trim() &&
+      this.sealNumber()?.trim()
+    )
   );
 
   // ── PASO 2: ASIGNACIÓN DE MONTACARGUISTA ──────────────────────────────────
@@ -213,9 +221,9 @@ export class OutboundSubmoduleComponent implements OnInit {
     }
     // Fallback inicial
     return [
-      { id: '00000000-0000-0000-0005-000000000001', name: 'PABLO HERNANDEZ', badge: 'MC-001', jobTitle: 'Montacarguista Master', shift: 'Matutino', status: 'ACTIVO' },
-      { id: '00000000-0000-0000-0005-000000000002', name: 'ALEJANDRO MONTIEL', badge: 'MC-002', jobTitle: 'Montacarguista Reach', shift: 'Vespertino', status: 'ACTIVO' },
-      { id: '00000000-0000-0000-0005-000000000003', name: 'JUAN PEREZ GONZALEZ', badge: 'MC-003', jobTitle: 'Operador Andenes', shift: 'Matutino', status: 'ACTIVO' },
+      { id: '852584b7-37c7-4a5f-b4dc-c7b6097a9c51', name: 'Hector Villalva Ayala', badge: 'MC-001', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX', status: 'ACTIVO' },
+      { id: 'b51345cb-bc76-4b3c-8386-d7595c14a83a', name: 'Alex Gabriel Perez Garduño', badge: 'MC-002', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX', status: 'ACTIVO' },
+      { id: '401954d5-dcc8-48bb-8a17-48a68d31580b', name: 'Alfredo Ramirez Gonzalez', badge: 'MC-003', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX', status: 'ACTIVO' },
     ];
   });
 
@@ -318,101 +326,75 @@ export class OutboundSubmoduleComponent implements OnInit {
     };
   }
 
-  // ── PASO 2: BUSCADOR PREDICTIVO DE PRODUCTOS / SKUS ───────────────────────
+  // ── PASO 2: BUSCADOR PREDICTIVO DE PRODUCTOS / SKUS Y ESCÁNER DE UAS ───
   skuSearchQuery = signal<string>('');
   isSkuDropdownOpen = signal<boolean>(false);
   selectedSkuCode = signal<string>('');
 
-  // Lotes disponibles para el cliente activo
+  // Lotes disponibles en todo el almacén (sin restricción de cliente para búsqueda libre)
   availableBatches = computed(() => {
-    const batches = this.allBatches().filter((b) => b.availablePallets > 0);
-    const client = this.selectedClient();
-    if (!client) return batches;
-    const cCode = (client.code || '').toLowerCase();
-    const cName = (client.name || '').toLowerCase();
-
-    const clientSpecific = batches.filter((b) => {
-      const bClient = ((b as any).clientName || b.client || '').toLowerCase();
-      return bClient.includes(cName) || cName.includes(bClient) || bClient.includes(cCode);
-    });
-
-    return clientSpecific.length > 0 ? clientSpecific : batches;
+    return this.allBatches().filter((b) => b.availablePallets > 0);
   });
 
-  // Catálogo completo de productos por cliente (con o sin stock)
-  availableSkusForClient = computed<AvailableSkuOption[]>(() => {
+  // Catálogo completo consolidado de todos los clientes y stock activo
+  availableCatalogSkus = computed<AvailableSkuOption[]>(() => {
     const batches = this.availableBatches();
-    const client = this.selectedClient();
-    const clientCode = (client?.code || '').toLowerCase();
-    const clientName = (client?.name || '').toLowerCase();
 
-    // Catálogo por defecto según cliente para garantizar visualización inmediata
-    const DEFAULT_CATALOG: Record<string, { code: string; name: string; category?: string }[]> = {
+    // Catálogo maestro multicliente
+    const DEFAULT_CATALOG: Record<string, { code: string; name: string; category?: string; clientName: string }[]> = {
       'NESTLE': [
-        { code: '8500297', name: 'NESCAFE CLASICO 5KG MX', category: 'CAFÉ Y BEBIDAS' },
-        { code: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', category: 'CREMADORES' },
-        { code: '12448910', name: 'NESCAFE CLASICO FRASCO 12X200G N1', category: 'CAFÉ Y BEBIDAS' },
-        { code: '12389412', name: 'NESQUIK CHOCOLATE POLVO 12X357G', category: 'MODIFICADORES' },
-        { code: '12984711', name: 'CARNATION CLAVEL EVAPORADA 24X360G', category: 'LÁCTEOS' },
-        { code: '12003948', name: 'CHOCOLATE ABUELITA TABLETA 24X540G', category: 'CHOCOLATES' },
+        { code: '8500297', name: 'NESCAFE CLASICO 5KG MX', category: 'CAFÉ Y BEBIDAS', clientName: 'Nestlé México' },
+        { code: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', category: 'CREMADORES', clientName: 'Nestlé México' },
+        { code: '12448910', name: 'NESCAFE CLASICO FRASCO 12X200G N1', category: 'CAFÉ Y BEBIDAS', clientName: 'Nestlé México' },
+        { code: '12389412', name: 'NESQUIK CHOCOLATE POLVO 12X357G', category: 'MODIFICADORES', clientName: 'Nestlé México' },
+        { code: '12984711', name: 'CARNATION CLAVEL EVAPORADA 24X360G', category: 'LÁCTEOS', clientName: 'Nestlé México' },
+        { code: '12003948', name: 'CHOCOLATE ABUELITA TABLETA 24X540G', category: 'CHOCOLATES', clientName: 'Nestlé México' },
       ],
       'LALA': [
-        { code: '33019284', name: 'LECHE LALA ENTERA 12X1L TETRAPAK', category: 'LÁCTEOS' },
-        { code: '33019285', name: 'LECHE LALA DESLACTOSADA 12X1L TETRAPAK', category: 'LÁCTEOS' },
-        { code: '33020011', name: 'YOGURT LALA FRESA 24X220G', category: 'YOGURT' },
-        { code: '33020055', name: 'QUESO MANCHEGO LALA 12X400G', category: 'QUESOS' },
+        { code: '33019284', name: 'LECHE LALA ENTERA 12X1L TETRAPAK', category: 'LÁCTEOS', clientName: 'Grupo Lala' },
+        { code: '33019285', name: 'LECHE LALA DESLACTOSADA 12X1L TETRAPAK', category: 'LÁCTEOS', clientName: 'Grupo Lala' },
+        { code: '33020011', name: 'YOGURT LALA FRESA 24X220G', category: 'YOGURT', clientName: 'Grupo Lala' },
+        { code: '33020055', name: 'QUESO MANCHEGO LALA 12X400G', category: 'QUESOS', clientName: 'Grupo Lala' },
       ],
       'BIMBO': [
-        { code: '22019481', name: 'PAN BLANCO BIMBO GRANDE 680G', category: 'PANIFICACIÓN' },
-        { code: '22019482', name: 'PAN INTEGRAL BIMBO 680G', category: 'PANIFICACIÓN' },
-        { code: '22030119', name: 'DONAS BIMBO AZUCARADAS 12X105G', category: 'DULCES' },
-        { code: '22030125', name: 'MANTECADAS BIMBO CON NUEZ 12X125G', category: 'PAN DULCE' },
+        { code: '22019481', name: 'PAN BLANCO BIMBO GRANDE 680G', category: 'PANIFICACIÓN', clientName: 'Grupo Bimbo' },
+        { code: '22019482', name: 'PAN INTEGRAL BIMBO 680G', category: 'PANIFICACIÓN', clientName: 'Grupo Bimbo' },
+        { code: '22030119', name: 'DONAS BIMBO AZUCARADAS 12X105G', category: 'DULCES', clientName: 'Grupo Bimbo' },
+        { code: '22030125', name: 'MANTECADAS BIMBO CON NUEZ 12X125G', category: 'PAN DULCE', clientName: 'Grupo Bimbo' },
       ],
       'PLASTICOS': [
-        { code: '44019201', name: 'ENVASE PET 1L CRISTAL BOCA 28MM', category: 'ENVASES' },
-        { code: '44019202', name: 'TAPA PLASTICA SEGURIDAD 28MM ROJA', category: 'TAPAS' },
-        { code: '44019203', name: 'BIDON POLIETILENO 20L BLANCO INDUSTRIAL', category: 'INDUSTRIAL' },
+        { code: '44019201', name: 'ENVASE PET 1L CRISTAL BOCA 28MM', category: 'ENVASES', clientName: 'Plásticos y Envases' },
+        { code: '44019202', name: 'TAPA PLASTICA SEGURIDAD 28MM ROJA', category: 'TAPAS', clientName: 'Plásticos y Envases' },
+        { code: '44019203', name: 'BIDON POLIETILENO 20L BLANCO INDUSTRIAL', category: 'INDUSTRIAL', clientName: 'Plásticos y Envases' },
       ],
       'ALPURA': [
-        { code: '55019301', name: 'LECHE ALPURA CLASICA 12X1L', category: 'LÁCTEOS' },
-        { code: '55019302', name: 'CREMA ALPURA ACIDIFICADA 12X450ML', category: 'CREMAS' },
-        { code: '55019303', name: 'MANTEQUILLA ALPURA CON SAL 20X90G', category: 'LÁCTEOS' },
+        { code: '55019301', name: 'LECHE ALPURA CLASICA 12X1L', category: 'LÁCTEOS', clientName: 'Comercializadora Alpura' },
+        { code: '55019302', name: 'CREMA ALPURA ACIDIFICADA 12X450ML', category: 'CREMAS', clientName: 'Comercializadora Alpura' },
+        { code: '55019303', name: 'MANTEQUILLA ALPURA CON SAL 20X90G', category: 'LÁCTEOS', clientName: 'Comercializadora Alpura' },
       ],
     };
 
     // 1. Recopilar catálogo de la API o fallback
     const catalogList = this.allCatalogSkus();
-    const matchedCatalog: { code: string; name: string; category?: string }[] = [];
+    const matchedCatalog: { code: string; name: string; category?: string; clientName?: string }[] = [];
 
     if (catalogList && catalogList.length > 0) {
       for (const item of catalogList) {
-        const itemClientId = (item.clientId || item.clientCode || '').toLowerCase();
-        const itemClientName = (item.clientName || '').toLowerCase();
-        if (
-          !client ||
-          itemClientId === clientCode ||
-          itemClientName === clientName ||
-          itemClientName.includes(clientName) ||
-          clientName.includes(itemClientName)
-        ) {
-          matchedCatalog.push({
-            code: String(item.code || item.sku || item.id).trim(),
-            name: item.name || item.description || item.code,
-            category: item.category || 'CATÁLOGO',
-          });
-        }
+        matchedCatalog.push({
+          code: String(item.code || item.sku || item.id).trim(),
+          name: item.name || item.description || item.code,
+          category: item.category || 'CATÁLOGO',
+          clientName: item.clientName || 'Catálogo General',
+        });
       }
     }
 
-    if (matchedCatalog.length === 0) {
-      for (const [key, items] of Object.entries(DEFAULT_CATALOG)) {
-        if (clientName.toUpperCase().includes(key) || clientCode.toUpperCase().includes(key)) {
-          matchedCatalog.push(...items);
-          break;
+    // Agregar todos los productos por defecto de todos los clientes
+    for (const items of Object.values(DEFAULT_CATALOG)) {
+      for (const it of items) {
+        if (!matchedCatalog.some((c) => c.code === it.code)) {
+          matchedCatalog.push(it);
         }
-      }
-      if (matchedCatalog.length === 0) {
-        matchedCatalog.push(...DEFAULT_CATALOG['NESTLE']);
       }
     }
 
@@ -456,6 +438,7 @@ export class OutboundSubmoduleComponent implements OnInit {
           skuCode: code,
           productName: cat.name,
           category: cat.category || 'GENERAL',
+          clientName: cat.clientName || 'General',
           totalAvailablePallets: inv.pallets,
           totalAvailablePieces: inv.pieces,
           batchesCount: 1,
@@ -471,6 +454,7 @@ export class OutboundSubmoduleComponent implements OnInit {
           skuCode: code,
           productName: cat.name,
           category: cat.category || 'GENERAL',
+          clientName: cat.clientName || 'General',
           totalAvailablePallets: 0,
           totalAvailablePieces: 0,
           batchesCount: 0,
@@ -493,6 +477,7 @@ export class OutboundSubmoduleComponent implements OnInit {
           skuCode: code,
           productName: b.productName || 'Producto General',
           category: (b as any).category || 'GENERAL',
+          clientName: (b as any).clientName || b.client || 'General',
           totalAvailablePallets: b.availablePallets,
           totalAvailablePieces: b.totalPieces,
           batchesCount: 1,
@@ -516,84 +501,257 @@ export class OutboundSubmoduleComponent implements OnInit {
     });
   });
 
+  // Alias para mantener compatibilidad con la vista
+  availableSkusForClient = computed<AvailableSkuOption[]>(() => this.availableCatalogSkus());
+
   inStockSkusCount = computed(() =>
-    this.availableSkusForClient().filter((s) => s.totalAvailablePallets > 0).length
+    this.availableCatalogSkus().filter((s) => s.totalAvailablePallets > 0).length
   );
 
+  // Lista plana de todas las tarimas físicas (UAs) en inventario para escaneo instantáneo
+  allFlatPalletsInWarehouse = computed<OutboundPalletItem[]>(() => {
+    const batches = this.availableBatches();
+    const list: OutboundPalletItem[] = [];
+    for (const b of batches) {
+      let pos = 1;
+      for (const p of b.pallets || []) {
+        const expDate = p.expirationDate || b.expirationDate;
+        const pablo = this.getPabloStatus(expDate);
+        list.push({
+          id: p.id,
+          palletCode: p.palletCode,
+          palletNumber: pos++,
+          productId: p.productId || b.productId,
+          description: p.description || b.productName,
+          clientName: (b as any).clientName || b.client || 'General',
+          lotNumber: p.lotNumber || b.lotNumber,
+          remisionNo: b.remisionNo,
+          expirationDate: expDate,
+          pieces: p.pieces,
+          palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+          palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+          locationCode: p.locationCode || b.locationCode || 'A-01-N1',
+          daysRemaining: pablo.daysRemaining,
+          pabloStatus: pablo.status,
+          pabloLabel: pablo.label,
+          pabloColor: pablo.color,
+          isSuggestedFefo: false,
+        });
+      }
+    }
+    return list;
+  });
+
+  // Tarimas coincidentes por código de UA / SSCC o Lote para la búsqueda predictiva
+  matchingPalletUas = computed<OutboundPalletItem[]>(() => {
+    const q = this.skuSearchQuery().toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    return this.allFlatPalletsInWarehouse().filter(
+      (p) =>
+        p.palletCode.toLowerCase().includes(q) ||
+        p.lotNumber.toLowerCase().includes(q)
+    ).slice(0, 8);
+  });
+
   filteredAvailableSkus = computed(() => {
-    const skus = this.availableSkusForClient();
+    const skus = this.availableCatalogSkus();
     const q = this.skuSearchQuery().toLowerCase().trim();
     if (!q) return skus;
+
+    // Si el texto del buscador coincide exactamente con el producto actualmente seleccionado, mostrar todo el catálogo
+    const current = this.selectedSku();
+    if (current && `${current.skuCode} — ${current.productName}`.toLowerCase() === q) {
+      return skus;
+    }
+
     return skus.filter(
       (s) =>
         s.skuCode.toLowerCase().includes(q) ||
         s.productName.toLowerCase().includes(q) ||
-        (s.category && s.category.toLowerCase().includes(q))
+        (s.clientName && s.clientName.toLowerCase().includes(q)) ||
+        (s.category && s.category.toLowerCase().includes(q)) ||
+        `${s.skuCode} — ${s.productName}`.toLowerCase().includes(q)
     );
   });
 
   selectedSku = computed<AvailableSkuOption | undefined>(() =>
-    this.availableSkusForClient().find((s) => s.skuCode === this.selectedSkuCode())
+    this.availableCatalogSkus().find((s) => s.skuCode === this.selectedSkuCode())
   );
 
   onSkuInput(val: string): void {
     this.skuSearchQuery.set(val);
     this.isSkuDropdownOpen.set(true);
-    const exact = this.availableSkusForClient().find(
+
+    // Si el usuario borró todo el texto manualmente, resetear solo el foco del SKU activo (no el manifiesto)
+    if (!val.trim()) {
+      this.selectedSkuCode.set('');
+      this.requestedPalletsCount.set(0);
+      return;
+    }
+
+    const exact = this.availableCatalogSkus().find(
       (s) =>
         s.skuCode.toLowerCase() === val.toLowerCase().trim() ||
         s.productName.toLowerCase() === val.toLowerCase().trim()
     );
     if (exact) {
-      this.selectSku(exact);
+      this.selectedSkuCode.set(exact.skuCode);
+      this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
     }
+  }
+
+  onSkuInputFocus(): void {
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  // Manejo de lectura con pistola de código de barras / tablet / teclado
+  handleScannerOrSearchSubmit(): void {
+    const rawVal = this.skuSearchQuery().trim();
+    if (!rawVal) return;
+
+    const val = rawVal.toLowerCase();
+
+    // 1. Buscar si coincide exactamente con una UA / Código de tarima física
+    const matchingPallet = this.allFlatPalletsInWarehouse().find(
+      (p) => p.palletCode.toLowerCase() === val || p.palletCode.toLowerCase().endsWith(val)
+    );
+
+    if (matchingPallet) {
+      this.selectPalletByUa(matchingPallet);
+      return;
+    }
+
+    // 2. Buscar coincidencia exacta por SKU Code
+    const matchingSku = this.availableCatalogSkus().find(
+      (s) =>
+        s.skuCode.toLowerCase() === val ||
+        s.productName.toLowerCase() === val
+    );
+
+    if (matchingSku) {
+      this.selectSku(matchingSku);
+      return;
+    }
+
+    // 3. Si hay un solo resultado de producto filtrado, seleccionarlo
+    const filtered = this.filteredAvailableSkus();
+    if (filtered.length === 1) {
+      this.selectSku(filtered[0]);
+      return;
+    }
+
+    // Si hay una sola UA coincidente, seleccionarla
+    const uas = this.matchingPalletUas();
+    if (uas.length === 1) {
+      this.selectPalletByUa(uas[0]);
+      return;
+    }
+
+    // Abrir dropdown si hay opciones
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  selectPalletByUa(pallet: OutboundPalletItem): void {
+    // Añadir la tarima directamente al carro acumulado del manifiesto sin forzar el banner de producto ni tabla de inventario
+    if (!this.selectedPalletIds().includes(pallet.id)) {
+      this.selectedPalletIds.update((ids) => [...ids, pallet.id]);
+      this.toast.success(
+        `⚡ Tarima [UA: ${pallet.palletCode}] agregada directamente al manifiesto (${pallet.description || pallet.productId} · ${pallet.pieces} pz).`
+      );
+    } else {
+      this.toast.info(`La tarima [UA: ${pallet.palletCode}] ya está en el manifiesto.`);
+    }
+
+    // Limpiar el campo de escáner y resetear SKU enfocado para que no abra el banner ni la tabla
+    this.selectedSkuCode.set('');
+    this.skuSearchQuery.set('');
+    this.isSkuDropdownOpen.set(false);
   }
 
   selectSku(sku: AvailableSkuOption): void {
     this.selectedSkuCode.set(sku.skuCode);
     this.skuSearchQuery.set(`${sku.skuCode} — ${sku.productName}`);
     this.isSkuDropdownOpen.set(false);
-
-    // Iniciar contador en 0; el usuario decide cuántas tarimas requiere
-    this.requestedPalletsCount.set(0);
-    this.selectedPalletIds.set([]);
-
-    if (sku.totalAvailablePallets === 0) {
-      this.toast.info(`El producto ${sku.skuCode} no cuenta con tarimas en stock actualmente.`);
-    } else if (sku.pabloStatus === 'PABLO_ALERT') {
-      this.toast.info(`⏳ ${sku.productName} está en Alerta Pablo (${sku.daysRemaining}d restantes).`);
-    }
+    this.fefoQuantityInput.set(1);
   }
 
-  clearSkuSelection(): void {
+  clearSkuSelection(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     this.selectedSkuCode.set('');
     this.skuSearchQuery.set('');
-    this.isSkuDropdownOpen.set(false);
-    this.selectedPalletIds.set([]);
     this.requestedPalletsCount.set(0);
+    this.isSkuDropdownOpen.set(true);
   }
 
-  // ── PASO 2: TARIMAS / PALLETS CON MOTOR FEFO EN VIVO ─────────────────────
+  // ── PASO 2: TARIMAS / PALLETS CON MOTOR FEFO Y BUSCADOR RÁPIDO POR UA ──
   selectedPalletIds = signal<string[]>([]);
+  fefoQuantityInput = signal<number>(1);
   requestedPalletsCount = signal<number>(0);
+  palletTableSearchQuery = signal<string>('');
 
-  // Lista plana de tarimas disponibles (filtradas por SKU y Bahía de Origen si se seleccionaron)
-  uniqueOriginBays = computed<string[]>(() => {
-    const batches = this.availableBatches();
-    const bays = new Set<string>();
-    for (const b of batches) {
-      if (b.locationCode) bays.add(b.locationCode);
-      for (const p of b.pallets || []) {
-        if (p.locationCode) bays.add(p.locationCode);
-      }
-    }
-    return Array.from(bays).sort();
+  onPalletTableSearchInput(val: string): void {
+    this.palletTableSearchQuery.set(val);
+  }
+
+  clearPalletTableSearch(): void {
+    this.palletTableSearchQuery.set('');
+  }
+
+  // Cantidad de tarimas seleccionadas para el SKU que está enfocado actualmente
+  selectedPalletsCountForCurrentSku = computed(() => {
+    const sku = this.selectedSkuCode();
+    if (!sku) return this.selectedPalletIds().length;
+    const selectedSet = new Set(this.selectedPalletIds());
+    return this.allFlatPalletsInWarehouse().filter(
+      (p) => p.productId === sku && selectedSet.has(p.id)
+    ).length;
   });
+
+  availablePalletsCountForCurrentSku = computed(() => {
+    const sku = this.selectedSkuCode();
+    if (!sku) return this.allFlatPalletsInWarehouse().length;
+    return this.allFlatPalletsInWarehouse().filter((p) => p.productId === sku).length;
+  });
+
+  maxAvailablePalletsForCurrentSku = computed(() => {
+    const sku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const selectedSet = new Set(this.selectedPalletIds());
+    if (sku) {
+      return all.filter((p) => p.productId === sku && p.pabloStatus !== 'EXPIRED' && !selectedSet.has(p.id)).length;
+    }
+    return all.filter((p) => p.pabloStatus !== 'EXPIRED' && !selectedSet.has(p.id)).length;
+  });
+
+  incrementFefoQuantity(): void {
+    const max = this.maxAvailablePalletsForCurrentSku();
+    const cur = this.fefoQuantityInput();
+    if (cur < max) {
+      this.fefoQuantityInput.set(cur + 1);
+    }
+  }
+
+  decrementFefoQuantity(): void {
+    const cur = this.fefoQuantityInput();
+    if (cur > 1) {
+      this.fefoQuantityInput.set(cur - 1);
+    }
+  }
+
+  onFefoQuantityInput(val: number): void {
+    const max = this.maxAvailablePalletsForCurrentSku();
+    const clamped = isNaN(val) ? 1 : Math.max(1, Math.min(val, Math.max(1, max)));
+    this.fefoQuantityInput.set(clamped);
+  }
 
   allAvailablePalletsForCurrentView = computed<OutboundPalletItem[]>(() => {
     const batches = this.availableBatches();
     const targetSku = this.selectedSkuCode();
-    const bayFilter = this.selectedOriginBayFilter();
+    const tableSearch = this.palletTableSearchQuery().toLowerCase().trim();
+    const selectedSet = new Set(this.selectedPalletIds());
 
     const filteredBatches = targetSku
       ? batches.filter((b) => b.productId === targetSku)
@@ -602,19 +760,41 @@ export class OutboundSubmoduleComponent implements OnInit {
     const palletsList: OutboundPalletItem[] = [];
 
     for (const b of filteredBatches) {
+      let pos = 1;
       for (const p of b.pallets || []) {
+        // Excluir tarimas que ya están en el manifiesto de salida
+        if (selectedSet.has(p.id)) {
+          pos++;
+          continue;
+        }
+
         const expDate = p.expirationDate || b.expirationDate;
         const pablo = this.getPabloStatus(expDate);
         const loc = p.locationCode || b.locationCode || 'A-01-N1';
+        const palletCode = p.palletCode || '';
+        const lotNumber = p.lotNumber || b.lotNumber || '';
+        const desc = p.description || b.productName || '';
+        const rem = b.remisionNo || '';
 
-        if (bayFilter === 'ALL' || loc === bayFilter) {
+        const matchesSearch =
+          !tableSearch ||
+          palletCode.toLowerCase().includes(tableSearch) ||
+          lotNumber.toLowerCase().includes(tableSearch) ||
+          rem.toLowerCase().includes(tableSearch) ||
+          desc.toLowerCase().includes(tableSearch) ||
+          loc.toLowerCase().includes(tableSearch) ||
+          String(pos).includes(tableSearch);
+
+        if (matchesSearch) {
           palletsList.push({
             id: p.id,
-            palletCode: p.palletCode,
+            palletCode: palletCode,
+            palletNumber: pos,
             productId: p.productId || b.productId,
-            description: p.description || b.productName,
-            lotNumber: p.lotNumber || b.lotNumber,
-            remisionNo: b.remisionNo,
+            description: desc,
+            clientName: (b as any).clientName || b.client || 'General',
+            lotNumber: lotNumber,
+            remisionNo: rem,
             expirationDate: expDate,
             pieces: p.pieces,
             palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
@@ -627,19 +807,19 @@ export class OutboundSubmoduleComponent implements OnInit {
             isSuggestedFefo: false,
           });
         }
+        pos++;
       }
     }
 
     // Ordenamiento FEFO estricto (menor días restantes primero)
     palletsList.sort((a, b) => a.daysRemaining - b.daysRemaining);
 
-    // Marcar como sugeridos FEFO los primeros N que no estén caducos si se solicitó cantidad > 0
-    const req = this.requestedPalletsCount();
-    let assigned = 0;
+    // Marcar como sugeridos FEFO los primeros que no estén caducos
+    let fefoCount = 0;
     for (const p of palletsList) {
-      if (p.pabloStatus !== 'EXPIRED' && req > 0 && assigned < req) {
+      if (p.pabloStatus !== 'EXPIRED' && fefoCount < 5) {
         p.isSuggestedFefo = true;
-        assigned++;
+        fefoCount++;
       }
     }
 
@@ -652,69 +832,102 @@ export class OutboundSubmoduleComponent implements OnInit {
     ).length;
   });
 
-  incrementRequestedCount(): void {
-    const max = this.maxAvailablePallets();
-    if (this.requestedPalletsCount() < max) {
-      const next = this.requestedPalletsCount() + 1;
-      this.requestedPalletsCount.set(next);
-      this.autoSelectFefo(next, false);
-    }
-  }
+  // Agregar tarimas estrictamente del producto seleccionado por FEFO acumulando en el carro
+  addFefoPalletsForCurrentSku(count?: number): void {
+    const sku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const selectedSet = new Set(this.selectedPalletIds());
 
-  decrementRequestedCount(): void {
-    if (this.requestedPalletsCount() > 0) {
-      const next = this.requestedPalletsCount() - 1;
-      this.requestedPalletsCount.set(next);
-      this.autoSelectFefo(next, false);
-    }
-  }
+    const pool = all.filter((p) => {
+      const matchSku = !sku || p.productId === sku;
+      const notExpired = p.pabloStatus !== 'EXPIRED';
+      const notSelected = !selectedSet.has(p.id);
+      return matchSku && notExpired && notSelected;
+    });
 
-  onRequestedCountInput(val: number): void {
-    const max = this.maxAvailablePallets();
-    const clamped = isNaN(val) ? 0 : Math.max(0, Math.min(val, max));
-    this.requestedPalletsCount.set(clamped);
-    this.autoSelectFefo(clamped, false);
-  }
+    pool.sort((a, b) => a.daysRemaining - b.daysRemaining);
 
-  // Auto-seleccionar tarimas inteligentes por FEFO (Regla de Pablo)
-  autoSelectFefo(count?: number, showToast = true): void {
-    const max = this.maxAvailablePallets();
-    let n = count !== undefined ? count : this.requestedPalletsCount();
-    if (n === 0 && max > 0) {
-      n = 1;
-      this.requestedPalletsCount.set(1);
+    const qty = count !== undefined ? count : this.fefoQuantityInput();
+    const clamped = Math.max(1, Math.min(qty, pool.length));
+
+    if (pool.length === 0) {
+      this.toast.info('No hay tarimas disponibles pendientes de agregar para este producto.');
+      return;
     }
-    const pallets = this.allAvailablePalletsForCurrentView().filter(
-      (p) => p.pabloStatus !== 'EXPIRED'
+
+    const toAdd = pool.slice(0, clamped);
+    const toAddIds = toAdd.map((p) => p.id);
+
+    this.selectedPalletIds.update((ids) => [...ids, ...toAddIds]);
+
+    const skuLabel = this.selectedSku()?.productName || sku || 'Producto';
+    this.toast.success(
+      `⚡ ${toAdd.length} tarima(s) de [${skuLabel}] agregadas al manifiesto por FEFO.`
     );
-    const toSelect = pallets.slice(0, n);
-    this.selectedPalletIds.set(toSelect.map((p) => p.id));
-    if (toSelect.length > 0 && showToast) {
-      this.toast.info(
-        `⚡ ${toSelect.length} tarima(s) con menor vida útil seleccionadas por FEFO (Regla de Pablo).`
-      );
+    const remaining = pool.length - toAdd.length;
+    this.fefoQuantityInput.set(Math.min(this.fefoQuantityInput(), Math.max(1, remaining)));
+  }
+
+  addAllPalletsForCurrentSku(): void {
+    const unselected = this.allAvailablePalletsForCurrentView();
+    if (unselected.length === 0) {
+      this.toast.info('Todas las tarimas disponibles ya están en el manifiesto.');
+      return;
+    }
+    const toAddIds = unselected.map((p) => p.id);
+    this.selectedPalletIds.update((ids) => Array.from(new Set([...ids, ...toAddIds])));
+    this.toast.success(`Se agregaron ${toAddIds.length} tarima(s) al manifiesto de salida.`);
+    this.fefoQuantityInput.set(1);
+  }
+
+  addFefoSuggestedPallets(): void {
+    this.addFefoPalletsForCurrentSku();
+  }
+
+  // Agrega o quita una tarima individual del manifiesto
+  addPalletToManifest(id: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    if (!this.selectedPalletIds().includes(id)) {
+      this.selectedPalletIds.update((ids) => [...ids, id]);
+      if (pallet) {
+        this.toast.success(`Tarima [UA: ${pallet.palletCode}] agregada al manifiesto.`);
+      }
+    } else {
+      this.selectedPalletIds.update((ids) => ids.filter((x) => x !== id));
+      if (pallet) {
+        this.toast.info(`Tarima [UA: ${pallet.palletCode}] removida del manifiesto.`);
+      }
     }
   }
 
   togglePallet(id: string): void {
     this.selectedPalletIds.update((ids) => {
-      const updated = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
-      this.requestedPalletsCount.set(updated.length);
+      const exists = ids.includes(id);
+      const updated = exists ? ids.filter((x) => x !== id) : [...ids, id];
       return updated;
     });
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
   }
 
   toggleAllPallets(): void {
-    const available = this.allAvailablePalletsForCurrentView().filter(
-      (p) => p.pabloStatus !== 'EXPIRED'
-    );
-    if (this.selectedPalletIds().length === available.length) {
-      this.selectedPalletIds.set([]);
-      this.requestedPalletsCount.set(0);
-    } else {
-      this.selectedPalletIds.set(available.map((p) => p.id));
-      this.requestedPalletsCount.set(available.length);
-    }
+    const viewPallets = this.allAvailablePalletsForCurrentView();
+    const viewIds = viewPallets.map((p) => p.id);
+    const selectedSet = new Set(this.selectedPalletIds());
+    const allViewSelected = viewIds.length > 0 && viewIds.every((id) => selectedSet.has(id));
+
+    this.selectedPalletIds.update((ids) => {
+      if (allViewSelected) {
+        const viewIdsSet = new Set(viewIds);
+        return ids.filter((id) => !viewIdsSet.has(id));
+      } else {
+        const combined = new Set([...ids, ...viewIds]);
+        return Array.from(combined);
+      }
+    });
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
   }
 
   isPalletSelected(id: string): boolean {
@@ -722,17 +935,45 @@ export class OutboundSubmoduleComponent implements OnInit {
   }
 
   areAllPalletsSelected(): boolean {
-    const available = this.allAvailablePalletsForCurrentView().filter(
-      (p) => p.pabloStatus !== 'EXPIRED'
-    );
-    if (available.length === 0) return false;
-    return this.selectedPalletIds().length === available.length;
+    const viewPallets = this.allAvailablePalletsForCurrentView();
+    if (viewPallets.length === 0) return false;
+    const selectedSet = new Set(this.selectedPalletIds());
+    return viewPallets.every((p) => selectedSet.has(p.id));
   }
 
-  // Convierte los pallets seleccionados a OutboundItems
+  // Remueve una tarima individual del manifiesto acumulado
+  removePalletFromManifest(id: string): void {
+    const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    this.selectedPalletIds.update((ids) => ids.filter((x) => x !== id));
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+    if (pallet) {
+      this.toast.info(`Tarima [UA: ${pallet.palletCode}] removida del manifiesto.`);
+    }
+  }
+
+  // Remueve todas las tarimas de un SKU del manifiesto
+  removeSkuFromManifest(skuCode: string): void {
+    const skuPalletIds = new Set(
+      this.allFlatPalletsInWarehouse()
+        .filter((p) => p.productId === skuCode)
+        .map((p) => p.id)
+    );
+    this.selectedPalletIds.update((ids) => ids.filter((id) => !skuPalletIds.has(id)));
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+    this.toast.info(`Todas las tarimas del SKU ${skuCode} han sido removidas del manifiesto.`);
+  }
+
+  // Vacía todo el manifiesto consolidado
+  clearAllManifest(): void {
+    this.selectedPalletIds.set([]);
+    this.requestedPalletsCount.set(0);
+    this.toast.info('Manifiesto de salida vaciado.');
+  }
+
+  // Convierte los pallets seleccionados de todo el almacén a OutboundItems
   selectedPalletItems = computed<OutboundItem[]>(() => {
     const ids = new Set(this.selectedPalletIds());
-    const all = this.allAvailablePalletsForCurrentView();
+    const all = this.allFlatPalletsInWarehouse();
     return all
       .filter((p) => ids.has(p.id))
       .map((p) => ({
@@ -740,13 +981,51 @@ export class OutboundSubmoduleComponent implements OnInit {
         palletCode: p.palletCode,
         productId: p.productId,
         description: p.description,
+        clientName: p.clientName,
+        inboundRemisionNo: p.remisionNo,
         lotNumber: p.lotNumber,
         expirationDate: p.expirationDate,
         pieces: p.pieces,
         palletTypeId: p.palletTypeId,
         palletTypeLabel: p.palletTypeLabel,
         locationCode: p.locationCode,
+        palletNumber: p.palletNumber,
+        pabloStatus: p.pabloStatus,
       }));
+  });
+
+  // Manifiesto agrupado por producto / SKU con subtotales
+  manifestGroupedBySku = computed(() => {
+    const items = this.selectedPalletItems();
+    const map = new Map<string, {
+      skuCode: string;
+      productName: string;
+      clientName?: string;
+      totalPallets: number;
+      totalPieces: number;
+      items: OutboundItem[];
+    }>();
+
+    for (const it of items) {
+      const key = it.productId;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          skuCode: it.productId,
+          productName: it.description,
+          clientName: it.clientName,
+          totalPallets: 1,
+          totalPieces: it.pieces,
+          items: [it],
+        });
+      } else {
+        existing.totalPallets += 1;
+        existing.totalPieces += it.pieces;
+        existing.items.push(it);
+      }
+    }
+
+    return Array.from(map.values());
   });
 
   totalSelectedPallets = computed(() => this.selectedPalletItems().length);
@@ -758,13 +1037,27 @@ export class OutboundSubmoduleComponent implements OnInit {
     return new Set(items.map((i) => i.productId)).size;
   });
   readonly totalSelectedSkus = this.distinctSkusCount;
+  totalLotesInManifest = computed(() => {
+    const items = this.selectedPalletItems();
+    return new Set(items.map((i) => i.lotNumber)).size;
+  });
+
+  allInboundRemisionesInManifest = computed<string[]>(() => {
+    const items = this.selectedPalletItems();
+    const rems = new Set<string>();
+    for (const it of items) {
+      if (it.inboundRemisionNo && it.inboundRemisionNo.trim()) {
+        rems.add(it.inboundRemisionNo.trim());
+      }
+    }
+    return Array.from(rems);
+  });
 
   primaryRemisionNo = computed(() => {
-    const items = this.selectedPalletItems();
-    if (items.length > 0 && (items[0] as any).remisionNo) {
-      return (items[0] as any).remisionNo;
-    }
-    return `REM-${Date.now().toString().slice(-6)}`;
+    const rems = this.allInboundRemisionesInManifest();
+    if (rems.length === 1) return rems[0];
+    if (rems.length > 1) return `${rems.length} remisiones (${rems.slice(0, 2).join(', ')}${rems.length > 2 ? '...' : ''})`;
+    return '--';
   });
 
   // Validación de Paso 2
@@ -858,7 +1151,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.boxEconomicNumber.set('');
     this.tractorPlates.set('');
     this.boxPlates.set('');
-    this.selectedTransportType.set('TRAILER');
+    this.selectedTransportType.set('');
     this.sealNumber.set('');
 
     // Resetear Paso 2
@@ -1031,7 +1324,19 @@ export class OutboundSubmoduleComponent implements OnInit {
   // ── PASO 1 → PASO 2 ───────────────────────────────────────────────────────
   goToStep2(): void {
     if (!this.isStep1Valid()) {
-      this.toast.warning('Completa los datos de transporte y destino para continuar.');
+      const missing: string[] = [];
+      if (!this.selectedClientCode()) missing.push('Cliente Propietario');
+      if (!this.selectedDestinationId()) missing.push('Planta / Destino');
+      if (!this.selectedCarrierCode()) missing.push('Línea Transportista');
+      if (!this.driverName()?.trim()) missing.push('Nombre del Operador (Chofer)');
+      if (!this.selectedTransportType()) missing.push('Tipo de Camión');
+      if (!this.tractorPlates()?.trim()) missing.push('Placas de Tracto');
+      if (!this.boxPlates()?.trim()) missing.push('Placas Caja');
+      if (!this.sealNumber()?.trim()) missing.push('Número de Sello o Cincho');
+
+      this.toast.warning(
+        `Debes completar los siguientes campos obligatorios: ${missing.join(', ')}.`
+      );
       return;
     }
     this.currentStep.set(2);
@@ -1057,28 +1362,16 @@ export class OutboundSubmoduleComponent implements OnInit {
   onClientChange(code: string): void {
     if (code === this.selectedClientCode()) return;
     this.selectedClientCode.set(code);
-    const dests = this.svc.getDestinationsForClient(code);
-    this.selectedDestinationId.set(dests.length > 0 ? dests[0].id : '');
-    // Limpiar selección de productos solo si cambió a un cliente distinto
+
+    // Limpiar selección de productos solo si cambió el cliente principal
     this.selectedSkuCode.set('');
     this.skuSearchQuery.set('');
     this.selectedPalletIds.set([]);
     this.requestedPalletsCount.set(0);
 
-    // Cargar SKUs y lotes de inventario reales del cliente desde la BD
-    const client = this.selectedClient();
-    const clientId = client?.code;
-    if (clientId) {
-      this.movementsApi.getProductSkus(clientId).subscribe({
-        next: (skus) => {
-          if (skus && skus.length > 0) {
-            this.allCatalogSkus.set(skus);
-          }
-        },
-        error: () => {},
-      });
-      this.svc.reloadInventoryBatches(clientId);
-    }
+    // Mantener siempre el catálogo general completo de todos los clientes y todo el inventario activo de almacén
+    this._loadCatalogSkus();
+    this.svc.reloadInventoryBatches();
   }
 
   onCarrierChange(code: string): void {
@@ -1147,7 +1440,7 @@ export class OutboundSubmoduleComponent implements OnInit {
       carrierName: carrier ? carrier.name : '',
       forkliftOperatorId: operatorId,
       forkliftOperatorName: operator ? operator.name : '',
-      transportType: this.selectedTransportType(),
+      transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
       driverName: this.driverName(),
       economicNumber: this.economicNumber() || '',
       boxEconomicNumber: this.boxEconomicNumber() || '',
@@ -1214,7 +1507,11 @@ export class OutboundSubmoduleComponent implements OnInit {
         };
 
         this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.svc.deductPalletsFromInventory(selectedItemIds);
+        this.selectedPalletIds.set([]);
+        this.requestedPalletsCount.set(0);
         this.svc.loadInitialBackendData();
+        this.svc.reloadInventoryBatches();
 
         this.selectedOutbound.set(result);
         this.lastCompletedOutbound.set(result);
@@ -1241,12 +1538,16 @@ export class OutboundSubmoduleComponent implements OnInit {
             boxEconomicNumber: this.boxEconomicNumber(),
             tractorPlates: this.tractorPlates(),
             boxPlates: this.boxPlates(),
-            transportType: this.selectedTransportType(),
+            transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
             sealNumber: this.sealNumber(),
             remisionNo: remisionNo,
             selectedPallets: selectedPallets,
             dispatchedBy: this.authState.userFullName() || 'Admin',
           });
+
+          this.selectedPalletIds.set([]);
+          this.requestedPalletsCount.set(0);
+          this.svc.reloadInventoryBatches();
 
           this.isExecuting.set(false);
           this.showConfirmModal.set(false);

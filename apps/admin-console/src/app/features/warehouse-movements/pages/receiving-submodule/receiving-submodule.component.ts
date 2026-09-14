@@ -136,11 +136,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
   suppliers = this.movementsService.suppliers;
 
   products = signal<{ id: string; code: string; name: string; defaultPieces: number }[]>([
-    { id: '00001070-0000-0000-0000-000000001070', code: '8500297', name: 'NESCAFE CLASICO 5KG MX', defaultPieces: 480 },
-    { id: '00001054-0000-0000-0000-000000001054', code: '8501911', name: 'LA LECHERA CONDENSADA LECHE BOLSA 11KG MX', defaultPieces: 480 },
-    { id: '00001049-0000-0000-0000-000000001049', code: '8505641', name: 'ABUELITA TABLETA 24X540G MX', defaultPieces: 480 },
-    { id: '00001059-0000-0000-0000-000000001059', code: '12182894', name: 'LA LECHERA LCA BOTELLA SQUEEZE 18X335GMX', defaultPieces: 480 },
-    { id: '00001080-0000-0000-0000-000000001080', code: '12574922', name: 'COFFEE-MATE ORIGINAL 12X640G N1MX', defaultPieces: 480 },
+    { id: '01c39e98-9645-4b6c-827d-ed885d19dd11', code: '8500297', name: 'NESCAFE CLASICO 5KG MX', defaultPieces: 480 },
+    { id: '95abe0e4-3512-43f3-b0ee-c0bbf6426b70', code: '8501911', name: 'LA LECHERA CONDENSADA LECHE BOLSA 11KG MX', defaultPieces: 480 },
+    { id: 'ed5dd656-1ed6-481e-892d-cd2fa24a9fbf', code: '8505641', name: 'ABUELITA TABLETA 24X540G MX', defaultPieces: 480 },
+    { id: '6985107c-62be-4df6-8e8c-4b161952f3d8', code: '12182894', name: 'LA LECHERA LCA BOTELLA SQUEEZE 18X335GMX', defaultPieces: 480 },
+    { id: '9b4e595d-1d7f-46a7-84eb-41e1fac5a5ba', code: '12574922', name: 'COFFEE-MATE ORIGINAL 12X640G N1MX', defaultPieces: 480 },
   ]);
 
   // ── AUTOCOMPLETE PREDICTIVO DE PRODUCTO (SKU) ──
@@ -464,14 +464,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   patchAltaFormWithReception(rec: ReceptionHeader): void {
     const defaultOperator = rec.checkIn?.forkliftOperator || (this.forkliftOperators().length > 0 ? this.forkliftOperators()[0].name : '');
-    let currentProdId = rec.productId || rec.skuCode || '';
-    if (currentProdId.startsWith('00000000-0000-0000-0007-')) {
-      const num = parseInt(currentProdId.slice(-4), 10);
-      if (!isNaN(num)) {
-        const v10 = (1000 + num).toString().padStart(4, '0');
-        currentProdId = `0000${v10}-0000-0000-0000-00000000${v10}`;
-      }
-    }
+    const currentProdId = rec.productId || rec.skuCode || '';
 
     const matchedProduct = (currentProdId || rec.productName)
       ? this.products().find(

@@ -243,12 +243,16 @@ export interface OutboundItem {
   palletCode: string;        // Código UA / SSCC (ej. 'UA-8810-1')
   productId: string;         // SKU
   description: string;       // Descripción del producto
+  clientName?: string;       // Cliente propietario
+  inboundRemisionNo?: string;// Remisión de entrada original
   lotNumber: string;         // Lote de fabricación
   expirationDate: string;    // Fecha de caducidad
   pieces: number;            // Piezas en la tarima
   palletTypeId: string;      // Tipo de tarima
   palletTypeLabel: string;
   locationCode?: string;     // Bahía de origen
+  palletNumber?: number;     // Número / posición de tarima
+  pabloStatus?: 'PABLO_ALERT' | 'OPTIMAL' | 'EXPIRED';
 }
 
 export interface WarehouseOutbound {
@@ -311,17 +315,12 @@ export const TRANSPORT_TYPES: { id: TransportType; label: string }[] = [
 ];
 
 export const CLIENT_DESTINATIONS: ClientDestination[] = [
-  // Nestlé México (CLI-001)
-  { id: 'DEST-CLI001-TOLUCA', clientCode: 'CLI-001', name: 'CEDIS Toluca',      address: 'Blvd. Aeropuerto 2112', city: 'Toluca',            state: 'Estado de México', status: 'ACTIVO' },
-  { id: 'DEST-CLI001-MTY',    clientCode: 'CLI-001', name: 'CEDIS Monterrey',   address: 'Av. Industrial 450',    city: 'Monterrey',         state: 'Nuevo León',      status: 'ACTIVO' },
-  { id: 'DEST-CLI001-GDL',    clientCode: 'CLI-001', name: 'CEDIS Guadalajara', address: 'Carr. Zapopan 1800',    city: 'Guadalajara',       state: 'Jalisco',         status: 'ACTIVO' },
-  { id: 'DEST-CLI001-CDMX',   clientCode: 'CLI-001', name: 'CEDIS CDMX Norte',  address: 'Av. Insurgentes 5500',  city: 'Ciudad de México',  state: 'CDMX',            status: 'ACTIVO' },
-  // Nestlé Planta Toluca (CLI-002)
-  { id: 'DEST-CLI002-TOLUCA', clientCode: 'CLI-002', name: 'Planta Toluca',     address: 'Blvd. Toluca Industrial 90', city: 'Toluca',       state: 'Estado de México', status: 'ACTIVO' },
-  // Nestlé Planta Querétaro (CLI-003)
-  { id: 'DEST-CLI003-QRO',    clientCode: 'CLI-003', name: 'Planta Querétaro',  address: 'Parque Industrial Querétaro', city: 'Querétaro',   state: 'Querétaro',       status: 'ACTIVO' },
-  // Nestlé Planta Veracruz (CLI-004)
-  { id: 'DEST-CLI004-VER',    clientCode: 'CLI-004', name: 'Planta Veracruz',   address: 'Km. 4.5 Carr. Veracruz-Xalapa', city: 'Veracruz',  state: 'Veracruz',        status: 'ACTIVO' },
+  { id: 'b9c6beee-1e5b-4e3c-8e46-32f0390bf0df', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO PAC', address: 'Planta Nestlé PAC', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: 'e2a4b891-3c7d-4f1e-9a52-78d1f046b9a2', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CULINARIOS', address: 'Planta Culinarios Nestlé', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CAFES', address: 'Planta Cafés Nestlé', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: '6ba7b810-9dad-41d1-80b4-00c04fd430c8', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CAF', address: 'Planta Nestlé CAF', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: '550e8400-e29b-41d4-a716-446655440000', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CHOCOLATES', address: 'Planta Chocolates Nestlé', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CAFÉ VERDE', address: 'Planta Nestlé Café Verde', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
 ];
 
 // ─── CONTROL Y AUDITORÍA DE MOVIMIENTOS ──────────────────────────────────────
