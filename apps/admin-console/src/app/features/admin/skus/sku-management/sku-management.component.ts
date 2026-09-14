@@ -97,9 +97,9 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
     const list = this.clientService.clients();
     if (list && list.length > 0) return list;
     return [
-      { id: '00000001-0000-0000-0000-000000000001', name: 'MARCAS NESTLE S.A. DE C.V.' },
-      { id: '00000002-0000-0000-0000-000000000002', name: 'NESTLE MEXICO S.A. DE C.V.' },
-      { id: '00000003-0000-0000-0000-000000000003', name: 'QUALAMEX S.A. DE C.V.' }
+      { id: 'f8d2d5f1-8b4e-4640-bf01-f6c088ad3a69', name: 'MARCAS NESTLE S.A. DE C.V.' },
+      { id: '99a0aac1-03cc-4ddf-89df-5f5925c57026', name: 'NESTLE MEXICO S.A. DE C.V.' },
+      { id: '26115b4f-b330-4440-8934-949434c46d93', name: 'QUALAMEX S.A. DE C.V.' }
     ];
   });
 

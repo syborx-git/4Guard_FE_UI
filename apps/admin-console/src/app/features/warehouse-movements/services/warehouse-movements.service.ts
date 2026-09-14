@@ -36,7 +36,7 @@ import { WarehouseMovementsApiService } from './warehouse-movements-api.service'
 const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   'A-01-N1': {
     locationCode: 'A-01-N1',
-    locationId: '00000000-0000-0000-0006-000000000001',
+    locationId: '34c6a900-91ad-46ae-b278-0f2edb55190b',
     warehouseName: 'Almacén Central',
     zone: 'Andén Recibo A',
     aisle: 'Pasillo A1',
@@ -56,7 +56,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'B-03-N2': {
     locationCode: 'B-03-N2',
-    locationId: '00000000-0000-0000-0006-000000000002',
+    locationId: '63b1f290-2cc4-436f-82fd-158e8861f2b8',
     warehouseName: 'Almacén Central',
     zone: 'Rack Principal B',
     aisle: 'Pasillo B2',
@@ -75,7 +75,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'C-05-N1': {
     locationCode: 'C-05-N1',
-    locationId: '00000000-0000-0000-0006-000000000003',
+    locationId: 'e2af2a6d-68e3-4ad8-91e2-8ac1b4b10d84',
     warehouseName: 'Almacén Central',
     zone: 'Cámara Alta Rotación C',
     aisle: 'Pasillo C1',
@@ -93,7 +93,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'D-02-N3': {
     locationCode: 'D-02-N3',
-    locationId: '00000000-0000-0000-0006-000000000004',
+    locationId: '34ce36c8-d127-4c31-a850-d2aafa7cad1e',
     warehouseName: 'Almacén Central',
     zone: 'Almacenaje General D',
     aisle: 'Pasillo D3',
@@ -114,7 +114,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'E-01-N1': {
     locationCode: 'E-01-N1',
-    locationId: '00000000-0000-0000-0006-000000000005',
+    locationId: 'bdeb00c6-5844-49ab-a22d-718ceab8e45f',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres E',
     aisle: 'Pasillo E1',
@@ -129,7 +129,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'E-02-N1': {
     locationCode: 'E-02-N1',
-    locationId: '00000000-0000-0000-0006-000000000006',
+    locationId: 'b16d74c9-1bcc-4132-936b-8660b044cdff',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres E',
     aisle: 'Pasillo E1',
@@ -144,7 +144,7 @@ const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
   },
   'F-04-N2': {
     locationCode: 'F-04-N2',
-    locationId: '00000000-0000-0000-0006-000000000007',
+    locationId: 'cbc646df-09d5-4595-be08-6f3eaa446cc9',
     warehouseName: 'Almacén Central',
     zone: 'Bahías Libres F',
     aisle: 'Pasillo F2',
@@ -277,16 +277,49 @@ export class WarehouseMovementsService {
     new Set(this.outboundsSignal().map((o) => o.clientCode)).size
   );
 
-  // Catálogo de Destinos por Cliente (dinámico de BD + fallback de catálogo)
+  // Catálogo de Destinos por Cliente y Global (dinámico de BD + fallback de catálogo)
   readonly clientDestinations = CLIENT_DESTINATIONS;
+
+  readonly allDestinations = computed<ClientDestination[]>(() => {
+    const clients = this.clientsSignal();
+    const result: ClientDestination[] = [];
+    const seenIds = new Set<string>();
+
+    for (const client of clients) {
+      if (client.destinations && client.destinations.length > 0) {
+        for (const dest of client.destinations) {
+          if (dest.status === 'ACTIVO' && !seenIds.has(dest.id)) {
+            seenIds.add(dest.id);
+            result.push(dest);
+          }
+        }
+      }
+    }
+
+    for (const defaultDest of CLIENT_DESTINATIONS) {
+      if (defaultDest.status === 'ACTIVO' && !seenIds.has(defaultDest.id)) {
+        seenIds.add(defaultDest.id);
+        result.push(defaultDest);
+      }
+    }
+
+    return result;
+  });
+
+  getAllDestinations(): ClientDestination[] {
+    return this.allDestinations();
+  }
+
   getDestinationsForClient(clientCode: string): ClientDestination[] {
+    if (!clientCode) return this.allDestinations();
     const client = this.clientsSignal().find((c) => c.code === clientCode || c.name === clientCode);
     if (client && client.destinations && client.destinations.length > 0) {
       return client.destinations.filter((d) => d.status === 'ACTIVO');
     }
-    return CLIENT_DESTINATIONS.filter(
+    const filtered = CLIENT_DESTINATIONS.filter(
       (d) => d.clientCode === clientCode && d.status === 'ACTIVO'
     );
+    return filtered.length > 0 ? filtered : this.allDestinations();
   }
 
   // Bahías Ocupadas y Disponibles (Computadas)
@@ -569,6 +602,23 @@ export class WarehouseMovementsService {
       },
       error: () => {},
     });
+  }
+
+  public deductPalletsFromInventory(palletIds: string[]): void {
+    if (!palletIds || palletIds.length === 0) return;
+    const selectedIds = new Set(palletIds);
+    this.inventoryBatchesSignal.update((batches) =>
+      batches.map((batch) => {
+        const remaining = (batch.pallets || []).filter((p) => !selectedIds.has(p.id));
+        if (remaining.length === (batch.pallets || []).length) return batch;
+        return {
+          ...batch,
+          availablePallets: remaining.length,
+          totalPieces: remaining.reduce((acc, p) => acc + p.pieces, 0),
+          pallets: remaining,
+        };
+      })
+    );
   }
 
   public reloadReceptions(): void {
@@ -1085,17 +1135,9 @@ export class WarehouseMovementsService {
         (p.name && formVals.productName && p.name.trim().toLowerCase() === formVals.productName.trim().toLowerCase()) ||
         (p.code && formVals.productName && formVals.productName.includes(p.code))
     );
-    let skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
+    const skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
       ? prodItem.id
       : (formVals.productId && formVals.productId.includes('-') ? formVals.productId : null);
-
-    if (skuId && skuId.startsWith('00000000-0000-0000-0007-')) {
-      const num = parseInt(skuId.slice(-4), 10);
-      if (!isNaN(num)) {
-        const v10 = (1000 + num).toString().padStart(4, '0');
-        skuId = `0000${v10}-0000-0000-0000-00000000${v10}`;
-      }
-    }
 
     const supItem = suppliersList.find(
       (s) =>
@@ -1104,19 +1146,11 @@ export class WarehouseMovementsService {
         s.code === formVals.supplierName ||
         s.id === formVals.supplierId
     );
-    let supplierId = (supItem && supItem.id && supItem.id.includes('-'))
+    const supplierId = (supItem && supItem.id && supItem.id.includes('-'))
       ? supItem.id
       : (supItem && supItem.code && supItem.code.includes('-')
           ? supItem.code
           : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null));
-
-    if (supplierId && supplierId.startsWith('00000000-0000-0000-0003-')) {
-      const num = parseInt(supplierId.slice(-4), 10);
-      if (!isNaN(num)) {
-        const v10 = (30 + num).toString().padStart(2, '0');
-        supplierId = `000000${v10}-0000-0000-0000-0000000000${v10}`;
-      }
-    }
 
     const paramPayload = {
       skuId: skuId,
