@@ -1,7 +1,9 @@
 import { Injectable, signal, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { UserRole } from '@4guard/shared-core';
 import { UsersService } from '../../../core/services/users.service';
 import { RolePermissionService } from './role-permission.service';
+import { BranchService } from './branch.service';
 import { ApiResponse, UserProfileDto, CreateUserRequest, UserAuditLogDto } from '../../../core/models/user.models';
 import { Observable, throwError, of } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
@@ -34,6 +36,7 @@ export interface UserAdminItem {
 export class UserAdminService {
   private readonly usersService = inject(UsersService);
   private readonly roleService = inject(RolePermissionService);
+  private readonly branchService = inject(BranchService);
   
   // Caching de DTOs originales para mantener campos no editables al hacer PUT
   private readonly originalDtos = new Map<string, UserProfileDto>();
@@ -117,59 +120,8 @@ export class UserAdminService {
           this.items.update(list => [...list, mapped]);
         }
       }),
-      catchError(() => {
-        // Fallback local si el Backend no responde o falla la red
-        const newId = `user-local-${Date.now()}`;
-        const nowIso = new Date().toISOString();
-        const newItem: UserAdminItem = {
-          id: newId,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          orgId: user.orgId || organizationId,
-          orgName: user.orgName || '4GUARD LOGISTICS CORP',
-          branchId: user.branchId,
-          branchName: user.branchName || 'CENTRO DE DISTRIBUCION CDMX',
-          role: user.role,
-          status: user.status || 'ACTIVE',
-          isEnabled: user.status === 'ACTIVE',
-          changePasswordRequired: false,
-          failedAttempts: 0,
-          lockedUntil: null,
-          permanentlyLocked: false,
-          lastLoginAt: null
-        };
-
-        const mockDto: UserProfileDto = {
-          id: newId,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          organizationId: user.orgId || organizationId,
-          organizationName: user.orgName || '4GUARD LOGISTICS CORP',
-          branchId: user.branchId || '',
-          branchName: user.branchName || 'CENTRO DE DISTRIBUCION CDMX',
-          roleId: roleId,
-          roleName: user.role.replace('ROLE_', ''),
-          status: user.status || 'ACTIVE',
-          isEnabled: user.status === 'ACTIVE',
-          lastLogin: nowIso,
-          createdAt: nowIso,
-          updatedAt: nowIso,
-          updatedBy: 'system'
-        };
-
-        this.originalDtos.set(newId, mockDto);
-        this.items.update(list => [...list, newItem]);
-
-        return of({
-          success: true,
-          message: 'Usuario registrado localmente.',
-          data: mockDto,
-          timestamp: new Date().toISOString()
-        } as ApiResponse<UserProfileDto>);
+      catchError((error: HttpErrorResponse) => {
+        return throwError(() => error);
       })
     );
   }
@@ -177,26 +129,42 @@ export class UserAdminService {
   /**
    * Modifica un usuario existente enviando los cambios al Backend mediante PUT.
    */
-  update(id: string, updatedFields: Partial<UserAdminItem>): Observable<ApiResponse<UserProfileDto>> {
+  update(id: string, updatedFields: Partial<UserAdminItem> & { password?: string }): Observable<ApiResponse<UserProfileDto>> {
     const originalDto = this.originalDtos.get(id);
     if (!originalDto) {
-      // Si no estaba en caché, actualizar item en señal directamente
-      this.items.update(list => list.map(item => item.id === id ? { ...item, ...updatedFields } : item));
-      return of({ success: true, message: 'Usuario actualizado localmente.' } as ApiResponse<UserProfileDto>);
+      const existing = this.items().find(u => u.id === id);
+      if (!existing) {
+        return throwError(() => new Error('Usuario no encontrado.'));
+      }
+    }
+
+    // Resolver branchId válido
+    let branchId: string = (updatedFields.branchId !== undefined && updatedFields.branchId !== null ? updatedFields.branchId : (originalDto?.branchId || '')) || '';
+    if (!branchId || branchId.startsWith('br-') || branchId === '1') {
+      const firstBranch = this.branchService.branches()[0];
+      branchId = firstBranch ? firstBranch.id : 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
     }
 
     // Clonamos y aplicamos campos modificados
-    const updatedDto: UserProfileDto = {
-      ...originalDto,
-      firstName: updatedFields.firstName !== undefined ? updatedFields.firstName : originalDto.firstName,
-      lastName: updatedFields.lastName !== undefined ? updatedFields.lastName : originalDto.lastName,
-      email: updatedFields.email !== undefined ? updatedFields.email : originalDto.email,
-      organizationId: updatedFields.orgId !== undefined ? updatedFields.orgId : originalDto.organizationId,
-      organizationName: updatedFields.orgName !== undefined ? updatedFields.orgName : originalDto.organizationName,
-      branchId: updatedFields.branchId !== undefined ? (updatedFields.branchId || '') : originalDto.branchId,
-      branchName: updatedFields.branchName !== undefined ? (updatedFields.branchName || '') : originalDto.branchName,
-      status: updatedFields.status !== undefined ? updatedFields.status : originalDto.status,
-      isEnabled: updatedFields.isEnabled !== undefined ? updatedFields.isEnabled : originalDto.isEnabled
+    const updatedDto: UserProfileDto & { password?: string } = {
+      ...(originalDto || ({} as UserProfileDto)),
+      id: id,
+      username: updatedFields.username !== undefined ? updatedFields.username : (originalDto?.username || ''),
+      firstName: updatedFields.firstName !== undefined ? updatedFields.firstName : (originalDto?.firstName || ''),
+      lastName: updatedFields.lastName !== undefined ? updatedFields.lastName : (originalDto?.lastName || ''),
+      email: updatedFields.email !== undefined ? updatedFields.email : (originalDto?.email || ''),
+      organizationId: updatedFields.orgId !== undefined ? updatedFields.orgId : (originalDto?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935'),
+      organizationName: updatedFields.orgName !== undefined ? updatedFields.orgName : (originalDto?.organizationName || '4GUARD LOGISTICS CORP'),
+      branchId: branchId,
+      branchName: updatedFields.branchName !== undefined ? (updatedFields.branchName || '') : (originalDto?.branchName || 'CENTRO DE DISTRIBUCION CDMX'),
+      roleId: originalDto?.roleId || '88888888-8888-8888-8888-888888888888',
+      roleName: originalDto?.roleName || 'OPERATIONS_MANAGER',
+      status: updatedFields.status !== undefined ? updatedFields.status : (originalDto?.status || 'ACTIVE'),
+      isEnabled: updatedFields.isEnabled !== undefined ? updatedFields.isEnabled : (originalDto?.isEnabled ?? true),
+      lastLogin: originalDto?.lastLogin || '',
+      createdAt: originalDto?.createdAt || '',
+      updatedAt: new Date().toISOString(),
+      updatedBy: 'system'
     };
 
     // Sincronizar isEnabled y status
@@ -221,6 +189,11 @@ export class UserAdminService {
       }
     }
 
+    // Si se pasa contraseña, incluirla para que el backend la actualice
+    if (updatedFields.password) {
+      updatedDto.password = updatedFields.password;
+    }
+
     return this.usersService.updateUser(updatedDto).pipe(
       tap(response => {
         if (response.success && response.data) {
@@ -230,16 +203,8 @@ export class UserAdminService {
           this.items.update(list => list.map(item => item.id === id ? mapped : item));
         }
       }),
-      catchError(() => {
-        this.originalDtos.set(id, updatedDto);
-        const mapped = this.mapDtoToItem(updatedDto);
-        this.items.update(list => list.map(item => item.id === id ? mapped : item));
-        return of({
-          success: true,
-          message: 'Usuario actualizado localmente.',
-          data: updatedDto,
-          timestamp: new Date().toISOString()
-        } as ApiResponse<UserProfileDto>);
+      catchError((error: HttpErrorResponse) => {
+        return throwError(() => error);
       })
     );
   }

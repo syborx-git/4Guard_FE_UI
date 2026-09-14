@@ -151,10 +151,10 @@ export interface CreateExchangeRateRequest {
 // ═══════════════════════════════════════════════════════════════════
 
 export const RATE_SOURCE_LABELS: Record<RateSourceType, string> = {
-  MANUAL: 'Captura Manual',
-  CENTRAL_BANK: 'Banco Central (DOF/Banxico)',
-  API_AUTO: 'Integración API',
-  CUSTOM: 'Acuerdo Personalizado',
+  CENTRAL_BANK: 'Banco de México (Banxico SIE)',
+  API_AUTO: 'API REST Automática',
+  MANUAL: 'Ajuste Manual / Especial',
+  CUSTOM: 'Acuerdo Comercial Pactado',
 };
 
 export const EXCHANGE_RATE_STATUS_LABELS: Record<ExchangeRateStatus, string> = {
