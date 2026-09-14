@@ -204,14 +204,37 @@ export class WarehouseMovementsApiService {
     );
   }
 
-  getInventoryBatches(options?: { organizationId?: string; branchId?: string; clientId?: string; skuId?: string }): Observable<any[]> {
+  getInventoryBatches(options?: { organizationId?: string; branchId?: string; clientId?: string; skuId?: string; search?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
     if (options?.branchId) params = params.set('branchId', options.branchId);
     if (options?.clientId) params = params.set('clientId', options.clientId);
     if (options?.skuId) params = params.set('skuId', options.skuId);
+    if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(`${this.outboundsUrl}/inventory-batches`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  scanPallet(barcode: string, organizationId?: string, branchId?: string): Observable<any> {
+    const orgId = organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('barcode', barcode).set('organizationId', orgId);
+    if (branchId) params = params.set('branchId', branchId);
+
+    return this.http.get<ApiResponse<any>>(`${this.outboundsUrl}/scan-pallet`, { params }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  validatePallets(barcodes: string[], organizationId?: string, branchId?: string): Observable<any[]> {
+    const orgId = organizationId || this.getSessionOrgId();
+    const body = {
+      organizationId: orgId,
+      branchId: branchId || this.getSessionOrg().branchId,
+      barcodes: barcodes,
+    };
+    return this.http.post<ApiResponse<any[]>>(`${this.outboundsUrl}/validate-pallets`, body).pipe(
       map((res) => res.data || [])
     );
   }

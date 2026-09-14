@@ -590,10 +590,13 @@ export class WarehouseMovementsService {
               id: p.itemId || p.id,
               palletCode: p.palletCode || p.sscc || '',
               description: p.description || b.productName || '',
-              productId: p.skuCode || b.skuCode || '',
+              productId: p.skuCode || b.skuCode || b.productId || '',
               pieces: p.pieces || 0,
               palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
               palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+              locationCode: p.locationCode || b.locationCode || 'N/A',
+              lotNumber: p.lotNumber || b.lotNumber || '',
+              expirationDate: p.expirationDate || b.expirationDate || '',
             })),
           };
         });
