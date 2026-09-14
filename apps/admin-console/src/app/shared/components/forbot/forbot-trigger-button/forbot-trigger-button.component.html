@@ -18,27 +18,20 @@
     type="button"
     (click)="onToggleForbot()"
     title="Abrir ForBot AI (Ctrl + K)"
-    class="group relative w-14 h-14 sm:w-15 sm:h-15 rounded-full bg-white border-2 border-amber-400/60 hover:border-amber-400 shadow-[0_10px_30px_rgba(0,0,0,0.12),0_0_20px_rgba(217,160,48,0.35)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.18),0_0_28px_rgba(217,160,48,0.55)] transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer overflow-visible"
+    class="group relative w-13 h-13 rounded-full bg-gradient-to-br from-[#172033] via-[#1f2c44] to-[#121927] border border-[#c5a86b]/70 hover:border-[#e5c158] shadow-[0_8px_25px_rgba(23,32,51,0.35),0_0_15px_rgba(197,168,107,0.25)] hover:shadow-[0_10px_30px_rgba(23,32,51,0.45),0_0_22px_rgba(229,193,88,0.45)] transition-all duration-300 transform hover:scale-108 active:scale-95 flex items-center justify-center cursor-pointer"
   >
-    <!-- Halo exterior con pulso orbital Dorado / Ámbar -->
-    <div class="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400/30 via-amber-300/40 to-yellow-500/30 blur-md opacity-75 group-hover:opacity-100 animate-pulse pointer-events-none"></div>
+    <!-- Halo sutil de fondo -->
+    <div class="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400/20 to-yellow-500/20 blur-sm opacity-60 group-hover:opacity-90 transition-opacity pointer-events-none"></div>
 
-    <!-- Anillo orbital exterior giratorio sutil -->
-    <div class="absolute inset-0 rounded-full border border-dashed border-amber-400/50 group-hover:border-amber-500 animate-spin-slow pointer-events-none"></div>
-
-    <!-- Imagen Oficial de ForBot AI en Fondo Blanco Nítido -->
-    <div class="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden flex items-center justify-center bg-white p-0.5 shadow-inner">
-      <img
-        src="/assets/forbot-avatar.png"
-        alt="ForBot AI"
-        class="w-full h-full object-contain select-none"
-      />
+    <!-- Icono ForBot AI estilizado con brillo dorado -->
+    <div class="relative flex items-center justify-center text-[#d4af37] group-hover:text-[#f3d978] transition-colors">
+      <span class="material-symbols-outlined text-[28px] select-none transform group-hover:rotate-6 transition-transform">smart_toy</span>
     </div>
 
-    <!-- Punto Verde Neón de Estado Activo (Esquina inferior derecha) -->
-    <span class="absolute bottom-0.5 right-0.5 flex h-3.5 w-3.5 z-10">
-      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80"></span>
-      <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.9)]"></span>
+    <!-- Punto Verde Neón de Estado Activo (Esquina superior derecha bien encajada) -->
+    <span class="absolute top-0.5 right-0.5 flex h-3 w-3 z-10">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-slate-900 shadow-[0_0_6px_rgba(16,185,129,0.9)]"></span>
     </span>
 
   </button>

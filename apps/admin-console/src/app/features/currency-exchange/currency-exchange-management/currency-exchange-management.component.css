@@ -485,6 +485,44 @@
 
 .carriers-count { font-size: 0.7rem; color: var(--text-muted); }
 
+/* ESTADO VACÍO (.carriers-state) */
+.carriers-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  gap: 0.75rem;
+  min-height: 200px;
+}
+
+.carriers-state__icon {
+  font-size: 40px !important;
+  color: var(--text-muted);
+  opacity: 0.55;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carriers-state__title {
+  font-weight: 650;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.carriers-state__desc {
+  font-size: 0.77rem;
+  color: var(--text-secondary);
+  max-width: 220px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* BADGES DE ESTADO */
 .carrier-status-badge {
   display: inline-flex;

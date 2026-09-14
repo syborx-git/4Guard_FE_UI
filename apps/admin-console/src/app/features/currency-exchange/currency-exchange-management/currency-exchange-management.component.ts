@@ -103,10 +103,11 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
 
   // ─── Banxico Live State ───────────────────────────────────────────────
   protected readonly isFetchingBanxico = signal(false);
+  protected readonly isSyncingBanxico = signal(false);
   protected readonly banxicoLiveInfo = signal<BanxicoLiveRateData | null>(null);
 
   // ─── Calculadora de conversión ─────────────────────────────────────────
-  protected readonly simAmount = signal<number>(1000);
+  protected readonly simAmount = signal<number>(1);
   protected readonly simSource = signal<string>('USD');
   protected readonly simTarget = signal<string>('MXN');
   protected readonly isConverting = signal(false);
@@ -141,13 +142,34 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     const currencies = this.ceService.currencies();
     const rates = this.ceService.exchangeRates();
     const base = currencies.find((c) => c.isBase);
-    const usdMxn = rates.find((r) => r.fromCurrencyCode === 'USD' && r.toCurrencyCode === 'MXN');
+
+    const usdRates = rates
+      .filter(
+        (r) =>
+          r.status === 'ACTIVE' &&
+          ((r.fromCurrencyCode === 'USD' && r.toCurrencyCode === 'MXN') ||
+            (r.fromCurrencyCode === 'MXN' && r.toCurrencyCode === 'USD'))
+      )
+      .sort((a, b) => {
+        const dateDiff = new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+    const latestUsd = usdRates[0];
+    const latestRateUsdMxn = latestUsd
+      ? latestUsd.fromCurrencyCode === 'USD'
+        ? latestUsd.rate
+        : latestUsd.inverseRate
+      : 17.0147;
 
     return {
       baseCurrencyCode: base?.code ?? '—',
       activeCurrencies: currencies.filter((c) => c.status === 'ACTIVE').length,
       totalRates: rates.length,
-      latestRateUsdMxn: usdMxn ? usdMxn.rate : 18.45,
+      latestRateUsdMxn,
     };
   });
 
@@ -162,9 +184,9 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
 
   // ─── Fuentes de tasa disponibles ─────────────────────────────────────────
   protected readonly rateSources: RateSourceType[] = [
-    'MANUAL',
     'CENTRAL_BANK',
     'API_AUTO',
+    'MANUAL',
     'CUSTOM',
   ];
 
@@ -242,8 +264,9 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
 
   private _loadInitialData(): void {
     this.isLoading.set(true);
+    const orgId = this.authState.currentUser()?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
 
-    this.ceService.getCurrencies().pipe(takeUntil(this.destroy$)).subscribe({
+    this.ceService.getCurrencies(orgId).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.isLoading.set(false);
         const list = this.ceService.currencies();
@@ -259,8 +282,32 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
       },
     });
 
-    this.ceService.getExchangeRates().pipe(takeUntil(this.destroy$)).subscribe();
-    this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
+    this.ceService.getExchangeRates({ organizationId: orgId }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        const rates = res.data || [];
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const hasTodayRate = rates.some(
+          (r) =>
+            r.effectiveDate === todayStr &&
+            r.status === 'ACTIVE' &&
+            r.sourceType === 'CENTRAL_BANK'
+        );
+
+        // Si las paridades oficiales no están al día, sincronizar automáticamente con Banxico
+        if (!hasTodayRate) {
+          this.syncBanxicoAll(true);
+        } else {
+          this.executeLiveConversion();
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.executeLiveConversion();
+        this.cdr.markForCheck();
+      },
+    });
+
+    this.ceService.getAuditLog({ organizationId: orgId }).pipe(takeUntil(this.destroy$)).subscribe();
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -306,7 +353,14 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
     this.panelView.set('RATE_FORM');
     const today = new Date().toISOString().slice(0, 10);
     this.banxicoLiveInfo.set(null);
-    this.rateForm.reset({ sourceType: 'MANUAL', effectiveDate: today });
+    const targets = this.availableTargetCurrencies;
+    const defaultTargetId = targets.length > 0 ? targets[0].id : '';
+    this.rateForm.reset({
+      toCurrencyId: defaultTargetId,
+      sourceType: 'CENTRAL_BANK',
+      effectiveDate: today,
+    });
+    this.fetchBanxicoLive();
     this.cdr.markForCheck();
   }
 
@@ -315,9 +369,22 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
   // ════════════════════════════════════════════════════════════════════════
 
   protected fetchBanxicoLive(): void {
-    const selCurrency = this.selectedCurrency();
-    const code = selCurrency?.code?.toUpperCase() || 'USD';
-    const seriesId = code === 'EUR' ? 'SF46410' : 'SF57805';
+    const fromCode = this.selectedCurrency()?.code?.toUpperCase() || 'USD';
+    const targetId = this.rateForm.get('toCurrencyId')?.value;
+    const targetCurrency = this.ceService.currencies().find((c) => c.id === targetId);
+    const toCode = targetCurrency?.code?.toUpperCase() || 'MXN';
+
+    // Determinar la serie de Banxico según el par (USD/MXN o EUR/MXN)
+    let seriesId = 'SF57805'; // Dólar FIX
+    let foreignCode = 'USD';
+
+    if (fromCode === 'EUR' || toCode === 'EUR') {
+      seriesId = 'SF46410';
+      foreignCode = 'EUR';
+    } else {
+      seriesId = 'SF57805';
+      foreignCode = 'USD';
+    }
 
     this.isFetchingBanxico.set(true);
 
@@ -329,24 +396,66 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
           this.isFetchingBanxico.set(false);
           if (res.success && res.data) {
             this.banxicoLiveInfo.set(res.data);
+            const spotRate = Number(res.data.rate);
             
+            // Si el origen es MXN y el destino es divisa extranjera, la tasa directa es 1 / spotRate
+            let appliedRate = spotRate;
+            if (fromCode === 'MXN' && toCode !== 'MXN' && spotRate > 0) {
+              appliedRate = Number((1 / spotRate).toFixed(6));
+            }
+
             // Auto-poblar el formulario permitiendo edición
             this.rateForm.patchValue({
-              rate: res.data.rate,
+              rate: appliedRate,
               sourceType: 'CENTRAL_BANK',
-              notes: `Cotización oficial Banxico (${res.data.seriesId}) pub: ${res.data.publicationDate}`,
+              notes: `Cotización oficial Banxico (${res.data.seriesId}) pub: ${res.data.publicationDate} [1 ${foreignCode} = ${spotRate} MXN]`,
             });
             this.rateForm.markAsDirty();
 
             this.toast.success(
-              `Valor de ${code} recuperado de Banxico: ${res.data.rate}. Puedes editarlo libremente.`
+              `Cotización Banxico aplicada: ${appliedRate} para ${fromCode} → ${toCode} (Oficial: 1 ${foreignCode} = ${spotRate} MXN).`
             );
           }
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.isFetchingBanxico.set(false);
-          this.toast.error('Error al conectar con la API de Banxico.');
+          const msg = err?.error?.message || 'Error al conectar con la API de Banxico SIE. Verifique la conexión con el servidor.';
+          this.toast.error(msg);
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // SINCRONIZACIÓN COMPLETA BANXICO SIE (POST /api/v1/exchange-rates/sync/banxico)
+  // ════════════════════════════════════════════════════════════════════════
+
+  protected syncBanxicoAll(silent = false): void {
+    const orgId = this.authState.currentUser()?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    this.isSyncingBanxico.set(true);
+
+    this.ceService
+      .syncBanxicoRates(orgId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isSyncingBanxico.set(false);
+          if (!silent) {
+            this.toast.success(res.message || 'Sincronización con Banxico SIE completada con éxito.');
+          }
+          this.ceService.getExchangeRates({ organizationId: orgId }).pipe(takeUntil(this.destroy$)).subscribe();
+          this.ceService.getAuditLog({ organizationId: orgId }).pipe(takeUntil(this.destroy$)).subscribe();
+          this.executeLiveConversion();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.isSyncingBanxico.set(false);
+          if (!silent) {
+            const msg = err?.error?.message || 'Error al sincronizar con la API de Banxico. Verifique el token de integración.';
+            this.toast.error(msg);
+          }
+          this.executeLiveConversion();
           this.cdr.markForCheck();
         },
       });
@@ -360,6 +469,7 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
 
   protected openAudit(): void {
     this.showAuditDrawer.set(true);
+    this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
     this.cdr.markForCheck();
   }
 
@@ -409,12 +519,16 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           this.isSaving.set(false);
-          this.toast.success(res.message);
+          this.toast.success(res.message || 'Divisa creada con éxito en la base de datos.');
           if (res.data) this.selectCurrency(res.data);
+          this.ceService.getCurrencies().pipe(takeUntil(this.destroy$)).subscribe();
+          this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.isSaving.set(false);
+          const msg = err?.error?.message || 'Error al registrar la divisa en el servidor.';
+          this.toast.error(msg);
           this.cdr.markForCheck();
         },
       });
@@ -436,13 +550,17 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           this.isSaving.set(false);
-          this.toast.success(res.message);
+          this.toast.success(res.message || 'Divisa actualizada con éxito en la base de datos.');
           if (res.data) this.selectedCurrency.set(res.data);
           this.currencyForm.markAsPristine();
+          this.ceService.getCurrencies().pipe(takeUntil(this.destroy$)).subscribe();
+          this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.isSaving.set(false);
+          const msg = err?.error?.message || 'Error al actualizar la divisa en el servidor.';
+          this.toast.error(msg);
           this.cdr.markForCheck();
         },
       });
@@ -466,10 +584,17 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (res) => {
-              this.toast.success(res.message);
+              this.toast.success(res.message || 'Estatus de divisa actualizado con éxito.');
               if (this.selectedCurrency()?.id === currency.id) {
                 this.selectedCurrency.set({ ...currency, status: newStatus });
               }
+              this.ceService.getCurrencies().pipe(takeUntil(this.destroy$)).subscribe();
+              this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
+              this.cdr.markForCheck();
+            },
+            error: (err) => {
+              const msg = err?.error?.message || 'Error al actualizar el estatus de la divisa.';
+              this.toast.error(msg);
               this.cdr.markForCheck();
             },
           });
@@ -493,10 +618,17 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (res) => {
-              this.toast.success(res.message);
+              this.toast.success(res.message || 'Divisa base establecida con éxito.');
               if (this.selectedCurrency()?.id === currency.id) {
                 this.selectedCurrency.set({ ...currency, isBase: true });
               }
+              this.ceService.getCurrencies().pipe(takeUntil(this.destroy$)).subscribe();
+              this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
+              this.cdr.markForCheck();
+            },
+            error: (err) => {
+              const msg = err?.error?.message || 'Error al establecer la divisa base principal.';
+              this.toast.error(msg);
               this.cdr.markForCheck();
             },
           });
@@ -533,12 +665,16 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           this.isSaving.set(false);
-          this.toast.success(res.message);
+          this.toast.success(res.message || 'Tipo de cambio registrado con éxito en la base de datos.');
+          this.ceService.getExchangeRates().pipe(takeUntil(this.destroy$)).subscribe();
+          this.ceService.getAuditLog().pipe(takeUntil(this.destroy$)).subscribe();
           this.panelView.set('CURRENCY_FORM');
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.isSaving.set(false);
+          const msg = err?.error?.message || 'Error al registrar el tipo de cambio en el servidor.';
+          this.toast.error(msg);
           this.cdr.markForCheck();
         },
       });
@@ -597,8 +733,11 @@ export class CurrencyExchangeManagementComponent implements OnInit, OnDestroy {
           }
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.isConverting.set(false);
+          this.liveConversion.set(null);
+          const msg = err?.error?.message || 'No se encontró un tipo de cambio vigente para realizar la conversión.';
+          this.toast.warning(msg);
           this.cdr.markForCheck();
         },
       });
