@@ -300,11 +300,13 @@ En el modo detalle (`formMode === 'detail'`), se despliega la sección **"Inform
 
 | Método | Endpoint | DTO / Payload | Descripción |
 |---|---|---|---|
-| `POST` | `/` | `CreateOutboundRequest` | Registrar salida / despacho outbound y descontar inventario |
+| `POST` | `/` | `CreateOutboundRequest` | Registrar salida / despacho outbound y descontar inventario atómicamente |
 | `GET` | `/{id}` | N/A | Consulta de detalle con tarimas despachadas |
-| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
-| `POST` | `/{id}/cancel` | `CancelOutboundRequest` | Cancelación de salida y restauración de inventario |
-| `GET` | `/inventory-batches` | Query params: `organizationId`, `clientId`, `skuId` | Consulta de lotes disponibles con sugerencia FIFO/FEFO |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs y filtros |
+| `POST` | `/{id}/cancel` | `CancelOutboundRequest` | Cancelación de salida y restauración de inventario con reautenticación Admin |
+| `GET` | `/inventory-batches` | Query params: `organizationId`, `branchId`, `clientId`, `skuId`, `search` | Consulta de lotes disponibles con sugerencia FEFO indexada |
+| `GET` | `/scan-pallet` | Query params: `barcode`, `organizationId`, `branchId` | Búsqueda rápida sub-10ms por SSCC o código de barras de tarima para escáner RF |
+| `POST` | `/validate-pallets` | `ValidatePalletsRequest` | Validación masiva de lote de códigos de barras / SSCCs |
 | `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
 
 
