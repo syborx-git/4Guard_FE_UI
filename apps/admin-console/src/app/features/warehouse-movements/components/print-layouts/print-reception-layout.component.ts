@@ -98,7 +98,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
           <div class="flex justify-between items-center gap-2 bg-amber-50/70 px-2 py-0.5 rounded border border-amber-200/80">
             <span class="font-bold text-[9.5px] uppercase text-amber-900 shrink-0">SELLOS DE SEGURIDAD:</span>
-            <span class="font-mono font-black text-[10.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ reception.checkIn.sealNumber || 'N/A' }}</span>
+            <span class="font-mono font-black text-[10.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ (reception.checkIn.sealNumbers && reception.checkIn.sealNumbers.length > 0) ? reception.checkIn.sealNumbers.join(', ') : (reception.checkIn.sealNumber || 'N/A') }}</span>
           </div>
         </div>
 

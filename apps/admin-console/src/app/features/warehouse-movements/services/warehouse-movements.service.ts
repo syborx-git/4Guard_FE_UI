@@ -20,6 +20,8 @@ import {
   CarrierLineItem,
   ClientItem,
   RampItem,
+  RampOccupancyStatus,
+  STANDARD_WAREHOUSE_RAMPS,
   ForkliftOperatorItem,
   TRANSFER_REASONS,
   WarehouseOutbound,
@@ -33,131 +35,9 @@ import {
 } from '../models/warehouse-movements.models';
 import { WarehouseMovementsApiService } from './warehouse-movements-api.service';
 
-const INITIAL_DUMMY_LOCATIONS: Record<string, LocationStockInfo> = {
-  'A-01-N1': {
-    locationCode: 'A-01-N1',
-    locationId: '34c6a900-91ad-46ae-b278-0f2edb55190b',
-    warehouseName: 'Almacén Central',
-    zone: 'Andén Recibo A',
-    aisle: 'Pasillo A1',
-    rack: 'Rack 01',
-    level: 'Nivel 1',
-    capacity: 6,
-    occupancy: 4,
-    availableCapacity: 2,
-    totalPallets: 4,
-    totalPieces: 1920,
-    pallets: [
-      { id: 'pal-dummy-101', palletNumber: 1, palletCode: '0376130491001', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-102', palletNumber: 2, palletCode: '0376130491002', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-103', palletNumber: 3, palletCode: '0376130491003', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-104', palletNumber: 4, palletCode: '0376130491004', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-    ],
-  },
-  'B-03-N2': {
-    locationCode: 'B-03-N2',
-    locationId: '63b1f290-2cc4-436f-82fd-158e8861f2b8',
-    warehouseName: 'Almacén Central',
-    zone: 'Rack Principal B',
-    aisle: 'Pasillo B2',
-    rack: 'Rack 03',
-    level: 'Nivel 2',
-    capacity: 4,
-    occupancy: 3,
-    availableCapacity: 1,
-    totalPallets: 3,
-    totalPieces: 1440,
-    pallets: [
-      { id: 'pal-dummy-201', palletNumber: 1, palletCode: '0376130492001', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
-      { id: 'pal-dummy-202', palletNumber: 2, palletCode: '0376130492002', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
-      { id: 'pal-dummy-203', palletNumber: 3, palletCode: '0376130492003', productId: '12448910', description: 'NESCAFE CLASICO FRASCO 12X200G N1', supplierName: 'NESTLE MEXICO S.A DE C.V', palletTypeId: 'TARIMA_CHEP_NACIONAL', palletTypeLabel: 'Tarima CHEP Nacional', pieces: 480 },
-    ],
-  },
-  'C-05-N1': {
-    locationCode: 'C-05-N1',
-    locationId: 'e2af2a6d-68e3-4ad8-91e2-8ac1b4b10d84',
-    warehouseName: 'Almacén Central',
-    zone: 'Cámara Alta Rotación C',
-    aisle: 'Pasillo C1',
-    rack: 'Rack 05',
-    level: 'Nivel 1',
-    capacity: 4,
-    occupancy: 2,
-    availableCapacity: 2,
-    totalPallets: 2,
-    totalPieces: 960,
-    pallets: [
-      { id: 'pal-dummy-301', palletNumber: 1, palletCode: '0376130493001', productId: '12345678', description: 'LECHE NIDO ENTERA LATA 12X800G', supplierName: 'UNILEVER MEXICO', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-302', palletNumber: 2, palletCode: '0376130493002', productId: '12345678', description: 'LECHE NIDO ENTERA LATA 12X800G', supplierName: 'UNILEVER MEXICO', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-    ],
-  },
-  'D-02-N3': {
-    locationCode: 'D-02-N3',
-    locationId: '34ce36c8-d127-4c31-a850-d2aafa7cad1e',
-    warehouseName: 'Almacén Central',
-    zone: 'Almacenaje General D',
-    aisle: 'Pasillo D3',
-    rack: 'Rack 02',
-    level: 'Nivel 3',
-    capacity: 6,
-    occupancy: 5,
-    availableCapacity: 1,
-    totalPallets: 5,
-    totalPieces: 2400,
-    pallets: [
-      { id: 'pal-dummy-401', palletNumber: 1, palletCode: '0376130494001', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-402', palletNumber: 2, palletCode: '0376130494002', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-403', palletNumber: 3, palletCode: '0376130494003', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-404', palletNumber: 4, palletCode: '0376130494004', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-      { id: 'pal-dummy-405', palletNumber: 5, palletCode: '0376130494005', productId: '12572733', description: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', supplierName: 'LE MEXICO S.A DE C.V', palletTypeId: 'MADERA_ESTANDAR', palletTypeLabel: 'Madera Estándar', pieces: 480 },
-    ],
-  },
-  'E-01-N1': {
-    locationCode: 'E-01-N1',
-    locationId: 'bdeb00c6-5844-49ab-a22d-718ceab8e45f',
-    warehouseName: 'Almacén Central',
-    zone: 'Bahías Libres E',
-    aisle: 'Pasillo E1',
-    rack: 'Rack 01',
-    level: 'Nivel 1',
-    capacity: 4,
-    occupancy: 0,
-    availableCapacity: 4,
-    totalPallets: 0,
-    totalPieces: 0,
-    pallets: [],
-  },
-  'E-02-N1': {
-    locationCode: 'E-02-N1',
-    locationId: 'b16d74c9-1bcc-4132-936b-8660b044cdff',
-    warehouseName: 'Almacén Central',
-    zone: 'Bahías Libres E',
-    aisle: 'Pasillo E1',
-    rack: 'Rack 02',
-    level: 'Nivel 1',
-    capacity: 4,
-    occupancy: 0,
-    availableCapacity: 4,
-    totalPallets: 0,
-    totalPieces: 0,
-    pallets: [],
-  },
-  'F-04-N2': {
-    locationCode: 'F-04-N2',
-    locationId: 'cbc646df-09d5-4595-be08-6f3eaa446cc9',
-    warehouseName: 'Almacén Central',
-    zone: 'Bahías Libres F',
-    aisle: 'Pasillo F2',
-    rack: 'Rack 04',
-    level: 'Nivel 2',
-    capacity: 4,
-    occupancy: 0,
-    availableCapacity: 4,
-    totalPallets: 0,
-    totalPieces: 0,
-    pallets: [],
-  },
-};
+export const isUuid = (val: any): boolean =>
+  typeof val === 'string' &&
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val.trim());
 
 @Injectable({
   providedIn: 'root',
@@ -176,52 +56,12 @@ export class WarehouseMovementsService {
   private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
   private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
-  // Catálogos Reactivos (con fallback de datos demo)
-  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([
-    { code: 'TR-01', name: 'TransNoreste Express' },
-    { code: 'TR-02', name: 'Fletes Directos de Puebla' },
-    { code: 'TR-03', name: 'Transportes Castores' },
-    { code: 'TR-04', name: 'Logística Flecha Amarilla' },
-    { code: 'TR-05', name: 'Transportes Norte de México' },
-  ]);
-
-  private readonly clientsSignal = signal<ClientItem[]>([
-    { code: 'CLI-01', name: 'Lala S.A. de C.V.' },
-    { code: 'CLI-02', name: 'Plásticos y Envases de México' },
-    { code: 'CLI-03', name: 'Grupo Bimbo S.A.B.' },
-    { code: 'CLI-04', name: 'Nestlé México S.A.' },
-    { code: 'CLI-05', name: 'Comercializadora Alpura' },
-  ]);
-
-  private readonly rampsSignal = signal<RampItem[]>([
-    { code: 'R-01', rampNumber: 1, name: 'Rampa 01' },
-    { code: 'R-02', rampNumber: 2, name: 'Rampa 02' },
-    { code: 'R-03', rampNumber: 3, name: 'Rampa 03' },
-    { code: 'R-04', rampNumber: 4, name: 'Rampa 04' },
-    { code: 'R-05', rampNumber: 5, name: 'Rampa 05' },
-    { code: 'R-06', rampNumber: 6, name: 'Rampa 06' },
-    { code: 'R-07', rampNumber: 7, name: 'Rampa 07' },
-    { code: 'R-08', rampNumber: 8, name: 'Rampa 08' },
-    { code: 'R-09', rampNumber: 9, name: 'Rampa 09' },
-    { code: 'R-10', rampNumber: 10, name: 'Rampa 10' },
-    { code: 'R-11', rampNumber: 11, name: 'Rampa 11' },
-    { code: 'R-12', rampNumber: 12, name: 'Rampa 12' },
-  ]);
-
-  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([
-    { code: 'OP-01', name: 'Pablo Hernández (Montacargas M-01)' },
-    { code: 'OP-02', name: 'Carlos Ruiz (Montacargas M-02)' },
-    { code: 'OP-03', name: 'Juan Pérez (Montacargas M-03)' },
-    { code: 'OP-04', name: 'Roberto Gómez (Montacargas M-04)' },
-    { code: 'OP-05', name: 'Miguel Torres (Montacargas M-05)' },
-  ]);
-  private readonly suppliersSignal = signal<{ code: string; name: string }[]>([
-    { code: 'SUP-01', name: 'LE MEXICO S.A DE C.V' },
-    { code: 'SUP-02', name: 'ENVASES Y PLÁSTICOS INTERNACIONALES' },
-    { code: 'SUP-03', name: 'PRODUCTOS LÁCTEOS DE PUEBLA' },
-    { code: 'SUP-04', name: 'DISTRIBUIDORA AGROALIMENTARIA S.A.' },
-    { code: 'SUP-05', name: 'EMBALAJES Y EMPAQUES DEL NORTE' },
-  ]);
+  // Catálogos Reactivos
+  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([]);
+  private readonly clientsSignal = signal<ClientItem[]>([]);
+  private readonly rampsSignal = signal<RampItem[]>(STANDARD_WAREHOUSE_RAMPS);
+  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
+  private readonly suppliersSignal = signal<{ code: string; name: string }[]>([]);
 
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();
@@ -246,8 +86,8 @@ export class WarehouseMovementsService {
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
   readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
 
-  // Bahías y su stock (inicia con datos dummy para Cambio de Almacén)
-  private readonly locationsSignal = signal<Record<string, LocationStockInfo>>(INITIAL_DUMMY_LOCATIONS);
+  // Bahías y su stock (inicia vacío — poblado exclusivamente por wms.locations y wms.inventory_items)
+  private readonly locationsSignal = signal<Record<string, LocationStockInfo>>({});
   private lastFetchedLocations: any[] = [];
 
   // Lotes de inventario (FIFO/FEFO)
@@ -276,6 +116,73 @@ export class WarehouseMovementsService {
   readonly kpiDistinctClientsServed = computed(() =>
     new Set(this.outboundsSignal().map((o) => o.clientCode)).size
   );
+
+  // ── MATRIZ DE OCUPACIÓN Y BLOQUEO DE RAMPAS (1 - 12) ──
+  readonly rampOccupancyStatus = computed<RampOccupancyStatus[]>(() => {
+    const allRamps = this.rampsSignal();
+    const activeReceptions = this.receptionsSignal().filter((r) => r.status === 'REGISTERED');
+    const activeOutbounds = this.outboundsSignal().filter((o) => o.status === 'IN_PROGRESS' || o.status === 'REGISTERED');
+
+    return allRamps.map((ramp) => {
+      // 1. Verificar si está ocupada por Recepción Inbound en andén
+      const recMatch = activeReceptions.find(
+        (r) =>
+          (r.checkIn?.rampNumber && Number(r.checkIn.rampNumber) === Number(ramp.rampNumber)) ||
+          (r.checkIn?.rampCode && (r.checkIn.rampCode === ramp.code || r.checkIn.rampCode === ramp.id))
+      );
+
+      if (recMatch) {
+        return {
+          rampNumber: ramp.rampNumber,
+          code: ramp.code,
+          name: ramp.name,
+          status: 'OCCUPIED_INBOUND',
+          statusLabel: 'En Descarga Inbound',
+          operationType: 'INBOUND',
+          operationFolio: recMatch.folio,
+          docNumber: recMatch.checkIn?.docNumber,
+          driverName: recMatch.checkIn?.driverName,
+          carrierName: recMatch.checkIn?.carrierLine,
+          forkliftOperator: recMatch.checkIn?.forkliftOperator,
+          startedAt: recMatch.checkIn?.receptionTime || recMatch.createdAt,
+        };
+      }
+
+      // 2. Verificar si está ocupada por Carga Outbound en andén
+      const outMatch = activeOutbounds.find(
+        (o) => o.rampNumber === ramp.rampNumber || o.rampCode === ramp.code
+      );
+
+      if (outMatch) {
+        return {
+          rampNumber: ramp.rampNumber,
+          code: ramp.code,
+          name: ramp.name,
+          status: 'OCCUPIED_OUTBOUND',
+          statusLabel: 'En Carga Outbound',
+          operationType: 'OUTBOUND',
+          operationFolio: outMatch.folio,
+          docNumber: outMatch.remisionNo,
+          driverName: outMatch.driverName,
+          carrierName: outMatch.carrierName,
+          forkliftOperator: outMatch.forkliftOperator,
+          startedAt: outMatch.timestamp,
+        };
+      }
+
+      // 3. Rampa Disponible
+      return {
+        rampNumber: ramp.rampNumber,
+        code: ramp.code,
+        name: ramp.name,
+        status: 'AVAILABLE',
+        statusLabel: 'Disponible',
+      };
+    });
+  });
+
+  readonly totalBusyRampsCount = computed(() => this.rampOccupancyStatus().filter((r) => r.status !== 'AVAILABLE').length);
+  readonly totalFreeRampsCount = computed(() => this.rampOccupancyStatus().filter((r) => r.status === 'AVAILABLE').length);
 
   // Catálogo de Destinos por Cliente y Global (dinámico de BD + fallback de catálogo)
   readonly clientDestinations = CLIENT_DESTINATIONS;
@@ -333,53 +240,6 @@ export class WarehouseMovementsService {
 
   readonly transferReasons = TRANSFER_REASONS;
 
-  // Simula la llegada de un nuevo registro desde Caseta de Seguridad
-  simulateQuickCasetaArrival(): ReceptionHeader {
-    const folio = this.generateNextReceptionFolio();
-    const mockClients = ['Nestlé México', 'Nestlé Planta Toluca', 'Unilever México', 'Distribuidora Automotriz'];
-    const mockCarriers = ['Transportes Castores', 'Express Tresguerras', 'TMS Maniobras', 'Fletes Directos'];
-    const mockDrivers = ['Carlos Ruiz', 'Martín Solís', 'Jorge Valenzuela', 'Raúl Domínguez'];
-    const randomClient = mockClients[Math.floor(Math.random() * mockClients.length)];
-    const randomCarrier = mockCarriers[Math.floor(Math.random() * mockCarriers.length)];
-    const randomDriver = mockDrivers[Math.floor(Math.random() * mockDrivers.length)];
-    const randomRamp = Math.floor(Math.random() * 8) + 1;
-    const randomRem = `REM-2026-${Math.floor(Math.random() * 899 + 100)}`;
-    const randomTime = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-
-    const newHeader: ReceptionHeader = {
-      folio,
-      status: 'REGISTERED',
-      checkIn: {
-        carrierLine: randomCarrier,
-        receptionTime: randomTime,
-        docNumber: randomRem,
-        docDate: new Date().toISOString().slice(0, 10),
-        client: randomClient,
-        rampNumber: randomRamp,
-        forkliftOperator: 'Pablo Hernández',
-        driverName: randomDriver,
-        tractorPlates: `${Math.floor(Math.random() * 89 + 10)}-AB-${Math.floor(Math.random() * 89 + 10)}`,
-        boxPlates: `${Math.floor(Math.random() * 89 + 10)}-XX-${Math.floor(Math.random() * 89 + 10)}`,
-        sealNumber: `SL-${Math.floor(Math.random() * 89999 + 10000)}`,
-      },
-      lotNumber: `LOT-2026-${String.fromCharCode(65 + Math.floor(Math.random() * 6))}${Math.floor(Math.random() * 9 + 1)}`,
-      elaborationDate: '',
-      expirationDate: '',
-      productId: '',
-      productName: '',
-      supplierName: '',
-      piecesPerPallet: 0,
-      selectedPalletType: '' as any,
-      observations: `Ingreso registrado en caseta andén ${randomRamp}`,
-      pallets: [],
-      createdAt: randomTime,
-      capturedBy: 'Caseta de Seguridad',
-    };
-
-    this.receptionsSignal.update((list) => [newHeader, ...list]);
-    return newHeader;
-  }
-
   constructor() {
     this.loadInitialBackendData();
   }
@@ -435,6 +295,7 @@ export class WarehouseMovementsService {
       next: (locs: any) => {
         this.lastFetchedLocations = locs || [];
         this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
+        this.syncRamps(this.lastFetchedLocations);
       },
       error: () => {},
     });
@@ -553,7 +414,7 @@ export class WarehouseMovementsService {
 
   public reloadInventoryBatches(clientId?: string): void {
     const options: any = {};
-    if (clientId && clientId.includes('-')) {
+    if (clientId && isUuid(clientId)) {
       options.clientId = clientId;
     }
     this.movementsApi.getInventoryBatches(options).subscribe({
@@ -690,11 +551,6 @@ export class WarehouseMovementsService {
       });
     }
 
-    // Si el backend no devolvió ubicaciones, usar las ubicaciones iniciales de fallback
-    if (Object.keys(locMap).length === 0) {
-      Object.assign(locMap, INITIAL_DUMMY_LOCATIONS);
-    }
-
     // 2. Asociar los lotes e items de inventario reales del BE a sus bahías
     if (batches && batches.length > 0) {
       batches.forEach((b: any) => {
@@ -748,6 +604,38 @@ export class WarehouseMovementsService {
     });
 
     this.locationsSignal.set(locMap);
+  }
+
+  public syncRamps(locs: any[]): void {
+    const defaultRamps = [...STANDARD_WAREHOUSE_RAMPS];
+    if (!locs || locs.length === 0) {
+      this.rampsSignal.set(defaultRamps);
+      return;
+    }
+
+    const rampLocs = locs.filter(
+      (l: any) =>
+        l.type === 'RAMP' ||
+        (l.code && (l.code.startsWith('LOC-RAMP') || l.code.startsWith('R-'))) ||
+        l.sectionCode === 'SEC-RAMP'
+    );
+
+    const merged = defaultRamps.map((dr) => {
+      const match = rampLocs.find(
+        (rl: any) =>
+          rl.code === `LOC-RAMP-${String(dr.rampNumber).padStart(2, '0')}` ||
+          rl.code === dr.code ||
+          (rl.name && rl.name.toLowerCase().trim() === dr.name.toLowerCase().trim()) ||
+          rl.position === `R${String(dr.rampNumber).padStart(2, '0')}` ||
+          rl.position === `R${dr.rampNumber}`
+      );
+      return {
+        ...dr,
+        id: match ? match.id : dr.id,
+      };
+    });
+
+    this.rampsSignal.set(merged);
   }
 
   // ─── MÉTODOS DE AUDITORÍA ───────────────────────────────────────────────────
@@ -948,15 +836,41 @@ export class WarehouseMovementsService {
     const branchId = session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
 
     const clientItem = this.clientsSignal().find((c) => c.code === data.clientCode || c.name === data.client);
-    const clientId = (clientItem && clientItem.code && clientItem.code.includes('-')) 
+    const clientId = (clientItem && isUuid(clientItem.code)) 
       ? clientItem.code 
-      : (data.clientCode && data.clientCode.includes('-') ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
+      : (isUuid(data.clientCode) ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
 
     const carrierItem = this.carrierLinesSignal().find((c) => c.code === data.carrierLineCode || c.name === data.carrierLine);
-    const carrierId = (carrierItem && carrierItem.code && carrierItem.code.includes('-')) ? carrierItem.code : null;
+    const carrierId = (carrierItem && isUuid(carrierItem.code))
+      ? carrierItem.code
+      : (isUuid(data.carrierLineCode) ? data.carrierLineCode : null);
 
     const opItem = this.forkliftOperatorsSignal().find((o) => o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
-    const forkliftOperatorId = (opItem && opItem.code && opItem.code.includes('-')) ? opItem.code : null;
+    const forkliftOperatorId = (opItem && isUuid(opItem.code))
+      ? opItem.code
+      : (isUuid(data.forkliftOperatorCode) ? data.forkliftOperatorCode : null);
+
+    const rampItem = this.rampsSignal().find(
+      (r) =>
+        r.code === data.rampCode ||
+        r.rampNumber === Number(data.rampNumber) ||
+        r.name === `Rampa ${String(data.rampNumber).padStart(2, '0')}` ||
+        r.id === data.rampCode
+    );
+    const matchedRampLoc = (this.lastFetchedLocations || []).find((l: any) =>
+      (l.type === 'RAMP' || l.sectionCode === 'SEC-RAMP') && (
+        l.code === `LOC-RAMP-${String(data.rampNumber).padStart(2, '0')}` ||
+        l.code === data.rampCode ||
+        l.position === `R${String(data.rampNumber).padStart(2, '0')}` ||
+        l.name === `Rampa ${String(data.rampNumber).padStart(2, '0')}` ||
+        l.id === data.rampCode
+      )
+    );
+    const rampId = (rampItem && isUuid(rampItem.id))
+      ? rampItem.id
+      : (matchedRampLoc && isUuid(matchedRampLoc.id)
+          ? matchedRampLoc.id
+          : (isUuid(data.rampCode) ? data.rampCode : null));
 
     // Normalizar hora a formato HH:mm:ss 24h
     let receptionTime = data.receptionTime ? data.receptionTime.trim() : '09:00:00';
@@ -979,20 +893,37 @@ export class WarehouseMovementsService {
       receptionTime = `${receptionTime}:00`;
     }
 
+    const seals: string[] = [];
+    if (data.sealNumbers && Array.isArray(data.sealNumbers)) {
+      data.sealNumbers.forEach((s: string) => {
+        if (s && s.trim() && !seals.includes(s.trim().toUpperCase())) {
+          seals.push(s.trim().toUpperCase());
+        }
+      });
+    }
+    if (data.sealNumber && data.sealNumber.trim() && !seals.includes(data.sealNumber.trim().toUpperCase())) {
+      seals.push(data.sealNumber.trim().toUpperCase());
+    }
+
     const payload = {
       organizationId: orgId,
       branchId: branchId,
       clientId: clientId,
       carrierId: carrierId,
       forkliftOperatorId: forkliftOperatorId,
-      rampId: null,
+      rampId: rampId,
+      rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
+      rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
       docNumber: data.docNumber,
       docDate: data.docDate || new Date().toISOString().slice(0, 10),
       receptionTime: receptionTime,
       driverName: data.driverName,
       tractorPlates: data.tractorPlates,
       boxPlates: data.boxPlates,
-      sealNumbers: data.sealNumbers || (data.sealNumber ? [data.sealNumber] : []),
+      lotNumber: data.lotNumber || null,
+      elaborationDate: data.elaborationDate || null,
+      expirationDate: data.expirationDate || null,
+      sealNumbers: seals,
     };
 
     return this.movementsApi.createCheckIn(payload).pipe(
@@ -1012,6 +943,9 @@ export class WarehouseMovementsService {
           productId: res.skuCode || res.productSku || '',
           productName: res.productDescription || res.productName || '',
           supplierName: res.supplierName || '',
+          storageLocation: res.storageLocationCode || res.storageLocationName || res.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',
+          storageLocationId: res.storageLocationId || '',
+          storageLocationCode: res.storageLocationCode || '',
           piecesPerPallet: res.piecesPerPallet != null ? Number(res.piecesPerPallet) : 0,
           selectedPalletType: (res.palletType as PalletType) || ('' as any),
           observations: res.observations || '',
@@ -1039,7 +973,7 @@ export class WarehouseMovementsService {
           id: `aud-rec-reg-${Date.now()}`,
           action: 'RECEPCION_CREADA',
           actionLabel: 'Pre-Recepción Registrada en Caseta',
-          username: 'Caseta de Seguridad',
+          username: res.createdBy || 'Caseta de Seguridad',
           timestamp: new Date().toLocaleString('es-MX'),
           details: [
             { fieldName: 'Línea Transportadora', newValue: data.carrierLine },
@@ -1094,14 +1028,15 @@ export class WarehouseMovementsService {
         docDate: r.docDate || r.checkIn?.docDate || '',
         client: r.clientName || r.client || r.checkIn?.client || '',
         clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
-        rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 4) : (r.rampNumber || r.checkIn?.rampNumber || 4),
+        rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 1) : (r.rampNumber || r.checkIn?.rampNumber || 1),
         rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
         forkliftOperator: r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '',
         forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
         driverName: r.driverName || r.checkIn?.driverName || '',
         tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
         boxPlates: r.boxPlates || r.checkIn?.boxPlates || '',
-        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers[0] : (r.sealNumber || r.checkIn?.sealNumber || ''),
+        sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers.join(', ') : (r.sealNumber || r.checkIn?.sealNumber || ''),
+        sealNumbers: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers : (r.sealNumber ? [r.sealNumber] : (r.checkIn?.sealNumbers || [])),
       },
       lotNumber: r.lotNumber || r.checkIn?.lotNumber || '',
       elaborationDate: r.elaborationDate || r.checkIn?.elaborationDate || '',
@@ -1112,13 +1047,15 @@ export class WarehouseMovementsService {
       supplierName: r.supplierName || '',
       piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
-      storageLocation: r.storageLocationCode || r.storageLocation || '',
+      storageLocation: r.storageLocationCode || r.storageLocationName || r.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',
+      storageLocationId: r.storageLocationId || '',
+      storageLocationCode: r.storageLocationCode || '',
       observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
       pallets: pallets,
       createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : (r.checkIn?.receptionTime || ''),
       completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
       cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
-      capturedBy: r.capturedBy || '',
+      capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
       leaderAuthorizedBy: r.leaderAuthorizedBy || '',
       cancellationReason: r.cancellationReason || '',
     };
@@ -1138,9 +1075,9 @@ export class WarehouseMovementsService {
         (p.name && formVals.productName && p.name.trim().toLowerCase() === formVals.productName.trim().toLowerCase()) ||
         (p.code && formVals.productName && formVals.productName.includes(p.code))
     );
-    const skuId = (prodItem && prodItem.id && prodItem.id.includes('-'))
+    const skuId = (prodItem && isUuid(prodItem.id))
       ? prodItem.id
-      : (formVals.productId && formVals.productId.includes('-') ? formVals.productId : null);
+      : (isUuid(formVals.productId) ? formVals.productId : null);
 
     const supItem = suppliersList.find(
       (s) =>
@@ -1149,19 +1086,21 @@ export class WarehouseMovementsService {
         s.code === formVals.supplierName ||
         s.id === formVals.supplierId
     );
-    const supplierId = (supItem && supItem.id && supItem.id.includes('-'))
+    const supplierId = (supItem && isUuid(supItem.id))
       ? supItem.id
-      : (supItem && supItem.code && supItem.code.includes('-')
+      : (supItem && isUuid(supItem.code)
           ? supItem.code
-          : (formVals.supplierId && formVals.supplierId.includes('-') ? formVals.supplierId : null));
+          : (isUuid(formVals.supplierId) ? formVals.supplierId : null));
 
     const paramPayload = {
       skuId: skuId,
       supplierId: supplierId,
       lotNumber: formVals.lotNumber,
+      elaborationDate: formVals.elaborationDate || null,
       expirationDate: formVals.expirationDate || null,
       piecesPerPallet: formVals.piecesPerPallet != null ? Number(formVals.piecesPerPallet) : 0,
       palletType: formVals.selectedPalletType || null,
+      storageLocationId: formVals.storageLocationId || null,
       observations: formVals.observations || '',
     };
 

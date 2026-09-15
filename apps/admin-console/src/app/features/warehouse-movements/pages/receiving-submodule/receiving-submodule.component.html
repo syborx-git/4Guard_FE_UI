@@ -66,15 +66,33 @@
         </a>
       </nav>
 
-      <button
-        type="button"
-        (click)="startNewReception()"
-        class="btn-new-reception"
-        aria-label="Registrar nueva pre-recepción"
-      >
-        <span class="material-symbols-outlined">add</span>
-        <span>Pre-Recepción</span>
-      </button>
+      <div class="flex items-center gap-2.5">
+        <!-- Indicador Inteligente de Andenes (Click abre el Plano de Andenes) -->
+        <button
+          type="button"
+          (click)="showDockMapModal.set(true)"
+          class="dock-summary-pill"
+          title="Ver plano interactivo y estado de andenes 1-12"
+        >
+          <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-sm">domain</span>
+          <span class="dock-summary-pill__text">Andenes:</span>
+          @if (totalBusyRampsCount() > 0) {
+            <span class="dock-summary-badge dock-summary-badge--busy">{{ totalBusyRampsCount() }} Ocupado{{ totalBusyRampsCount() === 1 ? '' : 's' }}</span>
+          } @else {
+            <span class="dock-summary-badge dock-summary-badge--all-free">Todos Libres (12)</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          (click)="startNewReception()"
+          class="btn-new-reception"
+          aria-label="Registrar nueva pre-recepción"
+        >
+          <span class="material-symbols-outlined">add</span>
+          <span>Pre-Recepción</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -351,14 +369,27 @@
                 </div>
 
                 <div>
-                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
-                    Rampa de Asignación <span class="text-amber-500">*</span>
-                  </label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
+                      Rampa de Asignación <span class="text-amber-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      (click)="showDockMapModal.set(true)"
+                      class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                      title="Abrir mapa visual de andenes"
+                    >
+                      <span class="material-symbols-outlined text-[13px]">grid_view</span>
+                      <span>Plano</span>
+                    </button>
+                  </div>
                   <div class="flex gap-1.5">
                     <select [value]="checkInForm.get('rampCode')?.value" (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
                       <option value="">-- Selecciona rampa --</option>
                       @for (rm of ramps(); track rm.code) {
-                        <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
+                        <option [value]="rm.code" [disabled]="isRampBusy(rm.rampNumber)">
+                          {{ getRampDisplayLabel(rm) }}
+                        </option>
                       }
                     </select>
                     <button type="button" (click)="openQuickAddModal('RAMP')" class="fg-btn-icon" title="Agregar Rampa">+</button>
@@ -409,11 +440,24 @@
                 </div>
               </div>
 
-              <!-- Registro Interactivo de Cinchos/Sellos -->
+              <!-- Registro Interactivo de Cinchos/Sellos (Obligatorio) -->
               <div class="space-y-2 pt-1">
-                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block">
-                  Sellos / Cinchos de Seguridad
-                </label>
+                <div class="flex items-center justify-between">
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block">
+                    Sellos / Cinchos de Seguridad <span class="text-amber-500">* (Obligatorio)</span>
+                  </label>
+                  @if (sealList().length > 0) {
+                    <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-xs">check_circle</span>
+                      <span>{{ sealList().length }} {{ sealList().length === 1 ? 'sello registrado' : 'sellos registrados' }}</span>
+                    </span>
+                  } @else {
+                    <span class="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-xs">info</span>
+                      <span>Obligatorio: agrega al menos 1 sello</span>
+                    </span>
+                  }
+                </div>
                 <div class="flex gap-2">
                   <input
                     type="text"
@@ -421,27 +465,31 @@
                     (ngModelChange)="tempSealInput.set($event)"
                     [ngModelOptions]="{ standalone: true }"
                     (keyup.enter)="addSeal()"
-                    placeholder="Ingresar número de sello..."
+                    placeholder="Ingresar número de sello (ej. SL-98421)..."
                     class="fg-input font-mono uppercase text-xs flex-1"
                   />
                   <button
                     type="button"
                     (click)="addSeal()"
-                    class="btn-secondary-outline px-4 py-2 text-xs font-bold rounded-xl"
+                    class="btn-secondary-outline px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1"
                   >
-                    AGREGAR
+                    <span class="material-symbols-outlined text-sm">add</span>
+                    <span>AGREGAR</span>
                   </button>
                 </div>
 
                 <!-- Badges de Sellos Adicionados -->
-                <div class="flex flex-wrap gap-1.5 p-2.5 bg-surface-subtle border border-subtle rounded-xl min-h-[42px] items-center">
+                <div class="flex flex-wrap gap-1.5 p-2.5 bg-surface-subtle border border-subtle rounded-xl min-h-[42px] items-center" [class.border-amber-500]="sealList().length === 0">
                   @for (seal of sealList(); track $index) {
                     <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold px-3 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                      <span>{{ seal }}</span>
-                      <button type="button" (click)="removeSeal($index)" class="hover:text-rose-600 font-bold ml-1 text-sm leading-none">×</button>
+                      <span>🔒 {{ seal }}</span>
+                      <button type="button" (click)="removeSeal($index)" class="hover:text-rose-600 font-bold ml-1 text-sm leading-none" title="Eliminar sello">×</button>
                     </span>
                   } @empty {
-                    <span class="text-secondary text-xs italic">No se han registrado sellos.</span>
+                    <span class="text-amber-600/80 dark:text-amber-400/80 text-xs italic font-medium flex items-center gap-1">
+                      <span class="material-symbols-outlined text-sm">lock</span>
+                      <span>No se han registrado sellos. Escribe el número de cincho arriba y presiona AGREGAR.</span>
+                    </span>
                   }
                 </div>
               </div>
@@ -515,29 +563,132 @@
             </div>
           </div>
 
-          <!-- 2. SECCIÓN 1: INFORMACIÓN GENERAL DE CASETA -->
-          <div class="space-y-3">
-            <div class="form-section__legend">
-              <span class="material-symbols-outlined">apartment</span>
-              <span>INFORMACIÓN GENERAL DE CASETA</span>
+          <!-- 2. FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
+          <div class="logistics-command-panel">
+            <div class="logistics-command-panel__header">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">local_shipping</span>
+                <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Ficha Operativa de Arribo &amp; Caseta
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="openEditCasetaModal()"
+                  class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                  title="Modificar datos de caseta, transportista, placas o chofer"
+                >
+                  <span class="material-symbols-outlined text-sm">edit</span>
+                  <span>Modificar Ficha</span>
+                </button>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs">alt_route</span>
+                  <span>WMS Auto-Slotting</span>
+                </span>
+              </div>
             </div>
 
-            <div class="caseta-summary-card">
-              <div class="caseta-summary-item">
-                <span class="caseta-summary-label">No. Remisión</span>
-                <span class="caseta-summary-value font-mono">{{ rec.checkIn.docNumber }}</span>
+            <!-- FILA 1: 4 Columnas bien distribuidas (No. Remisión, Hora Llegada, Transportista, Chofer) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+              <!-- No. Remisión -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">receipt_long</span>
+                  No. Remisión / Factura
+                </span>
+                <span class="logistics-command-value font-mono font-black text-amber-700 dark:text-amber-400 text-sm">
+                  {{ rec.checkIn.docNumber }}
+                </span>
               </div>
-              <div class="caseta-summary-item">
-                <span class="caseta-summary-label">Hora de Llegada</span>
-                <span class="caseta-summary-value font-mono">{{ rec.checkIn.receptionTime }}</span>
+
+              <!-- Hora Llegada -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">schedule</span>
+                  Hora de Llegada
+                </span>
+                <span class="logistics-command-value font-mono font-bold">
+                  {{ rec.checkIn.receptionTime }}
+                </span>
               </div>
-              <div class="caseta-summary-item">
-                <span class="caseta-summary-label">Línea Transportadora</span>
-                <span class="caseta-summary-value" [title]="rec.checkIn.carrierLine">{{ rec.checkIn.carrierLine }}</span>
+
+              <!-- Línea Transportadora -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">domain</span>
+                  Línea Transportista
+                </span>
+                <span class="logistics-command-value font-bold truncate" [title]="rec.checkIn.carrierLine">
+                  {{ rec.checkIn.carrierLine }}
+                </span>
               </div>
-              <div class="caseta-summary-item">
-                <span class="caseta-summary-label">Chofer &amp; Placas</span>
-                <span class="caseta-summary-value" [title]="rec.checkIn.driverName + ' (' + rec.checkIn.tractorPlates + ')'">{{ rec.checkIn.driverName }} ({{ rec.checkIn.tractorPlates }})</span>
+
+              <!-- Chofer / Operador -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">badge</span>
+                  Operador / Chofer
+                </span>
+                <span class="logistics-command-value font-bold truncate" [title]="rec.checkIn.driverName">
+                  {{ rec.checkIn.driverName }}
+                </span>
+              </div>
+            </div>
+
+            <!-- FILA 2: 3 Columnas amplias (Placas, Sellos, Bahía WMS) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-amber-500/15">
+              <!-- Placas Tracto y Caja (3 cols) -->
+              <div class="logistics-command-cell lg:col-span-3">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">pin</span>
+                  Placas Tracto &amp; Caja
+                </span>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                    T: {{ rec.checkIn.tractorPlates || 'S/P' }}
+                  </span>
+                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                    C: {{ rec.checkIn.boxPlates || 'S/P' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Sellos / Cinchos de Seguridad (4 cols) -->
+              <div class="logistics-command-cell lg:col-span-4">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">lock</span>
+                  Sellos / Cinchos de Seguridad
+                </span>
+                <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                  @if (rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0) {
+                    @for (s of rec.checkIn.sealNumbers; track s) {
+                      <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                        🔒 {{ s }}
+                      </span>
+                    }
+                  } @else {
+                    <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                      🔒 {{ rec.checkIn.sealNumber || 'N/A' }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Bahía Asignada Automáticamente por WMS & Rampa (5 cols) -->
+              <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-5">
+                <div class="flex items-center justify-between">
+                  <span class="logistics-command-label text-blue-700 dark:text-blue-300">
+                    <span class="material-symbols-outlined text-xs">warehouse</span>
+                    Bahía WMS Asignada (Auto-Slotting)
+                  </span>
+                  <span class="text-[10px] font-mono font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                    Andén {{ rec.checkIn.rampNumber || 1 }}
+                  </span>
+                </div>
+                <span class="font-mono font-black text-blue-900 dark:text-blue-200 text-sm mt-0.5 block truncate" [title]="rec.storageLocation || altaForm.value.storageLocation || 'Pasillo A - Rack 01 - Nivel 1'">
+                  {{ rec.storageLocation || altaForm.value.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}
+                </span>
               </div>
             </div>
           </div>
@@ -551,12 +702,17 @@
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
-                <div class="fg-field lg:col-span-3">
+                <div class="fg-field lg:col-span-2">
                   <label class="fg-label fg-label--required">Lote de Recepción</label>
                   <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="Ej. LOT-2026-A1" />
                 </div>
 
-                <div class="fg-field lg:col-span-3">
+                <div class="fg-field lg:col-span-2">
+                  <label class="fg-label">F. Elaboración</label>
+                  <input type="date" formControlName="elaborationDate" class="fg-input font-bold !text-slate-950" />
+                </div>
+
+                <div class="fg-field lg:col-span-2">
                   <label class="fg-label fg-label--required">Fecha de Caducidad</label>
                   <input type="date" formControlName="expirationDate" class="fg-input font-bold !text-slate-950" />
                 </div>
@@ -571,10 +727,23 @@
                 </div>
 
                 <div class="fg-field lg:col-span-3">
-                  <label class="fg-label fg-label--required">Rampa de Recepción</label>
+                  <div class="flex items-center justify-between">
+                    <label class="fg-label fg-label--required">Rampa de Recepción</label>
+                    <button
+                      type="button"
+                      (click)="showDockMapModal.set(true)"
+                      class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                      title="Abrir mapa visual de andenes"
+                    >
+                      <span class="material-symbols-outlined text-[13px]">grid_view</span>
+                      <span>Plano</span>
+                    </button>
+                  </div>
                   <select formControlName="rampNumber" class="fg-input font-bold !text-slate-950">
                     @for (rm of ramps(); track rm.code) {
-                      <option [value]="rm.rampNumber">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
+                      <option [value]="rm.rampNumber" [disabled]="isRampBusy(rm.rampNumber, rec.folio)">
+                        {{ getRampDisplayLabel(rm, rec.folio) }}
+                      </option>
                     }
                   </select>
                 </div>
@@ -694,8 +863,16 @@
                   <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
                 </div>
                 <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Fecha de Elaboración</span>
+                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'N/A' }}</span>
+                </div>
+                <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Fecha de Caducidad</span>
                   <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || altaForm.value.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Montacarguista</span>
@@ -703,7 +880,7 @@
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Rampa de Recepción</span>
-                  <span class="reception-readonly-val">Rampa {{ rec.checkIn?.rampNumber || altaForm.value.rampNumber || 4 }}</span>
+                  <span class="reception-readonly-val">Rampa {{ rec.checkIn?.rampNumber || altaForm.value.rampNumber || 1 }}</span>
                 </div>
 
                 <div class="reception-readonly-item sm:col-span-2">
@@ -722,6 +899,12 @@
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Proveedor</span>
                   <span class="reception-readonly-val truncate" [title]="rec.supplierName">{{ rec.supplierName }}</span>
+                </div>
+                <div class="reception-readonly-item sm:col-span-2">
+                  <span class="reception-readonly-label">Sellos de Seguridad Registrados</span>
+                  <span class="reception-readonly-val font-mono font-bold text-amber-700 dark:text-amber-400 truncate" [title]="(rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0) ? rec.checkIn.sealNumbers.join(', ') : (rec.checkIn.sealNumber || 'N/A')">
+                    🔒 {{ (rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0) ? rec.checkIn.sealNumbers.join(', ') : (rec.checkIn.sealNumber || 'N/A') }}
+                  </span>
                 </div>
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Observaciones</span>
@@ -1122,7 +1305,7 @@
             <span class="material-symbols-outlined">dock</span>
           </div>
           <div class="kpi-card__body">
-            <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">4</span>
+            <span class="kpi-card__value text-emerald-600 dark:text-emerald-400">{{ ramps().length }}</span>
             <span class="kpi-card__label">Rampas Habilitadas</span>
           </div>
           <div class="kpi-card__bar bg-emerald-500"></div>
@@ -1651,6 +1834,229 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" (click)="showQuickAddModal.set(false)" class="btn-ghost text-xs px-3 py-1">Cancelar</button>
           <button type="button" (click)="saveQuickAddEntity()" class="btn-save text-xs px-3 py-1 font-bold">Guardar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL: MODIFICAR FICHA OPERATIVA DE CASETA (CHOFER, PLACAS, SELLOS, TRANSPORTISTA) ── -->
+  @if (showEditCasetaModal()) {
+    <div class="modal-overlay p-4 animate-fade-in">
+      <div class="modal-card max-w-2xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <span class="material-symbols-outlined text-xl">edit_note</span>
+            </div>
+            <div>
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Modificar Ficha Operativa de Arribo
+              </h3>
+              <p class="text-[11px] text-slate-500">
+                Folio #{{ selectedReception()?.folio }} — Actualización de datos de caseta y transporte
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="showEditCasetaModal.set(false)"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg"
+          >
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Formulario -->
+        <form [formGroup]="editCasetaForm" (ngSubmit)="saveCasetaModifications()" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <!-- Línea Transportista -->
+            <div class="fg-field sm:col-span-2">
+              <label class="fg-label fg-label--required">Línea Transportista</label>
+              <select formControlName="carrierLine" class="fg-input font-bold !text-slate-950">
+                @for (tr of carrierLines(); track tr.code) {
+                  <option [value]="tr.name">{{ tr.name }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Hora de Llegada -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Hora de Llegada (HH:mm)</label>
+              <input type="text" formControlName="receptionTime" class="fg-input font-mono font-bold" placeholder="11:15" />
+            </div>
+
+            <!-- Chofer / Operador -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Nombre del Chofer / Operador</label>
+              <input type="text" formControlName="driverName" class="fg-input font-bold" placeholder="Nombre completo" />
+            </div>
+
+            <!-- Placas Tracto -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Placas Tracto</label>
+              <input type="text" formControlName="tractorPlates" class="fg-input font-mono uppercase font-bold" placeholder="77-AB-99" />
+            </div>
+
+            <!-- Placas Caja -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Placas Caja</label>
+              <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold" placeholder="55-XX-11" />
+            </div>
+          </div>
+
+          <!-- Sellos / Cinchos de Seguridad -->
+          <div class="space-y-2 pt-2 border-t border-subtle">
+            <label class="fg-label fg-label--required">Sellos / Cinchos de Seguridad</label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                [ngModel]="tempEditSealInput()"
+                (ngModelChange)="tempEditSealInput.set($event)"
+                [ngModelOptions]="{ standalone: true }"
+                (keyup.enter)="addEditSeal()"
+                placeholder="Ingresar número de sello (ej. SL-98421)..."
+                class="fg-input font-mono uppercase text-xs flex-1"
+              />
+              <button
+                type="button"
+                (click)="addEditSeal()"
+                class="btn-secondary-outline px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1"
+              >
+                <span class="material-symbols-outlined text-sm">add</span>
+                <span>Agregar</span>
+              </button>
+            </div>
+
+            <!-- Lista de sellos con botón de eliminar -->
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              @for (seal of editCasetaSeals(); track seal; let i = $index) {
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-sm">
+                  <span>🔒 {{ seal }}</span>
+                  <button
+                    type="button"
+                    (click)="removeEditSeal(i)"
+                    class="text-rose-500 hover:text-rose-700 ml-1 font-bold"
+                    title="Eliminar sello"
+                  >
+                    &times;
+                  </button>
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-subtle">
+            <button
+              type="button"
+              (click)="showEditCasetaModal.set(false)"
+              class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-save text-xs px-5 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md"
+            >
+              <span class="material-symbols-outlined text-sm">save</span>
+              <span>Guardar Cambios</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL: PLANO INTERACTIVO DE ANDENES Y RAMPAS (1 - 12) ── -->
+  @if (showDockMapModal()) {
+    <div class="modal-overlay p-4 animate-fade-in">
+      <div class="modal-card max-w-4xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-blue-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <span class="material-symbols-outlined text-2xl">domain</span>
+            </div>
+            <div>
+              <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                <span>Plano de Andenes &amp; Rampas de Descarga</span>
+                <span class="text-xs font-mono font-normal text-slate-500">(Almacén Central)</span>
+              </h3>
+              <p class="text-xs text-slate-500 font-medium">
+                Haz clic en una rampa disponible para seleccionarla o en una ocupada para ver su detalle operativo.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="showDockMapModal.set(false)"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg"
+          >
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
+          <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm inline-block"></span>
+              <span>{{ totalFreeRampsCount() }} Andenes Libres</span>
+            </span>
+            <span class="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+              <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm inline-block"></span>
+              <span>{{ totalBusyRampsCount() }} Ocupados</span>
+            </span>
+          </div>
+          <span class="text-[11px] text-slate-500 italic hidden sm:inline">
+            Bloqueo automático hasta notificación de finalización de maniobra
+          </span>
+        </div>
+
+        <!-- Grid Visual de Andenes (12 Bahías de Carga) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+          @for (ramp of rampOccupancyStatus(); track ramp.rampNumber) {
+            <div
+              (click)="onRampMatrixClick(ramp)"
+              class="dock-bay-card"
+              [class.dock-bay-card--free]="ramp.status === 'AVAILABLE'"
+              [class.dock-bay-card--busy-in]="ramp.status === 'OCCUPIED_INBOUND'"
+              [class.dock-bay-card--busy-out]="ramp.status === 'OCCUPIED_OUTBOUND'"
+            >
+              <!-- Puerta de Andén -->
+              <div class="dock-bay-door">
+                <span class="font-mono font-black text-xs">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
+                <span class="dock-bay-dot"></span>
+              </div>
+
+              <!-- Ilustración de Tráiler / Estado -->
+              <div class="dock-bay-body">
+                @if (ramp.status === 'AVAILABLE') {
+                  <span class="material-symbols-outlined text-2xl text-emerald-500/80 mb-0.5">garage_home</span>
+                  <span class="font-black text-[11px] text-emerald-700 dark:text-emerald-400">DISPONIBLE</span>
+                  <span class="text-[9px] text-slate-400 font-medium">clic para asignar</span>
+                } @else {
+                  <span class="material-symbols-outlined text-2xl text-rose-500 mb-0.5 animate-pulse">local_shipping</span>
+                  <span class="font-black text-[11px] text-rose-700 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
+                  <span class="text-[9px] text-slate-600 dark:text-slate-400 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
+                    {{ ramp.docNumber || 'En Operación' }}
+                  </span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end pt-2 border-t border-subtle">
+          <button
+            type="button"
+            (click)="showDockMapModal.set(false)"
+            class="btn-secondary-outline text-xs px-4 py-1.5 rounded-xl font-bold"
+          >
+            Cerrar Plano
+          </button>
         </div>
       </div>
     </div>
