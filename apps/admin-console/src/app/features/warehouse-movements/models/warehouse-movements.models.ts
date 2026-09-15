@@ -34,10 +34,38 @@ export interface ClientItem {
 }
 
 export interface RampItem {
+  id?: string;
   code: string;
   rampNumber: number;
   name: string;
 }
+
+export interface RampOccupancyStatus {
+  rampNumber: number;
+  code: string;
+  name: string;
+  status: 'AVAILABLE' | 'OCCUPIED_INBOUND' | 'OCCUPIED_OUTBOUND';
+  statusLabel: string;
+  operationType?: 'INBOUND' | 'OUTBOUND';
+  operationFolio?: string;
+  docNumber?: string;
+  driverName?: string;
+  carrierName?: string;
+  forkliftOperator?: string;
+  startedAt?: string;
+}
+
+export const STANDARD_WAREHOUSE_RAMPS: RampItem[] = Array.from({ length: 12 }, (_, i) => {
+  const num = i + 1;
+  const pad = String(num).padStart(2, '0');
+  const hexSuffix = (0x925 + i).toString(16);
+  return {
+    id: `e13f0907-9fa5-4bdf-87db-2eb5e7683${hexSuffix}`,
+    code: `LOC-RAMP-${pad}`,
+    rampNumber: num,
+    name: `Rampa ${pad}`,
+  };
+});
 
 export interface ForkliftOperatorItem {
   code: string;
@@ -124,7 +152,9 @@ export interface ReceptionHeader {
   skuCode?: string;          // Código de 8 dígitos del producto
   productName: string;
   supplierName?: string;     // Nombre del proveedor seleccionado
-  storageLocation?: string;  // Lugar de almacenaje (ej. Bodega M 98)
+  storageLocation?: string;  // Lugar de almacenaje (ej. Pasillo A - Rack 01)
+  storageLocationId?: string;
+  storageLocationCode?: string;
   piecesPerPallet: number;
   selectedPalletType: PalletType;
   observations?: string;
@@ -235,7 +265,7 @@ export interface OutboundDispatch {
 
 // ─── SALIDA DE ALMACÉN (OUTBOUND MVP1) ────────────────────────────────────────
 
-export type OutboundStatus = 'COMPLETED' | 'CANCELLED';
+export type OutboundStatus = 'DRAFT' | 'IN_PROGRESS' | 'REGISTERED' | 'COMPLETED' | 'CANCELLED';
 export type TransportType = 'CAMION' | 'TORTON' | 'TRAILER';
 
 export interface OutboundItem {
@@ -279,6 +309,8 @@ export interface WarehouseOutbound {
   boxPlates: string;
   transportType: TransportType;
   sealNumber: string;
+  rampNumber?: number;
+  rampCode?: string;
 
   // Mercancía
   remisionNo: string;
@@ -290,7 +322,7 @@ export interface WarehouseOutbound {
   // Auditoría
   dispatchedAt: string;
   dispatchedBy: string;
-  timestamp: string;         // HH:mm para tarjeta del directorio
+  timestamp?: string;         // HH:mm para tarjeta del directorio
   cancellationReason?: string;
   cancelledAt?: string;
   cancelledBy?: string;

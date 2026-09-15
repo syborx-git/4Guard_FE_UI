@@ -1816,7 +1816,259 @@
   border-radius: 12px;
 }
 
-/* ── INFORMACIÓN GENERAL DE CASETA (CARD) ── */
+/* ── PILL RESUMEN DE ANDENES EN HEADER TOOLBAR ── */
+.dock-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 12px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-card, #e2e8f0);
+  box-shadow: var(--shadow-card, 0 2px 6px rgba(0, 0, 0, 0.04));
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-body);
+}
+
+.dock-summary-pill:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);
+}
+
+:host-context(.theme-dark) .dock-summary-pill,
+:host-context(.dark) .dock-summary-pill {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dock-summary-pill__text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+}
+
+.dock-summary-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dock-summary-badge--all-free {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+:host-context(.theme-dark) .dock-summary-badge--all-free,
+:host-context(.dark) .dock-summary-badge--all-free {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.dock-summary-badge--busy {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  animation: pulse-busy 2.5s infinite ease-in-out;
+}
+
+:host-context(.theme-dark) .dock-summary-badge--busy,
+:host-context(.dark) .dock-summary-badge--busy {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+/* ── MODAL: PLANO INTERACTIVO DE BAHÍAS / ANDENES (1 - 12) ── */
+.dock-bay-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.875rem;
+  border: 1.5px solid transparent;
+  background: var(--bg-subtle, #f8fafc);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.dock-bay-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dock-bay-door {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.dock-bay-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dock-bay-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.4rem;
+  text-align: center;
+  min-height: 85px;
+}
+
+/* Estado: Libre */
+.dock-bay-card--free {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.dock-bay-card--free .dock-bay-door {
+  background: rgba(16, 185, 129, 0.1);
+  color: #065f46;
+}
+
+.dock-bay-card--free .dock-bay-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+:host-context(.theme-dark) .dock-bay-card--free,
+:host-context(.dark) .dock-bay-card--free {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Estado: Ocupada Inbound */
+.dock-bay-card--busy-in {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.dock-bay-card--busy-in .dock-bay-door {
+  background: rgba(239, 68, 68, 0.12);
+  color: #991b1b;
+}
+
+.dock-bay-card--busy-in .dock-bay-dot {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-in,
+:host-context(.dark) .dock-bay-card--busy-in {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Estado: Ocupada Outbound */
+.dock-bay-card--busy-out {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.dock-bay-card--busy-out .dock-bay-door {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1e40af;
+}
+
+.dock-bay-card--busy-out .dock-bay-dot {
+  background: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.8);
+}
+
+@keyframes pulse-busy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+/* ── FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS) ── */
+.logistics-command-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.95rem 1.25rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.06) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+:host-context(.theme-dark) .logistics-command-panel,
+:host-context(.dark) .logistics-command-panel {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(59, 130, 246, 0.12) 100%);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.logistics-command-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+  padding-bottom: 0.5rem;
+}
+
+.logistics-command-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.15rem 0.25rem;
+}
+
+.logistics-command-cell--highlight {
+  background: rgba(59, 130, 246, 0.09);
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.625rem;
+}
+
+:host-context(.theme-dark) .logistics-command-cell--highlight,
+:host-context(.dark) .logistics-command-cell--highlight {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.logistics-command-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #78350f !important;
+}
+
+:host-context(.theme-dark) .logistics-command-label,
+:host-context(.dark) .logistics-command-label {
+  color: #fcd34d !important;
+}
+
+.logistics-command-value {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a !important;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+:host-context(.theme-dark) .logistics-command-value,
+:host-context(.dark) .logistics-command-value {
+  color: #f8fafc !important;
+}
+
+/* Fallback para caseta-summary-card */
 .caseta-summary-card {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1825,19 +2077,12 @@
   border-radius: 0.875rem;
   background: rgba(245, 158, 11, 0.08);
   border: 1.5px solid rgba(245, 158, 11, 0.32);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 @media (min-width: 640px) {
   .caseta-summary-card {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-}
-
-:host-context(.theme-dark) .caseta-summary-card,
-:host-context(.dark) .caseta-summary-card {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.35);
 }
 
 .caseta-summary-item {
@@ -1851,29 +2096,13 @@
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: #78350f !important;
-}
-
-:host-context(.theme-dark) .caseta-summary-label,
-:host-context(.dark) .caseta-summary-label {
-  color: #fcd34d !important;
 }
 
 .caseta-summary-value {
   font-size: 0.88rem;
   font-weight: 900;
   color: #000000 !important;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.25;
-}
-
-:host-context(.theme-dark) .caseta-summary-value,
-:host-context(.dark) .caseta-summary-value {
-  color: #ffffff !important;
 }
 
 /* ── DROPDOWN PREDICTIVO FLOTANTE DE SKUs ── */

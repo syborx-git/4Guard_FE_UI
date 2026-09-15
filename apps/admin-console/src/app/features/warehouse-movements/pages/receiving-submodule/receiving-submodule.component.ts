@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
-import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
+import { WarehouseMovementsService, isUuid } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import {
   CheckInCasetaData,
@@ -15,6 +15,8 @@ import {
   PALLET_TYPE_LABELS,
   MovementAuditEntry,
   PatioUnitMonitor,
+  RampOccupancyStatus,
+  RampItem,
 } from '../../models/warehouse-movements.models';
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
@@ -65,6 +67,168 @@ export class ReceivingSubmoduleComponent implements OnInit {
   // Cola Reactiva de Pre-Recepciones Pendientes (Caseta)
   pendingReceptions = this.movementsService.pendingReceptions;
   pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
+
+  // Matriz de Ocupación de Rampas 1-12
+  rampOccupancyStatus = this.movementsService.rampOccupancyStatus;
+  totalBusyRampsCount = this.movementsService.totalBusyRampsCount;
+  totalFreeRampsCount = this.movementsService.totalFreeRampsCount;
+
+  // Modal Plano de Andenes Interactivo
+  showDockMapModal = signal(false);
+
+  // Modal Edición de Ficha de Caseta
+  showEditCasetaModal = signal(false);
+  editCasetaSeals = signal<string[]>([]);
+  tempEditSealInput = signal('');
+
+  editCasetaForm = this.fb.group({
+    carrierLineCode: [''],
+    carrierLine: ['', [Validators.required]],
+    receptionTime: ['', [Validators.required]],
+    driverName: ['', [Validators.required]],
+    tractorPlates: ['', [Validators.required]],
+    boxPlates: ['', [Validators.required]],
+    clientCode: [''],
+    client: ['', [Validators.required]],
+  });
+
+  openEditCasetaModal(): void {
+    const rec = this.selectedReception();
+    if (!rec) return;
+    this.editCasetaForm.patchValue({
+      carrierLineCode: rec.checkIn.carrierLineCode || '',
+      carrierLine: rec.checkIn.carrierLine || '',
+      receptionTime: rec.checkIn.receptionTime || '',
+      driverName: rec.checkIn.driverName || '',
+      tractorPlates: rec.checkIn.tractorPlates || '',
+      boxPlates: rec.checkIn.boxPlates || '',
+      clientCode: rec.checkIn.clientCode || '',
+      client: rec.checkIn.client || '',
+    });
+    const seals = rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0
+      ? [...rec.checkIn.sealNumbers]
+      : (rec.checkIn.sealNumber ? [rec.checkIn.sealNumber] : []);
+    this.editCasetaSeals.set(seals);
+    this.tempEditSealInput.set('');
+    this.showEditCasetaModal.set(true);
+  }
+
+  addEditSeal(): void {
+    const val = this.tempEditSealInput().trim().toUpperCase();
+    if (!val) return;
+    if (this.editCasetaSeals().includes(val)) {
+      this.toast.warning(`El sello ${val} ya está registrado.`);
+      return;
+    }
+    this.editCasetaSeals.update((l) => [...l, val]);
+    this.tempEditSealInput.set('');
+  }
+
+  removeEditSeal(idx: number): void {
+    this.editCasetaSeals.update((l) => l.filter((_, i) => i !== idx));
+  }
+
+  saveCasetaModifications(): void {
+    if (this.editCasetaForm.invalid) {
+      this.editCasetaForm.markAllAsTouched();
+      this.toast.warning('Por favor completa los campos requeridos de la ficha.');
+      return;
+    }
+
+    if (this.editCasetaSeals().length === 0) {
+      this.toast.warning('Debes mantener al menos 1 sello o cincho de seguridad.');
+      return;
+    }
+
+    const currentRec = this.selectedReception();
+    if (!currentRec) return;
+
+    const val = this.editCasetaForm.value;
+    const updatedCheckIn: CheckInCasetaData = {
+      ...currentRec.checkIn,
+      carrierLineCode: val.carrierLineCode || currentRec.checkIn.carrierLineCode,
+      carrierLine: val.carrierLine || currentRec.checkIn.carrierLine,
+      receptionTime: val.receptionTime || currentRec.checkIn.receptionTime,
+      driverName: val.driverName || currentRec.checkIn.driverName,
+      tractorPlates: (val.tractorPlates || currentRec.checkIn.tractorPlates).toUpperCase(),
+      boxPlates: (val.boxPlates || currentRec.checkIn.boxPlates).toUpperCase(),
+      clientCode: val.clientCode || currentRec.checkIn.clientCode,
+      client: val.client || currentRec.checkIn.client,
+      sealNumbers: this.editCasetaSeals(),
+      sealNumber: this.editCasetaSeals().join(', '),
+    };
+
+    const updatedReception: ReceptionHeader = {
+      ...currentRec,
+      checkIn: updatedCheckIn,
+    };
+
+    this.selectedReception.set(updatedReception);
+    this.movementsService.updateReception(currentRec.id || currentRec.folio, { checkIn: updatedCheckIn });
+
+    this.auditEntries.update((entries) => [
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        timestamp: new Date().toLocaleTimeString(),
+        action: 'EDICIÓN_CASETA',
+        actionLabel: 'Modificación de Caseta',
+        username: this.authState.userFullName() || this.authState.currentUser()?.email || 'Supervisor',
+        reason: `Chofer: ${updatedCheckIn.driverName}, Placas: ${updatedCheckIn.tractorPlates}/${updatedCheckIn.boxPlates}`,
+        observations: `Sellos actualizados: ${updatedCheckIn.sealNumber}`,
+        details: [
+          { fieldName: 'Chofer', newValue: updatedCheckIn.driverName },
+          { fieldName: 'Placas Tracto', newValue: updatedCheckIn.tractorPlates },
+          { fieldName: 'Placas Caja', newValue: updatedCheckIn.boxPlates },
+          { fieldName: 'Sellos', newValue: updatedCheckIn.sealNumber },
+        ],
+      },
+      ...entries,
+    ]);
+
+    this.showEditCasetaModal.set(false);
+    this.toast.success('Ficha operativa de caseta actualizada.');
+  }
+
+  onRampMatrixClick(ramp: RampOccupancyStatus): void {
+    if (ramp.status === 'OCCUPIED_INBOUND' && ramp.operationFolio) {
+      this.loadFromNotification(ramp.operationFolio);
+      this.showDockMapModal.set(false);
+    } else if (ramp.status === 'AVAILABLE') {
+      if (this.formMode() === 'create') {
+        this.checkInForm.patchValue({ rampNumber: ramp.rampNumber, rampCode: ramp.code });
+        this.toast.info(`Rampa ${ramp.rampNumber} seleccionada.`);
+      } else if (this.formMode() === 'detail' && this.selectedReception()?.status === 'REGISTERED') {
+        this.altaForm.patchValue({ rampNumber: ramp.rampNumber });
+        this.toast.info(`Rampa ${ramp.rampNumber} asignada al Folio #${this.selectedReception()?.folio}`);
+      }
+      this.showDockMapModal.set(false);
+    }
+  }
+
+  getRampOccupancy(rampNumber: number): RampOccupancyStatus | undefined {
+    return this.rampOccupancyStatus().find((r) => r.rampNumber === rampNumber);
+  }
+
+  isRampBusy(rampNumber: number, allowedFolio?: string | number): boolean {
+    const occ = this.getRampOccupancy(rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') return false;
+    if (allowedFolio != null && String(occ.operationFolio) === String(allowedFolio)) return false;
+    return true;
+  }
+
+  getRampDisplayLabel(rm: RampItem, currentFolio?: string | number): string {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return `${rm.name} (Libre)`;
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return `${rm.name} (Asignada a este Folio)`;
+    }
+    if (occ.status === 'OCCUPIED_INBOUND') {
+      return `${rm.name} (Ocupada - Folio #${occ.operationFolio})`;
+    }
+    return `${rm.name} (Ocupada - Salida #${occ.operationFolio})`;
+  }
 
   // Banner colapsable / expandible de la cola de notificaciones
   isQueueBannerExpanded = signal(true);
@@ -135,13 +299,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   suppliers = this.movementsService.suppliers;
 
-  products = signal<{ id: string; code: string; name: string; defaultPieces: number }[]>([
-    { id: '01c39e98-9645-4b6c-827d-ed885d19dd11', code: '8500297', name: 'NESCAFE CLASICO 5KG MX', defaultPieces: 480 },
-    { id: '95abe0e4-3512-43f3-b0ee-c0bbf6426b70', code: '8501911', name: 'LA LECHERA CONDENSADA LECHE BOLSA 11KG MX', defaultPieces: 480 },
-    { id: 'ed5dd656-1ed6-481e-892d-cd2fa24a9fbf', code: '8505641', name: 'ABUELITA TABLETA 24X540G MX', defaultPieces: 480 },
-    { id: '6985107c-62be-4df6-8e8c-4b161952f3d8', code: '12182894', name: 'LA LECHERA LCA BOTELLA SQUEEZE 18X335GMX', defaultPieces: 480 },
-    { id: '9b4e595d-1d7f-46a7-84eb-41e1fac5a5ba', code: '12574922', name: 'COFFEE-MATE ORIGINAL 12X640G N1MX', defaultPieces: 480 },
-  ]);
+  products = signal<{ id: string; code: string; name: string; defaultPieces: number }[]>([]);
 
   // ── AUTOCOMPLETE PREDICTIVO DE PRODUCTO (SKU) ──
   skuSearchQuery = signal<string>('');
@@ -184,64 +342,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   duplicateUaError = signal<string | null>(null);
   expirationWarningAlert = signal<string | null>(null);
 
-  patioUnits = signal<PatioUnitMonitor[]>([
-    {
-      id: 'PATIO-001',
-      folio: 'REC-2026-000881',
-      driverName: 'Carlos Ramírez M.',
-      carrierLine: 'Transportes Castores',
-      tractorPlates: '88-AA-12',
-      boxPlates: '99-TC-01',
-      economicNumber: 'ECO-402',
-      registeredAt: new Date(Date.now() - 9.5 * 3600 * 1000).toISOString(),
-      status: 'CHECKED_IN',
-      waitTimeMinutes: 570,
-      dischargeTimeMinutes: 0,
-      hasWaitAlert: true,
-      hasDischargeAlert: false,
-    },
-    {
-      id: 'PATIO-002',
-      folio: 'REC-2026-000882',
-      driverName: 'Jorge Luis Morales',
-      carrierLine: 'Express Tresguerras',
-      tractorPlates: '77-BB-45',
-      boxPlates: '12-TG-88',
-      economicNumber: 'ECO-119',
-      registeredAt: new Date(Date.now() - 3.5 * 3600 * 1000).toISOString(),
-      rampNumber: 2,
-      rampAssignedAt: new Date(Date.now() - 3.2 * 3600 * 1000).toISOString(),
-      dischargeStartedAt: new Date(Date.now() - 3.0 * 3600 * 1000).toISOString(),
-      status: 'DISCHARGING',
-      forkliftOperator: 'Ignacio Morales',
-      palletType: 'TARIMA_CHEP_NACIONAL',
-      waitTimeMinutes: 18,
-      dischargeTimeMinutes: 180,
-      hasWaitAlert: false,
-      hasDischargeAlert: true,
-    },
-    {
-      id: 'PATIO-003',
-      folio: 'REC-2026-000883',
-      driverName: 'Ernesto Zavala',
-      carrierLine: 'TUM Logística',
-      tractorPlates: '55-CD-99',
-      boxPlates: '33-TM-04',
-      economicNumber: 'ECO-88',
-      registeredAt: new Date(Date.now() - 1.2 * 3600 * 1000).toISOString(),
-      rampNumber: 4,
-      rampAssignedAt: new Date(Date.now() - 1.0 * 3600 * 1000).toISOString(),
-      dischargeStartedAt: new Date(Date.now() - 0.8 * 3600 * 1000).toISOString(),
-      dischargeEndedAt: new Date(Date.now() - 0.1 * 3600 * 1000).toISOString(),
-      status: 'DISCHARGED_PENDING_EXIT',
-      forkliftOperator: 'Miguel Ángel Ruiz',
-      palletType: 'PLASTICO_AZUL',
-      waitTimeMinutes: 12,
-      dischargeTimeMinutes: 42,
-      hasWaitAlert: false,
-      hasDischargeAlert: false,
-    },
-  ]);
+  patioUnits = signal<PatioUnitMonitor[]>([]);
 
   patioWaitAlertsCount = computed(() => this.patioUnits().filter(u => u.hasWaitAlert).length);
   patioDischargeAlertsCount = computed(() => this.patioUnits().filter(u => u.hasDischargeAlert).length);
@@ -255,7 +356,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
   // ── FORMULARIO: ALTA / EDICIÓN DE RECEPCIÓN (Detalle Producto) ──
   altaForm = this.fb.group({
     lotNumber: ['', [Validators.required]],
+    elaborationDate: [''],
     expirationDate: ['', [Validators.required]],
+    storageLocation: [''],
+    storageLocationId: [''],
     forkliftOperator: ['', [Validators.required]],
     rampNumber: [1, [Validators.required]],
     productId: ['', [Validators.required]],
@@ -402,7 +506,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
   resetAltaForm(): void {
     this.altaForm.reset({
       lotNumber: '',
+      elaborationDate: '',
       expirationDate: '',
+      storageLocation: '',
+      storageLocationId: '',
       forkliftOperator: '',
       rampNumber: 1,
       productId: '',
@@ -489,7 +596,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
+      elaborationDate: rec.elaborationDate || rec.checkIn?.elaborationDate || '',
       expirationDate: rec.expirationDate || rec.checkIn?.expirationDate || '',
+      storageLocation: rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1',
+      storageLocationId: rec.storageLocationId || '',
       forkliftOperator: defaultOperator,
       rampNumber: rec.checkIn?.rampNumber || 1,
       productId: matchedProduct ? matchedProduct.code : (rec.skuCode || rec.productId || ''),
@@ -503,7 +613,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   loadAuditLogs(folioOrId: string): void {
     const rec = this.selectedReception() || this.movementsService.findReceptionByFolio(folioOrId);
-    const id = rec?.id || (folioOrId.includes('-') ? folioOrId : null);
+    const id = (rec?.id && isUuid(rec.id)) ? rec.id : (isUuid(folioOrId) ? folioOrId : null);
     const folio = rec?.folio || folioOrId;
 
     if (id) {
@@ -625,12 +735,6 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.isQueueBannerExpanded.update((v) => !v);
   }
 
-  // Botón de prueba rápida para simular múltiples llegadas desde Caseta
-  simulateQuickArrival(): void {
-    const newRec = this.movementsService.simulateQuickCasetaArrival();
-    this.toast.success(`⚡ Nueva Pre-Recepción Folio #${newRec.folio} en espera de atención`);
-  }
-
   openNewReceptionModal(): void {
     this.resetCheckInForm();
     this.showCheckInModal.set(true);
@@ -659,6 +763,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.checkInForm.patchValue({ rampCode: rm.code, rampNumber: rm.rampNumber });
     }
 
+    if (this.tempSealInput().trim()) {
+      this.addSeal();
+    }
+
     if (this.checkInForm.invalid) {
       this.checkInForm.markAllAsTouched();
       const missing: string[] = [];
@@ -676,12 +784,21 @@ export class ReceivingSubmoduleComponent implements OnInit {
       return;
     }
 
+    const currentSeals = [...this.sealList()];
+    const singleSeal = (this.checkInForm.get('sealNumber')?.value || '').trim();
+    if (singleSeal && !currentSeals.includes(singleSeal.toUpperCase())) {
+      currentSeals.push(singleSeal.toUpperCase());
+      this.sealList.set(currentSeals);
+    }
+
+    if (currentSeals.length === 0) {
+      this.toast.warning('El sello de seguridad es obligatorio. Debe agregar al menos un número de sello o cincho.');
+      return;
+    }
+
     this.isSubmitting.set(true);
     const formData = this.checkInForm.value as any;
-    formData.sealNumbers = [...this.sealList()];
-    if (formData.sealNumber && !formData.sealNumbers.includes(formData.sealNumber)) {
-      formData.sealNumbers.push(formData.sealNumber);
-    }
+    formData.sealNumbers = currentSeals;
 
     this.movementsService.createCheckInBackend(formData).subscribe({
       next: (newRec) => {
@@ -693,7 +810,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        const errMsg = err?.error?.message || err?.message || 'Error al registrar pre-recepción en el servidor';
+        const errData = err?.error?.data;
+        let details = '';
+        if (Array.isArray(errData)) {
+          details = errData.join(', ');
+        } else if (typeof errData === 'string') {
+          details = errData;
+        }
+        const errMsg = details
+          ? `${err?.error?.message || 'Error'}: ${details}`
+          : (err?.error?.message || err?.message || 'Error al registrar pre-recepción en el servidor');
+        console.error('[RECEPCION_CHECKIN_ERROR]', err);
         this.toast.error(errMsg);
       },
     });
@@ -1274,7 +1401,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   addSeal(): void {
-    const s = this.tempSealInput().trim();
+    const s = this.tempSealInput().trim().toUpperCase();
     if (s && !this.sealList().includes(s)) {
       this.sealList.update((list) => [...list, s]);
       this.tempSealInput.set('');
