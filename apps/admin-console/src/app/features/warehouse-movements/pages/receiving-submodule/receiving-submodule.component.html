@@ -113,12 +113,24 @@
     <!-- En Caseta / Registradas -->
     <div class="movement-kpi-card movement-kpi-card--warning">
       <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">pending_actions</span>
+        <span class="material-symbols-outlined">shield_person</span>
       </div>
       <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">REGISTRADAS CASETA</span>
+        <span class="movement-kpi-card__label">1. REGISTRADAS CASETA</span>
         <strong class="movement-kpi-card__value">{{ kpiRegistered() }}</strong>
-        <span class="movement-kpi-card__sub">En andén / Espera</span>
+        <span class="movement-kpi-card__sub">Por asignar andén</span>
+      </div>
+    </div>
+
+    <!-- En Proceso / Andén (Asignadas + En Descarga + Por Auditar) -->
+    <div class="movement-kpi-card movement-kpi-card--info">
+      <div class="movement-kpi-card__icon">
+        <span class="material-symbols-outlined">forklift</span>
+      </div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">2-4. EN ANDÉN / DESCARGA</span>
+        <strong class="movement-kpi-card__value">{{ kpiInProcess() }}</strong>
+        <span class="movement-kpi-card__sub">Andén bloqueado / Descarga</span>
       </div>
     </div>
 
@@ -128,9 +140,9 @@
         <span class="material-symbols-outlined">check_circle</span>
       </div>
       <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">COMPLETADAS</span>
+        <span class="movement-kpi-card__label">5. COMPLETADAS</span>
         <strong class="movement-kpi-card__value">{{ kpiCompleted() }}</strong>
-        <span class="movement-kpi-card__sub">Inspección finalizada</span>
+        <span class="movement-kpi-card__sub">En stock / F01 cerrado</span>
       </div>
     </div>
 
@@ -177,9 +189,12 @@
               aria-label="Filtrar por estado"
             >
               <option value="ALL">Todos los estados</option>
-              <option value="REGISTERED">Registradas (Caseta)</option>
-              <option value="COMPLETED">Completadas</option>
-              <option value="CANCELLED">Canceladas</option>
+              <option value="REGISTERED">1. Registradas (Caseta)</option>
+              <option value="ASSIGNED">2. Asignadas (Andén)</option>
+              <option value="IN_PROGRESS">3. En Descarga</option>
+              <option value="DISCHARGED">4. Por Auditar (Descarga Finalizada)</option>
+              <option value="COMPLETED">5. Completadas</option>
+              <option value="CANCELLED">6. Canceladas</option>
             </select>
           </div>
         </div>
@@ -210,10 +225,18 @@
                 <span
                   class="carrier-status-badge"
                   [class.status-badge--registered]="rec.status === 'REGISTERED'"
+                  [class.status-badge--assigned]="rec.status === 'ASSIGNED'"
+                  [class.status-badge--progress]="rec.status === 'IN_PROGRESS'"
+                  [class.status-badge--discharged]="rec.status === 'DISCHARGED'"
                   [class.status-badge--completed]="rec.status === 'COMPLETED'"
                   [class.status-badge--cancelled]="rec.status === 'CANCELLED'"
                 >
-                  {{ rec.status === 'REGISTERED' ? 'Registrado' : (rec.status === 'COMPLETED' ? 'Completado' : 'Cancelado') }}
+                  @if (rec.status === 'REGISTERED') { Caseta }
+                  @else if (rec.status === 'ASSIGNED') { Asignada }
+                  @else if (rec.status === 'IN_PROGRESS') { En Descarga }
+                  @else if (rec.status === 'DISCHARGED') { Por Auditar }
+                  @else if (rec.status === 'COMPLETED') { Completado }
+                  @else if (rec.status === 'CANCELLED') { Cancelado }
                 </span>
               </div>
 
@@ -531,10 +554,18 @@
               <span
                 class="transportistas-status-badge"
                 [class.transportistas-status-badge--registered]="rec.status === 'REGISTERED'"
+                [class.transportistas-status-badge--assigned]="rec.status === 'ASSIGNED'"
+                [class.transportistas-status-badge--progress]="rec.status === 'IN_PROGRESS'"
+                [class.transportistas-status-badge--discharged]="rec.status === 'DISCHARGED'"
                 [class.transportistas-status-badge--active]="rec.status === 'COMPLETED'"
                 [class.transportistas-status-badge--cancelled]="rec.status === 'CANCELLED'"
               >
-                {{ rec.status === 'COMPLETED' ? 'Completado' : (rec.status === 'REGISTERED' ? 'En Espera' : 'Cancelado') }}
+                @if (rec.status === 'REGISTERED') { Pre-registro Caseta }
+                @else if (rec.status === 'ASSIGNED') { Andén Asignado }
+                @else if (rec.status === 'IN_PROGRESS') { En Descarga }
+                @else if (rec.status === 'DISCHARGED') { Por Auditar }
+                @else if (rec.status === 'COMPLETED') { Completado }
+                @else if (rec.status === 'CANCELLED') { Cancelado }
               </span>
             </div>
 
@@ -849,14 +880,35 @@
                 </div>
               </div>
             </form>
-          } @else if (rec.status === 'COMPLETED') {
-            <!-- Vista de Parámetros en Solo Lectura cuando ya está COMPLETADO -->
-            <div class="space-y-3.5 pt-1">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined">inventory_2</span>
-                <span>PARÁMETROS DE LA RECEPCIÓN (REGISTRO FINALIZADO)</span>
+          } @else if (rec.status === 'ASSIGNED') {
+            <!-- FASE 2: ANDÉN ASIGNADO Y NOTIFICADO A TERMINAL DE MONTACARGAS -->
+            <div class="space-y-4 pt-1">
+              <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/40 shrink-0">
+                    <span class="material-symbols-outlined text-2xl">forklift</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wide">
+                      Andén Asignado · Notificación Enviada a Terminal de Montacargas
+                    </h3>
+                    <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                      Rampa <strong>{{ rec.checkIn.rampNumber }}</strong> bloqueada. El operador <strong>{{ rec.checkIn.forkliftOperator }}</strong> validará el transporte y comenzará la descarga hacia bahía <strong>{{ rec.storageLocation }}</strong>.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  (click)="simulateStartDischarge()"
+                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap"
+                  title="Simular inicio de descarga en la terminal del montacarguista"
+                >
+                  <span class="material-symbols-outlined text-sm">play_arrow</span>
+                  <span>Iniciar Descarga en Terminal</span>
+                </button>
               </div>
 
+              <!-- Vista de Parámetros Asignados -->
               <div class="reception-readonly-grid">
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Lote de Recepción</span>
@@ -872,20 +924,19 @@
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
-                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || altaForm.value.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
                 </div>
                 <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Montacarguista</span>
-                  <span class="reception-readonly-val truncate" [title]="rec.checkIn?.forkliftOperator || altaForm.value.forkliftOperator">{{ rec.checkIn?.forkliftOperator || altaForm.value.forkliftOperator }}</span>
+                  <span class="reception-readonly-label">Montacarguista Asignado</span>
+                  <span class="reception-readonly-val truncate font-bold text-amber-700 dark:text-amber-400">{{ rec.checkIn?.forkliftOperator }}</span>
                 </div>
                 <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Rampa de Recepción</span>
-                  <span class="reception-readonly-val">Rampa {{ rec.checkIn?.rampNumber || altaForm.value.rampNumber || 1 }}</span>
+                  <span class="reception-readonly-label">Rampa Bloqueada</span>
+                  <span class="reception-readonly-val font-bold text-amber-700 dark:text-amber-400">Rampa {{ rec.checkIn?.rampNumber }}</span>
                 </div>
-
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Producto / SKU</span>
-                  <span class="reception-readonly-val truncate" [title]="rec.productId + ' — ' + rec.productName">{{ rec.productId }} — {{ rec.productName }}</span>
+                  <span class="reception-readonly-val truncate">{{ rec.productId }} — {{ rec.productName }}</span>
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Piezas x Tarima</span>
@@ -895,48 +946,42 @@
                   <span class="reception-readonly-label">Tipo de Tarima</span>
                   <span class="reception-readonly-val">{{ rec.selectedPalletType }}</span>
                 </div>
-
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Proveedor</span>
-                  <span class="reception-readonly-val truncate" [title]="rec.supplierName">{{ rec.supplierName }}</span>
-                </div>
-                <div class="reception-readonly-item sm:col-span-2">
-                  <span class="reception-readonly-label">Sellos de Seguridad Registrados</span>
-                  <span class="reception-readonly-val font-mono font-bold text-amber-700 dark:text-amber-400 truncate" [title]="(rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0) ? rec.checkIn.sealNumbers.join(', ') : (rec.checkIn.sealNumber || 'N/A')">
-                    🔒 {{ (rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0) ? rec.checkIn.sealNumbers.join(', ') : (rec.checkIn.sealNumber || 'N/A') }}
-                  </span>
-                </div>
-                <div class="reception-readonly-item sm:col-span-2">
-                  <span class="reception-readonly-label">Observaciones</span>
-                  <span class="reception-readonly-val reception-readonly-val--italic truncate" [title]="rec.observations || 'Sin incidentes registrados en andén.'">{{ rec.observations || 'Sin incidentes registrados en andén.' }}</span>
+                  <span class="reception-readonly-val truncate">{{ rec.supplierName }}</span>
                 </div>
               </div>
             </div>
-          } @else if (rec.status === 'CANCELLED') {
-            <!-- Banner de Auditoría de Cancelación -->
-            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
-              <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
-                <span class="material-symbols-outlined text-lg">cancel</span>
-                <span class="uppercase">FOLIO CANCELADO Y REVOCADO DE INVENTARIO</span>
+          } @else if (rec.status === 'IN_PROGRESS') {
+            <!-- FASE 3: DESCARGA FÍSICA EN CURSO (TERMINAL MONTACARGUISTA) -->
+            <div class="space-y-4 pt-1">
+              <div class="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/40 shrink-0 animate-pulse">
+                    <span class="material-symbols-outlined text-2xl">barcode_scanner</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-xs text-cyan-900 dark:text-cyan-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <span>Descarga Física en Curso · Rampa {{ rec.checkIn.rampNumber }}</span>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-700 dark:text-cyan-300">En Proceso</span>
+                    </h3>
+                    <p class="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
+                      Montacarguista <strong>{{ rec.checkIn.forkliftOperator }}</strong> leyendo códigos de tarima (UAs) en andén.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  (click)="simulateFinishDischarge()"
+                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap"
+                  title="Concluir descarga física y devolver información a mesa administrativa"
+                >
+                  <span class="material-symbols-outlined text-sm">fact_check</span>
+                  <span>Finalizar Descarga (Notificar a Administrativo)</span>
+                </button>
               </div>
-              <p class="text-xs text-rose-300 font-medium">
-                Motivo: "{{ rec.cancellationReason || 'Cancelado por el administrador.' }}"
-              </p>
-              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
-                <span>Autorizado por: <strong class="text-slate-200">{{ rec.leaderAuthorizedBy || 'Admin' }}</strong></span>
-                <span>Fecha: {{ rec.cancelledAt || 'Registrado' }}</span>
-              </div>
-            </div>
-          }
 
-          <!-- 4. SECCIÓN 3: CAPTURA DE TARIMAS (UA) - SOLO SI ESTÁ EN ESPERA / REGISTERED -->
-          @if (rec.status === 'REGISTERED') {
-            <div class="space-y-3 pt-1">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined">qr_code_scanner</span>
-                <span>CAPTURA DE TARIMAS (UA)</span>
-              </div>
-
+              <!-- Escáner Activo de Tarimas -->
               <div class="scan-bar p-3.5 rounded-xl border border-gold/40 bg-gold-subtle flex flex-col sm:flex-row items-center gap-3">
                 <div class="flex items-center gap-2 text-gold font-bold text-xs whitespace-nowrap">
                   <span class="material-symbols-outlined text-lg">barcode_scanner</span>
@@ -967,54 +1012,127 @@
                   <span>Agregar Tarima</span>
                 </button>
               </div>
-
-              <!-- ALERTA DE CANDADO ANTI-DUPLICADOS -->
-              @if (duplicateUaError()) {
-                <div class="p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-bold flex items-center justify-between gap-2 animate-pulse">
-                  <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-lg text-red-500">gpp_bad</span>
-                    <span>{{ duplicateUaError() }}</span>
+            </div>
+          } @else if (rec.status === 'DISCHARGED') {
+            <!-- FASE 4: DESCARGA CONCLUIDA POR MONTACARGUISTA — AUDITORÍA ADMINISTRATIVA (FOTO 2) -->
+            <div class="space-y-4 pt-1">
+              <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/40 shrink-0">
+                    <span class="material-symbols-outlined text-2xl">assignment_turned_in</span>
                   </div>
-                  <button type="button" (click)="duplicateUaError.set(null)" class="text-red-500 hover:text-red-700 font-extrabold cursor-pointer">✕</button>
-                </div>
-              }
-
-              <!-- ADVERTENCIA PARAMÉTRICA DE CADUCIDAD & VIDA ÚTIL -->
-              @if (expirationWarningAlert()) {
-                <div class="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-lg text-amber-500">warning</span>
-                    <span>{{ expirationWarningAlert() }}</span>
+                  <div>
+                    <h3 class="font-bold text-xs text-purple-900 dark:text-purple-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <span>Descarga Física Concluida · Auditoría Administrativa</span>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">Visto Bueno Pendiente</span>
+                    </h3>
+                    <p class="text-[11px] text-purple-700 dark:text-purple-300 font-medium">
+                      El montacarguista <strong>{{ rec.checkIn.forkliftOperator }}</strong> finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong>. Verifica el detalle consolidado abajo antes de aprobar.
+                    </p>
                   </div>
-                  <button type="button" (click)="expirationWarningAlert.set(null)" class="text-amber-500 hover:text-amber-700 font-extrabold cursor-pointer">✕</button>
                 </div>
-              }
+                <button
+                  type="button"
+                  [disabled]="isCompleting()"
+                  (click)="initiateCompleteReception()"
+                  class="btn-save flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
+                  title="Aprobar recepción y cerrar ciclo formalmente"
+                >
+                  @if (isCompleting()) {
+                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    <span>Autorizando...</span>
+                  } @else {
+                    <span class="material-symbols-outlined text-base">verified</span>
+                    <span>Aprobar Recepción y Finalizar Ciclo (F01)</span>
+                  }
+                </button>
+              </div>
             </div>
           } @else if (rec.status === 'COMPLETED') {
-            <!-- Banner Informativo de Folio Finalizado (Diseño Elegante) -->
-            <div class="reception-completed-banner">
-              <div class="reception-completed-banner__content">
-                <div class="reception-completed-banner__badge-icon">
-                  <span class="material-symbols-outlined">check_circle</span>
-                </div>
-                <div class="reception-completed-banner__info">
-                  <div class="reception-completed-banner__title">
-                    <span>Recepción Finalizada y Cerrada</span>
-                    <span class="reception-completed-banner__pill">Completado</span>
+            <!-- FASE 5: VISTA DE PARÁMETROS EN SOLO LECTURA CUANDO YA ESTÁ COMPLETADO -->
+            <div class="space-y-3.5 pt-1">
+              <div class="reception-completed-banner">
+                <div class="reception-completed-banner__content">
+                  <div class="reception-completed-banner__badge-icon">
+                    <span class="material-symbols-outlined">check_circle</span>
                   </div>
-                  <p class="reception-completed-banner__desc">
-                    Las <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> fueron registradas e ingresadas a inventario exitosamente.
-                  </p>
+                  <div class="reception-completed-banner__info">
+                    <div class="reception-completed-banner__title">
+                      <span>Recepción Finalizada y Cerrada</span>
+                      <span class="reception-completed-banner__pill">Completado</span>
+                    </div>
+                    <p class="reception-completed-banner__desc">
+                      Las <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> fueron registradas e ingresadas a inventario exitosamente. Andén liberado.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  (click)="openPrintPreview(rec)"
+                  class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 self-end sm:self-auto flex items-center gap-1.5"
+                >
+                  <span class="material-symbols-outlined text-base">print</span>
+                  <span>Imprimir Documento F01</span>
+                </button>
+              </div>
+
+              <div class="reception-readonly-grid">
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Lote de Recepción</span>
+                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Fecha de Elaboración</span>
+                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'N/A' }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Fecha de Caducidad</span>
+                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Montacarguista</span>
+                  <span class="reception-readonly-val truncate">{{ rec.checkIn?.forkliftOperator }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Rampa de Recepción</span>
+                  <span class="reception-readonly-val">Rampa {{ rec.checkIn?.rampNumber || 1 }}</span>
+                </div>
+                <div class="reception-readonly-item sm:col-span-2">
+                  <span class="reception-readonly-label">Producto / SKU</span>
+                  <span class="reception-readonly-val truncate">{{ rec.productId }} — {{ rec.productName }}</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Piezas x Tarima</span>
+                  <span class="reception-readonly-val reception-readonly-val--pieces">{{ rec.piecesPerPallet }} PZAS</span>
+                </div>
+                <div class="reception-readonly-item">
+                  <span class="reception-readonly-label">Tipo de Tarima</span>
+                  <span class="reception-readonly-val">{{ rec.selectedPalletType }}</span>
+                </div>
+                <div class="reception-readonly-item sm:col-span-2">
+                  <span class="reception-readonly-label">Proveedor</span>
+                  <span class="reception-readonly-val truncate">{{ rec.supplierName }}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                (click)="openPrintPreview(rec)"
-                class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 self-end sm:self-auto flex items-center gap-1.5"
-              >
-                <span class="material-symbols-outlined text-base">print</span>
-                <span>Imprimir Documento</span>
-              </button>
+            </div>
+          } @else if (rec.status === 'CANCELLED') {
+            <!-- Banner de Auditoría de Cancelación -->
+            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
+              <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                <span class="material-symbols-outlined text-lg">cancel</span>
+                <span class="uppercase">FOLIO CANCELADO Y REVOCADO DE INVENTARIO</span>
+              </div>
+              <p class="text-xs text-rose-300 font-medium">
+                Motivo: "{{ rec.cancellationReason || 'Cancelado por el administrador.' }}"
+              </p>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
+                <span>Autorizado por: <strong class="text-slate-200">{{ rec.leaderAuthorizedBy || 'Admin' }}</strong></span>
+                <span>Fecha: {{ rec.cancelledAt || 'Registrado' }}</span>
+              </div>
             </div>
           }
 
@@ -1055,7 +1173,7 @@
                   <th>Tipo Tarima</th>
                   <th class="text-right">Cant x Tarima</th>
                   <th>Observaciones</th>
-                  @if (rec.status === 'REGISTERED') {
+                  @if (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') {
                     <th class="text-center w-24">Acciones</th>
                   }
                 </tr>
@@ -1071,7 +1189,7 @@
                     <td class="tarimas-cell-type">{{ pallet.palletTypeLabel }}</td>
                     <td class="tarimas-cell-pieces">{{ pallet.pieces }} PZAS</td>
                     <td class="tarimas-cell-obs">{{ pallet.observations || '-' }}</td>
-                    @if (rec.status === 'REGISTERED') {
+                    @if (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') {
                       <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
@@ -1200,7 +1318,7 @@
             </div>
           </div>
 
-          <!-- 7. FOOTER CON ACCIONES DE GUARDADO Y AUTORIZACIÓN (SOLO EN ESPERA) -->
+          <!-- 7. FOOTER CON ACCIONES DE CICLO DE VIDA -->
           @if (rec.status === 'REGISTERED') {
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
               <button
@@ -1211,10 +1329,42 @@
               >
                 @if (isSavingDraft()) {
                   <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                  <span>Guardando en Servidor...</span>
+                  <span>Guardando...</span>
                 } @else {
                   <span class="material-symbols-outlined text-sm">save</span>
-                  <span>Guardar Avance de Descarga</span>
+                  <span>Guardar Parámetros</span>
+                }
+              </button>
+
+              <button
+                type="button"
+                [disabled]="isAssigning() || isSavingDraft()"
+                (click)="assignToForklift()"
+                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                @if (isAssigning()) {
+                  <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                  <span>Asignando y Despachando...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-base">send</span>
+                  <span>Asignar a Montacarguista y Bloquear Andén</span>
+                }
+              </button>
+            </div>
+          } @else if (rec.status === 'DISCHARGED') {
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
+              <button
+                type="button"
+                [disabled]="isSavingDraft()"
+                (click)="saveDraftReception()"
+                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                @if (isSavingDraft()) {
+                  <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                  <span>Guardando Ajustes...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-sm">save</span>
+                  <span>Guardar Ajustes de Tarimas</span>
                 }
               </button>
 
@@ -1228,8 +1378,8 @@
                   <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
                   <span>Autorizando en Servidor...</span>
                 } @else {
-                  <span class="material-symbols-outlined text-base">print</span>
-                  <span>Autorizar y Generar Formato de Impresión Oficial</span>
+                  <span class="material-symbols-outlined text-base">verified</span>
+                  <span>Aprobar Recepción y Finalizar Ciclo (F01)</span>
                 }
               </button>
             </div>

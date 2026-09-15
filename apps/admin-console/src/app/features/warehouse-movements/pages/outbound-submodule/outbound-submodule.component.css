@@ -198,17 +198,23 @@
    ───────────────────────────────────────────────────────────── */
 .movement-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
+  .movement-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
   .movement-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 500px) {
   .movement-kpi-grid {
     grid-template-columns: 1fr;
   }
@@ -3644,6 +3650,280 @@ input[type="number"] {
 :host-context(.dark) .fefo-qty-input,
 :host-context(.theme-dark) .fefo-qty-input {
   color: #f8fafc;
+}
+
+/* ── MODAL: PLANO INTERACTIVO DE BAHÍAS / ANDENES (1 - 12) ── */
+.dock-bay-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.875rem;
+  border: 1.5px solid transparent;
+  background: var(--bg-subtle, #f8fafc);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.dock-bay-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dock-bay-door {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.dock-bay-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dock-bay-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.4rem;
+  text-align: center;
+  min-height: 85px;
+}
+
+/* Estado: Libre */
+.dock-bay-card--free {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.dock-bay-card--free .dock-bay-door {
+  background: rgba(16, 185, 129, 0.1);
+  color: #065f46;
+}
+
+.dock-bay-card--free .dock-bay-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+:host-context(.theme-dark) .dock-bay-card--free,
+:host-context(.dark) .dock-bay-card--free {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Estado: Ocupada Inbound */
+.dock-bay-card--busy-in {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.dock-bay-card--busy-in .dock-bay-door {
+  background: rgba(239, 68, 68, 0.12);
+  color: #991b1b;
+}
+
+.dock-bay-card--busy-in .dock-bay-dot {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-in,
+:host-context(.dark) .dock-bay-card--busy-in {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Estado: Ocupada Outbound */
+.dock-bay-card--busy-out {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.dock-bay-card--busy-out .dock-bay-door {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1e40af;
+}
+
+.dock-bay-card--busy-out .dock-bay-dot {
+  background: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.8);
+}
+
+/* ── FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS) ── */
+.logistics-command-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.95rem 1.25rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.06) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+:host-context(.theme-dark) .logistics-command-panel,
+:host-context(.dark) .logistics-command-panel {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(59, 130, 246, 0.12) 100%);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.logistics-command-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+  padding-bottom: 0.5rem;
+}
+
+.logistics-command-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.15rem 0.25rem;
+}
+
+.logistics-command-cell--highlight {
+  background: rgba(59, 130, 246, 0.09);
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.625rem;
+}
+
+:host-context(.theme-dark) .logistics-command-cell--highlight,
+:host-context(.dark) .logistics-command-cell--highlight {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.logistics-command-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #78350f !important;
+}
+
+:host-context(.theme-dark) .logistics-command-label,
+:host-context(.dark) .logistics-command-label {
+  color: #fcd34d !important;
+}
+
+.logistics-command-value {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a !important;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+:host-context(.theme-dark) .logistics-command-value,
+:host-context(.dark) .logistics-command-value {
+  color: #f8fafc !important;
+}
+
+/* ── HORIZONTAL 5-PHASE STEPPER ── */
+.outbound-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+@media (max-width: 768px) {
+  .outbound-stepper {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+.outbound-stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  opacity: 0.5;
+  transition: all 0.2s ease;
+}
+
+.outbound-stepper-item--active {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06));
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.outbound-stepper-item--completed {
+  opacity: 0.9;
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.outbound-stepper-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: var(--border-subtle);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.outbound-stepper-item--active .outbound-stepper-num {
+  background: #f59e0b;
+  color: #0f172a;
+}
+
+.outbound-stepper-item--completed .outbound-stepper-num {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.outbound-stepper-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.outbound-stepper-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outbound-stepper-sub {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 

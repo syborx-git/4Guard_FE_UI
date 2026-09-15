@@ -120,8 +120,12 @@ export class WarehouseMovementsService {
   // ── MATRIZ DE OCUPACIÓN Y BLOQUEO DE RAMPAS (1 - 12) ──
   readonly rampOccupancyStatus = computed<RampOccupancyStatus[]>(() => {
     const allRamps = this.rampsSignal();
-    const activeReceptions = this.receptionsSignal().filter((r) => r.status === 'REGISTERED');
-    const activeOutbounds = this.outboundsSignal().filter((o) => o.status === 'IN_PROGRESS' || o.status === 'REGISTERED');
+    const activeReceptions = this.receptionsSignal().filter(
+      (r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status === 'REGISTERED' && !!r.checkIn?.rampNumber)
+    );
+    const activeOutbounds = this.outboundsSignal().filter(
+      (o) => o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status === 'REGISTERED' && !!o.rampNumber)
+    );
 
     return allRamps.map((ramp) => {
       // 1. Verificar si está ocupada por Recepción Inbound en andén
@@ -132,12 +136,23 @@ export class WarehouseMovementsService {
       );
 
       if (recMatch) {
+        let statusLabel = 'En Descarga Inbound';
+        if (recMatch.status === 'ASSIGNED') {
+          statusLabel = 'Andén Asignado (Espera Descarga)';
+        } else if (recMatch.status === 'IN_PROGRESS') {
+          statusLabel = 'En Descarga Inbound';
+        } else if (recMatch.status === 'DISCHARGED') {
+          statusLabel = 'Descarga Concluida (Por Auditar)';
+        } else if (recMatch.status === 'REGISTERED') {
+          statusLabel = 'Pre-registro Caseta (Entrada)';
+        }
+
         return {
           rampNumber: ramp.rampNumber,
           code: ramp.code,
           name: ramp.name,
           status: 'OCCUPIED_INBOUND',
-          statusLabel: 'En Descarga Inbound',
+          statusLabel: statusLabel,
           operationType: 'INBOUND',
           operationFolio: recMatch.folio,
           docNumber: recMatch.checkIn?.docNumber,
@@ -150,16 +165,29 @@ export class WarehouseMovementsService {
 
       // 2. Verificar si está ocupada por Carga Outbound en andén
       const outMatch = activeOutbounds.find(
-        (o) => o.rampNumber === ramp.rampNumber || o.rampCode === ramp.code
+        (o) =>
+          (o.rampNumber && Number(o.rampNumber) === Number(ramp.rampNumber)) ||
+          (o.rampCode && (o.rampCode === ramp.code || o.rampCode === ramp.id))
       );
 
       if (outMatch) {
+        let statusLabel = 'En Carga Outbound';
+        if (outMatch.status === 'ASSIGNED') {
+          statusLabel = 'Andén Asignado (Espera Carga)';
+        } else if (outMatch.status === 'IN_PROGRESS') {
+          statusLabel = 'En Carga Outbound';
+        } else if (outMatch.status === 'LOADED') {
+          statusLabel = 'Carga Concluida (Por Auditar)';
+        } else if (outMatch.status === 'REGISTERED') {
+          statusLabel = 'Pre-registro Caseta (Salida)';
+        }
+
         return {
           rampNumber: ramp.rampNumber,
           code: ramp.code,
           name: ramp.name,
           status: 'OCCUPIED_OUTBOUND',
-          statusLabel: 'En Carga Outbound',
+          statusLabel: statusLabel,
           operationType: 'OUTBOUND',
           operationFolio: outMatch.folio,
           docNumber: outMatch.remisionNo,
@@ -338,7 +366,7 @@ export class WarehouseMovementsService {
           (outbounds || []).map((o: any) => ({
             id: o.id,
             folio: o.folio,
-            status: o.status,
+            status: o.status || 'REGISTERED',
             clientCode: o.clientId || '',
             clientName: o.clientName || '',
             destinationId: o.destinationId || '',
@@ -346,15 +374,20 @@ export class WarehouseMovementsService {
             destinationAddress: o.destinationAddress || '',
             carrierCode: o.carrierId || '',
             carrierName: o.carrierName || '',
-            forkliftOperator: o.forkliftOperatorName || '',
+            rampId: o.rampId || '',
+            rampNumber: o.rampNumber ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
+            rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
+            forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
             forkliftOperatorId: o.forkliftOperatorId || '',
             driverName: o.driverName || '',
             economicNumber: o.economicNumber || '',
+            boxEconomicNumber: o.boxEconomicNumber || '',
             tractorPlates: o.tractorPlates || '',
             boxPlates: o.boxPlates || '',
             transportType: o.transportType || 'TRAILER',
             sealNumber: o.sealNumber || '',
             remisionNo: o.remisionNo || '',
+            observations: o.observations || '',
             items: (o.items || []).map((it: any) => ({
               id: it.id || it.itemId,
               palletCode: it.palletCode,
@@ -370,6 +403,8 @@ export class WarehouseMovementsService {
             totalPallets: o.totalPallets || 0,
             totalPieces: o.totalPieces || 0,
             distinctSkus: o.distinctSkus || 0,
+            completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
+            leaderAuthorizedBy: o.leaderAuthorizedBy || '',
             dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
             dispatchedBy: o.createdBy || 'Admin',
             timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
@@ -805,12 +840,14 @@ export class WarehouseMovementsService {
     }
     const str = String(value).trim();
     const map: Record<string, string> = {
-      REGISTERED: 'En Proceso / Registrado en Caseta',
+      REGISTERED: 'Registrado en Caseta',
+      ASSIGNED: 'Andén Asignado / Notificado a Terminal',
+      IN_PROGRESS: 'En Descarga Inbound',
+      DISCHARGED: 'Descarga Finalizada (Por Auditar)',
       COMPLETED: 'Descarga Finalizada / En Stock',
       CANCELLED: 'Cancelado',
       DRAFT: 'Borrador Guardado',
       PENDING: 'Pendiente',
-      IN_PROGRESS: 'En Tránsito / En Curso',
       DISPATCHED: 'Despachado / Salida Confirmada',
       MADERA_ESTANDAR: 'Madera Estándar (40x48)',
       PLASTICO: 'Plástico Higiénico',
@@ -1252,6 +1289,122 @@ export class WarehouseMovementsService {
     return updated;
   }
 
+  // Transición 1 -> 2: Asignación a Montacarguista y Andén (REGISTERED -> ASSIGNED)
+  assignReception(
+    folioOrId: string,
+    formVals: any,
+    productsList: any[],
+    suppliersList: any[],
+    assignedBy: string
+  ): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+
+    const recId = current?.id || folioOrId;
+    return this.saveDraftReceptionBackend(recId, formVals, current?.pallets || [], productsList, suppliersList).pipe(
+      map((rec) => {
+        const updated = this.updateReception(
+          rec.folio,
+          {
+            ...rec,
+            status: 'ASSIGNED',
+            lotNumber: formVals.lotNumber || rec.lotNumber,
+            elaborationDate: formVals.elaborationDate || rec.elaborationDate,
+            expirationDate: formVals.expirationDate || rec.expirationDate,
+            productId: formVals.productId || rec.productId,
+            productName: formVals.productName || rec.productName,
+            supplierName: formVals.supplierName || rec.supplierName,
+            piecesPerPallet: formVals.piecesPerPallet || rec.piecesPerPallet,
+            selectedPalletType: formVals.selectedPalletType || rec.selectedPalletType,
+            observations: formVals.observations || rec.observations,
+            checkIn: {
+              ...rec.checkIn,
+              forkliftOperator: formVals.forkliftOperator || rec.checkIn.forkliftOperator,
+              rampNumber: formVals.rampNumber || rec.checkIn.rampNumber,
+            },
+          },
+          true
+        );
+
+        this.addReceptionAudit(rec.folio, {
+          id: `aud-rec-asg-${Date.now()}`,
+          action: 'RECEPCION_ASIGNADA',
+          actionLabel: 'Andén y Montacarguista Asignados',
+          username: assignedBy || 'Administrador WMS',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'REGISTERED', newValue: 'ASSIGNED' },
+            { fieldName: 'Rampa Asignada', newValue: `Rampa ${formVals.rampNumber || rec.checkIn.rampNumber}` },
+            { fieldName: 'Montacarguista', newValue: formVals.forkliftOperator || rec.checkIn.forkliftOperator },
+            { fieldName: 'Bahía WMS', newValue: rec.storageLocation || 'Auto-Slotting' },
+          ],
+        });
+
+        return updated || rec;
+      })
+    );
+  }
+
+  // Transición 2 -> 3: Inicio de Descarga en Terminal Montacarguista (ASSIGNED -> IN_PROGRESS)
+  startDischarge(folioOrId: string, operatorName: string): ReceptionHeader | null {
+    const updated = this.updateReception(
+      folioOrId,
+      {
+        status: 'IN_PROGRESS',
+      },
+      true
+    );
+
+    if (updated) {
+      this.addReceptionAudit(updated.folio, {
+        id: `aud-rec-inp-${Date.now()}`,
+        action: 'DESCARGA_INICIADA',
+        actionLabel: 'Descarga Iniciada en Terminal de Montacargas',
+        username: operatorName || 'Montacarguista',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'ASSIGNED', newValue: 'IN_PROGRESS' },
+          { fieldName: 'Operador en Andén', newValue: operatorName || updated.checkIn.forkliftOperator },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 3 -> 4: Montacarguista Concluye Descarga Física (IN_PROGRESS -> DISCHARGED)
+  finishDischarge(folioOrId: string, pallets: ReceptionPalletItem[], operatorName: string): ReceptionHeader | null {
+    const updated = this.updateReception(
+      folioOrId,
+      {
+        status: 'DISCHARGED',
+        pallets: [...pallets],
+      },
+      true
+    );
+
+    if (updated) {
+      const totalPieces = pallets.reduce((sum, p) => sum + p.pieces, 0);
+      this.addReceptionAudit(updated.folio, {
+        id: `aud-rec-dis-${Date.now()}`,
+        action: 'DESCARGA_FINALIZADA',
+        actionLabel: 'Descarga Física Concluida (Notificado a Mesa Administrativa)',
+        username: operatorName || 'Montacarguista',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'IN_PROGRESS', newValue: 'DISCHARGED' },
+          { fieldName: 'Tarimas Descargadas', newValue: String(pallets.length) },
+          { fieldName: 'Piezas Totales', newValue: `${totalPieces} PZAS` },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
   // Busca una recepción por Folio
   findReceptionByFolio(folio: string): ReceptionHeader | undefined {
     return this.receptionsSignal().find((r) => r.folio.trim() === folio.trim());
@@ -1550,6 +1703,211 @@ export class WarehouseMovementsService {
 
     // Sincronizar con el backend
     this.reloadInventoryBatches();
+
+    return updated;
+  }
+
+  // Actualiza datos de una salida de almacén (por folio o id)
+  updateOutbound(folioOrId: string, partial: Partial<WarehouseOutbound>, skipAudit = false): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const index = list.findIndex(
+      (o) => (o.folio && o.folio.trim() === cleanKey) || (o.id && o.id.trim() === cleanKey)
+    );
+
+    if (index === -1) {
+      if (partial.folio) {
+        this.outboundsSignal.update((arr) => [partial as WarehouseOutbound, ...arr]);
+      }
+      return partial as WarehouseOutbound;
+    }
+
+    const updated: WarehouseOutbound = {
+      ...list[index],
+      ...partial,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.outboundsSignal.set(newArr);
+
+    if (!skipAudit && partial.status) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-upd-${Date.now()}`,
+        action: 'SALIDA_ACTUALIZADA',
+        actionLabel: 'Actualización de Salida',
+        username: partial.dispatchedBy || updated.dispatchedBy || 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', newValue: this.formatFieldValue('status', partial.status) },
+          { fieldName: 'Total Tarimas', newValue: String(updated.items?.length || 0) },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 1 -> 2: Asignación a Andén y Montacarguista (REGISTERED -> ASSIGNED)
+  assignOutboundRamp(
+    folioOrId: string,
+    rampNumber: number,
+    operatorId: string,
+    operatorName: string,
+    assignedBy: string,
+    observations?: string
+  ): WarehouseOutbound | null {
+    const updated = this.updateOutbound(
+      folioOrId,
+      {
+        status: 'ASSIGNED',
+        rampNumber,
+        rampCode: `RAMPA-${rampNumber}`,
+        forkliftOperator: operatorName,
+        forkliftOperatorId: operatorId,
+        observations: observations,
+      },
+      true
+    );
+
+    if (updated) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-asg-${Date.now()}`,
+        action: 'SALIDA_ASIGNADA',
+        actionLabel: 'Andén y Montacarguista Asignados',
+        username: assignedBy || 'Administrador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'REGISTERED', newValue: 'ASSIGNED' },
+          { fieldName: 'Rampa Asignada', newValue: `Rampa ${rampNumber}` },
+          { fieldName: 'Montacarguista', newValue: operatorName },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 2 -> 3: Inicio de Carga en Terminal Montacarguista (ASSIGNED -> IN_PROGRESS)
+  startOutboundLoading(folioOrId: string, operatorName: string): WarehouseOutbound | null {
+    const updated = this.updateOutbound(
+      folioOrId,
+      {
+        status: 'IN_PROGRESS',
+      },
+      true
+    );
+
+    if (updated) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-inp-${Date.now()}`,
+        action: 'CARGA_INICIADA',
+        actionLabel: 'Carga Iniciada en Andén',
+        username: operatorName || 'Montacarguista',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'ASSIGNED', newValue: 'IN_PROGRESS' },
+          { fieldName: 'Operador en Andén', newValue: operatorName },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 3 -> 4: Finalización de Carga Física y Captura de Sellos (IN_PROGRESS -> LOADED)
+  finishOutboundLoading(
+    folioOrId: string,
+    sealNumber: string,
+    operatorName: string,
+    items?: OutboundItem[]
+  ): WarehouseOutbound | null {
+    const partial: Partial<WarehouseOutbound> = {
+      status: 'LOADED',
+      sealNumber: sealNumber || '',
+    };
+    if (items && items.length > 0) {
+      partial.items = items;
+      partial.totalPallets = items.length;
+      partial.totalPieces = items.reduce((acc, p) => acc + p.pieces, 0);
+      partial.distinctSkus = new Set(items.map((p) => p.productId)).size;
+    }
+
+    const updated = this.updateOutbound(folioOrId, partial, true);
+
+    if (updated) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-load-${Date.now()}`,
+        action: 'CARGA_CONCLUIDA',
+        actionLabel: 'Carga Concluida en Andén (Por Auditar)',
+        username: operatorName || 'Montacarguista',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'IN_PROGRESS', newValue: 'LOADED' },
+          { fieldName: 'Sellos de Seguridad', newValue: sealNumber || 'Sin sello registrado' },
+          { fieldName: 'Tarimas Cargadas', newValue: String(updated.totalPallets) },
+          { fieldName: 'Piezas Totales', newValue: updated.totalPieces.toLocaleString() },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 4 -> 5: Cierre Administrativo y Despacho Formal F03 (LOADED -> COMPLETED)
+  completeOutboundDispatch(folioOrId: string, authorizedBy: string): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const target = list.find(
+      (o) => (o.folio && o.folio.trim() === cleanKey) || (o.id && o.id.trim() === cleanKey)
+    );
+    if (!target) return null;
+
+    const completedTime = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+    const updated: WarehouseOutbound = {
+      ...target,
+      status: 'COMPLETED',
+      completedAt: completedTime,
+      leaderAuthorizedBy: authorizedBy,
+      dispatchedAt: completedTime,
+      dispatchedBy: authorizedBy,
+    };
+
+    // Descontar UAs de inventario si no se habían descontado
+    if (target.items && target.items.length > 0) {
+      const selectedIds = new Set(target.items.map((p) => p.id));
+      this.inventoryBatchesSignal.update((batches) =>
+        batches.map((batch) => {
+          const remaining = batch.pallets.filter((p) => !selectedIds.has(p.id));
+          if (remaining.length === batch.pallets.length) return batch;
+          return {
+            ...batch,
+            availablePallets: remaining.length,
+            totalPieces: remaining.reduce((acc, p) => acc + p.pieces, 0),
+            pallets: remaining,
+          };
+        })
+      );
+    }
+
+    const newArr = list.map((o) => (o.folio === target.folio || o.id === target.id ? updated : o));
+    this.outboundsSignal.set(newArr);
+
+    this.addOutboundAudit(updated.folio, {
+      id: `aud-out-cmp-${Date.now()}`,
+      action: 'SALIDA_AUTORIZADA',
+      actionLabel: 'Cierre Administrativo y Despacho F03',
+      username: authorizedBy,
+      authorizedBy: authorizedBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: target.status, newValue: 'COMPLETED' },
+        { fieldName: 'Autorizado Por', newValue: authorizedBy },
+        { fieldName: 'Total Tarimas Despachadas', newValue: String(updated.totalPallets) },
+        { fieldName: 'Piezas Totales', newValue: updated.totalPieces.toLocaleString() },
+        { fieldName: 'Liberación de Andén', newValue: `Rampa ${target.rampNumber || 'N/A'} liberada` },
+      ],
+    });
 
     return updated;
   }

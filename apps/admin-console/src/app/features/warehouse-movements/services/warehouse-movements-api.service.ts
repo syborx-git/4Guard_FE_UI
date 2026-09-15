@@ -186,6 +186,12 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  updateOutbound(id: string, body: any): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.outboundsUrl}/${id}`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
   getOutbounds(options?: { organizationId?: string; branchId?: string; status?: string; search?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);

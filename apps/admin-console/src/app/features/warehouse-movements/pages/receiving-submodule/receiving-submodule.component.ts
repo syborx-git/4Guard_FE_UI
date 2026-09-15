@@ -393,6 +393,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   // ── COMPUTADOS DEL WORKBENCH ──
   kpiTotal = computed(() => this.movementsService.receptions().length);
   kpiRegistered = computed(() => this.movementsService.receptions().filter((r) => r.status === 'REGISTERED').length);
+  kpiInProcess = computed(() => this.movementsService.receptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED').length);
   kpiCompleted = computed(() => this.movementsService.receptions().filter((r) => r.status === 'COMPLETED').length);
   kpiCancelled = computed(() => this.movementsService.receptions().filter((r) => r.status === 'CANCELLED').length);
 
@@ -854,6 +855,116 @@ export class ReceivingSubmoduleComponent implements OnInit {
       return false;
     }
     return true;
+  }
+
+  // ── TRANSICIONES DEL CICLO DE VIDA DE RECEPCIÓN (5 FASES) ──
+
+  isAssigning = signal(false);
+
+  // Fase 1 -> 2: Asignar a Montacarguista y Bloquear Andén
+  assignToForklift(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+
+    if (!this.validateAltaForm()) return;
+
+    const formVals = this.altaForm.value;
+    const receptionId = current.id || current.folio;
+    const adminUser = this.authState.userFullName() || this.authState.currentUser()?.email || 'Administrador WMS';
+
+    this.isAssigning.set(true);
+    this.movementsService
+      .assignReception(receptionId, formVals, this.products(), this.suppliers(), adminUser)
+      .subscribe({
+        next: (updated) => {
+          this.isAssigning.set(false);
+          this.selectedReception.set(updated);
+          this.patchAltaFormWithReception(updated);
+          this.loadAuditLogs(updated.folio);
+          this.toast.success(`¡Folio #${updated.folio} asignado a Rampa ${updated.checkIn.rampNumber} y Montacarguista ${updated.checkIn.forkliftOperator}! Notificación enviada a la terminal.`);
+        },
+        error: (err) => {
+          this.isAssigning.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al asignar la recepción';
+          this.toast.error(msg);
+        },
+      });
+  }
+
+  // Fase 2 -> 3: Inicio de Descarga en Andén
+  simulateStartDischarge(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+    const op = current.checkIn.forkliftOperator || 'Montacarguista';
+    const updated = this.movementsService.startDischarge(current.id || current.folio, op);
+    if (updated) {
+      this.selectedReception.set(updated);
+      this.loadAuditLogs(updated.folio);
+      this.toast.success(`Descarga física iniciada por ${op} en Rampa ${updated.checkIn.rampNumber}.`);
+    }
+  }
+
+  // Fase 3 -> 4: Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa)
+  simulateFinishDischarge(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+
+    let stream = [...this.palletStream()];
+    if (stream.length === 0) {
+      const sku = this.altaForm.value.productId || current.productId || '8500297';
+      const desc = this.altaForm.value.productName || current.productName || 'NESCAFE CLASICO 5KG MX';
+      const sup = this.altaForm.value.supplierName || current.supplierName || 'OWENS AMERICA';
+      const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP_EXPORTACION';
+      const pzas = Number(this.altaForm.value.piecesPerPallet) || 45;
+
+      stream = [
+        {
+          id: `pal-${Date.now()}-1`,
+          palletNumber: 1,
+          palletCode: 'SDASDS',
+          productId: sku,
+          description: desc,
+          supplierName: sup,
+          palletTypeId: pType,
+          palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP Exportación',
+          pieces: pzas,
+          status: 'SCANNED',
+        },
+        {
+          id: `pal-${Date.now()}-2`,
+          palletNumber: 2,
+          palletCode: 'QEQEQWQEQ',
+          productId: sku,
+          description: desc,
+          supplierName: sup,
+          palletTypeId: pType,
+          palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP Exportación',
+          pieces: pzas,
+          status: 'SCANNED',
+        },
+        {
+          id: `pal-${Date.now()}-3`,
+          palletNumber: 3,
+          palletCode: 'DSFDSFSFDSFSDFDSFDS',
+          productId: sku,
+          description: desc,
+          supplierName: sup,
+          palletTypeId: pType,
+          palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP Exportación',
+          pieces: pzas,
+          status: 'SCANNED',
+        },
+      ];
+      this.palletStream.set(stream);
+    }
+
+    const op = current.checkIn.forkliftOperator || 'Montacarguista';
+    const updated = this.movementsService.finishDischarge(current.id || current.folio, stream, op);
+    if (updated) {
+      this.selectedReception.set(updated);
+      this.loadAuditLogs(updated.folio);
+      this.toast.success(`Descarga concluida por montacarguista. Se ha regresado la información a mesa administrativa para auditoría.`);
+    }
   }
 
   // Guardar Cambios Parciales / Avance de Descarga en el Backend (wms.warehouse_reception_pallets)
