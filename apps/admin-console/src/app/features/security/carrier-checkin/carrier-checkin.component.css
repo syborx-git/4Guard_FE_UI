@@ -605,3 +605,30 @@
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.custom-input-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px dashed #f59e0b;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.btn-text-action {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.btn-text-action:hover {
+  color: #7dd3fc;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+

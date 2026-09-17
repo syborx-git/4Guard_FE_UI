@@ -117,13 +117,36 @@
             </div>
 
             <div class="form-group mt-4">
-              <label class="form-label" for="clientName">Empresa / Cliente Destinatario *</label>
-              <input 
-                id="clientName" 
-                type="text" 
-                formControlName="clientName" 
-                class="form-input" 
-                placeholder="Ej. MARCAS NESTLE S.A. DE C.V." />
+              <label class="form-label" for="clientSelect">Empresa / Cliente Destinatario *</label>
+              @if (!isCustomClient()) {
+                <select 
+                  id="clientSelect" 
+                  class="form-input" 
+                  (change)="onClientSelectChange($event)">
+                  <option value="" disabled [selected]="!checkInForm.get('clientName')?.value">-- Seleccione Empresa / Cliente --</option>
+                  @for (cli of clientsList(); track cli.code) {
+                    <option [value]="cli.code" [selected]="checkInForm.get('clientCode')?.value === cli.code || checkInForm.get('clientName')?.value === cli.name">
+                      {{ cli.name }}
+                    </option>
+                  }
+                  <option value="__OTHER__">➕ Otro / Escribir manualmente...</option>
+                </select>
+              } @else {
+                <div class="custom-input-card">
+                  <div class="flex items-center justify-between mb-1.5" style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                    <span style="font-size:0.75rem; font-weight:700; color:#f59e0b;">Captura manual de Cliente:</span>
+                    <button type="button" class="btn-text-action" (click)="toggleCustomClient(false)">
+                      ← Seleccionar de la lista
+                    </button>
+                  </div>
+                  <input 
+                    id="clientName" 
+                    type="text" 
+                    formControlName="clientName" 
+                    class="form-input" 
+                    placeholder="Ej. MARCAS NESTLE S.A. DE C.V." />
+                </div>
+              }
             </div>
 
             @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
@@ -163,13 +186,36 @@
             <p class="step-desc">Capture la información del vehículo y la línea transportista.</p>
 
             <div class="form-group">
-              <label class="form-label" for="carrierLine">Línea Transportista / Fletera *</label>
-              <input 
-                id="carrierLine" 
-                type="text" 
-                formControlName="carrierLine" 
-                class="form-input" 
-                placeholder="Ej. TRANSPORTES GOLA S.A. DE C.V." />
+              <label class="form-label" for="carrierSelect">Línea Transportista / Fletera *</label>
+              @if (!isCustomCarrier()) {
+                <select 
+                  id="carrierSelect" 
+                  class="form-input" 
+                  (change)="onCarrierSelectChange($event)">
+                  <option value="" disabled [selected]="!checkInForm.get('carrierLine')?.value">-- Seleccione Línea Transportista --</option>
+                  @for (c of carrierLinesList(); track c.code) {
+                    <option [value]="c.code" [selected]="checkInForm.get('carrierLineCode')?.value === c.code || checkInForm.get('carrierLine')?.value === (c.tradeName || c.name)">
+                      {{ c.tradeName || c.name }}
+                    </option>
+                  }
+                  <option value="__OTHER__">➕ Otra Línea / Escribir manualmente...</option>
+                </select>
+              } @else {
+                <div class="custom-input-card">
+                  <div class="flex items-center justify-between mb-1.5" style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                    <span style="font-size:0.75rem; font-weight:700; color:#f59e0b;">Captura manual de Transportista:</span>
+                    <button type="button" class="btn-text-action" (click)="toggleCustomCarrier(false)">
+                      ← Seleccionar de la lista
+                    </button>
+                  </div>
+                  <input 
+                    id="carrierLine" 
+                    type="text" 
+                    formControlName="carrierLine" 
+                    class="form-input" 
+                    placeholder="Ej. TRANSPORTES GOLA S.A. DE C.V." />
+                </div>
+              }
             </div>
 
             <div class="form-group">
@@ -184,6 +230,48 @@
 
             <div class="form-row">
               <div class="form-group flex-1">
+                <label class="form-label" for="tipoTransporteSelect">Tipo de Transporte *</label>
+                <select id="tipoTransporteSelect" class="form-input" (change)="onTransportTypeSelectChange($event)">
+                  @for (t of transportTypesList(); track t) {
+                    <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
+                  }
+                  <option value="Otro (Especificar)">➕ Otro (Especificar)</option>
+                </select>
+                @if (isCustomTransport()) {
+                  <input
+                    type="text"
+                    [ngModel]="customTransportInput()"
+                    (ngModelChange)="onCustomTransportChange($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique tipo de transporte"
+                    class="form-input mt-2 animate-fade-in"
+                  />
+                }
+              </div>
+
+              <div class="form-group flex-1">
+                <label class="form-label" for="medidasCajaSelect">Medidas Caja</label>
+                <select id="medidasCajaSelect" class="form-input" (change)="onBoxDimensionSelectChange($event)">
+                  @for (d of boxDimensionsList(); track d) {
+                    <option [value]="d" [selected]="checkInForm.get('medidasCaja')?.value === d">{{ d }}</option>
+                  }
+                  <option value="Otra Medida">➕ Otra Medida</option>
+                </select>
+                @if (isCustomDimension()) {
+                  <input
+                    type="text"
+                    [ngModel]="customDimensionInput()"
+                    (ngModelChange)="onCustomDimensionChange($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique medidas (ej. 30 Pies)"
+                    class="form-input mt-2 animate-fade-in"
+                  />
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
                 <label class="form-label" for="placasTracto">Placas Tracto *</label>
                 <input 
                   id="placasTracto" 
@@ -193,18 +281,6 @@
                   placeholder="88-AB-4G" />
               </div>
 
-              <div class="form-group flex-1">
-                <label class="form-label" for="placasCaja">Placas Caja *</label>
-                <input 
-                  id="placasCaja" 
-                  type="text" 
-                  formControlName="placasCaja" 
-                  class="form-input uppercase" 
-                  placeholder="99-XX-4G" />
-              </div>
-            </div>
-
-            <div class="form-row">
               <div class="form-group flex-1">
                 <label class="form-label" for="noEcoTractor">No. Económico</label>
                 <input 
@@ -216,14 +292,13 @@
               </div>
 
               <div class="form-group flex-1">
-                <label class="form-label" for="medidasCaja">Medidas Caja</label>
-                <select id="medidasCaja" formControlName="medidasCaja" class="form-input">
-                  <option value="53 Pies">53 Pies</option>
-                  <option value="48 Pies">48 Pies</option>
-                  <option value="Tortón">Tortón (Camión Pesado)</option>
-                  <option value="Rabón">Rabón</option>
-                  <option value="3.5 Toneladas">3.5 Toneladas</option>
-                </select>
+                <label class="form-label" for="placasCaja">Placas Caja *</label>
+                <input 
+                  id="placasCaja" 
+                  type="text" 
+                  formControlName="placasCaja" 
+                  class="form-input uppercase" 
+                  placeholder="99-XX-4G" />
               </div>
             </div>
 

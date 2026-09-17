@@ -29,6 +29,20 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   protected readonly sealList = signal<string[]>([]);
   protected readonly tempSealInput = signal<string>('');
 
+  // Catálogos dinámicos desde Base de Datos
+  protected readonly clientsList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>([]);
+  protected readonly carrierLinesList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>([]);
+  protected readonly transportTypesList = signal<string[]>([]);
+  protected readonly boxDimensionsList = signal<string[]>([]);
+
+  // Flags para captura manual / libre
+  protected readonly isCustomClient = signal<boolean>(false);
+  protected readonly isCustomCarrier = signal<boolean>(false);
+  protected readonly isCustomTransport = signal<boolean>(false);
+  protected readonly isCustomDimension = signal<boolean>(false);
+  protected readonly customTransportInput = signal<string>('');
+  protected readonly customDimensionInput = signal<string>('');
+
   // Signature canvas state
   private isDrawing = false;
   private canvasContext: CanvasRenderingContext2D | null = null;
@@ -70,7 +84,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     revInteriorCaja: ['SI', Validators.required],
     revDanosCaja: ['NO', Validators.required],
     revDanosPuertas: ['NO', Validators.required],
-    revOloresExtraños: ['NO', Validators.required],
+    revOloresExtranos: ['NO', Validators.required],
     revIndiciosPlagas: ['NO', Validators.required],
 
     observaciones: [''],
@@ -78,6 +92,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   });
 
   ngOnInit(): void {
+    this.loadCatalogs();
+
     this.route.queryParams.subscribe((params) => {
       const qToken = params['token'] || params['pass'];
       if (qToken) {
@@ -91,6 +107,142 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     });
 
     this.onOperationChange('DESCARGA');
+  }
+
+  protected loadCatalogs(): void {
+    this.api.getPublicCatalogs().subscribe({
+      next: (data) => {
+        if (data) {
+          this.clientsList.set(data.clients || []);
+          this.carrierLinesList.set(data.carrierLines || []);
+          this.transportTypesList.set(data.transportTypes || []);
+          this.boxDimensionsList.set(data.boxDimensions || []);
+        }
+      },
+      error: () => {
+        this.clientsList.set([
+          { id: '87c07cb2-61c3-4006-a88c-265bd1eee2df', code: '87c07cb2-61c3-4006-a88c-265bd1eee2df', name: 'MARCAS NESTLE S.A. DE C.V.' },
+          { id: 'c083251b-e210-494e-80f3-38814eaba992', code: 'c083251b-e210-494e-80f3-38814eaba992', name: 'NESTLE MEXICO S.A. DE C.V.' },
+          { id: 'edc885c6-0216-405a-84cc-841f47f30f48', code: 'edc885c6-0216-405a-84cc-841f47f30f48', name: 'QUALAMEX S.A. DE C.V.' }
+        ]);
+        this.carrierLinesList.set([
+          { id: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA', tradeName: 'TRANSPORTE GOLA' },
+          { id: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ', tradeName: 'TRANSPORTE DIAZ' },
+          { id: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM', tradeName: 'TRANSPORTE TUM' },
+          { id: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER', tradeName: 'TRANSPORTE EBEN EZER' },
+          { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
+        ]);
+        this.transportTypesList.set([
+          'Caja Seca',
+          'Caja Refrigerada',
+          'Plataforma',
+          'Tortón',
+          'Rabón',
+          'Camioneta 3.5',
+          'Tráiler',
+          'Contenedor',
+          'Tolva',
+          'Pipa',
+          'Camioneta / Van',
+          'Otro (Especificar)'
+        ]);
+        this.boxDimensionsList.set([
+          '53 Pies',
+          '48 Pies',
+          '40 Pies',
+          '20 Pies',
+          'Tortón',
+          'Rabón',
+          '3.5 Toneladas',
+          'N/A - Plataforma',
+          'Otra Medida'
+        ]);
+      }
+    });
+  }
+
+  protected onClientSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    if (val === '__OTHER__') {
+      this.isCustomClient.set(true);
+      this.checkInForm.patchValue({ clientCode: '', clientName: '' });
+    } else {
+      this.isCustomClient.set(false);
+      const found = this.clientsList().find((c) => c.code === val || c.id === val);
+      if (found) {
+        this.checkInForm.patchValue({
+          clientCode: found.code,
+          clientName: found.name
+        });
+      }
+    }
+  }
+
+  protected toggleCustomClient(custom: boolean): void {
+    this.isCustomClient.set(custom);
+    if (!custom) {
+      this.checkInForm.patchValue({ clientCode: '', clientName: '' });
+    }
+  }
+
+  protected onCarrierSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    if (val === '__OTHER__') {
+      this.isCustomCarrier.set(true);
+      this.checkInForm.patchValue({ carrierLineCode: '', carrierLine: '' });
+    } else {
+      this.isCustomCarrier.set(false);
+      const found = this.carrierLinesList().find((c) => c.code === val || c.id === val);
+      if (found) {
+        this.checkInForm.patchValue({
+          carrierLineCode: found.code,
+          carrierLine: found.tradeName || found.name
+        });
+      }
+    }
+  }
+
+  protected toggleCustomCarrier(custom: boolean): void {
+    this.isCustomCarrier.set(custom);
+    if (!custom) {
+      this.checkInForm.patchValue({ carrierLineCode: '', carrierLine: '' });
+    }
+  }
+
+  protected onTransportTypeSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    if (val === 'Otro (Especificar)' || val === '__OTHER__') {
+      this.isCustomTransport.set(true);
+      this.checkInForm.patchValue({ tipoTransporte: this.customTransportInput() || 'Otro' });
+    } else {
+      this.isCustomTransport.set(false);
+      this.checkInForm.patchValue({ tipoTransporte: val });
+    }
+  }
+
+  protected onCustomTransportChange(val: string): void {
+    this.customTransportInput.set(val);
+    this.checkInForm.patchValue({ tipoTransporte: val });
+  }
+
+  protected onBoxDimensionSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    if (val === 'Otra Medida' || val === '__OTHER__') {
+      this.isCustomDimension.set(true);
+      this.checkInForm.patchValue({ medidasCaja: this.customDimensionInput() || 'Personalizada' });
+    } else {
+      this.isCustomDimension.set(false);
+      this.checkInForm.patchValue({ medidasCaja: val });
+    }
+  }
+
+  protected onCustomDimensionChange(val: string): void {
+    this.customDimensionInput.set(val);
+    this.checkInForm.patchValue({ medidasCaja: val });
   }
 
   ngAfterViewInit(): void {
@@ -283,7 +435,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       driverSignature: sigData || 'FIRMA_DIGITAL_AUTORIZADA_CHOFER',
       checklistData: JSON.stringify({
         epp: { zapatos: f.eppZapatos, cofia: f.eppCofia, cubrebocas: f.eppCubrebocas, chaleco: f.eppChaleco },
-        caja: { interior: f.revInteriorCaja, danos: f.revDanosCaja, puertas: f.revDanosPuertas, olores: f.revOloresExtraños, plagas: f.revIndiciosPlagas }
+        caja: { interior: f.revInteriorCaja, danos: f.revDanosCaja, puertas: f.revDanosPuertas, olores: f.revOloresExtranos, plagas: f.revIndiciosPlagas }
       })
     };
 

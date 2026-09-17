@@ -79,8 +79,35 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  getInYardPasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
+    const orgId = options?.organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('organizationId', orgId);
+    if (options?.branchId) params = params.set('branchId', options.branchId);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  getPassHistory(options?: { organizationId?: string; branchId?: string; search?: string }): Observable<any[]> {
+    const orgId = options?.organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('organizationId', orgId);
+    if (options?.branchId) params = params.set('branchId', options.branchId);
+    if (options?.search) params = params.set('search', options.search);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
   completePassCheckin(token: string, body: any): Observable<any> {
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/complete`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  checkOutPass(token: string, body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/check-out`, body).pipe(
       map((res) => res.data)
     );
   }
@@ -350,4 +377,20 @@ export class WarehouseMovementsApiService {
       })
     );
   }
+
+  getPublicCatalogs(orgId?: string): Observable<{
+    clients: Array<{ id: string; code: string; name: string; tradeName?: string }>;
+    carrierLines: Array<{ id: string; code: string; name: string; tradeName?: string }>;
+    transportTypes: string[];
+    boxDimensions: string[];
+  }> {
+    let url = `${this.securityGateUrl}/public/catalogs`;
+    if (orgId) {
+      url += `?organizationId=${orgId}`;
+    }
+    return this.http.get<ApiResponse<any>>(url).pipe(
+      map((res) => res.data || { clients: [], carrierLines: [], transportTypes: [], boxDimensions: [] })
+    );
+  }
 }
+
