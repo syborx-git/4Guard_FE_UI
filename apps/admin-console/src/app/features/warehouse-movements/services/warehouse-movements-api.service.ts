@@ -31,6 +31,7 @@ export class WarehouseMovementsApiService {
   private readonly receptionsUrl = `${this.baseUrl}/api/v1/warehouse-receptions`;
   private readonly transfersUrl = `${this.baseUrl}/api/v1/warehouse-transfers`;
   private readonly outboundsUrl = `${this.baseUrl}/api/v1/warehouse-outbounds`;
+  private readonly securityGateUrl = `${this.baseUrl}/api/v1/security-gate`;
 
   // Signals globales de estado de red
   readonly loading = signal<boolean>(false);
@@ -58,6 +59,42 @@ export class WarehouseMovementsApiService {
 
   getSessionOrgId(): string {
     return this.getSessionOrg().organizationId;
+  }
+
+  // ─── 0. CASETA DE SEGURIDAD Y PASES DIGITALES QR ────────────────────────────
+
+  generatePass(body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/generate`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  getActivePasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
+    const orgId = options?.organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('organizationId', orgId);
+    if (options?.branchId) params = params.set('branchId', options.branchId);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/active`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  completePassCheckin(token: string, body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/complete`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  getPublicPass(token: string): Observable<any> {
+    return this.http.get<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}`).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  submitPublicDriverCheckin(token: string, body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}/submit`, body).pipe(
+      map((res) => res.data)
+    );
   }
 
   // ─── 1. RECEPCIONES DE ALMACÉN (F01) ────────────────────────────────────────

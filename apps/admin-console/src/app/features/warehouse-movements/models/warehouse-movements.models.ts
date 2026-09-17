@@ -86,13 +86,17 @@ export interface CheckInCasetaData {
   rampCode?: string;        // Código Rampa
   rampNumber: number;       // Rampa No. (1-12)
   forkliftOperatorCode?: string; // ID Montacarguista
-  forkliftOperator: string; // Montacarguista Nombre
+  forkliftOperator?: string; // Montacarguista Nombre (asignado en recepción)
   driverName: string;       // Operador (Chofer)
   tractorPlates: string;    // Placas Tracto
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
   economicNumber?: string;  // Número económico del vehículo
+  transportType?: string;   // Tipo de transporte
+  medidasCaja?: string;     // Medidas de la caja
+  noCartaPorte?: string;    // Carta Porte
+  observations?: string;    // Observaciones / Resumen Check List
   securityApproved?: boolean; // Visto bueno de seguridad patrimonial
   securityApprovedAt?: string;
   securityApprovedBy?: string;

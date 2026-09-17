@@ -90,6 +90,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     boxPlates: ['', [Validators.required]],
     clientCode: [''],
     client: ['', [Validators.required]],
+    rampNumber: [1, [Validators.required]],
   });
 
   openEditCasetaModal(): void {
@@ -104,6 +105,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       boxPlates: rec.checkIn.boxPlates || '',
       clientCode: rec.checkIn.clientCode || '',
       client: rec.checkIn.client || '',
+      rampNumber: rec.checkIn.rampNumber || 1,
     });
     const seals = rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0
       ? [...rec.checkIn.sealNumbers]
@@ -144,6 +146,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (!currentRec) return;
 
     const val = this.editCasetaForm.value;
+    const rNum = Number(val.rampNumber) || currentRec.checkIn.rampNumber || 1;
     const updatedCheckIn: CheckInCasetaData = {
       ...currentRec.checkIn,
       carrierLineCode: val.carrierLineCode || currentRec.checkIn.carrierLineCode,
@@ -154,6 +157,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       boxPlates: (val.boxPlates || currentRec.checkIn.boxPlates).toUpperCase(),
       clientCode: val.clientCode || currentRec.checkIn.clientCode,
       client: val.client || currentRec.checkIn.client,
+      rampNumber: rNum,
+      rampCode: `LOC-RAMP-${String(rNum).padStart(2, '0')}`,
       sealNumbers: this.editCasetaSeals(),
       sealNumber: this.editCasetaSeals().join(', '),
     };
@@ -164,6 +169,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     };
 
     this.selectedReception.set(updatedReception);
+    this.altaForm.patchValue({ rampNumber: rNum });
     this.movementsService.updateReception(currentRec.id || currentRec.folio, { checkIn: updatedCheckIn });
 
     this.auditEntries.update((entries) => [
@@ -171,14 +177,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         timestamp: new Date().toLocaleTimeString(),
         action: 'EDICIÓN_CASETA',
-        actionLabel: 'Modificación de Caseta',
+        actionLabel: 'Modificación de Ficha de Caseta',
         username: this.authState.userFullName() || this.authState.currentUser()?.email || 'Supervisor',
-        reason: `Chofer: ${updatedCheckIn.driverName}, Placas: ${updatedCheckIn.tractorPlates}/${updatedCheckIn.boxPlates}`,
+        reason: `Chofer: ${updatedCheckIn.driverName}, Placas: ${updatedCheckIn.tractorPlates}/${updatedCheckIn.boxPlates}, Rampa: ${rNum}`,
         observations: `Sellos actualizados: ${updatedCheckIn.sealNumber}`,
         details: [
           { fieldName: 'Chofer', newValue: updatedCheckIn.driverName },
           { fieldName: 'Placas Tracto', newValue: updatedCheckIn.tractorPlates },
           { fieldName: 'Placas Caja', newValue: updatedCheckIn.boxPlates },
+          { fieldName: 'Rampa Asignada', newValue: `Rampa ${rNum}` },
           { fieldName: 'Sellos', newValue: updatedCheckIn.sealNumber },
         ],
       },
@@ -186,7 +193,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     ]);
 
     this.showEditCasetaModal.set(false);
-    this.toast.success('Ficha operativa de caseta actualizada.');
+    this.toast.success('Ficha operativa de caseta actualizada correctamente.');
   }
 
   onRampMatrixClick(ramp: RampOccupancyStatus): void {
@@ -524,14 +531,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.isSkuDropdownOpen.set(false);
   }
 
-  // Iniciar registro de nueva pre-recepción en el panel (sin modal)
+  // Iniciar registro de nuevo arribo en Caseta de Seguridad
   startNewReception(): void {
-    this.movementsService.reloadCarriers();
-    this.formMode.set('create');
-    this.selectedReception.set(null);
-    localStorage.removeItem('4g_active_reception_folio');
-    this.resetCheckInForm();
-    this.resetAltaForm();
+    this.router.navigate(['/security']);
   }
 
   // Restablecer a estado inicial (Sin selección)

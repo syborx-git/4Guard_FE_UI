@@ -43,6 +43,21 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Cambiar Contraseña',
   },
 
+  // Portal Público Móvil de Auto-Registro del Chofer en Caseta (Formato F01-PO-CP-7.1.3-03)
+  {
+    path: 'carrier-checkin',
+    loadComponent: () =>
+      import('./features/security/carrier-checkin/carrier-checkin.component').then(
+        (m) => m.CarrierCheckinComponent
+      ),
+    title: '4GUARD WMS — Auto-Registro de Transporte (Caseta)',
+  },
+  {
+    path: 'driver-checkin',
+    redirectTo: 'carrier-checkin',
+    pathMatch: 'full',
+  },
+
   // Rutas protegidas bajo el shell principal
   {
     path: '',

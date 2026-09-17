@@ -65,6 +65,7 @@ export class AuthState {
       [UserRole.QM_INSPECTOR]: 'Inspector de Calidad',
       [UserRole.AUDITOR]: 'Auditor',
       [UserRole.CLIENT]: 'Cliente 3PL',
+      [UserRole.SECURITY_GUARD]: 'Guardia de Seguridad',
     };
     return labels[role] ?? role;
   });
@@ -129,6 +130,7 @@ export class AuthState {
       [UserRole.QM_INSPECTOR]: '/quality',
       [UserRole.AUDITOR]: '/dashboard',
       [UserRole.CLIENT]: '/dashboard',
+      [UserRole.SECURITY_GUARD]: '/security',
     };
 
     const route = roleRoutes[user.role] ?? '/dashboard';

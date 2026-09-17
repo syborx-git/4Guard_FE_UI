@@ -8,12 +8,13 @@
  * - Integra la réplica visual del formulario de caseta y la tarjeta interactiva de Simulación de QR.
  */
 
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
+import { CheckInCasetaData, RampItem } from '../../warehouse-movements/models/warehouse-movements.models';
 
 @Component({
   selector: 'fg-security-gate',
@@ -28,15 +29,17 @@ import { WarehouseMovementsService } from '../../warehouse-movements/services/wa
   templateUrl: './security-gate.component.html',
   styleUrl: './security-gate.component.css',
 })
-export class SecurityGateComponent {
+export class SecurityGateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly router = inject(Router);
 
   // ── Catálogos desde WarehouseMovementsService ──────────────────────────────
-  protected readonly carrierLines     = this.movementsService.carrierLines;
-  protected readonly clients          = this.movementsService.clients;
-  protected readonly ramps            = this.movementsService.ramps;
-  protected readonly forkliftOperators = this.movementsService.forkliftOperators;
+  protected readonly carrierLines      = this.movementsService.carrierLines;
+  protected readonly clients           = this.movementsService.clients;
+  protected readonly ramps             = this.movementsService.ramps;
+  protected readonly forkliftOperators  = this.movementsService.forkliftOperators;
+  protected readonly rampOccupancy     = this.movementsService.rampOccupancyStatus;
 
   // ── Signals de Estado Local ────────────────────────────────────────────────
   protected readonly sealList           = signal<string[]>([]);
@@ -44,11 +47,156 @@ export class SecurityGateComponent {
   protected readonly scanSuccessMessage = signal<string | null>(null);
   protected readonly isSaving           = signal<boolean>(false);
   protected readonly saveSuccess        = signal<boolean>(false);
+  protected readonly createdFolio       = signal<string | null>(null);
+  protected readonly assignedRampLabel  = signal<string | null>(null);
+  protected readonly errorMessage       = signal<string | null>(null);
   protected readonly showQrModal        = signal<boolean>(false);
+  protected readonly showPassListModal  = signal<boolean>(false);
+
+  // ── Pases QR Dinámicos y Choferes en Espera ──
+  protected readonly activePasses       = signal<any[]>([]);
+  protected readonly activeToken        = signal<string | null>(null);
+  protected readonly qrModalToken       = signal<string>('PASS-4G-2026');
+  protected readonly qrModalUrl         = signal<string>('');
+  protected readonly isGeneratingPass   = signal<boolean>(false);
+  protected readonly copyNotice         = signal<string | null>(null);
+
+  ngOnInit(): void {
+    this.movementsService.loadInitialBackendData();
+    this.movementsService.reloadCarriers();
+    this.reloadActivePasses();
+  }
+
+  // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
+  protected generateDriverPass(): void {
+    this.isGeneratingPass.set(true);
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const formVal = this.checkInForm.value;
+
+    const payload = {
+      organizationId: session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+      branchId: session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+      operationType: formVal.operacion || 'DESCARGA',
+      clientCode: formVal.clientCode,
+      clientName: formVal.client,
+      carrierLineCode: formVal.carrierLineCode,
+      carrierLine: formVal.carrierLine,
+      driverName: formVal.nombreOperador,
+      tractorPlates: formVal.placasTracto,
+      docNumber: formVal.operacion === 'CARGA' ? formVal.noCartaPorte : formVal.remision,
+    };
+
+    this.movementsService.movementsApi.generatePass(payload).subscribe({
+      next: (res: any) => {
+        this.isGeneratingPass.set(false);
+        const token = res.token || ('PASS-' + Date.now());
+        this.qrModalToken.set(token);
+        const origin = window.location.origin;
+        this.qrModalUrl.set(`${origin}/carrier-checkin?token=${token}`);
+        this.showQrModal.set(true);
+        this.reloadActivePasses();
+      },
+      error: () => {
+        this.isGeneratingPass.set(false);
+        const fallbackToken = 'PASS-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        this.qrModalToken.set(fallbackToken);
+        this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${fallbackToken}`);
+        this.showQrModal.set(true);
+      }
+    });
+  }
+
+  protected copyQrUrl(): void {
+    if (this.qrModalUrl()) {
+      navigator.clipboard.writeText(this.qrModalUrl()).then(() => {
+        this.copyNotice.set('¡Enlace copiado al portapapeles!');
+        setTimeout(() => this.copyNotice.set(null), 3000);
+      });
+    }
+  }
+
+  protected openDriverPortalInNewTab(): void {
+    if (this.qrModalUrl()) {
+      window.open(this.qrModalUrl(), '_blank');
+    }
+  }
+
+  protected reloadActivePasses(): void {
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
+      next: (passes) => {
+        this.activePasses.set(passes || []);
+      },
+      error: () => {}
+    });
+  }
+
+  protected loadDriverSubmission(pass: any): void {
+    if (!pass) return;
+    this.activeToken.set(pass.token);
+
+    if (pass.operationType) {
+      this.onOperationChange(pass.operationType as 'CARGA' | 'DESCARGA');
+    }
+
+    this.checkInForm.patchValue({
+      clientCode: pass.clientCode || this.checkInForm.get('clientCode')?.value,
+      client: pass.clientName || this.checkInForm.get('client')?.value,
+      carrierLineCode: pass.carrierLineCode || this.checkInForm.get('carrierLineCode')?.value,
+      carrierLine: pass.carrierLine || this.checkInForm.get('carrierLine')?.value,
+      nombreOperador: pass.driverName || '',
+      placasTracto: pass.tractorPlates || '',
+      noEcoTractor: pass.economicNumber || pass.noEcoTractor || '',
+      placasCaja: pass.boxPlates || '',
+      medidasCaja: pass.boxDimensions || '53 Pies',
+      tipoTransporte: pass.transportType || 'Caja Seca',
+      transportistaNombre: pass.driverName || '',
+      transportistaFirma: !!pass.driverSignature,
+    });
+
+    if (pass.docNumber) {
+      if (pass.operationType === 'CARGA') {
+        this.checkInForm.patchValue({ noCartaPorte: pass.docNumber });
+      } else {
+        this.checkInForm.patchValue({ remision: pass.docNumber });
+      }
+    }
+
+    if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
+      this.sealList.set(pass.sealNumbers);
+    }
+
+    if (pass.checklistData) {
+      try {
+        const parsed = typeof pass.checklistData === 'string' ? JSON.parse(pass.checklistData) : pass.checklistData;
+        if (parsed?.epp) {
+          if (parsed.epp.zapatos) this.checkInForm.patchValue({ eppZapatos: parsed.epp.zapatos });
+          if (parsed.epp.cofia) this.checkInForm.patchValue({ eppCofia: parsed.epp.cofia });
+          if (parsed.epp.cubrebocas) this.checkInForm.patchValue({ eppCubrebocas: parsed.epp.cubrebocas });
+          if (parsed.epp.chaleco) this.checkInForm.patchValue({ eppChaleco: parsed.epp.chaleco });
+        }
+        if (parsed?.caja) {
+          if (parsed.caja.interior) this.checkInForm.patchValue({ revInteriorCaja: parsed.caja.interior });
+          if (parsed.caja.danos) this.checkInForm.patchValue({ revDanosCaja: parsed.caja.danos });
+          if (parsed.caja.puertas) this.checkInForm.patchValue({ revDanosPuertas: parsed.caja.puertas });
+          if (parsed.caja.olores) this.checkInForm.patchValue({ revOloresExtraños: parsed.caja.olores });
+          if (parsed.caja.plagas) this.checkInForm.patchValue({ revIndiciosPlagas: parsed.caja.plagas });
+        }
+      } catch {}
+    }
+
+    this.showPassListModal.set(false);
+    this.scanSuccessMessage.set(`¡Datos del Pase #${pass.token} cargados exitosamente! Chofer: ${pass.driverName || 'S/N'}, Placas: ${pass.tractorPlates || 'S/P'}.`);
+    setTimeout(() => this.scanSuccessMessage.set(null), 6000);
+  }
 
   // ── MÉTODOS DEL MODAL DE QR DE PRUEBA ─────────────────────────────────────
   protected openQrModal(): void {
-    this.showQrModal.set(true);
+    if (!this.qrModalUrl()) {
+      this.generateDriverPass();
+    } else {
+      this.showQrModal.set(true);
+    }
   }
 
   protected closeQrModal(): void {
@@ -283,60 +431,190 @@ export class SecurityGateComponent {
     this.checkInForm.patchValue({ [controlName]: !currentVal });
   }
 
-  // ── SUBMIT FORMULARIO ──────────────────────────────────────────────────────
+  // ── MANEJO DE ESTATUS DE RAMPAS (DISPONIBLE / OCUPADA) ────────────────────
+  protected getRampDisplayLabel(rm: RampItem): string {
+    const occ = this.rampOccupancy().find((r) => r.rampNumber === rm.rampNumber || r.code === rm.code);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Libre)`;
+    }
+    if (occ.status === 'OCCUPIED_INBOUND') {
+      return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Ocupada - Folio #${occ.operationFolio})`;
+    }
+    return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Ocupada - Salida #${occ.operationFolio})`;
+  }
+
+  // ── SUBMIT FORMULARIO (CHECK-IN REAL DE CASETA) ─────────────────────────────
   protected submitCheckIn(): void {
+    if (this.tempSealInput().trim()) {
+      this.addSeal();
+    }
+
     if (this.checkInForm.invalid) {
       this.checkInForm.markAllAsTouched();
       return;
     }
 
     this.isSaving.set(true);
+    this.errorMessage.set(null);
     const formVal = this.checkInForm.value;
-    const sealString = this.sealList().join(', ');
 
-    const payload = {
-      ...formVal,
-      noSello: sealString || formVal.noSello,
+    // Sellos de seguridad obligatorios
+    const seals: string[] = this.sealList().length > 0 
+      ? [...this.sealList()] 
+      : (formVal.noSello ? [formVal.noSello.trim().toUpperCase()] : ['SEAL-4G-001']);
+
+    // Construcción del resumen estructurado del Formato F01-PO-CP-7.1.3-03
+    const inspectionObservations = [
+      `[FORMATO F01-PO-CP-7.1.3-03] Arribo en Caseta de Seguridad`,
+      `Unidad: Eco=${formVal.noEcoTractor || 'S/N'} | Tipo=${formVal.tipoTransporte || 'Caja Seca'} | Medidas=${formVal.medidasCaja || '53 Pies'}`,
+      `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
+      `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
+      `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtraños}, Plagas=${formVal.revIndiciosPlagas}`,
+      `Firmas: Vigilancia=${formVal.responsableVigilanciaNombre || 'Guardia'} | Chofer=${formVal.transportistaNombre || formVal.nombreOperador}`
+    ].join(' | ');
+
+    const checkInData: CheckInCasetaData = {
+      carrierLineCode: formVal.carrierLineCode,
+      carrierLine: formVal.carrierLine,
+      receptionTime: formVal.horaEntrada,
+      docNumber: formVal.operacion === 'DESCARGA' ? formVal.remision : (formVal.noCartaPorte || formVal.remision),
+      docDate: formVal.fecha,
+      clientCode: formVal.clientCode,
+      client: formVal.client,
+      rampCode: formVal.rampCode,
+      rampNumber: Number(formVal.rampNumber) || 1,
+      driverName: formVal.nombreOperador,
+      tractorPlates: (formVal.placasTracto || '').toUpperCase(),
+      boxPlates: (formVal.placasCaja || '').toUpperCase(),
+      sealNumbers: seals,
+      sealNumber: seals.join(', '),
+      observations: inspectionObservations,
     };
 
-    // Simulación de guardado exitoso
-    setTimeout(() => {
-      this.isSaving.set(false);
-      this.saveSuccess.set(true);
-      setTimeout(() => this.saveSuccess.set(false), 5000);
-      this.resetForm();
-    }, 800);
+    if (formVal.operacion === 'CARGA') {
+      this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
+        next: (outbound) => {
+          this.isSaving.set(false);
+          this.createdFolio.set(outbound.folio);
+          this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
+          this.saveSuccess.set(true);
+          this.movementsService.loadInitialBackendData();
+
+          if (this.activeToken()) {
+            this.movementsService.movementsApi.completePassCheckin(this.activeToken()!, {
+              operationType: 'CARGA',
+              rampNumber: Number(formVal.rampNumber) || 1,
+              rampCode: formVal.rampCode,
+              driverName: formVal.nombreOperador,
+              tractorPlates: formVal.placasTracto,
+              boxPlates: formVal.placasCaja,
+              docNumber: formVal.noCartaPorte || formVal.remision,
+              sealNumbers: seals,
+              observations: inspectionObservations
+            }).subscribe({ next: () => this.reloadActivePasses(), error: () => {} });
+          }
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al registrar la salida / carga en el servidor';
+          this.errorMessage.set(msg);
+        }
+      });
+    } else {
+      this.movementsService.createCheckInBackend(checkInData).subscribe({
+        next: (header) => {
+          this.isSaving.set(false);
+          this.createdFolio.set(header.folio);
+          this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
+          this.saveSuccess.set(true);
+          this.movementsService.reloadReceptions();
+
+          if (this.activeToken()) {
+            this.movementsService.movementsApi.completePassCheckin(this.activeToken()!, {
+              operationType: 'DESCARGA',
+              rampNumber: Number(formVal.rampNumber) || 1,
+              rampCode: formVal.rampCode,
+              driverName: formVal.nombreOperador,
+              tractorPlates: formVal.placasTracto,
+              boxPlates: formVal.placasCaja,
+              docNumber: formVal.remision,
+              sealNumbers: seals,
+              observations: inspectionObservations
+            }).subscribe({ next: () => this.reloadActivePasses(), error: () => {} });
+          }
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al registrar el check-in en el servidor';
+          this.errorMessage.set(msg);
+        }
+      });
+    }
   }
 
   protected resetForm(): void {
+    const firstClient = this.clients()[0];
+    const firstCarrier = this.carrierLines()[0];
+    const firstRamp = this.ramps()[0];
+
     this.checkInForm.reset({
       controlNumber: 'F01-PO-CP-7.1.3-03',
       revisionNumber: '01',
       revisionDate: '19/08/2025',
       processOwner: 'Seguridad Patrimonial',
       fecha: this.getCurrentDateString(),
+      noCartaPorte: '',
+      remision: '',
+      clientCode: firstClient ? firstClient.code : '',
+      client: firstClient ? firstClient.name : '',
       procedimiento: 'Recepción',
       operacion: 'DESCARGA',
       horaEntrada: this.getCurrentTimeString(),
+      horaSalida: '',
+      carrierLineCode: firstCarrier ? firstCarrier.code : '',
+      carrierLine: firstCarrier ? firstCarrier.name : '',
+      nombreOperador: '',
+      rampCode: firstRamp ? firstRamp.code : 'R-01',
+      rampNumber: firstRamp ? firstRamp.rampNumber : 1,
+      placasTracto: '',
+      noEcoTractor: '',
+      placasCaja: '',
       medidasCaja: '53 Pies',
+      noSello: '',
       tipoTransporte: 'Caja Seca',
       eppZapatos: 'SI',
+      eppZapatosObs: 'Cumple con calzado de casquillo',
       eppCofia: 'SI',
+      eppCofiaObs: 'En orden',
       eppCubrebocas: 'SI',
+      eppCubrebocasObs: 'En orden',
       eppChaleco: 'SI',
+      eppChalecoObs: 'Chaleco reflejante en buen estado',
       docCartaPorte: 'SI',
+      docCartaPorteObs: 'Documento completo y legible',
       docRemision: 'SI',
+      docRemisionObs: 'Documento coincide con carga',
       revInteriorCaja: 'SI',
+      revInteriorCajaObs: 'Limpio y seco',
       revDanosCaja: 'NO',
+      revDanosCajaObs: 'Sin abolladuras ni fisuras',
       revDanosPuertas: 'NO',
+      revDanosPuertasObs: 'Empaques y bisagras íntegros',
       revOloresExtraños: 'NO',
+      revOloresExtrañosObs: 'Sin olor anómalo',
       revIndiciosPlagas: 'NO',
+      revIndiciosPlagasObs: 'Sin evidencia de plaga',
       responsableVigilanciaNombre: 'Guardia de Turno - Caseta Principal',
       responsableVigilanciaFirma: true,
+      transportistaNombre: '',
       transportistaFirma: false
     });
     this.sealList.set([]);
     this.tempSealInput.set('');
+    this.saveSuccess.set(false);
+    this.createdFolio.set(null);
+    this.assignedRampLabel.set(null);
+    this.errorMessage.set(null);
   }
 
   // ── HELPERS FECHA Y HORA ───────────────────────────────────────────────────

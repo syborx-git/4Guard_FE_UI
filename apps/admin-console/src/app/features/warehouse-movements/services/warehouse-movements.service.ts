@@ -946,7 +946,11 @@ export class WarehouseMovementsService {
       organizationId: orgId,
       branchId: branchId,
       clientId: clientId,
+      clientCode: data.clientCode,
+      clientName: data.client,
       carrierId: carrierId,
+      carrierLineCode: data.carrierLineCode,
+      carrierLine: data.carrierLine,
       forkliftOperatorId: forkliftOperatorId,
       rampId: rampId,
       rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
@@ -961,6 +965,7 @@ export class WarehouseMovementsService {
       elaborationDate: data.elaborationDate || null,
       expirationDate: data.expirationDate || null,
       sealNumbers: seals,
+      observations: data.observations || '',
     };
 
     return this.movementsApi.createCheckIn(payload).pipe(
@@ -1020,6 +1025,125 @@ export class WarehouseMovementsService {
         });
 
         return header;
+      })
+    );
+  }
+
+  // Guarda la Pre-Salida (Carga / Embarque) en Backend con estatus REGISTERED
+  createOutboundCheckInBackend(data: CheckInCasetaData): Observable<WarehouseOutbound> {
+    const session = this.movementsApi.getSessionOrg();
+    const orgId = session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const branchId = session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+    const clientItem = this.clientsSignal().find((c) => c.code === data.clientCode || c.name === data.client);
+    const clientId = (clientItem && isUuid(clientItem.code)) 
+      ? clientItem.code 
+      : (isUuid(data.clientCode) ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
+
+    const carrierItem = this.carrierLinesSignal().find((c) => c.code === data.carrierLineCode || c.name === data.carrierLine);
+    const carrierId = (carrierItem && isUuid(carrierItem.code))
+      ? carrierItem.code
+      : (isUuid(data.carrierLineCode) ? data.carrierLineCode : null);
+
+    const rampItem = this.rampsSignal().find(
+      (r) =>
+        r.code === data.rampCode ||
+        r.rampNumber === Number(data.rampNumber) ||
+        r.name === `Rampa ${String(data.rampNumber).padStart(2, '0')}` ||
+        r.id === data.rampCode
+    );
+    const matchedRampLoc = (this.lastFetchedLocations || []).find((l: any) =>
+      (l.type === 'RAMP' || l.sectionCode === 'SEC-RAMP') && (
+        l.code === `LOC-RAMP-${String(data.rampNumber).padStart(2, '0')}` ||
+        l.code === data.rampCode ||
+        l.position === `R${String(data.rampNumber).padStart(2, '0')}` ||
+        l.name === `Rampa ${String(data.rampNumber).padStart(2, '0')}` ||
+        l.id === data.rampCode
+      )
+    );
+    const rampId = (rampItem && isUuid(rampItem.id))
+      ? rampItem.id
+      : (matchedRampLoc && isUuid(matchedRampLoc.id)
+          ? matchedRampLoc.id
+          : (isUuid(data.rampCode) ? data.rampCode : null));
+
+    const seals: string[] = [];
+    if (data.sealNumbers && Array.isArray(data.sealNumbers)) {
+      data.sealNumbers.forEach((s: string) => {
+        if (s && s.trim() && !seals.includes(s.trim().toUpperCase())) {
+          seals.push(s.trim().toUpperCase());
+        }
+      });
+    }
+    if (data.sealNumber && data.sealNumber.trim() && !seals.includes(data.sealNumber.trim().toUpperCase())) {
+      seals.push(data.sealNumber.trim().toUpperCase());
+    }
+
+    const payload = {
+      organizationId: orgId,
+      branchId: branchId,
+      clientId: clientId,
+      clientCode: data.clientCode,
+      clientName: data.client,
+      carrierId: carrierId,
+      carrierName: data.carrierLine,
+      carrierLineCode: data.carrierLineCode,
+      carrierLine: data.carrierLine,
+      rampId: rampId,
+      rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
+      rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
+      transportType: 'TRAILER',
+      driverName: data.driverName,
+      tractorPlates: data.tractorPlates,
+      boxPlates: data.boxPlates,
+      economicNumber: '',
+      boxEconomicNumber: '',
+      sealNumber: seals.join(', '),
+      remisionNo: data.docNumber,
+      observations: data.observations || '',
+      status: 'REGISTERED',
+      selectedItemIds: [],
+    };
+
+    return this.movementsApi.createOutbound(payload).pipe(
+      map((res: any) => {
+        const outbound: WarehouseOutbound = {
+          id: res.id,
+          folio: res.folio || data.docNumber,
+          status: 'REGISTERED',
+          clientCode: res.clientId || data.clientCode,
+          clientName: res.clientName || data.client,
+          destinationId: res.destinationId || '',
+          destinationName: res.destinationName || '',
+          destinationAddress: res.destinationAddress || '',
+          carrierCode: res.carrierId || data.carrierLineCode,
+          carrierName: res.carrierName || data.carrierLine,
+          rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
+          rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
+          driverName: data.driverName,
+          economicNumber: '',
+          boxEconomicNumber: '',
+          tractorPlates: data.tractorPlates,
+          boxPlates: data.boxPlates,
+          transportType: (res.transportType || 'TRAILER') as TransportType,
+          sealNumber: seals.join(', '),
+          remisionNo: res.remisionNo || data.docNumber,
+          observations: data.observations || '',
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: res.createdBy || 'Caseta de Seguridad',
+          timestamp: res.createdAt ? String(res.createdAt).substring(11, 16) : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        this.outboundsSignal.update((list) => {
+          const filtered = list.filter((o) => o.folio !== outbound.folio && o.id !== outbound.id);
+          return [outbound, ...filtered];
+        });
+
+        return outbound;
       })
     );
   }
