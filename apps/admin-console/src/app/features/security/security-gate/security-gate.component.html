@@ -1,0 +1,784 @@
+<!-- ════════════════════════════════════════════════════════════════
+     CASETA DE SEGURIDAD — MÓDULO INDEPENDIENTE 4GUARD WMS
+     HOMOLOGADO CON SOPORTE COMPLETO PARA MODO BLANCO / CLARO & OSCURO
+     ════════════════════════════════════════════════════════════════ -->
+<div class="security-page">
+
+  <!-- ── HEADER PRINCIPAL DEL MÓDULO DE SEGURIDAD ── -->
+  <header class="security-header">
+    <div class="security-header__top">
+      <div class="security-header__left">
+        <div class="security-header__icon-wrap">
+          <span class="material-symbols-outlined security-header__icon">security</span>
+        </div>
+        <div class="security-header__copy">
+          <div class="security-header__eyebrow">
+            <a routerLink="/dashboard" class="security-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="security-header__eyebrow-sep">·</span>
+            <span class="font-bold text-amber-600 dark:text-amber-500">Módulo de Seguridad</span>
+          </div>
+          <h1 class="security-header__title">Caseta de Seguridad & Control de Arribo</h1>
+          <p class="security-header__subtitle">
+            Escaneo de pases digitales QR, validación de transportistas, documentación y registro de sellos de seguridad.
+          </p>
+        </div>
+      </div>
+
+      <!-- Acciones de Cabecera y Badge de Estado -->
+      <div class="security-header__right flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          (click)="openQrModal()"
+          class="btn-primary-gradient text-xs px-4 py-2.5 rounded-xl font-extrabold flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform"
+        >
+          <span class="material-symbols-outlined text-base">qr_code_scanner</span>
+          <span>Mostrar QR Prueba</span>
+        </button>
+
+        <div class="flex items-center gap-2.5">
+          <button
+            type="button"
+            (click)="resetForm()"
+            class="btn-secondary-outline text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-sm"
+            title="Limpiar todos los campos del formulario"
+          >
+            <span class="material-symbols-outlined text-sm">restart_alt</span>
+            <span>Limpiar Formulario</span>
+          </button>
+
+          <div class="security-status-badge">
+            <span class="security-status-badge__dot"></span>
+            <span>CASETA EN SERVICIO</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── FEEDBACK TOAST / ALERTA DE ESCANEO DE QR ── -->
+  @if (scanSuccessMessage()) {
+    <div class="security-alert security-alert--success animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-2xl text-emerald-600 dark:text-emerald-400">check_circle</span>
+        <div>
+          <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100">Escaneo de Pase Digital Exitoso</h4>
+          <p class="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{{ scanSuccessMessage() }}</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (saveSuccess()) {
+    <div class="security-alert security-alert--registered animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-2xl text-amber-600 dark:text-amber-400">task_alt</span>
+        <div>
+          <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100">Pre-Recepción Registrada Correctamente</h4>
+          <p class="text-xs text-slate-700 dark:text-slate-300 mt-0.5">El transporte ha ingresado a la cola de andenes y la información está disponible para el equipo operativo.</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── CONTENEDOR PRINCIPAL: FORMULARIO COMPLETO A ANCHO TOTAL (100%) ── -->
+  <div class="mt-4 w-full">
+    <div class="security-card p-6 space-y-6 animate-fade-up">
+
+        <!-- ════ ENCABEZADO OFICIAL DE FORMATO FÍSICO (FORMATO - CHECK LIST DE TRANSPORTE) ════ -->
+        <div class="doc-format-header p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-500 flex items-center justify-center border border-amber-500/30 font-black text-lg">
+                4G
+              </div>
+              <div>
+                <span class="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-slate-400 block">Dueño: Seguridad Patrimonial</span>
+                <h2 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide">FORMATO — CHECK LIST DE TRANSPORTE</h2>
+              </div>
+            </div>
+
+            <div class="text-right text-[11px] font-mono text-slate-600 dark:text-slate-400 space-y-0.5">
+              <div><strong class="text-slate-800 dark:text-slate-200">No. de Control:</strong> F01-PO-CP-7.1.3-03</div>
+              <div><strong class="text-slate-800 dark:text-slate-200">No. de Revisión:</strong> 01 | <strong>Fecha Rev:</strong> 19/08/2025</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] text-slate-600 dark:text-slate-400 font-medium">
+            <div class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <span class="text-slate-400 dark:text-slate-500 font-bold block uppercase text-[9px]">Emisión</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200">19/08/2025</span>
+            </div>
+            <div class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <span class="text-slate-400 dark:text-slate-500 font-bold block uppercase text-[9px]">Elaboró</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs">verified</span> Seguridad Patrimonial
+              </span>
+            </div>
+            <div class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <span class="text-slate-400 dark:text-slate-500 font-bold block uppercase text-[9px]">Revisó</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs">verified</span> Coor. Calidad
+              </span>
+            </div>
+            <div class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <span class="text-slate-400 dark:text-slate-500 font-bold block uppercase text-[9px]">Aprobó</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs">verified</span> Dir. Operaciones
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario Principal de Caseta (Réplica exactísima) -->
+        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="space-y-6 text-xs">
+
+          <!-- ════ SECCIÓN 1: DATOS GENERALES ════ -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">
+              <span class="material-symbols-outlined text-base">feed</span>
+              <span>DATOS GENERALES</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Fecha <span class="text-amber-500">*</span>
+                </label>
+                <input type="date" formControlName="fecha" class="fg-input w-full font-bold" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Operación <span class="text-amber-500">*</span>
+                </label>
+                <div class="flex items-center gap-2 pt-0.5">
+                  <button type="button" (click)="onOperationChange('CARGA')"
+                    class="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl border text-xs font-extrabold cursor-pointer transition-all"
+                    [class]="checkInForm.get('operacion')?.value === 'CARGA' ? 'bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-400 shadow-sm' : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'">
+                    <span class="material-symbols-outlined text-sm">unarchive</span>
+                    <span>CARGA</span>
+                  </button>
+                  <button type="button" (click)="onOperationChange('DESCARGA')"
+                    class="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl border text-xs font-extrabold cursor-pointer transition-all"
+                    [class]="checkInForm.get('operacion')?.value === 'DESCARGA' ? 'bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-400 shadow-sm' : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'">
+                    <span class="material-symbols-outlined text-sm">archive</span>
+                    <span>DESCARGA</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] flex items-center justify-between mb-1">
+                  <span>No. Carta Porte</span>
+                  @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                    <span class="text-[9px] text-amber-600 dark:text-amber-400 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">* Requerido Carga</span>
+                  } @else {
+                    <span class="text-[9px] text-slate-400 font-normal lowercase">(Opcional)</span>
+                  }
+                </label>
+                <input
+                  type="text"
+                  formControlName="noCartaPorte"
+                  class="fg-input uppercase font-mono w-full"
+                  [class.border-amber-500]="checkInForm.get('operacion')?.value === 'CARGA'"
+                  placeholder="Ej. CP-88492-MX"
+                />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] flex items-center justify-between mb-1">
+                  <span>No. Remisión / Factura</span>
+                  @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+                    <span class="text-[9px] text-amber-600 dark:text-amber-400 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">* Requerido Descarga</span>
+                  } @else {
+                    <span class="text-[9px] text-slate-400 font-normal lowercase">(Opcional)</span>
+                  }
+                </label>
+                <input
+                  type="text"
+                  formControlName="remision"
+                  class="fg-input uppercase font-mono w-full"
+                  [class.border-amber-500]="checkInForm.get('operacion')?.value === 'DESCARGA'"
+                  placeholder="Ej. REM-99482-4G / FAC-10293"
+                />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Hora Entrada <span class="text-amber-500">*</span>
+                </label>
+                <input type="time" formControlName="horaEntrada" class="fg-input w-full font-mono font-bold" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Hora Salida <span class="text-slate-400 font-normal lowercase">(al finalizar)</span>
+                </label>
+                <input type="time" formControlName="horaSalida" class="fg-input w-full font-mono" />
+              </div>
+            </div>
+          </div>
+
+          <!-- ════ SECCIÓN 2: DATOS DEL TRANSPORTE ════ -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">
+              <span class="material-symbols-outlined text-base">local_shipping</span>
+              <span>DATOS DEL TRANSPORTE</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-3.5">
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Línea Transp. <span class="text-amber-500">*</span>
+                </label>
+                <select [value]="checkInForm.get('carrierLineCode')?.value" (change)="onCarrierLineSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                  <option value="">-- Selecciona transportista --</option>
+                  @for (tr of carrierLines(); track tr.code) {
+                    <option [value]="tr.code">{{ tr.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Nombre Operador <span class="text-amber-500">*</span>
+                </label>
+                <input type="text" formControlName="nombreOperador" class="fg-input w-full font-semibold" placeholder="Nombre completo del chófer" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  No. Rampa <span class="text-amber-500">*</span>
+                </label>
+                <select [value]="checkInForm.get('rampCode')?.value" (change)="onRampSelect($any($event.target).value)" class="fg-input w-full font-bold">
+                  <option value="">-- Selecciona rampa --</option>
+                  @for (rm of ramps(); track rm.code) {
+                    <option [value]="rm.code">Rampa {{ rm.rampNumber }} ({{ rm.name }})</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Placas Tracto <span class="text-amber-500">*</span>
+                </label>
+                <input type="text" formControlName="placasTracto" class="fg-input uppercase font-mono w-full" placeholder="77-AB-99" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  No. Eco Tracto <span class="text-amber-500">*</span>
+                </label>
+                <input type="text" formControlName="noEcoTractor" class="fg-input uppercase font-mono w-full" placeholder="ECO-7742" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Placas Caja <span class="text-amber-500">*</span>
+                </label>
+                <input type="text" formControlName="placasCaja" class="fg-input uppercase font-mono w-full" placeholder="55-XX-11" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Medidas caja <span class="text-amber-500">*</span>
+                </label>
+                <input type="text" formControlName="medidasCaja" class="fg-input w-full" placeholder="Ej. 53 Pies / 48 Pies" />
+              </div>
+
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  Tipo de transporte <span class="text-amber-500">*</span>
+                </label>
+                <select formControlName="tipoTransporte" class="fg-input w-full font-bold">
+                  <option value="Caja Seca">Caja Seca</option>
+                  <option value="Caja Seca Refrigerada">Caja Seca Refrigerada</option>
+                  <option value="Plataforma">Plataforma</option>
+                  <option value="Contenedor / Lowboy">Contenedor / Lowboy</option>
+                  <option value="Torton / 3.5 Toneladas">Torton / 3.5 Toneladas</option>
+                </select>
+              </div>
+
+              <div class="lg:col-span-1">
+                <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                  No. Sello
+                </label>
+                <input type="text" formControlName="noSello" class="fg-input font-mono uppercase w-full" placeholder="SEAL-4G-9001" />
+              </div>
+            </div>
+
+            <!-- Registro Interactivo de Cinchos/Sellos Adicionales -->
+            <div class="space-y-2 pt-1">
+              <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block">
+                Sellos / Cinchos de Seguridad Registrados
+              </label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  [ngModel]="tempSealInput()"
+                  (ngModelChange)="tempSealInput.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                  (keyup.enter)="addSeal()"
+                  placeholder="Ingresar sello adicional..."
+                  class="fg-input font-mono uppercase text-xs flex-1"
+                />
+                <button
+                  type="button"
+                  (click)="addSeal()"
+                  class="btn-secondary-outline px-4 py-2 text-xs font-bold rounded-xl"
+                >
+                  AGREGAR SELLO
+                </button>
+              </div>
+
+              <!-- Badges de Sellos Adicionados -->
+              <div class="flex flex-wrap gap-1.5 p-2.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl min-h-[42px] items-center">
+                @for (seal of sealList(); track $index) {
+                  <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold px-3 py-1 rounded-lg bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-500/30">
+                    <span>{{ seal }}</span>
+                    <button type="button" (click)="removeSeal($index)" class="hover:text-rose-600 dark:hover:text-rose-400 font-bold ml-1 text-sm leading-none">×</button>
+                  </span>
+                } @empty {
+                  <span class="text-slate-400 dark:text-slate-500 text-xs italic">No hay sellos adicionales guardados.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- ════ SECCIÓN 3: REVISIÓN DEL TRANSPORTE (TABLA EPP Y DOCUMENTOS) ════ -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">
+              <span class="material-symbols-outlined text-base">fact_check</span>
+              <span>REVISIÓN DEL TRANSPORTE</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-100 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[11px] border-b border-slate-200 dark:border-slate-800">
+                    <th class="p-3 w-5/12">Criterios</th>
+                    <th class="p-3 text-center w-1/12">Sí</th>
+                    <th class="p-3 text-center w-1/12">No</th>
+                    <th class="p-3 w-5/12">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+
+                  <!-- ── SUBGRUPO: EPP ── -->
+                  <tr class="bg-amber-500/10 dark:bg-amber-500/5 font-extrabold text-amber-800 dark:text-amber-400 uppercase text-[10px] tracking-widest">
+                    <td colspan="4" class="px-3 py-1.5">
+                      <span class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-sm">shield</span>
+                        EPP (Equipo de Protección Personal)
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Zapatos de seguridad -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Zapatos de seguridad</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppZapatos', 'SI')"
+                        [class]="checkInForm.get('eppZapatos')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppZapatos', 'NO')"
+                        [class]="checkInForm.get('eppZapatos')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="eppZapatosObs" class="fg-input w-full py-1 text-xs" placeholder="Observaciones EPP zapatos..." />
+                    </td>
+                  </tr>
+
+                  <!-- Cofia -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Cofia</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppCofia', 'SI')"
+                        [class]="checkInForm.get('eppCofia')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppCofia', 'NO')"
+                        [class]="checkInForm.get('eppCofia')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="eppCofiaObs" class="fg-input w-full py-1 text-xs" placeholder="Observaciones cofia..." />
+                    </td>
+                  </tr>
+
+                  <!-- Cubrebocas -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Cubrebocas</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppCubrebocas', 'SI')"
+                        [class]="checkInForm.get('eppCubrebocas')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppCubrebocas', 'NO')"
+                        [class]="checkInForm.get('eppCubrebocas')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="eppCubrebocasObs" class="fg-input w-full py-1 text-xs" placeholder="Observaciones cubrebocas..." />
+                    </td>
+                  </tr>
+
+                  <!-- Chaleco con reflejante -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Chaleco con reflejante</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppChaleco', 'SI')"
+                        [class]="checkInForm.get('eppChaleco')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('eppChaleco', 'NO')"
+                        [class]="checkInForm.get('eppChaleco')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="eppChalecoObs" class="fg-input w-full py-1 text-xs" placeholder="Observaciones chaleco..." />
+                    </td>
+                  </tr>
+
+                  <!-- ── SUBGRUPO: DOCUMENTOS ── -->
+                  <tr class="bg-amber-500/10 dark:bg-amber-500/5 font-extrabold text-amber-800 dark:text-amber-400 uppercase text-[10px] tracking-widest">
+                    <td colspan="4" class="px-3 py-1.5">
+                      <span class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-sm">folder_open</span>
+                        Documentos
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Carta porte -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40" [class.doc-row-highlight]="checkInForm.get('operacion')?.value === 'CARGA'">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">
+                      <div class="flex items-center gap-2">
+                        <span>Carta porte</span>
+                        @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                          <span class="text-[9px] bg-amber-500/15 text-amber-700 dark:text-amber-400 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/30">Carga</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('docCartaPorte', 'SI')"
+                        [class]="checkInForm.get('docCartaPorte')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('docCartaPorte', 'NO')"
+                        [class]="checkInForm.get('docCartaPorte')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="docCartaPorteObs" class="fg-input w-full py-1 text-xs" placeholder="Observaciones carta porte..." />
+                    </td>
+                  </tr>
+
+                  <!-- Remision -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40" [class.doc-row-highlight]="checkInForm.get('operacion')?.value === 'DESCARGA'">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">
+                      <div class="flex items-center gap-2">
+                        <span>Remisión / Factura</span>
+                        @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+                          <span class="text-[9px] bg-amber-500/15 text-amber-700 dark:text-amber-400 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/30">Descarga</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('docRemision', 'SI')"
+                        [class]="checkInForm.get('docRemision')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('docRemision', 'NO')"
+                        [class]="checkInForm.get('docRemision')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="docRemisionObs" class="fg-input w-full py-1 text-xs" placeholder="Observaciones remisión / factura..." />
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ════ SECCIÓN 4: REVISIÓN DE LA UNIDAD ════ -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">
+              <span class="material-symbols-outlined text-base">minor_crash</span>
+              <span>REVISIÓN DE LA UNIDAD</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-100 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[11px] border-b border-slate-200 dark:border-slate-800">
+                    <th class="p-3 w-5/12">Revisión de la unidad:</th>
+                    <th class="p-3 text-center w-1/12">Sí</th>
+                    <th class="p-3 text-center w-1/12">No</th>
+                    <th class="p-3 w-5/12">Observaciones:</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+
+                  <!-- Interior de Caja -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Interior de Caja</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revInteriorCaja', 'SI')"
+                        [class]="checkInForm.get('revInteriorCaja')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revInteriorCaja', 'NO')"
+                        [class]="checkInForm.get('revInteriorCaja')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="revInteriorCajaObs" class="fg-input w-full py-1 text-xs" placeholder="Estado del interior de la caja..." />
+                    </td>
+                  </tr>
+
+                  <!-- Daños a la caja -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Daños a la caja</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revDanosCaja', 'SI')"
+                        [class]="checkInForm.get('revDanosCaja')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revDanosCaja', 'NO')"
+                        [class]="checkInForm.get('revDanosCaja')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="revDanosCajaObs" class="fg-input w-full py-1 text-xs" placeholder="Detalle de daños a la estructura de la caja..." />
+                    </td>
+                  </tr>
+
+                  <!-- Daños en puertas -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Daños en puertas</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revDanosPuertas', 'SI')"
+                        [class]="checkInForm.get('revDanosPuertas')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revDanosPuertas', 'NO')"
+                        [class]="checkInForm.get('revDanosPuertas')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="revDanosPuertasObs" class="fg-input w-full py-1 text-xs" placeholder="Detalle de empaques o chapa de puertas..." />
+                    </td>
+                  </tr>
+
+                  <!-- Olores extraños -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Olores extraños</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revOloresExtraños', 'SI')"
+                        [class]="checkInForm.get('revOloresExtraños')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revOloresExtraños', 'NO')"
+                        [class]="checkInForm.get('revOloresExtraños')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="revOloresExtrañosObs" class="fg-input w-full py-1 text-xs" placeholder="Presencia de olores a químicos o humedad..." />
+                    </td>
+                  </tr>
+
+                  <!-- Indicios de plagas -->
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">Indicios de plagas</td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revIndiciosPlagas', 'SI')"
+                        [class]="checkInForm.get('revIndiciosPlagas')?.value === 'SI' ? 'badge-toggle-si-active' : 'badge-toggle-inactive'">
+                        SÍ
+                      </button>
+                    </td>
+                    <td class="p-3 text-center">
+                      <button type="button" (click)="setCriterion('revIndiciosPlagas', 'NO')"
+                        [class]="checkInForm.get('revIndiciosPlagas')?.value === 'NO' ? 'badge-toggle-no-active' : 'badge-toggle-inactive'">
+                        NO
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <input type="text" formControlName="revIndiciosPlagasObs" class="fg-input w-full py-1 text-xs" placeholder="Inspección de insectos o excretas..." />
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ════ SECCIÓN 5: RESPONSABLES Y FIRMAS ════ -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-xs tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">
+              <span class="material-symbols-outlined text-base">draw</span>
+              <span>RESPONSABLES Y FIRMAS</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Responsable Vigilancia -->
+              <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-3">
+                <div class="font-extrabold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <span>Responsable Vigilancia</span>
+                  <span class="material-symbols-outlined text-amber-600 dark:text-amber-500">local_police</span>
+                </div>
+                <div>
+                  <label class="font-bold text-slate-600 dark:text-slate-400 uppercase text-[10px] block mb-1">Nombre</label>
+                  <input type="text" formControlName="responsableVigilanciaNombre" class="fg-input w-full font-bold" placeholder="Nombre de vigilancia" />
+                </div>
+                <div>
+                  <label class="font-bold text-slate-600 dark:text-slate-400 uppercase text-[10px] block mb-1">Firma Digital</label>
+                  <button type="button" (click)="toggleSignature('responsableVigilanciaFirma')"
+                    [class]="checkInForm.get('responsableVigilanciaFirma')?.value ? 'signature-card-signed' : 'signature-card-pending'">
+                    <span class="material-symbols-outlined text-base">
+                      {{ checkInForm.get('responsableVigilanciaFirma')?.value ? 'draw' : 'edit_note' }}
+                    </span>
+                    <span>{{ checkInForm.get('responsableVigilanciaFirma')?.value ? 'FIRMADO DIGITAMENTE' : 'HAGA CLIC PARA FIRMAR' }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Transportista -->
+              <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-3">
+                <div class="font-extrabold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <span>Transportista</span>
+                  <span class="material-symbols-outlined text-amber-600 dark:text-amber-500">badge</span>
+                </div>
+                <div>
+                  <label class="font-bold text-slate-600 dark:text-slate-400 uppercase text-[10px] block mb-1">Nombre</label>
+                  <input type="text" formControlName="transportistaNombre" class="fg-input w-full font-bold" placeholder="Nombre completo del transportista" />
+                </div>
+                <div>
+                  <label class="font-bold text-slate-600 dark:text-slate-400 uppercase text-[10px] block mb-1">Firma Digital</label>
+                  <button type="button" (click)="toggleSignature('transportistaFirma')"
+                    [class]="checkInForm.get('transportistaFirma')?.value ? 'signature-card-signed' : 'signature-card-pending'">
+                    <span class="material-symbols-outlined text-base">
+                      {{ checkInForm.get('transportistaFirma')?.value ? 'draw' : 'edit_note' }}
+                    </span>
+                    <span>{{ checkInForm.get('transportistaFirma')?.value ? 'FIRMADO DIGITAMENTE' : 'HAGA CLIC PARA FIRMAR' }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════ FOOTER CON BOTÓN DE REGISTRO DE CASETA ════ -->
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              (click)="resetForm()"
+              class="btn-secondary-outline px-5 py-2.5 text-xs font-bold rounded-xl"
+            >
+              CANCELAR
+            </button>
+
+            <button
+              type="submit"
+              [disabled]="checkInForm.invalid || isSaving()"
+              class="btn-primary-gradient px-6 py-2.5 text-xs font-extrabold rounded-xl uppercase tracking-wider flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-lg">fact_check</span>
+              <span>{{ isSaving() ? 'REGISTRANDO CHECK LIST...' : 'REGISTRAR CHECK LIST EN CASETA' }}</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════ MODAL EMERGENTE: PASE DIGITAL / QR PRUEBA ════ -->
+  @if (showQrModal()) {
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in"
+      (click)="closeQrModal()"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-scale-up"
+        (click)="$event.stopPropagation()"
+      >
+        <!-- Header del Modal -->
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-500 flex items-center justify-center border border-amber-500/30">
+              <span class="material-symbols-outlined text-lg">qr_code_2</span>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">Pase Digital de Acceso (QR Prueba)</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Escaneo de pase digital para auto-completar el Check List de Transporte</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="closeQrModal()"
+            class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center justify-center transition-colors"
+            aria-label="Cerrar modal"
+          >
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Tarjeta QR Simulator -->
+        <fg-qr-simulator-card (scanSimulated)="handleScanFromModal()"></fg-qr-simulator-card>
+
+        <!-- Footer del Modal -->
+        <div class="flex justify-end pt-2">
+          <button
+            type="button"
+            (click)="closeQrModal()"
+            class="btn-secondary-outline px-4 py-2 text-xs font-bold rounded-xl"
+          >
+            CERRAR VENTANA
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+
+

@@ -285,7 +285,7 @@
 /* ── 1. KPI CARDS GRID (ESTILO HOMOLOGADO RECEPCIÓN) ── */
 .quality-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -314,12 +314,28 @@
   min-height: 84px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
+  cursor: pointer;
+  user-select: none;
 }
 
 .quality-kpi-card:hover {
   transform: translateY(-2px);
   border-color: var(--gold-border);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.quality-kpi-card.quality-kpi-card--active {
+  border-color: var(--gold) !important;
+  background: var(--gold-bg) !important;
+  box-shadow: 0 8px 24px rgba(197, 168, 107, 0.22), inset 0 0 0 1.5px var(--gold-border) !important;
+  transform: translateY(-2px);
+}
+
+:host-context(.theme-dark) .quality-kpi-card.quality-kpi-card--active,
+:host-context(.dark) .quality-kpi-card.quality-kpi-card--active {
+  border-color: var(--gold-light) !important;
+  background: rgba(208, 175, 103, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1.5px var(--gold-border) !important;
 }
 
 .quality-kpi-card__icon {

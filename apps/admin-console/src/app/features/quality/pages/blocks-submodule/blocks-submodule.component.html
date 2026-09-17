@@ -57,11 +57,10 @@
       <table class="minimal-table" aria-label="Lotes bloqueados">
         <thead>
           <tr>
-            <th style="width: 15%;">ID / Folio</th>
-            <th style="width: 25%;">Producto / Lote</th>
-            <th style="width: 15%;">Cliente / Ubicación</th>
-            <th style="width: 14%;">Etapa</th>
-            <th style="width: 15%;">Estado / Severidad</th>
+            <th style="width: 18%;">ID / Folio</th>
+            <th style="width: 32%;">Producto / Lote</th>
+            <th style="width: 18%;">Cliente / Ubicación</th>
+            <th style="width: 16%;">Etapa</th>
             <th style="width: 16%; text-align: right;">Acciones</th>
           </tr>
         </thead>
@@ -112,23 +111,6 @@
                 </span>
               </td>
 
-              <!-- Estado / Severidad (Chips suaves pastel como en el Mockup) -->
-              <td>
-                <div class="cell-status">
-                  <span
-                    class="status-chip-mockup"
-                    [class.chip--critical]="block.severity === 'CRITICAL'"
-                    [class.chip--warning]="block.severity === 'WARNING'"
-                    [class.chip--info]="block.severity === 'INFO'"
-                  >
-                    {{ block.severity === 'CRITICAL' ? 'Critical' : block.severity === 'WARNING' ? 'Warning' : 'Informativo' }}
-                  </span>
-                  <span class="defect-category-hint" [title]="block.defectCriteria.join(', ')">
-                    {{ getCategoryLabel(block.defectCategory) }}
-                  </span>
-                </div>
-              </td>
-
               <!-- Acciones (Botones redondeados limpios) -->
               <td style="text-align: right;">
                 <div class="actions-cluster">
@@ -154,7 +136,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="empty-state-cell">
+              <td colspan="5" class="empty-state-cell">
                 <div class="empty-state-box">
                   <span class="material-symbols-outlined empty-icon">check_circle</span>
                   <h4>No se encontraron bloqueos</h4>
