@@ -93,6 +93,16 @@ export const adminRoutes: Routes = [
         pathMatch: 'prefix',
       },
 
+      // Caseta de Seguridad (Módulo Autónomo Independiente)
+      {
+        path: 'security',
+        loadComponent: () =>
+          import('./features/security/security-gate/security-gate.component').then(
+            (m) => m.SecurityGateComponent
+          ),
+        title: '4GUARD WMS — Caseta de Seguridad',
+      },
+
       // Control de Calidad
       {
         path: 'quality',

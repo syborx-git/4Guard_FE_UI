@@ -254,6 +254,8 @@ export class AuthState {
         return true; // Acceso total habilitado para evaluación (HU-134)
       case 'license-management':
         return true; // Acceso total habilitado para evaluación (HU-139)
+      case 'security':
+        return true; // Acceso total al nuevo módulo autónomo de Seguridad (Caseta)
       case 'user-activity':
         // HU-146: Solo OPERATIONS_SUPERVISOR, SHIFT_LEADER y OPERATIONS_MANAGER.
         // NOTA: La validación definitiva de RLS y permisos se ejecuta en el backend.
