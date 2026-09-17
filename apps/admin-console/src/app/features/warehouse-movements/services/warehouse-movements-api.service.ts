@@ -92,6 +92,18 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  getNextPalletNumber(organizationId?: string, branchId?: string): Observable<{ nextPalletNumber: number; lastPalletNumber: number }> {
+    const orgId = organizationId || this.getSessionOrgId();
+    const { branchId: bId } = this.getSessionOrg();
+    const branch = branchId || bId;
+    let params = new HttpParams().set('organizationId', orgId);
+    if (branch) params = params.set('branchId', branch);
+    return this.http.get<ApiResponse<{ nextPalletNumber: number; lastPalletNumber: number }>>(
+      `${this.receptionsUrl}/next-pallet-number`,
+      { params }
+    ).pipe(map((res) => res.data));
+  }
+
   addReceptionPallets(receptionId: string, pallets: any[]): Observable<any[]> {
     return this.http.post<ApiResponse<any[]>>(`${this.receptionsUrl}/${receptionId}/pallets`, { pallets }).pipe(
       map((res) => res.data || [])

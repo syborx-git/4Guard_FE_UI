@@ -1024,6 +1024,22 @@ export class WarehouseMovementsService {
     );
   }
 
+  // Obtiene el número consecutivo máximo de tarimas registrado entre todas las recepciones cargadas
+  getGlobalMaxPalletNumber(): number {
+    let maxNum = 0;
+    const list = this.receptionsSignal();
+    for (const r of list) {
+      if (r.pallets && Array.isArray(r.pallets)) {
+        for (const p of r.pallets) {
+          if (p.palletNumber && Number(p.palletNumber) > maxNum) {
+            maxNum = Number(p.palletNumber);
+          }
+        }
+      }
+    }
+    return maxNum;
+  }
+
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
     if (!r) return {} as ReceptionHeader;
@@ -1138,6 +1154,12 @@ export class WarehouseMovementsService {
       piecesPerPallet: formVals.piecesPerPallet != null ? Number(formVals.piecesPerPallet) : 0,
       palletType: formVals.selectedPalletType || null,
       storageLocationId: formVals.storageLocationId || null,
+      forkliftOperatorId: formVals.forkliftOperatorId || null,
+      forkliftOperatorName: formVals.forkliftOperator || formVals.forkliftOperatorName || null,
+      rampId: formVals.rampId || null,
+      rampNumber: formVals.rampNumber || null,
+      rampCode: formVals.rampCode || null,
+      status: formVals.status || null,
       observations: formVals.observations || '',
     };
 
@@ -1145,6 +1167,7 @@ export class WarehouseMovementsService {
       concatMap(() => {
         if (pallets && pallets.length > 0) {
           const palletPayload = pallets.map((p) => ({
+            palletNumber: p.palletNumber,
             palletCode: p.palletCode,
             pieces: p.pieces,
             palletType: p.palletTypeId,
@@ -1304,7 +1327,11 @@ export class WarehouseMovementsService {
     );
 
     const recId = current?.id || folioOrId;
-    return this.saveDraftReceptionBackend(recId, formVals, current?.pallets || [], productsList, suppliersList).pipe(
+    const enrichedFormVals = {
+      ...formVals,
+      status: 'ASSIGNED',
+    };
+    return this.saveDraftReceptionBackend(recId, enrichedFormVals, current?.pallets || [], productsList, suppliersList).pipe(
       map((rec) => {
         const updated = this.updateReception(
           rec.folio,
@@ -1349,60 +1376,118 @@ export class WarehouseMovementsService {
   }
 
   // Transición 2 -> 3: Inicio de Descarga en Terminal Montacarguista (ASSIGNED -> IN_PROGRESS)
-  startDischarge(folioOrId: string, operatorName: string): ReceptionHeader | null {
-    const updated = this.updateReception(
-      folioOrId,
-      {
-        status: 'IN_PROGRESS',
-      },
-      true
+  startDischarge(folioOrId: string, operatorName: string): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
     );
+    const recId = current?.id || folioOrId;
 
-    if (updated) {
-      this.addReceptionAudit(updated.folio, {
-        id: `aud-rec-inp-${Date.now()}`,
-        action: 'DESCARGA_INICIADA',
-        actionLabel: 'Descarga Iniciada en Terminal de Montacargas',
-        username: operatorName || 'Montacarguista',
-        timestamp: new Date().toLocaleString('es-MX'),
-        details: [
-          { fieldName: 'Estatus', oldValue: 'ASSIGNED', newValue: 'IN_PROGRESS' },
-          { fieldName: 'Operador en Andén', newValue: operatorName || updated.checkIn.forkliftOperator },
-        ],
-      });
-    }
+    const payload = {
+      status: 'IN_PROGRESS',
+      forkliftOperatorName: operatorName || current?.checkIn?.forkliftOperator || null,
+      forkliftOperatorId: current?.checkIn?.forkliftOperatorCode || null,
+      rampNumber: current?.checkIn?.rampNumber || null,
+      rampCode: current?.checkIn?.rampCode || null,
+      lotNumber: current?.lotNumber || null,
+      piecesPerPallet: current?.piecesPerPallet || 0,
+      palletType: current?.selectedPalletType || null,
+      storageLocationId: current?.storageLocationId || null,
+    };
 
-    return updated;
+    return this.movementsApi.updateReceptionParameters(recId, payload).pipe(
+      concatMap(() => this.movementsApi.getReceptionById(recId)),
+      map((freshRec: any) => {
+        const mapped = this.mapReceptionResponseToHeader(freshRec);
+        mapped.status = 'IN_PROGRESS';
+        this.updateReception(recId, mapped, true);
+        this.addReceptionAudit(mapped.folio, {
+          id: `aud-rec-inp-${Date.now()}`,
+          action: 'DESCARGA_INICIADA',
+          actionLabel: 'Descarga Iniciada en Terminal de Montacargas',
+          username: operatorName || mapped.checkIn?.forkliftOperator || 'Montacarguista',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'ASSIGNED', newValue: 'IN_PROGRESS' },
+            { fieldName: 'Operador en Andén', newValue: operatorName || mapped.checkIn?.forkliftOperator || 'Montacarguista' },
+          ],
+        });
+        return mapped;
+      }),
+      catchError(() => {
+        const updated = this.updateReception(
+          folioOrId,
+          {
+            status: 'IN_PROGRESS',
+          },
+          true
+        );
+        return of(updated || (current as ReceptionHeader));
+      })
+    );
   }
 
   // Transición 3 -> 4: Montacarguista Concluye Descarga Física (IN_PROGRESS -> DISCHARGED)
-  finishDischarge(folioOrId: string, pallets: ReceptionPalletItem[], operatorName: string): ReceptionHeader | null {
-    const updated = this.updateReception(
-      folioOrId,
-      {
-        status: 'DISCHARGED',
-        pallets: [...pallets],
-      },
-      true
+  finishDischarge(
+    folioOrId: string,
+    pallets: ReceptionPalletItem[],
+    operatorName: string,
+    formVals?: any,
+    productsList: any[] = [],
+    suppliersList: any[] = []
+  ): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
     );
+    const recId = current?.id || folioOrId;
 
-    if (updated) {
-      const totalPieces = pallets.reduce((sum, p) => sum + p.pieces, 0);
-      this.addReceptionAudit(updated.folio, {
-        id: `aud-rec-dis-${Date.now()}`,
-        action: 'DESCARGA_FINALIZADA',
-        actionLabel: 'Descarga Física Concluida (Notificado a Mesa Administrativa)',
-        username: operatorName || 'Montacarguista',
-        timestamp: new Date().toLocaleString('es-MX'),
-        details: [
-          { fieldName: 'Estatus', oldValue: 'IN_PROGRESS', newValue: 'DISCHARGED' },
-          { fieldName: 'Tarimas Descargadas', newValue: String(pallets.length) },
-          { fieldName: 'Piezas Totales', newValue: `${totalPieces} PZAS` },
-        ],
-      });
-    }
+    const enrichedFormVals = {
+      ...(formVals || {}),
+      status: 'DISCHARGED',
+      forkliftOperator: operatorName || current?.checkIn?.forkliftOperator || formVals?.forkliftOperator,
+      forkliftOperatorName: operatorName || current?.checkIn?.forkliftOperator || formVals?.forkliftOperator,
+      rampNumber: formVals?.rampNumber || current?.checkIn?.rampNumber,
+      lotNumber: formVals?.lotNumber || current?.lotNumber,
+      productId: formVals?.productId || current?.productId,
+      supplierName: formVals?.supplierName || current?.supplierName,
+      piecesPerPallet: formVals?.piecesPerPallet || current?.piecesPerPallet,
+      selectedPalletType: formVals?.selectedPalletType || current?.selectedPalletType,
+    };
 
-    return updated;
+    return this.saveDraftReceptionBackend(recId, enrichedFormVals, pallets, productsList, suppliersList).pipe(
+      map((mapped) => {
+        mapped.status = 'DISCHARGED';
+        this.updateReception(recId, mapped, true);
+        const totalPieces = (pallets || []).reduce((sum, p) => sum + p.pieces, 0);
+        this.addReceptionAudit(mapped.folio, {
+          id: `aud-rec-dis-${Date.now()}`,
+          action: 'DESCARGA_FINALIZADA',
+          actionLabel: 'Descarga Física Concluida (Notificado a Mesa Administrativa)',
+          username: operatorName || mapped.checkIn?.forkliftOperator || 'Montacarguista',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'IN_PROGRESS', newValue: 'DISCHARGED' },
+            { fieldName: 'Tarimas Descargadas', newValue: String((pallets || []).length) },
+            { fieldName: 'Piezas Totales', newValue: `${totalPieces} PZAS` },
+          ],
+        });
+        return mapped;
+      }),
+      catchError(() => {
+        const updated = this.updateReception(
+          folioOrId,
+          {
+            status: 'DISCHARGED',
+            pallets: [...pallets],
+          },
+          true
+        );
+        return of(updated || (current as ReceptionHeader));
+      })
+    );
   }
 
   // Busca una recepción por Folio

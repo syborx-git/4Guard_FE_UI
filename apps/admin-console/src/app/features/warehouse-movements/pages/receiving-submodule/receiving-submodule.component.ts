@@ -896,12 +896,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const current = this.selectedReception();
     if (!current) return;
     const op = current.checkIn.forkliftOperator || 'Montacarguista';
-    const updated = this.movementsService.startDischarge(current.id || current.folio, op);
-    if (updated) {
-      this.selectedReception.set(updated);
-      this.loadAuditLogs(updated.folio);
-      this.toast.success(`Descarga física iniciada por ${op} en Rampa ${updated.checkIn.rampNumber}.`);
-    }
+    const recId = current.id || current.folio;
+    this.movementsService.startDischarge(recId, op).subscribe({
+      next: (updated) => {
+        this.selectedReception.set(updated);
+        this.loadAuditLogs(updated.folio);
+        this.toast.success(`Descarga física iniciada por ${op} en Rampa ${updated.checkIn.rampNumber}. Guardada en base de datos.`);
+      },
+      error: (err) => {
+        const msg = err?.error?.message || err?.message || 'Error al iniciar la descarga';
+        this.toast.error(msg);
+      },
+    });
   }
 
   // Fase 3 -> 4: Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa)
@@ -916,11 +922,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
       const sup = this.altaForm.value.supplierName || current.supplierName || 'OWENS AMERICA';
       const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP_EXPORTACION';
       const pzas = Number(this.altaForm.value.piecesPerPallet) || 45;
+      const baseNum = this.getNextConsecutivePalletNumber();
 
       stream = [
         {
           id: `pal-${Date.now()}-1`,
-          palletNumber: 1,
+          palletNumber: baseNum,
           palletCode: 'SDASDS',
           productId: sku,
           description: desc,
@@ -932,7 +939,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
         },
         {
           id: `pal-${Date.now()}-2`,
-          palletNumber: 2,
+          palletNumber: baseNum + 1,
           palletCode: 'QEQEQWQEQ',
           productId: sku,
           description: desc,
@@ -944,7 +951,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
         },
         {
           id: `pal-${Date.now()}-3`,
-          palletNumber: 3,
+          palletNumber: baseNum + 2,
           palletCode: 'DSFDSFSFDSFSDFDSFDS',
           productId: sku,
           description: desc,
@@ -959,12 +966,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }
 
     const op = current.checkIn.forkliftOperator || 'Montacarguista';
-    const updated = this.movementsService.finishDischarge(current.id || current.folio, stream, op);
-    if (updated) {
-      this.selectedReception.set(updated);
-      this.loadAuditLogs(updated.folio);
-      this.toast.success(`Descarga concluida por montacarguista. Se ha regresado la información a mesa administrativa para auditoría.`);
-    }
+    const recId = current.id || current.folio;
+    const formVals = this.altaForm.value;
+
+    this.movementsService
+      .finishDischarge(recId, stream, op, formVals, this.products(), this.suppliers())
+      .subscribe({
+        next: (updated) => {
+          this.selectedReception.set(updated);
+          this.palletStream.set(updated.pallets ? [...updated.pallets] : stream);
+          this.loadAuditLogs(updated.folio);
+          this.toast.success(`Descarga concluida por montacarguista. Avances guardados en la base de datos y enviados a mesa administrativa.`);
+        },
+        error: (err) => {
+          const msg = err?.error?.message || err?.message || 'Error al concluir la descarga';
+          this.toast.error(msg);
+        },
+      });
   }
 
   // Guardar Cambios Parciales / Avance de Descarga en el Backend (wms.warehouse_reception_pallets)
@@ -1058,9 +1076,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   removePalletFromStream(palletId: string): void {
     const list = this.palletStream().filter((p) => p.id !== palletId);
-    // Re-enumerar tarimas para que siempre sean 1, 2, 3... N
-    const renumbered = list.map((item, idx) => ({ ...item, palletNumber: idx + 1 }));
-    this.palletStream.set(renumbered);
+    this.palletStream.set(list);
     this.toast.info('Tarima removida de la descarga');
   }
 
@@ -1302,6 +1318,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.selectedPrintReception.set(finalRec);
           this.printType.set('RECEPTION');
           this.showPrintModal.set(true);
+          this.movementsService.reloadReceptions();
           this.toast.success(`Recepción #${rec.folio} autorizada y cerrada exitosamente. Guardada en la base de datos.`);
         },
         error: (err) => {
@@ -1421,7 +1438,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const prodId = this.altaForm.value.productId || '';
     const prodName = this.altaForm.value.productName || this.altaForm.value.productId || '';
     const suppName = this.altaForm.value.supplierName || '';
-    const nextNum = this.palletStream().length + 1;
+    const nextNum = this.getNextConsecutivePalletNumber();
 
     const newItem: ReceptionPalletItem = {
       id: `ua-${Date.now()}-${nextNum}`,
@@ -1446,6 +1463,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.uaInput.nativeElement.focus();
       }
     }, 10);
+  }
+
+  // Obtiene el siguiente consecutivo de tarima global a nivel de almacén/sistema
+  getNextConsecutivePalletNumber(): number {
+    let maxInStream = 0;
+    for (const p of this.palletStream()) {
+      if (p.palletNumber && Number(p.palletNumber) > maxInStream) {
+        maxInStream = Number(p.palletNumber);
+      }
+    }
+    const maxInAll = this.movementsService.getGlobalMaxPalletNumber();
+    return Math.max(maxInStream, maxInAll) + 1;
   }
 
   // ── AUXILIARES Y CATÁLOGOS ──
