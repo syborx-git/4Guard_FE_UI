@@ -66,10 +66,15 @@
 
   </header>
 
-  <!-- ── 1. KPI CARDS HEADER (ESTILO RECEPCIÓN / SYNEXIA LIGHT) ── -->
+  <!-- ── 1. KPI CARDS HEADER (FILTROS / NAVEGACIÓN INTERACTIVA) ── -->
   <div class="quality-kpi-grid">
     <!-- Total Bloqueados -->
-    <div class="quality-kpi-card quality-kpi-card--primary">
+    <div
+      routerLink="/quality/blocks"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--primary"
+      title="Filtrar por Total Bloqueados (Bloqueos / PNC)"
+    >
       <div class="quality-kpi-card__icon">
         <span class="material-symbols-outlined">warning</span>
       </div>
@@ -80,20 +85,14 @@
       </div>
     </div>
 
-    <!-- En Muestreo -->
-    <div class="quality-kpi-card quality-kpi-card--warning">
-      <div class="quality-kpi-card__icon">
-        <span class="material-symbols-outlined">biotech</span>
-      </div>
-      <div class="quality-kpi-card__info">
-        <span class="quality-kpi-card__label">EN MUESTREO</span>
-        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalUnderInspection() }}</strong>
-        <span class="quality-kpi-card__sub">En cuarentena técnica</span>
-      </div>
-    </div>
 
     <!-- Liberaciones -->
-    <div class="quality-kpi-card quality-kpi-card--success">
+    <div
+      routerLink="/quality/releases"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--success"
+      title="Filtrar por Liberaciones (Dictámenes cerrados)"
+    >
       <div class="quality-kpi-card__icon">
         <span class="material-symbols-outlined">check_circle</span>
       </div>
@@ -105,7 +104,12 @@
     </div>
 
     <!-- Verificaciones F01 -->
-    <div class="quality-kpi-card quality-kpi-card--danger">
+    <div
+      routerLink="/quality/load-verifications"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--danger"
+      title="Filtrar por Verificaciones F01 (Cargas inspeccionadas)"
+    >
       <div class="quality-kpi-card__icon">
         <span class="material-symbols-outlined">fact_check</span>
       </div>
