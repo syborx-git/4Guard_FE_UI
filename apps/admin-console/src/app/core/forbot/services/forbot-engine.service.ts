@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file forbot-engine.service.ts
  * @description Motor NLP Conversacional 100% Local (0-Tokens) para ForBot (4GUARD AI).
  * Procesa intenciones con Pattern Matching, lee métricas reactivas directamente de las Signals de la app,
@@ -37,19 +37,36 @@ export class ForbotEngineService {
   public readonly currentMode = signal<ForbotMode>('operativo');
 
   /** Señal de Estado de Tema (Modo Día / Modo Noche) */
-  public readonly isDarkMode = signal<boolean>(
-    typeof document !== 'undefined'
-      ? document.documentElement.classList.contains('dark') || document.body.classList.contains('dark-theme')
-      : false
-  );
+  public readonly isDarkMode = signal<boolean>(this.detectDarkMode());
+
+  constructor() {
+    // Escucha en tiempo real cambios de clase en el elemento raíz (HTML)
+    if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(() => {
+        this.checkTheme();
+      });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+  }
+
+  private detectDarkMode(): boolean {
+    if (typeof document === 'undefined') return false;
+    const root = document.documentElement;
+    const body = document.body;
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('synexia-theme') : null;
+    return (
+      root.classList.contains('theme-dark') ||
+      root.classList.contains('dark') ||
+      body.classList.contains('theme-dark') ||
+      body.classList.contains('dark') ||
+      saved === 'dark'
+    );
+  }
 
   public checkTheme(): boolean {
-    if (typeof document !== 'undefined') {
-      const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark-theme');
-      this.isDarkMode.set(isDark);
-      return isDark;
-    }
-    return false;
+    const isDark = this.detectDarkMode();
+    this.isDarkMode.set(isDark);
+    return isDark;
   }
 
   /** Historial de conversación en vivo */

@@ -13,26 +13,14 @@
     </div>
   </div>
 
-  <!-- Botón Flotante Circular Luminoso (FAB) 4GUARD -->
+  <!-- Botón Flotante Circular Luminoso (FAB) 4GUARD con Avatar Oficial -->
   <button
     type="button"
     (click)="onToggleForbot()"
     title="Abrir ForBot AI (Ctrl + K)"
-    class="group relative w-13 h-13 rounded-full bg-gradient-to-br from-[#172033] via-[#1f2c44] to-[#121927] border border-[#c5a86b]/70 hover:border-[#e5c158] shadow-[0_8px_25px_rgba(23,32,51,0.35),0_0_15px_rgba(197,168,107,0.25)] hover:shadow-[0_10px_30px_rgba(23,32,51,0.45),0_0_22px_rgba(229,193,88,0.45)] transition-all duration-300 transform hover:scale-108 active:scale-95 flex items-center justify-center cursor-pointer"
+    class="relative rounded-full p-1 bg-gradient-to-br from-[#172033]/90 via-[#25324a]/90 to-[#172033]/90 border border-[#c5a86b]/70 hover:border-[#e5c158] shadow-[0_8px_25px_rgba(23,32,51,0.35),0_0_15px_rgba(197,168,107,0.25)] hover:shadow-[0_10px_30px_rgba(23,32,51,0.45),0_0_22px_rgba(229,193,88,0.45)] transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer"
   >
-    <!-- Halo sutil de fondo -->
-    <div class="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400/20 to-yellow-500/20 blur-sm opacity-60 group-hover:opacity-90 transition-opacity pointer-events-none"></div>
-
-    <!-- Icono ForBot AI estilizado con brillo dorado -->
-    <div class="relative flex items-center justify-center text-[#d4af37] group-hover:text-[#f3d978] transition-colors">
-      <span class="material-symbols-outlined text-[28px] select-none transform group-hover:rotate-6 transition-transform">smart_toy</span>
-    </div>
-
-    <!-- Punto Verde Neón de Estado Activo (Esquina superior derecha bien encajada) -->
-    <span class="absolute top-0.5 right-0.5 flex h-3 w-3 z-10">
-      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-slate-900 shadow-[0_0_6px_rgba(16,185,129,0.9)]"></span>
-    </span>
-
+    <!-- Avatar Oficial ForBot AI con Halo Dorado, Logo 4GUARD e Indicador En Vivo -->
+    <fg-forbot-avatar [size]="46"></fg-forbot-avatar>
   </button>
 </div>
