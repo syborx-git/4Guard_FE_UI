@@ -216,7 +216,8 @@
 .shell__content {
   flex: 1;
   overflow-y: auto;
-  padding: $space-3 $space-4;
+  padding: 0;
+  margin: 0;
   @include custom-scrollbar;
 }
 

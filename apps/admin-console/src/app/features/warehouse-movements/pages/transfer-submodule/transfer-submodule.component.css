@@ -10,6 +10,39 @@
   min-height: 100%;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  color: var(--text-primary) !important;
+}
+
+.transfer-card h2,
+.transfer-card h3,
+.transfer-card h4,
+.transfer-card h5,
+.panel-card h2,
+.panel-card h3,
+.panel-card h4 {
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
+}
+
+.badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  color: var(--text-gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
 .transfer-page {
   display: flex;
   flex-direction: column;
@@ -1834,7 +1867,7 @@
   background: #ffffff !important;
   border: 1px solid rgba(88, 98, 116, 0.2);
   border-radius: 20px;
-  color: var(--text-primary);
+  color: var(--text-primary, #0f172a);
   max-height: 82vh;
   display: flex;
   flex-direction: column;
@@ -1842,10 +1875,38 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
 }
 
+.modal-card h1,
+.modal-card h2,
+.modal-card h3,
+.modal-card h4 {
+  color: var(--text-primary, #0f172a) !important;
+}
+
+.modal-card p {
+  color: var(--text-secondary, #475569) !important;
+}
+
+:host-context(.dark) .modal-card h1,
+:host-context(.dark) .modal-card h2,
+:host-context(.dark) .modal-card h3,
+:host-context(.dark) .modal-card h4,
+:host-context(.theme-dark) .modal-card h1,
+:host-context(.theme-dark) .modal-card h2,
+:host-context(.theme-dark) .modal-card h3,
+:host-context(.theme-dark) .modal-card h4 {
+  color: #f8fafc !important;
+}
+
+:host-context(.dark) .modal-card p,
+:host-context(.theme-dark) .modal-card p {
+  color: #94a3b8 !important;
+}
+
 :host-context(.dark) .modal-card,
 :host-context(.theme-dark) .modal-card {
   background: #172033 !important;
   border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
 }
 
 .modal-header {

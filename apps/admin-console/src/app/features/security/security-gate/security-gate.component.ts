@@ -221,6 +221,29 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return this.inYardPasses().filter(p => p.isReadyForExit === true).length;
   });
 
+  protected readonly completedShiftExitsCount = computed(() => {
+    return this.historyPasses().length;
+  });
+
+  protected calculateDuration(inTime: any, outTime: any): string {
+    const cleanIn = this.formatTimeString(inTime);
+    const cleanOut = this.formatTimeString(outTime);
+    if (!cleanIn || cleanIn === '--:--' || !cleanOut || cleanOut === '--:--') return '--';
+
+    const inParts = cleanIn.split(':').map(Number);
+    const outParts = cleanOut.split(':').map(Number);
+    if (inParts.length < 2 || outParts.length < 2) return '--';
+    if (isNaN(inParts[0]) || isNaN(inParts[1]) || isNaN(outParts[0]) || isNaN(outParts[1])) return '--';
+
+    let diffMins = (outParts[0] * 60 + outParts[1]) - (inParts[0] * 60 + inParts[1]);
+    if (diffMins < 0) diffMins += 24 * 60;
+
+    const hrs = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    if (hrs === 0) return `${mins} min`;
+    return `${hrs}h ${mins}m`;
+  }
+
   protected readonly filteredInYardPasses = computed(() => {
     let list = this.inYardPasses();
     const filter = this.inYardFilter();
@@ -520,6 +543,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   // ── MÉTODOS DEL MODAL DE QR DE PRUEBA ─────────────────────────────────────
+  protected openPassQr(pass: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!pass || !pass.token) return;
+    this.qrModalToken.set(pass.token);
+    this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${pass.token}`);
+    this.showQrModal.set(true);
+  }
+
   protected openQrModal(): void {
     // Si ya existe un pase PENDING_DRIVER activo, reutilizarlo para no generar pases huérfanos
     const existingPending = this.activePasses().find(p => p.status === 'PENDING_DRIVER');

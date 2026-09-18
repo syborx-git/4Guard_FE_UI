@@ -634,7 +634,10 @@ export class ShellComponent implements OnInit, OnDestroy {
     const root = this.document.documentElement;
 
     root.classList.toggle('theme-dark', isDark);
+    root.classList.toggle('dark', isDark);
     root.classList.toggle('theme-light', !isDark);
+
+    this.forbotEngine.checkTheme();
   }
 
   protected toggleSidebar(): void {
