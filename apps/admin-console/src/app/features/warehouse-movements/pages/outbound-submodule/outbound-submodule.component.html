@@ -66,15 +66,32 @@
         </a>
       </nav>
 
-      <button
-        type="button"
-        (click)="startNewOutbound()"
-        class="btn-new-reception"
-        aria-label="Registrar nueva salida"
-      >
-        <span class="material-symbols-outlined">add</span>
-        <span>Nueva Salida</span>
-      </button>
+      <div class="flex items-center gap-2.5">
+        <!-- Indicador Inteligente de Andenes (Click abre el Plano de Andenes) -->
+        <button
+          type="button"
+          (click)="showDockMapModal.set(true)"
+          class="dock-summary-pill"
+          title="Ver plano interactivo y estado de andenes 1-12"
+        >
+          <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-sm">domain</span>
+          <span class="dock-summary-pill__text">Andenes:</span>
+          @if (totalBusyRampsCount() > 0) {
+            <span class="dock-summary-badge dock-summary-badge--busy">{{ totalBusyRampsCount() }} Ocupado{{ totalBusyRampsCount() === 1 ? '' : 's' }}</span>
+          } @else {
+            <span class="dock-summary-badge dock-summary-badge--all-free">Todos Libres (12)</span>
+          }
+        </button>
+
+        <a
+          routerLink="/security"
+          class="btn-new-reception"
+          aria-label="Registrar arribo en caseta de seguridad"
+        >
+          <span class="material-symbols-outlined">security</span>
+          <span>Registrar Arribo en Caseta</span>
+        </a>
+      </div>
     </div>
   </header>
 
@@ -272,15 +289,14 @@
           <p class="transfers-empty-state__desc">
             Selecciona una salida del directorio para consultar su información, o inicia una nueva operación de despacho.
           </p>
-          <button
-            class="branches-btn--primary"
-            type="button"
-            (click)="startNewOutbound()"
-            aria-label="Registrar nueva salida de almacén"
+          <a
+            routerLink="/security"
+            class="branches-btn--primary inline-flex items-center gap-2"
+            aria-label="Registrar arribo en caseta de seguridad"
           >
-            <span class="material-symbols-outlined">add</span>
-            <span>Nueva salida de almacén</span>
-          </button>
+            <span class="material-symbols-outlined">security</span>
+            <span>Registrar Arribo en Caseta</span>
+          </a>
         </div>
       }
 
@@ -1460,6 +1476,16 @@
             @if (selectedOutbound()?.status !== 'CANCELLED') {
               <button
                 type="button"
+                (click)="openChangeRemisionModal()"
+                class="btn-secondary-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+                title="Modificar número de remisión o carta porte con autorización supervisada"
+              >
+                <span class="material-symbols-outlined text-sm text-indigo-500">edit_note</span>
+                <span>Cambiar Remisión</span>
+              </button>
+
+              <button
+                type="button"
                 (click)="openCancelModal()"
                 class="btn-danger-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
               >
@@ -1586,15 +1612,17 @@
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  (click)="openEditCasetaModal()"
-                  class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
-                  title="Modificar datos de caseta, transportista, placas o chofer"
-                >
-                  <span class="material-symbols-outlined text-sm">edit</span>
-                  <span>Modificar Ficha</span>
-                </button>
+                @if (selectedOutbound()!.status === 'REGISTERED') {
+                  <button
+                    type="button"
+                    (click)="openEditCasetaModal()"
+                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                    title="Modificar datos de caseta, transportista, placas o chofer"
+                  >
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                    <span>Modificar Ficha</span>
+                  </button>
+                }
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
                   <span class="material-symbols-outlined text-xs">alt_route</span>
                   <span>WMS Auto-Slotting</span>
@@ -1904,12 +1932,12 @@
 
               <button
                 type="button"
-                [disabled]="isCompletingOutbound()"
-                (click)="completeOutboundAction()"
+                [disabled]="isAuthorizingDispatch()"
+                (click)="openAuthorizeModal()"
                 class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
-                title="Aprobar despacho y emitir documento F03 formal"
+                title="Aprobar despacho y emitir documento F03 formal con autorización supervisada"
               >
-                @if (isCompletingOutbound()) {
+                @if (isAuthorizingDispatch()) {
                   <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
                   <span>Autorizando...</span>
                 } @else {
@@ -2051,67 +2079,80 @@
               </div>
             </div>
 
-            <!-- Línea de Tiempo de Auditoría -->
+            <!-- Línea de Tiempo de Auditoría (Colapsable) -->
             <div class="carriers-timeline-preview rounded-xl border border-subtle bg-surface-subtle overflow-hidden">
-              <div class="carriers-timeline-preview__header flex items-center justify-between p-3 border-b border-subtle bg-gold/5">
+              <div
+                class="carriers-timeline-preview__header flex items-center justify-between p-3 border-b border-subtle bg-gold/5 cursor-pointer hover:bg-gold/10 transition-colors select-none"
+                (click)="toggleShowAuditTimeline()"
+              >
                 <div class="flex items-center gap-2 text-xs font-bold text-gold uppercase tracking-wider">
                   <span class="material-symbols-outlined text-base">timeline</span>
                   <span>Línea de Tiempo de Auditoría</span>
                 </div>
-                <span class="text-[11px] font-mono text-muted">{{ auditEntries().length }} evento(s)</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-mono text-muted">{{ auditEntries().length }} evento(s)</span>
+                  <span class="btn-gold-outline text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                    <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
+                    <span class="material-symbols-outlined text-base transition-transform duration-200" [class.rotate-180]="showAuditTimeline()">
+                      expand_more
+                    </span>
+                  </span>
+                </div>
               </div>
 
-              <div class="carriers-timeline-preview__nodes p-4 space-y-4">
-                @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
-                  <div class="carriers-tl-node flex items-start gap-3 relative" [ngClass]="getAuditColorClass(log.action)">
-                    <div class="carriers-tl-node__dot flex items-center justify-center w-8 h-8 rounded-full border shrink-0 z-10">
-                      <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
-                    </div>
-                    @if (!isLast) {
-                      <div class="carriers-tl-node__line absolute left-4 top-8 bottom-[-16px] w-[2px] bg-slate-300 dark:bg-slate-700"></div>
-                    }
-                    <div class="carriers-tl-node__content flex-1 min-w-0">
-                      <div class="carriers-tl-node__header flex items-center gap-2 flex-wrap mb-1">
-                        <span class="carriers-tl-node__action font-bold text-xs text-primary">{{ getAuditSummary(log.action) }}</span>
-                        <span class="carriers-tl-node__tag font-mono text-[10px] px-2 py-0.5 rounded bg-surface border border-subtle text-muted">&#64;{{ log.username }}</span>
+              @if (showAuditTimeline()) {
+                <div class="carriers-timeline-preview__nodes p-4 space-y-4 animate-fade-in">
+                  @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                    <div class="carriers-tl-node flex items-start gap-3 relative" [ngClass]="getAuditColorClass(log.action)">
+                      <div class="carriers-tl-node__dot flex items-center justify-center w-8 h-8 rounded-full border shrink-0 z-10">
+                        <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
                       </div>
-
-                      @if (log.details && log.details.length > 0) {
-                        <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
-                          @for (d of log.details; track d.fieldName) {
-                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
-                              <span class="carriers-tl-diff__field font-semibold text-secondary">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
-                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
-                                <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
-                              }
-                              <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
-                            </div>
-                          }
+                      @if (!isLast) {
+                        <div class="carriers-tl-node__line absolute left-4 top-8 bottom-[-16px] w-[2px] bg-slate-300 dark:bg-slate-700"></div>
+                      }
+                      <div class="carriers-tl-node__content flex-1 min-w-0">
+                        <div class="carriers-tl-node__header flex items-center gap-2 flex-wrap mb-1">
+                          <span class="carriers-tl-node__action font-bold text-xs text-primary">{{ getAuditSummary(log.action) }}</span>
+                          <span class="carriers-tl-node__tag font-mono text-[10px] px-2 py-0.5 rounded bg-surface border border-subtle text-muted">&#64;{{ log.username }}</span>
                         </div>
-                      }
 
-                      @if (log.reason) {
-                        <p class="text-xs text-rose-500 font-medium italic mt-1">
-                          Motivo: "{{ log.reason }}"
-                        </p>
-                      }
-
-                      <span class="carriers-tl-node__meta text-[11px] text-muted flex items-center gap-1 mt-1 font-mono">
-                        <span class="material-symbols-outlined text-[13px]">schedule</span>
-                        <span>{{ log.timestamp }}</span>
-                        @if (log.authorizedBy) {
-                          <span class="ml-2 font-normal">· Autorizado por: <strong class="text-primary font-bold">{{ log.authorizedBy }}</strong></span>
+                        @if (log.details && log.details.length > 0) {
+                          <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
+                            @for (d of log.details; track d.fieldName) {
+                              <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                                <span class="carriers-tl-diff__field font-semibold text-secondary">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                  <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                  <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
+                                }
+                                <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                              </div>
+                            }
+                          </div>
                         }
-                      </span>
+
+                        @if (log.reason) {
+                          <p class="text-xs text-rose-500 font-medium italic mt-1">
+                            Motivo: "{{ log.reason }}"
+                          </p>
+                        }
+
+                        <span class="carriers-tl-node__meta text-[11px] text-muted flex items-center gap-1 mt-1 font-mono">
+                          <span class="material-symbols-outlined text-[13px]">schedule</span>
+                          <span>{{ log.timestamp }}</span>
+                          @if (log.authorizedBy) {
+                            <span class="ml-2 font-normal">· Autorizado por: <strong class="text-primary font-bold">{{ log.authorizedBy }}</strong></span>
+                          }
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                } @empty {
-                  <div class="text-xs text-secondary italic text-center py-3">
-                    No hay eventos de auditoría registrados para este folio.
-                  </div>
-                }
-              </div>
+                  } @empty {
+                    <div class="text-xs text-secondary italic text-center py-3">
+                      No hay eventos de auditoría registrados para este folio.
+                    </div>
+                  }
+                </div>
+              }
             </div>
           </div>
 
@@ -2815,6 +2856,302 @@
             class="btn-secondary-outline text-xs px-4 py-1.5 rounded-xl font-bold"
           >
             Cerrar Plano
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: CAMBIO DE NO. DE REMISIÓN / CARTA PORTE (SUPERVISOR / ADMIN)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showChangeRemisionModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeChangeRemisionModal()">
+      <div class="modal-card max-w-lg w-full max-h-[82vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+
+        <!-- Header del Modal -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-header-icon-box" style="background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.28);">
+              <span class="material-symbols-outlined">edit_document</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Cambio de Remisión / Carta Porte #{{ selectedOutbound()?.folio }}</h3>
+              <p class="modal-header-subtitle" style="color: #b45309;">Modificación de documento con autorización Supervisor/Admin</p>
+            </div>
+          </div>
+          <button (click)="closeChangeRemisionModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal -->
+        <div class="modal-body space-y-3 text-xs">
+          <!-- Resumen de la orden -->
+          <div class="modal-summary-box grid grid-cols-2 gap-2">
+            <div>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block">{{ selectedOutbound()?.clientName }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Documento Actual:</span>
+              <span class="modal-summary-val font-mono font-bold text-amber-600 dark:text-amber-400">{{ selectedOutbound()?.remisionNo || 'Sin Asignar' }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedOutbound()?.totalPallets }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedOutbound()?.totalPieces | number }} Piezas</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (changeRemisionError()) {
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ changeRemisionError() }}</span>
+            </div>
+          }
+
+          <!-- Nuevo No. de Remisión / Carta Porte -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Nuevo Número de Remisión / Carta Porte <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <input
+              type="text"
+              [ngModel]="newRemisionInput()"
+              (ngModelChange)="newRemisionInput.set($event)"
+              placeholder="EJ. CP-2026-8812 / REM-0092"
+              class="fg-input font-mono font-bold uppercase text-xs w-full"
+              autofocus
+            />
+          </div>
+
+          <!-- Motivo de modificación obligatorio -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Motivo o Justificación Obligatoria del Cambio <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <textarea
+              [ngModel]="changeRemisionReason()"
+              (ngModelChange)="changeRemisionReason.set($event)"
+              rows="2"
+              placeholder="Describe detalladamente el motivo de la modificación (ej. Corrección de carta porte fiscal, cambio de folio SAT)..."
+              class="fg-input w-full text-xs"
+            ></textarea>
+          </div>
+
+          <!-- Credenciales de Rango Superior (Supervisor / Administrador) -->
+          <div class="pt-2.5 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">verified_user</span>
+              <span>Validación de Credenciales de Supervisor o Administrador</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Usuario / Correo Supervisor o Admin <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="changeRemisionAdminUser()"
+                  (ngModelChange)="changeRemisionAdminUser.set($event)"
+                  placeholder="supervisor@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Autorización <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showChangeRemisionPassword() ? 'text' : 'password'"
+                  [ngModel]="changeRemisionAdminPassword()"
+                  (ngModelChange)="changeRemisionAdminPassword.set($event)"
+                  (keyup.enter)="confirmChangeRemision()"
+                  placeholder="Ingresa la contraseña de autorización"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowChangeRemisionPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showChangeRemisionPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeChangeRemisionModal()"
+            class="modal-btn-cancel"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            [disabled]="isChangingRemision()"
+            (click)="confirmChangeRemision()"
+            class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-md disabled:opacity-50"
+          >
+            @if (isChangingRemision()) {
+              <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              <span>Guardando...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              <span>Autorizar y Actualizar Documento</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: AUTORIZACIÓN DE DESPACHO (LÍDER / SUPERVISOR)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showAuthorizeModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeAuthorizeModal()">
+      <div class="modal-card max-w-lg w-full max-h-[82vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+
+        <!-- Header del Modal -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-header-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.28);">
+              <span class="material-symbols-outlined">verified</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Aprobar y Autorizar Salida #{{ selectedOutbound()?.folio }}</h3>
+              <p class="modal-header-subtitle" style="color: #059669;">Cierre formal de despacho F03 y descuento de inventario</p>
+            </div>
+          </div>
+          <button (click)="closeAuthorizeModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal -->
+        <div class="modal-body space-y-3 text-xs">
+          <!-- Resumen de Despacho -->
+          <div class="modal-summary-box grid grid-cols-2 gap-2">
+            <div>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block">{{ selectedOutbound()?.clientName }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Destino:</span>
+              <span class="modal-summary-val truncate block text-slate-700 dark:text-slate-300">{{ selectedOutbound()?.destinationName || 'Destino General' }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedOutbound()?.totalPallets }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedOutbound()?.totalPieces | number }} Piezas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Sello de Carga:</span>
+              <span class="modal-summary-val font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ selectedOutbound()?.sealNumber || 'N/A' }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Rampa:</span>
+              <span class="modal-summary-val font-mono font-bold">{{ selectedOutbound()?.rampNumber ? 'Rampa ' + selectedOutbound()?.rampNumber : 'Andén General' }}</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (authLeaderError()) {
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ authLeaderError() }}</span>
+            </div>
+          }
+
+          <!-- Credenciales Líder / Supervisor -->
+          <div class="pt-2 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">lock</span>
+              <span>Credenciales del Líder / Supervisor de Turno</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Usuario / Correo del Supervisor <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="authLeaderUser()"
+                  (ngModelChange)="authLeaderUser.set($event)"
+                  placeholder="supervisor@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                  autofocus
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Sesión <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showAuthLeaderPassword() ? 'text' : 'password'"
+                  [ngModel]="authLeaderPassword()"
+                  (ngModelChange)="authLeaderPassword.set($event)"
+                  (keyup.enter)="confirmAuthorizeDispatch()"
+                  placeholder="Ingresa tu contraseña de sesión"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowAuthLeaderPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showAuthLeaderPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeAuthorizeModal()"
+            class="modal-btn-cancel"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            [disabled]="isAuthorizingDispatch()"
+            (click)="confirmAuthorizeDispatch()"
+            class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-5 py-2 rounded-xl text-slate-900 shadow-md disabled:opacity-50"
+          >
+            @if (isAuthorizingDispatch()) {
+              <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              <span>Completando salida...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">verified</span>
+              <span>Aprobar Despacho Oficial (F03)</span>
+            }
           </button>
         </div>
       </div>

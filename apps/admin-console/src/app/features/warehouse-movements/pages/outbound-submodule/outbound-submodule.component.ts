@@ -132,6 +132,11 @@ export class OutboundSubmoduleComponent implements OnInit {
   isFinishingLoading = signal(false);
   isCompletingOutbound = signal(false);
   tempFinishSealNumber = signal('');
+  showAuditTimeline = signal(false);
+
+  toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
 
   // Modal de Modificación de Ficha Operativa (Caseta / Transporte)
   showEditCasetaModal = signal(false);
@@ -243,6 +248,205 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   toggleShowCancelPassword(): void {
     this.showCancelPassword.update((v) => !v);
+  }
+
+  // ── MODAL CAMBIO DE NO. REMISIÓN / CARTA PORTE ──────────────────────────────
+  showChangeRemisionModal = signal(false);
+  newRemisionInput = signal('');
+  changeRemisionReason = signal('');
+  changeRemisionAdminUser = signal('');
+  changeRemisionAdminPassword = signal('');
+  changeRemisionError = signal<string | null>(null);
+  showChangeRemisionPassword = signal(false);
+  isChangingRemision = signal(false);
+
+  openChangeRemisionModal(): void {
+    const ob = this.selectedOutbound();
+    this.newRemisionInput.set(ob?.remisionNo || '');
+    this.changeRemisionReason.set('');
+    this.changeRemisionAdminUser.set('');
+    this.changeRemisionAdminPassword.set('');
+    this.changeRemisionError.set(null);
+    this.showChangeRemisionPassword.set(false);
+    this.showChangeRemisionModal.set(true);
+  }
+
+  closeChangeRemisionModal(): void {
+    this.showChangeRemisionModal.set(false);
+  }
+
+  toggleShowChangeRemisionPassword(): void {
+    this.showChangeRemisionPassword.update((v) => !v);
+  }
+
+  confirmChangeRemision(): void {
+    this.changeRemisionError.set(null);
+    const newDoc = this.newRemisionInput().trim();
+    const reason = this.changeRemisionReason().trim();
+    const user = this.changeRemisionAdminUser().trim();
+    const pass = this.changeRemisionAdminPassword().trim();
+    const current = this.selectedOutbound();
+
+    if (!current) return;
+
+    if (!newDoc) {
+      this.changeRemisionError.set('El nuevo número de remisión / carta porte es obligatorio.');
+      return;
+    }
+
+    if (newDoc.toUpperCase() === (current.remisionNo || '').toUpperCase()) {
+      this.changeRemisionError.set('El nuevo número de documento debe ser diferente al actual.');
+      return;
+    }
+
+    if (!reason) {
+      this.changeRemisionError.set('La justificación o motivo del cambio es obligatoria.');
+      return;
+    }
+
+    if (!user || !pass) {
+      this.changeRemisionError.set('Ingresa usuario y contraseña de Supervisor o Administrador.');
+      return;
+    }
+
+    this.isChangingRemision.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    if (current.id && current.id.includes('-')) {
+      this.movementsApi
+        .changeOutboundRemision(current.id, {
+          newDocNumber: newDoc,
+          reason,
+          adminUsername: user,
+          adminPassword: pass,
+        })
+        .subscribe({
+          next: () => {
+            this.isChangingRemision.set(false);
+            this.showChangeRemisionModal.set(false);
+
+            const updated = this.svc.changeOutboundRemision(
+              current.folio,
+              newDoc,
+              reason,
+              adminLabel
+            );
+            if (updated) {
+              this.selectedOutbound.set(updated);
+            }
+            this.loadAuditLogs(current.id || current.folio);
+            this.toast.success(
+              `Remisión / Carta Porte actualizada a '${newDoc}' y auditada en el sistema.`
+            );
+          },
+          error: (err) => {
+            this.isChangingRemision.set(false);
+            const msg =
+              err?.error?.message ||
+              err?.message ||
+              'Error al modificar remisión en el servidor. Verifica credenciales.';
+            this.changeRemisionError.set(msg);
+          },
+        });
+    } else {
+      this.isChangingRemision.set(false);
+      this.showChangeRemisionModal.set(false);
+      const updated = this.svc.changeOutboundRemision(
+        current.folio,
+        newDoc,
+        reason,
+        adminLabel
+      );
+      if (updated) {
+        this.selectedOutbound.set(updated);
+      }
+      this.toast.success(
+        `Remisión / Carta Porte actualizada a '${newDoc}' localmente.`
+      );
+    }
+  }
+
+  // ── MODAL AUTORIZACIÓN DE DESPACHO (CIERRE FORMAL LOADED -> COMPLETED) ──────
+  showAuthorizeModal = signal(false);
+  authLeaderUser = signal('');
+  authLeaderPassword = signal('');
+  authLeaderError = signal<string | null>(null);
+  showAuthLeaderPassword = signal(false);
+  isAuthorizingDispatch = signal(false);
+
+  openAuthorizeModal(): void {
+    this.authLeaderUser.set('');
+    this.authLeaderPassword.set('');
+    this.authLeaderError.set(null);
+    this.showAuthLeaderPassword.set(false);
+    this.showAuthorizeModal.set(true);
+  }
+
+  closeAuthorizeModal(): void {
+    this.showAuthorizeModal.set(false);
+  }
+
+  toggleShowAuthLeaderPassword(): void {
+    this.showAuthLeaderPassword.update((v) => !v);
+  }
+
+  confirmAuthorizeDispatch(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const user = this.authLeaderUser().trim();
+    const pass = this.authLeaderPassword().trim();
+
+    if (!user || !pass) {
+      this.authLeaderError.set('Ingresa usuario y contraseña de Líder / Supervisor de Almacén.');
+      return;
+    }
+
+    this.isAuthorizingDispatch.set(true);
+    this.authLeaderError.set(null);
+
+    const adminUser = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Líder / Supervisor Autorizado)`;
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'COMPLETED',
+        observations: cur.observations || '',
+      }).subscribe({
+        next: () => {
+          this.isAuthorizingDispatch.set(false);
+          this.showAuthorizeModal.set(false);
+          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.lastCompletedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.showPrintPromptModal.set(true);
+            this.toast.success(`Salida #${updated.folio} autorizada y cerrada exitosamente.`);
+          }
+        },
+        error: (err) => {
+          this.isAuthorizingDispatch.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al autorizar salida en el servidor.';
+          this.authLeaderError.set(msg);
+        }
+      });
+    } else {
+      this.isAuthorizingDispatch.set(false);
+      this.showAuthorizeModal.set(false);
+      const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.lastCompletedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.showPrintPromptModal.set(true);
+        this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+      }
+    }
   }
 
   getInitials(name?: string): string {

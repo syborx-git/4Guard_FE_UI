@@ -2251,6 +2251,46 @@ export class WarehouseMovementsService {
     return updated;
   }
 
+  // Modificación de Remisión / Carta Porte en Salidas (Outbound)
+  changeOutboundRemision(
+    folioOrId: string,
+    newRemision: string,
+    reason: string,
+    authorizedBy: string
+  ): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const target = list.find(
+      (o) => (o.folio && o.folio.trim() === cleanKey) || (o.id && o.id.trim() === cleanKey)
+    );
+    if (!target) return null;
+
+    const oldRem = target.remisionNo;
+    const updated: WarehouseOutbound = {
+      ...target,
+      remisionNo: newRemision.trim(),
+    };
+
+    const newArr = list.map((o) => (o.folio === target.folio || o.id === target.id ? updated : o));
+    this.outboundsSignal.set(newArr);
+
+    this.addOutboundAudit(updated.folio, {
+      id: `aud-out-rem-${Date.now()}`,
+      action: 'REMISION_MODIFICADA',
+      actionLabel: 'Modificación de No. Remisión / Carta Porte',
+      username: authorizedBy,
+      authorizedBy: authorizedBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'No. Remisión / Carta Porte', oldValue: oldRem || 'Sin asignar', newValue: newRemision.trim() },
+        { fieldName: 'Motivo / Justificación', newValue: reason },
+        { fieldName: 'Autorizado Por', newValue: authorizedBy },
+      ],
+    });
+
+    return updated;
+  }
+
   // Cambio de Remisión en UAs
   updateRemisionNumber(oldRemision: string, newRemision: string, justification: string): number {
     let updatedCount = 0;
