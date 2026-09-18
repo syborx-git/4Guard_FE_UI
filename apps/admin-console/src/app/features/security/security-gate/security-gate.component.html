@@ -1,10 +1,11 @@
 <!-- ════════════════════════════════════════════════════════════════
      CASETA DE SEGURIDAD & CENTRO DE CONTROL DE VIGILANCIA — 4GUARD WMS
-     HOMOLOGADO CON PESTAÑAS UI/UX, CHECK-OUT Y FORMATO OFICIAL F01-PO-CP-7.1.3-03
+     HOMOLOGADO CON SYNEXIA THEME ENGINE (LIGHT & DARK DUAL MODE)
+     CONFORME A: ui-design-system-light.sdd.md & ui-design-system-dark.sdd.md
      ════════════════════════════════════════════════════════════════ -->
 <div class="security-page">
 
-  <!-- ── CABECERA PRINCIPAL DEL CENTRO DE CONTROL ── -->
+  <!-- ── 1. CABECERA PRINCIPAL HERO (GOLDEN STANDARD) ── -->
   <header class="security-header">
     <div class="security-header__top">
       <div class="security-header__left">
@@ -18,33 +19,34 @@
               <span>Dashboard</span>
             </a>
             <span class="security-header__eyebrow-sep">·</span>
-            <span class="font-bold text-amber-600 dark:text-amber-500">Módulo de Vigilancia</span>
+            <span>Seguridad Patrimonial</span>
           </div>
-          <h1 class="security-header__title">Centro de Control de Vigilancia & Caseta</h1>
+          <h1 class="security-header__title">Centro de Control de Vigilancia &amp; Caseta</h1>
           <p class="security-header__subtitle">
-            Control integral de accesos, auto-registro QR de choferes, monitoreo en planta, check-out de salida y emisión de boleta F01-PO-CP-7.1.3-03.
+            Control integral de accesos vehiculares, auto-registro QR de choferes, inspección F01, monitoreo en patio y check-out de salida.
           </p>
         </div>
       </div>
 
       <!-- Acciones de Cabecera y Badges de Control -->
-      <div class="security-header__right flex flex-wrap items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
         <!-- Generador de Pase QR para Chofer -->
         <button
           type="button"
           (click)="generateDriverPass()"
           [disabled]="isGeneratingPass()"
-          class="btn-primary-gradient text-xs px-4 py-2.5 rounded-xl font-extrabold flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform"
+          class="btn-primary-gold"
+          aria-label="Generar Pase QR Chofer"
         >
           <span class="material-symbols-outlined text-base">qr_code_scanner</span>
-          <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Generar Pase QR Chofer' }}</span>
+          <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Generar Pase QR' }}</span>
         </button>
 
         <!-- Refrescar Datos -->
         <button
           type="button"
           (click)="reloadAllData()"
-          class="btn-secondary-outline text-xs px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-sm"
+          class="btn-secondary-outline"
           title="Actualizar datos de patio y caseta"
         >
           <span class="material-symbols-outlined text-base">refresh</span>
@@ -58,61 +60,114 @@
       </div>
     </div>
 
-    <!-- ── BARRA DE PESTAÑAS DE NAVEGACIÓN (TABS DE TRABAJO — 3 PESTAÑAS ENFOCADAS) ── -->
+    <!-- ── 2. BARRA DE PESTAÑAS DE NAVEGACIÓN (3 PESTAÑAS ENFOCADAS) ── -->
     <div class="security-tabs-bar">
-      <!-- Tab 1: Registro & Pases QR -->
-      <button
-        type="button"
-        (click)="setTab('REGISTRATION')"
-        [class.active]="activeTab() === 'REGISTRATION'"
-        class="security-tab-btn"
-      >
-        <span class="material-symbols-outlined text-base">how_to_reg</span>
-        <span>1. Nuevo Registro &amp; Pases QR</span>
-        @if (pendingDriverCount() > 0) {
-          <span class="security-tab-badge bg-amber-500 text-white animate-pulse">
-            {{ pendingDriverCount() }}
-          </span>
-        }
-      </button>
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Tab 1: Registro & Pases QR -->
+        <button
+          type="button"
+          (click)="setTab('REGISTRATION')"
+          [class.active]="activeTab() === 'REGISTRATION'"
+          class="security-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">how_to_reg</span>
+          <span>1. Nuevo Registro &amp; Pases QR</span>
+          @if (pendingDriverCount() > 0) {
+            <span class="security-tab-badge bg-amber-500 text-white animate-pulse">
+              {{ pendingDriverCount() }}
+            </span>
+          }
+        </button>
 
-      <!-- Tab 2: Unidades en Planta & Salidas -->
-      <button
-        type="button"
-        (click)="setTab('IN_YARD')"
-        [class.active]="activeTab() === 'IN_YARD'"
-        class="security-tab-btn"
-      >
-        <span class="material-symbols-outlined text-base">local_shipping</span>
-        <span>2. Unidades en Planta &amp; Salidas</span>
-        @if (inYardCount() > 0) {
-          <span class="security-tab-badge bg-blue-500 text-white">
-            {{ inYardCount() }}
-          </span>
-        }
-        @if (readyForExitCount() > 0) {
-          <span class="security-tab-badge bg-emerald-500 text-white animate-pulse">
-            {{ readyForExitCount() }} listos
-          </span>
-        }
-      </button>
+        <!-- Tab 2: Unidades en Planta & Salidas -->
+        <button
+          type="button"
+          (click)="setTab('IN_YARD')"
+          [class.active]="activeTab() === 'IN_YARD'"
+          class="security-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">local_shipping</span>
+          <span>2. Unidades en Planta &amp; Salidas</span>
+          @if (inYardCount() > 0) {
+            <span class="security-tab-badge bg-blue-500 text-white">
+              {{ inYardCount() }}
+            </span>
+          }
+          @if (readyForExitCount() > 0) {
+            <span class="security-tab-badge bg-emerald-500 text-white animate-pulse">
+              {{ readyForExitCount() }} listos
+            </span>
+          }
+        </button>
 
-      <!-- Tab 3: Historial del Turno -->
-      <button
-        type="button"
-        (click)="setTab('HISTORY')"
-        [class.active]="activeTab() === 'HISTORY'"
-        class="security-tab-btn"
-      >
-        <span class="material-symbols-outlined text-base">receipt_long</span>
-        <span>3. Historial del Turno</span>
-      </button>
+        <!-- Tab 3: Historial del Turno -->
+        <button
+          type="button"
+          (click)="setTab('HISTORY')"
+          [class.active]="activeTab() === 'HISTORY'"
+          class="security-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">receipt_long</span>
+          <span>3. Historial del Turno</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- ── NOTIFICACIONES Y ALERTAS ── -->
+  <!-- ── 3. TARJETAS DE MÉTRICAS KPI (4 COLUMNAS HOMOLOGADAS) ── -->
+  <section class="module-kpi-grid" aria-label="Métricas de Caseta">
+    <!-- KPI 1: Unidades en Planta -->
+    <div class="module-kpi-card module-kpi-card--primary">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">local_shipping</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">Unidades en Planta</span>
+        <span class="module-kpi-card__value">{{ inYardCount() }}</span>
+        <span class="module-kpi-card__sub">En patios y andenes</span>
+      </div>
+    </div>
+
+    <!-- KPI 2: QR Pendientes / Espera -->
+    <div class="module-kpi-card module-kpi-card--warning">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">qr_code_scanner</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">QR Pendientes / Espera</span>
+        <span class="module-kpi-card__value">{{ pendingDriverCount() }}</span>
+        <span class="module-kpi-card__sub">Choferes por autorizar</span>
+      </div>
+    </div>
+
+    <!-- KPI 3: Listos para Check-Out -->
+    <div class="module-kpi-card module-kpi-card--success">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">verified</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">Listos para Salida</span>
+        <span class="module-kpi-card__value">{{ readyForExitCount() }}</span>
+        <span class="module-kpi-card__sub">Descarga/Carga autorizada</span>
+      </div>
+    </div>
+
+    <!-- KPI 4: Salidas Concluidas del Turno -->
+    <div class="module-kpi-card module-kpi-card--info">
+      <div class="module-kpi-card__icon">
+        <span class="material-symbols-outlined">task_alt</span>
+      </div>
+      <div class="module-kpi-card__info">
+        <span class="module-kpi-card__label">Salidas del Turno</span>
+        <span class="module-kpi-card__value">{{ completedShiftExitsCount() }}</span>
+        <span class="module-kpi-card__sub">Inspecciones concluidas</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. NOTIFICACIONES Y ALERTAS ── -->
   @if (scanSuccessMessage()) {
-    <div class="security-alert security-alert--success animate-fade-in mb-4">
+    <div class="security-alert security-alert--success animate-fade-in">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-2xl text-emerald-600 dark:text-emerald-400">check_circle</span>
         <div>
@@ -124,7 +179,7 @@
   }
 
   @if (checkOutSuccessNotice()) {
-    <div class="security-alert security-alert--success animate-fade-in mb-4">
+    <div class="security-alert security-alert--success animate-fade-in">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-2xl text-emerald-600 dark:text-emerald-400">verified</span>
         <div>
@@ -136,20 +191,20 @@
   }
 
   @if (saveSuccess()) {
-    <div class="security-alert security-alert--registered animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-transparent border border-amber-500/30 mb-4">
+    <div class="security-alert security-alert--registered animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-transparent border border-amber-500/30">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-3xl text-emerald-600 dark:text-emerald-400">task_alt</span>
         <div>
           <div class="flex items-center gap-2 flex-wrap">
             <h4 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-              ¡{{ checkInForm.get('operacion')?.value === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga' }} Registrada!
+              ¡{{ checkInForm.get('operacion')?.value === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga' }} Registrada con Éxito!
             </h4>
             <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono font-extrabold text-xs">
               FOLIO: #{{ createdFolio() }}
             </span>
           </div>
           <p class="text-xs text-slate-700 dark:text-slate-300 mt-0.5">
-            Rampa asignada: <strong class="font-mono text-amber-600 dark:text-amber-400">{{ assignedRampLabel() }}</strong>. La unidad puede ingresar al andén.
+            Rampa asignada: <strong class="font-mono text-amber-600 dark:text-amber-400">{{ assignedRampLabel() }}</strong>. La unidad puede ingresar al andén correspondiente.
           </p>
         </div>
       </div>
@@ -158,7 +213,7 @@
         <button
           type="button"
           (click)="openF01Print(lastCompletedPrintItem() || checkInForm.value)"
-          class="btn-primary-gradient text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow"
+          class="btn-primary-gold"
         >
           <span class="material-symbols-outlined text-sm">print</span>
           <span>Imprimir Formato F01</span>
@@ -166,7 +221,7 @@
         <button
           type="button"
           (click)="resetForm()"
-          class="btn-secondary-outline text-xs px-3 py-2 rounded-xl font-bold"
+          class="btn-secondary-outline"
           title="Cerrar aviso y nuevo registro"
         >
           <span>✕ Cerrar Aviso</span>
@@ -176,7 +231,7 @@
   }
 
   @if (errorMessage()) {
-    <div class="security-alert security-alert--error animate-fade-in mb-4">
+    <div class="security-alert security-alert--error animate-fade-in">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-2xl text-rose-500">error</span>
         <div>
@@ -203,19 +258,19 @@
               <span class="material-symbols-outlined text-amber-500">qr_code_2</span>
               <span>Pase Digital para Chofer</span>
             </h3>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <span class="badge-gold">
               Formato F01
             </span>
           </div>
 
           <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-            Genera un código QR o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su teléfono.
+            Genera un código QR o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su smartphone.
           </p>
 
           <button
             type="button"
             (click)="openQrModal()"
-            class="w-full btn-primary-gradient py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+            class="w-full btn-primary-gold justify-center py-2.5"
           >
             <span class="material-symbols-outlined text-base">qr_code</span>
             <span>Ver / Generar Código QR</span>
@@ -227,9 +282,9 @@
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">pending_actions</span>
-              <span class="text-slate-900 dark:text-slate-100 font-extrabold">Choferes en Espera</span>
+              <span>Choferes en Espera</span>
             </h3>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/15 text-blue-700 dark:text-blue-300">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/15 text-blue-700 dark:text-blue-300">
               {{ activePasses().length }}
             </span>
           </div>
@@ -242,15 +297,15 @@
           }
 
           @if (activePasses().length === 0) {
-            <div class="text-center py-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
+            <div class="text-center py-6 border border-dashed border-slate-300 dark:border-slate-700/80 rounded-xl">
               <span class="material-symbols-outlined text-3xl text-slate-400 mb-1">hourglass_empty</span>
               <p class="text-xs font-semibold text-slate-600 dark:text-slate-400">No hay choferes en espera</p>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Los pases QR generados y auto-registros aparecerán aquí.</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5">Los pases QR generados y auto-registros aparecerán aquí.</p>
             </div>
           } @else {
-            <div class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+            <div class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
               @for (pass of activePasses(); track pass.id || pass.token) {
-                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/60 shadow-sm hover:border-amber-500/60 transition-all flex flex-col gap-2">
+                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/40 shadow-sm hover:border-amber-500/60 transition-all flex flex-col gap-2">
                   <div class="flex items-start justify-between">
                     <div>
                       <div class="flex items-center gap-1.5">
@@ -268,12 +323,12 @@
                     <div class="flex items-center gap-1.5">
                       <span class="px-2 py-0.5 rounded text-[9.5px] font-bold uppercase"
                             [ngClass]="pass.status === 'SUBMITTED' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'">
-                        {{ pass.status === 'SUBMITTED' ? '✓ Enviado' : '⏳ QR Generado' }}
+                        {{ pass.status === 'SUBMITTED' ? '✓ Enviado' : '⏳ QR Activo' }}
                       </span>
                       <button
                         type="button"
                         (click)="deleteDriverPass(pass, $event)"
-                        title="Descartar / Eliminar este pase"
+                        title="Descartar pase"
                         class="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                       >
                         <span class="material-symbols-outlined text-sm">delete_outline</span>
@@ -281,7 +336,7 @@
                     </div>
                   </div>
 
-                  <div class="text-[10px] text-slate-600 dark:text-slate-300 grid grid-cols-2 gap-1 border-t border-slate-100 dark:border-slate-700/60 pt-1.5">
+                  <div class="text-[10px] text-slate-600 dark:text-slate-300 grid grid-cols-2 gap-1 border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5 font-medium">
                     <div>Placas: <strong class="font-mono text-slate-800 dark:text-slate-100">{{ pass.tractorPlates || 'S/P' }}</strong></div>
                     <div>Transporte: <strong class="text-slate-800 dark:text-slate-100">{{ pass.carrierLine || 'General' }}</strong></div>
                   </div>
@@ -289,8 +344,17 @@
                   <div class="flex items-center gap-1.5 pt-1">
                     <button
                       type="button"
+                      (click)="openPassQr(pass, $event)"
+                      class="px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Ver Código QR de este pase"
+                    >
+                      <span class="material-symbols-outlined text-xs">qr_code</span>
+                      <span>QR</span>
+                    </button>
+                    <button
+                      type="button"
                       (click)="loadDriverSubmission(pass)"
-                      class="flex-1 btn-primary-gradient text-[11px] py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5"
+                      class="flex-1 btn-primary-gold text-[11px] py-1.5 justify-center"
                     >
                       <span class="material-symbols-outlined text-sm">download_done</span>
                       <span>{{ pass.status === 'SUBMITTED' ? 'Cargar en Caseta' : 'Cargar / Usar' }}</span>
@@ -298,11 +362,10 @@
                     <button
                       type="button"
                       (click)="deleteDriverPass(pass, $event)"
-                      class="px-3 py-1.5 rounded-lg btn-discard-pass text-[10px] font-bold flex items-center gap-1"
+                      class="px-2 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                       title="Descartar pase"
                     >
                       <span class="material-symbols-outlined text-xs">delete</span>
-                      <span>Descartar</span>
                     </button>
                   </div>
                 </div>
@@ -320,8 +383,8 @@
           <div class="border-b border-slate-200 dark:border-slate-700/80 pb-4">
             <div class="flex items-center justify-between flex-wrap gap-2">
               <div class="flex items-center gap-2.5">
-                <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono font-bold text-xs">
-                  FORMATO
+                <span class="badge-gold">
+                  FORMATO OFICIAL
                 </span>
                 <h2 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                   Check List de Transporte
@@ -336,11 +399,11 @@
           </div>
 
           <!-- ── SECCIÓN 1: DATOS GENERALES ── -->
-          <div>
-            <h3 class="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">description</span>
-              <span>1. Datos Generales</span>
-            </h3>
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">description</span>
+              <span>1. Datos Generales de la Operación</span>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <!-- Fecha -->
@@ -406,7 +469,7 @@
                 <select
                   formControlName="clientCode"
                   (change)="onClientSelect(checkInForm.get('clientCode')?.value)"
-                  class="form-input text-xs font-semibold"
+                  class="form-select text-xs font-semibold"
                 >
                   <option value="">-- Seleccionar Cliente --</option>
                   @for (cli of clients(); track cli.code) {
@@ -427,7 +490,7 @@
                 <select
                   formControlName="rampCode"
                   (change)="onRampSelect(checkInForm.get('rampCode')?.value)"
-                  class="form-input text-xs font-bold text-amber-600 dark:text-amber-400"
+                  class="form-select text-xs font-bold text-amber-600 dark:text-amber-400"
                 >
                   <option value="">-- Seleccionar Rampa --</option>
                   @for (rm of ramps(); track rm.code) {
@@ -439,11 +502,11 @@
           </div>
 
           <!-- ── SECCIÓN 2: DATOS DEL TRANSPORTE ── -->
-          <div class="border-t border-slate-200 dark:border-slate-700/80 pt-4">
-            <h3 class="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">rv_hookup</span>
-              <span>2. Datos del Transporte</span>
-            </h3>
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">rv_hookup</span>
+              <span>2. Datos del Transporte &amp; Unidad</span>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <!-- Línea Transportista -->
@@ -452,7 +515,7 @@
                 <select
                   formControlName="carrierLineCode"
                   (change)="onCarrierLineSelect(checkInForm.get('carrierLineCode')?.value)"
-                  class="form-input text-xs font-semibold"
+                  class="form-select text-xs font-semibold"
                 >
                   <option value="">-- Seleccionar Línea --</option>
                   @for (c of carrierLines(); track c.code) {
@@ -477,7 +540,7 @@
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Transporte *</label>
                 <select
                   (change)="onTransportTypeSelect($any($event.target).value)"
-                  class="form-input text-xs font-semibold"
+                  class="form-select text-xs font-semibold"
                 >
                   <option value="" disabled [selected]="!checkInForm.get('tipoTransporte')?.value">-- Seleccione Tipo de Transporte --</option>
                   @for (t of transportTypesList(); track t) {
@@ -535,7 +598,7 @@
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Medidas Caja / Capacidad *</label>
                 <select
                   (change)="onBoxDimensionSelect($any($event.target).value)"
-                  class="form-input text-xs font-semibold"
+                  class="form-select text-xs font-semibold"
                 >
                   <option value="" disabled [selected]="!checkInForm.get('medidasCaja')?.value">-- Seleccione Medidas de Caja --</option>
                   @for (d of boxDimensionsList(); track d) {
@@ -571,7 +634,7 @@
                   <button
                     type="button"
                     (click)="addSeal()"
-                    class="btn-secondary-outline text-xs px-3 py-2 rounded-xl font-bold"
+                    class="btn-secondary-outline"
                   >
                     Agregar
                   </button>
@@ -580,9 +643,9 @@
                 @if (sealList().length > 0) {
                   <div class="flex flex-wrap gap-1.5 mt-2">
                     @for (seal of sealList(); track seal; let i = $index) {
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold border border-amber-500/20">
                         <span>{{ seal }}</span>
-                        <button type="button" (click)="removeSeal(i)" class="hover:text-rose-500 text-xs">✕</button>
+                        <button type="button" (click)="removeSeal(i)" class="hover:text-rose-500 text-xs font-bold">✕</button>
                       </span>
                     }
                   </div>
@@ -592,20 +655,20 @@
           </div>
 
           <!-- ── SECCIÓN 3: REVISIÓN DEL TRANSPORTE (CHECKLIST) ── -->
-          <div class="border-t border-slate-200 dark:border-slate-700/80 pt-4">
-            <h3 class="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">fact_check</span>
-              <span>3. Revisión del Transporte (Check List)</span>
-            </h3>
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">fact_check</span>
+              <span>3. Revisión del Transporte (Check List de Seguridad)</span>
+            </div>
 
             <!-- Tabla de Inspección F01 -->
-            <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+            <div class="overflow-x-auto border border-slate-200 dark:border-slate-700/80 rounded-xl">
               <table class="w-full text-left text-xs">
                 <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-black text-[10px]">
                   <tr>
-                    <th class="py-2 px-3 w-[40%]">Criterio de Inspección</th>
-                    <th class="py-2 px-2 text-center w-[12%]">Cumple (Sí / No)</th>
-                    <th class="py-2 px-3 w-[48%]">Observaciones (Manual)</th>
+                    <th class="py-2.5 px-3 w-[40%]">Criterio de Inspección</th>
+                    <th class="py-2.5 px-2 text-center w-[15%]">Cumple (Sí / No)</th>
+                    <th class="py-2.5 px-3 w-[45%]">Observaciones (Manual)</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
@@ -619,7 +682,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Zapatos de seguridad</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('eppZapatos', 'SI')" [class.btn-active-si]="checkInForm.get('eppZapatos')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('eppZapatos', 'NO')" [class.btn-active-no]="checkInForm.get('eppZapatos')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -629,7 +692,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Cofia</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('eppCofia', 'SI')" [class.btn-active-si]="checkInForm.get('eppCofia')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('eppCofia', 'NO')" [class.btn-active-no]="checkInForm.get('eppCofia')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -639,7 +702,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Cubrebocas</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('eppCubrebocas', 'SI')" [class.btn-active-si]="checkInForm.get('eppCubrebocas')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('eppCubrebocas', 'NO')" [class.btn-active-no]="checkInForm.get('eppCubrebocas')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -649,7 +712,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Chaleco con reflejante</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('eppChaleco', 'SI')" [class.btn-active-si]="checkInForm.get('eppChaleco')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('eppChaleco', 'NO')" [class.btn-active-no]="checkInForm.get('eppChaleco')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -660,13 +723,13 @@
                   <!-- Grupo Documentos -->
                   <tr class="bg-slate-50 dark:bg-slate-850 font-bold text-[11px] text-slate-800 dark:text-slate-200">
                     <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      Documentos
+                      Documentos Obligatorios
                     </td>
                   </tr>
                   <tr>
                     <td class="py-2 px-3 font-medium">Carta porte</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('docCartaPorte', 'SI')" [class.btn-active-si]="checkInForm.get('docCartaPorte')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('docCartaPorte', 'NO')" [class.btn-active-no]="checkInForm.get('docCartaPorte')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -676,7 +739,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Remisión</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('docRemision', 'SI')" [class.btn-active-si]="checkInForm.get('docRemision')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('docRemision', 'NO')" [class.btn-active-no]="checkInForm.get('docRemision')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -687,13 +750,13 @@
                   <!-- Grupo Revisión Unidad -->
                   <tr class="bg-slate-50 dark:bg-slate-850 font-bold text-[11px] text-slate-800 dark:text-slate-200">
                     <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      Revisión de la Unidad
+                      Revisión Física de la Unidad
                     </td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-medium">Interior de Caja</td>
+                    <td class="py-2 px-3 font-medium">Interior de Caja Limpio y Seco</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('revInteriorCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revInteriorCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('revInteriorCaja', 'NO')" [class.btn-active-no]="checkInForm.get('revInteriorCaja')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -703,7 +766,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Daños a la caja</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('revDanosCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revDanosCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('revDanosCaja', 'NO')" [class.btn-active-no]="checkInForm.get('revDanosCaja')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -713,7 +776,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Daños en puertas</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('revDanosPuertas', 'SI')" [class.btn-active-si]="checkInForm.get('revDanosPuertas')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('revDanosPuertas', 'NO')" [class.btn-active-no]="checkInForm.get('revDanosPuertas')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -723,7 +786,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Olores extraños</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('revOloresExtranos', 'SI')" [class.btn-active-si]="checkInForm.get('revOloresExtranos')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('revOloresExtranos', 'NO')" [class.btn-active-no]="checkInForm.get('revOloresExtranos')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -733,7 +796,7 @@
                   <tr>
                     <td class="py-2 px-3 font-medium">Indicios de plagas</td>
                     <td class="py-2 px-2 text-center">
-                      <div class="inline-flex gap-1">
+                      <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('revIndiciosPlagas', 'SI')" [class.btn-active-si]="checkInForm.get('revIndiciosPlagas')?.value === 'SI'" class="crit-btn">SÍ</button>
                         <button type="button" (click)="setCriterion('revIndiciosPlagas', 'NO')" [class.btn-active-no]="checkInForm.get('revIndiciosPlagas')?.value === 'NO'" class="crit-btn">NO</button>
                       </div>
@@ -746,15 +809,15 @@
           </div>
 
           <!-- ── SECCIÓN 4: RESPONSABLES Y FIRMAS ── -->
-          <div class="border-t border-slate-200 dark:border-slate-700/80 pt-4">
-            <h3 class="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">draw</span>
-              <span>4. Responsables & Firmas</span>
-            </h3>
+          <div class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">draw</span>
+              <span>4. Responsables &amp; Firmas de Conformidad</span>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Responsable Vigilancia -->
-              <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
+              <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/30">
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Responsable Vigilancia *</label>
                 <input
                   type="text"
@@ -768,7 +831,7 @@
               </div>
 
               <!-- Transportista -->
-              <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
+              <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/30">
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Transportista (Chofer) *</label>
                 <input
                   type="text"
@@ -776,7 +839,7 @@
                   placeholder="Nombre de quien entrega / recibe"
                   class="form-input text-xs mb-2"
                 />
-                <label class="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                <label class="flex items-center gap-2 text-xs font-bold cursor-pointer text-slate-800 dark:text-slate-200">
                   <input type="checkbox" formControlName="transportistaFirma" class="rounded text-amber-500" />
                   <span>Transportista Acepta y Firma de Conformidad</span>
                 </label>
@@ -789,14 +852,14 @@
             <button
               type="button"
               (click)="resetForm()"
-              class="btn-secondary-outline text-xs px-4 py-2.5 rounded-xl font-bold"
+              class="btn-secondary-outline"
             >
               Cancelar / Limpiar
             </button>
             <button
               type="submit"
               [disabled]="isSaving()"
-              class="btn-primary-gradient text-xs px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:scale-[1.01] transition-transform"
+              class="btn-primary-gold px-6 py-2.5 text-sm"
             >
               <span class="material-symbols-outlined text-base">login</span>
               <span>{{ isSaving() ? 'Registrando en WMS...' : 'Autorizar Ingreso y Asignar Rampa' }}</span>
@@ -822,7 +885,7 @@
             <span>Unidades en Planta &amp; Control de Salidas</span>
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            Monitoreo en tiempo real de vehículos en patio y registro de salida (Check-Out) únicamente cuando el almacén ha autorizado el F01.
+            Monitoreo en tiempo real de vehículos en patio y registro de salida (Check-Out) una vez autorizada la operación por almacén.
           </p>
         </div>
 
@@ -843,7 +906,7 @@
           <button
             type="button"
             (click)="reloadInYardPasses()"
-            class="btn-secondary-outline text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5"
+            class="btn-secondary-outline text-xs px-3 py-1.5"
             title="Refrescar estatus de unidades"
           >
             <span class="material-symbols-outlined text-sm">refresh</span>
@@ -857,7 +920,7 @@
         <button
           type="button"
           (click)="inYardFilter.set('ALL')"
-          class="px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
           [ngClass]="inYardFilter() === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
         >
           <span>Todas en Planta</span>
@@ -869,7 +932,7 @@
         <button
           type="button"
           (click)="inYardFilter.set('IN_MANEUVER')"
-          class="px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
           [ngClass]="inYardFilter() === 'IN_MANEUVER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
         >
           <span class="material-symbols-outlined text-xs animate-spin">sync</span>
@@ -882,7 +945,7 @@
         <button
           type="button"
           (click)="inYardFilter.set('READY_EXIT')"
-          class="px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
           [ngClass]="inYardFilter() === 'READY_EXIT' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
         >
           <span class="material-symbols-outlined text-xs">check_circle</span>
@@ -908,51 +971,51 @@
           </p>
         </div>
       } @else {
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-black text-[10px]">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
               <tr>
-                <th class="py-2.5 px-3">Folio / Pase</th>
-                <th class="py-2.5 px-3">Operación</th>
-                <th class="py-2.5 px-3">Rampa</th>
-                <th class="py-2.5 px-3">Transporte &amp; Placas</th>
-                <th class="py-2.5 px-3">Operador</th>
-                <th class="py-2.5 px-3">Hora Entrada</th>
-                <th class="py-2.5 px-3">Estatus en Almacén</th>
-                <th class="py-2.5 px-3 text-right">Acciones</th>
+                <th>Folio / Pase</th>
+                <th>Operación</th>
+                <th>Rampa</th>
+                <th>Transporte &amp; Placas</th>
+                <th>Operador</th>
+                <th>Hora Entrada</th>
+                <th>Estatus en Almacén</th>
+                <th class="text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-800 font-medium">
+            <tbody>
               @for (item of filteredInYardPasses(); track item.id || item.token) {
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors" [ngClass]="{ 'bg-emerald-500/5': item.isReadyForExit }">
-                  <td class="py-3 px-3">
+                <tr [ngClass]="{ 'bg-emerald-500/5': item.isReadyForExit }">
+                  <td class="td-mono">
                     <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
                       {{ item.generatedFolio || item.token }}
                     </div>
                     <div class="text-[10px] text-slate-400 font-mono">Token: {{ item.token }}</div>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
                           [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
                       {{ item.operationType || 'DESCARGA' }}
                     </span>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <span class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 font-mono font-bold text-xs text-amber-600 dark:text-amber-400">
                       {{ item.rampCode || (item.rampNumber ? 'R-' + item.rampNumber : 'R-01') }}
                     </span>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <div class="font-semibold text-slate-900 dark:text-slate-100">{{ item.carrierLine || 'Transportista' }}</div>
                     <div class="font-mono text-[10px] text-slate-500">Tracto: {{ item.tractorPlates || '-' }} | Caja: {{ item.boxPlates || '-' }}</div>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <div class="font-semibold">{{ item.driverName || 'S/N' }}</div>
                   </td>
-                  <td class="py-3 px-3 font-mono text-[11px]">
+                  <td class="td-mono">
                     {{ formatTimeString(item.receptionTime) }}
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     @if (item.isReadyForExit) {
                       <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10.5px] border border-emerald-500/30 animate-pulse">
                         <span class="material-symbols-outlined text-sm">verified</span>
@@ -961,16 +1024,16 @@
                     } @else {
                       <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[10.5px] border border-amber-500/20">
                         <span class="material-symbols-outlined text-sm animate-spin">sync</span>
-                        <span>{{ item.warehouseStatus === 'ASSIGNED' ? 'Asignado a Rampa' : (item.warehouseStatus || 'En Descarga') }}</span>
+                        <span>{{ item.warehouseStatus === 'ASSIGNED' ? 'Asignado a Rampa' : (item.warehouseStatus || 'En Maniobra') }}</span>
                       </span>
                     }
                   </td>
-                  <td class="py-3 px-3 text-right">
+                  <td class="text-right">
                     <div class="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
                         (click)="openF01Print(item)"
-                        class="btn-secondary-outline text-[11px] px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow-sm"
+                        class="btn-secondary-outline text-[11px] px-2.5 py-1.5 rounded-lg"
                         title="Ver / Imprimir boleta F01"
                       >
                         <span class="material-symbols-outlined text-sm">print</span>
@@ -981,7 +1044,7 @@
                         <button
                           type="button"
                           (click)="openCheckOutModal(item)"
-                          class="btn-primary-gradient text-[11px] px-3.5 py-1.5 rounded-lg font-black flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-transform text-slate-900"
+                          class="btn-primary-gold text-[11px] px-3.5 py-1.5 rounded-lg"
                           title="Registrar salida de unidad"
                         >
                           <span class="material-symbols-outlined text-sm">logout</span>
@@ -990,10 +1053,10 @@
                       } @else {
                         <span
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-subtle cursor-not-allowed select-none"
-                          title="Descarga en proceso en almacén. Requiere autorización del Líder antes de dar salida."
+                          title="Maniobra en proceso en almacén. Requiere autorización del Líder antes de dar salida."
                         >
                           <span class="material-symbols-outlined text-xs">lock</span>
-                          <span>En Descarga</span>
+                          <span>En Maniobra</span>
                         </span>
                       }
                     </div>
@@ -1019,7 +1082,7 @@
             <span>Historial de Movimientos en Caseta</span>
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            Registro de entradas y salidas de vehículos con opción de reimpresión de la boleta F01-PO-CP-7.1.3-03.
+            Auditoría de ingresos y salidas con cálculo de estancia y reimpresión de boleta oficial F01-PO-CP-7.1.3-03.
           </p>
         </div>
 
@@ -1039,7 +1102,8 @@
           <button
             type="button"
             (click)="reloadHistoryPasses()"
-            class="btn-secondary-outline text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1"
+            class="btn-secondary-outline text-xs px-3 py-1.5"
+            title="Refrescar historial"
           >
             <span class="material-symbols-outlined text-sm">refresh</span>
           </button>
@@ -1054,73 +1118,77 @@
       } @else if (historyPasses().length === 0) {
         <div class="text-center py-12 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
           <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">history</span>
-          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No se encontraron registros</h3>
-          <p class="text-xs text-slate-500 mt-1">No hay movimientos que coincidan con la búsqueda.</p>
+          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No se encontraron registros finalizados</h3>
+          <p class="text-xs text-slate-500 mt-1">Las salidas con Check-Out concluido aparecerán listadas aquí.</p>
         </div>
       } @else {
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-black text-[10px]">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
               <tr>
-                <th class="py-2.5 px-3">Fecha & Folio</th>
-                <th class="py-2.5 px-3">Operación</th>
-                <th class="py-2.5 px-3">Cliente</th>
-                <th class="py-2.5 px-3">Transportista & Placas</th>
-                <th class="py-2.5 px-3">Operador Chofer</th>
-                <th class="py-2.5 px-3">Entrada / Salida</th>
-                <th class="py-2.5 px-3">Estado</th>
-                <th class="py-2.5 px-3 text-right">Boleta F01</th>
+                <th>Fecha &amp; Folio</th>
+                <th>Operación</th>
+                <th>Cliente</th>
+                <th>Transportista &amp; Placas</th>
+                <th>Operador Chofer</th>
+                <th>Entrada / Salida</th>
+                <th>Estancia</th>
+                <th>Estado</th>
+                <th class="text-right">Boleta F01</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-800 font-medium">
+            <tbody>
               @for (item of historyPasses(); track item.id || item.token) {
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3 px-3">
+                <tr>
+                  <td class="td-mono">
                     <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
                       {{ item.generatedFolio || item.token }}
                     </div>
                     <div class="text-[10px] text-slate-400 font-mono">{{ item.docDate || (item.createdAt | slice:0:10) }}</div>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
                           [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
                       {{ item.operationType || 'DESCARGA' }}
                     </span>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <div class="font-semibold text-slate-900 dark:text-slate-100">{{ item.clientName || 'General' }}</div>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <div>{{ item.carrierLine || 'Transporte' }}</div>
                     <div class="font-mono text-[10px] text-slate-500">{{ item.tractorPlates || '-' }} / {{ item.boxPlates || '-' }}</div>
                   </td>
-                  <td class="py-3 px-3">
+                  <td>
                     <div>{{ item.driverName || 'S/N' }}</div>
                   </td>
-                  <td class="py-3 px-3 font-mono text-[10.5px]">
+                  <td class="td-mono">
                     <div>In: <strong>{{ formatTimeString(item.receptionTime) }}</strong></div>
                     <div>Out: <strong>{{ formatTimeString(item.departureTime) }}</strong></div>
                   </td>
-                  <td class="py-3 px-3">
+                  <td class="td-mono font-bold text-amber-600 dark:text-amber-400">
+                    {{ calculateDuration(item.receptionTime, item.departureTime) }}
+                  </td>
+                  <td>
                     @if (item.status === 'COMPLETED_EXIT') {
-                      <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] uppercase">
+                      <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10px] uppercase border border-emerald-500/30">
                         ✓ Salida Concluida
                       </span>
                     } @else if (item.status === 'COMPLETED') {
-                      <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase">
+                      <span class="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase">
                         En Planta
                       </span>
                     } @else {
-                      <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] uppercase">
+                      <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] uppercase">
                         {{ item.status }}
                       </span>
                     }
                   </td>
-                  <td class="py-3 px-3 text-right">
+                  <td class="text-right">
                     <button
                       type="button"
                       (click)="openF01Print(item)"
-                      class="btn-primary-gradient text-[11px] px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1 shadow-sm"
+                      class="btn-primary-gold text-[11px] px-3 py-1.5"
                     >
                       <span class="material-symbols-outlined text-sm">print</span>
                       <span>Imprimir F01</span>
@@ -1141,17 +1209,18 @@
      MODAL A: PASE QR DINÁMICO PARA SMARTPHONE DEL CHOFER
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showQrModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl text-center relative">
+  <div class="modal-overlay animate-fade-in">
+    <div class="modal-card max-w-md w-full text-center relative">
       <button
         type="button"
         (click)="closeQrModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold"
+        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold cursor-pointer"
+        aria-label="Cerrar modal QR"
       >
         ✕
       </button>
 
-      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-3">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-3 border border-amber-500/25">
         <span class="material-symbols-outlined text-2xl">qr_code_2</span>
       </div>
 
@@ -1159,17 +1228,17 @@
         Pase Digital QR de Acceso
       </h3>
       <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-4">
-        Muestra este código al transportista para que escanee con su smartphone y realice su auto-registro.
+        Muestra este código al transportista para que escanee con su smartphone y realice su auto-registro F01.
       </p>
 
       <!-- Render Visual del QR -->
-      <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 inline-block mb-4 shadow-inner">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-md inline-block mb-4">
         <img
-          [src]="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + (qrModalUrl() || 'https://4guard.com')"
+          [src]="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=' + (qrModalUrl() || 'https://4guard.com')"
           alt="QR Pase Acceso Chofer"
-          class="w-44 h-44 object-contain mx-auto rounded-lg"
+          class="w-48 h-48 object-contain mx-auto rounded-lg bg-white"
         />
-        <div class="mt-2 font-mono font-extrabold text-xs text-slate-800 dark:text-slate-200">
+        <div class="mt-2 font-mono font-extrabold text-xs text-slate-900 bg-amber-50 px-2 py-1 rounded border border-amber-200">
           Token: {{ qrModalToken() }}
         </div>
       </div>
@@ -1179,7 +1248,7 @@
         <button
           type="button"
           (click)="openDriverPortalInNewTab()"
-          class="w-full btn-primary-gradient py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow"
+          class="w-full btn-primary-gold justify-center py-2.5 text-xs shadow"
         >
           <span class="material-symbols-outlined text-base">open_in_new</span>
           <span>Abrir Portal Móvil del Chofer</span>
@@ -1188,17 +1257,17 @@
         <button
           type="button"
           (click)="copyQrUrl()"
-          class="w-full btn-secondary-outline py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
+          class="w-full btn-secondary-outline justify-center py-2 text-xs"
         >
           <span class="material-symbols-outlined text-sm">content_copy</span>
           <span>Copiar Enlace al Portapapeles</span>
         </button>
 
-        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
           <button
             type="button"
             (click)="generateNewDriverPass()"
-            class="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 text-slate-700 dark:text-slate-300 hover:text-amber-600 font-bold text-[11px] flex items-center justify-center gap-1"
+            class="btn-modal-secondary"
           >
             <span class="material-symbols-outlined text-sm">restart_alt</span>
             <span>Nuevo QR</span>
@@ -1207,7 +1276,7 @@
           <button
             type="button"
             (click)="discardCurrentQrPass()"
-            class="py-2 px-3 rounded-xl border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 font-bold text-[11px] flex items-center justify-center gap-1"
+            class="btn-modal-danger"
           >
             <span class="material-symbols-outlined text-sm">delete_outline</span>
             <span>Descartar Pase</span>
@@ -1226,18 +1295,19 @@
      MODAL B: CHECK-OUT Y REGISTRO DE SALIDA DE CASETA
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showCheckOutModal() && selectedCheckOutPass()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 relative">
+  <div class="modal-overlay animate-fade-in">
+    <div class="modal-card max-w-lg w-full space-y-5 relative">
       <button
         type="button"
         (click)="closeCheckOutModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold"
+        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold cursor-pointer"
+        aria-label="Cerrar modal check-out"
       >
         ✕
       </button>
 
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/25">
           <span class="material-symbols-outlined text-2xl">logout</span>
         </div>
         <div>
@@ -1291,7 +1361,7 @@
             formControlName="exitObservations"
             rows="2"
             placeholder="Condiciones de la unidad al retirarse de planta..."
-            class="form-input text-xs"
+            class="form-textarea text-xs"
           ></textarea>
         </div>
 
@@ -1299,14 +1369,14 @@
           <button
             type="button"
             (click)="closeCheckOutModal()"
-            class="btn-secondary-outline text-xs px-4 py-2 rounded-xl font-bold"
+            class="btn-secondary-outline"
           >
             Cancelar
           </button>
           <button
             type="submit"
             [disabled]="isCheckingOut()"
-            class="btn-primary-gradient text-xs px-5 py-2 rounded-xl font-black flex items-center gap-2 shadow"
+            class="btn-primary-gold px-5 py-2"
           >
             <span class="material-symbols-outlined text-sm">verified</span>
             <span>{{ isCheckingOut() ? 'Registrando Salida...' : 'Confirmar Salida y Ver Boleta F01' }}</span>
@@ -1321,13 +1391,13 @@
      MODAL C: VISOR E IMPRESIÓN OFICIAL DEL FORMATO F01-PO-CP-7.1.3-03
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showF01PrintModal() && currentPrintData()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full max-h-[84vh] flex flex-col shadow-2xl overflow-hidden">
+  <div class="modal-overlay animate-fade-in">
+    <div class="modal-card max-w-3xl w-full max-h-[88vh] flex flex-col p-0 overflow-hidden">
       
       <!-- Top Action Bar (Compact) -->
-      <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 bg-slate-50 dark:bg-slate-950">
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 bg-slate-50 dark:bg-slate-950">
         <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/25">
             <span class="material-symbols-outlined text-base">print</span>
           </div>
           <div>
@@ -1342,7 +1412,7 @@
           <button
             type="button"
             (click)="printF01()"
-            class="btn-primary-gradient text-[11px] px-3.5 py-1.5 rounded-lg font-black flex items-center gap-1.5 shadow"
+            class="btn-primary-gold text-[11px] px-3.5 py-1.5"
           >
             <span class="material-symbols-outlined text-sm">print</span>
             <span>Imprimir Hoja</span>
@@ -1351,7 +1421,7 @@
           <button
             type="button"
             (click)="downloadF01Pdf()"
-            class="btn-secondary-outline text-[11px] px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5"
+            class="btn-secondary-outline text-[11px] px-3 py-1.5"
           >
             <span class="material-symbols-outlined text-sm">download</span>
             <span>Descargar PDF</span>
@@ -1360,7 +1430,8 @@
           <button
             type="button"
             (click)="closeF01Print()"
-            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-base font-bold px-1.5"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-base font-bold px-1.5 cursor-pointer"
+            aria-label="Cerrar visor F01"
           >
             ✕
           </button>
@@ -1368,7 +1439,7 @@
       </div>
 
       <!-- Contenedor con Scroll de la Hoja Oficial Imprimible -->
-      <div class="p-3 sm:p-4 overflow-y-auto bg-slate-200/60 dark:bg-slate-950/80 flex-1">
+      <div class="p-3 sm:p-5 overflow-y-auto bg-slate-200/60 dark:bg-slate-950/80 flex-1">
         <div id="f01-print-target">
           <fg-print-transport-checklist-layout [data]="currentPrintData()!"></fg-print-transport-checklist-layout>
         </div>

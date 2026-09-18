@@ -9,6 +9,39 @@
   min-height: 100%;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  color: var(--text-primary) !important;
+}
+
+.receiving-card h2,
+.receiving-card h3,
+.receiving-card h4,
+.receiving-card h5,
+.panel-card h2,
+.panel-card h3,
+.panel-card h4 {
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
+}
+
+.badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  color: var(--text-gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
 .receiving-page {
   display: flex;
   flex-direction: column;
@@ -917,6 +950,28 @@
   overflow: hidden;
   box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.06);
   margin: auto;
+}
+
+.modal-card h1,
+.modal-card h2,
+.modal-card h3,
+.modal-card h4 {
+  color: var(--text-primary, #0f172a) !important;
+}
+
+.modal-card p {
+  color: var(--text-secondary, #475569) !important;
+}
+
+:host-context(.dark) .modal-card h1,
+:host-context(.dark) .modal-card h2,
+:host-context(.dark) .modal-card h3,
+:host-context(.dark) .modal-card h4 {
+  color: #f8fafc !important;
+}
+
+:host-context(.dark) .modal-card p {
+  color: #94a3b8 !important;
 }
 
 :host-context(.dark) .modal-card {

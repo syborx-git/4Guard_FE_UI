@@ -56,21 +56,29 @@ body {
   font-size: $text-base;
   font-weight: $fw-regular;
   line-height: $lh-normal;
-  color: $text-primary;
-  background-color: $bg-primary;
+  color: var(--text-primary, #17243d);
+  background-color: var(--bg-primary, #f3f0e9);
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-// ── 6. Tipografía base ───────────────────────────────────────
+// ── 6. Tipografía base (Dinámica Light & Dark) ───────────────
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: $font-display;
+  color: var(--text-primary, #172033) !important;
+}
 
 h1,
 h2,
 h3 {
-  font-family: $font-display;
   font-weight: $fw-bold;
   line-height: $lh-tight;
-  color: $text-primary;
 }
 
 h4,
@@ -79,7 +87,6 @@ h6 {
   font-family: $font-ui;
   font-weight: $fw-semibold;
   line-height: $lh-snug;
-  color: $text-primary;
 }
 
 h1 {
@@ -109,25 +116,25 @@ h6 {
 }
 
 p {
-  color: $text-secondary;
+  color: var(--text-secondary, #748094);
   line-height: $lh-relaxed;
   max-width: 72ch;
 }
 
 a {
-  color: $gold-primary;
+  color: var(--gold, #ad8129);
   text-decoration: none;
   transition: color $transition-fast;
 
   &:hover {
-    color: $gold-light;
+    color: var(--gold-light, #c6a255);
   }
 }
 
 strong,
 b {
   font-weight: $fw-semibold;
-  color: $text-primary;
+  color: var(--text-primary, #17243d);
 }
 
 code,
@@ -163,15 +170,15 @@ html {
 }
 
 .text-primary {
-  color: $text-primary !important;
+  color: var(--text-primary, #17243d) !important;
 }
 
 .text-secondary {
-  color: $text-secondary !important;
+  color: var(--text-secondary, #748094) !important;
 }
 
 .text-muted {
-  color: $text-tertiary !important;
+  color: var(--text-muted, #a0a8b4) !important;
 }
 
 .text-danger {

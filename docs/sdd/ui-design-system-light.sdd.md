@@ -559,15 +559,55 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 
 ---
 
-## 4. Checklist Obligatorio para Nuevos Módulos
+## 4. Garantía de Contraste, Modales y Acciones Secundarias en Modo Claro (Light Mode)
 
-Al crear un nuevo módulo, verificar estrictamente los siguientes puntos antes del commit:
+Para evitar que textos o botones aparezcan en blanco o con contraste deficiente sobre fondos claros/lino:
+
+### 4.1 Reglas Estrictas de Tipografía y Modales
+1. **Encabezados y Títulos (`h1`, `h2`, `h3`, `h4`, `.dialog__title`, `.modal-card h3`):**  
+   - En Modo Claro DEBEN renderizarse SIEMPRE en color **Midnight Navy Oscuro (`#172033` / `#1c2940`)** con opacidad al 100%.  
+   - Queda estrictamente prohibido el uso de colores blancos (`#ffffff`), grises deslavados o gradientes claros sobre tarjetas o modales en modo claro.
+2. **Subtítulos y Textos Secundarios (`p`, `.modal-card p`, `.text-secondary`):**  
+   - Deben usar color **Slate Steel (`#5a6477` / `#475569`)** garantizando un ratio de contraste WCAG AAA superior a 7:1.
+3. **Encapsulamiento de Modales (`.modal-card`, `.modal-overlay`, `.dialog`):**  
+   - Todo modal debe definir explícitamente `color: var(--text-primary);` y sobrescribir cualquier selector de encabezado interno:
+   ```css
+   .modal-card {
+     background: var(--bg-card);
+     color: var(--text-primary);
+   }
+   .modal-card h1, .modal-card h2, .modal-card h3, .modal-card h4 {
+     color: var(--text-primary) !important;
+   }
+   .modal-card p {
+     color: var(--text-secondary) !important;
+   }
+   ```
+
+### 4.2 Botones de Acción Secundaria (Píldoras, Contornos y Acciones de Modal)
+Los botones de acción secundaria como *Nuevo QR*, *Copiar Enlace*, *Cancelar*, *Refrescar* o *Filtros*:
+- **Fondo:** `#ffffff` (en Light Mode) / `rgba(23, 35, 50, 0.6)` (en Dark Mode).
+- **Borde:** `1px solid rgba(76, 86, 105, 0.22)` (en Light Mode) / `1px solid rgba(255, 255, 255, 0.12)` (en Dark Mode).
+- **Texto e Icono:** `#1c2940` (en Light Mode) / `#edf1f5` (en Dark Mode).
+- **Hover:** Borde iluminado con el dorado institucional (`rgba(197, 168, 107, 0.45)`) y elevación sutil `translateY(-1px)`.
+
+### 4.3 Homologación de Tarjetas, Títulos y Badges Oficiales
+- **Variables SCSS Globales:** `$text-primary`, `$text-secondary`, `$surface` DEBEN instanciarse como `var(--text-primary, #172033)` para prevenir evaluación estática a color blanco en tiempo de compilación.
+- **Regla de Encabezados con Alta Prioridad:** Todo archivo `.component.css` debe forzar `h1, h2, h3, h4, h5, h6 { font-family: var(--font-display) !important; color: var(--text-primary) !important; }` y los títulos internos `.security-card h2, .security-card h3, .receiving-card h2, .receiving-card h3, etc.` a `color: var(--text-primary) !important;`.
+- **Badge Institucional Dorado (`.badge-gold`, `.badge--gold`):** Usar siempre `background: var(--gold-bg); border: 1px solid var(--gold-border); color: var(--text-gold); font-family: var(--font-mono); font-size: 10px; font-weight: 800; text-transform: uppercase;` asegurando que "FORMATO OFICIAL", "FORMATO F01", etc. tengan máxima legibilidad y jerarquía visual.
+
+---
+
+## 5. Checklist Obligatorio para Nuevos Módulos
+
+Al crear o refactorizar un módulo, verificar estrictamente los siguientes puntos antes del commit:
 
 - [ ] **TypeScript Imports:** Si se usan `routerLinkActive` y `[routerLinkActiveOptions]`, incluir tanto `RouterLink` como `RouterLinkActive` en `imports: [...]`.
 - [ ] **Sin Rutas Absolutas:** Usar siempre imports relativos (`../../`) o alias (`@4guard/shared-core`).
 - [ ] **Estructura de Cabecera:**
   - Fila 1: Icono Navy (`54x54px`), Eyebrow con link de retorno, Título H1 (`Outfit 1.7rem`), Subtítulo (`0.82rem`).
   - Fila 2: Slide de pestañas a la izquierda + Botón dorado a la derecha.
+- [ ] **Contraste en Modo Claro:** Verificar que en Light Mode no existan textos en blanco (`#fff`) sobre fondos blancos o grises claros en títulos, modales o botones secundarios.
 - [ ] **Botones de Registro:** El icono `add` es el único que proporciona el signo `+`. El texto del botón no debe tener `+` redundante.
 - [ ] **KPIs:** Disposición de 4 tarjetas horizontales con sus 4 variantes de color.
 - [ ] **Compilación Limpia:** Ejecutar `npm run build:admin` o `npx ng build admin-console --configuration development` y confirmar **0 errores**.
