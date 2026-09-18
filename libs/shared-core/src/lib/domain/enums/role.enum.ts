@@ -29,6 +29,9 @@ export enum UserRole {
 
   /** Cliente 3PL: portal de consulta del estado de su inventario */
   CLIENT = 'ROLE_CLIENT',
+
+  /** Guardia de seguridad / Vigilancia: acceso exclusivo a Caseta de Seguridad */
+  SECURITY_GUARD = 'ROLE_SECURITY_GUARD',
 }
 
 /**
@@ -42,6 +45,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.QM_INSPECTOR]:        'Inspector de Calidad',
   [UserRole.AUDITOR]:             'Auditor',
   [UserRole.CLIENT]:              'Cliente 3PL',
+  [UserRole.SECURITY_GUARD]:      'Guardia de Seguridad (Caseta)',
 };
 
 /**
@@ -59,6 +63,7 @@ export const MODULE_PERMISSIONS: Record<string, UserRole[]> = {
   'quality':    [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.QM_INSPECTOR],
   'shipping':   [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.WAREHOUSE_OPERATOR],
   'counting':   [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.WAREHOUSE_OPERATOR, UserRole.AUDITOR],
+  'security':   [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.SECURITY_GUARD],
 };
 
 /**

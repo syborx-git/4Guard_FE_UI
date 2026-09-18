@@ -1,7 +1,7 @@
 /**
  * @file print-dispatch-layout.component.ts
- * @description Formato de impresión oficial "SALIDA DE MERCANCIA / REMISION WMS".
- * 100% fiel al formato físico industrial oficial de 4GUARD WMS.
+ * @description Formato de impresión oficial "SALIDA DE MERCANCÍA / REMISIÓN WMS".
+ * 100% homologado al estándar institucional y formato oficial 4GUARD WMS (PDF & Print).
  */
 
 import { Component, Input, inject } from '@angular/core';
@@ -14,171 +14,156 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="outbound" class="print-container bg-white text-black p-4 sm:p-6 max-w-[900px] mx-auto font-sans text-xs border border-slate-300 rounded shadow-sm">
+    <div *ngIf="outbound" class="print-container bg-white text-black p-4 sm:p-5 max-w-full mx-auto font-sans border border-slate-300 rounded-sm shadow-sm text-[10px] leading-tight">
       
-      <!-- ── CABECERA SUPERIOR INSTITUCIONAL ── -->
-      <div class="flex justify-between items-start pb-2 border-b border-black">
-        <!-- Logo 4-GUARD -->
-        <div class="w-44 flex items-center">
-          <img src="/assets/logo-4guard.svg" alt="4-GUARD Logo" class="h-14 w-auto object-contain" />
+      <!-- Top Header & Logo Institucional -->
+      <div class="flex justify-between items-center mb-2 pb-1.5 border-b-2 border-black">
+        <div class="flex items-center gap-2.5">
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-8 w-auto max-w-[40px] object-contain rounded" />
+          <div>
+            <h1 class="text-sm sm:text-base font-black tracking-tight text-black leading-none mb-0.5">4-GUARD WMS</h1>
+            <p class="text-[8.5px] text-slate-700 font-bold uppercase tracking-tight">
+              Calle. Industria Automotriz sin número, Colonia el Coecillo, municipio de Toluca, Estado de México, C.P 50246.
+            </p>
+          </div>
         </div>
 
-        <!-- Dirección Central y Título Oficial -->
-        <div class="flex-1 text-center px-2">
-          <p class="text-[9.5px] font-semibold text-black uppercase tracking-tight">
-            Industria Automotriz 128, Delegación Santa María Totoltepec, 50200 Toluca de Lerdo, Méx
-          </p>
-          <h1 class="text-xl sm:text-2xl font-black uppercase tracking-wider text-black mt-1 font-sans">
-            SALIDA DE MERCANCIA
-          </h1>
-        </div>
-
-        <!-- Fecha de Impresión -->
-        <div class="w-44 text-right">
-          <p class="text-[10px] font-bold text-black uppercase">
-            FECHA DE IMPRESIÓN: <span class="font-normal font-mono">{{ printDate }}</span>
-          </p>
+        <div class="text-right shrink-0">
+          <span class="text-[9px] font-bold text-slate-700 block uppercase">FECHA DE IMPRESIÓN</span>
+          <span class="text-xs font-mono font-black text-black">{{ printDate }}</span>
         </div>
       </div>
 
-      <!-- ── METADATA LOGÍSTICA (3 BLOQUES HOMOLOGADOS AL FORMATO FÍSICO) ── -->
-      <div class="grid grid-cols-12 gap-3 my-3 text-[10px] uppercase font-sans text-black leading-tight">
+      <!-- Main Title (Estandarizado en Mayúsculas Oficiales) -->
+      <div class="text-center mb-2">
+        <h2 class="text-xs sm:text-sm font-black uppercase tracking-widest text-black border-y-2 border-black py-0.5 inline-block px-8">
+          SALIDA DE MERCANCÍA
+        </h2>
+      </div>
+
+      <!-- Header Grid Metadata: 2 Columnas Estructuradas en MAYÚSCULAS y Espacio Optimizado -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-1 text-[9.5px] mb-2.5 border border-black p-2 rounded-sm bg-slate-50/50 uppercase">
         
-        <!-- Columna 1: Logística, Transporte & Chofer (Span 6) -->
-        <div class="col-span-6 space-y-1">
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">FECHA:</span>
-            <span class="font-mono font-medium">{{ outbound.dispatchedAt || printDate }}</span>
+        <!-- Columna Izquierda: Logística & Transporte -->
+        <div class="space-y-1">
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">NO. SALIDA (FOLIO):</span>
+            <span class="font-black text-xs font-mono text-black text-right flex-1 min-w-0">#{{ outbound.folio }}</span>
           </div>
 
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">CLIENTE:</span>
-            <span class="font-bold flex-1 min-w-0">{{ outbound.clientName }}</span>
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">FECHA SALIDA:</span>
+            <span class="font-bold text-black text-right flex-1 min-w-0 font-mono">{{ formatDateDMY(outbound.dispatchedAt) }}</span>
           </div>
 
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">TRANSPORTA:</span>
-            <span class="font-bold flex-1 min-w-0">{{ outbound.carrierName }}</span>
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">LÍNEA TRANSPORTADORA:</span>
+            <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.carrierName || '').toUpperCase() }}</span>
           </div>
 
-          <div class="flex items-start justify-between">
-            <div class="flex items-center">
-              <span class="w-32 font-bold shrink-0">PLACAS:</span>
-              <span class="font-mono font-bold">{{ outbound.tractorPlates || '-' }}</span>
-            </div>
-            <div class="flex items-center pl-2">
-              <span class="font-bold mr-1">CAJA:</span>
-              <span class="font-mono font-bold">{{ outbound.boxPlates || '-' }}</span>
-            </div>
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">OPERADOR / CHOFER:</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.driverName || '-').toUpperCase() }}</span>
           </div>
 
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">N. ECONÓMICO :</span>
-            <span class="font-mono font-bold">{{ outbound.economicNumber || '-' }}</span>
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">PLACAS (TRACTO / CAJA):</span>
+            <span class="font-mono font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.tractorPlates || '-').toUpperCase() }} / {{ (outbound.boxPlates || '-').toUpperCase() }}</span>
           </div>
 
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">TIPO :</span>
-            <span class="font-bold">{{ formatTransportType(outbound.transportType).toUpperCase() }}</span>
-          </div>
-
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">OPERADOR :</span>
-            <span class="font-bold flex-1 min-w-0">{{ outbound.driverName || '-' }}</span>
-          </div>
-
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">DESTINO :</span>
-            <span class="font-bold flex-1 min-w-0">{{ outbound.destinationName }}</span>
-          </div>
-
-          <div class="flex items-start">
-            <span class="w-32 font-bold shrink-0">MONTACARGUISTA :</span>
-            <span class="font-bold flex-1 min-w-0">{{ outbound.forkliftOperator || 'OPERADOR WMS' }}</span>
+          <div class="flex justify-between items-start gap-1.5">
+            <span class="font-bold text-slate-700 shrink-0">MONTACARGUISTA / RAMPA:</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.forkliftOperator || 'OPERADOR WMS').toUpperCase() }} {{ outbound.rampNumber ? '(RAMPA ' + outbound.rampNumber + ')' : '' }}</span>
           </div>
         </div>
 
-        <!-- Columna 2: Sellos de Seguridad (Span 3) -->
-        <div class="col-span-3 border-l border-slate-300 pl-3">
-          <span class="font-bold block mb-1 text-[10px]">SELLOS DE SEGURIDAD</span>
-          <div class="flex flex-col gap-0.5 font-mono text-[9.5px]">
-            @for (s of sealsList; track s) {
-              <span>{{ s }}</span>
-            }
+        <!-- Columna Derecha: Documentación, Cliente & Destino / Sellos -->
+        <div class="space-y-1">
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">NO. REMISIÓN (SALIDA):</span>
+            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ formattedRemisionFolio }}</span>
           </div>
-        </div>
 
-        <!-- Columna 3: Remisión Oficial & Documento Inicial (Span 3) -->
-        <div class="col-span-3 text-right">
-          <div class="font-black text-sm text-black mb-1">
-            REMISION: <span class="font-mono font-black">{{ formattedRemisionFolio }}</span>
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">DOC. INICIAL (ENTRADA):</span>
+            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ initialDocuments.join(', ') || '-' }}</span>
           </div>
-          
-          <span class="font-bold text-[9.5px] block mt-2 text-slate-800 uppercase">DOCUMENTO INICIAL</span>
-          <div class="flex flex-col gap-0.5 font-mono text-[9.5px]">
-            @for (doc of initialDocuments; track doc) {
-              <span>{{ doc }}</span>
-            }
-            @if (initialDocuments.length === 0) {
-              <span>--</span>
-            }
+
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">CLIENTE:</span>
+            <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.clientName || '').toUpperCase() }}</span>
+          </div>
+
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">DESTINO:</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.destinationName || '-').toUpperCase() }}</span>
+          </div>
+
+          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">TIPO TRANSPORTE / NO. ECO:</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ formatTransportType(outbound.transportType).toUpperCase() }} / {{ outbound.economicNumber || '-' }}</span>
+          </div>
+
+          <div class="flex justify-between items-center gap-1.5 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+            <span class="font-bold text-[9px] uppercase text-amber-900 shrink-0">SELLOS DE SEGURIDAD:</span>
+            <span class="font-mono font-black text-[9.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ sealsList.join(', ') || 'N/A' }}</span>
           </div>
         </div>
 
       </div>
 
-      <!-- ── TABLA DE SALIDA DE MERCANCÍA (FORMATO INDUSTRIAL OFICIAL) ── -->
-      <div class="my-2 border-t-2 border-b-2 border-black">
-        <table class="w-full text-left text-[8.5px] border-collapse font-sans">
+      <!-- Tabla de Tarimas (Detalle Oficial con Remisión Inicial y Caducidad por UA) -->
+      <div class="mb-2 border border-black rounded-sm overflow-hidden">
+        <table class="w-full text-left text-[8.5px] sm:text-[9px] border-collapse font-sans uppercase">
           <thead>
-            <tr class="border-b border-black font-bold uppercase text-black">
-              <th class="py-1 px-1 text-center w-7">N. TARIMA</th>
-              <th class="py-1 px-1 font-mono">CODIGO</th>
-              <th class="py-1 px-1 font-mono">SKU</th>
-              <th class="py-1 px-1">DESCRIPCIÓN</th>
-              <th class="py-1 px-1 text-center font-mono">CANT X TARIMA</th>
-              <th class="py-1 px-1 text-center">TIPO TARIMA</th>
-              <th class="py-1 px-1 text-left">PROVEEDOR</th>
+            <tr class="border-b border-black font-black uppercase bg-slate-200 text-slate-950">
+              <th class="py-0.5 px-1.5 border-r border-black text-center w-8">N. TARIMA</th>
+              <th class="py-0.5 px-1.5 border-r border-black font-mono">CÓDIGO TARIMA (UA)</th>
+              <th class="py-0.5 px-1.5 border-r border-black font-mono text-center">DOC. INICIAL</th>
+              <th class="py-0.5 px-1.5 border-r border-black font-mono">SKU</th>
+              <th class="py-0.5 px-1.5 border-r border-black">DESCRIPCIÓN</th>
+              <th class="py-0.5 px-1.5 border-r border-black">CLIENTE / PROVEEDOR</th>
+              <th class="py-0.5 px-1.5 border-r border-black">TIPO TARIMA</th>
+              <th class="py-0.5 px-1.5 border-r border-black font-mono text-center">CADUCIDAD</th>
+              <th class="py-0.5 px-1.5 border-r border-black text-right">CANT X TARIMA</th>
+              <th class="py-0.5 px-1.5">UBICACIÓN / OBS</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of outbound.items; let idx = index" class="border-b border-slate-200">
-              <td class="py-0.5 px-1 text-center font-mono font-bold">{{ idx + 1 }}</td>
-              <td class="py-0.5 px-1 font-mono font-bold">{{ item.palletCode }}</td>
-              <td class="py-0.5 px-1 font-mono">{{ item.productId }}</td>
-              <td class="py-0.5 px-1 font-medium truncate max-w-[220px]">{{ item.description }}</td>
-              <td class="py-0.5 px-1 text-center font-mono font-bold">{{ item.pieces | number:'1.0-0' }} PIEZAS</td>
-              <td class="py-0.5 px-1 text-center uppercase">{{ item.palletTypeLabel || item.palletTypeId || 'TARIMA CHEP' }}</td>
-              <td class="py-0.5 px-1 truncate max-w-[150px] uppercase">{{ item.clientName || outbound.clientName }}</td>
+            <tr *ngFor="let item of outbound.items; let idx = index" class="border-b border-slate-300 hover:bg-slate-50">
+              <td class="py-0.5 px-1.5 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black font-bold font-mono text-slate-950">{{ item.palletCode }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ item.inboundRemisionNo || outbound.remisionNo || '-' }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black font-mono font-bold">{{ item.productId }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black font-semibold">{{ item.description }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black text-[8px]">{{ item.clientName || outbound.clientName }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black text-[8px]">{{ item.palletTypeLabel || item.palletTypeId || 'TARIMA ESTÁNDAR' }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ formatDateDMY(item.expirationDate) }}</td>
+              <td class="py-0.5 px-1.5 border-r border-black text-right font-black font-mono">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+              <td class="py-0.5 px-1.5 italic text-slate-600 text-[8px]">{{ item.locationCode || 'ANDÉN' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- ── TOTALES OFICIALES (EN UNA SOLA LÍNEA EXACTA AL FORMATO) ── -->
-      <div class="flex items-center gap-8 py-1 text-[11px] font-bold text-black border-b border-black mb-14">
-        <div>TOTAL TARIMAS: <span class="font-mono font-black">{{ outbound.totalPallets }}</span></div>
-        <div>TOTAL PZAS: <span class="font-mono font-black">{{ outbound.totalPieces | number:'1.0-0' }}</span></div>
-        <div>TOTAL PRODUCTOS: <span class="font-mono font-black">{{ distinctProductsCount }}</span></div>
+      <!-- Totales -->
+      <div class="flex justify-between items-center text-[10px] font-bold border-b-2 border-black pb-1 mb-3 bg-slate-100 px-2.5 py-1 rounded uppercase">
+        <div>TOTAL TARIMAS: <span class="font-mono font-black text-xs">{{ outbound.totalPallets }}</span></div>
+        <div>SKUS DISTINTOS: <span class="font-mono font-black text-xs">{{ distinctProductsCount }}</span></div>
+        <div>TOTAL PIEZAS: <span class="font-mono font-black text-xs">{{ outbound.totalPieces | number:'1.0-0' }} PZAS</span></div>
       </div>
 
-      <!-- ── BLOQUE OFICIAL DE FIRMAS (ELABORÓ / RECIBE) ── -->
-      <div class="grid grid-cols-2 gap-20 text-center text-[10px] mt-12 mb-6 uppercase font-sans">
+      <!-- Footer: Elaboró + Recibe de Conformidad -->
+      <div class="grid grid-cols-2 gap-10 items-end text-[9.5px] pt-1 uppercase">
         <div>
-          <div class="border-b border-black w-4/5 mx-auto mb-1"></div>
-          <p class="font-bold text-black tracking-wider">ELABORÓ</p>
-          <p class="font-bold text-black text-[10px] mt-0.5 tracking-wide">{{ elaboroName }}</p>
+          <p class="font-bold text-slate-800">ELABORÓ: <span class="font-black text-black">{{ elaboroName }}</span></p>
+          <p class="text-[7.5px] text-slate-500 font-sans tracking-wide">Documento auditado oficial 4GUARD WMS</p>
         </div>
-        <div>
-          <div class="border-b border-black w-4/5 mx-auto mb-1"></div>
-          <p class="font-bold text-black tracking-wider">RECIBE</p>
-          <p class="text-slate-600 text-[9px] mt-0.5">(NOMBRE, FIRMA Y FECHA)</p>
-        </div>
-      </div>
 
-      <!-- ── PIE DE PÁGINA ── -->
-      <div class="text-right text-[9px] text-slate-500 font-sans mt-4">
-        Page 1 of 1
+        <div class="text-center">
+          <div class="border-b-2 border-black w-full mb-1"></div>
+          <p class="font-black text-[9px] tracking-widest uppercase text-slate-950">RECIBE DE CONFORMIDAD (CHOFER / DESTINO)</p>
+        </div>
       </div>
 
     </div>
@@ -192,6 +177,9 @@ import { AuthState } from '../../../../core/auth/auth.state';
         width: 100% !important;
         max-width: 100% !important;
       }
+      table {
+        page-break-inside: avoid;
+      }
     }
   `]
 })
@@ -204,9 +192,6 @@ export class PrintDispatchLayoutComponent {
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
   }
 
-  /**
-   * Obtiene automáticamente el nombre completo del usuario que tiene la sesión activa iniciada en el sistema.
-   */
   get elaboroName(): string {
     const user = this.authState.currentUser();
     const fullName = this.authState.userFullName() || user?.fullName || user?.username;
@@ -262,5 +247,17 @@ export class PrintDispatchLayoutComponent {
     if (!type) return 'TRAILER';
     return TRANSPORT_TYPES.find((t) => t.id === type)?.label || type;
   }
+
+  formatDateDMY(dateVal?: string): string {
+    if (!dateVal) return 'N/A';
+    const str = String(dateVal).trim();
+    if (str.includes('/')) return str;
+    const parts = str.slice(0, 10).split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return str;
+  }
 }
+
 

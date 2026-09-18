@@ -19,6 +19,8 @@ import {
   InventoryBatch,
   MovementAuditEntry,
   ReceptionPalletItem,
+  RampOccupancyStatus,
+  RampItem,
 } from '../../models/warehouse-movements.models';
 import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
 import { PrintOutboundCancellationLayoutComponent } from '../../components/print-layouts/print-outbound-cancellation-layout.component';
@@ -89,7 +91,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
-  private readonly authState = inject(AuthState);
+  protected readonly authState = inject(AuthState);
   private readonly router = inject(Router);
 
   goToManageCarriers(): void {
@@ -103,6 +105,138 @@ export class OutboundSubmoduleComponent implements OnInit {
   statusFilter = signal<string>('ALL');
   auditEntries = signal<MovementAuditEntry[]>([]);
 
+  // KPIs Homologados
+  readonly kpiTotalOutbounds = this.svc.kpiTotalOutbounds;
+  readonly kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
+  readonly kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
+  readonly kpiClients = this.svc.kpiDistinctClientsServed;
+  readonly kpiCaseta = computed(() => this.svc.outbounds().filter((o) => o.status === 'REGISTERED').length);
+  readonly kpiInAnden = computed(() => this.svc.outbounds().filter((o) => ['ASSIGNED', 'IN_PROGRESS', 'LOADED'].includes(o.status)).length);
+  readonly kpiCompleted = computed(() => this.svc.outbounds().filter((o) => o.status === 'COMPLETED').length);
+  readonly kpiCancelled = computed(() => this.svc.outbounds().filter((o) => o.status === 'CANCELLED').length);
+
+  // Matriz de Ocupación de Rampas 1-12
+  readonly ramps = this.svc.ramps;
+  rampOccupancyStatus = this.svc.rampOccupancyStatus;
+  totalBusyRampsCount = this.svc.totalBusyRampsCount;
+  totalFreeRampsCount = this.svc.totalFreeRampsCount;
+
+  // Modal Plano de Andenes Interactivo
+  showDockMapModal = signal(false);
+  selectedRampNumber = signal<number>(1);
+  observations = signal<string>('');
+
+  // Estados de carga / acción en ciclo operativo
+  isAssigningRamp = signal(false);
+  isStartingLoading = signal(false);
+  isFinishingLoading = signal(false);
+  isCompletingOutbound = signal(false);
+  tempFinishSealNumber = signal('');
+  showAuditTimeline = signal(false);
+
+  toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
+
+  // Modal de Modificación de Ficha Operativa (Caseta / Transporte)
+  showEditCasetaModal = signal(false);
+  editCarrierCode = signal('');
+  editDriverName = signal('');
+  editTractorPlates = signal('');
+  editBoxPlates = signal('');
+  editSealNumber = signal('');
+  editEconomicNumber = signal('');
+  editBoxEconomicNumber = signal('');
+  editDestinationId = signal('');
+  isUpdatingCaseta = signal(false);
+
+  openEditCasetaModal(): void {
+    const ob = this.selectedOutbound();
+    if (!ob) return;
+    this.editCarrierCode.set(ob.carrierCode || '');
+    this.editDriverName.set(ob.driverName || '');
+    this.editTractorPlates.set(ob.tractorPlates || '');
+    this.editBoxPlates.set(ob.boxPlates || '');
+    this.editSealNumber.set(ob.sealNumber || '');
+    this.editEconomicNumber.set(ob.economicNumber || '');
+    this.editBoxEconomicNumber.set(ob.boxEconomicNumber || '');
+    this.editDestinationId.set(ob.destinationId || '');
+    this.showEditCasetaModal.set(true);
+  }
+
+  saveCasetaModifications(): void {
+    const ob = this.selectedOutbound();
+    if (!ob) return;
+    const carrier = this.carriers().find((c) => c.code === this.editCarrierCode());
+    const dest = this.allDestinations().find((d) => d.id === this.editDestinationId());
+
+    this.isUpdatingCaseta.set(true);
+    const updated: WarehouseOutbound = {
+      ...ob,
+      carrierCode: this.editCarrierCode() || ob.carrierCode,
+      carrierName: carrier ? carrier.name : ob.carrierName,
+      driverName: this.editDriverName() || ob.driverName,
+      tractorPlates: this.editTractorPlates() || ob.tractorPlates,
+      boxPlates: this.editBoxPlates() || ob.boxPlates,
+      sealNumber: this.editSealNumber() || ob.sealNumber,
+      economicNumber: this.editEconomicNumber() || ob.economicNumber,
+      boxEconomicNumber: this.editBoxEconomicNumber() || ob.boxEconomicNumber,
+      destinationId: this.editDestinationId() || ob.destinationId,
+      destinationName: dest ? dest.name : ob.destinationName,
+    };
+
+    if (ob.id && ob.id.includes('-')) {
+      this.movementsApi.updateOutbound(ob.id, {
+        carrierId: updated.carrierCode,
+        carrierName: updated.carrierName,
+        driverName: updated.driverName,
+        tractorPlates: updated.tractorPlates,
+        boxPlates: updated.boxPlates,
+        sealNumber: updated.sealNumber,
+        economicNumber: updated.economicNumber,
+        boxEconomicNumber: updated.boxEconomicNumber,
+        destinationId: updated.destinationId,
+        destinationName: updated.destinationName,
+      }).subscribe({
+        next: () => {
+          this.isUpdatingCaseta.set(false);
+          this.selectedOutbound.set(updated);
+          this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? updated : o)));
+          this.showEditCasetaModal.set(false);
+          this.toast.success('Ficha operativa actualizada exitosamente.');
+          this.loadAuditLogs(ob.id);
+        },
+        error: () => {
+          this.isUpdatingCaseta.set(false);
+          this.selectedOutbound.set(updated);
+          this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id || o.folio === ob.folio ? updated : o)));
+          this.showEditCasetaModal.set(false);
+          this.toast.success('Ficha operativa actualizada.');
+        },
+      });
+    } else {
+      this.isUpdatingCaseta.set(false);
+      this.selectedOutbound.set(updated);
+      this.svc.outboundsSignal.update((list) => list.map((o) => (o.folio === ob.folio ? updated : o)));
+      this.showEditCasetaModal.set(false);
+      this.toast.success('Ficha operativa actualizada localmente.');
+    }
+  }
+
+  // Índice de fase operativa activa en el Stepper (1 a 5)
+  lifecycleStepIndex = computed(() => {
+    const st = this.selectedOutbound()?.status;
+    switch (st) {
+      case 'REGISTERED': return 1;
+      case 'ASSIGNED': return 2;
+      case 'IN_PROGRESS': return 3;
+      case 'LOADED': return 4;
+      case 'COMPLETED': return 5;
+      case 'CANCELLED': return -1;
+      default: return 1;
+    }
+  });
+
   // Modal Cancelación con Autorización de Administrador
   showCancelModal = signal(false);
   cancelReason = signal('');
@@ -114,6 +248,205 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   toggleShowCancelPassword(): void {
     this.showCancelPassword.update((v) => !v);
+  }
+
+  // ── MODAL CAMBIO DE NO. REMISIÓN / CARTA PORTE ──────────────────────────────
+  showChangeRemisionModal = signal(false);
+  newRemisionInput = signal('');
+  changeRemisionReason = signal('');
+  changeRemisionAdminUser = signal('');
+  changeRemisionAdminPassword = signal('');
+  changeRemisionError = signal<string | null>(null);
+  showChangeRemisionPassword = signal(false);
+  isChangingRemision = signal(false);
+
+  openChangeRemisionModal(): void {
+    const ob = this.selectedOutbound();
+    this.newRemisionInput.set(ob?.remisionNo || '');
+    this.changeRemisionReason.set('');
+    this.changeRemisionAdminUser.set('');
+    this.changeRemisionAdminPassword.set('');
+    this.changeRemisionError.set(null);
+    this.showChangeRemisionPassword.set(false);
+    this.showChangeRemisionModal.set(true);
+  }
+
+  closeChangeRemisionModal(): void {
+    this.showChangeRemisionModal.set(false);
+  }
+
+  toggleShowChangeRemisionPassword(): void {
+    this.showChangeRemisionPassword.update((v) => !v);
+  }
+
+  confirmChangeRemision(): void {
+    this.changeRemisionError.set(null);
+    const newDoc = this.newRemisionInput().trim();
+    const reason = this.changeRemisionReason().trim();
+    const user = this.changeRemisionAdminUser().trim();
+    const pass = this.changeRemisionAdminPassword().trim();
+    const current = this.selectedOutbound();
+
+    if (!current) return;
+
+    if (!newDoc) {
+      this.changeRemisionError.set('El nuevo número de remisión / carta porte es obligatorio.');
+      return;
+    }
+
+    if (newDoc.toUpperCase() === (current.remisionNo || '').toUpperCase()) {
+      this.changeRemisionError.set('El nuevo número de documento debe ser diferente al actual.');
+      return;
+    }
+
+    if (!reason) {
+      this.changeRemisionError.set('La justificación o motivo del cambio es obligatoria.');
+      return;
+    }
+
+    if (!user || !pass) {
+      this.changeRemisionError.set('Ingresa usuario y contraseña de Supervisor o Administrador.');
+      return;
+    }
+
+    this.isChangingRemision.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    if (current.id && current.id.includes('-')) {
+      this.movementsApi
+        .changeOutboundRemision(current.id, {
+          newDocNumber: newDoc,
+          reason,
+          adminUsername: user,
+          adminPassword: pass,
+        })
+        .subscribe({
+          next: () => {
+            this.isChangingRemision.set(false);
+            this.showChangeRemisionModal.set(false);
+
+            const updated = this.svc.changeOutboundRemision(
+              current.folio,
+              newDoc,
+              reason,
+              adminLabel
+            );
+            if (updated) {
+              this.selectedOutbound.set(updated);
+            }
+            this.loadAuditLogs(current.id || current.folio);
+            this.toast.success(
+              `Remisión / Carta Porte actualizada a '${newDoc}' y auditada en el sistema.`
+            );
+          },
+          error: (err) => {
+            this.isChangingRemision.set(false);
+            const msg =
+              err?.error?.message ||
+              err?.message ||
+              'Error al modificar remisión en el servidor. Verifica credenciales.';
+            this.changeRemisionError.set(msg);
+          },
+        });
+    } else {
+      this.isChangingRemision.set(false);
+      this.showChangeRemisionModal.set(false);
+      const updated = this.svc.changeOutboundRemision(
+        current.folio,
+        newDoc,
+        reason,
+        adminLabel
+      );
+      if (updated) {
+        this.selectedOutbound.set(updated);
+      }
+      this.toast.success(
+        `Remisión / Carta Porte actualizada a '${newDoc}' localmente.`
+      );
+    }
+  }
+
+  // ── MODAL AUTORIZACIÓN DE DESPACHO (CIERRE FORMAL LOADED -> COMPLETED) ──────
+  showAuthorizeModal = signal(false);
+  authLeaderUser = signal('');
+  authLeaderPassword = signal('');
+  authLeaderError = signal<string | null>(null);
+  showAuthLeaderPassword = signal(false);
+  isAuthorizingDispatch = signal(false);
+
+  openAuthorizeModal(): void {
+    this.authLeaderUser.set('');
+    this.authLeaderPassword.set('');
+    this.authLeaderError.set(null);
+    this.showAuthLeaderPassword.set(false);
+    this.showAuthorizeModal.set(true);
+  }
+
+  closeAuthorizeModal(): void {
+    this.showAuthorizeModal.set(false);
+  }
+
+  toggleShowAuthLeaderPassword(): void {
+    this.showAuthLeaderPassword.update((v) => !v);
+  }
+
+  confirmAuthorizeDispatch(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const user = this.authLeaderUser().trim();
+    const pass = this.authLeaderPassword().trim();
+
+    if (!user || !pass) {
+      this.authLeaderError.set('Ingresa usuario y contraseña de Líder / Supervisor de Almacén.');
+      return;
+    }
+
+    this.isAuthorizingDispatch.set(true);
+    this.authLeaderError.set(null);
+
+    const adminUser = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Líder / Supervisor Autorizado)`;
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'COMPLETED',
+        observations: cur.observations || '',
+      }).subscribe({
+        next: () => {
+          this.isAuthorizingDispatch.set(false);
+          this.showAuthorizeModal.set(false);
+          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.lastCompletedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.showPrintPromptModal.set(true);
+            this.toast.success(`Salida #${updated.folio} autorizada y cerrada exitosamente.`);
+          }
+        },
+        error: (err) => {
+          this.isAuthorizingDispatch.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al autorizar salida en el servidor.';
+          this.authLeaderError.set(msg);
+        }
+      });
+    } else {
+      this.isAuthorizingDispatch.set(false);
+      this.showAuthorizeModal.set(false);
+      const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.lastCompletedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.showPrintPromptModal.set(true);
+        this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+      }
+    }
   }
 
   getInitials(name?: string): string {
@@ -133,6 +466,45 @@ export class OutboundSubmoduleComponent implements OnInit {
     if (s.includes('NOCTURNO') || s === 'THIRD' || s === '3') return 'Nocturno (22:00 - 06:00)';
     if (s.includes('MIXTO')) return 'Mixto';
     return shift;
+  }
+
+  onRampMatrixClick(ramp: RampOccupancyStatus): void {
+    if (ramp.status === 'OCCUPIED_OUTBOUND' && ramp.operationFolio) {
+      const match = this.svc.outbounds().find((o) => o.folio === ramp.operationFolio || o.id === ramp.operationFolio);
+      if (match) {
+        this.selectOutboundItem(match);
+      }
+      this.showDockMapModal.set(false);
+    } else if (ramp.status === 'AVAILABLE') {
+      this.selectedRampNumber.set(ramp.rampNumber);
+      this.toast.info(`Rampa ${ramp.rampNumber} seleccionada.`);
+      this.showDockMapModal.set(false);
+    }
+  }
+
+  getRampOccupancy(rampNumber: number): RampOccupancyStatus | undefined {
+    return this.rampOccupancyStatus().find((r) => r.rampNumber === rampNumber);
+  }
+
+  isRampBusy(rampNumber: number, allowedFolio?: string | number): boolean {
+    const occ = this.getRampOccupancy(rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') return false;
+    if (allowedFolio != null && String(occ.operationFolio) === String(allowedFolio)) return false;
+    return true;
+  }
+
+  getRampDisplayLabel(rm: RampItem, currentFolio?: string | number): string {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return `${rm.name} (Libre)`;
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return `${rm.name} (Asignada a este Folio)`;
+    }
+    if (occ.status === 'OCCUPIED_OUTBOUND') {
+      return `${rm.name} (Ocupada - Salida #${occ.operationFolio})`;
+    }
+    return `${rm.name} (Ocupada - Folio #${occ.operationFolio})`;
   }
 
   // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────
@@ -187,7 +559,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.carriers().find((c) => c.code === this.selectedCarrierCode()) || null
   );
 
-  // Validación Paso 1 (Estricta para todos los campos marcados como obligatorios)
+  // Validación Paso 1
   isStep1Valid = computed(() =>
     Boolean(
       this.selectedClientCode() &&
@@ -196,8 +568,7 @@ export class OutboundSubmoduleComponent implements OnInit {
       this.driverName()?.trim() &&
       this.selectedTransportType() &&
       this.tractorPlates()?.trim() &&
-      this.boxPlates()?.trim() &&
-      this.sealNumber()?.trim()
+      this.boxPlates()?.trim()
     )
   );
 
@@ -1069,11 +1440,207 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.isStep1Valid() && this.isStep2Valid()
   );
 
-  // ── KPI SIGNALS ────────────────────────────────────────────────────────────
-  readonly kpiTotalOutbounds = this.svc.kpiTotalOutbounds;
-  readonly kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
-  readonly kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
-  readonly kpiClients = this.svc.kpiDistinctClientsServed;
+
+
+  // Guardar Pre-Salida en Caseta (Fase 1: REGISTERED)
+  saveCasetaPreRegistration(): void {
+    if (!this.selectedClientCode() || !this.selectedDestinationId() || !this.selectedCarrierCode() || !this.driverName()?.trim() || !this.tractorPlates()?.trim() || !this.boxPlates()?.trim()) {
+      this.toast.warning('Por favor completa los datos del transporte y chofer.');
+      return;
+    }
+
+    const carrier = this.selectedCarrier();
+    const client = this.selectedClient();
+    const dest = this.selectedDestination();
+    const session = this.movementsApi.getSessionOrg();
+    const folio = `SAL-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    const remisionNo = `REM-${folio}`;
+
+    const clientId = (client && client.code && client.code.includes('-')) 
+      ? client.code 
+      : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938';
+
+    const destinationId = (dest && dest.id && dest.id.includes('-')) ? dest.id : null;
+    const carrierId = (carrier && carrier.code && carrier.code.includes('-')) ? carrier.code : null;
+
+    const payload: any = {
+      organizationId: session.organizationId,
+      branchId: session.branchId,
+      clientId: clientId,
+      destinationId: destinationId,
+      destinationName: dest ? dest.name : '',
+      destinationAddress: dest ? (dest.address ? `${dest.address}, ${dest.city || ''} ${dest.state || ''}`.trim() : '') : '',
+      carrierId: carrierId,
+      carrierName: carrier ? carrier.name : '',
+      transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
+      driverName: this.driverName(),
+      economicNumber: this.economicNumber() || '',
+      boxEconomicNumber: this.boxEconomicNumber() || '',
+      tractorPlates: this.tractorPlates(),
+      boxPlates: this.boxPlates(),
+      sealNumber: this.sealNumber() || '',
+      remisionNo: remisionNo,
+      status: 'REGISTERED',
+      rampNumber: this.selectedRampNumber(),
+      observations: this.observations() || '',
+      selectedItemIds: [],
+    };
+
+    this.isExecuting.set(true);
+    this.movementsApi.createOutbound(payload).subscribe({
+      next: (res: any) => {
+        this.isExecuting.set(false);
+        const result: WarehouseOutbound = {
+          id: res.id,
+          folio: res.folio || folio,
+          status: 'REGISTERED',
+          clientCode: res.clientId || this.selectedClientCode(),
+          clientName: res.clientName || client?.name || '',
+          destinationId: res.destinationId || this.selectedDestinationId(),
+          destinationName: res.destinationName || dest?.name || '',
+          destinationAddress: res.destinationAddress || (dest ? `${dest.address}, ${dest.city}, ${dest.state}` : ''),
+          carrierCode: res.carrierId || this.selectedCarrierCode(),
+          carrierName: res.carrierName || carrier?.name || '',
+          rampNumber: this.selectedRampNumber(),
+          rampCode: `RAMPA-${this.selectedRampNumber()}`,
+          driverName: this.driverName(),
+          economicNumber: this.economicNumber() || '',
+          boxEconomicNumber: this.boxEconomicNumber() || '',
+          tractorPlates: this.tractorPlates(),
+          boxPlates: this.boxPlates(),
+          transportType: (res.transportType || this.selectedTransportType()) as TransportType,
+          sealNumber: this.sealNumber() || '',
+          remisionNo: res.remisionNo || remisionNo,
+          observations: this.observations() || '',
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: this.authState.userFullName() || 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.selectedOutbound.set(result);
+        this.formMode.set('detail');
+        this.loadAuditLogs(result.id || result.folio);
+        this.toast.success(`Pre-registro de salida #${result.folio} registrado exitosamente.`);
+      },
+      error: () => {
+        this.isExecuting.set(false);
+        // Local fallback
+        const result: WarehouseOutbound = {
+          id: 'out-' + Date.now(),
+          folio,
+          status: 'REGISTERED',
+          clientCode: this.selectedClientCode(),
+          clientName: client?.name || 'Cliente',
+          destinationId: this.selectedDestinationId(),
+          destinationName: dest?.name || 'Destino',
+          destinationAddress: dest ? `${dest.address}, ${dest.city}, ${dest.state}` : '',
+          carrierCode: this.selectedCarrierCode(),
+          carrierName: carrier?.name || 'Transportista',
+          rampNumber: this.selectedRampNumber(),
+          rampCode: `RAMPA-${this.selectedRampNumber()}`,
+          driverName: this.driverName(),
+          economicNumber: this.economicNumber(),
+          boxEconomicNumber: this.boxEconomicNumber(),
+          tractorPlates: this.tractorPlates(),
+          boxPlates: this.boxPlates(),
+          transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
+          sealNumber: this.sealNumber() || '',
+          remisionNo: remisionNo,
+          observations: this.observations(),
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: this.authState.userFullName() || 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+        this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.selectedOutbound.set(result);
+        this.formMode.set('detail');
+        this.loadAuditLogs(result.folio);
+        this.toast.success(`Pre-registro de salida #${result.folio} registrado.`);
+      }
+    });
+  }
+
+  // Transición 1 -> 2: Asignar Rampa y Montacarguista (REGISTERED -> ASSIGNED)
+  assignRampAndOperatorAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+    const operator = this.selectedOperator();
+    const opName = operator?.name || this.operatorSearchQuery() || 'Montacarguista';
+    const opId = operator?.id || '';
+    const rampNum = this.selectedRampNumber() || cur.rampNumber || 1;
+    const user = this.authState.userFullName() || 'Administrador WMS';
+
+    const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+    }
+  }
+
+  // Transición 2 -> 3: Iniciar Carga (ASSIGNED -> IN_PROGRESS)
+  startOutboundLoadingAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+    const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
+
+    const updated = this.svc.startOutboundLoading(cur.id || cur.folio, opName);
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.toast.success(`Carga iniciada en andén para salida #${updated.folio}.`);
+    }
+  }
+
+  // Transición 3 -> 4: Finalizar Carga Física (IN_PROGRESS -> LOADED)
+  finishOutboundLoadingAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+    const seals = this.sealNumber() || cur.sealNumber;
+    if (!seals || !seals.trim()) {
+      this.toast.warning('Debes capturar el número de sello o precinto colocado en las puertas de la caja.');
+      return;
+    }
+
+    const items = this.selectedPalletItems().length > 0 ? this.selectedPalletItems() : cur.items;
+    if (!items || items.length === 0) {
+      this.toast.warning('Debes escanear o seleccionar al menos 1 tarima cargada.');
+      return;
+    }
+
+    const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
+    const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.toast.success(`Carga física finalizada y sellos registrados para #${updated.folio}. Listo para auditoría.`);
+    }
+  }
+
+  // Transición 4 -> 5: Cierre Administrativo y Despacho Formal F03 (LOADED -> COMPLETED)
+  completeOutboundAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+    const adminUser = this.authState.userFullName() || 'Supervisor / Administrador';
+
+    const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser);
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.lastCompletedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.showPrintPromptModal.set(true);
+      this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+    }
+  }
 
   // ── DIRECTORIO (LISTA IZQUIERDA) ──────────────────────────────────────────
   filteredOutbounds = computed(() => {

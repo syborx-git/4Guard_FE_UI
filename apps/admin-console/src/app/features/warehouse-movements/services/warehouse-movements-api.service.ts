@@ -31,6 +31,7 @@ export class WarehouseMovementsApiService {
   private readonly receptionsUrl = `${this.baseUrl}/api/v1/warehouse-receptions`;
   private readonly transfersUrl = `${this.baseUrl}/api/v1/warehouse-transfers`;
   private readonly outboundsUrl = `${this.baseUrl}/api/v1/warehouse-outbounds`;
+  private readonly securityGateUrl = `${this.baseUrl}/api/v1/security-gate`;
 
   // Signals globales de estado de red
   readonly loading = signal<boolean>(false);
@@ -58,6 +59,75 @@ export class WarehouseMovementsApiService {
 
   getSessionOrgId(): string {
     return this.getSessionOrg().organizationId;
+  }
+
+  // ─── 0. CASETA DE SEGURIDAD Y PASES DIGITALES QR ────────────────────────────
+
+  generatePass(body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/generate`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  getActivePasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
+    const orgId = options?.organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('organizationId', orgId);
+    if (options?.branchId) params = params.set('branchId', options.branchId);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/active`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  getInYardPasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
+    const orgId = options?.organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('organizationId', orgId);
+    if (options?.branchId) params = params.set('branchId', options.branchId);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  getPassHistory(options?: { organizationId?: string; branchId?: string; search?: string }): Observable<any[]> {
+    const orgId = options?.organizationId || this.getSessionOrgId();
+    let params = new HttpParams().set('organizationId', orgId);
+    if (options?.branchId) params = params.set('branchId', options.branchId);
+    if (options?.search) params = params.set('search', options.search);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  completePassCheckin(token: string, body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/complete`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  checkOutPass(token: string, body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/check-out`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  deletePass(passId: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${passId}`).pipe(
+      map(() => void 0)
+    );
+  }
+
+  getPublicPass(token: string): Observable<any> {
+    return this.http.get<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}`).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  submitPublicDriverCheckin(token: string, body: any): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}/submit`, body).pipe(
+      map((res) => res.data)
+    );
   }
 
   // ─── 1. RECEPCIONES DE ALMACÉN (F01) ────────────────────────────────────────
@@ -90,6 +160,18 @@ export class WarehouseMovementsApiService {
     return this.http.get<ApiResponse<any[]>>(this.receptionsUrl, { params }).pipe(
       map((res) => res.data || [])
     );
+  }
+
+  getNextPalletNumber(organizationId?: string, branchId?: string): Observable<{ nextPalletNumber: number; lastPalletNumber: number }> {
+    const orgId = organizationId || this.getSessionOrgId();
+    const { branchId: bId } = this.getSessionOrg();
+    const branch = branchId || bId;
+    let params = new HttpParams().set('organizationId', orgId);
+    if (branch) params = params.set('branchId', branch);
+    return this.http.get<ApiResponse<{ nextPalletNumber: number; lastPalletNumber: number }>>(
+      `${this.receptionsUrl}/next-pallet-number`,
+      { params }
+    ).pipe(map((res) => res.data));
   }
 
   addReceptionPallets(receptionId: string, pallets: any[]): Observable<any[]> {
@@ -186,6 +268,12 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  updateOutbound(id: string, body: any): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.outboundsUrl}/${id}`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
   getOutbounds(options?: { organizationId?: string; branchId?: string; status?: string; search?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
@@ -200,6 +288,12 @@ export class WarehouseMovementsApiService {
 
   cancelOutbound(id: string, body: { adminUsername: string; adminPassword: string; reason: string }): Observable<any> {
     return this.http.post<ApiResponse<any>>(`${this.outboundsUrl}/${id}/cancel`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  changeOutboundRemision(id: string, body: { newDocNumber: string; reason: string; adminUsername: string; adminPassword: string }): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.outboundsUrl}/${id}/change-remision`, body).pipe(
       map((res) => res.data)
     );
   }
@@ -295,4 +389,31 @@ export class WarehouseMovementsApiService {
       })
     );
   }
+
+  getPublicCatalogs(orgId?: string): Observable<{
+    clients: Array<{ id: string; code: string; name: string; tradeName?: string }>;
+    carriers: Array<{ id: string; code: string; name: string; tradeName?: string }>;
+    carrierLines: Array<{ id: string; code: string; name: string; tradeName?: string }>;
+    transportTypes: string[];
+    boxDimensions: string[];
+  }> {
+    let url = `${this.securityGateUrl}/public/catalogs`;
+    if (orgId) {
+      url += `?organizationId=${orgId}`;
+    }
+    return this.http.get<ApiResponse<any>>(url).pipe(
+      map((res) => {
+        const raw = res?.data || {};
+        const carriersList = raw.carriers || raw.carrierLines || [];
+        return {
+          clients: raw.clients || [],
+          carriers: carriersList,
+          carrierLines: carriersList,
+          transportTypes: raw.transportTypes || [],
+          boxDimensions: raw.boxDimensions || [],
+        };
+      })
+    );
+  }
 }
+

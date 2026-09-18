@@ -1,0 +1,483 @@
+<div class="driver-portal">
+  <!-- Top Mobile Brand Header -->
+  <header class="driver-portal__header">
+    <div class="header-content">
+      <div class="brand-badge">
+        <span class="brand-logo">🛡️ 4GUARD</span>
+        <span class="brand-tag">WMS SECURITY</span>
+      </div>
+      <div class="pass-chip">
+        <span class="token-label">Pase:</span>
+        <span class="token-value">{{ token() }}</span>
+      </div>
+    </div>
+    <div class="document-info">
+      <span class="doc-code">FORMATO F01-PO-CP-7.1.3-03</span>
+      <span class="doc-title">Check List de Acceso a Planta</span>
+    </div>
+  </header>
+
+  <!-- Step Progress Bar -->
+  @if (!submitSuccess()) {
+    <div class="step-wizard">
+      <div class="step-item" [class.step-item--active]="currentStep() === 1" [class.step-item--completed]="currentStep() > 1" (click)="setStep(1)">
+        <span class="step-number">1</span>
+        <span class="step-label">Operación</span>
+      </div>
+      <div class="step-connector" [class.step-connector--active]="currentStep() > 1"></div>
+      <div class="step-item" [class.step-item--active]="currentStep() === 2" [class.step-item--completed]="currentStep() > 2" (click)="setStep(2)">
+        <span class="step-number">2</span>
+        <span class="step-label">Transporte</span>
+      </div>
+      <div class="step-connector" [class.step-connector--active]="currentStep() > 2"></div>
+      <div class="step-item" [class.step-item--active]="currentStep() === 3" [class.step-item--completed]="currentStep() > 3" (click)="setStep(3)">
+        <span class="step-number">3</span>
+        <span class="step-label">Inspección</span>
+      </div>
+      <div class="step-connector" [class.step-connector--active]="currentStep() > 3"></div>
+      <div class="step-item" [class.step-item--active]="currentStep() === 4" [class.step-item--completed]="currentStep() > 4" (click)="setStep(4)">
+        <span class="step-number">4</span>
+        <span class="step-label">Firma</span>
+      </div>
+    </div>
+  }
+
+  <!-- Main Content Container -->
+  <main class="driver-portal__main">
+    @if (submitSuccess()) {
+      <!-- SUCCESS SCREEN -->
+      <div class="success-card animate-fade-in">
+        <div class="success-icon-wrap">
+          <span class="success-check">✓</span>
+        </div>
+        <h2 class="success-title">¡Registro Enviado a Caseta!</h2>
+        <p class="success-subtitle">
+          Sus datos han sido transmitidos exitosamente a la Caseta de Vigilancia Principal.
+        </p>
+
+        <div class="success-info-box">
+          <div class="info-row">
+            <span class="label">Operación:</span>
+            <span class="value font-bold">{{ checkInForm.get('operacion')?.value }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Chofer:</span>
+            <span class="value">{{ checkInForm.get('nombreOperador')?.value }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Tracto / Caja:</span>
+            <span class="value">{{ checkInForm.get('placasTracto')?.value }} / {{ checkInForm.get('placasCaja')?.value }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Pase ID:</span>
+            <span class="value font-mono">{{ token() }}</span>
+          </div>
+        </div>
+
+        <div class="success-instruction">
+          <span class="alert-icon">⚠️</span>
+          <span>Por favor <strong>permanezca en su unidad</strong> en el carril de acceso. El guardia verificará sus datos físicos y le asignará su rampa.</span>
+        </div>
+      </div>
+    } @else {
+      <!-- FORM WIZARD -->
+      <form [formGroup]="checkInForm" (ngSubmit)="submitDriverForm()" class="checkin-form">
+
+        @if (submitError()) {
+          <div class="validation-alert-banner animate-fade-in" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.12); color: #fca5a5;">
+            <div class="validation-alert-header" style="color: #f87171;">
+              <span class="alert-icon">❌</span>
+              <strong>Error al Enviar Registro:</strong>
+            </div>
+            <p style="font-size: 0.82rem; margin-top: 0.25rem; color: #fecaca;">{{ submitError() }}</p>
+          </div>
+        }
+
+        @if (validationErrorsList().length > 0) {
+          <div class="validation-alert-banner animate-fade-in">
+            <div class="validation-alert-header">
+              <span class="alert-icon">⚠️</span>
+              <strong>Complete los datos obligatorios para continuar:</strong>
+            </div>
+            <ul class="validation-alert-list">
+              @for (err of validationErrorsList(); track err) {
+                <li>• {{ err }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <!-- STEP 1: OPERACIÓN Y DOCUMENTACIÓN -->
+        @if (currentStep() === 1) {
+          <div class="step-card animate-fade-in">
+            <h3 class="step-title">1. Tipo de Operación y Documento</h3>
+            <p class="step-desc">Indique el motivo de su visita e ingrese el folio de su documento de traslado.</p>
+
+            <!-- Bimodal Selector -->
+            <div class="op-selector">
+              <button 
+                type="button" 
+                class="op-btn" 
+                [class.op-btn--active]="checkInForm.get('operacion')?.value === 'DESCARGA'"
+                (click)="onOperationChange('DESCARGA')">
+                <span class="op-icon">📥</span>
+                <div class="op-meta">
+                  <span class="op-name">DESCARGA</span>
+                  <span class="op-sub">Recepción / Entrega</span>
+                </div>
+              </button>
+
+              <button 
+                type="button" 
+                class="op-btn" 
+                [class.op-btn--active]="checkInForm.get('operacion')?.value === 'CARGA'"
+                (click)="onOperationChange('CARGA')">
+                <span class="op-icon">📤</span>
+                <div class="op-meta">
+                  <span class="op-name">CARGA</span>
+                  <span class="op-sub">Embarque / Recolección</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="form-group mt-4">
+              <label class="form-label" for="clientSelect">Empresa / Cliente Destinatario *</label>
+              @if (!isCustomClient()) {
+                <select 
+                  id="clientSelect" 
+                  class="form-input" 
+                  (change)="onClientSelectChange($event)">
+                  <option value="" disabled [selected]="!checkInForm.get('clientName')?.value">-- Seleccione Empresa / Cliente --</option>
+                  @for (cli of clientsList(); track cli.code) {
+                    <option [value]="cli.code" [selected]="checkInForm.get('clientCode')?.value === cli.code || checkInForm.get('clientName')?.value === cli.name">
+                      {{ cli.name }}
+                    </option>
+                  }
+                  <option value="__OTHER__">➕ Otro / Escribir manualmente...</option>
+                </select>
+              } @else {
+                <div class="custom-input-card">
+                  <div class="flex items-center justify-between mb-1.5" style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                    <span style="font-size:0.75rem; font-weight:700; color:#f59e0b;">Captura manual de Cliente:</span>
+                    <button type="button" class="btn-text-action" (click)="toggleCustomClient(false)">
+                      ← Seleccionar de la lista
+                    </button>
+                  </div>
+                  <input 
+                    id="clientName" 
+                    type="text" 
+                    formControlName="clientName" 
+                    class="form-input" 
+                    placeholder="Ej. MARCAS NESTLE S.A. DE C.V." />
+                </div>
+              }
+            </div>
+
+            @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+              <div class="form-group">
+                <label class="form-label" for="remision">Número de Remisión / Factura *</label>
+                <input 
+                  id="remision" 
+                  type="text" 
+                  formControlName="remision" 
+                  class="form-input" 
+                  placeholder="Ej. REM-88492 o FACT-1029" />
+              </div>
+            } @else {
+              <div class="form-group">
+                <label class="form-label" for="noCartaPorte">Número de Carta Porte *</label>
+                <input 
+                  id="noCartaPorte" 
+                  type="text" 
+                  formControlName="noCartaPorte" 
+                  class="form-input" 
+                  placeholder="Ej. CP-77492-MX" />
+              </div>
+            }
+
+            <div class="wizard-actions">
+              <button type="button" class="btn btn--primary btn--block" (click)="nextStep()">
+                Continuar a Datos del Transporte →
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- STEP 2: CHOFER Y UNIDAD -->
+        @if (currentStep() === 2) {
+          <div class="step-card animate-fade-in">
+            <h3 class="step-title">2. Datos del Chofer y Unidad</h3>
+            <p class="step-desc">Capture la información del vehículo y la línea transportista.</p>
+
+            <div class="form-group">
+              <label class="form-label" for="carrierSelect">Línea Transportista / Fletera *</label>
+              @if (!isCustomCarrier()) {
+                <select 
+                  id="carrierSelect" 
+                  class="form-input" 
+                  (change)="onCarrierSelectChange($event)">
+                  <option value="" disabled [selected]="!checkInForm.get('carrierLine')?.value">-- Seleccione Línea Transportista --</option>
+                  @for (c of carrierLinesList(); track c.code) {
+                    <option [value]="c.code" [selected]="checkInForm.get('carrierLineCode')?.value === c.code || checkInForm.get('carrierLine')?.value === (c.tradeName || c.name)">
+                      {{ c.tradeName || c.name }}
+                    </option>
+                  }
+                  <option value="__OTHER__">➕ Otra Línea / Escribir manualmente...</option>
+                </select>
+              } @else {
+                <div class="custom-input-card">
+                  <div class="flex items-center justify-between mb-1.5" style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                    <span style="font-size:0.75rem; font-weight:700; color:#f59e0b;">Captura manual de Transportista:</span>
+                    <button type="button" class="btn-text-action" (click)="toggleCustomCarrier(false)">
+                      ← Seleccionar de la lista
+                    </button>
+                  </div>
+                  <input 
+                    id="carrierLine" 
+                    type="text" 
+                    formControlName="carrierLine" 
+                    class="form-input" 
+                    placeholder="Ej. TRANSPORTES GOLA S.A. DE C.V." />
+                </div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="nombreOperador">Nombre Completo del Operador / Chofer *</label>
+              <input 
+                id="nombreOperador" 
+                type="text" 
+                formControlName="nombreOperador" 
+                class="form-input" 
+                placeholder="Nombre y Apellidos" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label class="form-label" for="tipoTransporteSelect">Tipo de Transporte *</label>
+                <select id="tipoTransporteSelect" class="form-input" (change)="onTransportTypeSelectChange($event)">
+                  <option value="" disabled [selected]="!checkInForm.get('tipoTransporte')?.value">-- Seleccione Tipo de Transporte --</option>
+                  @for (t of transportTypesList(); track t) {
+                    <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
+                  }
+                  <option value="Otro (Especificar)">➕ Otro (Especificar)</option>
+                </select>
+                @if (isCustomTransport()) {
+                  <input
+                    type="text"
+                    [ngModel]="customTransportInput()"
+                    (ngModelChange)="onCustomTransportChange($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique tipo de transporte"
+                    class="form-input mt-2 animate-fade-in"
+                  />
+                }
+              </div>
+
+              <div class="form-group flex-1">
+                <label class="form-label" for="medidasCajaSelect">Medidas Caja *</label>
+                <select id="medidasCajaSelect" class="form-input" (change)="onBoxDimensionSelectChange($event)">
+                  <option value="" disabled [selected]="!checkInForm.get('medidasCaja')?.value">-- Seleccione Medidas de Caja --</option>
+                  @for (d of boxDimensionsList(); track d) {
+                    <option [value]="d" [selected]="checkInForm.get('medidasCaja')?.value === d">{{ d }}</option>
+                  }
+                  <option value="Otra Medida">➕ Otra Medida</option>
+                </select>
+                @if (isCustomDimension()) {
+                  <input
+                    type="text"
+                    [ngModel]="customDimensionInput()"
+                    (ngModelChange)="onCustomDimensionChange($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique medidas (ej. 30 Pies)"
+                    class="form-input mt-2 animate-fade-in"
+                  />
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label class="form-label" for="placasTracto">Placas Tracto *</label>
+                <input 
+                  id="placasTracto" 
+                  type="text" 
+                  formControlName="placasTracto" 
+                  class="form-input uppercase" 
+                  placeholder="88-AB-4G" />
+              </div>
+
+              <div class="form-group flex-1">
+                <label class="form-label" for="noEcoTractor">No. Económico</label>
+                <input 
+                  id="noEcoTractor" 
+                  type="text" 
+                  formControlName="noEcoTractor" 
+                  class="form-input" 
+                  placeholder="ECO-7742" />
+              </div>
+
+              <div class="form-group flex-1">
+                <label class="form-label" for="placasCaja">Placas Caja *</label>
+                <input 
+                  id="placasCaja" 
+                  type="text" 
+                  formControlName="placasCaja" 
+                  class="form-input uppercase" 
+                  placeholder="99-XX-4G" />
+              </div>
+            </div>
+
+            <!-- Sellos / Cinchos de Seguridad -->
+            <div class="seals-section">
+              <label class="form-label">Sellos de Seguridad (Cinchos)</label>
+              <div class="seal-input-row">
+                <input 
+                  type="text" 
+                  [ngModel]="tempSealInput()" 
+                  (ngModelChange)="tempSealInput.set($event)"
+                  [ngModelOptions]="{standalone: true}"
+                  placeholder="Ej. SEAL-4G-9001" 
+                  class="form-input uppercase flex-1" 
+                  (keydown.enter)="$event.preventDefault(); addSeal()" />
+                <button type="button" class="btn btn--secondary" (click)="addSeal()">+ Agregar</button>
+              </div>
+
+              <div class="seal-chips">
+                @for (seal of sealList(); track seal; let i = $index) {
+                  <span class="seal-chip">
+                    🔒 {{ seal }}
+                    <button type="button" class="seal-remove" (click)="removeSeal(i)">×</button>
+                  </span>
+                }
+                @if (sealList().length === 0) {
+                  <span class="seal-empty-note">Ingrese al menos un sello si su unidad cuenta con marchamo.</span>
+                }
+              </div>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" class="btn btn--outline" (click)="prevStep()">← Atrás</button>
+              <button type="button" class="btn btn--primary flex-1" (click)="nextStep()">Continuar a Inspección →</button>
+            </div>
+          </div>
+        }
+
+        <!-- STEP 3: INSPECCIÓN FÍSICA Y EPP -->
+        @if (currentStep() === 3) {
+          <div class="step-card animate-fade-in">
+            <h3 class="step-title">3. Verificación de EPP e Inspección</h3>
+            <p class="step-desc">Confirme que cuenta con su equipo de protección y el estado de la unidad.</p>
+
+            <div class="checklist-group">
+              <h4 class="checklist-header">Equipo de Protección Personal (EPP)</h4>
+
+              <div class="check-item">
+                <span class="check-text">🥾 Calzado de seguridad con casquillo</span>
+                <div class="toggle-switch">
+                  <button type="button" [class.active]="checkInForm.get('eppZapatos')?.value === 'SI'" (click)="checkInForm.patchValue({eppZapatos: 'SI'})">SÍ</button>
+                  <button type="button" [class.active]="checkInForm.get('eppZapatos')?.value === 'NO'" (click)="checkInForm.patchValue({eppZapatos: 'NO'})">NO</button>
+                </div>
+              </div>
+
+              <div class="check-item">
+                <span class="check-text">🦺 Chaleco de seguridad reflejante</span>
+                <div class="toggle-switch">
+                  <button type="button" [class.active]="checkInForm.get('eppChaleco')?.value === 'SI'" (click)="checkInForm.patchValue({eppChaleco: 'SI'})">SÍ</button>
+                  <button type="button" [class.active]="checkInForm.get('eppChaleco')?.value === 'NO'" (click)="checkInForm.patchValue({eppChaleco: 'NO'})">NO</button>
+                </div>
+              </div>
+
+              <div class="check-item">
+                <span class="check-text">🧢 Cofia o gorra de protección</span>
+                <div class="toggle-switch">
+                  <button type="button" [class.active]="checkInForm.get('eppCofia')?.value === 'SI'" (click)="checkInForm.patchValue({eppCofia: 'SI'})">SÍ</button>
+                  <button type="button" [class.active]="checkInForm.get('eppCofia')?.value === 'NO'" (click)="checkInForm.patchValue({eppCofia: 'NO'})">NO</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="checklist-group mt-4">
+              <h4 class="checklist-header">Condiciones de la Caja</h4>
+
+              <div class="check-item">
+                <span class="check-text">🧹 Interior limpio, seco y sin basura</span>
+                <div class="toggle-switch">
+                  <button type="button" [class.active]="checkInForm.get('revInteriorCaja')?.value === 'SI'" (click)="checkInForm.patchValue({revInteriorCaja: 'SI'})">SÍ</button>
+                  <button type="button" [class.active]="checkInForm.get('revInteriorCaja')?.value === 'NO'" (click)="checkInForm.patchValue({revInteriorCaja: 'NO'})">NO</button>
+                </div>
+              </div>
+
+              <div class="check-item">
+                <span class="check-text">🐜 Sin evidencias de humedad ni plagas</span>
+                <div class="toggle-switch">
+                  <button type="button" [class.active]="checkInForm.get('revIndiciosPlagas')?.value === 'NO'" (click)="checkInForm.patchValue({revIndiciosPlagas: 'NO'})">CUMPLE</button>
+                  <button type="button" [class.active]="checkInForm.get('revIndiciosPlagas')?.value === 'SI'" (click)="checkInForm.patchValue({revIndiciosPlagas: 'SI'})">NO</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label class="form-label" for="observaciones">Observaciones Adicionales</label>
+              <textarea 
+                id="observaciones" 
+                formControlName="observaciones" 
+                class="form-input form-textarea" 
+                placeholder="Observaciones de la carga o unidad (opcional)"></textarea>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" class="btn btn--outline" (click)="prevStep()">← Atrás</button>
+              <button type="button" class="btn btn--primary flex-1" (click)="nextStep()">Continuar a Firma Digital →</button>
+            </div>
+          </div>
+        }
+
+        <!-- STEP 4: FIRMA DIGITAL Y ENVÍO -->
+        @if (currentStep() === 4) {
+          <div class="step-card animate-fade-in">
+            <h3 class="step-title">4. Firma Digital del Transportista</h3>
+            <p class="step-desc">Firme en el recuadro con su dedo o lápiz táctil para validar su declaración de ingreso.</p>
+
+            <div class="signature-canvas-container">
+              <canvas 
+                #signatureCanvas 
+                class="signature-canvas"
+                (mousedown)="startDrawing($event)"
+                (mousemove)="draw($event)"
+                (mouseup)="stopDrawing()"
+                (mouseleave)="stopDrawing()"
+                (touchstart)="startDrawing($event)"
+                (touchmove)="draw($event)"
+                (touchend)="stopDrawing()"></canvas>
+              <div class="canvas-hint">Firme aquí con el dedo o stylus</div>
+              <button type="button" class="btn-clear-sig" (click)="clearSignature()">Limpiar Firma</button>
+            </div>
+
+            <div class="declaration-checkbox">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="declaracionVerdad" />
+                <span>Declaro bajo protesta de decir verdad que los datos ingresados y la condición del transporte corresponden a la realidad física de la unidad.</span>
+              </label>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" class="btn btn--outline" (click)="prevStep()">← Atrás</button>
+              <button 
+                type="submit" 
+                class="btn btn--success flex-1" 
+                [disabled]="isSubmitting() || checkInForm.invalid">
+                @if (isSubmitting()) {
+                  <span>Transmitiendo datos...</span>
+                } @else {
+                  <span>✓ Enviar Registro a Caseta</span>
+                }
+              </button>
+            </div>
+          </div>
+        }
+
+      </form>
+    }
+  </main>
+</div>

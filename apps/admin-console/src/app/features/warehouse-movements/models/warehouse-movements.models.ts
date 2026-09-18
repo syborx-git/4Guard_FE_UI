@@ -86,13 +86,17 @@ export interface CheckInCasetaData {
   rampCode?: string;        // Código Rampa
   rampNumber: number;       // Rampa No. (1-12)
   forkliftOperatorCode?: string; // ID Montacarguista
-  forkliftOperator: string; // Montacarguista Nombre
+  forkliftOperator?: string; // Montacarguista Nombre (asignado en recepción)
   driverName: string;       // Operador (Chofer)
   tractorPlates: string;    // Placas Tracto
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
   economicNumber?: string;  // Número económico del vehículo
+  transportType?: string;   // Tipo de transporte
+  medidasCaja?: string;     // Medidas de la caja
+  noCartaPorte?: string;    // Carta Porte
+  observations?: string;    // Observaciones / Resumen Check List
   securityApproved?: boolean; // Visto bueno de seguridad patrimonial
   securityApprovedAt?: string;
   securityApprovedBy?: string;
@@ -138,12 +142,21 @@ export interface ReceptionPalletItem {
   locationCode?: string;    // Ubicación física de la tarima
   lotNumber?: string;       // Lote
   expirationDate?: string;  // Fecha de caducidad
+  docNumber?: string;       // No. Remisión / Documento
 }
+
+export type ReceptionStatus =
+  | 'REGISTERED'
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'DISCHARGED'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface ReceptionHeader {
   id?: string;               // UUID del backend
   folio: string;             // ej. 26506 / REC-2026-000001
-  status: 'REGISTERED' | 'COMPLETED' | 'CANCELLED';
+  status: ReceptionStatus;
   checkIn: CheckInCasetaData;
   lotNumber: string;
   elaborationDate: string;
@@ -265,7 +278,7 @@ export interface OutboundDispatch {
 
 // ─── SALIDA DE ALMACÉN (OUTBOUND MVP1) ────────────────────────────────────────
 
-export type OutboundStatus = 'DRAFT' | 'IN_PROGRESS' | 'REGISTERED' | 'COMPLETED' | 'CANCELLED';
+export type OutboundStatus = 'DRAFT' | 'REGISTERED' | 'ASSIGNED' | 'IN_PROGRESS' | 'LOADED' | 'COMPLETED' | 'CANCELLED';
 export type TransportType = 'CAMION' | 'TORTON' | 'TRAILER';
 
 export interface OutboundItem {
@@ -300,6 +313,9 @@ export interface WarehouseOutbound {
   // Transportista / Vehículo (Snapshot)
   carrierCode: string;
   carrierName: string;
+  rampId?: string;
+  rampNumber?: number;
+  rampCode?: string;
   forkliftOperator?: string;
   forkliftOperatorId?: string;
   driverName: string;
@@ -309,17 +325,18 @@ export interface WarehouseOutbound {
   boxPlates: string;
   transportType: TransportType;
   sealNumber: string;
-  rampNumber?: number;
-  rampCode?: string;
 
   // Mercancía
   remisionNo: string;
+  observations?: string;
   items: OutboundItem[];
   totalPallets: number;
   totalPieces: number;
   distinctSkus: number;
 
   // Auditoría
+  completedAt?: string;
+  leaderAuthorizedBy?: string;
   dispatchedAt: string;
   dispatchedBy: string;
   timestamp?: string;         // HH:mm para tarjeta del directorio

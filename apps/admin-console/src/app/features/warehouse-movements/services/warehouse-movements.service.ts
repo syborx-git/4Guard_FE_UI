@@ -120,8 +120,12 @@ export class WarehouseMovementsService {
   // ── MATRIZ DE OCUPACIÓN Y BLOQUEO DE RAMPAS (1 - 12) ──
   readonly rampOccupancyStatus = computed<RampOccupancyStatus[]>(() => {
     const allRamps = this.rampsSignal();
-    const activeReceptions = this.receptionsSignal().filter((r) => r.status === 'REGISTERED');
-    const activeOutbounds = this.outboundsSignal().filter((o) => o.status === 'IN_PROGRESS' || o.status === 'REGISTERED');
+    const activeReceptions = this.receptionsSignal().filter(
+      (r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status === 'REGISTERED' && !!r.checkIn?.rampNumber)
+    );
+    const activeOutbounds = this.outboundsSignal().filter(
+      (o) => o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status === 'REGISTERED' && !!o.rampNumber)
+    );
 
     return allRamps.map((ramp) => {
       // 1. Verificar si está ocupada por Recepción Inbound en andén
@@ -132,12 +136,23 @@ export class WarehouseMovementsService {
       );
 
       if (recMatch) {
+        let statusLabel = 'En Descarga Inbound';
+        if (recMatch.status === 'ASSIGNED') {
+          statusLabel = 'Andén Asignado (Espera Descarga)';
+        } else if (recMatch.status === 'IN_PROGRESS') {
+          statusLabel = 'En Descarga Inbound';
+        } else if (recMatch.status === 'DISCHARGED') {
+          statusLabel = 'Descarga Concluida (Por Auditar)';
+        } else if (recMatch.status === 'REGISTERED') {
+          statusLabel = 'Pre-registro Caseta (Entrada)';
+        }
+
         return {
           rampNumber: ramp.rampNumber,
           code: ramp.code,
           name: ramp.name,
           status: 'OCCUPIED_INBOUND',
-          statusLabel: 'En Descarga Inbound',
+          statusLabel: statusLabel,
           operationType: 'INBOUND',
           operationFolio: recMatch.folio,
           docNumber: recMatch.checkIn?.docNumber,
@@ -150,16 +165,29 @@ export class WarehouseMovementsService {
 
       // 2. Verificar si está ocupada por Carga Outbound en andén
       const outMatch = activeOutbounds.find(
-        (o) => o.rampNumber === ramp.rampNumber || o.rampCode === ramp.code
+        (o) =>
+          (o.rampNumber && Number(o.rampNumber) === Number(ramp.rampNumber)) ||
+          (o.rampCode && (o.rampCode === ramp.code || o.rampCode === ramp.id))
       );
 
       if (outMatch) {
+        let statusLabel = 'En Carga Outbound';
+        if (outMatch.status === 'ASSIGNED') {
+          statusLabel = 'Andén Asignado (Espera Carga)';
+        } else if (outMatch.status === 'IN_PROGRESS') {
+          statusLabel = 'En Carga Outbound';
+        } else if (outMatch.status === 'LOADED') {
+          statusLabel = 'Carga Concluida (Por Auditar)';
+        } else if (outMatch.status === 'REGISTERED') {
+          statusLabel = 'Pre-registro Caseta (Salida)';
+        }
+
         return {
           rampNumber: ramp.rampNumber,
           code: ramp.code,
           name: ramp.name,
           status: 'OCCUPIED_OUTBOUND',
-          statusLabel: 'En Carga Outbound',
+          statusLabel: statusLabel,
           operationType: 'OUTBOUND',
           operationFolio: outMatch.folio,
           docNumber: outMatch.remisionNo,
@@ -338,7 +366,7 @@ export class WarehouseMovementsService {
           (outbounds || []).map((o: any) => ({
             id: o.id,
             folio: o.folio,
-            status: o.status,
+            status: o.status || 'REGISTERED',
             clientCode: o.clientId || '',
             clientName: o.clientName || '',
             destinationId: o.destinationId || '',
@@ -346,15 +374,20 @@ export class WarehouseMovementsService {
             destinationAddress: o.destinationAddress || '',
             carrierCode: o.carrierId || '',
             carrierName: o.carrierName || '',
-            forkliftOperator: o.forkliftOperatorName || '',
+            rampId: o.rampId || '',
+            rampNumber: o.rampNumber ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
+            rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
+            forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
             forkliftOperatorId: o.forkliftOperatorId || '',
             driverName: o.driverName || '',
             economicNumber: o.economicNumber || '',
+            boxEconomicNumber: o.boxEconomicNumber || '',
             tractorPlates: o.tractorPlates || '',
             boxPlates: o.boxPlates || '',
             transportType: o.transportType || 'TRAILER',
             sealNumber: o.sealNumber || '',
             remisionNo: o.remisionNo || '',
+            observations: o.observations || '',
             items: (o.items || []).map((it: any) => ({
               id: it.id || it.itemId,
               palletCode: it.palletCode,
@@ -370,6 +403,8 @@ export class WarehouseMovementsService {
             totalPallets: o.totalPallets || 0,
             totalPieces: o.totalPieces || 0,
             distinctSkus: o.distinctSkus || 0,
+            completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
+            leaderAuthorizedBy: o.leaderAuthorizedBy || '',
             dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
             dispatchedBy: o.createdBy || 'Admin',
             timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
@@ -488,12 +523,46 @@ export class WarehouseMovementsService {
   public reloadReceptions(): void {
     this.movementsApi.getReceptions().subscribe({
       next: (receptions: any) => {
-        this.receptionsSignal.set(
-          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
-        );
+        const mapped = (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r));
+        const unique: ReceptionHeader[] = [];
+        const seenDocs = new Set<string>();
+        const seenIds = new Set<string>();
+
+        // Priorizar y deduplicar registros para evitar duplicidad de folios en pantalla
+        for (const r of mapped) {
+          const idKey = (r.id || r.folio || '').trim();
+          const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
+          if (idKey && !seenIds.has(idKey) && (!docKey || !seenDocs.has(docKey))) {
+            seenIds.add(idKey);
+            if (docKey) seenDocs.add(docKey);
+            unique.push(r);
+          }
+        }
+        this.receptionsSignal.set(unique);
       },
       error: () => {},
     });
+  }
+
+  public removeReception(folioOrId: string): void {
+    const key = (folioOrId || '').trim();
+    this.receptionsSignal.update((list) =>
+      list.filter((r) => r.folio !== key && r.id !== key)
+    );
+  }
+
+  public deduplicateReceptions(): void {
+    const list = this.receptionsSignal();
+    const seen = new Set<string>();
+    const unique: ReceptionHeader[] = [];
+    for (const r of list) {
+      const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
+      if (!seen.has(docKey)) {
+        seen.add(docKey);
+        unique.push(r);
+      }
+    }
+    this.receptionsSignal.set(unique);
   }
 
   public reloadTransfers(): void {
@@ -516,6 +585,46 @@ export class WarehouseMovementsService {
             distinctSkus: t.distinctSkus || 0,
             transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
             transferredBy: t.createdBy || '',
+          }))
+        );
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadOutbounds(): void {
+    this.movementsApi.getOutbounds().subscribe({
+      next: (outbounds: any) => {
+        this.outboundsSignal.set(
+          (outbounds || []).map((o: any) => ({
+            id: o.id,
+            folio: o.folio,
+            status: o.status || 'REGISTERED',
+            clientCode: o.clientId || '',
+            clientName: o.clientName || '',
+            destinationId: o.destinationId || '',
+            destinationName: o.destinationName || '',
+            destinationAddress: o.destinationAddress || '',
+            carrierCode: o.carrierId || '',
+            carrierName: o.carrierName || '',
+            rampId: o.rampId || '',
+            rampNumber: o.rampNumber ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
+            rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
+            forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
+            forkliftOperatorId: o.forkliftOperatorId,
+            transportType: o.transportType || '',
+            driverName: o.driverName || '',
+            tractorPlates: o.tractorPlates || '',
+            boxPlates: o.boxPlates || '',
+            economicNumber: o.economicNumber || '',
+            boxEconomicNumber: o.boxEconomicNumber || '',
+            sealNumber: o.sealNumber || '',
+            remisionNo: o.remisionNo || '',
+            observations: o.observations || '',
+            outboundDate: o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-MX') : '',
+            outboundTime: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '',
+            authorizedBy: o.createdBy || '',
+            items: [],
           }))
         );
       },
@@ -805,12 +914,14 @@ export class WarehouseMovementsService {
     }
     const str = String(value).trim();
     const map: Record<string, string> = {
-      REGISTERED: 'En Proceso / Registrado en Caseta',
+      REGISTERED: 'Registrado en Caseta',
+      ASSIGNED: 'Andén Asignado / Notificado a Terminal',
+      IN_PROGRESS: 'En Descarga Inbound',
+      DISCHARGED: 'Descarga Finalizada (Por Auditar)',
       COMPLETED: 'Descarga Finalizada / En Stock',
       CANCELLED: 'Cancelado',
       DRAFT: 'Borrador Guardado',
       PENDING: 'Pendiente',
-      IN_PROGRESS: 'En Tránsito / En Curso',
       DISPATCHED: 'Despachado / Salida Confirmada',
       MADERA_ESTANDAR: 'Madera Estándar (40x48)',
       PLASTICO: 'Plástico Higiénico',
@@ -894,22 +1005,29 @@ export class WarehouseMovementsService {
     }
 
     const seals: string[] = [];
-    if (data.sealNumbers && Array.isArray(data.sealNumbers)) {
-      data.sealNumbers.forEach((s: string) => {
-        if (s && s.trim() && !seals.includes(s.trim().toUpperCase())) {
-          seals.push(s.trim().toUpperCase());
-        }
-      });
-    }
-    if (data.sealNumber && data.sealNumber.trim() && !seals.includes(data.sealNumber.trim().toUpperCase())) {
-      seals.push(data.sealNumber.trim().toUpperCase());
-    }
+    const rawSeals: string[] = (data.sealNumbers && data.sealNumbers.length > 0)
+      ? data.sealNumbers
+      : (data.sealNumber ? [data.sealNumber] : []);
+
+    rawSeals.forEach((s: string) => {
+      if (s && s.trim()) {
+        s.split(',').map((p) => p.trim().toUpperCase()).filter((p) => p.length > 0).forEach((item) => {
+          if (!seals.includes(item)) {
+            seals.push(item);
+          }
+        });
+      }
+    });
 
     const payload = {
       organizationId: orgId,
       branchId: branchId,
       clientId: clientId,
+      clientCode: data.clientCode,
+      clientName: data.client,
       carrierId: carrierId,
+      carrierLineCode: data.carrierLineCode,
+      carrierLine: data.carrierLine,
       forkliftOperatorId: forkliftOperatorId,
       rampId: rampId,
       rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
@@ -924,6 +1042,7 @@ export class WarehouseMovementsService {
       elaborationDate: data.elaborationDate || null,
       expirationDate: data.expirationDate || null,
       sealNumbers: seals,
+      observations: data.observations || '',
     };
 
     return this.movementsApi.createCheckIn(payload).pipe(
@@ -985,6 +1104,144 @@ export class WarehouseMovementsService {
         return header;
       })
     );
+  }
+
+  // Guarda la Pre-Salida (Carga / Embarque) en Backend con estatus REGISTERED
+  createOutboundCheckInBackend(data: CheckInCasetaData): Observable<WarehouseOutbound> {
+    const session = this.movementsApi.getSessionOrg();
+    const orgId = session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const branchId = session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+    const clientItem = this.clientsSignal().find((c) => c.code === data.clientCode || c.name === data.client);
+    const clientId = (clientItem && isUuid(clientItem.code)) 
+      ? clientItem.code 
+      : (isUuid(data.clientCode) ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
+
+    const carrierItem = this.carrierLinesSignal().find((c) => c.code === data.carrierLineCode || c.name === data.carrierLine);
+    const carrierId = (carrierItem && isUuid(carrierItem.code))
+      ? carrierItem.code
+      : (isUuid(data.carrierLineCode) ? data.carrierLineCode : null);
+
+    const rampItem = this.rampsSignal().find(
+      (r) =>
+        r.code === data.rampCode ||
+        r.rampNumber === Number(data.rampNumber) ||
+        r.name === `Rampa ${String(data.rampNumber).padStart(2, '0')}` ||
+        r.id === data.rampCode
+    );
+    const matchedRampLoc = (this.lastFetchedLocations || []).find((l: any) =>
+      (l.type === 'RAMP' || l.sectionCode === 'SEC-RAMP') && (
+        l.code === `LOC-RAMP-${String(data.rampNumber).padStart(2, '0')}` ||
+        l.code === data.rampCode ||
+        l.position === `R${String(data.rampNumber).padStart(2, '0')}` ||
+        l.name === `Rampa ${String(data.rampNumber).padStart(2, '0')}` ||
+        l.id === data.rampCode
+      )
+    );
+    const rampId = (rampItem && isUuid(rampItem.id))
+      ? rampItem.id
+      : (matchedRampLoc && isUuid(matchedRampLoc.id)
+          ? matchedRampLoc.id
+          : (isUuid(data.rampCode) ? data.rampCode : null));
+
+    const seals: string[] = [];
+    const rawSeals: string[] = (data.sealNumbers && data.sealNumbers.length > 0)
+      ? data.sealNumbers
+      : (data.sealNumber ? [data.sealNumber] : []);
+
+    rawSeals.forEach((s: string) => {
+      if (s && s.trim()) {
+        s.split(',').map((p) => p.trim().toUpperCase()).filter((p) => p.length > 0).forEach((item) => {
+          if (!seals.includes(item)) {
+            seals.push(item);
+          }
+        });
+      }
+    });
+
+    const payload = {
+      organizationId: orgId,
+      branchId: branchId,
+      clientId: clientId,
+      clientCode: data.clientCode,
+      clientName: data.client,
+      carrierId: carrierId,
+      carrierName: data.carrierLine,
+      carrierLineCode: data.carrierLineCode,
+      carrierLine: data.carrierLine,
+      rampId: rampId,
+      rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
+      rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
+      transportType: 'TRAILER',
+      driverName: data.driverName,
+      tractorPlates: data.tractorPlates,
+      boxPlates: data.boxPlates,
+      economicNumber: '',
+      boxEconomicNumber: '',
+      sealNumber: seals.join(', '),
+      remisionNo: data.docNumber,
+      observations: data.observations || '',
+      status: 'REGISTERED',
+      selectedItemIds: [],
+    };
+
+    return this.movementsApi.createOutbound(payload).pipe(
+      map((res: any) => {
+        const outbound: WarehouseOutbound = {
+          id: res.id,
+          folio: res.folio || data.docNumber,
+          status: 'REGISTERED',
+          clientCode: res.clientId || data.clientCode,
+          clientName: res.clientName || data.client,
+          destinationId: res.destinationId || '',
+          destinationName: res.destinationName || '',
+          destinationAddress: res.destinationAddress || '',
+          carrierCode: res.carrierId || data.carrierLineCode,
+          carrierName: res.carrierName || data.carrierLine,
+          rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
+          rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
+          driverName: data.driverName,
+          economicNumber: '',
+          boxEconomicNumber: '',
+          tractorPlates: data.tractorPlates,
+          boxPlates: data.boxPlates,
+          transportType: (res.transportType || 'TRAILER') as TransportType,
+          sealNumber: seals.join(', '),
+          remisionNo: res.remisionNo || data.docNumber,
+          observations: data.observations || '',
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: res.createdBy || 'Caseta de Seguridad',
+          timestamp: res.createdAt ? String(res.createdAt).substring(11, 16) : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        this.outboundsSignal.update((list) => {
+          const filtered = list.filter((o) => o.folio !== outbound.folio && o.id !== outbound.id);
+          return [outbound, ...filtered];
+        });
+
+        return outbound;
+      })
+    );
+  }
+
+  // Obtiene el número consecutivo máximo de tarimas registrado entre todas las recepciones cargadas
+  getGlobalMaxPalletNumber(): number {
+    let maxNum = 0;
+    const list = this.receptionsSignal();
+    for (const r of list) {
+      if (r.pallets && Array.isArray(r.pallets)) {
+        for (const p of r.pallets) {
+          if (p.palletNumber && Number(p.palletNumber) > maxNum) {
+            maxNum = Number(p.palletNumber);
+          }
+        }
+      }
+    }
+    return maxNum;
   }
 
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
@@ -1101,6 +1358,12 @@ export class WarehouseMovementsService {
       piecesPerPallet: formVals.piecesPerPallet != null ? Number(formVals.piecesPerPallet) : 0,
       palletType: formVals.selectedPalletType || null,
       storageLocationId: formVals.storageLocationId || null,
+      forkliftOperatorId: formVals.forkliftOperatorId || null,
+      forkliftOperatorName: formVals.forkliftOperator || formVals.forkliftOperatorName || null,
+      rampId: formVals.rampId || null,
+      rampNumber: formVals.rampNumber || null,
+      rampCode: formVals.rampCode || null,
+      status: formVals.status || null,
       observations: formVals.observations || '',
     };
 
@@ -1108,6 +1371,7 @@ export class WarehouseMovementsService {
       concatMap(() => {
         if (pallets && pallets.length > 0) {
           const palletPayload = pallets.map((p) => ({
+            palletNumber: p.palletNumber,
             palletCode: p.palletCode,
             pieces: p.pieces,
             palletType: p.palletTypeId,
@@ -1129,6 +1393,56 @@ export class WarehouseMovementsService {
     );
   }
 
+  // Persiste modificaciones de caseta (placas, transportista, chofer, remisión, rampa, sellos) en el Backend (wms.warehouse_receptions)
+  updateCasetaCheckInBackend(
+    receptionId: string,
+    checkIn: CheckInCasetaData
+  ): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (receptionId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+    const resolvedId = (current?.id && isUuid(current.id)) ? current.id : (isUuid(receptionId) ? receptionId : null);
+
+    const payload = {
+      tractorPlates: checkIn.tractorPlates,
+      boxPlates: checkIn.boxPlates,
+      driverName: checkIn.driverName,
+      docNumber: checkIn.docNumber,
+      docDate: checkIn.docDate || null,
+      receptionTime: checkIn.receptionTime ? `${checkIn.receptionTime}:00`.slice(0, 8) : null,
+      carrierId: isUuid(checkIn.carrierLineCode || '') ? checkIn.carrierLineCode : null,
+      carrierLineCode: checkIn.carrierLineCode || null,
+      carrierLine: checkIn.carrierLine || null,
+      clientId: isUuid(checkIn.clientCode || '') ? checkIn.clientCode : null,
+      clientCode: checkIn.clientCode || null,
+      clientName: checkIn.client || null,
+      rampNumber: checkIn.rampNumber || 1,
+      rampCode: checkIn.rampCode || `LOC-RAMP-${String(checkIn.rampNumber || 1).padStart(2, '0')}`,
+      sealNumbers: checkIn.sealNumbers && checkIn.sealNumbers.length > 0 ? checkIn.sealNumbers : (checkIn.sealNumber ? [checkIn.sealNumber] : []),
+      piecesPerPallet: current?.piecesPerPallet != null ? Number(current.piecesPerPallet) : 0,
+      observations: checkIn.observations || current?.observations || '',
+    };
+
+    if (resolvedId) {
+      return this.movementsApi.updateReceptionParameters(resolvedId, payload).pipe(
+        map((res: any) => {
+          const mapped = this.mapReceptionResponseToHeader(res);
+          this.updateReception(resolvedId, mapped, true);
+          return mapped;
+        }),
+        catchError(() => {
+          const fallback = this.updateReception(receptionId, { checkIn }, true);
+          return of(fallback || current || ({} as ReceptionHeader));
+        })
+      );
+    } else {
+      const fallback = this.updateReception(receptionId, { checkIn }, true);
+      return of(fallback || current || ({} as ReceptionHeader));
+    }
+  }
+
   // Completa y autoriza formalmente la recepción F01 en el Backend
   completeReceptionBackend(
     receptionId: string,
@@ -1144,7 +1458,7 @@ export class WarehouseMovementsService {
       concatMap(() => {
         const completePayload = {
           leaderUsername: leaderUser || 'admin',
-          leaderPassword: leaderPass || 'adminPassword',
+          leaderPassword: leaderPass || 'admin123',
           observations: `Autorizado por ${leaderName}. ${formVals.observations || ''}`.trim(),
         };
         return this.movementsApi.completeReception(receptionId, completePayload);
@@ -1250,6 +1564,184 @@ export class WarehouseMovementsService {
     }
 
     return updated;
+  }
+
+  // Transición 1 -> 2: Asignación a Montacarguista y Andén (REGISTERED -> ASSIGNED)
+  assignReception(
+    folioOrId: string,
+    formVals: any,
+    productsList: any[],
+    suppliersList: any[],
+    assignedBy: string
+  ): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+
+    const recId = current?.id || folioOrId;
+    const enrichedFormVals = {
+      ...formVals,
+      status: 'ASSIGNED',
+    };
+    return this.saveDraftReceptionBackend(recId, enrichedFormVals, current?.pallets || [], productsList, suppliersList).pipe(
+      map((rec) => {
+        const updated = this.updateReception(
+          rec.folio,
+          {
+            ...rec,
+            status: 'ASSIGNED',
+            lotNumber: formVals.lotNumber || rec.lotNumber,
+            elaborationDate: formVals.elaborationDate || rec.elaborationDate,
+            expirationDate: formVals.expirationDate || rec.expirationDate,
+            productId: formVals.productId || rec.productId,
+            productName: formVals.productName || rec.productName,
+            supplierName: formVals.supplierName || rec.supplierName,
+            piecesPerPallet: formVals.piecesPerPallet || rec.piecesPerPallet,
+            selectedPalletType: formVals.selectedPalletType || rec.selectedPalletType,
+            observations: formVals.observations || rec.observations,
+            checkIn: {
+              ...rec.checkIn,
+              forkliftOperator: formVals.forkliftOperator || rec.checkIn.forkliftOperator,
+              rampNumber: formVals.rampNumber || rec.checkIn.rampNumber,
+            },
+          },
+          true
+        );
+
+        this.addReceptionAudit(rec.folio, {
+          id: `aud-rec-asg-${Date.now()}`,
+          action: 'RECEPCION_ASIGNADA',
+          actionLabel: 'Andén y Montacarguista Asignados',
+          username: assignedBy || 'Administrador WMS',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'REGISTERED', newValue: 'ASSIGNED' },
+            { fieldName: 'Rampa Asignada', newValue: `Rampa ${formVals.rampNumber || rec.checkIn.rampNumber}` },
+            { fieldName: 'Montacarguista', newValue: formVals.forkliftOperator || rec.checkIn.forkliftOperator },
+            { fieldName: 'Bahía WMS', newValue: rec.storageLocation || 'Auto-Slotting' },
+          ],
+        });
+
+        return updated || rec;
+      })
+    );
+  }
+
+  // Transición 2 -> 3: Inicio de Descarga en Terminal Montacarguista (ASSIGNED -> IN_PROGRESS)
+  startDischarge(folioOrId: string, operatorName: string): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+    const recId = current?.id || folioOrId;
+
+    const payload = {
+      status: 'IN_PROGRESS',
+      forkliftOperatorName: operatorName || current?.checkIn?.forkliftOperator || null,
+      forkliftOperatorId: current?.checkIn?.forkliftOperatorCode || null,
+      rampNumber: current?.checkIn?.rampNumber || null,
+      rampCode: current?.checkIn?.rampCode || null,
+      lotNumber: current?.lotNumber || null,
+      piecesPerPallet: current?.piecesPerPallet || 0,
+      palletType: current?.selectedPalletType || null,
+      storageLocationId: current?.storageLocationId || null,
+    };
+
+    return this.movementsApi.updateReceptionParameters(recId, payload).pipe(
+      concatMap(() => this.movementsApi.getReceptionById(recId)),
+      map((freshRec: any) => {
+        const mapped = this.mapReceptionResponseToHeader(freshRec);
+        mapped.status = 'IN_PROGRESS';
+        this.updateReception(recId, mapped, true);
+        this.addReceptionAudit(mapped.folio, {
+          id: `aud-rec-inp-${Date.now()}`,
+          action: 'DESCARGA_INICIADA',
+          actionLabel: 'Descarga Iniciada en Terminal de Montacargas',
+          username: operatorName || mapped.checkIn?.forkliftOperator || 'Montacarguista',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'ASSIGNED', newValue: 'IN_PROGRESS' },
+            { fieldName: 'Operador en Andén', newValue: operatorName || mapped.checkIn?.forkliftOperator || 'Montacarguista' },
+          ],
+        });
+        return mapped;
+      }),
+      catchError(() => {
+        const updated = this.updateReception(
+          folioOrId,
+          {
+            status: 'IN_PROGRESS',
+          },
+          true
+        );
+        return of(updated || (current as ReceptionHeader));
+      })
+    );
+  }
+
+  // Transición 3 -> 4: Montacarguista Concluye Descarga Física (IN_PROGRESS -> DISCHARGED)
+  finishDischarge(
+    folioOrId: string,
+    pallets: ReceptionPalletItem[],
+    operatorName: string,
+    formVals?: any,
+    productsList: any[] = [],
+    suppliersList: any[] = []
+  ): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+    const recId = current?.id || folioOrId;
+
+    const enrichedFormVals = {
+      ...(formVals || {}),
+      status: 'DISCHARGED',
+      forkliftOperator: operatorName || current?.checkIn?.forkliftOperator || formVals?.forkliftOperator,
+      forkliftOperatorName: operatorName || current?.checkIn?.forkliftOperator || formVals?.forkliftOperator,
+      rampNumber: formVals?.rampNumber || current?.checkIn?.rampNumber,
+      lotNumber: formVals?.lotNumber || current?.lotNumber,
+      productId: formVals?.productId || current?.productId,
+      supplierName: formVals?.supplierName || current?.supplierName,
+      piecesPerPallet: formVals?.piecesPerPallet || current?.piecesPerPallet,
+      selectedPalletType: formVals?.selectedPalletType || current?.selectedPalletType,
+    };
+
+    return this.saveDraftReceptionBackend(recId, enrichedFormVals, pallets, productsList, suppliersList).pipe(
+      map((mapped) => {
+        mapped.status = 'DISCHARGED';
+        this.updateReception(recId, mapped, true);
+        const totalPieces = (pallets || []).reduce((sum, p) => sum + p.pieces, 0);
+        this.addReceptionAudit(mapped.folio, {
+          id: `aud-rec-dis-${Date.now()}`,
+          action: 'DESCARGA_FINALIZADA',
+          actionLabel: 'Descarga Física Concluida (Notificado a Mesa Administrativa)',
+          username: operatorName || mapped.checkIn?.forkliftOperator || 'Montacarguista',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Estatus', oldValue: 'IN_PROGRESS', newValue: 'DISCHARGED' },
+            { fieldName: 'Tarimas Descargadas', newValue: String((pallets || []).length) },
+            { fieldName: 'Piezas Totales', newValue: `${totalPieces} PZAS` },
+          ],
+        });
+        return mapped;
+      }),
+      catchError(() => {
+        const updated = this.updateReception(
+          folioOrId,
+          {
+            status: 'DISCHARGED',
+            pallets: [...pallets],
+          },
+          true
+        );
+        return of(updated || (current as ReceptionHeader));
+      })
+    );
   }
 
   // Busca una recepción por Folio
@@ -1550,6 +2042,251 @@ export class WarehouseMovementsService {
 
     // Sincronizar con el backend
     this.reloadInventoryBatches();
+
+    return updated;
+  }
+
+  // Actualiza datos de una salida de almacén (por folio o id)
+  updateOutbound(folioOrId: string, partial: Partial<WarehouseOutbound>, skipAudit = false): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const index = list.findIndex(
+      (o) => (o.folio && o.folio.trim() === cleanKey) || (o.id && o.id.trim() === cleanKey)
+    );
+
+    if (index === -1) {
+      if (partial.folio) {
+        this.outboundsSignal.update((arr) => [partial as WarehouseOutbound, ...arr]);
+      }
+      return partial as WarehouseOutbound;
+    }
+
+    const updated: WarehouseOutbound = {
+      ...list[index],
+      ...partial,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.outboundsSignal.set(newArr);
+
+    if (!skipAudit && partial.status) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-upd-${Date.now()}`,
+        action: 'SALIDA_ACTUALIZADA',
+        actionLabel: 'Actualización de Salida',
+        username: partial.dispatchedBy || updated.dispatchedBy || 'Operador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', newValue: this.formatFieldValue('status', partial.status) },
+          { fieldName: 'Total Tarimas', newValue: String(updated.items?.length || 0) },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 1 -> 2: Asignación a Andén y Montacarguista (REGISTERED -> ASSIGNED)
+  assignOutboundRamp(
+    folioOrId: string,
+    rampNumber: number,
+    operatorId: string,
+    operatorName: string,
+    assignedBy: string,
+    observations?: string
+  ): WarehouseOutbound | null {
+    const updated = this.updateOutbound(
+      folioOrId,
+      {
+        status: 'ASSIGNED',
+        rampNumber,
+        rampCode: `RAMPA-${rampNumber}`,
+        forkliftOperator: operatorName,
+        forkliftOperatorId: operatorId,
+        observations: observations,
+      },
+      true
+    );
+
+    if (updated) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-asg-${Date.now()}`,
+        action: 'SALIDA_ASIGNADA',
+        actionLabel: 'Andén y Montacarguista Asignados',
+        username: assignedBy || 'Administrador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'REGISTERED', newValue: 'ASSIGNED' },
+          { fieldName: 'Rampa Asignada', newValue: `Rampa ${rampNumber}` },
+          { fieldName: 'Montacarguista', newValue: operatorName },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 2 -> 3: Inicio de Carga en Terminal Montacarguista (ASSIGNED -> IN_PROGRESS)
+  startOutboundLoading(folioOrId: string, operatorName: string): WarehouseOutbound | null {
+    const updated = this.updateOutbound(
+      folioOrId,
+      {
+        status: 'IN_PROGRESS',
+      },
+      true
+    );
+
+    if (updated) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-inp-${Date.now()}`,
+        action: 'CARGA_INICIADA',
+        actionLabel: 'Carga Iniciada en Andén',
+        username: operatorName || 'Montacarguista',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'ASSIGNED', newValue: 'IN_PROGRESS' },
+          { fieldName: 'Operador en Andén', newValue: operatorName },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 3 -> 4: Finalización de Carga Física y Captura de Sellos (IN_PROGRESS -> LOADED)
+  finishOutboundLoading(
+    folioOrId: string,
+    sealNumber: string,
+    operatorName: string,
+    items?: OutboundItem[]
+  ): WarehouseOutbound | null {
+    const partial: Partial<WarehouseOutbound> = {
+      status: 'LOADED',
+      sealNumber: sealNumber || '',
+    };
+    if (items && items.length > 0) {
+      partial.items = items;
+      partial.totalPallets = items.length;
+      partial.totalPieces = items.reduce((acc, p) => acc + p.pieces, 0);
+      partial.distinctSkus = new Set(items.map((p) => p.productId)).size;
+    }
+
+    const updated = this.updateOutbound(folioOrId, partial, true);
+
+    if (updated) {
+      this.addOutboundAudit(updated.folio, {
+        id: `aud-out-load-${Date.now()}`,
+        action: 'CARGA_CONCLUIDA',
+        actionLabel: 'Carga Concluida en Andén (Por Auditar)',
+        username: operatorName || 'Montacarguista',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: [
+          { fieldName: 'Estatus', oldValue: 'IN_PROGRESS', newValue: 'LOADED' },
+          { fieldName: 'Sellos de Seguridad', newValue: sealNumber || 'Sin sello registrado' },
+          { fieldName: 'Tarimas Cargadas', newValue: String(updated.totalPallets) },
+          { fieldName: 'Piezas Totales', newValue: updated.totalPieces.toLocaleString() },
+        ],
+      });
+    }
+
+    return updated;
+  }
+
+  // Transición 4 -> 5: Cierre Administrativo y Despacho Formal F03 (LOADED -> COMPLETED)
+  completeOutboundDispatch(folioOrId: string, authorizedBy: string): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const target = list.find(
+      (o) => (o.folio && o.folio.trim() === cleanKey) || (o.id && o.id.trim() === cleanKey)
+    );
+    if (!target) return null;
+
+    const completedTime = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+    const updated: WarehouseOutbound = {
+      ...target,
+      status: 'COMPLETED',
+      completedAt: completedTime,
+      leaderAuthorizedBy: authorizedBy,
+      dispatchedAt: completedTime,
+      dispatchedBy: authorizedBy,
+    };
+
+    // Descontar UAs de inventario si no se habían descontado
+    if (target.items && target.items.length > 0) {
+      const selectedIds = new Set(target.items.map((p) => p.id));
+      this.inventoryBatchesSignal.update((batches) =>
+        batches.map((batch) => {
+          const remaining = batch.pallets.filter((p) => !selectedIds.has(p.id));
+          if (remaining.length === batch.pallets.length) return batch;
+          return {
+            ...batch,
+            availablePallets: remaining.length,
+            totalPieces: remaining.reduce((acc, p) => acc + p.pieces, 0),
+            pallets: remaining,
+          };
+        })
+      );
+    }
+
+    const newArr = list.map((o) => (o.folio === target.folio || o.id === target.id ? updated : o));
+    this.outboundsSignal.set(newArr);
+
+    this.addOutboundAudit(updated.folio, {
+      id: `aud-out-cmp-${Date.now()}`,
+      action: 'SALIDA_AUTORIZADA',
+      actionLabel: 'Cierre Administrativo y Despacho F03',
+      username: authorizedBy,
+      authorizedBy: authorizedBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estatus', oldValue: target.status, newValue: 'COMPLETED' },
+        { fieldName: 'Autorizado Por', newValue: authorizedBy },
+        { fieldName: 'Total Tarimas Despachadas', newValue: String(updated.totalPallets) },
+        { fieldName: 'Piezas Totales', newValue: updated.totalPieces.toLocaleString() },
+        { fieldName: 'Liberación de Andén', newValue: `Rampa ${target.rampNumber || 'N/A'} liberada` },
+      ],
+    });
+
+    return updated;
+  }
+
+  // Modificación de Remisión / Carta Porte en Salidas (Outbound)
+  changeOutboundRemision(
+    folioOrId: string,
+    newRemision: string,
+    reason: string,
+    authorizedBy: string
+  ): WarehouseOutbound | null {
+    const list = this.outboundsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const target = list.find(
+      (o) => (o.folio && o.folio.trim() === cleanKey) || (o.id && o.id.trim() === cleanKey)
+    );
+    if (!target) return null;
+
+    const oldRem = target.remisionNo;
+    const updated: WarehouseOutbound = {
+      ...target,
+      remisionNo: newRemision.trim(),
+    };
+
+    const newArr = list.map((o) => (o.folio === target.folio || o.id === target.id ? updated : o));
+    this.outboundsSignal.set(newArr);
+
+    this.addOutboundAudit(updated.folio, {
+      id: `aud-out-rem-${Date.now()}`,
+      action: 'REMISION_MODIFICADA',
+      actionLabel: 'Modificación de No. Remisión / Carta Porte',
+      username: authorizedBy,
+      authorizedBy: authorizedBy,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'No. Remisión / Carta Porte', oldValue: oldRem || 'Sin asignar', newValue: newRemision.trim() },
+        { fieldName: 'Motivo / Justificación', newValue: reason },
+        { fieldName: 'Autorizado Por', newValue: authorizedBy },
+      ],
+    });
 
     return updated;
   }
