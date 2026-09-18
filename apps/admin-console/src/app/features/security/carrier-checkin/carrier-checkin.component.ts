@@ -71,8 +71,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     placasTracto: ['', [Validators.required, Validators.minLength(3)]],
     noEcoTractor: [''],
     placasCaja: ['', [Validators.required, Validators.minLength(3)]],
-    medidasCaja: ['53 Pies', Validators.required],
-    tipoTransporte: ['Caja Seca', Validators.required],
+    medidasCaja: ['', Validators.required],
+    tipoTransporte: ['', Validators.required],
 
     // Criterios EPP
     eppZapatos: ['SI', Validators.required],
@@ -114,7 +114,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       next: (data) => {
         if (data) {
           this.clientsList.set(data.clients || []);
-          this.carrierLinesList.set(data.carrierLines || []);
+          const carriers = (data.carrierLines && data.carrierLines.length > 0) 
+            ? data.carrierLines 
+            : ((data as any).carriers || []);
+          this.carrierLinesList.set(carriers);
           this.transportTypesList.set(data.transportTypes || []);
           this.boxDimensionsList.set(data.boxDimensions || []);
         }
@@ -300,14 +303,75 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     remCtrl?.updateValueAndValidity();
   }
 
+  protected readonly validationErrorsList = signal<string[]>([]);
+
   protected setStep(step: number): void {
+    if (step > this.currentStep()) {
+      for (let s = this.currentStep(); s < step; s++) {
+        if (!this.validateStep(s)) return;
+      }
+    }
+    this.validationErrorsList.set([]);
     this.currentStep.set(step);
     if (step === 4) {
       setTimeout(() => this.initCanvas(), 100);
     }
   }
 
+  protected validateStep(step: number): boolean {
+    const missing: string[] = [];
+    const f = this.checkInForm.value;
+
+    if (step === 1) {
+      if (!f.operacion) missing.push('Tipo de Operación (Carga o Descarga)');
+      if (!f.clientName || !f.clientName.trim()) missing.push('Empresa / Cliente Destinatario');
+      if (f.operacion === 'CARGA' && (!f.noCartaPorte || !f.noCartaPorte.trim())) {
+        missing.push('Número de Carta Porte (Obligatorio en Carga)');
+      }
+      if (f.operacion === 'DESCARGA' && (!f.remision || !f.remision.trim())) {
+        missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
+      }
+    } else if (step === 2) {
+      if (this.tempSealInput().trim()) {
+        this.addSeal();
+      }
+      if (!f.carrierLine || !f.carrierLine.trim()) missing.push('Línea Transportista / Fletera');
+      if (!f.nombreOperador || f.nombreOperador.trim().length < 3) missing.push('Nombre Completo del Operador / Chofer (mínimo 3 letras)');
+      if (!f.tipoTransporte || !f.tipoTransporte.trim()) missing.push('Tipo de Transporte');
+      if (!f.medidasCaja || !f.medidasCaja.trim()) missing.push('Medidas de Caja');
+      if (!f.placasTracto || f.placasTracto.trim().length < 3) missing.push('Placas de Tracto');
+      if (!f.placasCaja || f.placasCaja.trim().length < 3) missing.push('Placas de Caja');
+      if (this.sealList().length === 0) {
+        missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio)');
+      }
+    } else if (step === 3) {
+      if (!f.eppZapatos || !f.eppCofia || !f.eppCubrebocas || !f.eppChaleco) {
+        missing.push('Verificación de criterios de Equipo de Protección Personal (EPP)');
+      }
+      if (!f.revInteriorCaja || !f.revDanosCaja || !f.revDanosPuertas || !f.revOloresExtranos || !f.revIndiciosPlagas) {
+        missing.push('Verificación de criterios de Inspección Física de la Unidad');
+      }
+    } else if (step === 4) {
+      if (!this.hasSignature()) {
+        missing.push('Firma Digital del Chofer en el recuadro');
+      }
+      if (!f.declaracionVerdad) {
+        missing.push('Aceptación de la Declaración bajo protesta de decir verdad');
+      }
+    }
+
+    this.validationErrorsList.set(missing);
+    if (missing.length > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    return missing.length === 0;
+  }
+
   protected nextStep(): void {
+    if (!this.validateStep(this.currentStep())) {
+      return;
+    }
+    this.validationErrorsList.set([]);
     if (this.currentStep() < 4) {
       this.currentStep.update((s) => s + 1);
       if (this.currentStep() === 4) {
@@ -317,6 +381,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   }
 
   protected prevStep(): void {
+    this.validationErrorsList.set([]);
     if (this.currentStep() > 1) {
       this.currentStep.update((s) => s - 1);
     }
@@ -398,7 +463,15 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       this.addSeal();
     }
 
-    if (this.checkInForm.invalid) {
+    for (let s = 1; s <= 4; s++) {
+      if (!this.validateStep(s)) {
+        this.currentStep.set(s);
+        if (s === 4) setTimeout(() => this.initCanvas(), 100);
+        return;
+      }
+    }
+
+    if (this.checkInForm.invalid || !this.hasSignature() || this.sealList().length === 0) {
       this.checkInForm.markAllAsTouched();
       return;
     }
@@ -407,7 +480,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.submitError.set(null);
 
     const f = this.checkInForm.value;
-    const seals = this.sealList().length > 0 ? this.sealList() : ['SEAL-DRIVER-001'];
+    const seals = [...this.sealList()];
 
     let sigData = '';
     if (this.signatureCanvasRef && this.hasSignature()) {
@@ -448,8 +521,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        // If public endpoint failed due to offline demo, show success state with mock storage
-        this.submitSuccess.set(true);
+        const errorMsg = err?.error?.message || err?.message || 'Error al conectar con la Caseta de Vigilancia. Verifique que su código de pase sea correcto y esté activo.';
+        this.submitError.set(errorMsg);
       }
     });
   }

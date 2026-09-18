@@ -63,6 +63,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
   statusFilter = signal<string>('ALL');
   selectedReception = signal<ReceptionHeader | null>(null);
   auditEntries = signal<MovementAuditEntry[]>([]);
+  showAuditTimeline = signal(false);
+
+  toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
 
   // Cola Reactiva de Pre-Recepciones Pendientes (Caseta)
   pendingReceptions = this.movementsService.pendingReceptions;
@@ -82,29 +87,54 @@ export class ReceivingSubmoduleComponent implements OnInit {
   tempEditSealInput = signal('');
 
   editCasetaForm = this.fb.group({
+    docNumber: ['', [Validators.required]],
+    clientCode: [''],
+    client: ['', [Validators.required]],
     carrierLineCode: [''],
     carrierLine: ['', [Validators.required]],
     receptionTime: ['', [Validators.required]],
     driverName: ['', [Validators.required]],
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
-    clientCode: [''],
-    client: ['', [Validators.required]],
     rampNumber: [1, [Validators.required]],
   });
 
   openEditCasetaModal(): void {
     const rec = this.selectedReception();
     if (!rec) return;
+
+    if (rec.status !== 'REGISTERED') {
+      this.toast.warning('La Ficha de Caseta solo puede modificarse en estado inicial (antes de asignar andén/montacarguista o finalizar).');
+      return;
+    }
+
+    const carrierName = rec.checkIn.carrierLine || '';
+    const clientName = rec.checkIn.client || '';
+    const matchedCarrier = this.carrierLines().find(
+      (c) =>
+        c.code === rec.checkIn.carrierLineCode ||
+        c.name === carrierName ||
+        (carrierName && c.name.toLowerCase().includes(carrierName.toLowerCase())) ||
+        (carrierName && carrierName.toLowerCase().includes(c.name.toLowerCase()))
+    );
+    const matchedClient = this.clients().find(
+      (cl) =>
+        cl.code === rec.checkIn.clientCode ||
+        cl.name === clientName ||
+        (clientName && cl.name.toLowerCase().includes(clientName.toLowerCase())) ||
+        (clientName && clientName.toLowerCase().includes(cl.name.toLowerCase()))
+    );
+
     this.editCasetaForm.patchValue({
-      carrierLineCode: rec.checkIn.carrierLineCode || '',
-      carrierLine: rec.checkIn.carrierLine || '',
+      docNumber: rec.checkIn.docNumber || rec.folio || '',
+      clientCode: matchedClient ? matchedClient.code : (rec.checkIn.clientCode || ''),
+      client: matchedClient ? matchedClient.name : clientName,
+      carrierLineCode: matchedCarrier ? matchedCarrier.code : (rec.checkIn.carrierLineCode || ''),
+      carrierLine: matchedCarrier ? matchedCarrier.name : carrierName,
       receptionTime: rec.checkIn.receptionTime || '',
       driverName: rec.checkIn.driverName || '',
       tractorPlates: rec.checkIn.tractorPlates || '',
       boxPlates: rec.checkIn.boxPlates || '',
-      clientCode: rec.checkIn.clientCode || '',
-      client: rec.checkIn.client || '',
       rampNumber: rec.checkIn.rampNumber || 1,
     });
     const seals = rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0
@@ -113,6 +143,24 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.editCasetaSeals.set(seals);
     this.tempEditSealInput.set('');
     this.showEditCasetaModal.set(true);
+  }
+
+  onEditCasetaCarrierChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    const found = this.carrierLines().find((c) => c.name === val || c.code === val);
+    if (found) {
+      this.editCasetaForm.patchValue({ carrierLineCode: found.code, carrierLine: found.name });
+    }
+  }
+
+  onEditCasetaClientChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    const found = this.clients().find((c) => c.name === val || c.code === val);
+    if (found) {
+      this.editCasetaForm.patchValue({ clientCode: found.code, client: found.name });
+    }
   }
 
   addEditSeal(): void {
@@ -131,6 +179,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   saveCasetaModifications(): void {
+    if (this.tempEditSealInput().trim()) {
+      this.addEditSeal();
+    }
+
     if (this.editCasetaForm.invalid) {
       this.editCasetaForm.markAllAsTouched();
       this.toast.warning('Por favor completa los campos requeridos de la ficha.');
@@ -147,8 +199,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
     const val = this.editCasetaForm.value;
     const rNum = Number(val.rampNumber) || currentRec.checkIn.rampNumber || 1;
+    const updatedDoc = (val.docNumber || currentRec.checkIn.docNumber || '').trim().toUpperCase();
+
     const updatedCheckIn: CheckInCasetaData = {
       ...currentRec.checkIn,
+      docNumber: updatedDoc,
       carrierLineCode: val.carrierLineCode || currentRec.checkIn.carrierLineCode,
       carrierLine: val.carrierLine || currentRec.checkIn.carrierLine,
       receptionTime: val.receptionTime || currentRec.checkIn.receptionTime,
@@ -168,9 +223,21 @@ export class ReceivingSubmoduleComponent implements OnInit {
       checkIn: updatedCheckIn,
     };
 
-    this.selectedReception.set(updatedReception);
-    this.altaForm.patchValue({ rampNumber: rNum });
-    this.movementsService.updateReception(currentRec.id || currentRec.folio, { checkIn: updatedCheckIn });
+    this.movementsService.updateCasetaCheckInBackend(currentRec.id || currentRec.folio, updatedCheckIn).subscribe({
+      next: (persisted) => {
+        this.selectedReception.set(persisted);
+        this.altaForm.patchValue({ rampNumber: rNum });
+        this.showEditCasetaModal.set(false);
+        this.toast.success('Ficha operativa actualizada y guardada correctamente en la base de datos.');
+        this.loadAuditLogs(persisted.id || persisted.folio);
+      },
+      error: () => {
+        this.selectedReception.set(updatedReception);
+        this.altaForm.patchValue({ rampNumber: rNum });
+        this.showEditCasetaModal.set(false);
+        this.toast.success('Ficha operativa actualizada.');
+      }
+    });
 
     this.auditEntries.update((entries) => [
       {
@@ -179,9 +246,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
         action: 'EDICIÓN_CASETA',
         actionLabel: 'Modificación de Ficha de Caseta',
         username: this.authState.userFullName() || this.authState.currentUser()?.email || 'Supervisor',
-        reason: `Chofer: ${updatedCheckIn.driverName}, Placas: ${updatedCheckIn.tractorPlates}/${updatedCheckIn.boxPlates}, Rampa: ${rNum}`,
+        reason: `Remisión: ${updatedDoc}, Cliente: ${updatedCheckIn.client}, Chofer: ${updatedCheckIn.driverName}, Placas: ${updatedCheckIn.tractorPlates}/${updatedCheckIn.boxPlates}, Rampa: ${rNum}`,
         observations: `Sellos actualizados: ${updatedCheckIn.sealNumber}`,
         details: [
+          { fieldName: 'No. Remisión', newValue: updatedDoc },
+          { fieldName: 'Cliente', newValue: updatedCheckIn.client },
+          { fieldName: 'Línea Transportista', newValue: updatedCheckIn.carrierLine },
           { fieldName: 'Chofer', newValue: updatedCheckIn.driverName },
           { fieldName: 'Placas Tracto', newValue: updatedCheckIn.tractorPlates },
           { fieldName: 'Placas Caja', newValue: updatedCheckIn.boxPlates },
@@ -191,9 +261,6 @@ export class ReceivingSubmoduleComponent implements OnInit {
       },
       ...entries,
     ]);
-
-    this.showEditCasetaModal.set(false);
-    this.toast.success('Ficha operativa de caseta actualizada correctamente.');
   }
 
   onRampMatrixClick(ramp: RampOccupancyStatus): void {
@@ -360,6 +427,16 @@ export class ReceivingSubmoduleComponent implements OnInit {
   sealList = signal<string[]>([]);
   tempSealInput = signal('');
 
+  // ── GESTIÓN MULTI-LOTE POR RECEPCIÓN Y ASIGNACIÓN A UA ──
+  lotsList = signal<Array<{ lotNumber: string; elaborationDate?: string; expirationDate: string }>>([]);
+  selectedScanningLot = signal<string>('');
+  showAddLotModal = signal(false);
+  newLotForm = this.fb.group({
+    lotNumber: ['', [Validators.required]],
+    elaborationDate: [''],
+    expirationDate: ['', [Validators.required]],
+  });
+
   // ── FORMULARIO: ALTA / EDICIÓN DE RECEPCIÓN (Detalle Producto) ──
   altaForm = this.fb.group({
     lotNumber: ['', [Validators.required]],
@@ -388,6 +465,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
     palletTypeId: ['' as any, [Validators.required]],
     pieces: [0, [Validators.required, Validators.min(1)]],
     observations: [''],
+    lotNumber: [''],
+    expirationDate: [''],
+    docNumber: [''],
   });
 
   // ── ESTADO DE MODAL LÍDER E IMPRESIÓN ──
@@ -573,7 +653,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   patchAltaFormWithReception(rec: ReceptionHeader): void {
-    const defaultOperator = rec.checkIn?.forkliftOperator || (this.forkliftOperators().length > 0 ? this.forkliftOperators()[0].name : '');
+    const defaultOperator = rec.checkIn?.forkliftOperator || '';
     const currentProdId = rec.productId || rec.skuCode || '';
 
     const matchedProduct = (currentProdId || rec.productName)
@@ -597,6 +677,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const hasConfiguredProduct = !!(rec.productId || rec.skuCode || (rec.pallets && rec.pallets.length > 0));
     const palletTypeValue = hasConfiguredProduct ? (rec.selectedPalletType || ('' as any)) : ('' as any);
 
+    const rawObs = rec.observations || '';
+    const isCasetaChecklist = rawObs.includes('[FORMATO F01') || rawObs.includes('Arribo en Caseta');
+    const cleanDischargeObs = isCasetaChecklist
+      ? ''
+      : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
+
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
       elaborationDate: rec.elaborationDate || rec.checkIn?.elaborationDate || '',
@@ -610,8 +696,110 @@ export class ReceivingSubmoduleComponent implements OnInit {
       supplierName: rec.supplierName || '',
       piecesPerPallet: rec.piecesPerPallet != null ? Number(rec.piecesPerPallet) : 0,
       selectedPalletType: palletTypeValue,
-      observations: (rec.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
+      observations: cleanDischargeObs,
     });
+
+    // Sincronizar catálogo de lotes disponibles en la sesión de recepción
+    const primaryLot = (rec.lotNumber || rec.checkIn?.lotNumber || '').trim().toUpperCase();
+    const primaryExp = rec.expirationDate || rec.checkIn?.expirationDate || '';
+    const primaryElab = rec.elaborationDate || rec.checkIn?.elaborationDate || '';
+
+    const initialLots: Array<{ lotNumber: string; elaborationDate?: string; expirationDate: string }> = [];
+    if (primaryLot) {
+      initialLots.push({ lotNumber: primaryLot, elaborationDate: primaryElab, expirationDate: primaryExp });
+    }
+
+    if (rec.pallets && rec.pallets.length > 0) {
+      rec.pallets.forEach((p) => {
+        if (p.lotNumber && !initialLots.some((l) => l.lotNumber === p.lotNumber)) {
+          initialLots.push({
+            lotNumber: p.lotNumber,
+            expirationDate: p.expirationDate || primaryExp,
+          });
+        }
+      });
+    }
+
+    const finalList = initialLots.length > 0 ? initialLots : [{ lotNumber: 'LOT-2026-N1', expirationDate: primaryExp }];
+    this.lotsList.set(finalList);
+    this.selectedScanningLot.set(primaryLot || finalList[0].lotNumber);
+  }
+
+  // ── MÉTODOS DE CONTROL DE LOTES POR UA (CRITERIO 1) ──
+  openAddLotModal(): void {
+    this.newLotForm.reset({
+      lotNumber: '',
+      elaborationDate: this.altaForm.value.elaborationDate || '',
+      expirationDate: this.altaForm.value.expirationDate || '',
+    });
+    this.showAddLotModal.set(true);
+  }
+
+  closeAddLotModal(): void {
+    this.showAddLotModal.set(false);
+  }
+
+  saveNewLot(): void {
+    if (this.newLotForm.invalid) {
+      this.newLotForm.markAllAsTouched();
+      this.toast.warning('Ingresa el número de lote y fecha de caducidad.');
+      return;
+    }
+
+    const vals = this.newLotForm.value;
+    const lotNum = (vals.lotNumber || '').trim().toUpperCase();
+    const elab = vals.elaborationDate || '';
+    const exp = vals.expirationDate || '';
+
+    if (elab && exp) {
+      if (exp < elab) {
+        this.toast.error('🛑 La fecha de caducidad no puede ser anterior a la de elaboración.');
+        return;
+      }
+      if (exp === elab) {
+        const ok = window.confirm('⚠️ La fecha de caducidad es idéntica a la de elaboración. ¿Desea continuar?');
+        if (!ok) return;
+      }
+    }
+
+    if (this.lotsList().some((l) => l.lotNumber === lotNum)) {
+      this.toast.info(`El lote ${lotNum} ya está registrado.`);
+    } else {
+      this.lotsList.update((list) => [...list, { lotNumber: lotNum, elaborationDate: elab, expirationDate: exp }]);
+      this.toast.success(`Lote ${lotNum} agregado a la sesión de recepción.`);
+    }
+
+    this.selectedScanningLot.set(lotNum);
+    this.closeAddLotModal();
+  }
+
+  selectLotForScanning(lotNum: string): void {
+    this.selectedScanningLot.set(lotNum);
+    const matched = this.lotsList().find((l) => l.lotNumber === lotNum);
+    if (matched) {
+      this.altaForm.patchValue({
+        lotNumber: matched.lotNumber,
+        expirationDate: matched.expirationDate || this.altaForm.value.expirationDate,
+        elaborationDate: matched.elaborationDate || this.altaForm.value.elaborationDate,
+      });
+    }
+  }
+
+  assignLotToPallet(palletId: string, lotNum: string): void {
+    const matchedLot = this.lotsList().find((l) => l.lotNumber === lotNum);
+    this.palletStream.update((list) =>
+      list.map((p) => {
+        if (p.id === palletId) {
+          return {
+            ...p,
+            lotNumber: lotNum,
+            expirationDate: matchedLot?.expirationDate || p.expirationDate || (this.altaForm.value.expirationDate ?? undefined),
+          };
+        }
+        return p;
+      })
+    );
+    this.toast.success(`Lote ${lotNum} asignado a la UA.`);
   }
 
   loadAuditLogs(folioOrId: string): void {
@@ -856,6 +1044,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.toast.warning(`Por favor completa los parámetros obligatorios de la descarga: ${missing.join(', ')}.`);
       return false;
     }
+
+    // ⚠️ VALIDACIÓN RIGUROSA DE FECHAS (CRITERIO 2: ELABORACIÓN VS CADUCIDAD)
+    const elab = this.altaForm.get('elaborationDate')?.value;
+    const exp = this.altaForm.get('expirationDate')?.value;
+    if (elab && exp) {
+      if (exp < elab) {
+        this.toast.error('🛑 Error de validación: La fecha de caducidad no puede ser anterior a la fecha de elaboración.');
+        return false;
+      }
+      if (exp === elab) {
+        const confirmed = window.confirm('⚠️ Advertencia: La fecha de caducidad es la misma que la de elaboración. ¿Está seguro que desea continuar?');
+        if (!confirmed) {
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 
@@ -1025,6 +1230,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // ── EDICIÓN Y ELIMINACIÓN DE TARIMAS (ROL ADMINISTRADOR) ──
   openEditPalletModal(pallet: ReceptionPalletItem): void {
+    const currentRec = this.selectedReception();
     this.editPalletForm.setValue({
       id: pallet.id,
       palletNumber: pallet.palletNumber || 1,
@@ -1035,6 +1241,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
       palletTypeId: pallet.palletTypeId,
       pieces: pallet.pieces,
       observations: pallet.observations || '',
+      lotNumber: pallet.lotNumber || this.selectedScanningLot() || this.altaForm.value.lotNumber || '',
+      expirationDate: pallet.expirationDate || this.altaForm.value.expirationDate || '',
+      docNumber: (pallet as any).docNumber || currentRec?.checkIn?.docNumber || this.checkInForm.value.docNumber || '',
     });
     this.showEditPalletModal.set(true);
   }
@@ -1066,6 +1275,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
             palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
             pieces: Number(formVals.pieces) || item.pieces,
             observations: formVals.observations || undefined,
+            lotNumber: formVals.lotNumber ? formVals.lotNumber.toUpperCase() : item.lotNumber,
+            expirationDate: (formVals.expirationDate || item.expirationDate) ?? undefined,
+            docNumber: (formVals.docNumber || item.docNumber) ?? undefined,
           };
         }
         return item;
@@ -1088,6 +1300,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.cancelAdminUser.set('');
     this.cancelAdminPassword.set('');
     this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
     this.showCancelModal.set(true);
   }
 
@@ -1183,6 +1396,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.changeRemisionAdminUser.set('');
     this.changeRemisionAdminPassword.set('');
     this.changeRemisionError.set(null);
+    this.showChangeRemisionPassword.set(false);
     this.showChangeRemisionModal.set(true);
   }
 
@@ -1297,8 +1511,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const receptionId = rec.id || rec.folio;
     const currentStream = [...this.palletStream()];
     const formVals = this.altaForm.value;
-    const leaderName = this.authState.userFullName() || 'Pablo Hernández (Líder)';
-    const leaderUser = this.authState.currentUser()?.email || 'admin';
+    const leaderName = this.authState.userFullName() || this.authState.currentUser()?.fullName || 'Líder de Almacén';
+    const leaderUser = this.authState.currentUser()?.email || this.authState.currentUser()?.fullName || 'enrique@4guard.com';
 
     this.isCompleting.set(true);
     this.movementsService
@@ -1310,7 +1524,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.suppliers(),
         leaderName,
         leaderUser,
-        'adminPassword'
+        'admin123'
       )
       .subscribe({
         next: (updated) => {
@@ -1442,6 +1656,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const suppName = this.altaForm.value.supplierName || '';
     const nextNum = this.getNextConsecutivePalletNumber();
 
+    const activeLotNum = this.selectedScanningLot() || this.altaForm.value.lotNumber || '';
+    const matchedLot = this.lotsList().find((l) => l.lotNumber === activeLotNum);
+    const activeExpDate = matchedLot?.expirationDate || this.altaForm.value.expirationDate || this.checkInForm.value.expirationDate || '';
+    const currentDoc = this.checkInForm.value.docNumber || this.selectedReception()?.checkIn?.docNumber || '';
+
     const newItem: ReceptionPalletItem = {
       id: `ua-${Date.now()}-${nextNum}`,
       palletNumber: nextNum,
@@ -1453,6 +1672,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
       observations: this.uaObsInput().trim() || undefined,
       palletTypeId: pType,
       palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+      lotNumber: activeLotNum || undefined,
+      expirationDate: activeExpDate || undefined,
+      docNumber: currentDoc || undefined,
     };
 
     // ⬇️ VISUALIZACIÓN DESCENDENTE: Los más recientes se agregan AL PRINCIPIO del arreglo (unshift)

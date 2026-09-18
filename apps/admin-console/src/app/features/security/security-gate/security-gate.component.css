@@ -359,3 +359,48 @@
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
 }
+
+/* ── CHOFERES EN ESPERA & FORM HEADERS HIGH-CONTRAST & BUTTONS ── */
+.security-card h2,
+.security-card h3,
+.security-card h4 {
+  color: #0f172a !important;
+}
+
+:host-context(.dark) .security-card h2,
+:host-context(.dark) .security-card h3,
+:host-context(.dark) .security-card h4,
+:host-context(.theme-dark) .security-card h2,
+:host-context(.theme-dark) .security-card h3,
+:host-context(.theme-dark) .security-card h4 {
+  color: #f8fafc !important;
+}
+
+.btn-discard-pass {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c !important;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-discard-pass:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b !important;
+}
+
+:host-context(.dark) .btn-discard-pass,
+:host-context(.theme-dark) .btn-discard-pass {
+  background: rgba(153, 27, 27, 0.25);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5 !important;
+}
+
+:host-context(.dark) .btn-discard-pass:hover,
+:host-context(.theme-dark) .btn-discard-pass:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #ffffff !important;
+}
+

@@ -305,17 +305,18 @@
 
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
             <div class="flex items-center gap-2">
-              <button
-                type="button"
-                (click)="openChangeRemisionModal()"
-                class="btn-gold-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm"
-                title="Cambiar número de remisión con autorización de supervisor"
-              >
-                <span class="material-symbols-outlined text-sm">edit_document</span>
-                <span>Cambiar Remisión</span>
-              </button>
-
               @if (rec.status !== 'CANCELLED') {
+                <button
+                  type="button"
+                  (click)="openChangeRemisionModal()"
+                  class="btn-secondary-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
+                  title="Modificar folio de remisión SAP"
+                >
+                  <span class="material-symbols-outlined text-sm">edit_document</span>
+                  <span>Cambiar Remisión</span>
+                </button>
+              }
+              @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
                 <button
                   type="button"
                   (click)="openCancelModal()"
@@ -338,15 +339,17 @@
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  (click)="openEditCasetaModal()"
-                  class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
-                  title="Modificar datos de caseta, transportista, placas o chofer"
-                >
-                  <span class="material-symbols-outlined text-sm">edit</span>
-                  <span>Modificar Ficha</span>
-                </button>
+                @if (rec.status === 'REGISTERED') {
+                  <button
+                    type="button"
+                    (click)="openEditCasetaModal()"
+                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                    title="Modificar datos de caseta, transportista, placas o chofer"
+                  >
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                    <span>Modificar Ficha</span>
+                  </button>
+                }
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
                   <span class="material-symbols-outlined text-xs">alt_route</span>
                   <span>WMS Auto-Slotting</span>
@@ -354,8 +357,19 @@
               </div>
             </div>
 
-            <!-- FILA 1: 4 Columnas bien distribuidas (No. Remisión, Hora Llegada, Transportista, Chofer) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+            <!-- FILA 1: 5 Columnas completas (Cliente, No. Remisión, Hora Llegada, Transportista, Chofer) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 pt-1">
+              <!-- Cliente Destinatario / Propietario -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">business</span>
+                  Cliente Destinatario
+                </span>
+                <span class="logistics-command-value font-bold text-slate-900 dark:text-slate-100 truncate" [title]="rec.checkIn.client">
+                  {{ rec.checkIn.client || 'Cliente General' }}
+                </span>
+              </div>
+
               <!-- No. Remisión -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
@@ -461,14 +475,57 @@
           <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO -->
           @if (rec.status === 'REGISTERED') {
             <form [formGroup]="altaForm" class="space-y-3.5 pt-1">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined">inventory_2</span>
-                <span>PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO</span>
+              <div class="form-section__legend flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined">inventory_2</span>
+                  <span>PARÁMETROS DE LA RECEPCIÓN Y CONTROL DE LOTES</span>
+                </div>
+                <button
+                  type="button"
+                  (click)="openAddLotModal()"
+                  class="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 flex items-center gap-1 transition-all"
+                  title="Registrar nuevo lote para asignar a las tarimas de esta recepción"
+                >
+                  <span class="material-symbols-outlined text-xs">add_circle</span>
+                  <span>+ Agregar Lote a Sesión</span>
+                </button>
               </div>
+
+              <!-- Selector visual de Lotes de la Sesión -->
+              @if (lotsList().length > 0) {
+                <div class="flex items-center gap-2 flex-wrap p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-xs">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lotes Registrados:</span>
+                  @for (lt of lotsList(); track lt.lotNumber) {
+                    <button
+                      type="button"
+                      (click)="selectLotForScanning(lt.lotNumber)"
+                      class="px-2.5 py-1 rounded-lg font-mono text-xs font-bold border transition-all flex items-center gap-1.5"
+                      [class.bg-amber-500]="selectedScanningLot() === lt.lotNumber"
+                      [class.text-slate-950]="selectedScanningLot() === lt.lotNumber"
+                      [class.border-amber-600]="selectedScanningLot() === lt.lotNumber"
+                      [class.bg-white]="selectedScanningLot() !== lt.lotNumber"
+                      [class.dark:bg-slate-900]="selectedScanningLot() !== lt.lotNumber"
+                      [class.text-slate-700]="selectedScanningLot() !== lt.lotNumber"
+                      [class.dark:text-slate-300]="selectedScanningLot() !== lt.lotNumber"
+                      [class.border-slate-300]="selectedScanningLot() !== lt.lotNumber"
+                      [class.dark:border-slate-700]="selectedScanningLot() !== lt.lotNumber"
+                      [title]="'Caducidad: ' + (lt.expirationDate || 'N/A')"
+                    >
+                      <span>📦 {{ lt.lotNumber }}</span>
+                      @if (lt.expirationDate) {
+                        <span class="text-[10px] opacity-75 font-normal">({{ lt.expirationDate }})</span>
+                      }
+                      @if (selectedScanningLot() === lt.lotNumber) {
+                        <span class="material-symbols-outlined text-[13px] font-black">check</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
 
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
                 <div class="fg-field lg:col-span-2">
-                  <label class="fg-label fg-label--required">Lote de Recepción</label>
+                  <label class="fg-label fg-label--required">Lote Activo</label>
                   <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="Ej. LOT-2026-A1" />
                 </div>
 
@@ -485,6 +542,7 @@
                 <div class="fg-field lg:col-span-3">
                   <label class="fg-label fg-label--required">Montacarguista</label>
                   <select formControlName="forkliftOperator" class="fg-input font-bold !text-slate-950">
+                    <option value="">-- Selecciona montacarguista --</option>
                     @for (op of forkliftOperators(); track op.code) {
                       <option [value]="op.name">{{ op.name }}</option>
                     }
@@ -715,40 +773,68 @@
                 </button>
               </div>
 
-              <!-- Escáner Activo de Tarimas -->
-              <div class="scan-bar p-3.5 rounded-xl border border-gold/40 bg-gold-subtle flex flex-col sm:flex-row items-center gap-3">
-                <div class="flex items-center gap-2 text-gold font-bold text-xs whitespace-nowrap">
-                  <span class="material-symbols-outlined text-lg">barcode_scanner</span>
-                  <span>ESCANEAR UA:</span>
+              <!-- Escáner Activo de Tarimas con Selector de Lote Activo -->
+              <div class="scan-bar p-3.5 rounded-xl border border-gold/40 bg-gold-subtle flex flex-col gap-3">
+                <div class="flex items-center justify-between flex-wrap gap-2 text-gold font-bold text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg">barcode_scanner</span>
+                    <span>ESCANEAR UA (TARIMA):</span>
+                  </div>
+                  @if (lotsList().length > 0) {
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] text-slate-600 dark:text-slate-300 font-bold">Lote para nuevas UAs:</span>
+                      <select
+                        [ngModel]="selectedScanningLot()"
+                        (ngModelChange)="selectLotForScanning($event)"
+                        class="text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-amber-500/40 rounded-lg px-2.5 py-1 text-slate-900 dark:text-slate-100"
+                      >
+                        @for (lt of lotsList(); track lt.lotNumber) {
+                          <option [value]="lt.lotNumber">{{ lt.lotNumber }} (Cad: {{ lt.expirationDate || 'N/A' }})</option>
+                        }
+                      </select>
+                      <button
+                        type="button"
+                        (click)="openAddLotModal()"
+                        class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                        title="Agregar otro lote a la sesión"
+                      >
+                        <span class="material-symbols-outlined text-xs">add</span>
+                        <span>Otro Lote</span>
+                      </button>
+                    </div>
+                  }
                 </div>
-                <input
-                  #uaInput
-                  type="text"
-                  [ngModel]="uaCodeInput()"
-                  (ngModelChange)="uaCodeInput.set($event)"
-                  (keyup.enter)="onUaEnter($event)"
-                  placeholder="Código de Barras / Código de Tarima"
-                  class="fg-input font-mono text-xs w-full border-gold focus:ring-2 focus:ring-gold"
-                />
-                <input
-                  type="text"
-                  [ngModel]="uaObsInput()"
-                  (ngModelChange)="uaObsInput.set($event)"
-                  placeholder="Observación (opcional)"
-                  class="fg-input text-xs w-full sm:w-56"
-                />
-                <button
-                  type="button"
-                  (click)="onUaEnter()"
-                  class="btn-primary-gold flex items-center justify-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl whitespace-nowrap w-full sm:w-auto text-slate-900 shadow-sm"
-                >
-                  <span class="material-symbols-outlined text-sm">add</span>
-                  <span>Agregar Tarima</span>
-                </button>
+
+                <div class="flex flex-col sm:flex-row items-center gap-3">
+                  <input
+                    #uaInput
+                    type="text"
+                    [ngModel]="uaCodeInput()"
+                    (ngModelChange)="uaCodeInput.set($event)"
+                    (keyup.enter)="onUaEnter($event)"
+                    placeholder="Código de Barras / Código de Tarima (UA)"
+                    class="fg-input font-mono text-xs w-full border-gold focus:ring-2 focus:ring-gold"
+                  />
+                  <input
+                    type="text"
+                    [ngModel]="uaObsInput()"
+                    (ngModelChange)="uaObsInput.set($event)"
+                    placeholder="Observación (opcional)"
+                    class="fg-input text-xs w-full sm:w-56"
+                  />
+                  <button
+                    type="button"
+                    (click)="onUaEnter()"
+                    class="btn-primary-gold flex items-center justify-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl whitespace-nowrap w-full sm:w-auto text-slate-900 shadow-sm"
+                  >
+                    <span class="material-symbols-outlined text-sm">add</span>
+                    <span>Agregar Tarima</span>
+                  </button>
+                </div>
               </div>
             </div>
           } @else if (rec.status === 'DISCHARGED') {
-            <!-- FASE 4: DESCARGA CONCLUIDA POR MONTACARGUISTA — AUDITORÍA ADMINISTRATIVA (FOTO 2) -->
+            <!-- FASE 4: DESCARGA CONCLUIDA POR MONTACARGUISTA — AUDITORÍA ADMINISTRATIVA -->
             <div class="space-y-4 pt-1">
               <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
@@ -765,21 +851,6 @@
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  [disabled]="isCompleting()"
-                  (click)="initiateCompleteReception()"
-                  class="btn-save flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
-                  title="Aprobar recepción y cerrar ciclo formalmente"
-                >
-                  @if (isCompleting()) {
-                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                    <span>Autorizando...</span>
-                  } @else {
-                    <span class="material-symbols-outlined text-base">verified</span>
-                    <span>Aprobar Recepción y Finalizar Ciclo (F01)</span>
-                  }
-                </button>
               </div>
             </div>
           } @else if (rec.status === 'COMPLETED') {
@@ -800,14 +871,25 @@
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  (click)="openPrintPreview(rec)"
-                  class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 self-end sm:self-auto flex items-center gap-1.5"
-                >
-                  <span class="material-symbols-outlined text-base">print</span>
-                  <span>Imprimir Documento F01</span>
-                </button>
+                <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto flex-wrap">
+                  <button
+                    type="button"
+                    (click)="openChangeRemisionModal()"
+                    class="btn-secondary-outline text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-sm"
+                    title="Modificar folio de remisión SAP en recepción e inventario"
+                  >
+                    <span class="material-symbols-outlined text-sm">edit_document</span>
+                    <span>Cambiar Remisión</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="openPrintPreview(rec)"
+                    class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm flex items-center gap-1.5"
+                  >
+                    <span class="material-symbols-outlined text-base">print</span>
+                    <span>Imprimir Documento F01</span>
+                  </button>
+                </div>
               </div>
 
               <div class="reception-readonly-grid">
@@ -899,8 +981,10 @@
             <table class="tarimas-table">
               <thead>
                 <tr>
-                  <th class="text-center w-14">N. Tarima</th>
-                  <th>Código Tarima</th>
+                  <th class="text-center w-12">N°</th>
+                  <th>Código Tarima (UA)</th>
+                  <th>Lote Asignado</th>
+                  <th>Caducidad</th>
                   <th>SKU</th>
                   <th>Descripción</th>
                   <th>Proveedor</th>
@@ -916,7 +1000,28 @@
                 @for (pallet of palletStream(); track pallet.id) {
                   <tr>
                     <td class="tarimas-cell-num">{{ pallet.palletNumber }}</td>
-                    <td class="tarimas-cell-code">{{ pallet.palletCode }}</td>
+                    <td class="tarimas-cell-code font-mono font-bold">{{ pallet.palletCode }}</td>
+                    <td class="tarimas-cell-lot">
+                      @if (lotsList().length > 1 && (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED')) {
+                        <select
+                          [ngModel]="pallet.lotNumber || selectedScanningLot() || altaForm.value.lotNumber"
+                          (ngModelChange)="assignLotToPallet(pallet.id, $event)"
+                          class="text-[11px] font-mono font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded px-1.5 py-0.5"
+                          title="Cambiar lote asignado a esta UA"
+                        >
+                          @for (lt of lotsList(); track lt.lotNumber) {
+                            <option [value]="lt.lotNumber">{{ lt.lotNumber }}</option>
+                          }
+                        </select>
+                      } @else {
+                        <span class="font-mono text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                          {{ pallet.lotNumber || altaForm.value.lotNumber || 'N/A' }}
+                        </span>
+                      }
+                    </td>
+                    <td class="tarimas-cell-exp font-mono text-xs text-slate-600 dark:text-slate-300">
+                      {{ pallet.expirationDate || altaForm.value.expirationDate || '-' }}
+                    </td>
                     <td class="tarimas-cell-sku">{{ pallet.productId }}</td>
                     <td class="tarimas-cell-desc">{{ pallet.description }}</td>
                     <td class="tarimas-cell-supplier">{{ pallet.supplierName || '-' }}</td>
@@ -948,7 +1053,7 @@
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="9" class="p-0">
+                    <td colspan="11" class="p-0">
                       <div class="tarimas-table-empty">
                         <span class="material-symbols-outlined tarimas-table-empty__icon">inventory_2</span>
                         <p class="tarimas-table-empty__title">No hay tarimas registradas en este folio.</p>
@@ -961,98 +1066,7 @@
             </table>
           </div>
 
-          <!-- 6.5 SECCIÓN DE CONTROL & AUDITORÍA (HOMOLOGADA 4GUARD) -->
-          <div class="carriers-form-section mt-4 pt-4 border-t border-subtle">
-            <div class="carriers-form-section__legend flex items-center gap-2 text-xs font-bold text-gold uppercase tracking-wider mb-3">
-              <span class="material-symbols-outlined text-base">history</span>
-              <span>Información de Control & Auditoría</span>
-            </div>
-
-            <!-- Metadatos de lectura rápida -->
-            <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div class="carriers-readonly-field">
-                <span class="carriers-readonly-field__label">Folio de Recepción</span>
-                <span class="carriers-readonly-field__value font-mono font-black text-xs">#{{ rec.folio }}</span>
-              </div>
-              <div class="carriers-readonly-field">
-                <span class="carriers-readonly-field__label">Organización</span>
-                <span class="carriers-readonly-field__value text-xs font-black">4GUARD LOGISTICS CORP</span>
-              </div>
-              <div class="carriers-readonly-field">
-                <span class="carriers-readonly-field__label">Registrado Por</span>
-                <span class="carriers-readonly-field__value font-mono text-xs font-black">&#64;{{ rec.capturedBy || 'Caseta' }}</span>
-              </div>
-              <div class="carriers-readonly-field">
-                <span class="carriers-readonly-field__label">Fecha de Registro</span>
-                <span class="carriers-readonly-field__value text-xs font-mono font-black">{{ rec.createdAt }}</span>
-              </div>
-            </div>
-
-            <!-- Línea de Tiempo de Auditoría -->
-            <div class="carriers-timeline-preview">
-              <div class="carriers-timeline-preview__header">
-                <div class="carriers-timeline-preview__title">
-                  <span class="material-symbols-outlined text-base">timeline</span>
-                  <span>Línea de Tiempo de Auditoría</span>
-                </div>
-                <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
-              </div>
-
-              <div class="carriers-timeline-preview__nodes">
-                @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
-                  <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action)">
-                    <div class="carriers-tl-node__dot">
-                      <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
-                    </div>
-                    @if (!isLast) {
-                      <div class="carriers-tl-node__line"></div>
-                    }
-                    <div class="carriers-tl-node__content">
-                      <div class="carriers-tl-node__header">
-                        <span class="carriers-tl-node__action">{{ getAuditSummary(log.action) }}</span>
-                        <span class="carriers-tl-node__tag">&#64;{{ log.username }}</span>
-                      </div>
-
-                      @if (log.details && log.details.length > 0) {
-                        <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2 rounded-lg bg-surface border border-subtle">
-                          @for (d of log.details; track d.fieldName) {
-                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
-                              <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
-                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
-                                <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
-                              }
-                              <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
-                            </div>
-                          }
-                        </div>
-                      }
-
-                      @if (log.reason) {
-                        <p class="text-xs text-rose-600 dark:text-rose-400 font-bold italic mt-1">
-                          Motivo: "{{ log.reason }}"
-                        </p>
-                      }
-
-                      <span class="carriers-tl-node__meta">
-                        <span class="material-symbols-outlined text-[13px]">schedule</span>
-                        <span>{{ log.timestamp }}</span>
-                        @if (log.authorizedBy) {
-                          <span class="ml-2 font-bold">· Autorizado por: <strong class="carriers-tl-node__author">{{ log.authorizedBy }}</strong></span>
-                        }
-                      </span>
-                    </div>
-                  </div>
-                } @empty {
-                  <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-3">
-                    No hay eventos de auditoría registrados para este folio.
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- 7. FOOTER CON ACCIONES DE CICLO DE VIDA -->
+          <!-- 6.5 ACCIONES DE CICLO DE VIDA (DIRECTAS DEBAJO DE LA TABLA) -->
           @if (rec.status === 'REGISTERED') {
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-subtle">
               <button
@@ -1117,7 +1131,140 @@
                 }
               </button>
             </div>
+          } @else if (rec.status === 'COMPLETED') {
+            <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-3 border-t border-subtle">
+              <button
+                type="button"
+                (click)="openChangeRemisionModal()"
+                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center"
+              >
+                <span class="material-symbols-outlined text-sm">edit_document</span>
+                <span>Cambiar No. de Remisión</span>
+              </button>
+              <button
+                type="button"
+                (click)="openPrintPreview(rec)"
+                class="btn-primary-gold flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900"
+              >
+                <span class="material-symbols-outlined text-base">print</span>
+                <span>Imprimir Documento F01</span>
+              </button>
+            </div>
           }
+
+          <!-- 7. SECCIÓN DE CONTROL & AUDITORÍA (COLAPSABLE / ON-DEMAND) -->
+          <div class="carriers-form-section mt-4 pt-3 border-t border-subtle">
+            <div
+              (click)="toggleShowAuditTimeline()"
+              class="flex items-center justify-between p-3 rounded-xl bg-surface-variant/40 hover:bg-surface-variant/70 border border-subtle cursor-pointer transition-colors"
+            >
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-base text-gold">history</span>
+                <span class="text-xs font-bold text-gold uppercase tracking-wider">
+                  Información de Control &amp; Auditoría
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gold/15 text-gold border border-gold/30">
+                  {{ auditEntries().length }} evento(s)
+                </span>
+              </div>
+              <button
+                type="button"
+                class="text-xs font-bold text-muted flex items-center gap-1 hover:text-foreground"
+              >
+                <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
+                <span class="material-symbols-outlined text-base transition-transform duration-200" [class.rotate-180]="showAuditTimeline()">
+                  expand_more
+                </span>
+              </button>
+            </div>
+
+            @if (showAuditTimeline()) {
+              <div class="mt-3 space-y-4">
+                <!-- Metadatos de lectura rápida -->
+                <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Folio de Recepción</span>
+                    <span class="carriers-readonly-field__value font-mono font-black text-xs">#{{ rec.folio }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Organización</span>
+                    <span class="carriers-readonly-field__value text-xs font-black">4GUARD LOGISTICS CORP</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Registrado Por</span>
+                    <span class="carriers-readonly-field__value font-mono text-xs font-black">&#64;{{ rec.capturedBy || 'Caseta' }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Fecha de Registro</span>
+                    <span class="carriers-readonly-field__value text-xs font-mono font-black">{{ rec.createdAt }}</span>
+                  </div>
+                </div>
+
+                <!-- Línea de Tiempo de Auditoría -->
+                <div class="carriers-timeline-preview">
+                  <div class="carriers-timeline-preview__header">
+                    <div class="carriers-timeline-preview__title">
+                      <span class="material-symbols-outlined text-base">timeline</span>
+                      <span>Línea de Tiempo de Auditoría</span>
+                    </div>
+                    <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
+                  </div>
+
+                  <div class="carriers-timeline-preview__nodes">
+                    @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                      <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action)">
+                        <div class="carriers-tl-node__dot">
+                          <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
+                        </div>
+                        @if (!isLast) {
+                          <div class="carriers-tl-node__line"></div>
+                        }
+                        <div class="carriers-tl-node__content">
+                          <div class="carriers-tl-node__header">
+                            <span class="carriers-tl-node__action">{{ getAuditSummary(log.action) }}</span>
+                            <span class="carriers-tl-node__tag">&#64;{{ log.username }}</span>
+                          </div>
+
+                          @if (log.details && log.details.length > 0) {
+                            <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2 rounded-lg bg-surface border border-subtle">
+                              @for (d of log.details; track d.fieldName) {
+                                <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                                  <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                  @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                    <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                    <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
+                                  }
+                                  <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          @if (log.reason) {
+                            <p class="text-xs text-rose-600 dark:text-rose-400 font-bold italic mt-1">
+                              Motivo: "{{ log.reason }}"
+                            </p>
+                          }
+
+                          <span class="carriers-tl-node__meta">
+                            <span class="material-symbols-outlined text-[13px]">schedule</span>
+                            <span>{{ log.timestamp }}</span>
+                            @if (log.authorizedBy) {
+                              <span class="ml-2 font-bold">· Autorizado por: <strong class="carriers-tl-node__author">{{ log.authorizedBy }}</strong></span>
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    } @empty {
+                      <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-3">
+                        No hay eventos de auditoría registrados para este folio.
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
         </div>
       } @else {
         <!-- ── ESTADO INICIAL: SIN SELECCIÓN (ESTILO OFICIAL WMS) ── -->
@@ -1353,6 +1500,22 @@
                   }
                 </select>
               </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="font-bold !text-amber-900 uppercase block mb-1">LOTE ASIGNADO:</label>
+                <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase w-full font-bold !text-slate-950" placeholder="Ej. LOT-2026-A1" />
+              </div>
+              <div>
+                <label class="font-bold !text-amber-900 uppercase block mb-1">FECHA CADUCIDAD:</label>
+                <input type="date" formControlName="expirationDate" class="fg-input font-mono w-full font-bold !text-slate-950" />
+              </div>
+            </div>
+
+            <div>
+              <label class="font-bold !text-amber-900 uppercase block mb-1">NO. DE REMISIÓN / DOCUMENTO:</label>
+              <input type="text" formControlName="docNumber" class="fg-input font-mono uppercase w-full font-bold !text-slate-950" placeholder="Ej. REM-26510" />
             </div>
 
             <div>
@@ -1722,19 +1885,20 @@
 
   <!-- ── MODAL: MODIFICAR FICHA OPERATIVA DE CASETA (CHOFER, PLACAS, SELLOS, TRANSPORTISTA) ── -->
   @if (showEditCasetaModal()) {
-    <div class="modal-overlay p-4 animate-fade-in">
-      <div class="modal-card max-w-2xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl">
-        <!-- Header -->
-        <div class="flex items-center justify-between border-b border-subtle pb-3">
+    <div class="modal-overlay p-3 sm:p-4 animate-fade-in" (click)="showEditCasetaModal.set(false)">
+      <div class="modal-card max-w-xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: min(86vh, 680px);" (click)="$event.stopPropagation()">
+        
+        <!-- Modal Header (Fixed at top) -->
+        <div class="modal-header flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 flex-shrink-0">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
-              <span class="material-symbols-outlined text-xl">edit_note</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 flex-shrink-0">
+              <span class="material-symbols-outlined text-lg">edit_note</span>
             </div>
             <div>
-              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide m-0" style="color: #0f172a !important;">
                 Modificar Ficha Operativa de Arribo
               </h3>
-              <p class="text-[11px] text-slate-500">
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 m-0 font-medium">
                 Folio #{{ selectedReception()?.folio }} — Actualización de datos de caseta y transporte
               </p>
             </div>
@@ -1742,113 +1906,135 @@
           <button
             type="button"
             (click)="showEditCasetaModal.set(false)"
-            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Cerrar modal"
           >
             <span class="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
 
-        <!-- Formulario -->
-        <form [formGroup]="editCasetaForm" (ngSubmit)="saveCasetaModifications()" class="space-y-4 text-xs">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <!-- Línea Transportista -->
-            <div class="fg-field sm:col-span-2">
-              <label class="fg-label fg-label--required">Línea Transportista</label>
-              <select formControlName="carrierLine" class="fg-input font-bold !text-slate-950">
-                @for (tr of carrierLines(); track tr.code) {
-                  <option [value]="tr.name">{{ tr.name }}</option>
+        <!-- Form with scrollable body and sticky action footer -->
+        <form [formGroup]="editCasetaForm" (ngSubmit)="saveCasetaModifications()" class="flex flex-col flex-1 min-h-0 overflow-hidden m-0">
+          <!-- Scrollable Body Content -->
+          <div class="modal-body flex-1 overflow-y-auto px-5 py-4 space-y-3.5 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- No. de Remisión / Factura -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required">No. Remisión / Factura</label>
+                <input type="text" formControlName="docNumber" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="Ej. REM-2026-101" />
+              </div>
+
+              <!-- Cliente Destinatario -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required">Cliente Destinatario</label>
+                <select formControlName="client" (change)="onEditCasetaClientChange($event)" class="fg-input font-bold !text-slate-950">
+                  <option value="">-- Selecciona Cliente --</option>
+                  @for (cl of clients(); track cl.code) {
+                    <option [value]="cl.name">{{ cl.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Línea Transportista -->
+              <div class="fg-field sm:col-span-2">
+                <label class="fg-label fg-label--required">Línea Transportista</label>
+                <select formControlName="carrierLine" (change)="onEditCasetaCarrierChange($event)" class="fg-input font-bold !text-slate-950">
+                  <option value="">-- Selecciona Transportista --</option>
+                  @for (tr of carrierLines(); track tr.code) {
+                    <option [value]="tr.name">{{ tr.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Hora de Llegada -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required">Hora de Llegada (HH:mm)</label>
+                <input type="text" formControlName="receptionTime" class="fg-input font-mono font-bold !text-slate-950" placeholder="11:15" />
+              </div>
+
+              <!-- Chofer / Operador -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required">Nombre del Chofer / Operador</label>
+                <input type="text" formControlName="driverName" class="fg-input font-bold !text-slate-950" placeholder="Nombre completo" />
+              </div>
+
+              <!-- Placas Tracto -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required">Placas Tracto</label>
+                <input type="text" formControlName="tractorPlates" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="77-AB-99" />
+              </div>
+
+              <!-- Placas Caja -->
+              <div class="fg-field">
+                <label class="fg-label fg-label--required">Placas Caja</label>
+                <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="55-XX-11" />
+              </div>
+
+              <!-- Andén / Rampa Asignada -->
+              <div class="fg-field sm:col-span-2">
+                <label class="fg-label fg-label--required">Andén / Rampa de Descarga</label>
+                <select formControlName="rampNumber" class="fg-input font-bold !text-slate-950">
+                  @for (rm of ramps(); track rm.code) {
+                    <option [value]="rm.rampNumber">{{ getRampDisplayLabel(rm, selectedReception()?.folio) }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <!-- Sellos / Cinchos de Seguridad -->
+            <div class="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <label class="fg-label fg-label--required">Sellos / Cinchos de Seguridad</label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  [ngModel]="tempEditSealInput()"
+                  (ngModelChange)="tempEditSealInput.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                  (keyup.enter)="addEditSeal()"
+                  placeholder="Ingresar número de sello (ej. SL-98421)..."
+                  class="fg-input font-mono uppercase text-xs flex-1 !text-slate-950"
+                />
+                <button
+                  type="button"
+                  (click)="addEditSeal()"
+                  class="btn-secondary-outline px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1 flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-sm">add</span>
+                  <span>Agregar</span>
+                </button>
+              </div>
+
+              <!-- Lista de sellos con botón de eliminar -->
+              <div class="flex flex-wrap gap-1.5 pt-1">
+                @for (seal of editCasetaSeals(); track seal; let i = $index) {
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-sm">
+                    <span>🔒 {{ seal }}</span>
+                    <button
+                      type="button"
+                      (click)="removeEditSeal(i)"
+                      class="text-rose-500 hover:text-rose-700 ml-1 font-bold"
+                      title="Eliminar sello"
+                    >
+                      &times;
+                    </button>
+                  </span>
                 }
-              </select>
-            </div>
-
-            <!-- Hora de Llegada -->
-            <div class="fg-field">
-              <label class="fg-label fg-label--required">Hora de Llegada (HH:mm)</label>
-              <input type="text" formControlName="receptionTime" class="fg-input font-mono font-bold" placeholder="11:15" />
-            </div>
-
-            <!-- Chofer / Operador -->
-            <div class="fg-field">
-              <label class="fg-label fg-label--required">Nombre del Chofer / Operador</label>
-              <input type="text" formControlName="driverName" class="fg-input font-bold" placeholder="Nombre completo" />
-            </div>
-
-            <!-- Placas Tracto -->
-            <div class="fg-field">
-              <label class="fg-label fg-label--required">Placas Tracto</label>
-              <input type="text" formControlName="tractorPlates" class="fg-input font-mono uppercase font-bold" placeholder="77-AB-99" />
-            </div>
-
-            <!-- Placas Caja -->
-            <div class="fg-field">
-              <label class="fg-label fg-label--required">Placas Caja</label>
-              <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold" placeholder="55-XX-11" />
-            </div>
-
-            <!-- Andén / Rampa Asignada -->
-            <div class="fg-field sm:col-span-2">
-              <label class="fg-label fg-label--required">Andén / Rampa de Descarga</label>
-              <select formControlName="rampNumber" class="fg-input font-bold !text-slate-950">
-                @for (rm of ramps(); track rm.code) {
-                  <option [value]="rm.rampNumber">{{ getRampDisplayLabel(rm, selectedReception()?.folio) }}</option>
-                }
-              </select>
+              </div>
             </div>
           </div>
 
-          <!-- Sellos / Cinchos de Seguridad -->
-          <div class="space-y-2 pt-2 border-t border-subtle">
-            <label class="fg-label fg-label--required">Sellos / Cinchos de Seguridad</label>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                [ngModel]="tempEditSealInput()"
-                (ngModelChange)="tempEditSealInput.set($event)"
-                [ngModelOptions]="{ standalone: true }"
-                (keyup.enter)="addEditSeal()"
-                placeholder="Ingresar número de sello (ej. SL-98421)..."
-                class="fg-input font-mono uppercase text-xs flex-1"
-              />
-              <button
-                type="button"
-                (click)="addEditSeal()"
-                class="btn-secondary-outline px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1"
-              >
-                <span class="material-symbols-outlined text-sm">add</span>
-                <span>Agregar</span>
-              </button>
-            </div>
-
-            <!-- Lista de sellos con botón de eliminar -->
-            <div class="flex flex-wrap gap-1.5 pt-1">
-              @for (seal of editCasetaSeals(); track seal; let i = $index) {
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-sm">
-                  <span>🔒 {{ seal }}</span>
-                  <button
-                    type="button"
-                    (click)="removeEditSeal(i)"
-                    class="text-rose-500 hover:text-rose-700 ml-1 font-bold"
-                    title="Eliminar sello"
-                  >
-                    &times;
-                  </button>
-                </span>
-              }
-            </div>
-          </div>
-
-          <!-- Botones de Acción -->
-          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-subtle">
+          <!-- Modal Footer (Fixed / Sticky at bottom) -->
+          <div class="modal-footer flex items-center justify-end gap-2.5 px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex-shrink-0">
             <button
               type="button"
               (click)="showEditCasetaModal.set(false)"
-              class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold"
+              class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              class="btn-save text-xs px-5 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md"
+              class="btn-save text-xs px-5 py-2 rounded-xl font-black flex items-center gap-1.5 shadow-md bg-amber-500 hover:bg-amber-600 text-slate-950 transition-transform active:scale-95"
             >
               <span class="material-symbols-outlined text-sm">save</span>
               <span>Guardar Cambios</span>
@@ -1949,6 +2135,60 @@
             Cerrar Plano
           </button>
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL: AGREGAR NUEVO LOTE A LA SESIÓN DE RECEPCIÓN (CRITERIO 1 & 2) ── -->
+  @if (showAddLotModal()) {
+    <div class="modal-overlay p-4 animate-fade-in" (click)="closeAddLotModal()">
+      <div class="modal-card max-w-md w-full p-5 space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <span class="material-symbols-outlined text-lg">batch_prediction</span>
+            </div>
+            <div>
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase">Agregar Lote a Sesión</h3>
+              <p class="text-[11px] text-slate-500">Permite asociar diferentes lotes por Unidad de Almacén (UA)</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeAddLotModal()" class="text-slate-400 hover:text-slate-600">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <form [formGroup]="newLotForm" (ngSubmit)="saveNewLot()" class="space-y-3.5 text-xs">
+          <div>
+            <label class="fg-label fg-label--required">Número / Código de Lote</label>
+            <input
+              type="text"
+              formControlName="lotNumber"
+              class="fg-input font-mono font-bold uppercase w-full !text-slate-950"
+              placeholder="Ej. LOT-2026-N2"
+              autofocus
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="fg-label">Fecha Elaboración</label>
+              <input type="date" formControlName="elaborationDate" class="fg-input font-bold w-full !text-slate-950" />
+            </div>
+            <div>
+              <label class="fg-label fg-label--required">Fecha Caducidad</label>
+              <input type="date" formControlName="expirationDate" class="fg-input font-bold w-full !text-slate-950" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
+            <button type="button" (click)="closeAddLotModal()" class="btn-ghost text-xs px-3.5 py-1.5 rounded-lg">Cancelar</button>
+            <button type="submit" class="btn-save text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">add</span>
+              <span>Guardar Lote</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   }

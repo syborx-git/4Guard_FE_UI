@@ -142,6 +142,7 @@ export interface ReceptionPalletItem {
   locationCode?: string;    // Ubicación física de la tarima
   lotNumber?: string;       // Lote
   expirationDate?: string;  // Fecha de caducidad
+  docNumber?: string;       // No. Remisión / Documento
 }
 
 export type ReceptionStatus =

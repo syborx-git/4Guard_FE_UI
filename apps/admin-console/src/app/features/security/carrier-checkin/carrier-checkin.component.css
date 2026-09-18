@@ -632,3 +632,36 @@
   margin-top: 0.5rem;
 }
 
+/* Validation Alert Banner */
+.validation-alert-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  color: #fca5a5;
+  font-size: 0.8125rem;
+}
+
+.validation-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: #f87171;
+  margin-bottom: 0.35rem;
+}
+
+.validation-alert-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style-type: none;
+}
+
+.validation-alert-list li {
+  padding: 0.15rem 0;
+  color: #fecaca;
+  font-weight: 500;
+}
+
+

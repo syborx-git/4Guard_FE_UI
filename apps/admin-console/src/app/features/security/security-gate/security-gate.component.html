@@ -58,7 +58,7 @@
       </div>
     </div>
 
-    <!-- ── BARRA DE PESTAÑAS DE NAVEGACIÓN (TABS DE TRABAJO) ── -->
+    <!-- ── BARRA DE PESTAÑAS DE NAVEGACIÓN (TABS DE TRABAJO — 3 PESTAÑAS ENFOCADAS) ── -->
     <div class="security-tabs-bar">
       <!-- Tab 1: Registro & Pases QR -->
       <button
@@ -68,7 +68,7 @@
         class="security-tab-btn"
       >
         <span class="material-symbols-outlined text-base">how_to_reg</span>
-        <span>1. Nuevo Registro & Pases QR</span>
+        <span>1. Nuevo Registro &amp; Pases QR</span>
         @if (pendingDriverCount() > 0) {
           <span class="security-tab-badge bg-amber-500 text-white animate-pulse">
             {{ pendingDriverCount() }}
@@ -76,7 +76,7 @@
         }
       </button>
 
-      <!-- Tab 2: Unidades en Planta / Rampa -->
+      <!-- Tab 2: Unidades en Planta & Salidas -->
       <button
         type="button"
         (click)="setTab('IN_YARD')"
@@ -84,31 +84,20 @@
         class="security-tab-btn"
       >
         <span class="material-symbols-outlined text-base">local_shipping</span>
-        <span>2. Unidades en Planta</span>
+        <span>2. Unidades en Planta &amp; Salidas</span>
         @if (inYardCount() > 0) {
           <span class="security-tab-badge bg-blue-500 text-white">
             {{ inYardCount() }}
           </span>
         }
-      </button>
-
-      <!-- Tab 3: Salidas Pendientes (Check-Out) -->
-      <button
-        type="button"
-        (click)="setTab('CHECKOUT')"
-        [class.active]="activeTab() === 'CHECKOUT'"
-        class="security-tab-btn"
-      >
-        <span class="material-symbols-outlined text-base">logout</span>
-        <span>3. Salidas (Check-Out)</span>
         @if (readyForExitCount() > 0) {
-          <span class="security-tab-badge bg-emerald-500 text-white animate-bounce">
-            {{ readyForExitCount() }}
+          <span class="security-tab-badge bg-emerald-500 text-white animate-pulse">
+            {{ readyForExitCount() }} listos
           </span>
         }
       </button>
 
-      <!-- Tab 4: Historial & Auditoría -->
+      <!-- Tab 3: Historial del Turno -->
       <button
         type="button"
         (click)="setTab('HISTORY')"
@@ -116,7 +105,7 @@
         class="security-tab-btn"
       >
         <span class="material-symbols-outlined text-base">receipt_long</span>
-        <span>4. Historial & Auditoría F01</span>
+        <span>3. Historial del Turno</span>
       </button>
     </div>
   </header>
@@ -168,7 +157,7 @@
       <div class="flex items-center gap-2.5">
         <button
           type="button"
-          (click)="openF01Print(checkInForm.value)"
+          (click)="openF01Print(lastCompletedPrintItem() || checkInForm.value)"
           class="btn-primary-gradient text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow"
         >
           <span class="material-symbols-outlined text-sm">print</span>
@@ -178,8 +167,9 @@
           type="button"
           (click)="resetForm()"
           class="btn-secondary-outline text-xs px-3 py-2 rounded-xl font-bold"
+          title="Cerrar aviso y nuevo registro"
         >
-          <span>Nuevo Registro</span>
+          <span>✕ Cerrar Aviso</span>
         </button>
       </div>
     </div>
@@ -236,56 +226,85 @@
         <div class="security-card p-5">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-blue-500">pending_actions</span>
-              <span>Choferes en Espera</span>
+              <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">pending_actions</span>
+              <span class="text-slate-900 dark:text-slate-100 font-extrabold">Choferes en Espera</span>
             </h3>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/15 text-blue-600 dark:text-blue-400">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/15 text-blue-700 dark:text-blue-300">
               {{ activePasses().length }}
             </span>
           </div>
 
+          @if (passActionNotice()) {
+            <div class="mb-3 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 animate-fade-in">
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              <span>{{ passActionNotice() }}</span>
+            </div>
+          }
+
           @if (activePasses().length === 0) {
             <div class="text-center py-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
               <span class="material-symbols-outlined text-3xl text-slate-400 mb-1">hourglass_empty</span>
-              <p class="text-xs font-semibold text-slate-500">No hay choferes en espera</p>
-              <p class="text-[11px] text-slate-400 mt-0.5">Los auto-registros móviles aparecerán aquí.</p>
+              <p class="text-xs font-semibold text-slate-600 dark:text-slate-400">No hay choferes en espera</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Los pases QR generados y auto-registros aparecerán aquí.</p>
             </div>
           } @else {
-            <div class="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+            <div class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
               @for (pass of activePasses(); track pass.id || pass.token) {
-                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/40 hover:border-amber-500/60 transition-all flex flex-col gap-2">
+                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/60 shadow-sm hover:border-amber-500/60 transition-all flex flex-col gap-2">
                   <div class="flex items-start justify-between">
                     <div>
-                      <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-1.5">
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase"
-                              [ngClass]="pass.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
+                              [ngClass]="pass.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300' : 'bg-blue-500/20 text-blue-800 dark:text-blue-300'">
                           {{ pass.operationType || 'DESCARGA' }}
                         </span>
-                        <span class="font-mono text-[10px] font-bold text-slate-500">#{{ pass.token }}</span>
+                        <span class="font-mono text-[10px] font-bold text-slate-600 dark:text-slate-400">#{{ pass.token }}</span>
                       </div>
                       <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 mt-1">
-                        {{ pass.driverName || 'Chofer sin nombre' }}
+                        {{ pass.driverName || (pass.status === 'SUBMITTED' ? 'Chofer sin nombre' : 'QR esperando captura') }}
                       </h4>
                     </div>
-                    <span class="px-2 py-0.5 rounded text-[9.5px] font-bold uppercase"
-                          [ngClass]="pass.status === 'SUBMITTED' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'">
-                      {{ pass.status === 'SUBMITTED' ? '✓ Enviado' : 'Pendiente' }}
-                    </span>
+
+                    <div class="flex items-center gap-1.5">
+                      <span class="px-2 py-0.5 rounded text-[9.5px] font-bold uppercase"
+                            [ngClass]="pass.status === 'SUBMITTED' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'">
+                        {{ pass.status === 'SUBMITTED' ? '✓ Enviado' : '⏳ QR Generado' }}
+                      </span>
+                      <button
+                        type="button"
+                        (click)="deleteDriverPass(pass, $event)"
+                        title="Descartar / Eliminar este pase"
+                        class="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                      >
+                        <span class="material-symbols-outlined text-sm">delete_outline</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div class="text-[10px] text-slate-600 dark:text-slate-400 grid grid-cols-2 gap-1 border-t border-slate-200 dark:border-slate-700 pt-1.5">
-                    <div>Placas: <strong class="font-mono">{{ pass.tractorPlates || 'S/P' }}</strong></div>
-                    <div>Transporte: <strong>{{ pass.carrierLine || 'General' }}</strong></div>
+                  <div class="text-[10px] text-slate-600 dark:text-slate-300 grid grid-cols-2 gap-1 border-t border-slate-100 dark:border-slate-700/60 pt-1.5">
+                    <div>Placas: <strong class="font-mono text-slate-800 dark:text-slate-100">{{ pass.tractorPlates || 'S/P' }}</strong></div>
+                    <div>Transporte: <strong class="text-slate-800 dark:text-slate-100">{{ pass.carrierLine || 'General' }}</strong></div>
                   </div>
 
-                  <button
-                    type="button"
-                    (click)="loadDriverSubmission(pass)"
-                    class="w-full btn-primary-gradient text-[11px] py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <span class="material-symbols-outlined text-sm">download_done</span>
-                    <span>Cargar en Caseta</span>
-                  </button>
+                  <div class="flex items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      (click)="loadDriverSubmission(pass)"
+                      class="flex-1 btn-primary-gradient text-[11px] py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5"
+                    >
+                      <span class="material-symbols-outlined text-sm">download_done</span>
+                      <span>{{ pass.status === 'SUBMITTED' ? 'Cargar en Caseta' : 'Cargar / Usar' }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="deleteDriverPass(pass, $event)"
+                      class="px-3 py-1.5 rounded-lg btn-discard-pass text-[10px] font-bold flex items-center gap-1"
+                      title="Descartar pase"
+                    >
+                      <span class="material-symbols-outlined text-xs">delete</span>
+                      <span>Descartar</span>
+                    </button>
+                  </div>
                 </div>
               }
             </div>
@@ -460,6 +479,7 @@
                   (change)="onTransportTypeSelect($any($event.target).value)"
                   class="form-input text-xs font-semibold"
                 >
+                  <option value="" disabled [selected]="!checkInForm.get('tipoTransporte')?.value">-- Seleccione Tipo de Transporte --</option>
                   @for (t of transportTypesList(); track t) {
                     <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
                   }
@@ -517,6 +537,7 @@
                   (change)="onBoxDimensionSelect($any($event.target).value)"
                   class="form-input text-xs font-semibold"
                 >
+                  <option value="" disabled [selected]="!checkInForm.get('medidasCaja')?.value">-- Seleccione Medidas de Caja --</option>
                   @for (d of boxDimensionsList(); track d) {
                     <option [value]="d" [selected]="checkInForm.get('medidasCaja')?.value === d">{{ d }}</option>
                   }
@@ -789,41 +810,102 @@
   }
 
   <!-- ══════════════════════════════════════════════════════════════════════════
-       PESTAÑA 2: UNIDADES EN PLANTA / RAMPA
+       PESTAÑA 2: UNIDADES EN PLANTA & CONTROL DE SALIDAS (CHECK-OUT)
   ══════════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'IN_YARD') {
     <div class="security-card p-5 sm:p-6 animate-fade-in space-y-4">
+      <!-- Cabecera de la mesa de control -->
       <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
         <div>
           <h2 class="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span class="material-symbols-outlined text-blue-500">local_shipping</span>
-            <span>Unidades Operando en Planta (Rampas y Andenes)</span>
+            <span>Unidades en Planta &amp; Control de Salidas</span>
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            Vehículos que han ingresado y se encuentran actualmente en proceso de descarga, carga o listos para retiro.
+            Monitoreo en tiempo real de vehículos en patio y registro de salida (Check-Out) únicamente cuando el almacén ha autorizado el F01.
           </p>
         </div>
 
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Buscador Rápido -->
+          <div class="relative w-56 sm:w-64">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            <input
+              type="text"
+              [ngModel]="inYardSearch()"
+              (ngModelChange)="inYardSearch.set($event)"
+              placeholder="Filtrar por placas, chofer, rampa..."
+              class="form-input text-xs pl-9 py-1.5 rounded-xl w-full"
+            />
+          </div>
+
+          <!-- Botón Refrescar -->
+          <button
+            type="button"
+            (click)="reloadInYardPasses()"
+            class="btn-secondary-outline text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5"
+            title="Refrescar estatus de unidades"
+          >
+            <span class="material-symbols-outlined text-sm">refresh</span>
+            <span>Refrescar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros Segmentados -->
+      <div class="flex items-center gap-2 flex-wrap pb-1">
         <button
           type="button"
-          (click)="reloadInYardPasses()"
-          class="btn-secondary-outline text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5"
+          (click)="inYardFilter.set('ALL')"
+          class="px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+          [ngClass]="inYardFilter() === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
         >
-          <span class="material-symbols-outlined text-sm">refresh</span>
-          <span>Refrescar</span>
+          <span>Todas en Planta</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+            {{ inYardCount() }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          (click)="inYardFilter.set('IN_MANEUVER')"
+          class="px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+          [ngClass]="inYardFilter() === 'IN_MANEUVER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+        >
+          <span class="material-symbols-outlined text-xs animate-spin">sync</span>
+          <span>En Descarga / Maniobra</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'IN_MANEUVER' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+            {{ inManeuverCount() }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          (click)="inYardFilter.set('READY_EXIT')"
+          class="px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+          [ngClass]="inYardFilter() === 'READY_EXIT' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+        >
+          <span class="material-symbols-outlined text-xs">check_circle</span>
+          <span>Listas para Salida</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'READY_EXIT' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+            {{ readyForExitCount() }}
+          </span>
         </button>
       </div>
 
+      <!-- Estado de Carga o Vacío -->
       @if (isLoadingInYard()) {
         <div class="text-center py-12">
           <span class="material-symbols-outlined text-4xl text-amber-500 animate-spin">progress_activity</span>
           <p class="text-xs font-semibold text-slate-500 mt-2">Consultando unidades en planta...</p>
         </div>
-      } @else if (inYardPasses().length === 0) {
+      } @else if (filteredInYardPasses().length === 0) {
         <div class="text-center py-12 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
           <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">garage</span>
-          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No hay unidades en planta</h3>
-          <p class="text-xs text-slate-500 mt-1">Todas las unidades han completado su salida o no se han registrado ingresos.</p>
+          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No hay unidades en esta categoría</h3>
+          <p class="text-xs text-slate-500 mt-1">
+            {{ inYardFilter() === 'READY_EXIT' ? 'No hay unidades autorizadas pendientes de salida en este momento.' : 'No se encontraron vehículos operando en planta.' }}
+          </p>
         </div>
       } @else {
         <div class="overflow-x-auto">
@@ -833,7 +915,7 @@
                 <th class="py-2.5 px-3">Folio / Pase</th>
                 <th class="py-2.5 px-3">Operación</th>
                 <th class="py-2.5 px-3">Rampa</th>
-                <th class="py-2.5 px-3">Transporte & Placas</th>
+                <th class="py-2.5 px-3">Transporte &amp; Placas</th>
                 <th class="py-2.5 px-3">Operador</th>
                 <th class="py-2.5 px-3">Hora Entrada</th>
                 <th class="py-2.5 px-3">Estatus en Almacén</th>
@@ -841,8 +923,8 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-800 font-medium">
-              @for (item of inYardPasses(); track item.id || item.token) {
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              @for (item of filteredInYardPasses(); track item.id || item.token) {
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors" [ngClass]="{ 'bg-emerald-500/5': item.isReadyForExit }">
                   <td class="py-3 px-3">
                     <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
                       {{ item.generatedFolio || item.token }}
@@ -868,18 +950,18 @@
                     <div class="font-semibold">{{ item.driverName || 'S/N' }}</div>
                   </td>
                   <td class="py-3 px-3 font-mono text-[11px]">
-                    {{ item.receptionTime || '--:--' }}
+                    {{ formatTimeString(item.receptionTime) }}
                   </td>
                   <td class="py-3 px-3">
                     @if (item.isReadyForExit) {
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-[10.5px] animate-pulse">
-                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10.5px] border border-emerald-500/30 animate-pulse">
+                        <span class="material-symbols-outlined text-sm">verified</span>
                         <span>Autorizado / Listo Salida</span>
                       </span>
                     } @else {
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold text-[10.5px]">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[10.5px] border border-amber-500/20">
                         <span class="material-symbols-outlined text-sm animate-spin">sync</span>
-                        <span>{{ item.warehouseStatus || 'En Descarga' }}</span>
+                        <span>{{ item.warehouseStatus === 'ASSIGNED' ? 'Asignado a Rampa' : (item.warehouseStatus || 'En Descarga') }}</span>
                       </span>
                     }
                   </td>
@@ -888,20 +970,32 @@
                       <button
                         type="button"
                         (click)="openF01Print(item)"
-                        class="btn-secondary-outline text-[11px] px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1"
-                        title="Ver formato F01"
+                        class="btn-secondary-outline text-[11px] px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow-sm"
+                        title="Ver / Imprimir boleta F01"
                       >
                         <span class="material-symbols-outlined text-sm">print</span>
                         <span>F01</span>
                       </button>
-                      <button
-                        type="button"
-                        (click)="openCheckOutModal(item)"
-                        class="btn-primary-gradient text-[11px] px-3 py-1.5 rounded-lg font-bold flex items-center gap-1"
-                      >
-                        <span class="material-symbols-outlined text-sm">logout</span>
-                        <span>Check-Out</span>
-                      </button>
+
+                      @if (item.isReadyForExit) {
+                        <button
+                          type="button"
+                          (click)="openCheckOutModal(item)"
+                          class="btn-primary-gradient text-[11px] px-3.5 py-1.5 rounded-lg font-black flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-transform text-slate-900"
+                          title="Registrar salida de unidad"
+                        >
+                          <span class="material-symbols-outlined text-sm">logout</span>
+                          <span>Check-Out</span>
+                        </button>
+                      } @else {
+                        <span
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-subtle cursor-not-allowed select-none"
+                          title="Descarga en proceso en almacén. Requiere autorización del Líder antes de dar salida."
+                        >
+                          <span class="material-symbols-outlined text-xs">lock</span>
+                          <span>En Descarga</span>
+                        </span>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -914,105 +1008,7 @@
   }
 
   <!-- ══════════════════════════════════════════════════════════════════════════
-       PESTAÑA 3: SALIDAS PENDIENTES (CHECK-OUT)
-  ══════════════════════════════════════════════════════════════════════════ -->
-  @if (activeTab() === 'CHECKOUT') {
-    <div class="security-card p-5 sm:p-6 animate-fade-in space-y-4">
-      <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-        <div>
-          <h2 class="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span class="material-symbols-outlined text-emerald-500">exit_to_app</span>
-            <span>Salidas Pendientes & Check-Out de Vigilancia</span>
-          </h2>
-          <p class="text-xs text-slate-500 mt-0.5">
-            Unidades cuya maniobra en almacén fue autorizada y completada por el Líder de Almacén, listas para registrar hora de salida e imprimir boleta.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          (click)="reloadInYardPasses()"
-          class="btn-secondary-outline text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5"
-        >
-          <span class="material-symbols-outlined text-sm">refresh</span>
-          <span>Refrescar</span>
-        </button>
-      </div>
-
-      @if (inYardPasses().length === 0) {
-        <div class="text-center py-12 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
-          <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">task_alt</span>
-          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No hay salidas pendientes</h3>
-          <p class="text-xs text-slate-500 mt-1">Todas las unidades en planta están operando o ya registraron su retiro de caseta.</p>
-        </div>
-      } @else {
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          @for (item of inYardPasses(); track item.id || item.token) {
-            <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 hover:border-amber-500/60 transition-all flex flex-col justify-between gap-3">
-              <div>
-                <div class="flex items-start justify-between gap-2">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                        [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
-                    {{ item.operationType || 'DESCARGA' }}
-                  </span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                        [ngClass]="item.isReadyForExit ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'">
-                    {{ item.isReadyForExit ? '✓ Autorizada por Almacén' : 'En Maniobra' }}
-                  </span>
-                </div>
-
-                <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 mt-2">
-                  {{ item.generatedFolio ? 'Folio #' + item.generatedFolio : 'Pase #' + item.token }}
-                </h3>
-                <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold">{{ item.clientName || 'Cliente General' }}</p>
-
-                <div class="mt-3 space-y-1 text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <div class="flex justify-between">
-                    <span class="text-slate-500">Chofer:</span>
-                    <strong class="text-right">{{ item.driverName || 'S/N' }}</strong>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-slate-500">Placas Tracto/Caja:</span>
-                    <strong class="font-mono text-right">{{ item.tractorPlates || '-' }} / {{ item.boxPlates || '-' }}</strong>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-slate-500">Rampa:</span>
-                    <strong class="text-amber-600 dark:text-amber-400 font-mono">{{ item.rampCode || ('R-' + item.rampNumber) }}</strong>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-slate-500">Hora Entrada:</span>
-                    <strong class="font-mono">{{ item.receptionTime || '--:--' }}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  (click)="openF01Print(item)"
-                  class="btn-secondary-outline text-xs py-2 px-3 rounded-xl font-bold flex-1 flex items-center justify-center gap-1"
-                >
-                  <span class="material-symbols-outlined text-sm">print</span>
-                  <span>Ver F01</span>
-                </button>
-                <button
-                  type="button"
-                  (click)="openCheckOutModal(item)"
-                  class="btn-primary-gradient text-xs py-2 px-3 rounded-xl font-bold flex-1 flex items-center justify-center gap-1 shadow"
-                >
-                  <span class="material-symbols-outlined text-sm">check_circle</span>
-                  <span>Registrar Salida</span>
-                </button>
-              </div>
-            </div>
-          }
-        </div>
-      }
-    </div>
-  }
-
-  <!-- ══════════════════════════════════════════════════════════════════════════
-       PESTAÑA 4: HISTORIAL & AUDITORÍA F01
+       PESTAÑA 3: HISTORIAL DEL TURNO
   ══════════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'HISTORY') {
     <div class="security-card p-5 sm:p-6 animate-fade-in space-y-4">
@@ -1020,10 +1016,10 @@
         <div>
           <h2 class="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span class="material-symbols-outlined text-amber-500">receipt_long</span>
-            <span>Historial y Auditoría de Movimientos en Caseta</span>
+            <span>Historial de Movimientos en Caseta</span>
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            Registro inmutable de todas las entradas y salidas de vehículos con opción de reimpresión de la boleta F01-PO-CP-7.1.3-03.
+            Registro de entradas y salidas de vehículos con opción de reimpresión de la boleta F01-PO-CP-7.1.3-03.
           </p>
         </div>
 
@@ -1102,8 +1098,8 @@
                     <div>{{ item.driverName || 'S/N' }}</div>
                   </td>
                   <td class="py-3 px-3 font-mono text-[10.5px]">
-                    <div>In: <strong>{{ item.receptionTime || '--:--' }}</strong></div>
-                    <div>Out: <strong>{{ item.departureTime || '--:--' }}</strong></div>
+                    <div>In: <strong>{{ formatTimeString(item.receptionTime) }}</strong></div>
+                    <div>Out: <strong>{{ formatTimeString(item.departureTime) }}</strong></div>
                   </td>
                   <td class="py-3 px-3">
                     @if (item.status === 'COMPLETED_EXIT') {
@@ -1198,6 +1194,26 @@
           <span>Copiar Enlace al Portapapeles</span>
         </button>
 
+        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="generateNewDriverPass()"
+            class="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 text-slate-700 dark:text-slate-300 hover:text-amber-600 font-bold text-[11px] flex items-center justify-center gap-1"
+          >
+            <span class="material-symbols-outlined text-sm">restart_alt</span>
+            <span>Nuevo QR</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="discardCurrentQrPass()"
+            class="py-2 px-3 rounded-xl border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 font-bold text-[11px] flex items-center justify-center gap-1"
+          >
+            <span class="material-symbols-outlined text-sm">delete_outline</span>
+            <span>Descartar Pase</span>
+          </button>
+        </div>
+
         @if (copyNotice()) {
           <p class="text-xs text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
         }
@@ -1238,7 +1254,7 @@
       <div class="grid grid-cols-2 gap-2 text-xs p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
         <div>Chofer: <strong>{{ selectedCheckOutPass().driverName || 'S/N' }}</strong></div>
         <div>Transporte: <strong>{{ selectedCheckOutPass().carrierLine || 'General' }}</strong></div>
-        <div>Hora Entrada: <strong class="font-mono">{{ selectedCheckOutPass().receptionTime || '--:--' }}</strong></div>
+        <div>Hora Entrada: <strong class="font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime) }}</strong></div>
         <div>Rampa: <strong class="font-mono text-amber-600">{{ selectedCheckOutPass().rampCode || 'R-01' }}</strong></div>
       </div>
 
@@ -1305,20 +1321,20 @@
      MODAL C: VISOR E IMPRESIÓN OFICIAL DEL FORMATO F01-PO-CP-7.1.3-03
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showF01PrintModal() && currentPrintData()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-fade-in">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-4xl w-full max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full max-h-[84vh] flex flex-col shadow-2xl overflow-hidden">
       
-      <!-- Top Action Bar -->
-      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3 bg-slate-50 dark:bg-slate-950">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-            <span class="material-symbols-outlined text-lg">print</span>
+      <!-- Top Action Bar (Compact) -->
+      <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 bg-slate-50 dark:bg-slate-950">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <span class="material-symbols-outlined text-base">print</span>
           </div>
           <div>
-            <h3 class="font-black text-sm text-slate-900 dark:text-slate-100">
+            <h3 class="font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-none">
               Formato F01-PO-CP-7.1.3-03 (Check List de Transporte)
             </h3>
-            <p class="text-[11px] text-slate-500">Documento Oficial para Auditoría Patrimonial</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Documento Oficial para Auditoría Patrimonial</p>
           </div>
         </div>
 
@@ -1326,25 +1342,25 @@
           <button
             type="button"
             (click)="printF01()"
-            class="btn-primary-gradient text-xs px-4 py-2 rounded-xl font-black flex items-center gap-1.5 shadow"
+            class="btn-primary-gradient text-[11px] px-3.5 py-1.5 rounded-lg font-black flex items-center gap-1.5 shadow"
           >
-            <span class="material-symbols-outlined text-base">print</span>
+            <span class="material-symbols-outlined text-sm">print</span>
             <span>Imprimir Hoja</span>
           </button>
 
           <button
             type="button"
             (click)="downloadF01Pdf()"
-            class="btn-secondary-outline text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5"
+            class="btn-secondary-outline text-[11px] px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5"
           >
-            <span class="material-symbols-outlined text-base">download</span>
+            <span class="material-symbols-outlined text-sm">download</span>
             <span>Descargar PDF</span>
           </button>
 
           <button
             type="button"
             (click)="closeF01Print()"
-            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-lg font-bold px-2"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-base font-bold px-1.5"
           >
             ✕
           </button>
@@ -1352,7 +1368,7 @@
       </div>
 
       <!-- Contenedor con Scroll de la Hoja Oficial Imprimible -->
-      <div class="p-4 sm:p-6 overflow-y-auto bg-slate-200/60 dark:bg-slate-950/80 flex-1">
+      <div class="p-3 sm:p-4 overflow-y-auto bg-slate-200/60 dark:bg-slate-950/80 flex-1">
         <div id="f01-print-target">
           <fg-print-transport-checklist-layout [data]="currentPrintData()!"></fg-print-transport-checklist-layout>
         </div>

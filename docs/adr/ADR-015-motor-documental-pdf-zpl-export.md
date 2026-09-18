@@ -1,54 +1,58 @@
-# ADR-015: Motor Documental para Generación de Boletas de Recepción, Traspasos, Despachos Outbound y Códigos Industriales (PDF & ZPL)
+# ADR-015: Motor Documental para Generación de Boletas de Recepción, Traspasos, Despachos Outbound, Check List F01 y Códigos Industriales (PDF & ZPL)
 
-- **Estado:** Aceptado
-- **Fecha:** 2026-09-12
-- **Autores:** Equipo 4GUARD WMS (Frontend, Backend & Hardware)
+- **Estado:** Aceptado / Homologado
+- **Fecha:** 2026-09-12 (Actualizado: 2026-09-17)
+- **Autores:** Equipo 4GUARD WMS (Frontend, Backend & Calidad Documental)
 - **Módulos Afectados:** `apps/admin-console`, `apps/rf-terminal`, `4guard_be`, `libs/shared-core`
+- **ADRs Relacionados:** [ADR-018 (Check-Out Caseta y Formato F01)](./ADR-018-security-gate-checkout-and-f01-transport-checklist-homologation.md)
 
 ---
 
 ## 1. Contexto y Problema
 
-Las operaciones logísticas de 4GUARD WMS requieren generar dos categorías completamente distintas de artefactos físicos y digitales:
-
-1. **Documentos Ejecutivos y de Soporte Legal (Formato Humano):**
-   - Boletas de descarga / recepción de mercancía en andén (`ReceptionReceipt`).
-   - Órdenes de traspaso interno entre bahías o almacenes (`TransferManifest`).
-   - Hojas de embarque, cartas porte y notas de remisión de salida (`OutboundBillOfLading`).
-   - Estos documentos deben tener diseño corporativo impecable (tipografía institucional, logos vectoriales, tablas con desglose de SKUs, lotes, fechas de caducidad, códigos QR de validación y firmas de conformidad).
-
-2. **Etiquetas Térmicas Industriales (Formato Máquina):**
-   - Etiquetas para tarimas (pallets) con código de barras GS1-128 / Code 128.
-   - Identificadores de ubicación de racks y bahías.
-   - Estas etiquetas deben imprimirse a alta velocidad en impresoras industriales Zebra en andenes mediante comandos nativos ZPL (*Zebra Programming Language*).
+Las operaciones logísticas y de auditoría patrimonial de 4GUARD WMS requieren emitir formatos oficiales estandarizados que cumplan rigurosamente con los lineamientos corporativos institucionales:
+1. **Unificación y Homologación Visual Transversal:**
+   - Boleta Oficial de Recepción de Mercancía (`PrintReceptionLayoutComponent`).
+   - Boleta Oficial de Salida / Despacho de Mercancía (`PrintDispatchLayoutComponent`).
+   - Comprobante Oficial de Cambio de Almacén / Traspaso (`PrintTransferLayoutComponent`).
+   - Formato F01 de Inspección y Check List de Transporte (`PrintTransportChecklistLayoutComponent`).
+2. **Requerimientos de Diseño Corporativo Físico (F01 / Pauta Institucional):**
+   - **Dirección Oficial Institucional:** `Calle. Industria Automotriz sin número, Colonia el Coecillo, municipio de Toluca, Estado de México, C.P 50246.`
+   - **Estandarización Tipográfica:** Todas las etiquetas, encabezados y valores en **MAYÚSCULAS** sostenidas.
+   - **Títulos Limpios:** Eliminación de prefijos innecesarios ("Pauta de"), quedando: `RECEPCIÓN DE MERCANCÍA`, `SALIDA DE MERCANCÍA`, `COMPROBANTE DE CAMBIO DE ALMACÉN` y `FORMATO CHECK LIST DE TRANSPORTE`.
+   - **Fechas y Horas Estándar:** Fechas en formato exacto `DD/MM/YYYY` y horas homologadas a 2 dígitos de segundos `HH:mm:ss`.
+   - **Detalle de Tarimas Enriquecido:** Cada fila/UA en las tablas incluye su número de remisión/documento inicial (`NO. REMISIÓN` / `DOC. INICIAL`) y fecha de caducidad individual (`CADUCIDAD`).
+   - **Garantía de Impresión en 1 Sola Hoja (Single Page Print):** Estructura CSS optimizada con márgenes compactos, paddings micrométricos y `page-break-inside: avoid` para que el documento encaje al 100% en 1 sola hoja Carta/A4.
+   - **Firmas Institucionales:** Bloque de `ELABORÓ / CAPTURÓ` con el nombre dinámico del usuario en sesión activa, junto con la línea oficial de `FIRMA DE CONFORMIDAD / RECIBE`.
 
 ---
 
 ## 2. Decisión Tomada
 
-Se adopta una **Arquitectura Híbrida de Generación y Emisión Documental**:
+Se adopta una **Arquitectura Híbrida de Generación y Emisión Documental Homologada**:
 
-### 2.1 Generación de Documentos PDF en Frontend (`apps/admin-console`, `pdf-print-export.service.ts`)
-* **Tecnología:** Generación directa en el cliente mediante **jsPDF** y **pdfmake / canvas**, eliminando la sobrecarga computacional de renderizado en el servidor para documentos administrativos.
-* **Estándar Visual Corporativo:**
-  - Paleta institucional: Cabeceras en Midnight Navy (`#172033`), acentos en Prestige Gold (`#c5a86b`) y líneas delimitadoras sutiles (`#e2e8f0`).
-  - Metadatos estandarizados: Folio único correlativo, logotipo corporativo en base64, código QR con URL de verificación de autenticidad, tabla de partidas con cantidades solicitadas vs recibidas/despachadas, y recuadros de firma para operador de patio, chofer y supervisor.
-* **Previsualización y Descarga:** El usuario puede abrir un modal con previsualización en tiempo real mediante `Blob URL` o disparar la impresión nativa del navegador con hojas dimensionadas en formato Carta (Letter) o A4.
+### 2.1 Generación de Documentos PDF y Vistas Imprimibles en Frontend (`apps/admin-console`, `PrintService`)
+* **Tecnología:** Renderizado DOM nativo de alta resolución mediante `PrintService` (`window.print()` / `html2canvas` / `jsPDF`).
+* **Estándar Visual Corporativo Homologado:**
+  - **Encabezado Institucional:** Logotipo SVG `4GUARD`, nombre corporativo `4-GUARD WMS`, dirección fiscal unificada y fecha de emisión `DD/MM/YYYY`.
+  - **Bloque de Metadatos:** Cuadrícula de 2 columnas con bordes nítidos de 1px/2px, etiquetas en negrita a la izquierda y valores en tipografía monoespaciada a la derecha.
+  - **Tabla de UAs/Tarimas:** Desglose con `N. TARIMA`, `CÓDIGO TARIMA (UA)`, `NO. REMISIÓN`, `SKU`, `DESCRIPCIÓN`, `PROVEEDOR / CLIENTE`, `TIPO TARIMA`, `CADUCIDAD`, `CANT X TARIMA` y `OBSERVACIONES`.
+  - **Fila de Totales:** Resumen en una sola línea con `TOTAL TARIMAS`, `TOTAL PIEZAS` y `SKUS DISTINTOS`.
+  - **Bloque de Firmas y Auditoría:** Doble columna para responsable emisor (`CAPTURÓ: [USUARIO]`) y receptor (`FIRMA DE CONFORMIDAD`).
 
 ### 2.2 Impresión Industrial ZPL por Socket TCP Backend (`4guard_be`)
 * **Tecnología:** Emisión directa desde el backend a través de **Sockets TCP Raw (Puerto 9100)** hacia las direcciones IP asignadas a las impresoras Zebra de andén.
-* **Justificación:** Los navegadores web y las PWAs operan bajo un modelo sandbox de seguridad que les prohíbe abrir sockets TCP directos hacia la red local del almacén. El backend actúa como broker autorizado para enviar ráfagas ZPL precompiladas.
-* **Formato ZPL:** Plantillas estandarizadas con control milimétrico de densidad térmica (203 dpi / 300 dpi), campos de código de barras bidimensional (Datamatrix / QR) y unidimensional (Code 128 con dígito verificador).
+* **Formato ZPL:** Plantillas estandarizadas a 203/300 dpi con códigos de barras Code 128 y QR bidimensional.
 
 ---
 
 ## 3. Consecuencias
 
 ### Positivas
-- **Descarga Inmediata sin Latencia:** Los PDFs se procesan en milisegundos en el cliente, evitando cuellos de botella en el servidor de Spring Boot al imprimir cientos de boletas diarias.
-- **Confiabilidad en Piso de Operación:** La impresión ZPL por socket backend garantiza etiquetas nítidas, resistentes y legibles para los escáneres láser de las terminales handheld.
-- **Diseño Corporativo Unificado:** Tanto las boletas PDF como las etiquetas ZPL comparten los mismos identificadores de lote, folio y códigos de barras.
+- **Homogeneidad Total en Planta:** Todos los documentos emitidos (Recepción, Salida, Traspaso y Caseta) guardan una misma identidad corporativa y estructura visual.
+- **Cero Desperdicio de Papel:** La optimización de espaciado garantiza que las boletas operativas se impriman en exactamente una página.
+- **Trazabilidad a Nivel Tarima:** La inclusión de la remisión y caducidad por UA permite auditar la procedencia de cada pallet individualmente.
 
 ### Compromisos
-- Requiere mantener sincronizadas las direcciones IP de las impresoras Zebra en el catálogo de configuración de sucursales del backend.
-- El bundle de frontend incluye las librerías de generación de PDF, debiendo ser cargadas perezosamente (*Lazy Loading*) solo al ingresar a módulos de exportación.
+- Se deben mantener las funciones de formateo `formatDateDMY` y `formatTimeString` activas en todos los componentes de impresión para evitar discrepancias de milisegundos o formatos ISO.
+

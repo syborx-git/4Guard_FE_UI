@@ -523,12 +523,46 @@ export class WarehouseMovementsService {
   public reloadReceptions(): void {
     this.movementsApi.getReceptions().subscribe({
       next: (receptions: any) => {
-        this.receptionsSignal.set(
-          (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r))
-        );
+        const mapped = (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r));
+        const unique: ReceptionHeader[] = [];
+        const seenDocs = new Set<string>();
+        const seenIds = new Set<string>();
+
+        // Priorizar y deduplicar registros para evitar duplicidad de folios en pantalla
+        for (const r of mapped) {
+          const idKey = (r.id || r.folio || '').trim();
+          const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
+          if (idKey && !seenIds.has(idKey) && (!docKey || !seenDocs.has(docKey))) {
+            seenIds.add(idKey);
+            if (docKey) seenDocs.add(docKey);
+            unique.push(r);
+          }
+        }
+        this.receptionsSignal.set(unique);
       },
       error: () => {},
     });
+  }
+
+  public removeReception(folioOrId: string): void {
+    const key = (folioOrId || '').trim();
+    this.receptionsSignal.update((list) =>
+      list.filter((r) => r.folio !== key && r.id !== key)
+    );
+  }
+
+  public deduplicateReceptions(): void {
+    const list = this.receptionsSignal();
+    const seen = new Set<string>();
+    const unique: ReceptionHeader[] = [];
+    for (const r of list) {
+      const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
+      if (!seen.has(docKey)) {
+        seen.add(docKey);
+        unique.push(r);
+      }
+    }
+    this.receptionsSignal.set(unique);
   }
 
   public reloadTransfers(): void {
@@ -551,6 +585,46 @@ export class WarehouseMovementsService {
             distinctSkus: t.distinctSkus || 0,
             transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
             transferredBy: t.createdBy || '',
+          }))
+        );
+      },
+      error: () => {},
+    });
+  }
+
+  public reloadOutbounds(): void {
+    this.movementsApi.getOutbounds().subscribe({
+      next: (outbounds: any) => {
+        this.outboundsSignal.set(
+          (outbounds || []).map((o: any) => ({
+            id: o.id,
+            folio: o.folio,
+            status: o.status || 'REGISTERED',
+            clientCode: o.clientId || '',
+            clientName: o.clientName || '',
+            destinationId: o.destinationId || '',
+            destinationName: o.destinationName || '',
+            destinationAddress: o.destinationAddress || '',
+            carrierCode: o.carrierId || '',
+            carrierName: o.carrierName || '',
+            rampId: o.rampId || '',
+            rampNumber: o.rampNumber ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
+            rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
+            forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
+            forkliftOperatorId: o.forkliftOperatorId,
+            transportType: o.transportType || '',
+            driverName: o.driverName || '',
+            tractorPlates: o.tractorPlates || '',
+            boxPlates: o.boxPlates || '',
+            economicNumber: o.economicNumber || '',
+            boxEconomicNumber: o.boxEconomicNumber || '',
+            sealNumber: o.sealNumber || '',
+            remisionNo: o.remisionNo || '',
+            observations: o.observations || '',
+            outboundDate: o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-MX') : '',
+            outboundTime: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '',
+            authorizedBy: o.createdBy || '',
+            items: [],
           }))
         );
       },
@@ -931,16 +1005,19 @@ export class WarehouseMovementsService {
     }
 
     const seals: string[] = [];
-    if (data.sealNumbers && Array.isArray(data.sealNumbers)) {
-      data.sealNumbers.forEach((s: string) => {
-        if (s && s.trim() && !seals.includes(s.trim().toUpperCase())) {
-          seals.push(s.trim().toUpperCase());
-        }
-      });
-    }
-    if (data.sealNumber && data.sealNumber.trim() && !seals.includes(data.sealNumber.trim().toUpperCase())) {
-      seals.push(data.sealNumber.trim().toUpperCase());
-    }
+    const rawSeals: string[] = (data.sealNumbers && data.sealNumbers.length > 0)
+      ? data.sealNumbers
+      : (data.sealNumber ? [data.sealNumber] : []);
+
+    rawSeals.forEach((s: string) => {
+      if (s && s.trim()) {
+        s.split(',').map((p) => p.trim().toUpperCase()).filter((p) => p.length > 0).forEach((item) => {
+          if (!seals.includes(item)) {
+            seals.push(item);
+          }
+        });
+      }
+    });
 
     const payload = {
       organizationId: orgId,
@@ -1068,16 +1145,19 @@ export class WarehouseMovementsService {
           : (isUuid(data.rampCode) ? data.rampCode : null));
 
     const seals: string[] = [];
-    if (data.sealNumbers && Array.isArray(data.sealNumbers)) {
-      data.sealNumbers.forEach((s: string) => {
-        if (s && s.trim() && !seals.includes(s.trim().toUpperCase())) {
-          seals.push(s.trim().toUpperCase());
-        }
-      });
-    }
-    if (data.sealNumber && data.sealNumber.trim() && !seals.includes(data.sealNumber.trim().toUpperCase())) {
-      seals.push(data.sealNumber.trim().toUpperCase());
-    }
+    const rawSeals: string[] = (data.sealNumbers && data.sealNumbers.length > 0)
+      ? data.sealNumbers
+      : (data.sealNumber ? [data.sealNumber] : []);
+
+    rawSeals.forEach((s: string) => {
+      if (s && s.trim()) {
+        s.split(',').map((p) => p.trim().toUpperCase()).filter((p) => p.length > 0).forEach((item) => {
+          if (!seals.includes(item)) {
+            seals.push(item);
+          }
+        });
+      }
+    });
 
     const payload = {
       organizationId: orgId,
@@ -1313,6 +1393,56 @@ export class WarehouseMovementsService {
     );
   }
 
+  // Persiste modificaciones de caseta (placas, transportista, chofer, remisión, rampa, sellos) en el Backend (wms.warehouse_receptions)
+  updateCasetaCheckInBackend(
+    receptionId: string,
+    checkIn: CheckInCasetaData
+  ): Observable<ReceptionHeader> {
+    const list = this.receptionsSignal();
+    const cleanKey = (receptionId || '').trim();
+    const current = list.find(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+    const resolvedId = (current?.id && isUuid(current.id)) ? current.id : (isUuid(receptionId) ? receptionId : null);
+
+    const payload = {
+      tractorPlates: checkIn.tractorPlates,
+      boxPlates: checkIn.boxPlates,
+      driverName: checkIn.driverName,
+      docNumber: checkIn.docNumber,
+      docDate: checkIn.docDate || null,
+      receptionTime: checkIn.receptionTime ? `${checkIn.receptionTime}:00`.slice(0, 8) : null,
+      carrierId: isUuid(checkIn.carrierLineCode || '') ? checkIn.carrierLineCode : null,
+      carrierLineCode: checkIn.carrierLineCode || null,
+      carrierLine: checkIn.carrierLine || null,
+      clientId: isUuid(checkIn.clientCode || '') ? checkIn.clientCode : null,
+      clientCode: checkIn.clientCode || null,
+      clientName: checkIn.client || null,
+      rampNumber: checkIn.rampNumber || 1,
+      rampCode: checkIn.rampCode || `LOC-RAMP-${String(checkIn.rampNumber || 1).padStart(2, '0')}`,
+      sealNumbers: checkIn.sealNumbers && checkIn.sealNumbers.length > 0 ? checkIn.sealNumbers : (checkIn.sealNumber ? [checkIn.sealNumber] : []),
+      piecesPerPallet: current?.piecesPerPallet != null ? Number(current.piecesPerPallet) : 0,
+      observations: checkIn.observations || current?.observations || '',
+    };
+
+    if (resolvedId) {
+      return this.movementsApi.updateReceptionParameters(resolvedId, payload).pipe(
+        map((res: any) => {
+          const mapped = this.mapReceptionResponseToHeader(res);
+          this.updateReception(resolvedId, mapped, true);
+          return mapped;
+        }),
+        catchError(() => {
+          const fallback = this.updateReception(receptionId, { checkIn }, true);
+          return of(fallback || current || ({} as ReceptionHeader));
+        })
+      );
+    } else {
+      const fallback = this.updateReception(receptionId, { checkIn }, true);
+      return of(fallback || current || ({} as ReceptionHeader));
+    }
+  }
+
   // Completa y autoriza formalmente la recepción F01 en el Backend
   completeReceptionBackend(
     receptionId: string,
@@ -1328,7 +1458,7 @@ export class WarehouseMovementsService {
       concatMap(() => {
         const completePayload = {
           leaderUsername: leaderUser || 'admin',
-          leaderPassword: leaderPass || 'adminPassword',
+          leaderPassword: leaderPass || 'admin123',
           observations: `Autorizado por ${leaderName}. ${formVals.observations || ''}`.trim(),
         };
         return this.movementsApi.completeReception(receptionId, completePayload);

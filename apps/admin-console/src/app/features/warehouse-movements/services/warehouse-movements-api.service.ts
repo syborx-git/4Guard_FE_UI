@@ -112,6 +112,12 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  deletePass(passId: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${passId}`).pipe(
+      map(() => void 0)
+    );
+  }
+
   getPublicPass(token: string): Observable<any> {
     return this.http.get<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}`).pipe(
       map((res) => res.data)
@@ -380,6 +386,7 @@ export class WarehouseMovementsApiService {
 
   getPublicCatalogs(orgId?: string): Observable<{
     clients: Array<{ id: string; code: string; name: string; tradeName?: string }>;
+    carriers: Array<{ id: string; code: string; name: string; tradeName?: string }>;
     carrierLines: Array<{ id: string; code: string; name: string; tradeName?: string }>;
     transportTypes: string[];
     boxDimensions: string[];
@@ -389,7 +396,17 @@ export class WarehouseMovementsApiService {
       url += `?organizationId=${orgId}`;
     }
     return this.http.get<ApiResponse<any>>(url).pipe(
-      map((res) => res.data || { clients: [], carrierLines: [], transportTypes: [], boxDimensions: [] })
+      map((res) => {
+        const raw = res?.data || {};
+        const carriersList = raw.carriers || raw.carrierLines || [];
+        return {
+          clients: raw.clients || [],
+          carriers: carriersList,
+          carrierLines: carriersList,
+          transportTypes: raw.transportTypes || [],
+          boxDimensions: raw.boxDimensions || [],
+        };
+      })
     );
   }
 }

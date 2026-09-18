@@ -157,8 +157,8 @@ export interface TransportChecklistPrintData {
             </td>
             <td class="border border-slate-900 px-2 py-1 font-bold bg-slate-100">Horas:</td>
             <td class="border border-slate-900 px-2 py-1 font-mono text-[9.5px]">
-              <div><strong>Entrada:</strong> {{ data.horaEntrada || '--:--' }}</div>
-              <div><strong>Salida:</strong> {{ data.horaSalida || '--:--' }}</div>
+              <div><strong>Entrada:</strong> {{ formatTime(data.horaEntrada) }}</div>
+              <div><strong>Salida:</strong> {{ formatTime(data.horaSalida) }}</div>
             </td>
           </tr>
         </tbody>
@@ -321,7 +321,7 @@ export interface TransportChecklistPrintData {
                 <span class="font-bold">Nombre:</span>
                 <span class="font-semibold ml-1">{{ data.responsableVigilanciaNombre || 'Guardia en Turno' }}</span>
               </div>
-              <div class="h-16 border-b border-dashed border-slate-400 flex items-center justify-center">
+              <div class="h-14 border-b border-dashed border-slate-400 flex items-center justify-center">
                 <div class="text-center text-[9px] text-slate-700 font-serif italic">
                   [ Sello Digital de Caseta Autorizado ]
                 </div>
@@ -335,9 +335,8 @@ export interface TransportChecklistPrintData {
                 <span class="font-bold">Nombre:</span>
                 <span class="font-semibold ml-1">{{ data.transportistaNombre || data.nombreOperador || 'Operador Chofer' }}</span>
               </div>
-              <div class="h-16 border-b border-dashed border-slate-400 flex items-center justify-center">
-                <img *ngIf="data.driverSignature" [src]="data.driverSignature" alt="Firma Chofer" class="h-14 max-w-full object-contain" />
-                <span *ngIf="!data.driverSignature" class="text-center text-[9px] text-slate-400 font-serif italic">
+              <div class="h-14 border-b border-dashed border-slate-400 flex items-center justify-center">
+                <span class="text-center text-[9px] text-slate-400 font-serif italic">
                   (Firma autógrafa del operador)
                 </span>
               </div>
@@ -373,4 +372,15 @@ export interface TransportChecklistPrintData {
 })
 export class PrintTransportChecklistLayoutComponent {
   @Input() data?: TransportChecklistPrintData;
+
+  formatTime(val?: string | null): string {
+    if (!val) return '--:--';
+    const str = String(val).trim();
+    if (!str || str === '--:--' || str === 'null' || str === 'undefined') return '--:--';
+    const withoutMillis = str.split('.')[0];
+    if (withoutMillis.includes('T')) {
+      return withoutMillis.split('T')[1];
+    }
+    return withoutMillis;
+  }
 }
