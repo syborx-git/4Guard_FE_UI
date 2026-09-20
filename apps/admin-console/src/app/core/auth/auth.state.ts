@@ -118,6 +118,18 @@ export class AuthState {
       return;
     }
 
+    if (
+      session.user.role === 'SECURITY_GUARD' ||
+      session.user.role === 'ROLE_SECURITY_GUARD' ||
+      session.user.role === 'VIGILANCIA' ||
+      session.user.role === 'ROLE_VIGILANCIA'
+    ) {
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
+      this.router.navigate(['/security']);
+      return;
+    }
+
     const returnUrl = localStorage.getItem('4g_return_url');
     const pendingProcess = localStorage.getItem('4g_pending_process_name');
 
@@ -203,6 +215,16 @@ export class AuthState {
     const role = this.role();
     if (!role) return false;
 
+    // Guardia de seguridad: Acceso EXCLUSIVO a Caseta de Seguridad
+    if (
+      role === 'SECURITY_GUARD' ||
+      role === 'ROLE_SECURITY_GUARD' ||
+      role === 'VIGILANCIA' ||
+      role === 'ROLE_VIGILANCIA'
+    ) {
+      return module === 'security';
+    }
+
     // Los Administradores y Gerentes de Operaciones tienen acceso completo
     if (
       role === 'ROLE_ADMIN' ||
@@ -254,6 +276,8 @@ export class AuthState {
         return true; // Acceso total habilitado para evaluación (HU-134)
       case 'license-management':
         return true; // Acceso total habilitado para evaluación (HU-139)
+      case 'security':
+        return true; // Acceso total al nuevo módulo autónomo de Seguridad (Caseta)
       case 'user-activity':
         // HU-146: Solo OPERATIONS_SUPERVISOR, SHIFT_LEADER y OPERATIONS_MANAGER.
         // NOTA: La validación definitiva de RLS y permisos se ejecuta en el backend.

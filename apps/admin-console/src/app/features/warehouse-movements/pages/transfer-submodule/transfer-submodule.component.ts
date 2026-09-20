@@ -847,8 +847,8 @@ export class TransferSubmoduleComponent implements OnInit {
     }
     // Fallbacks deterministas válidos a los UUIDs sembrados en wms.locations
     return isDest
-      ? '00000000-0000-0000-0006-000000000005'
-      : '00000000-0000-0000-0006-000000000001';
+      ? 'bdeb00c6-5844-49ab-a22d-718ceab8e45f'
+      : '34c6a900-91ad-46ae-b278-0f2edb55190b';
   }
 
   // Ejecutar el Cambio de Almacen -- integrado con el Backend

@@ -478,6 +478,7 @@ export class ShellComponent implements OnInit, OnDestroy {
         { label: 'Salidas de Almacén', route: '/warehouse-movements/outbound', icon: 'local_shipping' },
       ],
     },
+    { label: 'Seguridad', route: '/security', icon: 'security', module: 'security' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
@@ -633,7 +634,10 @@ export class ShellComponent implements OnInit, OnDestroy {
     const root = this.document.documentElement;
 
     root.classList.toggle('theme-dark', isDark);
+    root.classList.toggle('dark', isDark);
     root.classList.toggle('theme-light', !isDark);
+
+    this.forbotEngine.checkTheme();
   }
 
   protected toggleSidebar(): void {

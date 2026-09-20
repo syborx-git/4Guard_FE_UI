@@ -19,7 +19,7 @@
   width: 100%;
   height: 100vh;
   overflow: hidden;
-  background: #f5f6f8;
+  background: var(--shell-bg, #f5f4f0);
   transition: grid-template-columns 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1558,14 +1558,14 @@
   z-index: 1;
   flex: 1;
   min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  color: #172033;
-  background:
-    linear-gradient(180deg,
-      #f8f9fb 0%,
-      #f4f6f8 42%,
-      #f3f5f7 100%);
+  color: var(--premium-text, #172033);
+  background: var(--shell-bg, #f5f4f0);
   scrollbar-color: #cbd2da transparent;
   scrollbar-width: thin;
 }
@@ -2608,9 +2608,9 @@
    ──────────────────────────────────────────────────────────────── */
 
 :host {
-  --shell-bg: #f4f6f8;
-  --content-bg-start: #f8f9fb;
-  --content-bg-end: #f2f4f7;
+  --shell-bg: #f5f4f0;
+  --content-bg-start: #f5f4f0;
+  --content-bg-end: #f5f4f0;
 
   --glass-surface: rgba(255, 255, 255, 0.72);
   --glass-surface-strong: rgba(255, 255, 255, 0.88);
@@ -2637,8 +2637,8 @@
 
 :host-context(.theme-dark) {
   --shell-bg: #0b1119;
-  --content-bg-start: #101722;
-  --content-bg-end: #0c121b;
+  --content-bg-start: #0b1119;
+  --content-bg-end: #0b1119;
 
   --glass-surface: rgba(16, 24, 36, 0.67);
   --glass-surface-strong: rgba(17, 25, 38, 0.86);
@@ -2679,13 +2679,11 @@
 
 .shell__content {
   color: var(--premium-text);
-  background:
-    radial-gradient(circle at 82% 12%,
-      rgba(197, 168, 107, 0.055),
-      transparent 25rem),
-    linear-gradient(180deg,
-      var(--content-bg-start) 0%,
-      var(--content-bg-end) 100%);
+  background: var(--shell-bg);
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* ────────────────────────────────────────────────────────────────

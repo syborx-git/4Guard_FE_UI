@@ -90,6 +90,39 @@
   --c-info-bdr:     rgba(96, 165, 250, 0.24);
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  color: var(--text-primary) !important;
+}
+
+.verif-card h2,
+.verif-card h3,
+.verif-card h4,
+.verif-card h5,
+.panel-card h2,
+.panel-card h3,
+.panel-card h4 {
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
+}
+
+.badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  color: var(--text-gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
 .load-verif-page {
   display: flex;
   flex-direction: column;

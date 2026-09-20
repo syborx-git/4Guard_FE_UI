@@ -60,7 +60,7 @@
   --gold-border:    rgba(208, 175, 103, 0.25);
   --gold-subtle:    rgba(208, 175, 103, 0.08);
 
-  --bg-page:        #080e18;
+  --bg-page:        #0b1119;
   --bg-card:        rgba(15, 23, 42, 0.95);
   --bg-subtle:      rgba(255, 255, 255, 0.04);
   --border-subtle:  rgba(255, 255, 255, 0.08);
@@ -84,6 +84,36 @@
   --c-info:         #77a8df;
   --c-info-bg:      rgba(96, 165, 250, 0.12);
   --c-info-bdr:     rgba(96, 165, 250, 0.24);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  color: var(--text-primary) !important;
+}
+
+.quality-card h2,
+.quality-card h3,
+.quality-card h4,
+.quality-card h5 {
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
+}
+
+.badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  color: var(--text-gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
 }
 
 /* ── PÁGINA ── */
@@ -285,7 +315,7 @@
 /* ── 1. KPI CARDS GRID (ESTILO HOMOLOGADO RECEPCIÓN) ── */
 .quality-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -314,12 +344,28 @@
   min-height: 84px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
+  cursor: pointer;
+  user-select: none;
 }
 
 .quality-kpi-card:hover {
   transform: translateY(-2px);
   border-color: var(--gold-border);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.quality-kpi-card.quality-kpi-card--active {
+  border-color: var(--gold) !important;
+  background: var(--gold-bg) !important;
+  box-shadow: 0 8px 24px rgba(197, 168, 107, 0.22), inset 0 0 0 1.5px var(--gold-border) !important;
+  transform: translateY(-2px);
+}
+
+:host-context(.theme-dark) .quality-kpi-card.quality-kpi-card--active,
+:host-context(.dark) .quality-kpi-card.quality-kpi-card--active {
+  border-color: var(--gold-light) !important;
+  background: rgba(208, 175, 103, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1.5px var(--gold-border) !important;
 }
 
 .quality-kpi-card__icon {

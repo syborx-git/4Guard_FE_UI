@@ -88,9 +88,20 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.showSetPasswordModal.set(false);
     const user = this.selectedUser();
     if (user) {
-      this.toastService.success(`⚡ Contraseña de "${user.firstName} ${user.lastName}" establecida con éxito`);
-      this.saveSuccess.set(true);
-      setTimeout(() => this.saveSuccess.set(false), 4000);
+      this.userAdminService.update(user.id, {
+        password: newPassword
+      }).pipe(takeUntil(this.destroy$)).subscribe({
+        next: () => {
+          this.toastService.success(`⚡ Contraseña de "${user.firstName} ${user.lastName}" establecida con éxito en la base de datos.`, 4000);
+          this.saveSuccess.set(true);
+          this.loadAuditLogs(user.id);
+          setTimeout(() => this.saveSuccess.set(false), 4000);
+        },
+        error: (err: HttpErrorResponse) => {
+          const msg = err?.error?.message || err?.message || 'Error al actualizar la contraseña del usuario.';
+          this.toastService.error(msg, 4500);
+        }
+      });
     }
   }
 
@@ -122,13 +133,19 @@ export class UsersListComponent implements OnInit, OnDestroy {
         label: this.getRoleLabel(r.name)
       }));
     }
-    // Fallback con roles del sistema
+    // Fallback con catálogo completo de roles del sistema WMS
     return [
+      { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones (OPERATIONS_MANAGER)' },
       { id: 'ADMIN', name: 'ADMIN', label: 'Administrador General (ADMIN)' },
+      { id: 'CEO', name: 'CEO', label: 'Director General (CEO)' },
+      { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones (OPERATIONS_SUPERVISOR)' },
       { id: 'WAREHOUSE_MANAGER', name: 'WAREHOUSE_MANAGER', label: 'Gerente de Almacén (WAREHOUSE_MANAGER)' },
-      { id: 'DOCK_SUPERVISOR', name: 'DOCK_SUPERVISOR', label: 'Supervisor de Embarques (DOCK_SUPERVISOR)' },
+      { id: 'DOCK_SUPERVISOR', name: 'DOCK_SUPERVISOR', label: 'Supervisor de Andén (DOCK_SUPERVISOR)' },
+      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno (SHIFT_LEADER)' },
+      { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control (CONTROL_DESK)' },
       { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad (QM_INSPECTOR)' },
       { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén (WAREHOUSE_OPERATOR)' },
+      { id: 'MANEUVER_OPERATOR', name: 'MANEUVER_OPERATOR', label: 'Operador de Maniobras (MANEUVER_OPERATOR)' },
       { id: 'AUDITOR', name: 'AUDITOR', label: 'Auditor (AUDITOR)' },
       { id: 'CLIENT', name: 'CLIENT', label: 'Cliente 3PL (CLIENT)' },
     ];
@@ -171,16 +188,30 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly totalUsers = computed(() => this.userAdminService.users().length);
   protected readonly kpiActive = computed(() => this.userAdminService.users().filter(u => u.status === 'ACTIVE').length);
   protected readonly kpiInactive = computed(() => this.userAdminService.users().filter(u => u.status !== 'ACTIVE').length);
-  protected readonly kpiAdminSupervisors = computed(() => 
-    this.userAdminService.users().filter(u => 
-      u.role === UserRole.ADMIN || 
-      u.role === UserRole.WAREHOUSE_MANAGER || 
-      u.role === UserRole.DOCK_SUPERVISOR
-    ).length
-  );
+  protected readonly kpiAdminSupervisors = computed(() => {
+    const adminSupervisorSet = new Set([
+      'ADMIN', 'ROLE_ADMIN',
+      'OPERATIONS_MANAGER', 'ROLE_OPERATIONS_MANAGER',
+      'WAREHOUSE_MANAGER', 'ROLE_WAREHOUSE_MANAGER',
+      'CEO', 'ROLE_CEO',
+      'OPERATIONS_SUPERVISOR', 'ROLE_OPERATIONS_SUPERVISOR',
+      'DOCK_SUPERVISOR', 'ROLE_DOCK_SUPERVISOR',
+      'SHIFT_LEADER', 'ROLE_SHIFT_LEADER',
+      'CONTROL_DESK', 'ROLE_CONTROL_DESK',
+      'SUPERVISOR', 'ROLE_SUPERVISOR'
+    ]);
+    return this.userAdminService.users().filter(u => {
+      const role = (u.role || '').toUpperCase().trim();
+      const cleanRole = role.replace('ROLE_', '');
+      return adminSupervisorSet.has(role) || adminSupervisorSet.has(cleanRole);
+    }).length;
+  });
 
   // ── Ciclo de vida ────────────────────────────────────────
   ngOnInit(): void {
+    this.branchService.loadBranches().pipe(takeUntil(this.destroy$)).subscribe({
+      error: (err) => console.error('Error al precargar sucursales de la BD:', err)
+    });
     this.roleService.loadRolesAndPermissions().pipe(takeUntil(this.destroy$)).subscribe({
       error: (err) => console.error('Error al precargar roles de la BD:', err)
     });
@@ -204,7 +235,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
         this.isLoadingUsers.set(false);
         const msg = err?.error?.message || 'Error al cargar los usuarios del backend.';
         this.loadUsersError.set(msg);
-        this.toastService.error(msg);
+        this.toastService.error(msg, 4000);
       }
     });
   }
@@ -328,22 +359,35 @@ export class UsersListComponent implements OnInit, OnDestroy {
         lockedUntil: null,
         permanentlyLocked: false
       }).pipe(takeUntil(this.destroy$)).subscribe({
-        next: () => {
+        next: (response) => {
           this.saveSuccess.set(true);
-          const emailTrimmed = raw.email.trim().toLowerCase();
-          const usernameTrimmed = raw.username.trim();
-          const createdItem = this.userAdminService.users().find(u => u.email === emailTrimmed || u.username === usernameTrimmed);
-          if (createdItem) {
-            this.selectedUser.set(createdItem);
-            this.loadAuditLogs(createdItem.id);
+          const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
+          this.toastService.success(`⚡ Usuario "${fullName}" creado y registrado con éxito en el sistema.`, 4000);
+          
+          const createdUser = response?.data;
+          if (createdUser) {
+            const mappedItem = this.userAdminService.users().find(u => u.id === createdUser.id);
+            if (mappedItem) {
+              this.selectedUser.set(mappedItem);
+              this.loadAuditLogs(mappedItem.id);
+            }
+          } else {
+            const emailTrimmed = raw.email.trim().toLowerCase();
+            const usernameTrimmed = raw.username.trim();
+            const createdItem = this.userAdminService.users().find(u => u.email === emailTrimmed || u.username === usernameTrimmed);
+            if (createdItem) {
+              this.selectedUser.set(createdItem);
+              this.loadAuditLogs(createdItem.id);
+            }
           }
           this.formMode.set('edit');
           this.submitAttempted.set(false);
-          this.toastService.success(`⚡ Usuario "${raw.firstName} ${raw.lastName}" dado de alta con éxito`);
           setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
-          this.backendError.set(err?.error?.message || err?.message || 'Error al crear el usuario.');
+          const msg = err?.error?.message || err?.message || 'Error al crear el usuario en la base de datos.';
+          this.backendError.set(msg);
+          this.toastService.error(msg, 4500);
         }
       });
     } else if (mode === 'edit' && this.selectedUser()) {
@@ -361,6 +405,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
+          const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
+          this.toastService.success(`⚡ Usuario "${fullName}" actualizado con éxito.`, 4000);
           const updated = this.userAdminService.users().find(u => u.id === userId);
           if (updated) {
             this.selectedUser.set(updated);
@@ -368,11 +414,12 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.submitAttempted.set(false);
           this.form.markAsPristine();
           this.loadAuditLogs(userId);
-          this.toastService.success(`⚡ Usuario "${raw.firstName} ${raw.lastName}" actualizado con éxito`);
           setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
-          this.backendError.set(err?.error?.message || err?.message || 'Error al actualizar el usuario.');
+          const msg = err?.error?.message || err?.message || 'Error al actualizar el usuario en la base de datos.';
+          this.backendError.set(msg);
+          this.toastService.error(msg, 4500);
         }
       });
     }
@@ -395,10 +442,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.populateForm(updated);
         }
         this.loadAuditLogs(target.id);
-        this.toastService.success(`Usuario ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado'} con éxito.`);
+        this.toastService.success(`Usuario "${target.firstName} ${target.lastName}" ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado'} con éxito.`, 3500);
       },
-      error: (err) => {
-        this.toastService.error(err?.error?.message || 'Error al cambiar el estado del usuario.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err?.error?.message || 'Error al cambiar el estado del usuario.';
+        this.toastService.error(msg, 4000);
       }
     });
   }
@@ -429,6 +477,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.tempPassword.set(response.data);
           this.tempPasswordUser.set(user);
+          this.toastService.success(`Contraseña temporal generada para "${user.firstName} ${user.lastName}".`, 4000);
           this.loadAuditLogs(user.id);
         } else {
           this.toastService.error(response.message || 'No se pudo generar la contraseña temporal.');
@@ -471,12 +520,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
         this.deletingUser.set(null);
         this.selectedUser.set(null);
         this.formMode.set('idle');
-        this.toastService.success('Usuario eliminado correctamente.');
+        this.toastService.success(`Usuario "${user.firstName} ${user.lastName}" eliminado correctamente.`, 4000);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.isDeleting.set(false);
         this.deletingUser.set(null);
-        this.toastService.error(err.message || 'Error al eliminar el usuario.');
+        const msg = err?.error?.message || err?.message || 'Error al eliminar el usuario.';
+        this.toastService.error(msg, 4000);
       }
     });
   }
@@ -498,7 +548,26 @@ export class UsersListComponent implements OnInit, OnDestroy {
   }
 
   protected getRoleLabel(role: UserRole | string): string {
-    return ROLE_LABELS[role as UserRole] || role;
+    if (!role) return '';
+    const clean = role.replace('ROLE_', '').toUpperCase();
+    const extendedLabels: Record<string, string> = {
+      'ADMIN': 'Administrador General (ADMIN)',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones (OPERATIONS_MANAGER)',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén (WAREHOUSE_MANAGER)',
+      'CEO': 'Director General (CEO)',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones (OPERATIONS_SUPERVISOR)',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén (DOCK_SUPERVISOR)',
+      'SHIFT_LEADER': 'Líder de Turno (SHIFT_LEADER)',
+      'CONTROL_DESK': 'Mesa de Control (CONTROL_DESK)',
+      'QM_INSPECTOR': 'Inspector de Calidad (QM_INSPECTOR)',
+      'WAREHOUSE_OPERATOR': 'Operario de Almacén (WAREHOUSE_OPERATOR)',
+      'MANEUVER_OPERATOR': 'Operador de Maniobras (MANEUVER_OPERATOR)',
+      'AUDITOR': 'Auditor (AUDITOR)',
+      'CLIENT': 'Cliente 3PL (CLIENT)',
+    };
+    if (extendedLabels[clean]) return extendedLabels[clean];
+    if (ROLE_LABELS[role as UserRole]) return ROLE_LABELS[role as UserRole];
+    return role;
   }
 
   protected getInitials(user: UserAdminItem): string {
@@ -510,14 +579,24 @@ export class UsersListComponent implements OnInit, OnDestroy {
   }
 
   protected getAvatarClass(role: UserRole | string): string {
-    switch (role) {
-      case UserRole.ADMIN: return 'avatar--admin';
-      case UserRole.WAREHOUSE_MANAGER: return 'avatar--manager';
-      case UserRole.DOCK_SUPERVISOR: return 'avatar--supervisor';
-      case UserRole.QM_INSPECTOR: return 'avatar--inspector';
-      case UserRole.AUDITOR: return 'avatar--supervisor';
-      case UserRole.CLIENT: return 'avatar--manager';
-      default: return 'avatar--operator';
+    const r = (role || '').toUpperCase().replace('ROLE_', '');
+    switch (r) {
+      case 'ADMIN':
+      case 'CEO':
+        return 'avatar--admin';
+      case 'OPERATIONS_MANAGER':
+      case 'WAREHOUSE_MANAGER':
+        return 'avatar--manager';
+      case 'OPERATIONS_SUPERVISOR':
+      case 'DOCK_SUPERVISOR':
+      case 'SHIFT_LEADER':
+      case 'CONTROL_DESK':
+      case 'AUDITOR':
+        return 'avatar--supervisor';
+      case 'QM_INSPECTOR':
+        return 'avatar--inspector';
+      default:
+        return 'avatar--operator';
     }
   }
 

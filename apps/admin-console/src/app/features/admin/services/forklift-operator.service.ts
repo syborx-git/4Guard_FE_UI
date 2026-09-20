@@ -63,7 +63,7 @@ export class ForkliftOperatorAdminService {
 
   readonly dropdownOperators = computed(() =>
     this.activeOperators().map((op) => ({
-      code: op.code,
+      code: op.id || op.code,
       name: op.fullName,
     }))
   );

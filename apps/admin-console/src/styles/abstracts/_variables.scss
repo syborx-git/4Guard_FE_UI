@@ -3,30 +3,30 @@
 // Tokens de diseño: colores, radios, z-index, sombras
 // ============================================================
 
-// ── Colores base ─────────────────────────────────────────────
-$bg-primary: #0E0E0D;
-$surface: #131412;
-$surface-secondary: #1F201E;
-$surface-elevated: #343533;
+// ── Colores base y Superficies Dinámicas ──────────────────────
+$bg-primary:         var(--bg-primary, #f5f4f0);
+$surface:            var(--surface, #ffffff);
+$surface-secondary:  var(--surface-secondary, #f7f5ef);
+$surface-elevated:   var(--surface-elevated, #ffffff);
 
-$gold-primary: #EAC349;
-$gold-light: #FFE088;
-$gold-subtle: rgba(234, 195, 73, 0.12);
-$gold-border: rgba(234, 195, 73, 0.25);
-$gold-hover-bg: rgba(234, 195, 73, 0.08);
+$gold-primary:       var(--gold, #c5a86b);
+$gold-light:         var(--gold-light, #e0c87a);
+$gold-subtle:        var(--gold-subtle, rgba(197, 168, 107, 0.10));
+$gold-border:        var(--gold-border, rgba(197, 168, 107, 0.28));
+$gold-hover-bg:      var(--gold-hover-bg, rgba(197, 168, 107, 0.08));
 
-$purple-corporate: #2D1B44;
-$purple-light: #D5BDF0;
-$purple-subtle: rgba(45, 27, 68, 0.6);
+$purple-corporate:   #172033;
+$purple-light:       #344463;
+$purple-subtle:      rgba(23, 32, 51, 0.6);
 
-$text-primary: #E4E2DE;
-$text-secondary: #CCC4CE;
-$text-tertiary: #958E98;
-$text-inverse: #0E0E0D;
+$text-primary:       var(--text-primary, #172033);
+$text-secondary:     var(--text-secondary, #5a6477);
+$text-tertiary:      var(--text-muted, #8b94a3);
+$text-inverse:       var(--text-inverse, #ffffff);
 
-$border-default: #958E98;
-$border-subtle: rgba(149, 142, 152, 0.3);
-$border-gold: rgba(234, 195, 73, 0.4);
+$border-default:     var(--border, rgba(23, 36, 61, 0.12));
+$border-subtle:      var(--border-subtle, rgba(23, 36, 61, 0.08));
+$border-gold:        var(--border-gold, rgba(197, 168, 107, 0.28));
 
 $danger: #EF5350;
 $danger-dark: #B71C1C;

@@ -36,6 +36,21 @@
         <button
           type="button"
           class="carriers-btn carriers-btn--ghost"
+          id="btn-sync-banxico"
+          (click)="syncBanxicoAll()"
+          [disabled]="isSyncingBanxico()"
+          title="Sincronizar tipos de cambio oficiales en tiempo real desde la API de Banxico SIE">
+          @if (isSyncingBanxico()) {
+            <span class="material-symbols-outlined spinner">sync</span>
+            Sincronizando…
+          } @else {
+            <span class="material-symbols-outlined" style="color: var(--gold);">cloud_sync</span>
+            Sincronizar Banxico (API)
+          }
+        </button>
+        <button
+          type="button"
+          class="carriers-btn carriers-btn--ghost"
           id="btn-audit-drawer"
           (click)="openAudit()"
           title="Historial de auditoría">
@@ -125,9 +140,9 @@
           class="fg-input"
           [value]="simAmount()"
           (input)="updateSimAmount($event)"
-          min="0"
-          step="100"
-          placeholder="1,000" />
+          min="0.01"
+          step="1"
+          placeholder="1" />
       </div>
 
       <!-- Moneda origen -->

@@ -89,15 +89,15 @@ export interface WarehouseOutbound {
   status: OutboundStatus;
 
   // ── Cliente / Destino (Snapshot) ──
-  clientCode: string;                  // Ej. 'CLI-001'
-  clientName: string;                  // Snapshot: 'Nestlé México'
-  destinationId: string;               // Ej. 'DEST-CLI001-TOLUCA'
-  destinationName: string;             // Snapshot: 'CEDIS Toluca'
+  clientCode: string;                  // UUID del cliente (ej. 'a07281f9-3d2b-42f3-a756-11f869a8b123')
+  clientName: string;                  // Snapshot: 'MARCAS NESTLE S.A. DE C.V.'
+  destinationId: string;               // UUID del destino (ej. 'b9c6beee-1e5b-4e3c-8e46-32f0390bf0df')
+  destinationName: string;             // Snapshot: 'CENTRO DE NEGOCIO PAC'
   destinationAddress?: string;         // Snapshot dirección completa
 
   // ── Transportista / Vehículo (Snapshot) ──
-  carrierCode: string;                 // Ej. 'TR-01'
-  carrierName: string;                 // Snapshot: 'Transportes Castores'
+  carrierCode: string;                 // UUID del transportista (ej. 'f1a9b2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c')
+  carrierName: string;                 // Snapshot: 'TRANSPORTADORA GOLA S.A. DE C.V.'
   driverName: string;                  // Nombre del Chofer
   economicNumber: string;              // Número económico del tractocamión
   tractorPlates: string;               // Placas del Tracto
@@ -138,9 +138,9 @@ export interface OutboundItem {
 ### 4.3 Destinos por Cliente: `ClientDestination`
 ```typescript
 export interface ClientDestination {
-  id: string;                          // Ej. 'DEST-CLI001-TOLUCA'
+  id: string;                          // Ej. 'b9c6beee-1e5b-4e3c-8e46-32f0390bf0df'
   clientCode: string;                  // Referencia al cliente
-  name: string;                        // Ej. 'CEDIS Toluca'
+  name: string;                        // Ej. 'CENTRO DE NEGOCIO PAC'
   address: string;                     // Dirección completa
   city: string;
   state: string;
@@ -159,15 +159,12 @@ export const TRANSPORT_TYPES: { id: TransportType; label: string }[] = [
 ];
 
 export const CLIENT_DESTINATIONS: ClientDestination[] = [
-  // Nestlé México (CLI-001)
-  { id: 'DEST-CLI001-TOLUCA',   clientCode: 'CLI-001', name: 'CEDIS Toluca',     address: 'Blvd. Aeropuerto 2112', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
-  { id: 'DEST-CLI001-MTY',      clientCode: 'CLI-001', name: 'CEDIS Monterrey',  address: 'Av. Industrial 450',    city: 'Monterrey', state: 'Nuevo León',    status: 'ACTIVO' },
-  { id: 'DEST-CLI001-GDL',      clientCode: 'CLI-001', name: 'CEDIS Guadalajara',address: 'Carr. Zapopan 1800',    city: 'Guadalajara', state: 'Jalisco',      status: 'ACTIVO' },
-  { id: 'DEST-CLI001-CDMX',     clientCode: 'CLI-001', name: 'CEDIS CDMX Norte', address: 'Av. Insurgentes 5500',  city: 'Ciudad de México', state: 'CDMX',    status: 'ACTIVO' },
-  // Nestlé Planta Toluca (CLI-002)
-  { id: 'DEST-CLI002-TOLUCA',   clientCode: 'CLI-002', name: 'Planta Toluca',    address: 'Blvd. Toluca Industrial 90', city: 'Toluca', state: 'EdoMex',      status: 'ACTIVO' },
-  // Nestlé Planta Querétaro (CLI-003)
-  { id: 'DEST-CLI003-QRO',      clientCode: 'CLI-003', name: 'Planta Querétaro', address: 'Parque Industrial Querétaro', city: 'Querétaro', state: 'Querétaro', status: 'ACTIVO' },
+  { id: 'b9c6beee-1e5b-4e3c-8e46-32f0390bf0df', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO PAC', address: 'Planta Nestlé PAC', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: 'e2a4b891-3c7d-4f1e-9a52-78d1f046b9a2', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CULINARIOS', address: 'Planta Culinarios Nestlé', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CAFES', address: 'Planta Cafés Nestlé', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: '6ba7b810-9dad-41d1-80b4-00c04fd430c8', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CAF', address: 'Planta Nestlé CAF', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: '550e8400-e29b-41d4-a716-446655440000', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CHOCOLATES', address: 'Planta Chocolates Nestlé', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
+  { id: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d', clientCode: 'c9b4e182-7d3f-4e91-8845-a4b5c6d7e8f9', name: 'CENTRO DE NEGOCIO CAFÉ VERDE', address: 'Planta Nestlé Café Verde', city: 'Toluca', state: 'Estado de México', status: 'ACTIVO' },
 ];
 ```
 
@@ -178,7 +175,7 @@ export const CLIENT_DESTINATIONS: ClientDestination[] = [
 | Código | Regla |
 |---|---|
 | **RN-001** | Cliente Propietario obligatorio — selector del catálogo activo. |
-| **RN-002** | Destino obligatorio — debe pertenecer estrictamente al cliente seleccionado. |
+| **RN-002** | Destino Físico / Planta obligatorio — selector del catálogo integral de destinos (desacoplado de la selección de cliente para máxima flexibilidad operativa en andén). |
 | **RN-003** | Transportista obligatorio — del catálogo institucional activo. |
 | **RN-004** | Número de sello (cincho) obligatorio en todo despacho. |
 | **RN-005** | Al menos 1 tarima/UA debe ser seleccionada para registrar la salida. |
@@ -303,11 +300,13 @@ En el modo detalle (`formMode === 'detail'`), se despliega la sección **"Inform
 
 | Método | Endpoint | DTO / Payload | Descripción |
 |---|---|---|---|
-| `POST` | `/` | `CreateOutboundRequest` | Registrar salida / despacho outbound y descontar inventario |
+| `POST` | `/` | `CreateOutboundRequest` | Registrar salida / despacho outbound y descontar inventario atómicamente |
 | `GET` | `/{id}` | N/A | Consulta de detalle con tarimas despachadas |
-| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs |
-| `POST` | `/{id}/cancel` | `CancelOutboundRequest` | Cancelación de salida y restauración de inventario |
-| `GET` | `/inventory-batches` | Query params: `organizationId`, `clientId`, `skuId` | Consulta de lotes disponibles con sugerencia FIFO/FEFO |
+| `GET` | `/` | Query params: `organizationId`, `branchId`, `status`, `search` | Consulta de listado master con KPIs y filtros |
+| `POST` | `/{id}/cancel` | `CancelOutboundRequest` | Cancelación de salida y restauración de inventario con reautenticación Admin |
+| `GET` | `/inventory-batches` | Query params: `organizationId`, `branchId`, `clientId`, `skuId`, `search` | Consulta de lotes disponibles con sugerencia FEFO indexada |
+| `GET` | `/scan-pallet` | Query params: `barcode`, `organizationId`, `branchId` | Búsqueda rápida sub-10ms por SSCC o código de barras de tarima para escáner RF |
+| `POST` | `/validate-pallets` | `ValidatePalletsRequest` | Validación masiva de lote de códigos de barras / SSCCs |
 | `GET` | `/{id}/audit` | N/A | Historial de auditoría cronológica |
 
 

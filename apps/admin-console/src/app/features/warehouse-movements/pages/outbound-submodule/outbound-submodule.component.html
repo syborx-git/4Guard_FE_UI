@@ -66,15 +66,32 @@
         </a>
       </nav>
 
-      <button
-        type="button"
-        (click)="startNewOutbound()"
-        class="btn-new-reception"
-        aria-label="Registrar nueva salida"
-      >
-        <span class="material-symbols-outlined">add</span>
-        <span>Nueva Salida</span>
-      </button>
+      <div class="flex items-center gap-2.5">
+        <!-- Indicador Inteligente de Andenes (Click abre el Plano de Andenes) -->
+        <button
+          type="button"
+          (click)="showDockMapModal.set(true)"
+          class="dock-summary-pill"
+          title="Ver plano interactivo y estado de andenes 1-12"
+        >
+          <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-sm">domain</span>
+          <span class="dock-summary-pill__text">Andenes:</span>
+          @if (totalBusyRampsCount() > 0) {
+            <span class="dock-summary-badge dock-summary-badge--busy">{{ totalBusyRampsCount() }} Ocupado{{ totalBusyRampsCount() === 1 ? '' : 's' }}</span>
+          } @else {
+            <span class="dock-summary-badge dock-summary-badge--all-free">Todos Libres (12)</span>
+          }
+        </button>
+
+        <a
+          routerLink="/security"
+          class="btn-new-reception"
+          aria-label="Registrar arribo en caseta de seguridad"
+        >
+          <span class="material-symbols-outlined">security</span>
+          <span>Registrar Arribo en Caseta</span>
+        </a>
+      </div>
     </div>
   </header>
 
@@ -94,39 +111,51 @@
       </div>
     </div>
 
-    <!-- Tarimas Despachadas -->
+    <!-- 1. Caseta -->
     <div class="movement-kpi-card movement-kpi-card--warning">
       <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">inventory</span>
+        <span class="material-symbols-outlined">assignment</span>
       </div>
       <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">TARIMAS DESPACHADAS</span>
-        <strong class="movement-kpi-card__value">{{ kpiTotalPallets() }}</strong>
-        <span class="movement-kpi-card__sub">UAs embarcadas</span>
+        <span class="movement-kpi-card__label">1. CASETA</span>
+        <strong class="movement-kpi-card__value">{{ kpiCaseta() }}</strong>
+        <span class="movement-kpi-card__sub">Pre-registro vigilancia</span>
       </div>
     </div>
 
-    <!-- Clientes Atendidos -->
-    <div class="movement-kpi-card movement-kpi-card--success">
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">groups</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">CLIENTES ATENDIDOS</span>
-        <strong class="movement-kpi-card__value">{{ kpiClients() }}</strong>
-        <span class="movement-kpi-card__sub">Destinos activos</span>
-      </div>
-    </div>
-
-    <!-- Piezas Despachadas -->
+    <!-- 2-4. En Andén / Carga -->
     <div class="movement-kpi-card movement-kpi-card--info">
       <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">scale</span>
+        <span class="material-symbols-outlined">forklift</span>
       </div>
       <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">PIEZAS DESPACHADAS</span>
-        <strong class="movement-kpi-card__value">{{ kpiTotalPieces() | number }}</strong>
-        <span class="movement-kpi-card__sub">Unidades totales</span>
+        <span class="movement-kpi-card__label">EN ANDÉN / CARGA</span>
+        <strong class="movement-kpi-card__value">{{ kpiInAnden() }}</strong>
+        <span class="movement-kpi-card__sub">Asignadas o surtiendo</span>
+      </div>
+    </div>
+
+    <!-- 5. Completadas -->
+    <div class="movement-kpi-card movement-kpi-card--success">
+      <div class="movement-kpi-card__icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">5. COMPLETADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiCompleted() }}</strong>
+        <span class="movement-kpi-card__sub">Despachadas / F03 cerrado</span>
+      </div>
+    </div>
+
+    <!-- Canceladas -->
+    <div class="movement-kpi-card movement-kpi-card--danger">
+      <div class="movement-kpi-card__icon">
+        <span class="material-symbols-outlined">cancel</span>
+      </div>
+      <div class="movement-kpi-card__info">
+        <span class="movement-kpi-card__label">CANCELADAS</span>
+        <strong class="movement-kpi-card__value">{{ kpiCancelled() }}</strong>
+        <span class="movement-kpi-card__sub">Rechazadas / Cero</span>
       </div>
     </div>
   </div>
@@ -162,10 +191,13 @@
               (ngModelChange)="statusFilter.set($event)"
               aria-label="Filtrar por estado"
             >
-              <option value="ALL">-- Selecciona el Estado (Todos) --</option>
-              <option value="COMPLETED">Completadas</option>
-              <option value="IN_PROGRESS">En Proceso</option>
-              <option value="CANCELLED">Canceladas</option>
+              <option value="ALL">Todos los estados</option>
+              <option value="REGISTERED">1. Registradas (Caseta)</option>
+              <option value="ASSIGNED">2. Asignadas (Andén)</option>
+              <option value="IN_PROGRESS">3. En Carga (Montacarguista)</option>
+              <option value="LOADED">4. Por Auditar (Carga Finalizada)</option>
+              <option value="COMPLETED">5. Completadas</option>
+              <option value="CANCELLED">6. Canceladas</option>
             </select>
           </div>
         </div>
@@ -195,11 +227,19 @@
                 <span class="carrier-item__name" [title]="outbound.clientName">{{ outbound.clientName }}</span>
                 <span
                   class="carrier-status-badge"
+                  [class.status-badge--registered]="outbound.status === 'REGISTERED'"
+                  [class.status-badge--assigned]="outbound.status === 'ASSIGNED'"
+                  [class.status-badge--progress]="outbound.status === 'IN_PROGRESS'"
+                  [class.status-badge--discharged]="outbound.status === 'LOADED'"
                   [class.status-badge--completed]="outbound.status === 'COMPLETED'"
-                  [class.status-badge--registered]="outbound.status === 'IN_PROGRESS'"
                   [class.status-badge--cancelled]="outbound.status === 'CANCELLED'"
                 >
-                  {{ outbound.status === 'COMPLETED' ? 'Completado' : (outbound.status === 'IN_PROGRESS' ? 'En Proceso' : 'Cancelado') }}
+                  @if (outbound.status === 'REGISTERED') { Caseta }
+                  @else if (outbound.status === 'ASSIGNED') { Asignada }
+                  @else if (outbound.status === 'IN_PROGRESS') { En Carga }
+                  @else if (outbound.status === 'LOADED') { Por Auditar }
+                  @else if (outbound.status === 'COMPLETED') { Completado }
+                  @else if (outbound.status === 'CANCELLED') { Cancelado }
                 </span>
               </div>
 
@@ -210,7 +250,9 @@
 
               <div class="flex items-center justify-between mt-0.5">
                 <span class="carrier-item__tag font-mono">{{ outbound.folio }}</span>
-                <span class="text-[10px] text-slate-500 font-medium">{{ outbound.totalPallets }} tarimas ({{ outbound.totalPieces }} pzas)</span>
+                <span class="text-[10px] text-slate-500 font-medium">
+                  {{ outbound.rampNumber ? ('Rampa ' + outbound.rampNumber) : 'Sin rampa' }} · {{ outbound.totalPallets }} tarimas
+                </span>
               </div>
 
               @if (outbound.sealNumber) {
@@ -247,15 +289,14 @@
           <p class="transfers-empty-state__desc">
             Selecciona una salida del directorio para consultar su información, o inicia una nueva operación de despacho.
           </p>
-          <button
-            class="branches-btn--primary"
-            type="button"
-            (click)="startNewOutbound()"
-            aria-label="Registrar nueva salida de almacén"
+          <a
+            routerLink="/security"
+            class="branches-btn--primary inline-flex items-center gap-2"
+            aria-label="Registrar arribo en caseta de seguridad"
           >
-            <span class="material-symbols-outlined">add</span>
-            <span>Nueva salida de almacén</span>
-          </button>
+            <span class="material-symbols-outlined">security</span>
+            <span>Registrar Arribo en Caseta</span>
+          </a>
         </div>
       }
 
@@ -312,7 +353,7 @@
                   </select>
                 </div>
 
-                <!-- Destino (filtrado por cliente) -->
+                <!-- Destino Físico / Planta (Desacoplado de Selección de Cliente) -->
                 <div class="fg-field" style="grid-column: span 2;">
                   <label class="fg-label">Planta / Destino Físico <span class="req">*</span></label>
                   <select
@@ -320,15 +361,12 @@
                     [ngModel]="selectedDestinationId()"
                     (ngModelChange)="selectedDestinationId.set($event)"
                   >
-                    <option value="">-- Selecciona el Destino --</option>
-                    @for (d of destinationsForClient(); track d.id) {
-                      <option [value]="d.id">{{ d.name }} — {{ d.city }}, {{ d.state }}</option>
+                    <option value="">-- Selecciona la Planta o Destino --</option>
+                    @for (d of allDestinations(); track d.id) {
+                      <option [value]="d.id">{{ d.name }}{{ d.city ? ' — ' + d.city : '' }}{{ d.state ? ', ' + d.state : '' }}</option>
                     }
-                    @if (destinationsForClient().length === 0 && selectedClientCode()) {
-                      <option value="" disabled>-- Sin destinos registrados para este cliente --</option>
-                    }
-                    @if (!selectedClientCode()) {
-                      <option value="" disabled>-- Primero selecciona el cliente --</option>
+                    @if (allDestinations().length === 0) {
+                      <option value="" disabled>-- Sin destinos registrados en el catálogo --</option>
                     }
                   </select>
                 </div>
@@ -482,20 +520,34 @@
               </div>
             </div>
 
-            <!-- Botón Continuar -->
-            <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+            <!-- Botones de Acción en Paso 1 -->
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border-subtle);">
               <button type="button" class="btn-secondary" (click)="resetToIdle()">
                 Cancelar
               </button>
-              <button
-                type="button"
-                class="btn-primary-gold"
-                [disabled]="!isStep1Valid()"
-                (click)="goToStep2()"
-              >
-                <span>Continuar a Paso 2</span>
-                <span class="material-symbols-outlined" style="font-size:1rem;">arrow_forward</span>
-              </button>
+              
+              <div style="display:flex;gap:0.75rem;align-items:center;">
+                <button
+                  type="button"
+                  class="btn-secondary-outline text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5"
+                  [disabled]="!selectedClientCode() || !selectedDestinationId() || !selectedCarrierCode() || !driverName() || !tractorPlates() || !boxPlates()"
+                  (click)="saveCasetaPreRegistration()"
+                  title="Guardar arribo de transporte en Caseta de Vigilancia (Fase 1)"
+                >
+                  <span class="material-symbols-outlined text-base text-amber-600">assignment</span>
+                  <span>Registrar Pre-Salida (Caseta)</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-primary-gold text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md text-slate-900"
+                  [disabled]="!isStep1Valid()"
+                  (click)="goToStep2()"
+                >
+                  <span>Continuar a Surtido (Paso 2)</span>
+                  <span class="material-symbols-outlined" style="font-size:1rem;">arrow_forward</span>
+                </button>
+              </div>
             </div>
 
           }
@@ -531,17 +583,17 @@
               </button>
             </div>
 
-            <!-- ── SECCIÓN 1: ASIGNACIÓN DE MONTACARGUISTA CERTIFICADO ── -->
+            <!-- ── SECCIÓN 1: ASIGNACIÓN DE MONTACARGUISTA ── -->
             <div class="form-section">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined">engineering</span>
-                <span>1. ASIGNACIÓN DE MONTACARGUISTA CERTIFICADO</span>
+                <span>ASIGNACIÓN DE MONTACARGUISTA</span>
                 <span class="step-badge" style="margin-left:auto;">Paso 2 de 2</span>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start mt-2">
+              <div class="mt-2">
                 <!-- Buscador Autocomplete de Montacarguista -->
-                <div class="md:col-span-6 fg-field relative">
+                <div class="fg-field relative">
                   <label class="fg-label fg-label--required">
                     Montacarguista Responsable del Despacho
                   </label>
@@ -584,7 +636,6 @@
                           <span class="material-symbols-outlined text-sm">engineering</span>
                           <span>-- Selecciona el Montacarguista Responsable --</span>
                         </div>
-                        <span class="sku-autocomplete-header__hint">{{ filteredForkliftOperators().length }} activos</span>
                       </div>
                       @for (op of filteredForkliftOperators(); track op.id) {
                         <button
@@ -602,15 +653,11 @@
                               <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
                             </div>
                           </div>
-                          <div class="flex items-center gap-1.5 shrink-0">
-                            <span class="w-2 h-2 rounded-full" [ngClass]="getOperatorAvailability(op).dotClass"></span>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border" [ngClass]="getOperatorAvailability(op).badgeClass">
-                              {{ getOperatorAvailability(op).label }}
-                            </span>
-                            @if (selectedOperatorId() === op.id) {
-                              <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1">check_circle</span>
-                            }
-                          </div>
+                          @if (selectedOperatorId() === op.id) {
+                            <div class="flex items-center shrink-0">
+                              <span class="material-symbols-outlined text-emerald-600 text-base font-bold ml-1">check_circle</span>
+                            </div>
+                          }
                         </button>
                       }
                     </div>
@@ -620,373 +667,645 @@
                     </div>
                   }
                 </div>
-
-                <!-- Tarjeta de Metadatos del Montacarguista -->
-                <div class="md:col-span-6">
-                  <div class="caseta-summary-card" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
-                    <div class="caseta-summary-item">
-                      <span class="caseta-summary-label">Puesto</span>
-                      <span class="caseta-summary-value" [title]="selectedOperator()?.jobTitle || 'Selecciona el Montacarguista Responsable'">
-                        {{ selectedOperator()?.jobTitle || '--' }}
-                      </span>
-                    </div>
-                    <div class="caseta-summary-item">
-                      <span class="caseta-summary-label">Turno</span>
-                      <span class="caseta-summary-value" [title]="selectedOperator() ? formatShift(selectedOperator()?.shift) : 'Selecciona el Montacarguista Responsable'">
-                        {{ selectedOperator() ? formatShift(selectedOperator()?.shift) : '--' }}
-                      </span>
-                    </div>
-                    <div class="caseta-summary-item">
-                      <span class="caseta-summary-label">Estatus</span>
-                      @if (selectedOperator()) {
-                        <span class="caseta-summary-value inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
-                          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                          {{ getOperatorAvailability(selectedOperator()!).label }}
-                        </span>
-                      } @else {
-                        <span class="caseta-summary-value text-slate-400 dark:text-slate-500 font-normal">--</span>
-                      }
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
-            <!-- ── SECCIÓN 2: BUSCADOR DE PRODUCTO ── -->
+            <!-- ── SECCIÓN 2: BUSCADOR DE PRODUCTO Y ESCÁNER DE TARIMAS (UA) ── -->
             <div class="form-section">
               <div class="form-section__legend">
                 <span class="material-symbols-outlined text-amber-500">search</span>
-                <span>Buscar Producto</span>
+                <span>Buscador de Producto y Escáner de Tarimas (UA)</span>
                 <span class="text-xs text-slate-400 font-normal" style="margin-left:auto;">
-                  {{ availableSkusForClient().length }} producto(s) del catálogo ({{ inStockSkusCount() }} con stock)
+                  {{ availableCatalogSkus().length }} productos disponibles · {{ inStockSkusCount() }} con stock
                 </span>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start mt-2">
-                <!-- Buscador Predictivo de SKUs -->
-                <div class="md:col-span-8 fg-field relative">
-                  <label class="fg-label">
-                    Buscar Producto
-                  </label>
+              <!-- Banner de Compatibilidad Pistola / Tablet -->
+              <div class="mb-3.5 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                <div class="flex items-center gap-2.5">
+                  <span class="material-symbols-outlined text-amber-500 text-lg">barcode_scanner</span>
+                  <span><strong>Modo Industrial Pistola RF / Tablet:</strong> Dispara el escáner sobre la etiqueta UA o teclea el producto / lote si el código está dañado.</span>
+                </div>
+                <span class="hidden md:inline-block font-mono text-[11px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded">
+                  [ENTER] / Disparo para auto-selección
+                </span>
+              </div>
 
-                  <div class="sku-search-wrapper">
-                    <span class="material-symbols-outlined sku-search-icon">search</span>
-                    <input
-                      type="text"
-                      [value]="skuSearchQuery()"
-                      (input)="onSkuInput($any($event.target).value)"
-                      (focus)="isSkuDropdownOpen.set(true)"
-                      (click)="isSkuDropdownOpen.set(true)"
-                      placeholder="Selecciona el Producto o escribe SKU / descripción..."
-                      class="fg-input sku-search-input font-bold w-full"
-                      autocomplete="off"
-                    />
+              <!-- Buscador Omnicanal a Ancho Completo (Full-Width) -->
+              <div class="fg-field relative w-full mb-3.5">
+                <div class="sku-omni-wrapper">
+                  <span class="material-symbols-outlined sku-omni-icon">barcode_reader</span>
+                  <input
+                    type="text"
+                    [value]="skuSearchQuery()"
+                    (input)="onSkuInput($any($event.target).value)"
+                    (keydown.enter)="handleScannerOrSearchSubmit()"
+                    (focus)="onSkuInputFocus()"
+                    (click)="onSkuInputFocus()"
+                    placeholder="Escribe producto, código SKU, lote o escanea el código de barras UA..."
+                    class="fg-input sku-omni-input"
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <div class="sku-omni-actions">
                     @if (skuSearchQuery()) {
                       <button
                         type="button"
-                        (click)="clearSkuSelection()"
-                        class="sku-search-clear"
-                        title="Limpiar búsqueda"
+                        (click)="clearSkuSelection($event)"
+                        class="sku-omni-clear"
+                        title="Borrar texto y cambiar producto"
                       >
-                        <span class="material-symbols-outlined text-sm">close</span>
+                        <span class="material-symbols-outlined text-base">close</span>
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="handleScannerOrSearchSubmit()"
+                      class="sku-omni-scan-btn"
+                      title="Procesar lectura de escáner"
+                    >
+                      <span class="material-symbols-outlined text-sm">qr_code_scanner</span>
+                      <span>Escanear</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Backdrop transparente -->
+                @if (isSkuDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isSkuDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Dropdown Flotante Predictivo de SKUs y UAs -->
+                @if (isSkuDropdownOpen() && (filteredAvailableSkus().length > 0 || matchingPalletUas().length > 0)) {
+                  <div class="sku-autocomplete-dropdown">
+                    
+                    <!-- Sección A: Tarimas / UAs Directas Coincidentes -->
+                    @if (matchingPalletUas().length > 0) {
+                      <div class="p-2.5 bg-amber-50/90 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-800/60">
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mb-2">
+                          <span class="material-symbols-outlined text-sm text-amber-600">pallet</span>
+                          <span>Tarimas / UAs Encontradas en Inventario (Click para agregar al despacho)</span>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                          @for (pallet of matchingPalletUas(); track pallet.id) {
+                            <button
+                              type="button"
+                              (click)="selectPalletByUa(pallet)"
+                              class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700/60 hover:bg-amber-100/70 dark:hover:bg-amber-900/50 text-left transition-colors"
+                            >
+                              <div class="flex items-center gap-3 min-w-0">
+                                <span class="font-mono font-bold text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded">{{ pallet.palletCode }}</span>
+                                <div class="flex flex-col min-w-0">
+                                  <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{{ pallet.description }}</span>
+                                  <span class="text-[10px] font-mono text-slate-500">Lote: {{ pallet.lotNumber }} · {{ pallet.pieces | number }} pz</span>
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-2 shrink-0">
+                                <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                  {{ pallet.locationCode }}
+                                </span>
+                                <span class="material-symbols-outlined text-emerald-600 text-base">add_circle</span>
+                              </div>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Sección B: Catálogo de Productos y SKUs -->
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm text-amber-500">inventory_2</span>
+                        <span>-- Catálogo de Productos (Todos los Clientes) --</span>
+                      </div>
+                      <span class="sku-autocomplete-header__hint">{{ filteredAvailableSkus().length }} productos disponibles</span>
+                    </div>
+                    
+                    @for (sku of filteredAvailableSkus(); track sku.skuCode) {
+                      <button
+                        type="button"
+                        (click)="selectSku(sku)"
+                        class="sku-autocomplete-item"
+                        [class.sku-autocomplete-item--selected]="selectedSkuCode() === sku.skuCode"
+                        [class.opacity-60]="sku.totalAvailablePallets === 0"
+                      >
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                          <span class="sku-autocomplete-badge font-mono font-bold">{{ sku.skuCode }}</span>
+                          <div class="flex flex-col min-w-0 flex-1 text-left">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="sku-autocomplete-name font-semibold">{{ sku.productName }}</span>
+                              @if (sku.clientName) {
+                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700">
+                                  {{ sku.clientName }}
+                                </span>
+                              }
+                            </div>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                              @if (sku.totalAvailablePallets > 0) {
+                                <strong class="text-amber-700 dark:text-amber-400">{{ sku.totalAvailablePallets }} tarima(s) en inventario</strong> · {{ sku.totalAvailablePieces | number }} pz
+                              } @else {
+                                <span class="text-slate-400 dark:text-slate-500">0 tarimas en inventario · 0 pz</span>
+                              }
+                            </span>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                          @if (sku.totalAvailablePallets > 0) {
+                            @if (sku.pabloStatus === 'PABLO_ALERT') {
+                              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/60 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-xs">hourglass_top</span>
+                                {{ sku.pabloLabel }}
+                              </span>
+                            } @else if (sku.pabloStatus === 'OPTIMAL') {
+                              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+                                {{ sku.pabloLabel }}
+                              </span>
+                            }
+                          } @else {
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700">
+                              0 tarimas
+                            </span>
+                          }
+                          @if (selectedSkuCode() === sku.skuCode) {
+                            <span class="material-symbols-outlined text-emerald-600 text-lg shrink-0 font-bold ml-1">check_circle</span>
+                          }
+                        </div>
                       </button>
                     }
                   </div>
+                } @else if (isSkuDropdownOpen() && filteredAvailableSkus().length === 0 && matchingPalletUas().length === 0 && skuSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron productos ni tarimas con código / descripción "{{ skuSearchQuery() }}"
+                  </div>
+                }
+              </div>
+            </div>
 
-                  <!-- Backdrop transparente -->
-                  @if (isSkuDropdownOpen()) {
-                    <div class="fixed inset-0 z-40" (click)="isSkuDropdownOpen.set(false)"></div>
-                  }
+            <!-- ── SECCIÓN 3: TARIMAS DISPONIBLES EN INVENTARIO (TRANSICIÓN DIRECTA VISUAL AL SELECCIONAR PRODUCTO) ── -->
+            @if (selectedSku()) {
+              <div class="form-section animate-fadeIn">
+                <!-- Header con información del Producto y botón Cambiar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
+                  <div class="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+                    <span class="material-symbols-outlined text-amber-500 text-lg shrink-0">pallet</span>
+                    <span class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md" title="{{ selectedSku()!.productName }}">
+                      3. TARIMAS DISPONIBLES — {{ selectedSku()!.productName }}
+                    </span>
+                    <span class="font-mono font-bold text-[11px] bg-amber-500/20 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded border border-amber-500/30 shrink-0">
+                      SKU: {{ selectedSku()!.skuCode }}
+                    </span>
+                    @if (selectedSku()!.clientName) {
+                      <span class="text-[11px] px-2 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-300 dark:border-slate-700 shrink-0">
+                        {{ selectedSku()!.clientName }}
+                      </span>
+                    }
+                  </div>
 
-                  <!-- Dropdown Flotante Predictivo de SKUs -->
-                  @if (isSkuDropdownOpen() && filteredAvailableSkus().length > 0) {
-                    <div class="sku-autocomplete-dropdown">
-                      <div class="sku-autocomplete-header">
-                        <div class="sku-autocomplete-header__title">
-                          <span class="material-symbols-outlined text-sm text-amber-500">inventory_2</span>
-                          <span>-- Selecciona el Producto --</span>
-                        </div>
-                        <span class="sku-autocomplete-header__hint">{{ filteredAvailableSkus().length }} resultados</span>
-                      </div>
-                      @for (sku of filteredAvailableSkus(); track sku.skuCode) {
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span
+                      class="text-[11px] font-bold px-2 py-0.5 rounded border"
+                      [ngClass]="selectedSku()!.totalAvailablePallets === 0 ? 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' : (selectedSku()!.pabloColor === 'amber' ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700' : (selectedSku()!.pabloColor === 'rose' ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-700' : 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'))"
+                    >
+                      {{ selectedSku()!.totalAvailablePallets === 0 ? 'Sin stock' : selectedSku()!.pabloLabel }}
+                    </span>
+
+                    <button
+                      type="button"
+                      (click)="clearSkuSelection($event)"
+                      class="text-[11px] font-bold text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                      title="Limpiar y buscar otro producto"
+                    >
+                      <span class="material-symbols-outlined text-sm">swap_horiz</span>
+                      <span>Cambiar Producto</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Toolbar Compacta con Buscador Local, Contador y Regla FEFO -->
+                <div class="flex flex-wrap items-center justify-between gap-2.5 my-2 p-2.5 bg-slate-500/5 dark:bg-slate-800/40 rounded-xl border border-slate-500/20 max-w-full">
+                  
+                  <!-- Lado Izquierdo: Buscador Local + Contador de Stock -->
+                  <div class="flex items-center gap-2 flex-1 min-w-[220px] max-w-full">
+                    <div class="relative flex-1 min-w-[130px]">
+                      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
+                        search
+                      </span>
+                      <input
+                        type="text"
+                        [value]="palletTableSearchQuery()"
+                        (input)="onPalletTableSearchInput($any($event.target).value)"
+                        placeholder="Filtrar por UA, lote, ubicación..."
+                        class="fg-input pl-8 pr-7 text-xs font-medium w-full py-1 h-8 rounded-lg"
+                        autocomplete="off"
+                      />
+                      @if (palletTableSearchQuery()) {
                         <button
                           type="button"
-                          (click)="selectSku(sku)"
-                          class="sku-autocomplete-item"
-                          [class.sku-autocomplete-item--selected]="selectedSkuCode() === sku.skuCode"
-                          [class.opacity-60]="sku.totalAvailablePallets === 0"
+                          (click)="clearPalletTableSearch()"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                          title="Limpiar filtro"
                         >
-                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span class="sku-autocomplete-badge font-mono">{{ sku.skuCode }}</span>
-                            <div class="flex flex-col min-w-0 flex-1 text-left">
-                              <span class="sku-autocomplete-name">{{ sku.productName }}</span>
-                              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                                @if (sku.totalAvailablePallets > 0) {
-                                  <strong class="text-amber-700 dark:text-amber-400">{{ sku.totalAvailablePallets }} tarima(s) disponibles</strong> · {{ sku.totalAvailablePieces | number }} pz
-                                } @else {
-                                  <span class="text-slate-400 dark:text-slate-500">0 tarimas disponibles · 0 pz</span>
-                                }
-                              </span>
-                            </div>
-                          </div>
-                          <div class="flex items-center gap-2 shrink-0">
-                            @if (sku.totalAvailablePallets > 0) {
-                              @if (sku.pabloStatus === 'PABLO_ALERT') {
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/60 flex items-center gap-1">
-                                  <span class="material-symbols-outlined text-xs">hourglass_top</span>
-                                  {{ sku.pabloLabel }}
-                                </span>
-                              } @else if (sku.pabloStatus === 'OPTIMAL') {
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
-                                  {{ sku.pabloLabel }}
-                                </span>
-                              }
-                            } @else {
-                              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700">
-                                0 tarimas
-                              </span>
-                            }
-                            @if (selectedSkuCode() === sku.skuCode) {
-                              <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
-                            }
-                          </div>
+                          <span class="material-symbols-outlined text-xs">close</span>
                         </button>
                       }
                     </div>
-                  } @else if (isSkuDropdownOpen() && filteredAvailableSkus().length === 0 && skuSearchQuery()) {
-                    <div class="sku-autocomplete-empty">
-                      No se encontraron productos para "{{ skuSearchQuery() }}"
+
+                    <!-- Badge de Inventario Local -->
+                    <div class="hidden md:flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-lg bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 shrink-0 text-slate-600 dark:text-slate-300">
+                      <span><strong>{{ allAvailablePalletsForCurrentView().length }}</strong> disp.</span>
+                      <span class="text-slate-400">·</span>
+                      <span class="text-amber-600 dark:text-amber-400 font-bold">{{ selectedPalletsCountForCurrentSku() }} en salida</span>
+                    </div>
+                  </div>
+
+                  <!-- Lado Derecho: Controles del Motor FEFO -->
+                  @if (maxAvailablePalletsForCurrentSku() > 0) {
+                    <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+                      <!-- Stepper Numérico FEFO -->
+                      <div class="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5 shadow-inner h-8">
+                        <span class="text-[10px] font-bold text-slate-400 px-1 hidden sm:inline">FEFO:</span>
+                        <button
+                          type="button"
+                          (click)="decrementFefoQuantity()"
+                          [disabled]="fefoQuantityInput() <= 1"
+                          class="w-5 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 rounded cursor-pointer"
+                          title="Disminuir"
+                        >
+                          <span class="material-symbols-outlined text-xs">remove</span>
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          [max]="maxAvailablePalletsForCurrentSku()"
+                          [value]="fefoQuantityInput()"
+                          (input)="onFefoQuantityInput(+$any($event.target).value)"
+                          (keydown.enter)="addFefoPalletsForCurrentSku()"
+                          class="fefo-qty-input w-7 text-center text-xs font-mono font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white p-0"
+                        />
+                        <button
+                          type="button"
+                          (click)="incrementFefoQuantity()"
+                          [disabled]="fefoQuantityInput() >= maxAvailablePalletsForCurrentSku()"
+                          class="w-5 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 rounded cursor-pointer"
+                          title="Aumentar"
+                        >
+                          <span class="material-symbols-outlined text-xs">add</span>
+                        </button>
+                        <span class="text-[10px] font-mono text-slate-400 pr-1">/ {{ maxAvailablePalletsForCurrentSku() }}</span>
+                      </div>
+
+                      <!-- Botón Agregar FEFO -->
+                      <button
+                        type="button"
+                        (click)="addFefoPalletsForCurrentSku()"
+                        class="btn-primary-gold text-xs px-2.5 h-8 rounded-lg font-bold flex items-center gap-1 shadow-sm text-slate-900 transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                        title="Agrega las {{ fefoQuantityInput() }} tarimas con menor vida útil directamente al manifiesto de salida"
+                      >
+                        <span class="material-symbols-outlined text-sm">bolt</span>
+                        <span>Agregar {{ fefoQuantityInput() }} FEFO</span>
+                      </button>
+
+                      <!-- Botón Todas -->
+                      <button
+                        type="button"
+                        (click)="addAllPalletsForCurrentSku()"
+                        class="text-xs px-2 h-8 rounded-lg font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
+                        title="Agrega todas las tarimas disponibles al manifiesto de salida"
+                      >
+                        Todas ({{ maxAvailablePalletsForCurrentSku() }})
+                      </button>
                     </div>
                   }
                 </div>
 
-                <!-- Resumen Rápido del SKU Seleccionado -->
-                <div class="md:col-span-4">
-                  @if (selectedSku()) {
-                    <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-1 text-xs">
-                      <div class="flex items-center justify-between">
-                        <span class="font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[10px]">Producto Activo</span>
-                        <span class="font-mono font-bold text-amber-800 dark:text-amber-200">{{ selectedSku()!.skuCode }}</span>
+                <!-- Tabla de Tarimas Disponibles -->
+                @if (allAvailablePalletsForCurrentView().length === 0) {
+                  @if (selectedPalletsCountForCurrentSku() > 0) {
+                    <div class="p-6 text-center text-xs flex flex-col items-center justify-center gap-2 bg-emerald-500/5 border border-emerald-500/20 rounded-xl my-2">
+                      <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-xl font-bold">done_all</span>
                       </div>
-                      <div class="font-bold text-slate-800 dark:text-slate-100 truncate" [title]="selectedSku()!.productName">
-                        {{ selectedSku()!.productName }}
+                      <div class="font-bold text-sm text-emerald-800 dark:text-emerald-300">
+                        ¡Todas las tarimas disponibles de este producto ya están en el manifiesto de salida!
                       </div>
-                      <div class="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 pt-1 border-t border-amber-500/20">
-                        <span>Stock: <strong class="text-slate-900 dark:text-white">{{ selectedSku()!.totalAvailablePallets }} tarimas ({{ selectedSku()!.totalAvailablePieces | number }} pz)</strong></span>
-                        <span class="font-bold" [ngClass]="selectedSku()!.totalAvailablePallets === 0 ? 'text-slate-400' : (selectedSku()!.pabloColor === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')">
-                          {{ selectedSku()!.totalAvailablePallets === 0 ? 'Sin stock disponible' : selectedSku()!.pabloLabel }}
-                        </span>
-                      </div>
+                      <p class="text-[11px] text-slate-500 dark:text-slate-400 max-w-md">
+                        Tienes {{ selectedPalletsCountForCurrentSku() }} tarima(s) en el carro de salida (revisa la Sección 4 abajo). Puedes buscar otro producto arriba o proceder con el despacho.
+                      </p>
+                      <button
+                        type="button"
+                        (click)="clearSkuSelection($event)"
+                        class="mt-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-500 hover:text-slate-900 transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <span class="material-symbols-outlined text-sm">search</span>
+                        <span>Buscar otro producto</span>
+                      </button>
                     </div>
                   } @else {
-                    <div class="p-3 rounded-xl bg-slate-500/5 border border-slate-500/20 text-center text-xs text-slate-400 py-3.5">
-                      <span class="material-symbols-outlined text-lg block mb-0.5 text-slate-400">touch_app</span>
-                      Selecciona el Producto para filtrar o consulta los lotes disponibles abajo.
+                    <div class="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+                      <span class="material-symbols-outlined text-3xl text-slate-400">inventory_2</span>
+                      <span>No se encontraron tarimas disponibles para este producto.</span>
+                      @if (palletTableSearchQuery()) {
+                        <button
+                          type="button"
+                          (click)="clearPalletTableSearch()"
+                          class="text-xs text-amber-600 dark:text-amber-400 font-semibold underline mt-1 cursor-pointer"
+                        >
+                          Limpiar filtro "{{ palletTableSearchQuery() }}"
+                        </button>
+                      }
                     </div>
+                  }
+                } @else {
+                  <div class="ua-table-wrapper">
+                    <table class="ua-table">
+                      <thead>
+                        <tr>
+                          <th style="width:40px;text-align:center;">#</th>
+                          <th>Código UA / SSCC</th>
+                          <th>Posición / Doc. Entrada</th>
+                          <th>Ubicación</th>
+                          <th>Descripción Producto</th>
+                          <th>Lote</th>
+                          <th>Caducidad / Estado</th>
+                          <th style="text-align:right;">Piezas</th>
+                          <th style="text-align:center;width:150px;">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (pallet of allAvailablePalletsForCurrentView(); track pallet.id; let idx = $index) {
+                          <tr
+                            (click)="addPalletToManifest(pallet.id)"
+                            style="cursor:pointer;"
+                            class="transition-colors hover:bg-amber-500/10"
+                          >
+                            <td style="text-align:center;" class="font-mono text-xs font-bold text-slate-400">
+                              {{ idx + 1 }}
+                            </td>
+                            <td>
+                              <div class="flex items-center gap-1.5">
+                                <span class="mono gold font-bold text-xs">{{ pallet.palletCode }}</span>
+                                @if (pallet.isSuggestedFefo) {
+                                  <span class="fifo-badge font-bold text-[9px]" title="Sugerencia FEFO por proximidad de caducidad">
+                                    FEFO ★
+                                  </span>
+                                }
+                              </div>
+                            </td>
+                            <td>
+                              <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                                  Tarima #{{ pallet.palletNumber || 1 }}
+                                </span>
+                                @if (pallet.remisionNo) {
+                                  <span class="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                                    {{ pallet.remisionNo }}
+                                  </span>
+                                }
+                              </div>
+                            </td>
+                            <td>
+                              <span class="inline-flex items-center gap-1 font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300">
+                                <span class="material-symbols-outlined text-[11px] text-amber-500">pin_drop</span>
+                                {{ pallet.locationCode }}
+                              </span>
+                            </td>
+                            <td>
+                              <div class="flex flex-col min-w-0">
+                                <span class="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[200px]">{{ pallet.description }}</span>
+                                <span class="font-mono text-[10px] text-slate-500">SKU: {{ pallet.productId }} · {{ pallet.clientName }}</span>
+                              </div>
+                            </td>
+                            <td class="mono muted font-semibold text-xs">{{ pallet.lotNumber }}</td>
+                            <td>
+                              <div class="flex items-center gap-1.5">
+                                <span class="font-mono text-xs">{{ pallet.expirationDate }}</span>
+                                @if (pallet.pabloStatus === 'PABLO_ALERT') {
+                                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                                    ⏳ {{ pallet.pabloLabel }}
+                                  </span>
+                                } @else if (pallet.pabloStatus === 'EXPIRED') {
+                                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40" title="Seleccionable para salida extraordinaria / destrucción">
+                                    ⛔ Caduco (Destrucción)
+                                  </span>
+                                } @else {
+                                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                    {{ pallet.pabloLabel }}
+                                  </span>
+                                }
+                              </div>
+                            </td>
+                            <td style="text-align:right;" class="mono font-bold text-xs">{{ pallet.pieces | number }} pz</td>
+                            <td style="text-align:center;" (click)="$event.stopPropagation()">
+                              <button
+                                type="button"
+                                (click)="addPalletToManifest(pallet.id, $event)"
+                                class="w-full py-1.5 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-900 dark:text-amber-200 hover:text-slate-900 text-[11px] font-bold flex items-center justify-center gap-1 transition-all border border-amber-500/30 hover:scale-[1.02] cursor-pointer"
+                                title="Mover esta tarima al manifiesto de salida"
+                              >
+                                <span class="material-symbols-outlined text-xs">add_shopping_cart</span>
+                                <span>+ Agregar</span>
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- ── SECCIÓN 4: MANIFIESTO CONSOLIDADO DE DESPACHO (CARRO DE SALIDA MULTI-PRODUCTO) ── -->
+            <div class="form-section manifest-section">
+              <div class="form-section__legend flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-500 text-lg">shopping_cart_checkout</span>
+                  <span class="font-bold">4. MANIFIESTO CONSOLIDADO DE DESPACHO (CARRO DE SALIDA)</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-slate-400 font-normal">
+                    {{ totalSelectedPallets() }} tarima(s) en manifiesto · {{ distinctSkusCount() }} producto(s)
+                  </span>
+                  @if (totalSelectedPallets() > 0) {
+                    <button
+                      type="button"
+                      (click)="clearAllManifest()"
+                      class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 flex items-center gap-1 font-semibold px-2 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      title="Vaciar todas las tarimas del manifiesto"
+                    >
+                      <span class="material-symbols-outlined text-sm">remove_shopping_cart</span>
+                      <span>Vaciar Manifiesto</span>
+                    </button>
                   }
                 </div>
               </div>
-            </div>
 
-            <!-- ── SECCIÓN 3: CONFIGURACIÓN DE LIBERACIÓN FEFO (REGLA DE PABLO) ── -->
-            <div class="form-section">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined text-amber-500">auto_fix_high</span>
-                <span>3. MOTOR DE LIBERACIÓN INTELIGENTE (REGLA DE PABLO / FEFO)</span>
+              <!-- Tarjetas Resumen del Manifiesto -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 my-3">
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-900 dark:text-amber-200 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-lg">pallet</span>
+                  </div>
+                  <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Tarimas Acumuladas</span>
+                    <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ totalSelectedPallets() }} UAs</strong>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-lg">scale</span>
+                  </div>
+                  <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Total Piezas</span>
+                    <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ totalSelectedPieces() | number }} pz</strong>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-lg">category</span>
+                  </div>
+                  <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">SKUs Únicos</span>
+                    <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ distinctSkusCount() }} producto(s)</strong>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-lg">inventory</span>
+                  </div>
+                  <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Lotes Involucrados</span>
+                    <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ totalLotesInManifest() }} lote(s)</strong>
+                  </div>
+                </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center mt-2 p-3 bg-slate-500/5 rounded-xl border border-slate-500/20">
-                <!-- Input de Cantidad Requerida con Stepper Component -->
-                <div class="md:col-span-5 flex items-center gap-3">
-                  <div class="flex flex-col">
-                    <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                      Tarimas Requeridas por el Cliente
-                    </label>
-                    <span class="text-[10px] text-slate-400">
-                      De {{ maxAvailablePallets() }} tarimas disponibles en inventario
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-2 ml-auto">
-                    <div class="stepper-counter">
+              <!-- Desglose por SKU en Chips -->
+              @if (manifestGroupedBySku().length > 0) {
+                <div class="mb-3 flex items-center gap-2 flex-wrap">
+                  <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Productos en Manifiesto:</span>
+                  @for (group of manifestGroupedBySku(); track group.skuCode) {
+                    <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs">
+                      <span class="font-mono font-bold text-amber-700 dark:text-amber-300">{{ group.skuCode }}</span>
+                      <span class="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{{ group.productName }}</span>
+                      <span class="font-bold font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-900 dark:text-amber-200 text-[10px]">
+                        {{ group.totalPallets }} tarima(s) · {{ group.totalPieces | number }} pz
+                      </span>
                       <button
                         type="button"
-                        class="stepper-btn"
-                        [disabled]="requestedPalletsCount() <= 0"
-                        (click)="decrementRequestedCount()"
-                        title="Disminuir tarimas"
+                        (click)="removeSkuFromManifest(group.skuCode)"
+                        class="text-slate-400 hover:text-rose-500 transition-colors ml-0.5"
+                        title="Quitar todas las tarimas de este producto"
                       >
-                        <span class="material-symbols-outlined text-sm">remove</span>
-                      </button>
-                      <input
-                        type="number"
-                        min="0"
-                        [max]="maxAvailablePallets()"
-                        [value]="requestedPalletsCount()"
-                        (input)="onRequestedCountInput(+$any($event.target).value)"
-                        class="stepper-input"
-                      />
-                      <button
-                        type="button"
-                        class="stepper-btn"
-                        [disabled]="requestedPalletsCount() >= maxAvailablePallets() || maxAvailablePallets() === 0"
-                        (click)="incrementRequestedCount()"
-                        title="Aumentar tarimas"
-                      >
-                        <span class="material-symbols-outlined text-sm">add</span>
+                        <span class="material-symbols-outlined text-xs">close</span>
                       </button>
                     </div>
-                    <span class="text-xs font-bold text-slate-500">tarimas</span>
-                  </div>
+                  }
                 </div>
+              }
 
-                <!-- Botón de Auto-Selección Inteligente FEFO -->
-                <div class="md:col-span-7 flex items-center justify-end gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    (click)="autoSelectFefo()"
-                    class="btn-primary-gold px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm text-slate-900 transition-all hover:scale-[1.02]"
-                    title="Selecciona automáticamente las tarimas más próximas a caducar"
-                  >
-                    <span class="material-symbols-outlined text-base">bolt</span>
-                    <span>
-                      @if (requestedPalletsCount() > 0) {
-                        Auto-seleccionar {{ requestedPalletsCount() }} por FEFO (Regla de Pablo)
-                      } @else {
-                        Auto-seleccionar por FEFO (Regla de Pablo)
-                      }
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Banner Asistente de Decisión -->
-              <div class="mt-2.5 px-3.5 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300/40 text-[11px] text-amber-900 dark:text-amber-200 flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-base shrink-0">info</span>
-                <span>
-                  <strong>Criterio FEFO Activo:</strong> El sistema prioriza automáticamente las tarimas en <em>Alerta Pablo (&lt;30 días)</em> para evitar mermas operativas y asegurar frescura de rotación.
-                </span>
-              </div>
-            </div>
-
-            <!-- ── SECCIÓN 4: TABLA DE TARIMAS / PALLETS PARA DESPACHO ── -->
-            <div class="form-section">
-              <div class="form-section__legend">
-                <span class="material-symbols-outlined">pallet</span>
-                <span>4. TARIMAS / UAS DISPONIBLES PARA LIBERACIÓN (POR BAHÍA DE ORIGEN)</span>
-                <span class="text-xs text-slate-400 font-normal" style="margin-left:auto;">
-                  Mostrando {{ allAvailablePalletsForCurrentView().length }} tarima(s)
-                </span>
-              </div>
-
-              <!-- Toolbar: Filtro por Bahía de Origen + toggle-all -->
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 my-2.5 p-2.5 bg-slate-500/5 rounded-xl border border-slate-500/20">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-sm text-amber-500">pin_drop</span>
-                    Bahía de Origen:
-                  </span>
-                  <select
-                    class="fg-select text-xs py-1 px-2.5 w-auto font-mono font-bold"
-                    [ngModel]="selectedOriginBayFilter()"
-                    (ngModelChange)="selectedOriginBayFilter.set($event)"
-                  >
-                    <option value="ALL">-- Todas las Bahías de Origen --</option>
-                    @for (bay of uniqueOriginBays(); track bay) {
-                      <option [value]="bay">Bahía {{ bay }}</option>
-                    }
-                  </select>
-                </div>
-
-                <div class="flex items-center gap-3 ml-auto">
-                  <span style="font-size:0.75rem;color:var(--text-muted);">
-                    Seleccionadas: <strong style="color:var(--text-gold);font-size:0.85rem;">{{ totalSelectedPallets() }}</strong> de {{ allAvailablePalletsForCurrentView().length }} UAs
-                  </span>
-                  <button type="button" class="toggle-all-btn" (click)="toggleAllPallets()">
-                    <span class="material-symbols-outlined" style="font-size:0.8rem;">
-                      {{ areAllPalletsSelected() ? 'deselect' : 'select_all' }}
-                    </span>
-                    {{ areAllPalletsSelected() ? 'Deseleccionar todas' : 'Seleccionar todas' }}
-                  </button>
-                </div>
-              </div>
-
-              @if (allAvailablePalletsForCurrentView().length === 0) {
-                <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.8rem;">
-                  <span class="material-symbols-outlined" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;color:var(--text-muted);">inventory_2</span>
-                  No se encontraron tarimas disponibles para el cliente, producto o bahía de origen seleccionada.
+              <!-- Tabla Dinámica Consolidada del Manifiesto -->
+              @if (totalSelectedPallets() === 0) {
+                <div class="p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 text-center flex flex-col items-center justify-center gap-2">
+                  <span class="material-symbols-outlined text-3xl text-amber-500/60">add_shopping_cart</span>
+                  <div class="text-xs font-bold text-slate-700 dark:text-slate-300">El manifiesto de despacho está vacío</div>
+                  <p class="text-[11px] text-slate-500 max-w-md">
+                    Selecciona productos en el buscador de arriba o escanea códigos de barras / UAs para irlos agregando a este carro de salida multi-producto.
+                  </p>
                 </div>
               } @else {
                 <div class="ua-table-wrapper">
                   <table class="ua-table">
                     <thead>
                       <tr>
-                        <th style="width:40px;text-align:center;">Sel.</th>
-                        <th>UA / SSCC</th>
-                        <th>Bahía de Origen</th>
-                        <th>Descripción Producto</th>
-                        <th>Lote</th>
-                        <th>Caducidad / Regla de Pablo</th>
+                        <th style="width:30px;text-align:center;">#</th>
+                        <th>Producto / SKU</th>
+                        <th>UA / Identificador</th>
+                        <th>Doc. Entrada Origen</th>
+                        <th>Bahía Origen</th>
+                        <th>Lote & Caducidad</th>
                         <th style="text-align:right;">Piezas</th>
-                        <th style="text-align:center;">Prioridad</th>
+                        <th style="width:50px;text-align:center;">Quitar</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (pallet of allAvailablePalletsForCurrentView(); track pallet.id) {
-                        <tr [class.selected-row]="isPalletSelected(pallet.id)">
-                          <td style="text-align:center;">
-                            <input
-                              type="checkbox"
-                              [checked]="isPalletSelected(pallet.id)"
-                              [disabled]="pallet.pabloStatus === 'EXPIRED'"
-                              (change)="togglePallet(pallet.id)"
-                              style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer;"
-                            />
-                          </td>
-                          <td class="mono gold font-bold">{{ pallet.palletCode }}</td>
-                          <td>
-                            <span class="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300">
-                              <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
-                              {{ pallet.locationCode }}
-                            </span>
+                      @for (it of selectedPalletItems(); track it.id; let idx = $index) {
+                        <tr class="selected-row">
+                          <td style="text-align:center;" class="font-mono text-xs font-bold text-slate-400">
+                            {{ idx + 1 }}
                           </td>
                           <td>
                             <div class="flex flex-col min-w-0">
-                              <span class="font-semibold text-slate-800 dark:text-slate-200 text-xs">{{ pallet.description }}</span>
-                              <span class="font-mono text-[10px] text-slate-500">SKU: {{ pallet.productId }}</span>
+                              <span class="font-bold text-xs text-slate-900 dark:text-slate-100 truncate max-w-[220px]">
+                                {{ it.description }}
+                              </span>
+                              <div class="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                                <span>SKU: {{ it.productId }}</span>
+                                @if (it.clientName) {
+                                  <span>· {{ it.clientName }}</span>
+                                }
+                              </div>
                             </div>
                           </td>
-                          <td class="mono muted font-semibold">{{ pallet.lotNumber }}</td>
                           <td>
-                            <div class="flex items-center gap-1.5">
-                              <span class="font-mono text-xs">{{ pallet.expirationDate }}</span>
-                              @if (pallet.pabloStatus === 'PABLO_ALERT') {
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
-                                  ⏳ {{ pallet.pabloLabel }}
-                                </span>
-                              } @else if (pallet.pabloStatus === 'EXPIRED') {
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40">
-                                  ⛔ Caduco
-                                </span>
-                              } @else {
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                                  {{ pallet.pabloLabel }}
+                            <span class="font-mono font-bold text-xs text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                              {{ it.palletCode }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="flex items-center gap-1">
+                              <span class="font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                                {{ it.inboundRemisionNo || 'REM-S/N' }}
+                              </span>
+                              @if (it.palletNumber) {
+                                <span class="text-[10px] text-slate-400 font-mono">
+                                  (#{{ it.palletNumber }})
                                 </span>
                               }
                             </div>
                           </td>
-                          <td style="text-align:right;" class="mono font-bold">{{ pallet.pieces | number }} pz</td>
+                          <td>
+                            <span class="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300">
+                              <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
+                              {{ it.locationCode || 'N/A' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="flex flex-col min-w-0 font-mono text-xs">
+                              <span class="font-semibold text-slate-700 dark:text-slate-300">{{ it.lotNumber }}</span>
+                              <span class="text-[10px] text-slate-400">Cad: {{ it.expirationDate }}</span>
+                            </div>
+                          </td>
+                          <td style="text-align:right;" class="mono font-bold text-xs">
+                            {{ it.pieces | number }} pz
+                          </td>
                           <td style="text-align:center;">
-                            @if (pallet.isSuggestedFefo) {
-                              <span class="fifo-badge font-bold" title="Sugerencia FEFO por proximidad de caducidad">
-                                FEFO ★
-                              </span>
-                            } @else {
-                              <span class="text-slate-400 text-xs font-mono">--</span>
-                            }
+                            <button
+                              type="button"
+                              (click)="removePalletFromManifest(it.id)"
+                              class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-colors mx-auto"
+                              title="Quitar esta tarima del despacho"
+                            >
+                              <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
                           </td>
                         </tr>
                       }
                     </tbody>
+                    <tfoot>
+                      <tr style="background:var(--bg-subtle);font-weight:700;">
+                        <td colspan="6" style="padding:0.6rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
+                          Total Manifiesto: {{ totalSelectedPallets() }} Tarima(s) · {{ distinctSkusCount() }} SKU(s) · {{ totalLotesInManifest() }} Lote(s)
+                        </td>
+                        <td style="text-align:right;padding:0.6rem 0.8rem;font-family:var(--font-mono);font-size:0.85rem;font-weight:800;color:var(--gold);">
+                          {{ totalSelectedPieces() | number }} pz
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               }
@@ -1027,14 +1346,14 @@
                   </div>
                 </div>
 
-                <!-- Checklist 4: Tarimas y Piezas -->
+                <!-- Checklist 4: Tarimas y Piezas del Manifiesto -->
                 <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-2">
                   <span class="material-symbols-outlined text-base shrink-0 mt-0.5" [ngClass]="totalSelectedPallets() > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
                     {{ totalSelectedPallets() > 0 ? 'check_circle' : 'cancel' }}
                   </span>
                   <div class="flex flex-col text-xs min-w-0">
-                    <span class="font-bold text-slate-800 dark:text-slate-200">Mercancía & Bahías de Origen</span>
-                    <span class="text-[11px] text-slate-500 font-mono">{{ totalSelectedPallets() }} UA(s) · {{ totalSelectedPieces() | number }} pzas · {{ totalSelectedSkus() }} SKU(s)</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Manifiesto Consolidado</span>
+                    <span class="text-[11px] text-slate-500 font-mono">{{ totalSelectedPallets() }} UA(s) · {{ totalSelectedPieces() | number }} pzas · {{ distinctSkusCount() }} SKU(s)</span>
                   </div>
                 </div>
 
@@ -1121,26 +1440,50 @@
         </div><!-- /outbound-panel-body -->
       }
 
-      <!-- ─────────────── MODO DETAIL: CONSULTA HISTÓRICA ─────────────── -->
+      <!-- ─────────────── MODO DETAIL: CONSULTA Y CICLO OPERATIVO ─────────────── -->
       @if (formMode() === 'detail' && selectedOutbound()) {
 
+        <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
         <div class="outbound-breadcrumb-bar">
           <div class="outbound-breadcrumb-bar__path">
+            <span class="material-symbols-outlined text-base text-slate-700 dark:text-slate-300">local_shipping</span>
             <span>Movimientos</span>
             <span class="breadcrumb-sep">›</span>
             <span>Salida de Almacén</span>
             <span class="breadcrumb-sep">›</span>
-            <span class="breadcrumb-active">{{ selectedOutbound()!.folio }}</span>
+            <strong class="text-slate-950 dark:text-slate-50 font-black">{{ selectedOutbound()!.clientName }}</strong>
+            <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30">FOLIO #{{ selectedOutbound()!.folio }}</span>
             <span style="margin-left:0.5rem;">
-              @if (selectedOutbound()?.status === 'CANCELLED') {
-                <span class="status-badge--cancelled">Cancelado</span>
-              } @else {
-                <span class="status-badge--completed">Completado</span>
-              }
+              <span
+                class="carrier-status-badge"
+                [class.status-badge--registered]="selectedOutbound()!.status === 'REGISTERED'"
+                [class.status-badge--assigned]="selectedOutbound()!.status === 'ASSIGNED'"
+                [class.status-badge--progress]="selectedOutbound()!.status === 'IN_PROGRESS'"
+                [class.status-badge--discharged]="selectedOutbound()!.status === 'LOADED'"
+                [class.status-badge--completed]="selectedOutbound()!.status === 'COMPLETED'"
+                [class.status-badge--cancelled]="selectedOutbound()!.status === 'CANCELLED'"
+              >
+                @if (selectedOutbound()!.status === 'REGISTERED') { 1. Pre-registro Caseta }
+                @else if (selectedOutbound()!.status === 'ASSIGNED') { 2. Andén Asignado }
+                @else if (selectedOutbound()!.status === 'IN_PROGRESS') { 3. En Carga }
+                @else if (selectedOutbound()!.status === 'LOADED') { 4. Por Auditar }
+                @else if (selectedOutbound()!.status === 'COMPLETED') { 5. Completado }
+                @else if (selectedOutbound()!.status === 'CANCELLED') { Cancelado }
+              </span>
             </span>
           </div>
           <div class="outbound-breadcrumb-bar__actions">
             @if (selectedOutbound()?.status !== 'CANCELLED') {
+              <button
+                type="button"
+                (click)="openChangeRemisionModal()"
+                class="btn-secondary-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+                title="Modificar número de remisión o carta porte con autorización supervisada"
+              >
+                <span class="material-symbols-outlined text-sm text-indigo-500">edit_note</span>
+                <span>Cambiar Remisión</span>
+              </button>
+
               <button
                 type="button"
                 (click)="openCancelModal()"
@@ -1152,16 +1495,488 @@
             }
             <button type="button" class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm text-slate-900" (click)="openPrintPreview(selectedOutbound()!)">
               <span class="material-symbols-outlined" style="font-size:0.85rem;">print</span>
-              <span>{{ selectedOutbound()?.status === 'CANCELLED' ? 'Imprimir Cancelación' : 'Imprimir Salida' }}</span>
+              <span>{{ selectedOutbound()?.status === 'CANCELLED' ? 'Imprimir Cancelación' : 'Imprimir Salida (F03)' }}</span>
             </button>
           </div>
         </div>
 
-        <div class="outbound-panel-body">
+        <div class="outbound-panel-body space-y-4">
 
-          @if (selectedOutbound()?.status === 'CANCELLED') {
-            <!-- Banner de Auditoría de Cancelación -->
-            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 mb-4">
+          <!-- 2. STEPPER HORIZONTAL VISUAL (5 FASES OPERATIVAS) -->
+          @if (selectedOutbound()?.status !== 'CANCELLED') {
+            <div class="outbound-stepper">
+              <!-- Paso 1: Caseta -->
+              <div
+                class="outbound-stepper-item"
+                [class.outbound-stepper-item--active]="lifecycleStepIndex() === 1"
+                [class.outbound-stepper-item--completed]="lifecycleStepIndex() > 1"
+              >
+                <div class="outbound-stepper-num">
+                  @if (lifecycleStepIndex() > 1) {
+                    <span class="material-symbols-outlined text-xs">check</span>
+                  } @else {
+                    1
+                  }
+                </div>
+                <div class="outbound-stepper-info">
+                  <span class="outbound-stepper-title">1. Caseta</span>
+                  <span class="outbound-stepper-sub">Registro Arribo</span>
+                </div>
+              </div>
+
+              <!-- Paso 2: Asignación -->
+              <div
+                class="outbound-stepper-item"
+                [class.outbound-stepper-item--active]="lifecycleStepIndex() === 2"
+                [class.outbound-stepper-item--completed]="lifecycleStepIndex() > 2"
+              >
+                <div class="outbound-stepper-num">
+                  @if (lifecycleStepIndex() > 2) {
+                    <span class="material-symbols-outlined text-xs">check</span>
+                  } @else {
+                    2
+                  }
+                </div>
+                <div class="outbound-stepper-info">
+                  <span class="outbound-stepper-title">2. Asignación</span>
+                  <span class="outbound-stepper-sub">Rampa &amp; Montacargas</span>
+                </div>
+              </div>
+
+              <!-- Paso 3: En Carga -->
+              <div
+                class="outbound-stepper-item"
+                [class.outbound-stepper-item--active]="lifecycleStepIndex() === 3"
+                [class.outbound-stepper-item--completed]="lifecycleStepIndex() > 3"
+              >
+                <div class="outbound-stepper-num">
+                  @if (lifecycleStepIndex() > 3) {
+                    <span class="material-symbols-outlined text-xs">check</span>
+                  } @else {
+                    3
+                  }
+                </div>
+                <div class="outbound-stepper-info">
+                  <span class="outbound-stepper-title">3. En Carga</span>
+                  <span class="outbound-stepper-sub">Terminal RF Andén</span>
+                </div>
+              </div>
+
+              <!-- Paso 4: Por Auditar -->
+              <div
+                class="outbound-stepper-item"
+                [class.outbound-stepper-item--active]="lifecycleStepIndex() === 4"
+                [class.outbound-stepper-item--completed]="lifecycleStepIndex() > 4"
+              >
+                <div class="outbound-stepper-num">
+                  @if (lifecycleStepIndex() > 4) {
+                    <span class="material-symbols-outlined text-xs">check</span>
+                  } @else {
+                    4
+                  }
+                </div>
+                <div class="outbound-stepper-info">
+                  <span class="outbound-stepper-title">4. Por Auditar</span>
+                  <span class="outbound-stepper-sub">Carga Concluida</span>
+                </div>
+              </div>
+
+              <!-- Paso 5: Cerrada -->
+              <div
+                class="outbound-stepper-item"
+                [class.outbound-stepper-item--active]="lifecycleStepIndex() === 5"
+                [class.outbound-stepper-item--completed]="lifecycleStepIndex() === 5"
+              >
+                <div class="outbound-stepper-num">
+                  @if (lifecycleStepIndex() === 5) {
+                    <span class="material-symbols-outlined text-xs">check</span>
+                  } @else {
+                    5
+                  }
+                </div>
+                <div class="outbound-stepper-info">
+                  <span class="outbound-stepper-title">5. Despacho</span>
+                  <span class="outbound-stepper-sub">F03 Cerrado</span>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- 3. FICHA OPERATIVA UNIFICADA: CASETA & TRANSPORTE (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
+          <div class="logistics-command-panel">
+            <div class="logistics-command-panel__header">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">local_shipping</span>
+                <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Ficha Operativa de Arribo &amp; Caseta
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                @if (selectedOutbound()!.status === 'REGISTERED') {
+                  <button
+                    type="button"
+                    (click)="openEditCasetaModal()"
+                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                    title="Modificar datos de caseta, transportista, placas o chofer"
+                  >
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                    <span>Modificar Ficha</span>
+                  </button>
+                }
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs">alt_route</span>
+                  <span>WMS Auto-Slotting</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- FILA 1: 4 Columnas bien distribuidas (Cliente, Destino, Transportista, Chofer) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+              <!-- Cliente -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">person</span>
+                  Cliente Propietario
+                </span>
+                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.clientName">
+                  {{ selectedOutbound()!.clientName }}
+                </span>
+              </div>
+
+              <!-- Destino / Planta -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">pin_drop</span>
+                  Planta / Destino
+                </span>
+                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.destinationName">
+                  {{ selectedOutbound()!.destinationName }}
+                </span>
+              </div>
+
+              <!-- Línea Transportista -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">domain</span>
+                  Línea Transportista
+                </span>
+                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.carrierName">
+                  {{ selectedOutbound()!.carrierName }}
+                </span>
+              </div>
+
+              <!-- Chofer / Operador -->
+              <div class="logistics-command-cell">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">badge</span>
+                  Operador / Chofer
+                </span>
+                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.driverName">
+                  {{ selectedOutbound()!.driverName }} ({{ getTransportLabel(selectedOutbound()!.transportType) }})
+                </span>
+              </div>
+            </div>
+
+            <!-- FILA 2: 3 Columnas amplias (Placas Tracto & Caja, Sellos Oficiales, Bahía / Rampa Asignada) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-amber-500/15">
+              <!-- Placas Tracto y Caja (4 cols) -->
+              <div class="logistics-command-cell lg:col-span-4">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">pin</span>
+                  Eco / Placas (Tracto &amp; Caja)
+                </span>
+                <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                    T: {{ selectedOutbound()!.economicNumber || '-' }} / {{ selectedOutbound()!.tractorPlates || 'S/P' }}
+                  </span>
+                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                    C: {{ selectedOutbound()!.boxEconomicNumber || '-' }} / {{ selectedOutbound()!.boxPlates || 'S/P' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Sellos / Cinchos de Seguridad (4 cols) -->
+              <div class="logistics-command-cell lg:col-span-4">
+                <span class="logistics-command-label">
+                  <span class="material-symbols-outlined text-xs">lock</span>
+                  Número de Sello o Cincho
+                </span>
+                <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                  @if (selectedOutbound()!.sealNumber && selectedOutbound()!.sealNumber !== 'PENDIENTE_ANDEN') {
+                    <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                      🔒 {{ selectedOutbound()!.sealNumber }}
+                    </span>
+                  } @else {
+                    <span class="font-mono text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-xs">pending</span>
+                      <span>Pendiente al finalizar carga</span>
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Andén de Salida & Montacarguista (4 cols) -->
+              <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-4">
+                <div class="flex items-center justify-between">
+                  <span class="logistics-command-label text-blue-700 dark:text-blue-300">
+                    <span class="material-symbols-outlined text-xs">warehouse</span>
+                    Andén de Carga
+                  </span>
+                  <span class="text-[10px] font-mono font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                    {{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Por Asignar' }}
+                  </span>
+                </div>
+                <span class="font-mono font-black text-blue-900 dark:text-blue-200 text-xs mt-0.5 block truncate" [title]="selectedOutbound()!.forkliftOperator || 'Operador por asignar'">
+                  {{ selectedOutbound()!.forkliftOperator ? ('Montacarguista: ' + selectedOutbound()!.forkliftOperator) : 'Sin montacarguista asignado' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. CAJAS DE ACCIÓN OPERATIVA CONTEXTUAL SEGÚN LA FASE ACTIVA -->
+          @if (selectedOutbound()!.status === 'REGISTERED') {
+            <!-- FASE 1: REGISTRADO EN CASETA — MESA DE CONTROL ASIGNA ANDÉN Y MONTACARGUISTA -->
+            <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center border border-amber-500/40 shrink-0">
+                    <span class="material-symbols-outlined text-2xl">forklift</span>
+                  </div>
+                  <div>
+                    <h3 class="font-black text-xs text-amber-900 dark:text-amber-200 uppercase tracking-wide">
+                      Fase 1: Pre-registro en Caseta · Asignar Andén &amp; Montacarguista
+                    </h3>
+                    <p class="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                      El transporte arribó a patio. Asigna la rampa de carga (1-12) y el montacarguista responsable para despachar la orden a su terminal RF.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  [disabled]="isAssigningRamp() || !selectedOperatorId()"
+                  (click)="assignRampAndOperatorAction()"
+                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
+                  title="Bloquear rampa y despachar orden a terminal RF del montacarguista"
+                >
+                  @if (isAssigningRamp()) {
+                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    <span>Asignando...</span>
+                  } @else {
+                    <span class="material-symbols-outlined text-base">send_to_mobile</span>
+                    <span>Asignar Andén y Notificar Terminal RF</span>
+                  }
+                </button>
+              </div>
+
+              <!-- Selector Rápido de Rampa y Montacarguista -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 border-t border-amber-500/20 text-xs">
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
+                      Rampa de Asignación <span class="text-amber-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      (click)="showDockMapModal.set(true)"
+                      class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      title="Abrir mapa visual de andenes"
+                    >
+                      <span class="material-symbols-outlined text-[13px]">grid_view</span>
+                      <span>Plano</span>
+                    </button>
+                  </div>
+                  <select
+                    [ngModel]="selectedRampNumber()"
+                    (ngModelChange)="selectedRampNumber.set(+$event)"
+                    class="fg-input w-full font-bold"
+                  >
+                    @for (rm of ramps(); track rm.code) {
+                      <option [value]="rm.rampNumber" [disabled]="isRampBusy(rm.rampNumber, selectedOutbound()?.folio)">
+                        {{ getRampDisplayLabel(rm, selectedOutbound()?.folio) }}
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Montacarguista Certificado <span class="text-amber-500">*</span>
+                  </label>
+                  <select
+                    [ngModel]="selectedOperatorId()"
+                    (ngModelChange)="selectedOperatorId.set($event)"
+                    class="fg-input w-full font-bold"
+                  >
+                    <option value="">-- Selecciona montacarguista --</option>
+                    @for (op of forkliftOperators(); track op.id) {
+                      <option [value]="op.id">{{ op.name }} ({{ op.badge }})</option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
+                    Observaciones para el Operador
+                  </label>
+                  <input
+                    type="text"
+                    [ngModel]="observations()"
+                    (ngModelChange)="observations.set($event)"
+                    placeholder="Instrucciones de estiba o andén..."
+                    class="fg-input w-full text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+          } @else if (selectedOutbound()!.status === 'ASSIGNED') {
+            <!-- FASE 2: ANDÉN ASIGNADO — NOTIFICACIÓN EN TERMINAL DE MONTACARGAS -->
+            <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/40 shrink-0">
+                  <span class="material-symbols-outlined text-2xl">forklift</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wide">
+                    Fase 2: Andén Asignado · Notificación Enviada a Terminal RF
+                  </h3>
+                  <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                    Rampa <strong>{{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Asignada' }}</strong> bloqueada. El montacarguista <strong>{{ selectedOutbound()!.forkliftOperator }}</strong> validará el transporte e iniciará el surtido/carga en andén.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                [disabled]="isStartingLoading()"
+                (click)="startOutboundLoadingAction()"
+                class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap"
+                title="Simular inicio de carga en la terminal del montacarguista"
+              >
+                @if (isStartingLoading()) {
+                  <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                  <span>Iniciando...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-sm">play_arrow</span>
+                  <span>Iniciar Carga en Terminal RF</span>
+                }
+              </button>
+            </div>
+
+          } @else if (selectedOutbound()!.status === 'IN_PROGRESS') {
+            <!-- FASE 3: CARGA FÍSICA EN CURSO (TERMINAL MONTACARGUISTA) -->
+            <div class="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-3">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/40 shrink-0 animate-pulse">
+                    <span class="material-symbols-outlined text-2xl">barcode_scanner</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-xs text-cyan-900 dark:text-cyan-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <span>Fase 3: Carga Física en Curso · Rampa {{ selectedOutbound()!.rampNumber || 1 }}</span>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-700 dark:text-cyan-300">En Proceso</span>
+                    </h3>
+                    <p class="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
+                      Montacarguista <strong>{{ selectedOutbound()!.forkliftOperator }}</strong> estibando mercancía en caja de transporte.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  [disabled]="isFinishingLoading()"
+                  (click)="finishOutboundLoadingAction()"
+                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap"
+                  title="Concluir carga física y notificar a mesa de control"
+                >
+                  @if (isFinishingLoading()) {
+                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    <span>Finalizando...</span>
+                  } @else {
+                    <span class="material-symbols-outlined text-sm">fact_check</span>
+                    <span>Finalizar Carga (Registrar Sellos y Notificar Control)</span>
+                  }
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-cyan-500/30 text-xs">
+                <span class="font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">Número de Sello / Precinto de Puerta:</span>
+                <input
+                  type="text"
+                  [ngModel]="tempFinishSealNumber()"
+                  (ngModelChange)="tempFinishSealNumber.set($event)"
+                  placeholder="Ingresar número de sello final (ej. SL-99201)..."
+                  class="fg-input font-mono uppercase text-xs flex-1"
+                />
+              </div>
+            </div>
+
+          } @else if (selectedOutbound()!.status === 'LOADED') {
+            <!-- FASE 4: CARGA CONCLUIDA — AUDITORÍA ADMINISTRATIVA Y VISTO BUENO -->
+            <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/40 shrink-0">
+                  <span class="material-symbols-outlined text-2xl">assignment_turned_in</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-xs text-purple-900 dark:text-purple-200 uppercase tracking-wide flex items-center gap-1.5">
+                    <span>Fase 4: Carga Física Concluida · Auditoría Administrativa</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">Visto Bueno Pendiente</span>
+                  </h3>
+                  <p class="text-[11px] text-purple-700 dark:text-purple-300 font-medium">
+                    El montacarguista <strong>{{ selectedOutbound()!.forkliftOperator }}</strong> finalizó la carga de <strong>{{ selectedOutbound()!.totalPallets }} tarimas ({{ selectedOutbound()!.totalPieces }} piezas)</strong> con sello <strong>{{ selectedOutbound()!.sealNumber }}</strong>. Verifica el manifiesto abajo para emitir pauta F03 y liberar andén.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                [disabled]="isAuthorizingDispatch()"
+                (click)="openAuthorizeModal()"
+                class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
+                title="Aprobar despacho y emitir documento F03 formal con autorización supervisada"
+              >
+                @if (isAuthorizingDispatch()) {
+                  <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                  <span>Autorizando...</span>
+                } @else {
+                  <span class="material-symbols-outlined text-base">verified</span>
+                  <span>Aprobar Despacho y Finalizar Salida (F03)</span>
+                }
+              </button>
+            </div>
+
+          } @else if (selectedOutbound()!.status === 'COMPLETED') {
+            <!-- FASE 5: DESPACHO COMPLETADO -->
+            <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/40 shrink-0">
+                  <span class="material-symbols-outlined text-2xl">check_circle</span>
+                </div>
+                <div>
+                  <h3 class="font-black text-xs text-emerald-900 dark:text-emerald-200 uppercase tracking-wide">
+                    Salida de Almacén Completada &amp; Despachada
+                  </h3>
+                  <p class="text-[11px] text-emerald-800 dark:text-emerald-300 font-medium">
+                    Las <strong>{{ selectedOutbound()!.totalPallets }} tarimas ({{ selectedOutbound()!.totalPieces | number }} piezas)</strong> fueron descontadas del inventario. Andén liberado.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="openPrintPreview(selectedOutbound()!)"
+                class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 flex items-center gap-1.5 text-slate-900"
+              >
+                <span class="material-symbols-outlined text-base">print</span>
+                <span>Imprimir Pauta F03</span>
+              </button>
+            </div>
+
+          } @else if (selectedOutbound()!.status === 'CANCELLED') {
+            <!-- CANCELADO -->
+            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
               <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
                 <span class="material-symbols-outlined text-lg">cancel</span>
                 <span class="uppercase">SALIDA CANCELADA Y REVOCADA DE INVENTARIO</span>
@@ -1175,88 +1990,6 @@
               </div>
             </div>
           }
-
-          <!-- Información General -->
-          <div class="form-section">
-            <div class="form-section__legend">
-              <span class="material-symbols-outlined">receipt_long</span>
-              Información General
-            </div>
-            <div class="detail-info-grid">
-              <div class="detail-field">
-                <span class="fg-label">Folio</span>
-                <span class="fg-value mono">{{ selectedOutbound()!.folio }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Fecha / Hora</span>
-                <span class="fg-value">{{ selectedOutbound()!.dispatchedAt }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Registrado por</span>
-                <span class="fg-value">{{ selectedOutbound()!.dispatchedBy }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Cliente</span>
-                <span class="fg-value">{{ selectedOutbound()!.clientName }}</span>
-              </div>
-              <div class="detail-field" style="grid-column:span 2;">
-                <span class="fg-label">Destino</span>
-                <span class="fg-value">{{ selectedOutbound()!.destinationName }}</span>
-                @if (selectedOutbound()!.destinationAddress) {
-                  <span style="font-size:0.72rem;color:var(--text-muted);">{{ selectedOutbound()!.destinationAddress }}</span>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- Datos del Transporte -->
-          <div class="form-section">
-            <div class="form-section__legend">
-              <span class="material-symbols-outlined">local_shipping</span>
-              Datos del Transporte & Unidad (Snapshot)
-            </div>
-            <div class="detail-info-grid">
-              <div class="detail-field">
-                <span class="fg-label">Línea Transportista</span>
-                <span class="fg-value">{{ selectedOutbound()!.carrierName }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Nombre del Operador (Chofer)</span>
-                <span class="fg-value">{{ selectedOutbound()!.driverName }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Tipo de Camión</span>
-                <span class="fg-value">{{ getTransportLabel(selectedOutbound()!.transportType) }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Eco de Tracto</span>
-                <span class="fg-value mono">{{ selectedOutbound()!.economicNumber || '--' }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Placas de Tracto</span>
-                <span class="fg-value mono">{{ selectedOutbound()!.tractorPlates }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Eco Caja</span>
-                <span class="fg-value mono">{{ selectedOutbound()!.boxEconomicNumber || '--' }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Placas Caja</span>
-                <span class="fg-value mono">{{ selectedOutbound()!.boxPlates }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="fg-label">Montacarguista Asignado</span>
-                <span class="fg-value">{{ selectedOutbound()!.forkliftOperator || 'Operador WMS' }}</span>
-              </div>
-              <div class="detail-field" style="grid-column:span 3;">
-                <span class="fg-label">Número de Sello o Cincho</span>
-                <span class="seal-chip" style="margin-top:0.2rem;">
-                  <span class="material-symbols-outlined" style="font-size:0.8rem;">lock</span>
-                  {{ selectedOutbound()!.sealNumber }}
-                </span>
-              </div>
-            </div>
-          </div>
 
           <!-- Detalle de Tarimas Despachadas -->
           <div class="form-section">
@@ -1273,6 +2006,7 @@
                 <thead>
                   <tr>
                     <th>UA / SSCC</th>
+                    <th>Doc. Entrada Origen</th>
                     <th>Bahía de Origen</th>
                     <th>SKU</th>
                     <th>Descripción</th>
@@ -1285,6 +2019,11 @@
                   @for (item of selectedOutbound()!.items; track item.id || $index) {
                     <tr>
                       <td class="mono gold font-bold">{{ item.palletCode || '--' }}</td>
+                      <td>
+                        <span class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          {{ item.inboundRemisionNo || '--' }}
+                        </span>
+                      </td>
                       <td>
                         <span class="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300">
                           <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
@@ -1301,7 +2040,7 @@
                 </tbody>
                 <tfoot>
                   <tr style="background:var(--bg-subtle);font-weight:700;">
-                    <td colspan="6" style="padding:0.5rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
+                    <td colspan="7" style="padding:0.5rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
                       Totales: {{ selectedOutbound()!.totalPallets }} Tarima(s) · {{ selectedOutbound()!.distinctSkus }} SKU(s)
                     </td>
                     <td style="text-align:right;padding:0.5rem 0.8rem;font-family:var(--font-mono);font-size:0.85rem;font-weight:800;color:var(--gold);">
@@ -1340,67 +2079,80 @@
               </div>
             </div>
 
-            <!-- Línea de Tiempo de Auditoría -->
+            <!-- Línea de Tiempo de Auditoría (Colapsable) -->
             <div class="carriers-timeline-preview rounded-xl border border-subtle bg-surface-subtle overflow-hidden">
-              <div class="carriers-timeline-preview__header flex items-center justify-between p-3 border-b border-subtle bg-gold/5">
+              <div
+                class="carriers-timeline-preview__header flex items-center justify-between p-3 border-b border-subtle bg-gold/5 cursor-pointer hover:bg-gold/10 transition-colors select-none"
+                (click)="toggleShowAuditTimeline()"
+              >
                 <div class="flex items-center gap-2 text-xs font-bold text-gold uppercase tracking-wider">
                   <span class="material-symbols-outlined text-base">timeline</span>
                   <span>Línea de Tiempo de Auditoría</span>
                 </div>
-                <span class="text-[11px] font-mono text-muted">{{ auditEntries().length }} evento(s)</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-mono text-muted">{{ auditEntries().length }} evento(s)</span>
+                  <span class="btn-gold-outline text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                    <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
+                    <span class="material-symbols-outlined text-base transition-transform duration-200" [class.rotate-180]="showAuditTimeline()">
+                      expand_more
+                    </span>
+                  </span>
+                </div>
               </div>
 
-              <div class="carriers-timeline-preview__nodes p-4 space-y-4">
-                @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
-                  <div class="carriers-tl-node flex items-start gap-3 relative" [ngClass]="getAuditColorClass(log.action)">
-                    <div class="carriers-tl-node__dot flex items-center justify-center w-8 h-8 rounded-full border shrink-0 z-10">
-                      <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
-                    </div>
-                    @if (!isLast) {
-                      <div class="carriers-tl-node__line absolute left-4 top-8 bottom-[-16px] w-[2px] bg-slate-300 dark:bg-slate-700"></div>
-                    }
-                    <div class="carriers-tl-node__content flex-1 min-w-0">
-                      <div class="carriers-tl-node__header flex items-center gap-2 flex-wrap mb-1">
-                        <span class="carriers-tl-node__action font-bold text-xs text-primary">{{ getAuditSummary(log.action) }}</span>
-                        <span class="carriers-tl-node__tag font-mono text-[10px] px-2 py-0.5 rounded bg-surface border border-subtle text-muted">&#64;{{ log.username }}</span>
+              @if (showAuditTimeline()) {
+                <div class="carriers-timeline-preview__nodes p-4 space-y-4 animate-fade-in">
+                  @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                    <div class="carriers-tl-node flex items-start gap-3 relative" [ngClass]="getAuditColorClass(log.action)">
+                      <div class="carriers-tl-node__dot flex items-center justify-center w-8 h-8 rounded-full border shrink-0 z-10">
+                        <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
                       </div>
-
-                      @if (log.details && log.details.length > 0) {
-                        <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
-                          @for (d of log.details; track d.fieldName) {
-                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
-                              <span class="carriers-tl-diff__field font-semibold text-secondary">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
-                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
-                                <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
-                              }
-                              <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
-                            </div>
-                          }
+                      @if (!isLast) {
+                        <div class="carriers-tl-node__line absolute left-4 top-8 bottom-[-16px] w-[2px] bg-slate-300 dark:bg-slate-700"></div>
+                      }
+                      <div class="carriers-tl-node__content flex-1 min-w-0">
+                        <div class="carriers-tl-node__header flex items-center gap-2 flex-wrap mb-1">
+                          <span class="carriers-tl-node__action font-bold text-xs text-primary">{{ getAuditSummary(log.action) }}</span>
+                          <span class="carriers-tl-node__tag font-mono text-[10px] px-2 py-0.5 rounded bg-surface border border-subtle text-muted">&#64;{{ log.username }}</span>
                         </div>
-                      }
 
-                      @if (log.reason) {
-                        <p class="text-xs text-rose-500 font-medium italic mt-1">
-                          Motivo: "{{ log.reason }}"
-                        </p>
-                      }
-
-                      <span class="carriers-tl-node__meta text-[11px] text-muted flex items-center gap-1 mt-1 font-mono">
-                        <span class="material-symbols-outlined text-[13px]">schedule</span>
-                        <span>{{ log.timestamp }}</span>
-                        @if (log.authorizedBy) {
-                          <span class="ml-2 font-normal">· Autorizado por: <strong class="text-primary font-bold">{{ log.authorizedBy }}</strong></span>
+                        @if (log.details && log.details.length > 0) {
+                          <div class="carriers-tl-node__diffs p-2.5 rounded-lg bg-surface border border-subtle space-y-1 my-1.5">
+                            @for (d of log.details; track d.fieldName) {
+                              <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                                <span class="carriers-tl-diff__field font-semibold text-secondary">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                  <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                  <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
+                                }
+                                <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                              </div>
+                            }
+                          </div>
                         }
-                      </span>
+
+                        @if (log.reason) {
+                          <p class="text-xs text-rose-500 font-medium italic mt-1">
+                            Motivo: "{{ log.reason }}"
+                          </p>
+                        }
+
+                        <span class="carriers-tl-node__meta text-[11px] text-muted flex items-center gap-1 mt-1 font-mono">
+                          <span class="material-symbols-outlined text-[13px]">schedule</span>
+                          <span>{{ log.timestamp }}</span>
+                          @if (log.authorizedBy) {
+                            <span class="ml-2 font-normal">· Autorizado por: <strong class="text-primary font-bold">{{ log.authorizedBy }}</strong></span>
+                          }
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                } @empty {
-                  <div class="text-xs text-secondary italic text-center py-3">
-                    No hay eventos de auditoría registrados para este folio.
-                  </div>
-                }
-              </div>
+                  } @empty {
+                    <div class="text-xs text-secondary italic text-center py-3">
+                      No hay eventos de auditoría registrados para este folio.
+                    </div>
+                  }
+                </div>
+              }
             </div>
           </div>
 
@@ -1461,7 +2213,7 @@
             </div>
           </div>
 
-          <!-- Structured Details Card (Wraps gracefully, no truncation) -->
+          <!-- Structured Details Card (Logística y Transporte) -->
           <div class="confirm-data-card">
             
             <div class="confirm-data-row">
@@ -1481,21 +2233,14 @@
             <div class="confirm-data-row">
               <span class="confirm-data-label">Línea Transportista:</span>
               <span class="confirm-data-val font-semibold text-slate-800 dark:text-slate-200">
-                {{ selectedCarrier()?.name || '--' }}
+                {{ selectedCarrier()?.name || '--' }} · <span class="text-amber-600 dark:text-amber-400 font-bold">{{ getTransportLabel(selectedTransportType()) }}</span>
               </span>
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">Nombre del Operador (Chofer):</span>
+              <span class="confirm-data-label">Chofer:</span>
               <span class="confirm-data-val font-medium text-slate-900 dark:text-slate-100">
                 {{ driverName() || '--' }}
-              </span>
-            </div>
-
-            <div class="confirm-data-row">
-              <span class="confirm-data-label">Tipo de Camión:</span>
-              <span class="confirm-data-val font-semibold text-amber-700 dark:text-amber-400">
-                {{ getTransportLabel(selectedTransportType()) }}
               </span>
             </div>
 
@@ -1514,7 +2259,7 @@
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">Número de Sello o Cincho:</span>
+              <span class="confirm-data-label">Sello / Cincho:</span>
               <div class="confirm-data-val">
                 <span class="confirm-seal-badge font-mono">
                   🔒 {{ sealNumber() || '--' }}
@@ -1523,27 +2268,48 @@
             </div>
 
             <div class="confirm-data-row">
-              <span class="confirm-data-label">Montacarguista Responsable:</span>
+              <span class="confirm-data-label">Montacarguista:</span>
               <span class="confirm-data-val font-bold text-slate-900 dark:text-slate-100">
                 {{ selectedOperator()?.name || 'No asignado' }} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">({{ selectedOperator()?.badge || '--' }})</span>
               </span>
             </div>
 
-            <div class="confirm-data-row confirm-data-row--highlight">
-              <span class="confirm-data-label">Remisión / Documento:</span>
-              <span class="confirm-data-val font-mono font-bold text-amber-800 dark:text-amber-300">
-                {{ primaryRemisionNo() }}
-              </span>
-            </div>
-
-            @if (selectedSku()) {
-              <div class="confirm-data-row">
-                <span class="confirm-data-label">Producto Seleccionado:</span>
-                <span class="confirm-data-val font-mono font-bold text-slate-900 dark:text-slate-100">
-                  {{ selectedSku()?.skuCode }} — {{ selectedSku()?.productName }}
+            @if (allInboundRemisionesInManifest().length > 0) {
+              <div class="confirm-data-row confirm-data-row--highlight">
+                <span class="confirm-data-label">Doc. Entrada Origen:</span>
+                <span class="confirm-data-val font-mono font-bold text-amber-700 dark:text-amber-300">
+                  {{ primaryRemisionNo() }}
                 </span>
               </div>
             }
+          </div>
+
+          <!-- Desglose Completo de Productos / Mercancía (Soporte Multi-Producto) -->
+          <div class="confirm-products-card">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 px-1">
+              <span>Mercancía a Despachar ({{ distinctSkusCount() }} Producto{{ distinctSkusCount() > 1 ? 's' : '' }})</span>
+              <span class="text-amber-600 dark:text-amber-400 font-mono">{{ totalSelectedPallets() }} Tarima(s) Total</span>
+            </div>
+
+            <div class="confirm-products-list">
+              @for (group of manifestGroupedBySku(); track group.skuCode) {
+                <div class="confirm-product-item">
+                  <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <span class="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30 shrink-0">
+                      {{ group.skuCode }}
+                    </span>
+                    <span class="font-semibold text-slate-800 dark:text-slate-200 truncate text-xs" title="{{ group.productName }}">
+                      {{ group.productName }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
+                    <span class="font-bold text-slate-900 dark:text-white">{{ group.totalPallets }} UA(s)</span>
+                    <span class="text-slate-400">·</span>
+                    <span class="text-amber-600 dark:text-amber-400 font-bold">{{ group.totalPieces | number }} pz</span>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
 
           <!-- Alert / Security Disclaimer -->
@@ -1831,6 +2597,561 @@
           >
             <span class="material-symbols-outlined text-base">security_update_warning</span>
             <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: MODIFICAR FICHA OPERATIVA DE CASETA & TRANSPORTE
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showEditCasetaModal()) {
+    <div class="modal-overlay p-4 animate-fade-in" (click)="showEditCasetaModal.set(false)">
+      <div class="modal-card max-w-2xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <span class="material-symbols-outlined text-xl">edit_note</span>
+            </div>
+            <div>
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                Modificar Ficha Operativa de Arribo &amp; Caseta
+              </h3>
+              <p class="text-[11px] text-slate-500">
+                Folio #{{ selectedOutbound()?.folio }} — Actualización de datos de transporte y caseta
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="showEditCasetaModal.set(false)"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg"
+          >
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Formulario de Modificación -->
+        <div class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <!-- Línea Transportista -->
+            <div class="fg-field sm:col-span-2">
+              <label class="fg-label fg-label--required">Línea Transportista</label>
+              <select
+                [ngModel]="editCarrierCode()"
+                (ngModelChange)="editCarrierCode.set($event)"
+                class="fg-input font-bold"
+              >
+                @for (c of carriers(); track c.code) {
+                  <option [value]="c.code">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Planta / Destino -->
+            <div class="fg-field sm:col-span-2">
+              <label class="fg-label fg-label--required">Planta / Destino</label>
+              <select
+                [ngModel]="editDestinationId()"
+                (ngModelChange)="editDestinationId.set($event)"
+                class="fg-input font-bold"
+              >
+                @for (d of allDestinations(); track d.id) {
+                  <option [value]="d.id">{{ d.name }}{{ d.city ? ' — ' + d.city : '' }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Chofer / Operador -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Nombre del Operador (Chofer)</label>
+              <input
+                type="text"
+                [ngModel]="editDriverName()"
+                (ngModelChange)="editDriverName.set($event)"
+                class="fg-input font-bold"
+                placeholder="Nombre completo"
+              />
+            </div>
+
+            <!-- Sello Oficial -->
+            <div class="fg-field">
+              <label class="fg-label">Número de Sello o Cincho</label>
+              <input
+                type="text"
+                [ngModel]="editSealNumber()"
+                (ngModelChange)="editSealNumber.set($event)"
+                class="fg-input font-mono font-bold uppercase"
+                placeholder="SL-88401"
+              />
+            </div>
+
+            <!-- Placas Tracto -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Placas Tracto</label>
+              <input
+                type="text"
+                [ngModel]="editTractorPlates()"
+                (ngModelChange)="editTractorPlates.set($event)"
+                class="fg-input font-mono uppercase font-bold"
+                placeholder="77-AB-99"
+              />
+            </div>
+
+            <!-- Placas Caja -->
+            <div class="fg-field">
+              <label class="fg-label fg-label--required">Placas Caja</label>
+              <input
+                type="text"
+                [ngModel]="editBoxPlates()"
+                (ngModelChange)="editBoxPlates.set($event)"
+                class="fg-input font-mono uppercase font-bold"
+                placeholder="55-XX-11"
+              />
+            </div>
+
+            <!-- Eco Tracto -->
+            <div class="fg-field">
+              <label class="fg-label">Eco de Tracto</label>
+              <input
+                type="text"
+                [ngModel]="editEconomicNumber()"
+                (ngModelChange)="editEconomicNumber.set($event)"
+                class="fg-input font-mono uppercase font-bold"
+                placeholder="ECO-101"
+              />
+            </div>
+
+            <!-- Eco Caja -->
+            <div class="fg-field">
+              <label class="fg-label">Eco Caja</label>
+              <input
+                type="text"
+                [ngModel]="editBoxEconomicNumber()"
+                (ngModelChange)="editBoxEconomicNumber.set($event)"
+                class="fg-input font-mono uppercase font-bold"
+                placeholder="BOX-202"
+              />
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-subtle">
+            <button
+              type="button"
+              (click)="showEditCasetaModal.set(false)"
+              class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              [disabled]="isUpdatingCaseta()"
+              (click)="saveCasetaModifications()"
+              class="btn-primary-gold text-xs px-5 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md text-slate-900 disabled:opacity-50"
+            >
+              @if (isUpdatingCaseta()) {
+                <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                <span>Guardando...</span>
+              } @else {
+                <span class="material-symbols-outlined text-sm">save</span>
+                <span>Guardar Cambios</span>
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: PLANO INTERACTIVO DE ANDENES Y RAMPAS (1 - 12)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showDockMapModal()) {
+    <div class="modal-overlay p-4 animate-fade-in" (click)="showDockMapModal.set(false)">
+      <div class="modal-card max-w-4xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-blue-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <span class="material-symbols-outlined text-2xl">domain</span>
+            </div>
+            <div>
+              <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                <span>Plano de Andenes &amp; Rampas de Carga</span>
+                <span class="text-xs font-mono font-normal text-slate-500">(Almacén Central)</span>
+              </h3>
+              <p class="text-xs text-slate-500 font-medium">
+                Haz clic en una rampa disponible para seleccionarla o en una ocupada para ver su detalle operativo.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="showDockMapModal.set(false)"
+            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg"
+          >
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
+          <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm inline-block"></span>
+              <span>{{ totalFreeRampsCount() }} Andenes Libres</span>
+            </span>
+            <span class="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+              <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm inline-block"></span>
+              <span>{{ totalBusyRampsCount() }} Ocupados</span>
+            </span>
+          </div>
+          <span class="text-[11px] text-slate-500 italic hidden sm:inline">
+            Bloqueo automático hasta notificación de finalización de maniobra
+          </span>
+        </div>
+
+        <!-- Grid Visual de Andenes (12 Bahías de Carga) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+          @for (ramp of rampOccupancyStatus(); track ramp.rampNumber) {
+            <div
+              (click)="onRampMatrixClick(ramp)"
+              class="dock-bay-card"
+              [class.dock-bay-card--free]="ramp.status === 'AVAILABLE'"
+              [class.dock-bay-card--busy-in]="ramp.status === 'OCCUPIED_INBOUND'"
+              [class.dock-bay-card--busy-out]="ramp.status === 'OCCUPIED_OUTBOUND'"
+            >
+              <!-- Puerta de Andén -->
+              <div class="dock-bay-door">
+                <span class="font-mono font-black text-xs">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
+                <span class="dock-bay-dot"></span>
+              </div>
+
+              <!-- Ilustración de Tráiler / Estado -->
+              <div class="dock-bay-body">
+                @if (ramp.status === 'AVAILABLE') {
+                  <span class="material-symbols-outlined text-2xl text-emerald-500/80 mb-0.5">garage_home</span>
+                  <span class="font-black text-[11px] text-emerald-700 dark:text-emerald-400">DISPONIBLE</span>
+                  <span class="text-[9px] text-slate-400 font-medium">clic para asignar</span>
+                } @else {
+                  <span class="material-symbols-outlined text-2xl text-rose-500 mb-0.5 animate-pulse">local_shipping</span>
+                  <span class="font-black text-[11px] text-rose-700 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
+                  <span class="text-[9px] text-slate-600 dark:text-slate-400 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
+                    {{ ramp.docNumber || 'En Operación' }}
+                  </span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end pt-2 border-t border-subtle">
+          <button
+            type="button"
+            (click)="showDockMapModal.set(false)"
+            class="btn-secondary-outline text-xs px-4 py-1.5 rounded-xl font-bold"
+          >
+            Cerrar Plano
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: CAMBIO DE NO. DE REMISIÓN / CARTA PORTE (SUPERVISOR / ADMIN)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showChangeRemisionModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeChangeRemisionModal()">
+      <div class="modal-card max-w-lg w-full max-h-[82vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+
+        <!-- Header del Modal -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-header-icon-box" style="background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.28);">
+              <span class="material-symbols-outlined">edit_document</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Cambio de Remisión / Carta Porte #{{ selectedOutbound()?.folio }}</h3>
+              <p class="modal-header-subtitle" style="color: #b45309;">Modificación de documento con autorización Supervisor/Admin</p>
+            </div>
+          </div>
+          <button (click)="closeChangeRemisionModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal -->
+        <div class="modal-body space-y-3 text-xs">
+          <!-- Resumen de la orden -->
+          <div class="modal-summary-box grid grid-cols-2 gap-2">
+            <div>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block">{{ selectedOutbound()?.clientName }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Documento Actual:</span>
+              <span class="modal-summary-val font-mono font-bold text-amber-600 dark:text-amber-400">{{ selectedOutbound()?.remisionNo || 'Sin Asignar' }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedOutbound()?.totalPallets }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedOutbound()?.totalPieces | number }} Piezas</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (changeRemisionError()) {
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ changeRemisionError() }}</span>
+            </div>
+          }
+
+          <!-- Nuevo No. de Remisión / Carta Porte -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Nuevo Número de Remisión / Carta Porte <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <input
+              type="text"
+              [ngModel]="newRemisionInput()"
+              (ngModelChange)="newRemisionInput.set($event)"
+              placeholder="EJ. CP-2026-8812 / REM-0092"
+              class="fg-input font-mono font-bold uppercase text-xs w-full"
+              autofocus
+            />
+          </div>
+
+          <!-- Motivo de modificación obligatorio -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Motivo o Justificación Obligatoria del Cambio <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <textarea
+              [ngModel]="changeRemisionReason()"
+              (ngModelChange)="changeRemisionReason.set($event)"
+              rows="2"
+              placeholder="Describe detalladamente el motivo de la modificación (ej. Corrección de carta porte fiscal, cambio de folio SAT)..."
+              class="fg-input w-full text-xs"
+            ></textarea>
+          </div>
+
+          <!-- Credenciales de Rango Superior (Supervisor / Administrador) -->
+          <div class="pt-2.5 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">verified_user</span>
+              <span>Validación de Credenciales de Supervisor o Administrador</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Usuario / Correo Supervisor o Admin <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="changeRemisionAdminUser()"
+                  (ngModelChange)="changeRemisionAdminUser.set($event)"
+                  placeholder="supervisor@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Autorización <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showChangeRemisionPassword() ? 'text' : 'password'"
+                  [ngModel]="changeRemisionAdminPassword()"
+                  (ngModelChange)="changeRemisionAdminPassword.set($event)"
+                  (keyup.enter)="confirmChangeRemision()"
+                  placeholder="Ingresa la contraseña de autorización"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowChangeRemisionPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showChangeRemisionPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeChangeRemisionModal()"
+            class="modal-btn-cancel"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            [disabled]="isChangingRemision()"
+            (click)="confirmChangeRemision()"
+            class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-md disabled:opacity-50"
+          >
+            @if (isChangingRemision()) {
+              <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              <span>Guardando...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              <span>Autorizar y Actualizar Documento</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: AUTORIZACIÓN DE DESPACHO (LÍDER / SUPERVISOR)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showAuthorizeModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeAuthorizeModal()">
+      <div class="modal-card max-w-lg w-full max-h-[82vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+
+        <!-- Header del Modal -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-header-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.28);">
+              <span class="material-symbols-outlined">verified</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Aprobar y Autorizar Salida #{{ selectedOutbound()?.folio }}</h3>
+              <p class="modal-header-subtitle" style="color: #059669;">Cierre formal de despacho F03 y descuento de inventario</p>
+            </div>
+          </div>
+          <button (click)="closeAuthorizeModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal -->
+        <div class="modal-body space-y-3 text-xs">
+          <!-- Resumen de Despacho -->
+          <div class="modal-summary-box grid grid-cols-2 gap-2">
+            <div>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block">{{ selectedOutbound()?.clientName }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Destino:</span>
+              <span class="modal-summary-val truncate block text-slate-700 dark:text-slate-300">{{ selectedOutbound()?.destinationName || 'Destino General' }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedOutbound()?.totalPallets }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedOutbound()?.totalPieces | number }} Piezas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Sello de Carga:</span>
+              <span class="modal-summary-val font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ selectedOutbound()?.sealNumber || 'N/A' }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Rampa:</span>
+              <span class="modal-summary-val font-mono font-bold">{{ selectedOutbound()?.rampNumber ? 'Rampa ' + selectedOutbound()?.rampNumber : 'Andén General' }}</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (authLeaderError()) {
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ authLeaderError() }}</span>
+            </div>
+          }
+
+          <!-- Credenciales Líder / Supervisor -->
+          <div class="pt-2 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">lock</span>
+              <span>Credenciales del Líder / Supervisor de Turno</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Usuario / Correo del Supervisor <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="authLeaderUser()"
+                  (ngModelChange)="authLeaderUser.set($event)"
+                  placeholder="supervisor@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                  autofocus
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Sesión <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showAuthLeaderPassword() ? 'text' : 'password'"
+                  [ngModel]="authLeaderPassword()"
+                  (ngModelChange)="authLeaderPassword.set($event)"
+                  (keyup.enter)="confirmAuthorizeDispatch()"
+                  placeholder="Ingresa tu contraseña de sesión"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowAuthLeaderPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showAuthLeaderPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between">
+          <button
+            type="button"
+            (click)="closeAuthorizeModal()"
+            class="modal-btn-cancel"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            [disabled]="isAuthorizingDispatch()"
+            (click)="confirmAuthorizeDispatch()"
+            class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-5 py-2 rounded-xl text-slate-900 shadow-md disabled:opacity-50"
+          >
+            @if (isAuthorizingDispatch()) {
+              <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              <span>Completando salida...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">verified</span>
+              <span>Aprobar Despacho Oficial (F03)</span>
+            }
           </button>
         </div>
       </div>

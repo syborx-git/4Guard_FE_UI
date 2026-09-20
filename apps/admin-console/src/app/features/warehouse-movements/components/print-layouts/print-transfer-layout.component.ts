@@ -177,17 +177,19 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <ng-template #completedLayout>
         
         <!-- Top Header & Logo Institucional -->
-        <div class="flex justify-between items-center mb-3 pb-2 border-b-2 border-black">
-          <div class="flex items-center gap-3">
-            <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-9 w-auto max-w-[44px] object-contain rounded" />
+        <div class="flex justify-between items-center mb-2 pb-1.5 border-b-2 border-black">
+          <div class="flex items-center gap-2.5">
+            <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-8 w-auto max-w-[40px] object-contain rounded" />
             <div>
-              <h1 class="text-base font-black tracking-tight text-black leading-none mb-1">4-GUARD WMS</h1>
-              <p class="text-[9px] text-slate-600 font-semibold uppercase tracking-wider">Industria Automotriz 128, Toluca de Lerdo, Méx</p>
+              <h1 class="text-sm sm:text-base font-black tracking-tight text-black leading-none mb-0.5">4-GUARD WMS</h1>
+              <p class="text-[8.5px] text-slate-700 font-bold uppercase tracking-tight">
+                Calle. Industria Automotriz sin número, Colonia el Coecillo, municipio de Toluca, Estado de México, C.P 50246.
+              </p>
             </div>
           </div>
 
-          <div class="text-right">
-            <span class="text-[10px] font-bold text-slate-700 block">FECHA DE IMPRESIÓN</span>
+          <div class="text-right shrink-0">
+            <span class="text-[9px] font-bold text-slate-700 block uppercase">FECHA DE IMPRESIÓN</span>
             <span class="text-xs font-mono font-black text-black">{{ printDate }}</span>
           </div>
         </div>
