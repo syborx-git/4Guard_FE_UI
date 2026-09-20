@@ -9,5 +9,6 @@ export const environment = {
   production: false,
   envName: 'local',
   apiBaseUrl: 'http://localhost:8080',
+  publicAppUrl: 'https://faster-treadmill-oppose.ngrok-free.dev',
   appVersion: '1.0.0-local',
 };

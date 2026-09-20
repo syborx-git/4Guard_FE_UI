@@ -496,17 +496,24 @@ h1, h2, h3, h4, h5, h6 {
    ───────────────────────────────────────────────────────────── */
 .movement-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
+  margin-bottom: 20px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
+  .movement-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
   .movement-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .movement-kpi-grid {
     grid-template-columns: 1fr;
   }
@@ -516,26 +523,33 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: 18px;
-  padding: 14px 18px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   box-shadow: var(--shadow-card);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 84px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
 }
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
+.movement-kpi-card--primary:hover { border-color: var(--gold-border); }
+.movement-kpi-card--warning:hover { border-color: var(--c-warning-bdr); }
+.movement-kpi-card--info:hover { border-color: var(--c-info-bdr); }
+.movement-kpi-card--success:hover { border-color: var(--c-success-bdr); }
+.movement-kpi-card--danger:hover { border-color: var(--c-danger-bdr); }
+
 .movement-kpi-card__icon {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 14px;
   display: flex;
   align-items: center;
