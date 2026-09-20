@@ -21,6 +21,7 @@ import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
 } from '../../warehouse-movements/components/print-layouts/print-transport-checklist-layout.component';
+import { environment } from '../../../../environments/environment';
 
 export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
 
@@ -270,6 +271,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  protected getPublicBaseUrl(): string {
+    const envUrl = (environment as any).publicAppUrl;
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+      return envUrl.trim().replace(/\/+$/, '');
+    }
+    return window.location.origin;
+  }
+
   ngOnInit(): void {
     this.movementsService.loadInitialBackendData();
     this.movementsService.reloadCarriers();
@@ -358,31 +367,57 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       organizationId: session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
       branchId: session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
       operationType: formVal.operacion || 'DESCARGA',
-      clientCode: formVal.clientCode,
-      clientName: formVal.client,
-      carrierLineCode: formVal.carrierLineCode,
-      carrierLine: formVal.carrierLine,
-      driverName: formVal.nombreOperador,
-      tractorPlates: formVal.placasTracto,
+      clientCode: formVal.clientCode || '',
+      clientName: formVal.client || '',
+      carrierLineCode: formVal.carrierLineCode || '',
+      carrierLine: formVal.carrierLine || '',
+      driverName: formVal.nombreOperador || '',
+      tractorPlates: formVal.placasTracto || '',
       docNumber: formVal.operacion === 'CARGA' ? formVal.noCartaPorte : formVal.remision,
     };
 
-    this.movementsService.movementsApi.generatePass(payload).subscribe({
+    const passData = {
+      v: 1,
+      ts: Date.now(),
+      op: payload.operationType,
+      cc: payload.clientCode,
+      cn: payload.clientName,
+      clc: payload.carrierLineCode,
+      cln: payload.carrierLine,
+      dn: payload.driverName,
+      tp: payload.tractorPlates,
+      doc: payload.docNumber || ''
+    };
+
+    const jsonStr = JSON.stringify(passData);
+    let encodedStr = '';
+    try {
+      encodedStr = btoa(encodeURIComponent(jsonStr)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    } catch {
+      encodedStr = Date.now().toString();
+    }
+
+    const smartToken = `PASS-4G-${encodedStr}`;
+
+    this.movementsService.movementsApi.generatePass({ ...payload, token: smartToken }).subscribe({
       next: (res: any) => {
         this.isGeneratingPass.set(false);
-        const token = res.token || ('PASS-' + Date.now());
+        const token = res.token || smartToken;
         this.qrModalToken.set(token);
-        const origin = window.location.origin;
-        this.qrModalUrl.set(`${origin}/carrier-checkin?token=${token}`);
+        const baseUrl = this.getPublicBaseUrl();
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
         this.showQrModal.set(true);
+        this.savePassToLocalStorage(token, { ...payload, status: 'PENDING_DRIVER' });
         this.reloadActivePasses();
       },
       error: () => {
         this.isGeneratingPass.set(false);
-        const fallbackToken = 'PASS-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-        this.qrModalToken.set(fallbackToken);
-        this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${fallbackToken}`);
+        this.qrModalToken.set(smartToken);
+        const baseUrl = this.getPublicBaseUrl();
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${smartToken}`);
         this.showQrModal.set(true);
+        this.savePassToLocalStorage(smartToken, { ...payload, status: 'PENDING_DRIVER' });
+        this.reloadActivePasses();
       }
     });
   }
@@ -406,10 +441,81 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const session = this.movementsService.movementsApi.getSessionOrg();
     this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
-        this.activePasses.set(passes || []);
+        this.mergeLocalActivePasses(passes || []);
       },
-      error: () => {}
+      error: () => {
+        this.mergeLocalActivePasses([]);
+      }
     });
+  }
+
+  private mergeLocalActivePasses(backendPasses: any[]): void {
+    try {
+      const localStr = localStorage.getItem('4g_local_passes');
+      const localPasses: any[] = localStr ? JSON.parse(localStr) : [];
+      const pendingLocal = localPasses.filter(p => p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER');
+
+      const mergedMap = new Map<string, any>();
+      for (const p of backendPasses) {
+        if (p && p.token) mergedMap.set(p.token, p);
+      }
+      for (const p of pendingLocal) {
+        if (p && p.token) {
+          const existing = mergedMap.get(p.token);
+          if (!existing) {
+            mergedMap.set(p.token, p);
+          } else {
+            const isSubmitted = existing.status === 'SUBMITTED' || p.status === 'SUBMITTED';
+            const primary = (existing.status === 'SUBMITTED') ? existing : ((p.status === 'SUBMITTED') ? p : existing);
+            const secondary = (primary === existing) ? p : existing;
+
+            mergedMap.set(p.token, {
+              ...secondary,
+              ...primary,
+              status: isSubmitted ? 'SUBMITTED' : (primary.status || secondary.status || 'PENDING_DRIVER'),
+              operationType: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
+              operacion: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
+              driverName: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
+              nombreOperador: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
+              tractorPlates: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || '',
+              placasTracto: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || ''
+            });
+          }
+        }
+      }
+      this.activePasses.set(Array.from(mergedMap.values()));
+    } catch {
+      this.activePasses.set(backendPasses || []);
+    }
+  }
+
+  private savePassToLocalStorage(tokenStr: string, payload: any): void {
+    try {
+      const existingStr = localStorage.getItem('4g_local_passes');
+      let passes: any[] = existingStr ? JSON.parse(existingStr) : [];
+      const passObj = {
+        id: 'pass-loc-' + Date.now(),
+        token: tokenStr,
+        status: payload.status || 'PENDING_DRIVER',
+        operationType: payload.operationType,
+        docNumber: payload.docNumber,
+        noCartaPorte: payload.operationType === 'CARGA' ? payload.docNumber : '',
+        remision: payload.operationType === 'DESCARGA' ? payload.docNumber : '',
+        clientCode: payload.clientCode,
+        clientName: payload.clientName,
+        carrierLineCode: payload.carrierLineCode,
+        carrierLine: payload.carrierLine,
+        driverName: payload.driverName,
+        tractorPlates: payload.tractorPlates,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      passes = passes.filter(p => p.token !== tokenStr);
+      passes.unshift(passObj);
+      localStorage.setItem('4g_local_passes', JSON.stringify(passes));
+    } catch {
+      // Storage error fallback
+    }
   }
 
   protected reloadInYardPasses(): void {
@@ -449,46 +555,59 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (!pass) return;
     this.activeToken.set(pass.token);
 
-    if (pass.operationType) {
-      this.onOperationChange(pass.operationType as 'CARGA' | 'DESCARGA');
-    }
+    const opVal = pass.operationType || pass.operacion || 'DESCARGA';
+    this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
+
+    const driverNameVal = pass.driverName || pass.nombreOperador || pass.operatorName || pass.driver_name || '';
+    const tractorPlatesVal = pass.tractorPlates || pass.placasTracto || pass.truckPlates || pass.plates || '';
+    const boxPlatesVal = pass.boxPlates || pass.placasCaja || pass.trailerPlates || '';
+    const boxDimensionsVal = pass.boxDimensions || pass.medidasCaja || pass.boxSize || '53 Pies';
+    const transportTypeVal = pass.transportType || pass.tipoTransporte || pass.vehicleType || 'Caja Seca';
+    const ecoNumberVal = pass.economicNumber || pass.noEcoTractor || pass.ecoTractor || 'ECO-01';
+    const docNumberVal = pass.docNumber || pass.remision || pass.noCartaPorte || '';
 
     // Resolver Cliente en el catálogo
     let matchedClientCode = pass.clientCode || '';
-    let matchedClientName = pass.clientName || '';
-    const foundClient = this.clients().find(c => 
-      (pass.clientCode && (c.code === pass.clientCode || c.code.toLowerCase() === pass.clientCode.toLowerCase())) ||
-      (pass.clientName && c.name.toLowerCase() === pass.clientName.toLowerCase())
-    );
-    if (foundClient) {
-      matchedClientCode = foundClient.code;
-      matchedClientName = foundClient.name;
-    } else if (!matchedClientCode && this.clients().length > 0) {
+    let matchedClientName = pass.clientName || pass.client || '';
+    if (matchedClientCode || matchedClientName) {
+      const foundClient = this.clients().find(c => 
+        (matchedClientCode && (c.code === matchedClientCode || c.code.toLowerCase() === matchedClientCode.toLowerCase())) ||
+        (matchedClientName && (c.name.toLowerCase() === matchedClientName.toLowerCase() || c.name.toLowerCase().includes(matchedClientName.toLowerCase())))
+      );
+      if (foundClient) {
+        matchedClientCode = foundClient.code;
+        matchedClientName = foundClient.name;
+      }
+    }
+    if (!matchedClientName && this.clients().length > 0) {
       matchedClientCode = this.clients()[0].code;
       matchedClientName = this.clients()[0].name;
     }
 
     // Resolver Línea Transportista en el catálogo
     let matchedCarrierCode = pass.carrierLineCode || '';
-    let matchedCarrierName = pass.carrierLine || '';
-    const foundCarrier = this.carrierLines().find(c =>
-      (pass.carrierLineCode && (c.code === pass.carrierLineCode || c.code.toLowerCase() === pass.carrierLineCode.toLowerCase())) ||
-      (pass.carrierLine && c.name.toLowerCase() === pass.carrierLine.toLowerCase())
-    );
-    if (foundCarrier) {
-      matchedCarrierCode = foundCarrier.code;
-      matchedCarrierName = foundCarrier.name;
-    } else if (!matchedCarrierCode && this.carrierLines().length > 0) {
+    let matchedCarrierName = pass.carrierLine || pass.carrier || '';
+    if (matchedCarrierCode || matchedCarrierName) {
+      const foundCarrier = this.carrierLines().find(c =>
+        (matchedCarrierCode && (c.code === matchedCarrierCode || c.code.toLowerCase() === matchedCarrierCode.toLowerCase())) ||
+        (matchedCarrierName && (c.name.toLowerCase() === matchedCarrierName.toLowerCase() || c.name.toLowerCase().includes(matchedCarrierName.toLowerCase())))
+      );
+      if (foundCarrier) {
+        matchedCarrierCode = foundCarrier.code;
+        matchedCarrierName = foundCarrier.name;
+      }
+    }
+    if (!matchedCarrierName && this.carrierLines().length > 0) {
       matchedCarrierCode = this.carrierLines()[0].code;
       matchedCarrierName = this.carrierLines()[0].name;
     }
 
     // Resolver Tipo de Transporte y Medidas
-    if (pass.transportType && !this.transportTypesList().includes(pass.transportType)) {
-      this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), pass.transportType, 'Otro (Especificar)']);
+    if (transportTypeVal && !this.transportTypesList().includes(transportTypeVal)) {
+      this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), transportTypeVal, 'Otro (Especificar)']);
     }
-    if (pass.boxDimensions && !this.boxDimensionsList().includes(pass.boxDimensions)) {
-      this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), pass.boxDimensions, 'Otra Medida']);
+    if (boxDimensionsVal && !this.boxDimensionsList().includes(boxDimensionsVal)) {
+      this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), boxDimensionsVal, 'Otra Medida']);
     }
 
     this.checkInForm.patchValue({
@@ -496,21 +615,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       client: matchedClientName,
       carrierLineCode: matchedCarrierCode,
       carrierLine: matchedCarrierName,
-      nombreOperador: pass.driverName || '',
-      placasTracto: pass.tractorPlates || '',
-      noEcoTractor: pass.economicNumber || pass.noEcoTractor || 'ECO-01',
-      placasCaja: pass.boxPlates || '',
-      medidasCaja: pass.boxDimensions || '53 Pies',
-      tipoTransporte: pass.transportType || 'Caja Seca',
-      transportistaNombre: pass.driverName || '',
+      nombreOperador: driverNameVal,
+      placasTracto: tractorPlatesVal,
+      noEcoTractor: ecoNumberVal,
+      placasCaja: boxPlatesVal,
+      medidasCaja: boxDimensionsVal,
+      tipoTransporte: transportTypeVal,
+      transportistaNombre: driverNameVal,
       transportistaFirma: true,
     });
 
-    if (pass.docNumber) {
-      if (pass.operationType === 'CARGA') {
-        this.checkInForm.patchValue({ noCartaPorte: pass.docNumber });
+    if (docNumberVal) {
+      if (opVal === 'CARGA') {
+        this.checkInForm.patchValue({ noCartaPorte: docNumberVal });
       } else {
-        this.checkInForm.patchValue({ remision: pass.docNumber });
+        this.checkInForm.patchValue({ remision: docNumberVal });
       }
     }
 
@@ -549,18 +668,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     if (!pass || !pass.token) return;
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${pass.token}`);
+    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}`);
     this.showQrModal.set(true);
   }
 
   protected openQrModal(): void {
-    // Si ya existe un pase PENDING_DRIVER activo, reutilizarlo para no generar pases huérfanos
-    const existingPending = this.activePasses().find(p => p.status === 'PENDING_DRIVER');
-    if (existingPending) {
-      this.qrModalToken.set(existingPending.token);
-      this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${existingPending.token}`);
-      this.showQrModal.set(true);
-    } else if (!this.qrModalUrl()) {
+    if (!this.qrModalUrl()) {
       this.generateDriverPass();
     } else {
       this.showQrModal.set(true);
@@ -580,6 +693,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const found = this.activePasses().find(p => p.token === currentToken);
     if (found) {
       this.deleteDriverPass(found);
+    } else if (currentToken) {
+      this.movementsService.movementsApi.deletePass(currentToken, currentToken).subscribe();
     }
     this.qrModalUrl.set('');
     this.qrModalToken.set('');
@@ -592,31 +707,29 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     if (!pass) return;
 
-    const passId = pass.id;
-    const passToken = pass.token;
+    const passId = pass.id || pass.token;
+    const passToken = pass.token || pass.id;
 
-    if (passId) {
-      this.movementsService.movementsApi.deletePass(passId).subscribe({
-        next: () => {
-          this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
-          if (this.qrModalToken() === passToken) {
-            this.qrModalUrl.set('');
-            this.qrModalToken.set('');
-          }
-          this.passActionNotice.set(`Pase #${passToken} descartado correctamente.`);
-          setTimeout(() => this.passActionNotice.set(null), 4000);
-        },
-        error: (err) => {
-          console.error('Error al descartar pase:', err);
-          // Actualizar en memoria por fallback
-          this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
-          this.passActionNotice.set(`Pase #${passToken} removido.`);
-          setTimeout(() => this.passActionNotice.set(null), 4000);
+    this.movementsService.movementsApi.deletePass(passId, passToken).subscribe({
+      next: () => {
+        this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
+        if (this.qrModalToken() === passToken) {
+          this.qrModalUrl.set('');
+          this.qrModalToken.set('');
         }
-      });
-    } else {
-      this.activePasses.update(list => list.filter(p => p.token !== passToken));
-    }
+        this.passActionNotice.set(`Pase #${passToken} descartado correctamente.`);
+        setTimeout(() => this.passActionNotice.set(null), 4000);
+      },
+      error: () => {
+        this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
+        if (this.qrModalToken() === passToken) {
+          this.qrModalUrl.set('');
+          this.qrModalToken.set('');
+        }
+        this.passActionNotice.set(`Pase #${passToken} removido.`);
+        setTimeout(() => this.passActionNotice.set(null), 4000);
+      }
+    });
   }
 
   // ── CHECK-OUT / SALIDA DE CASETA ──────────────────────────────────────────

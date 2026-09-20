@@ -310,13 +310,13 @@
                     <div>
                       <div class="flex items-center gap-1.5">
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase"
-                              [ngClass]="pass.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300' : 'bg-blue-500/20 text-blue-800 dark:text-blue-300'">
-                          {{ pass.operationType || 'DESCARGA' }}
+                              [ngClass]="(pass.operationType === 'CARGA' || pass.operacion === 'CARGA') ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300' : 'bg-blue-500/20 text-blue-800 dark:text-blue-300'">
+                          {{ pass.operationType || pass.operacion || 'DESCARGA' }}
                         </span>
                         <span class="font-mono text-[10px] font-bold text-slate-600 dark:text-slate-400">#{{ pass.token }}</span>
                       </div>
                       <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 mt-1">
-                        {{ pass.driverName || (pass.status === 'SUBMITTED' ? 'Chofer sin nombre' : 'QR esperando captura') }}
+                        {{ pass.driverName || pass.nombreOperador || pass.operatorName || (pass.status === 'SUBMITTED' ? 'Chofer sin nombre' : 'QR esperando captura') }}
                       </h4>
                     </div>
 
@@ -337,8 +337,8 @@
                   </div>
 
                   <div class="text-[10px] text-slate-600 dark:text-slate-300 grid grid-cols-2 gap-1 border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5 font-medium">
-                    <div>Placas: <strong class="font-mono text-slate-800 dark:text-slate-100">{{ pass.tractorPlates || 'S/P' }}</strong></div>
-                    <div>Transporte: <strong class="text-slate-800 dark:text-slate-100">{{ pass.carrierLine || 'General' }}</strong></div>
+                    <div>Placas: <strong class="font-mono text-slate-800 dark:text-slate-100">{{ pass.tractorPlates || pass.placasTracto || pass.truckPlates || 'S/P' }}</strong></div>
+                    <div>Transporte: <strong class="text-slate-800 dark:text-slate-100">{{ pass.carrierLine || pass.carrier || pass.carrierName || 'General' }}</strong></div>
                   </div>
 
                   <div class="flex items-center gap-1.5 pt-1">

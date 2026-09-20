@@ -90,7 +90,9 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 4200,
-            "host": "localhost"
+            "host": "0.0.0.0",
+            "disableHostCheck": true,
+            "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"]
           }
         },
         "test": {
