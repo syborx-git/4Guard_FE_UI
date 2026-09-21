@@ -9,5 +9,6 @@ export const environment = {
   production: false,
   envName: 'develop',
   apiBaseUrl: 'https://fourguard-be-huzh.onrender.com',
+  publicAppUrl: 'https://faster-treadmill-oppose.ngrok-free.dev',
   appVersion: '1.0.0-develop',
 };

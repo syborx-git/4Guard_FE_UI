@@ -531,13 +531,20 @@ h1, h2, h3, h4, h5, h6 {
   min-height: 82px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
 }
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
+
+.movement-kpi-card--primary:hover { border-color: var(--gold-border); }
+.movement-kpi-card--warning:hover { border-color: var(--c-warning-bdr); }
+.movement-kpi-card--info:hover { border-color: var(--c-info-bdr); }
+.movement-kpi-card--success:hover { border-color: var(--c-success-bdr); }
+.movement-kpi-card--danger:hover { border-color: var(--c-danger-bdr); }
 
 .movement-kpi-card__icon {
   width: 46px;
