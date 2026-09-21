@@ -12,6 +12,8 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Observable, tap, catchError, EMPTY, finalize } from 'rxjs';
 import { BackendService } from '../../infrastructure/services/backend.service';
+import { IInventoryRepository } from '../../domain/ports/inventory.repository';
+import { INVENTORY_REPOSITORY } from '../../domain/ports/repository.tokens';
 import { Item, ItemFilter, PagedItemResponse } from '../../domain/models/item.model';
 import { InventoryStatus } from '../../domain/enums/inventory-status.enum';
 
@@ -42,7 +44,9 @@ const INITIAL_STATE: InventoryStateShape = {
 
 @Injectable({ providedIn: 'root' })
 export class InventoryState {
-  private readonly backend = inject(BackendService);
+  // Desacoplado: Inyecta el puerto IInventoryRepository con fallback seguro a BackendService (Zero Breaking Changes)
+  private readonly repo: IInventoryRepository =
+    (inject(INVENTORY_REPOSITORY, { optional: true }) as IInventoryRepository) ?? inject(BackendService);
 
   // ─── Estado privado ───────────────────────────────────────────────────────
   private readonly _state = signal<InventoryStateShape>(INITIAL_STATE);
@@ -75,14 +79,14 @@ export class InventoryState {
   // ─── Acciones ─────────────────────────────────────────────────────────────
 
   /**
-   * Carga la lista de ítems con los filtros actuales.
+   * Carga la lista de ítems con los filtros actuales a través del repositorio desacoplado.
    */
   loadItems(): Observable<PagedItemResponse> {
     this.patchState({ isLoading: true, error: null });
 
     const filters = this._state().filters;
 
-    return this.backend.get<PagedItemResponse>('/api/inventory/items', filters as Record<string, string>).pipe(
+    return this.repo.getItems(filters).pipe(
       tap((response) => {
         this.patchState({
           items:         response.content,

@@ -11,4 +11,9 @@ export const environment = {
   apiBaseUrl: 'https://fourguard-be-huzh.onrender.com',
   publicAppUrl: 'https://faster-treadmill-oppose.ngrok-free.dev',
   appVersion: '1.0.0-develop',
+  dataSource: 'API' as 'API' | 'MOCK',
+  featureFlags: {
+    useMockData: false,
+    enablePlaywrightAutomation: false,
+  },
 };

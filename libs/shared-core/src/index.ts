@@ -66,3 +66,10 @@ export type { SyncOperation, SyncStatus } from './lib/infrastructure/services/sy
 export { AuthState }      from './lib/application/state/auth.state';
 export { InventoryState } from './lib/application/state/inventory.state';
 export { SyncState }      from './lib/application/state/sync.state';
+
+// ─── Domain — Ports & Tokens (SDOP) ──────────────────────────────────────────
+export * from './lib/domain/ports/repository.tokens';
+export type { IInventoryRepository } from './lib/domain/ports/inventory.repository';
+export { HttpInventoryAdapter } from './lib/infrastructure/adapters/http-inventory.adapter';
+
+

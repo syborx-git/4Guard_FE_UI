@@ -73,8 +73,11 @@ const INITIAL_DB = {
   ]
 };
 
+import { IInventoryRepository } from '../../domain/ports/inventory.repository';
+import { Item, ItemFilter, PagedItemResponse } from '../../domain/models/item.model';
+
 @Injectable({ providedIn: 'root' })
-export class BackendService {
+export class BackendService implements IInventoryRepository {
   constructor() {
     this.initDb();
   }
@@ -184,5 +187,36 @@ export class BackendService {
     }
 
     return of({ success: true } as unknown as TResponse).pipe(delay(200));
+  }
+
+  // ─── Implementación IInventoryRepository (SDOP) ───────────────────────────
+
+  getItems(filters?: ItemFilter): Observable<PagedItemResponse> {
+    return this.get<PagedItemResponse>('/api/inventory/items', filters as unknown as QueryParams);
+  }
+
+  getItemById(id: string): Observable<Item | null> {
+    const db = this.getDb();
+    const item = (db.items as Item[]).find((i) => i.id === id || (i as any).sscc === id) ?? null;
+    return of(item);
+  }
+
+  updateStatus(id: string, status: InventoryStatus, notes?: string): Observable<Item> {
+    const db = this.getDb();
+    let updatedItem: Item | null = null;
+    db.items = (db.items as any[]).map((item) => {
+      if (item.id === id) {
+        updatedItem = {
+          ...item,
+          status,
+          notes: notes !== undefined ? notes : item.notes,
+          lastStatusChangeAt: new Date().toISOString(),
+        };
+        return updatedItem;
+      }
+      return item;
+    });
+    this.saveDb(db);
+    return of(updatedItem as unknown as Item);
   }
 }

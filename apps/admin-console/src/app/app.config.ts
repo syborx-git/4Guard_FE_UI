@@ -21,7 +21,11 @@ import {
 } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
-import { branchInterceptor } from '@4guard/shared-core';
+import { branchInterceptor, LICENSE_REPOSITORY } from '@4guard/shared-core';
+import { inject } from '@angular/core';
+import { environment } from '../environments/environment';
+import { LicenseManagementService } from './features/license-management/license-management.service';
+import { MockLicenseRepositoryAdapter } from './features/license-management/adapters/mock-license-repository.adapter';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { adminRoutes } from './app.routes';
 
@@ -51,5 +55,15 @@ export const appConfig: ApplicationConfig = {
 
     // ── Animaciones ───────────────────────────────────────────────────────────
     provideAnimationsAsync(),
+
+    // ── SDOP Repositorios (Bridge Pattern) ────────────────────────────────────
+    {
+      provide: LICENSE_REPOSITORY,
+      useFactory: () => {
+        return environment.dataSource === 'MOCK' || environment.featureFlags?.useMockData
+          ? inject(MockLicenseRepositoryAdapter)
+          : inject(LicenseManagementService);
+      },
+    },
   ],
 };

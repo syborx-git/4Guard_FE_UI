@@ -11,4 +11,9 @@ export const environment = {
   apiBaseUrl: 'http://localhost:8080',
   publicAppUrl: 'https://faster-treadmill-oppose.ngrok-free.dev',
   appVersion: '1.0.0-local',
+  dataSource: 'API' as 'API' | 'MOCK',
+  featureFlags: {
+    useMockData: false,
+    enablePlaywrightAutomation: false,
+  },
 };

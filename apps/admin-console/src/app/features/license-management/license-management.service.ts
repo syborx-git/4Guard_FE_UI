@@ -33,10 +33,12 @@ export interface ApiResponse<T> {
   };
 }
 
+import { ILicenseRepository } from './license.repository';
+
 @Injectable({
   providedIn: 'root',
 })
-export class LicenseManagementService {
+export class LicenseManagementService implements ILicenseRepository {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
   private readonly apiUrl = `${environment.apiBaseUrl}/api/v1/licenses`;
