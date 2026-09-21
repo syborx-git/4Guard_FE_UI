@@ -111,3 +111,10 @@ Todo componente debe implementar el selector `:host-context(.theme-dark), :host-
    - **Preparación de Expediente (`ReceptionCreateComponent`):** Header de expediente con migas de pan y selector de fase, tarjetas de resumen, checklists de validación y tabla de líneas de orden de compra en liquid glass.
    - **La Bóveda: Wizard de Recepción (`ReceivingWizardComponent`):** Stepper secuencial de recepción con círculos contrastados en oro, tabla de líneas de inspección y conteo ciego, panel cuádruple y escáner de códigos de barras.
    - **Drawers Laterales (`DockAssignmentDrawerComponent` & `PurchaseOrderDetailDrawerComponent`):** Paneles desplegables con backdrop blur, grid de tarjetas de rampa, visor documental y soporte de adjuntos PDF.
+
+5. **Caseta de Seguridad & Vigilancia Táctica (`/security` — Golden Standard):**
+   - **Hero Header Midnight:** Icon wrap de 52x52px en gradiente `#172033` a `#25324a` con borde dorado sutil `rgba(197, 168, 107, 0.35)` e icono en oro claro `#e0c87a`.
+   - **Pill Navigation:** Contenedor Liquid Glass con tabs redondeados; tab activo con degradado obsidian y brillo dorado perimetral.
+   - **Métricas KPI Pastel (4 y 5 Columnas):** Icon wraps de 46x46px con fondos semánticos traslúcidos calibrados para evitar destellos (Azul Zafiro, Ámbar Cálido, Verde Esmeralda, Púrpura y Coral), cifras grandes en font display `Outfit` de 1.75rem y subtítulos informativos.
+   - **Consola de Administración & Catálogos (`/admin`):** Tarjetas de catálogo interactivas con badges numéricos en mono, efecto glow radial dorado y transición suave al interactuar.
+

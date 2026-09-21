@@ -1067,3 +1067,76 @@
   border-color: rgba(255, 255, 255, 0.10);
   color: var(--text-primary);
 }
+
+:host-context(.theme-dark) .carriers-form-header,
+:host-context(.dark) .carriers-form-header {
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+:host-context(.theme-dark) .carriers-form-actions,
+:host-context(.dark) .carriers-form-actions {
+  background: rgba(15, 23, 42, 0.92);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+:host-context(.theme-dark) .carriers-btn--ghost,
+:host-context(.dark) .carriers-btn--ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark) .carriers-btn--ghost:not(:disabled):hover,
+:host-context(.dark) .carriers-btn--ghost:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .fg-input,
+:host-context(.dark) .fg-input,
+:host-context(.theme-dark) .fg-select,
+:host-context(.dark) .fg-select,
+:host-context(.theme-dark) .fg-textarea,
+:host-context(.dark) .fg-textarea,
+:host-context(.theme-dark) .lm-dir__search-input,
+:host-context(.dark) .lm-dir__search-input,
+:host-context(.theme-dark) .lm-dir__plan-select,
+:host-context(.dark) .lm-dir__plan-select {
+  background: rgba(11, 17, 25, 0.65);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .fg-input:focus,
+:host-context(.dark) .fg-input:focus,
+:host-context(.theme-dark) .fg-select:focus,
+:host-context(.dark) .fg-select:focus,
+:host-context(.theme-dark) .fg-textarea:focus,
+:host-context(.dark) .fg-textarea:focus,
+:host-context(.theme-dark) .lm-dir__search-input:focus,
+:host-context(.dark) .lm-dir__search-input:focus,
+:host-context(.theme-dark) .lm-dir__plan-select:focus,
+:host-context(.dark) .lm-dir__plan-select:focus {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: var(--gold);
+}
+
+:host-context(.theme-dark) .lm-dir__filter-chip,
+:host-context(.dark) .lm-dir__filter-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark) .lm-dir__filter-chip:hover,
+:host-context(.dark) .lm-dir__filter-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+:host-context(.theme-dark) .lm-dir__item:hover,
+:host-context(.dark) .lm-dir__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
