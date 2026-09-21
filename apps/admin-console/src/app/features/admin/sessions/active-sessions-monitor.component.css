@@ -39,9 +39,34 @@
   --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 }
 
-/* ================================================================
-   PÁGINA GENERAL
-   ================================================================ */
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --app-bg-start:   #0b1119;
+  --app-bg-end:     #080e18;
+  --surface-card:   rgba(17, 26, 38, 0.94);
+  --surface-secondary: rgba(23, 35, 50, 0.98);
+  --surface-card-hover: rgba(208, 175, 103, 0.10);
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-subtle:  rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #edf1f5;
+  --text-secondary: #9aa6b4;
+  --text-tertiary:  #667585;
+
+  --navy:           #dfe7ef;
+  --navy-mid:       #16212f;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-subtle:    rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --success:        #67c78b;
+  --success-bg:     rgba(76, 175, 112, 0.12);
+  --warning:        #e0aa4f;
+  --warning-bg:     rgba(224, 170, 79, 0.12);
+  --danger:         #ef7773;
+  --danger-bg:      rgba(239, 83, 80, 0.12);
+}
 
 .sessions-page {
   position: relative;
@@ -50,9 +75,9 @@
   box-sizing: border-box;
   background:
     radial-gradient(circle at top right,
-      rgba(197, 157, 67, 0.09),
+      rgba(208, 175, 103, 0.07),
       transparent 31rem),
-    linear-gradient(180deg, #f8f6f1 0%, #f2efe8 100%);
+    linear-gradient(180deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
   color: var(--text-primary);
   font-family: var(--font-body);
   animation: sessionsPageEnter 320ms ease both;

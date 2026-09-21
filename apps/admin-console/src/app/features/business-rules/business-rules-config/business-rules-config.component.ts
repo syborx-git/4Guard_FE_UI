@@ -23,6 +23,7 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -52,7 +53,7 @@ import {
 @Component({
   selector: 'fg-business-rules-config',
   standalone: true,
-  imports: [CommonModule, DatePipe, ReactiveFormsModule],
+  imports: [CommonModule, DatePipe, ReactiveFormsModule, RouterLink],
   templateUrl: './business-rules-config.component.html',
   styleUrl: './business-rules-config.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
