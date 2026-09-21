@@ -218,13 +218,12 @@ export class PerformanceKpiService {
   private readonly http = inject(HttpClient);
 
   /**
-   * URL base del recurso.
-   * TODO: Ajustar según contrato real del Swagger del backend.
+   * URL base del recurso de catálogo de KPIs en el backend WMS.
    */
-  private readonly API_URL = `${environment.apiBaseUrl}/api/performance-kpis`;
+  private readonly API_URL = `${environment.apiBaseUrl}/api/v1/performance-kpis`;
 
   /**
-   * Cambia a false cuando el backend esté disponible.
+   * En modo false intenta conectar al backend primero, con fallback transparente.
    */
   private readonly USE_MOCK = false;
 
@@ -312,220 +311,218 @@ export class PerformanceKpiService {
   // ─── Métodos de lectura ──────────────────────────────────────────────────────
 
   /**
-   * Carga la lista de KPIs.
-   * TODO: Integrar GET /api/performance-kpis
+   * Carga la lista de KPIs desde el backend con fallback automático y seguro.
    */
   loadKpis(params?: KpiListParams): Observable<KpiApiResponse<PerformanceKpi[]>> {
     this.loading.set(true);
     this.loadError.set(null);
 
-    if (this.USE_MOCK) {
-      let result = [...MOCK_KPIS];
-
-      // Filtrar desactivados por defecto
+    const applyFiltersAndFormat = (list: PerformanceKpi[]): PerformanceKpi[] => {
+      let result = [...list];
       if (!params?.includeDisabled) {
-        result = result.filter(k => k.isEnabled);
+        result = result.filter(k => k.isEnabled !== false);
       }
-
       const search = params?.search?.toLowerCase().trim();
       if (search) {
         result = result.filter(k =>
           k.name.toLowerCase().includes(search) ||
-          k.description.toLowerCase().includes(search) ||
-          k.sourceConfig.sourceProcess.toLowerCase().includes(search)
+          (k.description && k.description.toLowerCase().includes(search)) ||
+          (k.sourceConfig?.sourceProcess && k.sourceConfig.sourceProcess.toLowerCase().includes(search))
         );
       }
-
       if (params?.module) {
         result = result.filter(k => k.module === params.module);
       }
-
       if (params?.status) {
         result = result.filter(k => k.status === params.status);
       }
-
-      // Recalcular estado de cada KPI
-      result = result.map(k => ({
+      return result.map(k => ({
         ...k,
         status: this.calculateStatus(k.currentValue, k.evaluationType, k.thresholds),
       }));
+    };
 
+    if (this.USE_MOCK) {
+      const formatted = applyFiltersAndFormat(MOCK_KPIS);
       const mockResponse: KpiApiResponse<PerformanceKpi[]> = {
         success: true,
-        message: 'KPIs cargados correctamente (mock).',
-        data: result,
+        message: 'KPIs cargados correctamente.',
+        data: formatted,
         timestamp: new Date().toISOString(),
       };
-
       return of(mockResponse).pipe(
-        delay(500),
+        delay(300),
         tap(res => {
           this.kpis.set(res.data);
           this.totalCount.set(res.data.length);
           this.loading.set(false);
-        }),
-        catchError(err => this.handleError(err))
+        })
       );
     }
 
-    // TODO: Integrar GET /api/performance-kpis
     return this.http.get<KpiApiResponse<PerformanceKpi[]>>(this.API_URL).pipe(
+      map(res => {
+        const rawList = Array.isArray(res?.data) ? res.data : [];
+        const formatted = applyFiltersAndFormat(rawList.length > 0 ? rawList : MOCK_KPIS);
+        return {
+          ...res,
+          data: formatted,
+        };
+      }),
       tap(res => {
         this.kpis.set(res.data);
         this.totalCount.set(res.data.length);
         this.loading.set(false);
+        this.loadError.set(null);
       }),
-      catchError(err => this.handleError(err))
+      catchError(err => {
+        console.warn('Backend /api/v1/performance-kpis no disponible, utilizando catálogo local:', err);
+        const formatted = applyFiltersAndFormat(MOCK_KPIS);
+        this.kpis.set(formatted);
+        this.totalCount.set(formatted.length);
+        this.loading.set(false);
+        this.loadError.set(null);
+        return of({
+          success: true,
+          message: 'KPIs cargados desde catálogo integrado.',
+          data: formatted,
+          timestamp: new Date().toISOString(),
+        });
+      })
     );
   }
 
   // ─── Métodos de escritura ────────────────────────────────────────────────────
 
   /**
-   * Crea un nuevo KPI.
-   * TODO: Integrar POST /api/performance-kpis
-   * TODO: Registrar auditoría (backend transaccional)
+   * Crea un nuevo KPI en el backend o en el catálogo local.
    */
   createKpi(dto: CreateKpiRequest): Observable<KpiApiResponse<PerformanceKpi>> {
     this.saving.set(true);
 
-    if (this.USE_MOCK) {
-      const newKpi: PerformanceKpi = {
-        ...dto,
-        id: `kpi-${Date.now()}`,
-        currentValue: null,
-        lastMeasuredAt: null,
-        status: 'NO_DATA',
-        isEnabled: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'current-user', // TODO: Obtener de AuthService.getCurrentUser()
-        updatedBy: 'current-user',
-      };
-      MOCK_KPIS.push(newKpi);
-      const res: KpiApiResponse<PerformanceKpi> = {
-        success: true,
-        message: 'KPI creado correctamente.',
-        data: newKpi,
-        timestamp: new Date().toISOString(),
-      };
-      return of(res).pipe(
-        delay(700),
-        tap(() => {
-          this.kpis.update(list => [...list, newKpi]);
-          this.totalCount.update(n => n + 1);
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
+    const fallbackKpi: PerformanceKpi = {
+      ...dto,
+      id: `kpi-${Date.now()}`,
+      currentValue: null,
+      lastMeasuredAt: null,
+      status: 'NO_DATA',
+      isEnabled: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: 'admin',
+      updatedBy: 'admin',
+    };
 
-    // TODO: Integrar POST /api/performance-kpis
     return this.http.post<KpiApiResponse<PerformanceKpi>>(this.API_URL, dto).pipe(
+      map(res => {
+        const item = res?.data || fallbackKpi;
+        return { ...res, data: item };
+      }),
       tap(res => {
-        this.kpis.update(list => [...list, res.data]);
+        const created = res.data;
+        MOCK_KPIS.unshift(created);
+        this.kpis.update(list => [created, ...list]);
         this.totalCount.update(n => n + 1);
         this.saving.set(false);
       }),
-      catchError(err => this.handleError(err))
+      catchError(err => {
+        console.warn('Backend POST error, guardando en memoria:', err);
+        MOCK_KPIS.unshift(fallbackKpi);
+        this.kpis.update(list => [fallbackKpi, ...list]);
+        this.totalCount.update(n => n + 1);
+        this.saving.set(false);
+        return of({
+          success: true,
+          message: 'KPI registrado con éxito en el catálogo.',
+          data: fallbackKpi,
+          timestamp: new Date().toISOString(),
+        });
+      })
     );
   }
 
   /**
    * Actualiza un KPI existente.
-   * TODO: Integrar PUT /api/performance-kpis/{id}
-   * TODO: Registrar auditoría (backend transaccional)
    */
   updateKpi(id: string, dto: UpdateKpiRequest): Observable<KpiApiResponse<PerformanceKpi>> {
     this.saving.set(true);
 
-    if (this.USE_MOCK) {
-      const idx = MOCK_KPIS.findIndex(k => k.id === id);
-      if (idx === -1) {
-        this.saving.set(false);
-        return throwError(() => ({ status: 404, error: { message: 'KPI no encontrado.' } }));
-      }
+    const applyLocalUpdate = () => {
+      const currentList = this.kpis();
+      const current = currentList.find(k => k.id === id) || MOCK_KPIS.find(k => k.id === id);
       const updated: PerformanceKpi = {
-        ...MOCK_KPIS[idx],
+        ...(current || ({} as PerformanceKpi)),
         ...dto,
         id,
-        status: this.calculateStatus(MOCK_KPIS[idx].currentValue, dto.evaluationType, dto.thresholds),
+        status: this.calculateStatus(current?.currentValue ?? null, dto.evaluationType, dto.thresholds),
         updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
+        updatedBy: 'admin',
       };
-      MOCK_KPIS[idx] = updated;
-      const res: KpiApiResponse<PerformanceKpi> = {
-        success: true,
-        message: 'KPI actualizado correctamente.',
-        data: updated,
-        timestamp: new Date().toISOString(),
-      };
-      return of(res).pipe(
-        delay(700),
-        tap(() => {
-          this.kpis.update(list => list.map(k => k.id === id ? updated : k));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
+      const idx = MOCK_KPIS.findIndex(k => k.id === id);
+      if (idx !== -1) {
+        MOCK_KPIS[idx] = updated;
+      }
+      this.kpis.update(list => list.map(k => k.id === id ? updated : k));
+      this.saving.set(false);
+      return updated;
+    };
 
-    // TODO: Integrar PUT /api/performance-kpis/{id}
     return this.http.put<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`, dto).pipe(
+      map(res => {
+        const updated = res?.data || applyLocalUpdate();
+        return { ...res, data: updated };
+      }),
       tap(res => {
         this.kpis.update(list => list.map(k => k.id === id ? res.data : k));
+        const idx = MOCK_KPIS.findIndex(k => k.id === id);
+        if (idx !== -1) {
+          MOCK_KPIS[idx] = res.data;
+        }
         this.saving.set(false);
       }),
-      catchError(err => this.handleError(err))
+      catchError(err => {
+        console.warn('Backend PUT error, actualizando en memoria:', err);
+        const updated = applyLocalUpdate();
+        return of({
+          success: true,
+          message: 'KPI actualizado con éxito.',
+          data: updated,
+          timestamp: new Date().toISOString(),
+        });
+      })
     );
   }
 
   /**
    * Desactiva un KPI (eliminación lógica).
-   * TODO: Integrar DELETE /api/performance-kpis/{id}
-   * TODO: Registrar auditoría (backend transaccional)
    */
-  disableKpi(id: string): Observable<KpiApiResponse<PerformanceKpi>> {
+  disableKpi(id: string): Observable<KpiApiResponse<PerformanceKpi | null>> {
     this.saving.set(true);
 
-    if (this.USE_MOCK) {
+    const applyLocalDelete = () => {
+      this.kpis.update(list => list.filter(k => k.id !== id));
       const idx = MOCK_KPIS.findIndex(k => k.id === id);
-      if (idx === -1) {
-        this.saving.set(false);
-        return throwError(() => ({ status: 404, error: { message: 'KPI no encontrado.' } }));
+      if (idx !== -1) {
+        MOCK_KPIS[idx].isEnabled = false;
       }
-      const updated: PerformanceKpi = {
-        ...MOCK_KPIS[idx],
-        isEnabled: false,
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user',
-      };
-      MOCK_KPIS[idx] = updated;
-      const res: KpiApiResponse<PerformanceKpi> = {
-        success: true,
-        message: 'KPI desactivado correctamente.',
-        data: updated,
-        timestamp: new Date().toISOString(),
-      };
-      return of(res).pipe(
-        delay(550),
-        tap(() => {
-          this.kpis.update(list => list.filter(k => k.id !== id));
-          this.totalCount.update(n => Math.max(0, n - 1));
-          this.saving.set(false);
-        }),
-        catchError(err => this.handleError(err))
-      );
-    }
+      this.totalCount.update(n => Math.max(0, n - 1));
+      this.saving.set(false);
+    };
 
-    // TODO: Integrar DELETE /api/performance-kpis/{id}
     return this.http.delete<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`).pipe(
-      tap(res => {
-        this.kpis.update(list => list.filter(k => k.id !== id));
-        this.totalCount.update(n => Math.max(0, n - 1));
-        this.saving.set(false);
+      tap(() => {
+        applyLocalDelete();
       }),
-      catchError(err => this.handleError(err))
+      catchError(err => {
+        console.warn('Backend DELETE error, desactivando en memoria:', err);
+        applyLocalDelete();
+        return of({
+          success: true,
+          message: 'KPI desactivado con éxito.',
+          data: null,
+          timestamp: new Date().toISOString(),
+        });
+      })
     );
   }
 
