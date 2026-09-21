@@ -1,0 +1,159 @@
+<div class="perf-shell">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL UNIFICADO SYNEXIA THEME ENGINE
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="perf-header">
+    <div class="perf-header__top">
+      <div class="perf-header__left">
+        <div class="perf-header__icon-wrap">
+          <span class="material-symbols-outlined perf-header__icon">monitoring</span>
+        </div>
+
+        <div class="perf-header__copy">
+          <div class="perf-header__eyebrow">
+            <a routerLink="/dashboard" class="perf-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="perf-header__eyebrow-sep">·</span>
+            <span>Inteligencia Operativa & Rendimiento 3PL</span>
+          </div>
+          <h1 class="perf-header__title">Módulo de Rendimiento</h1>
+          <p class="perf-header__subtitle">
+            Consola analítica para monitoreo de productividad, tiempos de ciclo, cumplimiento OTIF y gestión de KPIs.
+          </p>
+        </div>
+      </div>
+
+      <!-- ── FILTROS GLOBALES Y ACCIONES SUPERIORES ── -->
+      <div class="perf-header__controls">
+        <!-- Selector de Sucursal -->
+        <div class="perf-control-group">
+          <span class="material-symbols-outlined perf-control-icon">store</span>
+          <select
+            class="perf-select"
+            [ngModel]="selectedBranch()"
+            (ngModelChange)="onBranchChange($event)"
+            aria-label="Seleccionar Sucursal">
+            <option value="all">Todas las Sucursales</option>
+            <option value="b1">CEDIS Central — Cuautitlán</option>
+            <option value="b2">Almacén Regional Guadalajara</option>
+            <option value="b3">Almacén Monterrey Apodaca</option>
+          </select>
+        </div>
+
+        <!-- Selector de Rango Temporal -->
+        <div class="perf-control-group">
+          <span class="material-symbols-outlined perf-control-icon">calendar_today</span>
+          <select
+            class="perf-select"
+            [ngModel]="selectedDateRange()"
+            (ngModelChange)="onDateRangeChange($event)"
+            aria-label="Seleccionar Rango Temporal">
+            <option value="today">Hoy (Tiempo Real)</option>
+            <option value="week">Últimos 7 días</option>
+            <option value="month">Mes Actual</option>
+            <option value="custom">Rango Personalizado</option>
+          </select>
+        </div>
+
+        <!-- Live Polling Badge + Botón Refresco -->
+        <div class="perf-polling-badge" title="Auto-actualización cada 60s">
+          <span class="perf-polling-dot" [class.perf-polling-dot--active]="perfService.isAnalyticsLoading()"></span>
+          <span>Auto: {{ secondsUntilRefresh() }}s</span>
+          <button
+            type="button"
+            class="perf-btn-refresh"
+            (click)="onManualRefresh()"
+            [disabled]="perfService.isAnalyticsLoading()"
+            aria-label="Refrescar métricas">
+            <span class="material-symbols-outlined" [class.spin]="perfService.isAnalyticsLoading()">refresh</span>
+          </button>
+        </div>
+
+        <!-- Botón Ajustar Metas / Objetivos -->
+        <button
+          type="button"
+          class="perf-btn-targets"
+          (click)="perfService.openTargetModal()"
+          aria-label="Ajustar metas y objetivos de rendimiento">
+          <span class="material-symbols-outlined">tune</span>
+          <span>Ajustar Metas</span>
+        </button>
+
+        <!-- Botón Exportar Excel (HU-158) -->
+        <button
+          type="button"
+          class="perf-btn-export"
+          (click)="exportExcelReport()"
+          [disabled]="isExporting()"
+          aria-label="Exportar reporte Excel asíncrono">
+          @if (isExporting()) {
+            <span class="perf-spinner"></span>
+            <span>Encolando...</span>
+          } @else {
+            <span class="material-symbols-outlined">download</span>
+            <span>Exportar Excel</span>
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- Alerta de Exportación Exitosa -->
+    @if (exportSuccessMessage()) {
+      <div class="perf-export-alert" role="status">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>{{ exportSuccessMessage() }}</span>
+      </div>
+    }
+
+    <!-- ── BARRA DE PESTAÑAS (PILLS TOOLBAR) ── -->
+    <nav class="perf-tabs-nav" aria-label="Navegación del Módulo de Rendimiento">
+      <a
+        routerLink="/performance/dashboard"
+        routerLinkActive="tab-active"
+        class="perf-tab-btn">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span>Control General & Procesos</span>
+      </a>
+
+      <a
+        routerLink="/performance/operators"
+        routerLinkActive="tab-active"
+        class="perf-tab-btn">
+        <span class="material-symbols-outlined">badge</span>
+        <span>Productividad & Turnos</span>
+      </a>
+
+      <a
+        routerLink="/performance/circuito-delicado"
+        routerLinkActive="tab-active"
+        class="perf-tab-btn">
+        <span class="material-symbols-outlined">local_shipping</span>
+        <span>Circuito Delicado (Flota Propia)</span>
+      </a>
+
+      <a
+        routerLink="/performance/kpis"
+        routerLinkActive="tab-active"
+        class="perf-tab-btn">
+        <span class="material-symbols-outlined">rule_settings</span>
+        <span>Catálogo & Reglas de KPIs</span>
+      </a>
+    </nav>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ROUTER OUTLET PARA SUBMÓDULOS HIJOS
+       ════════════════════════════════════════════════════════════════ -->
+  <main class="perf-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <!-- ── MODAL DE CONFIGURACIÓN DINÁMICA DE METAS ── -->
+  @if (perfService.isTargetModalOpen()) {
+    <app-target-settings-modal></app-target-settings-modal>
+  }
+
+</div>
