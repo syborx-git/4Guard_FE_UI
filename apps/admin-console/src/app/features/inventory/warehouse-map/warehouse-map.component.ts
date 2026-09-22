@@ -1,6 +1,6 @@
-/**
  * @file warehouse-map.component.ts
  * @description P5 — Mapa Interactivo 2D de Nave y Topología Física [HU-048 / HU-127].
+ * 100% Integrado al Backend Spring Boot en tiempo real.
  */
 
 import {
@@ -12,19 +12,6 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { WarehouseLayoutService } from '../services/warehouse-layout.service';
 import { WarehouseSection, PositionDetail, PositionStatus } from '../models/warehouse-layout.models';
-
-export const WMS_BLOCK_REASONS: string[] = [
-  'Cuarentena QM — Sospecha de contaminación',
-  'Cuarentena QM — Inspección de calidad en proceso',
-  'Cuarentena QM — Muestra retenida para análisis de laboratorio',
-  'Mantenimiento — Reparación de rack o estructura',
-  'Mantenimiento — Inspección técnica programada',
-  'Inventario cíclico — Recuento en curso',
-  'Daño físico — Producto con daño visible',
-  'Derrame o contaminación — Zona delimitada por seguridad',
-  'Bloqueo administrativo — Pendiente de revisión por supervisor',
-  'Exceso de peso — Sobrepasa límite de carga del rack',
-];
 
 type InspectorMode = 'view' | 'block';
 
@@ -44,7 +31,7 @@ export class WarehouseMapComponent implements AfterViewInit, OnDestroy {
   // ─── Estado Reactivo ─────────────────────────────────────────────────────
   protected readonly sections = this.layoutService.sections;
   protected readonly stats    = this.layoutService.stats;
-  protected readonly blockReasons = WMS_BLOCK_REASONS;
+  protected readonly blockReasons = this.layoutService.blockReasons;
 
   protected readonly selectedSection    = signal<WarehouseSection | null>(null);
   protected readonly hoveredSection     = signal<WarehouseSection | null>(null);
@@ -56,7 +43,7 @@ export class WarehouseMapComponent implements AfterViewInit, OnDestroy {
 
   protected readonly inspectedPosition  = signal<PositionDetail | null>(null);
   protected readonly inspectorMode      = signal<InspectorMode>('view');
-  protected readonly blockReason        = signal<string>(WMS_BLOCK_REASONS[0]);
+  protected readonly blockReason        = signal<string>('');
   protected readonly blockComment       = signal<string>('');
   protected readonly isDetailPanelOpen  = computed(() => this.selectedSection() !== null);
 
@@ -75,6 +62,11 @@ export class WarehouseMapComponent implements AfterViewInit, OnDestroy {
   private cleanupFns: (() => void)[] = [];
 
   // ─── Computados ──────────────────────────────────────────────────────────
+  protected readonly isPositionsLoading = computed(() => {
+    const sec = this.selectedSection();
+    return sec ? this.layoutService.isLoadingPositionsForSection(sec.id) : false;
+  });
+
   protected readonly currentPositions = computed<PositionDetail[]>(() => {
     const sec = this.selectedSection();
     if (!sec || sec.status === 'PENDING') return [];
@@ -218,13 +210,21 @@ export class WarehouseMapComponent implements AfterViewInit, OnDestroy {
   protected inspectPosition(pos: PositionDetail): void {
     this.inspectedPosition.set(pos);
     this.inspectorMode.set('view');
-    this.blockReason.set(WMS_BLOCK_REASONS[0]);
+    const reasons = this.blockReasons();
+    this.blockReason.set(reasons.length > 0 ? reasons[0] : '');
     this.blockComment.set('');
   }
 
   protected closeInspector(): void { this.inspectedPosition.set(null); }
 
-  protected enterBlockMode(): void { this.inspectorMode.set('block'); }
+  protected enterBlockMode(): void {
+    const reasons = this.blockReasons();
+    if (!this.blockReason() && reasons.length > 0) {
+      this.blockReason.set(reasons[0]);
+    }
+    this.inspectorMode.set('block');
+  }
+
   protected cancelBlockMode(): void { this.inspectorMode.set('view'); }
 
   protected confirmBlock(): void {
@@ -272,12 +272,5 @@ export class WarehouseMapComponent implements AfterViewInit, OnDestroy {
     return (
       { OCCUPIED: 'Ocupada', AVAILABLE: 'Disponible', BLOCKED: 'Bloqueada QM', MAINTENANCE: 'Mantenimiento' } as Record<string, string>
     )[status] ?? status;
-  }
-
-  protected resetToInitialData(): void {
-    if (confirm('¿Restablecer todos los datos del layout a su estado inicial de fábrica?')) {
-      this.layoutService.resetToDefaults();
-      this.closeSectionDetail();
-    }
   }
 }

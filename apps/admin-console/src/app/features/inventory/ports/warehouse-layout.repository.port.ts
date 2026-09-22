@@ -2,10 +2,17 @@ import { InjectionToken } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   WarehouseSection,
-  PositionDetail
+  PositionDetail,
+  WarehouseLayoutStats
 } from '../models/warehouse-layout.models';
 
+export interface WarehouseTopologyData {
+  sections: WarehouseSection[];
+  stats: WarehouseLayoutStats;
+}
+
 export interface WarehouseLayoutRepositoryPort {
+  getTopology(): Observable<WarehouseTopologyData>;
   getSections(): Observable<WarehouseSection[]>;
   getPositionsForSection(sectionId: string, status?: string, query?: string): Observable<PositionDetail[]>;
   updatePositionStatus(

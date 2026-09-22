@@ -29,10 +29,6 @@
     </div>
 
     <div class="wmap__header-actions">
-      <button class="wmap__btn wmap__btn--ghost" (click)="resetToInitialData()">
-        <span class="material-symbols-outlined">restart_alt</span>
-        Restablecer
-      </button>
       <a routerLink="/dashboard" class="wmap__btn wmap__btn--secondary">
         <span class="material-symbols-outlined">dashboard</span>
         Dashboard
@@ -281,7 +277,12 @@
 
         <!-- Grid de posiciones (con scroll) -->
         <div class="wmap__pos-scroll">
-          @if (filteredPositions().length > 0) {
+          @if (isPositionsLoading()) {
+            <div class="wmap__empty">
+              <span class="material-symbols-outlined">sync</span>
+              <p>Cargando posiciones desde el servidor...</p>
+            </div>
+          } @else if (filteredPositions().length > 0) {
             <div class="wmap__pos-grid">
               @for (pos of filteredPositions(); track pos.id) {
                 <div
@@ -402,7 +403,7 @@
 
               <label class="wmap__form-label">Motivo de Bloqueo <span class="wmap__required">*</span></label>
               <select class="wmap__form-select" [ngModel]="blockReason()" (ngModelChange)="blockReason.set($event)">
-                @for (r of blockReasons; track r) {
+                @for (r of blockReasons(); track r) {
                   <option [value]="r">{{ r }}</option>
                 }
               </select>

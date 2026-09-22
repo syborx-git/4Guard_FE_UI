@@ -1,12 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, throwError } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { WarehouseLayoutRepositoryPort } from '../ports/warehouse-layout.repository.port';
+import {
+  WarehouseLayoutRepositoryPort,
+  WarehouseTopologyData
+} from '../ports/warehouse-layout.repository.port';
 import {
   WarehouseSection,
   PositionDetail,
-  PositionStatus
+  PositionStatus,
+  WarehouseLayoutStats
 } from '../models/warehouse-layout.models';
 
 interface ApiResponse<T> {
@@ -22,27 +26,20 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/api/v1/warehouse-map`;
 
-  // Fallback cache local en caso de desconexión de red
-  private readonly STORAGE_KEY = '4guard_warehouse_layout_resilience_cache';
-
-  getSections(): Observable<WarehouseSection[]> {
+  getTopology(): Observable<WarehouseTopologyData> {
     const branchId = (environment as any).defaultBranchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
     const params = new HttpParams().set('branchId', branchId);
 
-    return this.http.get<ApiResponse<{ sections: any[] }>>(`${this.baseUrl}/topology`, { params }).pipe(
-      map(res => {
-        const sections = res.data.sections.map(s => this.mapSectionFromBackend(s));
-        try {
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sections));
-        } catch {}
-        return sections;
-      }),
-      catchError(err => {
-        console.warn('Fallo conexión HTTP con Backend, recuperando cache de resiliencia...', err);
-        const cached = localStorage.getItem(this.STORAGE_KEY);
-        return cached ? of(JSON.parse(cached)) : throwError(() => err);
-      })
+    return this.http.get<ApiResponse<{ sections: any[]; globalStats: any }>>(`${this.baseUrl}/topology`, { params }).pipe(
+      map(res => ({
+        sections: (res.data?.sections || []).map(s => this.mapSectionFromBackend(s)),
+        stats: this.mapStatsFromBackend(res.data?.globalStats)
+      }))
     );
+  }
+
+  getSections(): Observable<WarehouseSection[]> {
+    return this.getTopology().pipe(map(data => data.sections));
   }
 
   getPositionsForSection(sectionId: string, status?: string, query?: string): Observable<PositionDetail[]> {
@@ -51,7 +48,7 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     if (query && query.trim()) params = params.set('search', query.trim());
 
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/sections/${sectionId}/positions`, { params }).pipe(
-      map(res => res.data.map(p => this.mapPositionFromBackend(p)))
+      map(res => (res.data || []).map(p => this.mapPositionFromBackend(p)))
     );
   }
 
@@ -73,14 +70,31 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
 
   getBlockReasons(): Observable<string[]> {
     return this.http.get<ApiResponse<{ code: string; description: string }[]>>(`${this.baseUrl}/catalogs/block-reasons`).pipe(
-      map(res => res.data.map(r => r.description)),
-      catchError(() => of([
-        'Cuarentena QM — Sospecha de contaminación',
-        'Cuarentena QM — Inspección de calidad en proceso',
-        'Mantenimiento — Reparación de rack o estructura',
-        'Bloqueo administrativo — Pendiente de revisión por supervisor'
-      ]))
+      map(res => (res.data || []).map(r => r.description))
     );
+  }
+
+  private mapStatsFromBackend(raw: any): WarehouseLayoutStats {
+    if (!raw) {
+      return {
+        totalSections: 0,
+        loadedSections: 0,
+        pendingSections: 0,
+        totalPositions: 0,
+        totalCapacityTarimas: 0,
+        occupiedPositions: 0,
+        blockedPositions: 0
+      };
+    }
+    return {
+      totalSections: raw.totalSections ?? 0,
+      loadedSections: raw.loadedSections ?? 0,
+      pendingSections: raw.pendingSections ?? 0,
+      totalPositions: raw.totalPositions ?? 0,
+      totalCapacityTarimas: raw.totalCapacityTarimas ?? 0,
+      occupiedPositions: raw.occupiedPositions ?? 0,
+      blockedPositions: raw.blockedPositions ?? 0
+    };
   }
 
   private mapSectionFromBackend(raw: any): WarehouseSection {
@@ -115,7 +129,7 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       currentTarimas: raw.currentTarimas,
       batchNumber: raw.batchNumber || 'N/A',
       lastMovement: raw.lastMovement || 'Sin movimientos',
-      blockReason: raw.blockReason
+      blockReason: raw.blockReason || (raw.isBlocked ? raw.statusReason : undefined)
     };
   }
 }
