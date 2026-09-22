@@ -3,13 +3,14 @@
  * @description Servicio de Gestión de Topología y Datos del Almacén con Persistencia en LocalStorage (SDOP / ADR-001).
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import {
   WarehouseSection,
   PositionDetail,
   PositionStatus,
   WarehouseLayoutStats
 } from '../models/warehouse-layout.models';
+import { WarehouseLayoutHttpAdapter } from './warehouse-layout-http.adapter';
 
 const STORAGE_KEY = '4guard_warehouse_layout_v1';
 
@@ -220,12 +221,17 @@ export const INITIAL_WAREHOUSE_SECTIONS: WarehouseSection[] = [
   providedIn: 'root'
 })
 export class WarehouseLayoutService {
+  private readonly httpAdapter = inject(WarehouseLayoutHttpAdapter);
   private readonly _sections = signal<WarehouseSection[]>([]);
   private readonly _positionsCache = new Map<string, PositionDetail[]>();
+  private readonly _positionsVersion = signal<number>(0);
+  private readonly _loadingPositions = new Set<string>();
 
   readonly sections = computed(() => this._sections());
 
   readonly stats = computed<WarehouseLayoutStats>(() => {
+    // Reactividad: escucha versiones de posiciones y secciones
+    this._positionsVersion();
     const list = this._sections();
     const loaded = list.filter((s) => s.status === 'LOADED');
     const pending = list.filter((s) => s.status === 'PENDING');
@@ -237,7 +243,7 @@ export class WarehouseLayoutService {
     let occupied = 0;
     let blocked = 0;
     loaded.forEach((s) => {
-      const positions = this.getPositionsForSection(s.id);
+      const positions = this._positionsCache.get(s.id) || [];
       positions.forEach((p) => {
         if (p.status === 'OCCUPIED') occupied++;
         else if (p.status === 'BLOCKED') blocked++;
@@ -260,21 +266,35 @@ export class WarehouseLayoutService {
   }
 
   private initData(): void {
+    // 1. Cargar cache local inmediatamente para visualización instantánea
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           this._sections.set(parsed);
-          return;
+        } else {
+          this._sections.set(INITIAL_WAREHOUSE_SECTIONS);
         }
+      } else {
+        this._sections.set(INITIAL_WAREHOUSE_SECTIONS);
       }
     } catch {
-      // Fallback a iniciales
+      this._sections.set(INITIAL_WAREHOUSE_SECTIONS);
     }
 
-    this._sections.set(INITIAL_WAREHOUSE_SECTIONS);
-    this.persist();
+    // 2. Conexión HTTP al Backend en segundo plano para sincronizar topología real
+    this.httpAdapter.getSections().subscribe({
+      next: (backendSections) => {
+        if (backendSections && backendSections.length > 0) {
+          this._sections.set(backendSections);
+          this.persist();
+        }
+      },
+      error: (err) => {
+        console.warn('Backend warehouse-map no disponible, usando topología local.', err);
+      }
+    });
   }
 
   private persist(): void {
@@ -287,6 +307,7 @@ export class WarehouseLayoutService {
 
   resetToDefaults(): void {
     this._positionsCache.clear();
+    this._loadingPositions.clear();
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(`${STORAGE_KEY}_positions`);
@@ -294,6 +315,18 @@ export class WarehouseLayoutService {
 
     this._sections.set(INITIAL_WAREHOUSE_SECTIONS);
     this.persist();
+    this._positionsVersion.update(v => v + 1);
+
+    // Re-sincronizar con el backend
+    this.httpAdapter.getSections().subscribe({
+      next: (backendSections) => {
+        if (backendSections && backendSections.length > 0) {
+          this._sections.set(backendSections);
+          this.persist();
+        }
+      },
+      error: () => {}
+    });
   }
 
   getSectionById(id: string): WarehouseSection | undefined {
@@ -301,9 +334,13 @@ export class WarehouseLayoutService {
   }
 
   /**
-   * Obtiene o genera las posiciones detalladas de una sección con persistencia local
+   * Obtiene o genera las posiciones detalladas de una sección.
+   * Conecta HTTP con el backend y actualiza reactivamente los componentes vía señales.
    */
   getPositionsForSection(sectionId: string): PositionDetail[] {
+    // Reactividad: cualquier computed que invoque este método se registrará contra _positionsVersion
+    this._positionsVersion();
+
     if (this._positionsCache.has(sectionId)) {
       return this._positionsCache.get(sectionId)!;
     }
@@ -311,6 +348,26 @@ export class WarehouseLayoutService {
     const section = this.getSectionById(sectionId);
     if (!section || section.status === 'PENDING' || section.posFijas === 0) {
       return [];
+    }
+
+    // Si la sección tiene un UUID real del backend y no está en proceso de carga, disparar fetch HTTP
+    const isBackendUuid = sectionId.includes('-') && sectionId.length > 10;
+    if (isBackendUuid && !this._loadingPositions.has(sectionId)) {
+      this._loadingPositions.add(sectionId);
+      this.httpAdapter.getPositionsForSection(sectionId).subscribe({
+        next: (positions) => {
+          this._loadingPositions.delete(sectionId);
+          if (positions && positions.length > 0) {
+            this._positionsCache.set(sectionId, positions);
+            this.savePositionsToStorage(sectionId, positions);
+            this._positionsVersion.update(v => v + 1);
+          }
+        },
+        error: (err) => {
+          this._loadingPositions.delete(sectionId);
+          console.warn(`Fallo carga HTTP de posiciones para sección ${sectionId}, usando fallback local.`, err);
+        }
+      });
     }
 
     // Intentar leer de localStorage si ya existían posiciones modificadas
@@ -326,21 +383,19 @@ export class WarehouseLayoutService {
       }
     } catch {}
 
-    // Generación determinista inicial basada en la pauta real
+    // Generación determinista inicial basada en la pauta real (fallback inmediato)
     const factorNum = parseInt(section.factorEstiba, 10) || 22;
     const positions: PositionDetail[] = [];
 
     for (let i = 1; i <= section.posFijas; i++) {
-      const mat = section.materials.length > 0 ? section.materials[(i - 1) % section.materials.length] : 'Sin Material Asignado';
+      const mat = section.materials && section.materials.length > 0 ? section.materials[(i - 1) % section.materials.length] : 'Sin Material Asignado';
       const posCode = `POS-${String(i).padStart(3, '0')}`;
-      const id = `POS-${section.code}-${i}`;
+      const id = isBackendUuid ? `POS-${section.code}-${i}` : `POS-${section.code}-${i}`;
 
-      // Extraer código SKU si existe
       const skuMatch = mat.match(/^(\d{8}|\b[A-Za-z0-9-]+\b)/);
       const skuCode = skuMatch ? skuMatch[1] : `SKU-${i}`;
 
-      // Simulación de estados operativos
-      const hash = (section.code.charCodeAt(0) * 17 + i * 13) % 100;
+      const hash = ((section.code || 'A').charCodeAt(0) * 17 + i * 13) % 100;
       let status: PositionStatus = 'OCCUPIED';
       let currentTarimas = factorNum;
 
@@ -392,6 +447,7 @@ export class WarehouseLayoutService {
     const item = list.find((p) => p.id === positionId);
     if (!item) return;
 
+    // Actualización optimista inmediata en memoria
     item.status = newStatus;
     if (newStatus === 'AVAILABLE') {
       item.currentTarimas = 0;
@@ -408,6 +464,30 @@ export class WarehouseLayoutService {
     }
 
     this.savePositionsToStorage(sectionId, list);
+    this._positionsVersion.update(v => v + 1);
+
+    // Si la posición tiene ID de PostgreSQL (UUID), sincronizar vía PATCH HTTP
+    const isBackendPosition = positionId.includes('-') && positionId.length > 20 && !positionId.startsWith('POS-');
+    if (isBackendPosition) {
+      const action = newStatus === 'AVAILABLE' ? 'RELEASE' : (newStatus === 'BLOCKED' ? 'BLOCK' : 'OCCUPY');
+      this.httpAdapter.updatePositionStatus(positionId, action, {
+        reasonCode: meta.reason,
+        comment: meta.comment
+      }).subscribe({
+        next: (updatedPos) => {
+          // Confirmar con datos exactos del servidor
+          const idx = list.findIndex(p => p.id === positionId);
+          if (idx !== -1) {
+            list[idx] = updatedPos;
+            this.savePositionsToStorage(sectionId, list);
+            this._positionsVersion.update(v => v + 1);
+          }
+        },
+        error: (err) => {
+          console.error('Error al sincronizar estado de posición con backend:', err);
+        }
+      });
+    }
   }
 
   private savePositionsToStorage(sectionId: string, positions: PositionDetail[]): void {
