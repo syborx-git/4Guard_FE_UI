@@ -89,7 +89,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
   protected readonly currentSectionPositions = computed<PositionDetail[]>(() => {
     const sec = this.selectedSection();
-    if (!sec || sec.status === 'PENDING') return [];
+    if (!sec) return [];
     return this.layoutService.getPositionsForSection(sec.id);
   });
 
@@ -117,9 +117,13 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     const occupied  = positions.filter(p => p.status === 'OCCUPIED').length;
     const available = positions.filter(p => p.status === 'AVAILABLE').length;
     const blocked   = positions.filter(p => p.status === 'BLOCKED').length;
+    const totalCapacity = sec.capacidadTarimas > 0
+      ? sec.capacidadTarimas
+      : positions.reduce((acc, p) => acc + (p.capacityTarimas || 22), 0);
+
     return {
       total,
-      capacityTarimas: sec.capacidadTarimas,
+      capacityTarimas: totalCapacity,
       factorEstiba: sec.factorEstiba,
       materialsCount: sec.materials.length,
       occupied,
@@ -278,6 +282,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     this.sectionSearchQuery.set('');
     this.sectionStatusFilter.set('ALL');
     this.inspectedPosition.set(null);
+    this.layoutService.loadPositionsForSection(section.id);
   }
 
   protected closeSectionDetail(): void {

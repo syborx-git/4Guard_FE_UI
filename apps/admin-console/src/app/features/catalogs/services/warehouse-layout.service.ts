@@ -99,6 +99,33 @@ export class WarehouseLayoutService {
     return this._loadingSections().has(sectionId);
   }
 
+  loadPositionsForSection(sectionId: string): void {
+    if (this._loadingSections().has(sectionId)) {
+      return;
+    }
+
+    const nextSet = new Set(this._loadingSections());
+    nextSet.add(sectionId);
+    this._loadingSections.set(nextSet);
+
+    this.repository.getPositionsForSection(sectionId).subscribe({
+      next: (positions) => {
+        const updatedSet = new Set(this._loadingSections());
+        updatedSet.delete(sectionId);
+        this._loadingSections.set(updatedSet);
+
+        this._positionsCache.set(sectionId, positions);
+        this._positionsVersion.update(v => v + 1);
+      },
+      error: (err) => {
+        const updatedSet = new Set(this._loadingSections());
+        updatedSet.delete(sectionId);
+        this._loadingSections.set(updatedSet);
+        console.error(`Error al cargar posiciones de la sección ${sectionId}:`, err);
+      }
+    });
+  }
+
   getPositionsForSection(sectionId: string): PositionDetail[] {
     this._positionsVersion();
 
@@ -106,32 +133,9 @@ export class WarehouseLayoutService {
       return this._positionsCache.get(sectionId)!;
     }
 
-    const section = this.getSectionById(sectionId);
-    if (!section || section.status === 'PENDING' || section.posFijas === 0) {
-      return [];
-    }
-
-    if (!this._loadingSections().has(sectionId)) {
-      const nextSet = new Set(this._loadingSections());
-      nextSet.add(sectionId);
-      this._loadingSections.set(nextSet);
-
-      this.repository.getPositionsForSection(sectionId).subscribe({
-        next: (positions) => {
-          const updatedSet = new Set(this._loadingSections());
-          updatedSet.delete(sectionId);
-          this._loadingSections.set(updatedSet);
-
-          this._positionsCache.set(sectionId, positions);
-          this._positionsVersion.update(v => v + 1);
-        },
-        error: (err) => {
-          const updatedSet = new Set(this._loadingSections());
-          updatedSet.delete(sectionId);
-          this._loadingSections.set(updatedSet);
-          console.error(`Error al cargar posiciones de la sección ${sectionId}:`, err);
-        }
-      });
+    const fromAll = this._allPositions().filter((p) => p.sectionId === sectionId);
+    if (fromAll.length > 0) {
+      return fromAll;
     }
 
     return [];
