@@ -3,15 +3,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
-  WarehouseLayoutRepositoryPort,
-  WarehouseTopologyData
+  WarehouseLayoutRepositoryPort
 } from '../ports/warehouse-layout.repository.port';
 import {
   WarehouseSection,
   PositionDetail,
   PositionStatus,
-  WarehouseLayoutStats
-} from '../models/warehouse-layout.models';
+  WarehouseLayoutStats,
+  WarehouseTopologyData
+} from '../models/warehouse-catalog.models';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -48,6 +48,18 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     if (query && query.trim()) params = params.set('search', query.trim());
 
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/sections/${sectionId}/positions`, { params }).pipe(
+      map(res => (res.data || []).map(p => this.mapPositionFromBackend(p)))
+    );
+  }
+
+  getAllPositions(sectionId?: string, status?: string, query?: string): Observable<PositionDetail[]> {
+    const branchId = (environment as any).defaultBranchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+    let params = new HttpParams().set('branchId', branchId);
+    if (sectionId && sectionId !== 'ALL') params = params.set('sectionId', sectionId);
+    if (status && status !== 'ALL') params = params.set('status', status);
+    if (query && query.trim()) params = params.set('search', query.trim());
+
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/positions`, { params }).pipe(
       map(res => (res.data || []).map(p => this.mapPositionFromBackend(p)))
     );
   }

@@ -81,14 +81,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Dashboard',
       },
 
-      // Inventario
+      // Redirección de Inventario hacia Almacén / Topología
       {
         path: 'inventory',
-        canActivate: [rbacGuard],
-        data: { module: 'inventory' },
-        loadChildren: () =>
-          import('./features/inventory/inventory.routes').then((m) => m.inventoryRoutes),
-        title: '4GUARD WMS — Inventario',
+        redirectTo: 'catalogs/warehouse',
+        pathMatch: 'prefix',
       },
 
       // Layout y Ubicaciones (HU-127)

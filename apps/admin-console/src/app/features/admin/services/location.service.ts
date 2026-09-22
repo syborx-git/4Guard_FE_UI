@@ -8,7 +8,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { DockItem, DockOperationalStatus } from '../../inventory/models/warehouse-location.models';
+import { DockItem, DockOperationalStatus } from '../../catalogs/models/warehouse-location.models';
 import { ReceptionAppointment } from '../../receiving/models/reception-appointment.models';
 import { DockEligibilityCheck, DockRecommendation } from '../../receiving/models/dock-assignment.models';
 

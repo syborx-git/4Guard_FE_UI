@@ -3,18 +3,14 @@ import { Observable } from 'rxjs';
 import {
   WarehouseSection,
   PositionDetail,
-  WarehouseLayoutStats
-} from '../models/warehouse-layout.models';
-
-export interface WarehouseTopologyData {
-  sections: WarehouseSection[];
-  stats: WarehouseLayoutStats;
-}
+  WarehouseTopologyData
+} from '../models/warehouse-catalog.models';
 
 export interface WarehouseLayoutRepositoryPort {
   getTopology(): Observable<WarehouseTopologyData>;
   getSections(): Observable<WarehouseSection[]>;
   getPositionsForSection(sectionId: string, status?: string, query?: string): Observable<PositionDetail[]>;
+  getAllPositions(sectionId?: string, status?: string, query?: string): Observable<PositionDetail[]>;
   updatePositionStatus(
     positionId: string,
     action: 'BLOCK' | 'RELEASE' | 'OCCUPY',

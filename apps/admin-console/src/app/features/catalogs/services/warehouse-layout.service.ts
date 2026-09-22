@@ -1,6 +1,7 @@
 /**
  * @file warehouse-layout.service.ts
- * @description Servicio de Gestión de Topología y Datos del Almacén integrado 100% al Backend (SDOP / Hexagonal Architecture).
+ * @description Servicio de Gestión de Topología y Datos del Almacén en Catálogos Maestros (SDOP / Hexagonal).
+ * 100% Integrado al Backend Spring Boot y PostgreSQL (Sin mocks ni localStorage).
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
@@ -9,7 +10,7 @@ import {
   PositionDetail,
   PositionStatus,
   WarehouseLayoutStats
-} from '../models/warehouse-layout.models';
+} from '../models/warehouse-catalog.models';
 import { WAREHOUSE_LAYOUT_REPOSITORY } from '../ports/warehouse-layout.repository.port';
 
 @Injectable({
@@ -30,19 +31,24 @@ export class WarehouseLayoutService {
   });
 
   private readonly _positionsCache = new Map<string, PositionDetail[]>();
+  private readonly _allPositions = signal<PositionDetail[]>([]);
   private readonly _positionsVersion = signal<number>(0);
   private readonly _loadingSections = signal<Set<string>>(new Set());
   private readonly _isLoadingTopology = signal<boolean>(false);
+  private readonly _isLoadingAllPositions = signal<boolean>(false);
   private readonly _blockReasons = signal<string[]>([]);
 
   readonly sections = computed(() => this._sections());
   readonly stats = computed(() => this._stats());
+  readonly allPositions = computed(() => this._allPositions());
   readonly isLoadingTopology = computed(() => this._isLoadingTopology());
+  readonly isLoadingAllPositions = computed(() => this._isLoadingAllPositions());
   readonly blockReasons = computed(() => this._blockReasons());
 
   constructor() {
     this.loadTopology();
     this.loadBlockReasons();
+    this.loadAllPositions();
   }
 
   loadTopology(): void {
@@ -67,6 +73,20 @@ export class WarehouseLayoutService {
       },
       error: (err) => {
         console.error('Error al cargar catálogo de motivos de bloqueo QM:', err);
+      }
+    });
+  }
+
+  loadAllPositions(sectionId?: string, status?: string, query?: string): void {
+    this._isLoadingAllPositions.set(true);
+    this.repository.getAllPositions(sectionId, status, query).subscribe({
+      next: (positions) => {
+        this._isLoadingAllPositions.set(false);
+        this._allPositions.set(positions);
+      },
+      error: (err) => {
+        this._isLoadingAllPositions.set(false);
+        console.error('Error al cargar todas las posiciones desde el backend:', err);
       }
     });
   }
@@ -125,29 +145,35 @@ export class WarehouseLayoutService {
   ): void {
     const list = this._positionsCache.get(sectionId);
     const item = list?.find((p) => p.id === positionId);
-    if (!item || !list) return;
 
-    // Snapshot para rollback en caso de error
-    const prevStatus = item.status;
-    const prevCurrentTarimas = item.currentTarimas;
-    const prevBlockReason = item.blockReason;
+    // Actualizar también en _allPositions si existe
+    const allList = this._allPositions();
+    const itemInAll = allList.find((p) => p.id === positionId);
 
-    // Actualización optimista inmediata en memoria
-    item.status = newStatus;
-    if (newStatus === 'AVAILABLE') {
-      item.currentTarimas = 0;
-      item.blockReason = undefined;
-    } else if (newStatus === 'OCCUPIED') {
-      item.currentTarimas = item.capacityTarimas;
-      item.blockReason = undefined;
-    } else if (newStatus === 'BLOCKED') {
-      item.currentTarimas = 0;
-      const parts: string[] = [];
-      if (meta.reason) parts.push(meta.reason);
-      if (meta.comment) parts.push(`Nota: ${meta.comment}`);
-      item.blockReason = parts.length ? parts.join(' — ') : 'Bloqueo Manual QM';
-    }
+    const prevStatus = item?.status ?? itemInAll?.status ?? 'AVAILABLE';
+    const prevCurrentTarimas = item?.currentTarimas ?? itemInAll?.currentTarimas ?? 0;
+    const prevBlockReason = item?.blockReason ?? itemInAll?.blockReason;
 
+    // Optimistic update
+    const applyOptimistic = (target: PositionDetail) => {
+      target.status = newStatus;
+      if (newStatus === 'AVAILABLE') {
+        target.currentTarimas = 0;
+        target.blockReason = undefined;
+      } else if (newStatus === 'OCCUPIED') {
+        target.currentTarimas = target.capacityTarimas;
+        target.blockReason = undefined;
+      } else if (newStatus === 'BLOCKED') {
+        target.currentTarimas = 0;
+        const parts: string[] = [];
+        if (meta.reason) parts.push(meta.reason);
+        if (meta.comment) parts.push(`Nota: ${meta.comment}`);
+        target.blockReason = parts.length ? parts.join(' — ') : 'Bloqueo Manual QM';
+      }
+    };
+
+    if (item) applyOptimistic(item);
+    if (itemInAll) applyOptimistic(itemInAll);
     this._positionsVersion.update(v => v + 1);
 
     const action = newStatus === 'AVAILABLE' ? 'RELEASE' : (newStatus === 'BLOCKED' ? 'BLOCK' : 'OCCUPY');
@@ -156,19 +182,27 @@ export class WarehouseLayoutService {
       comment: meta.comment
     }).subscribe({
       next: (updatedPos) => {
-        const idx = list.findIndex(p => p.id === positionId);
-        if (idx !== -1) {
-          list[idx] = updatedPos;
-          this._positionsVersion.update(v => v + 1);
+        if (list) {
+          const idx = list.findIndex(p => p.id === positionId);
+          if (idx !== -1) list[idx] = updatedPos;
         }
-        // Refrescar topología y KPIs desde el backend
+        const idxAll = allList.findIndex(p => p.id === positionId);
+        if (idxAll !== -1) {
+          allList[idxAll] = updatedPos;
+          this._allPositions.set([...allList]);
+        }
+        this._positionsVersion.update(v => v + 1);
         this.loadTopology();
       },
       error: (err) => {
         console.error('Error al actualizar estado en el backend, revirtiendo estado optimista:', err);
-        item.status = prevStatus;
-        item.currentTarimas = prevCurrentTarimas;
-        item.blockReason = prevBlockReason;
+        const rollback = (target: PositionDetail) => {
+          target.status = prevStatus;
+          target.currentTarimas = prevCurrentTarimas;
+          target.blockReason = prevBlockReason;
+        };
+        if (item) rollback(item);
+        if (itemInAll) rollback(itemInAll);
         this._positionsVersion.update(v => v + 1);
       }
     });
