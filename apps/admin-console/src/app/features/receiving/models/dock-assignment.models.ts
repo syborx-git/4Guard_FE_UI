@@ -3,7 +3,7 @@
  * @description Modelos de datos de recepción, capacidades RBAC, auditoría y orquestación de muelles [HU-030].
  */
 
-import { DockItem, DockOperationalStatus } from '../../inventory/models/warehouse-location.models';
+import { DockItem, DockOperationalStatus } from '../../catalogs/models/warehouse-location.models';
 
 export { DockItem, DockOperationalStatus };
 

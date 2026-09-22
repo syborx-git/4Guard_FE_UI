@@ -24,6 +24,8 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { branchInterceptor } from '@4guard/shared-core';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { adminRoutes } from './app.routes';
+import { WAREHOUSE_LAYOUT_REPOSITORY } from './features/catalogs/ports/warehouse-layout.repository.port';
+import { WarehouseLayoutHttpAdapter } from './features/catalogs/services/warehouse-layout-http.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -48,6 +50,12 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([authInterceptor, branchInterceptor]),
     ),
+
+    // ── Repositorio Warehouse Layout (SDOP Bridge) ───────────────────────────
+    {
+      provide: WAREHOUSE_LAYOUT_REPOSITORY,
+      useClass: WarehouseLayoutHttpAdapter,
+    },
 
     // ── Animaciones ───────────────────────────────────────────────────────────
     provideAnimationsAsync(),

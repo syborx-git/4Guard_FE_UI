@@ -1,77 +1,69 @@
 /**
  * @file warehouse-catalog.models.ts
- * @description Modelos e interfaces para el Catálogo de Almacén y Topología de Posiciones.
- * Mapea fielmente las 6 bodegas reales de 4Guard WMS.
+ * @description Modelos e interfaces unificados para el Catálogo de Almacén, Topología 2D y Consulta de Bahías.
+ * Mapea las 11 naves reales y 885-915 posiciones físicas de PostgreSQL [HU-048 / HU-127].
  */
 
-export type WarehouseZoneCode = 'A' | 'APC' | 'AT' | 'B' | 'BPC' | 'BT';
+export type SectionStatus = 'LOADED' | 'PENDING';
 
-export interface WarehouseZoneInfo {
-  code: WarehouseZoneCode;
-  name: string;
-  description: string;
-  totalPositions: number;
-  prefix: string;
-  type: 'ALMACENAMIENTO_GENERAL' | 'STAGING_PRECARGA' | 'SATURACION_TEMPORAL';
+export type PositionStatus = 'AVAILABLE' | 'OCCUPIED' | 'BLOCKED' | 'MAINTENANCE';
+
+export interface PositionDetail {
+  id: string;             // UUID de la ubicación en BD o código
+  positionNumber: number; // Número ordinal 1..N
+  code: string;           // Código de ubicación (ej. 'POS-A-001', 'A-01')
+  sectionId: string;      // UUID de la sección/almacén
+  sectionName: string;    // Nombre descriptivo de la nave
+  skuCode?: string;
+  skuDescription: string;
+  status: PositionStatus;
+  capacityTarimas: number;
+  currentTarimas: number;
+  batchNumber?: string;
+  lastMovement?: string;
+  blockReason?: string;
 }
 
-export const WAREHOUSE_ZONES: WarehouseZoneInfo[] = [
-  {
-    code: 'A',
-    name: 'Bodega A',
-    description: 'Almacén Principal A (175 Posiciones fijas)',
-    totalPositions: 175,
-    prefix: 'A-',
-    type: 'ALMACENAMIENTO_GENERAL',
-  },
-  {
-    code: 'APC',
-    name: 'Bodega APC (Pre-Carga)',
-    description: 'Área de Pre-Carga y Staging Outbound (6 Posiciones)',
-    totalPositions: 6,
-    prefix: 'APC-',
-    type: 'STAGING_PRECARGA',
-  },
-  {
-    code: 'AT',
-    name: 'Bodega AT (Saturación Nestlé)',
-    description: 'Área de Saturación Temporal Nestlé (46 Posiciones)',
-    totalPositions: 46,
-    prefix: 'AT-',
-    type: 'SATURACION_TEMPORAL',
-  },
-  {
-    code: 'B',
-    name: 'Bodega B',
-    description: 'Almacén Secundario B (37 Posiciones)',
-    totalPositions: 37,
-    prefix: 'B-',
-    type: 'ALMACENAMIENTO_GENERAL',
-  },
-  {
-    code: 'BPC',
-    name: 'Bodega BPC',
-    description: 'Pre-Carga Secundarias (6 Posiciones)',
-    totalPositions: 6,
-    prefix: 'BPC-',
-    type: 'STAGING_PRECARGA',
-  },
-  {
-    code: 'BT',
-    name: 'Bodega BT',
-    description: 'Saturación Temporal B (12 Posiciones)',
-    totalPositions: 12,
-    prefix: 'BT-',
-    type: 'SATURACION_TEMPORAL',
-  },
-];
+export interface WarehouseSection {
+  id: string;                  // UUID de la sección
+  code: string;                // 'A', 'E', 'F (D)', 'G', 'I', 'J(C)', 'L', 'K', 'B', 'C', 'H'
+  name: string;
+  category: string;
+  posFijas: number;
+  capacidadTarimas: number;
+  factorEstiba: string;
+  materials: string[];
+  notes: string;
+  status: SectionStatus;
+  polygonPoints: string;
+  labelPosition: { x: number; y: number };
+  sublabelPosition: { x: number; y: number };
+  positions?: PositionDetail[];
+}
 
-export type BayOccupancyStatus = 'DESOCUPADA' | 'PARCIAL' | 'SATURADA';
+export interface WarehouseLayoutStats {
+  totalSections: number;
+  loadedSections: number;
+  pendingSections: number;
+  totalPositions: number;
+  totalCapacityTarimas: number;
+  occupiedPositions: number;
+  blockedPositions: number;
+}
+
+export interface WarehouseTopologyData {
+  sections: WarehouseSection[];
+  stats: WarehouseLayoutStats;
+}
+
+// Compatibilidad y vistas tabulares de Consulta de Bahías
+export type BayOccupancyStatus = 'DESOCUPADA' | 'PARCIAL' | 'SATURADA' | 'BLOQUEADA';
 
 export interface WarehouseBay {
   id: string;
-  bayCode: string; // e.g. A-1, APC-3, AT-24
-  warehouseZone: WarehouseZoneCode;
+  bayCode: string;
+  warehouseZone: string;
+  warehouseZoneName: string;
   description: string;
   capacityPallets: number;
   occupiedPallets: number;
@@ -80,4 +72,5 @@ export interface WarehouseBay {
   skuStored?: string;
   lotStored?: string;
   lastMovement: string;
+  rawPosition: PositionDetail;
 }
