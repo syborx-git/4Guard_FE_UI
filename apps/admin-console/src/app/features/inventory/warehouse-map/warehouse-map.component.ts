@@ -1,3 +1,4 @@
+/**
  * @file warehouse-map.component.ts
  * @description P5 — Mapa Interactivo 2D de Nave y Topología Física [HU-048 / HU-127].
  * 100% Integrado al Backend Spring Boot en tiempo real.
