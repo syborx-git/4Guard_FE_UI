@@ -1,283 +1,283 @@
 /**
  * @file warehouse-map.component.ts
- * @description P5 — Inventario 2D (Topología Cromática) [HU-048].
- * Mapa interactivo de bahías dinámicas por Almacén Real (885 posiciones consolidado planta).
+ * @description P5 — Mapa Interactivo 2D de Nave y Topología Física [HU-048 / HU-127].
  */
 
-import { Component, signal, computed, inject } from '@angular/core';
+import {
+  Component, inject, signal, computed,
+  ElementRef, ViewChild, AfterViewInit, OnDestroy, NgZone
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { LocationService } from '../../admin/services/location.service';
-import { AuthState } from '../../../core/auth/auth.state';
+import { WarehouseLayoutService } from '../services/warehouse-layout.service';
+import { WarehouseSection, PositionDetail, PositionStatus } from '../models/warehouse-layout.models';
 
-export interface WarehouseDef {
-  id: string;
-  code: string;
-  name: string;
-  nominalCapacity: number;
-}
+export const WMS_BLOCK_REASONS: string[] = [
+  'Cuarentena QM — Sospecha de contaminación',
+  'Cuarentena QM — Inspección de calidad en proceso',
+  'Cuarentena QM — Muestra retenida para análisis de laboratorio',
+  'Mantenimiento — Reparación de rack o estructura',
+  'Mantenimiento — Inspección técnica programada',
+  'Inventario cíclico — Recuento en curso',
+  'Daño físico — Producto con daño visible',
+  'Derrame o contaminación — Zona delimitada por seguridad',
+  'Bloqueo administrativo — Pendiente de revisión por supervisor',
+  'Exceso de peso — Sobrepasa límite de carga del rack',
+];
 
-export interface Bay {
-  id: string;
-  code: string;
-  warehouseId: string;
-  warehouseCode: string;
-  type: 'RACK' | 'QUARANTINE_ZONE' | 'DOCK' | 'STAGING';
-  row: number;
-  col: number;
-  capacity: number;
-  occupied: number;
-  isBlocked: boolean;
-}
-
-export interface SelectedBayInfo extends Bay {
-  occupancyPct: number;
-  colorClass: string;
-}
-
-export type FilterType = 'ALL' | 'RACK' | 'QUARANTINE_ZONE' | 'DOCK' | 'STAGING';
-export type SaturationFilterType = 'ALL' | 'HIGH' | 'MID' | 'LOW' | 'BLOCKED';
+type InspectorMode = 'view' | 'block';
 
 @Component({
   selector: 'fg-warehouse-map',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './warehouse-map.component.html',
-  styleUrl: './warehouse-map.component.css',
+  styleUrl: './warehouse-map.component.css'
 })
-export class WarehouseMapComponent {
-  private readonly locationService = inject(LocationService);
-  private readonly authState = inject(AuthState);
+export class WarehouseMapComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('blueprintContainer') blueprintContainerRef!: ElementRef<HTMLDivElement>;
 
-  // ── Almacenes Reales de la Planta (SSOT) ──────────────────────────────────
-  protected readonly officialWarehouses: WarehouseDef[] = [
-    { id: 'WH-A', code: 'A', name: 'Almacén A — Secos & PT', nominalCapacity: 170 },
-    { id: 'WH-E', code: 'E', name: 'Almacén E — Materia Prima', nominalCapacity: 38 },
-    { id: 'WH-F', code: 'F', name: 'Almacén F — Empaque & Vidrio', nominalCapacity: 120 },
-    { id: 'WH-G', code: 'G', name: 'Almacén G — General Central', nominalCapacity: 117 },
-    { id: 'WH-I', code: 'I', name: 'Almacén I — Insumos Especiales', nominalCapacity: 91 },
-    { id: 'WH-J', code: 'J', name: 'Almacén J — Granel & Tambores', nominalCapacity: 56 },
-    { id: 'WH-K', code: 'K', name: 'Almacén K — Racks Libres', nominalCapacity: 181 },
-    { id: 'WH-L', code: 'L', name: 'Almacén L — Cuarentena & Retenidos', nominalCapacity: 112 },
-  ];
+  protected readonly layoutService = inject(WarehouseLayoutService);
+  private readonly ngZone = inject(NgZone);
 
-  // Total Consolidado Planta: 170+38+120+117+91+56+181+112 = 885 pos
-  protected readonly totalPlantCapacity = this.officialWarehouses.reduce(
-    (sum, w) => sum + w.nominalCapacity,
-    0
-  );
+  // ─── Estado Reactivo ─────────────────────────────────────────────────────
+  protected readonly sections = this.layoutService.sections;
+  protected readonly stats    = this.layoutService.stats;
+  protected readonly blockReasons = WMS_BLOCK_REASONS;
 
-  protected readonly selectedWarehouseId = signal<string>('ALL');
-  protected readonly filterType = signal<FilterType>('ALL');
-  protected readonly satFilter = signal<SaturationFilterType>('ALL');
-  protected readonly selectedBay = signal<SelectedBayInfo | null>(null);
-  protected readonly searchCode = signal<string>('');
+  protected readonly selectedSection    = signal<WarehouseSection | null>(null);
+  protected readonly hoveredSection     = signal<WarehouseSection | null>(null);
+  protected readonly tooltipCoords      = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  protected readonly isTooltipVisible   = signal<boolean>(false);
 
-  protected readonly activeBranchId = computed(() => {
-    return (this.authState as any).activeBranchId?.() || 'SUC-001';
+  protected readonly searchQuery        = signal<string>('');
+  protected readonly statusFilter       = signal<'ALL' | 'OCCUPIED' | 'AVAILABLE' | 'BLOCKED'>('ALL');
+
+  protected readonly inspectedPosition  = signal<PositionDetail | null>(null);
+  protected readonly inspectorMode      = signal<InspectorMode>('view');
+  protected readonly blockReason        = signal<string>(WMS_BLOCK_REASONS[0]);
+  protected readonly blockComment       = signal<string>('');
+  protected readonly isDetailPanelOpen  = computed(() => this.selectedSection() !== null);
+
+  // ─── Zoom & Pan ──────────────────────────────────────────────────────────
+  protected readonly zoomScale = signal<number>(1.0);
+  private panX = 0;
+  private panY = 0;
+  protected readonly panOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  private isPanning = false;
+  private startX = 0;
+  private startY = 0;
+  private startPanX = 0;
+  private startPanY = 0;
+
+  private cleanupFns: (() => void)[] = [];
+
+  // ─── Computados ──────────────────────────────────────────────────────────
+  protected readonly currentPositions = computed<PositionDetail[]>(() => {
+    const sec = this.selectedSection();
+    if (!sec || sec.status === 'PENDING') return [];
+    return this.layoutService.getPositionsForSection(sec.id);
   });
 
-  // Generador de bahías dinámicas por Almacén Real (885 posiciones totales)
-  protected readonly plantBays = computed<Bay[]>(() => {
-    const list: Bay[] = [];
-    
-    this.officialWarehouses.forEach((wh) => {
-      const isQuarantineWh = wh.code === 'L';
-      const type: Bay['type'] = isQuarantineWh ? 'QUARANTINE_ZONE' : 'RACK';
+  protected readonly filteredPositions = computed<PositionDetail[]>(() => {
+    const list   = this.currentPositions();
+    const query  = this.searchQuery().trim().toLowerCase();
+    const filter = this.statusFilter();
 
-      for (let i = 1; i <= wh.nominalCapacity; i++) {
-        const rackNum = Math.ceil(i / 20);
-        const posNum = String((i - 1) % 20 + 1).padStart(2, '0');
-        const code = `${wh.code}-${rackNum}-${posNum}`;
-        const id = `LOC-${wh.code}-${i}`;
-        const row = rackNum - 1;
-        const col = (i - 1) % 20;
-
-        // Distribución determinista de saturación acorde a la planta
-        let occupied = 0;
-        const capacity = 100;
-        let isBlocked = false;
-
-        const hash = (wh.code.charCodeAt(0) * 31 + i) % 100;
-
-        if (hash < 12) {
-          // 12% Bloqueados por QM
-          isBlocked = true;
-          occupied = 90;
-        } else if (hash < 35) {
-          // Alta saturación (>85%)
-          occupied = 88 + (hash % 12);
-        } else if (hash < 75) {
-          // Saturación media (40-85%)
-          occupied = 45 + (hash % 38);
-        } else {
-          // Baja saturación (<40%)
-          occupied = 10 + (hash % 25);
-        }
-
-        list.push({
-          id,
-          code,
-          warehouseId: wh.id,
-          warehouseCode: wh.code,
-          type,
-          row,
-          col,
-          capacity,
-          occupied,
-          isBlocked,
-        });
-      }
-    });
-
-    return list;
-  });
-
-  // Consumo Reactivo de Muelles desde LocationService (SSOT Físico)
-  protected readonly dockBays = computed<Bay[]>(() => {
-    const branchId = this.activeBranchId();
-    if (!branchId) return [];
-
-    const docks = this.locationService.getDocksForBranch(branchId);
-    return docks.map((dock, index) => {
-      let occupied = 0;
-      if (dock.operationalStatus === 'OCCUPIED') occupied = 100;
-      else if (dock.operationalStatus === 'RESERVED') occupied = 50;
-
-      const isBlocked =
-        dock.operationalStatus === 'MAINTENANCE' ||
-        dock.operationalStatus === 'BLOCKED' ||
-        dock.operationalStatus === 'OUT_OF_SERVICE';
-
-      return {
-        id: dock.id,
-        code: dock.code,
-        warehouseId: 'WH-DOCKS',
-        warehouseCode: 'DOCK',
-        type: 'DOCK',
-        row: 99,
-        col: index,
-        capacity: 100,
-        occupied,
-        isBlocked,
-      };
+    return list.filter((pos) => {
+      const matchQ = !query ||
+        pos.code.toLowerCase().includes(query) ||
+        pos.skuDescription.toLowerCase().includes(query) ||
+        (pos.skuCode?.toLowerCase().includes(query)) ||
+        (pos.batchNumber?.toLowerCase().includes(query));
+      const matchS = filter === 'ALL' || pos.status === filter;
+      return matchQ && matchS;
     });
   });
 
-  // Combinación reactiva unificada de todas las bahías de la planta
-  protected readonly allBays = computed<Bay[]>(() => {
-    return [...this.plantBays(), ...this.dockBays()];
+  protected readonly sectionMetrics = computed(() => {
+    const sec = this.selectedSection();
+    if (!sec) return null;
+    const positions = this.currentPositions();
+    const total     = positions.length;
+    const occupied  = positions.filter(p => p.status === 'OCCUPIED').length;
+    const available = positions.filter(p => p.status === 'AVAILABLE').length;
+    const blocked   = positions.filter(p => p.status === 'BLOCKED').length;
+    return { total, capacityTarimas: sec.capacidadTarimas, factorEstiba: sec.factorEstiba,
+             materialsCount: sec.materials.length, occupied, available, blocked,
+             occupancyPct: total > 0 ? Math.round((occupied / total) * 100) : 0 };
   });
 
-  // Filtrado reactivo por Almacén seleccionado, Tipo, Nivel de Saturación y Búsqueda por Código
-  protected readonly displayBays = computed(() => {
-    const whId = this.selectedWarehouseId();
-    const typeFilter = this.filterType();
-    const satFilter = this.satFilter();
-    const search = this.searchCode().trim().toLowerCase();
-
-    return this.allBays().filter((bay) => {
-      const matchWh = whId === 'ALL' || bay.warehouseId === whId;
-      const matchType = typeFilter === 'ALL' || bay.type === typeFilter;
-      const matchSearch = !search || bay.code.toLowerCase().includes(search);
-
-      let matchSat = true;
-      const pct = bay.capacity > 0 ? bay.occupied / bay.capacity : 0;
-
-      if (satFilter === 'HIGH') {
-        matchSat = !bay.isBlocked && pct > 0.85;
-      } else if (satFilter === 'MID') {
-        matchSat = !bay.isBlocked && pct >= 0.4 && pct <= 0.85;
-      } else if (satFilter === 'LOW') {
-        matchSat = !bay.isBlocked && pct < 0.4;
-      } else if (satFilter === 'BLOCKED') {
-        matchSat = bay.isBlocked;
-      }
-
-      return matchWh && matchType && matchSearch && matchSat;
+  // ─── Lifecycle ───────────────────────────────────────────────────────────
+  ngAfterViewInit(): void {
+    this.ngZone.runOutsideAngular(() => {
+      this.attachPanListeners();
     });
-  });
-
-  // Métricas dinámicas calculadas según el Almacén Activo
-  protected readonly stats = computed(() => {
-    const whId = this.selectedWarehouseId();
-    const activeBays = this.allBays().filter(
-      (b) => whId === 'ALL' || b.warehouseId === whId
-    );
-
-    const total = activeBays.length;
-    const blocked = activeBays.filter((b) => b.isBlocked).length;
-    const highOcc = activeBays.filter(
-      (b) => !b.isBlocked && b.occupied / b.capacity > 0.85
-    ).length;
-    const medOcc = activeBays.filter(
-      (b) =>
-        !b.isBlocked &&
-        b.occupied / b.capacity >= 0.4 &&
-        b.occupied / b.capacity <= 0.85
-    ).length;
-    const lowOcc = activeBays.filter(
-      (b) => !b.isBlocked && b.occupied / b.capacity < 0.4
-    ).length;
-
-    return { total, blocked, highOcc, medOcc, lowOcc };
-  });
-
-  protected selectWarehouse(whId: string): void {
-    this.selectedWarehouseId.set(whId);
-    this.selectedBay.set(null);
   }
 
-  protected toggleSaturationFilter(filter: SaturationFilterType): void {
-    if (this.satFilter() === filter) {
-      this.satFilter.set('ALL');
-    } else {
-      this.satFilter.set(filter);
+  ngOnDestroy(): void {
+    this.cleanupFns.forEach(fn => fn());
+  }
+
+  // ─── Pan / Drag ──────────────────────────────────────────────────────────
+  private attachPanListeners(): void {
+    const el = this.blueprintContainerRef?.nativeElement;
+    if (!el) return;
+
+    const onMouseDown = (e: MouseEvent) => {
+      if ((e.target as SVGElement).closest('.wmap__zone-poly')) return; // clic en zona → drill-down
+      this.isPanning = true;
+      this.startX    = e.clientX;
+      this.startY    = e.clientY;
+      this.startPanX = this.panX;
+      this.startPanY = this.panY;
+      el.style.cursor = 'grabbing';
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.isPanning) return;
+      this.panX = this.startPanX + (e.clientX - this.startX);
+      this.panY = this.startPanY + (e.clientY - this.startY);
+      this.ngZone.run(() => this.panOffset.set({ x: this.panX, y: this.panY }));
+    };
+
+    const onMouseUp = () => {
+      this.isPanning = false;
+      el.style.cursor = 'grab';
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta  = e.deltaY < 0 ? 0.1 : -0.1;
+      this.ngZone.run(() =>
+        this.zoomScale.update(s => Math.min(2.5, Math.max(0.5, +(s + delta).toFixed(2))))
+      );
+    };
+
+    el.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup',   onMouseUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
+
+    this.cleanupFns.push(
+      () => el.removeEventListener('mousedown', onMouseDown),
+      () => window.removeEventListener('mousemove', onMouseMove),
+      () => window.removeEventListener('mouseup',   onMouseUp),
+      () => el.removeEventListener('wheel', onWheel)
+    );
+  }
+
+  // ─── Zoom controles ──────────────────────────────────────────────────────
+  protected zoomIn():   void { this.zoomScale.update(s => Math.min(2.5, +(s + 0.15).toFixed(2))); }
+  protected zoomOut():  void { this.zoomScale.update(s => Math.max(0.5, +(s - 0.15).toFixed(2))); }
+  protected resetView():void {
+    this.zoomScale.set(1.0);
+    this.panX = 0; this.panY = 0;
+    this.panOffset.set({ x: 0, y: 0 });
+  }
+
+  // ─── Tooltip ─────────────────────────────────────────────────────────────
+  protected onPolygonMouseEnter(event: MouseEvent, section: WarehouseSection): void {
+    this.hoveredSection.set(section);
+    this.updateTooltip(event);
+    this.isTooltipVisible.set(true);
+  }
+
+  protected onPolygonMouseMove(event: MouseEvent): void {
+    if (this.isTooltipVisible()) this.updateTooltip(event);
+  }
+
+  protected onPolygonMouseLeave(): void {
+    this.isTooltipVisible.set(false);
+    this.hoveredSection.set(null);
+  }
+
+  private updateTooltip(e: MouseEvent): void {
+    const ct = (e.currentTarget as Element)?.closest('.wmap__viewport');
+    const r  = ct ? ct.getBoundingClientRect() : { left: 0, top: 0 };
+    this.tooltipCoords.set({ x: e.clientX - r.left + 18, y: e.clientY - r.top + 18 });
+  }
+
+  // ─── Drill-Down ───────────────────────────────────────────────────────────
+  protected openSectionDetail(section: WarehouseSection): void {
+    this.isTooltipVisible.set(false);
+    this.selectedSection.set(section);
+    this.searchQuery.set('');
+    this.statusFilter.set('ALL');
+    this.inspectedPosition.set(null);
+  }
+
+  protected closeSectionDetail(): void {
+    this.selectedSection.set(null);
+    this.inspectedPosition.set(null);
+  }
+
+  // ─── Inspector de Posición ────────────────────────────────────────────────
+  protected inspectPosition(pos: PositionDetail): void {
+    this.inspectedPosition.set(pos);
+    this.inspectorMode.set('view');
+    this.blockReason.set(WMS_BLOCK_REASONS[0]);
+    this.blockComment.set('');
+  }
+
+  protected closeInspector(): void { this.inspectedPosition.set(null); }
+
+  protected enterBlockMode(): void { this.inspectorMode.set('block'); }
+  protected cancelBlockMode(): void { this.inspectorMode.set('view'); }
+
+  protected confirmBlock(): void {
+    const pos = this.inspectedPosition();
+    const sec = this.selectedSection();
+    if (!pos || !sec) return;
+
+    this.layoutService.updatePositionStatus(sec.id, pos.id, 'BLOCKED', {
+      reason:  this.blockReason(),
+      comment: this.blockComment().trim()
+    });
+
+    const updated = this.layoutService.getPositionsForSection(sec.id).find(p => p.id === pos.id);
+    if (updated) this.inspectedPosition.set({ ...updated });
+    this.inspectorMode.set('view');
+    this.blockComment.set('');
+  }
+
+  protected releasePosition(): void {
+    const pos = this.inspectedPosition();
+    const sec = this.selectedSection();
+    if (!pos || !sec) return;
+    this.layoutService.updatePositionStatus(sec.id, pos.id, 'AVAILABLE', {});
+    const updated = this.layoutService.getPositionsForSection(sec.id).find(p => p.id === pos.id);
+    if (updated) this.inspectedPosition.set({ ...updated });
+  }
+
+  protected occupyPosition(): void {
+    const pos = this.inspectedPosition();
+    const sec = this.selectedSection();
+    if (!pos || !sec) return;
+    this.layoutService.updatePositionStatus(sec.id, pos.id, 'OCCUPIED', {});
+    const updated = this.layoutService.getPositionsForSection(sec.id).find(p => p.id === pos.id);
+    if (updated) this.inspectedPosition.set({ ...updated });
+  }
+
+  // ─── Helpers Visuales ────────────────────────────────────────────────────
+  protected getStatusClass(status: PositionStatus): string {
+    return (
+      { OCCUPIED: 'status--occupied', AVAILABLE: 'status--available', BLOCKED: 'status--blocked', MAINTENANCE: 'status--blocked' } as Record<string, string>
+    )[status] ?? '';
+  }
+
+  protected getStatusLabel(status: PositionStatus): string {
+    return (
+      { OCCUPIED: 'Ocupada', AVAILABLE: 'Disponible', BLOCKED: 'Bloqueada QM', MAINTENANCE: 'Mantenimiento' } as Record<string, string>
+    )[status] ?? status;
+  }
+
+  protected resetToInitialData(): void {
+    if (confirm('¿Restablecer todos los datos del layout a su estado inicial de fábrica?')) {
+      this.layoutService.resetToDefaults();
+      this.closeSectionDetail();
     }
   }
-
-  protected occupancyPct(bay: Bay): number {
-    if (bay.capacity === 0) return 0;
-    return Math.round((bay.occupied / bay.capacity) * 100);
-  }
-
-  protected bayColorClass(bay: Bay): string {
-    if (bay.isBlocked) return 'bay--blocked';
-    const pct = this.occupancyPct(bay);
-    if (pct > 85) return 'bay--high';
-    if (pct >= 40) return 'bay--mid';
-    return 'bay--low';
-  }
-
-  protected selectBay(bay: Bay): void {
-    const pct = this.occupancyPct(bay);
-    this.selectedBay.set({
-      ...bay,
-      occupancyPct: pct,
-      colorClass: this.bayColorClass(bay),
-    });
-  }
-
-  protected closeBayPanel(): void {
-    this.selectedBay.set(null);
-  }
-
-  protected typeLabel(type: string): string {
-    const labels: Record<string, string> = {
-      RACK: 'Rack',
-      QUARANTINE_ZONE: 'Cuarentena',
-      DOCK: 'Muelle',
-      STAGING: 'Staging',
-    };
-    return labels[type] ?? type;
-  }
-
-  protected filterOptions: { value: FilterType; label: string }[] = [
-    { value: 'ALL', label: 'Todas las Zonas' },
-    { value: 'RACK', label: 'Racks' },
-    { value: 'QUARANTINE_ZONE', label: 'Cuarentena' },
-    { value: 'DOCK', label: 'Muelles' },
-    { value: 'STAGING', label: 'Staging' },
-  ];
 }
