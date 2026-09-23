@@ -231,6 +231,16 @@ export class KpiManagementComponent implements OnInit, OnDestroy {
     this.kpiService.kpis.update(list => [...list]);
   }
 
+  protected setFilterModule(mod: KpiModule | ''): void {
+    this.filterModule = mod;
+    this.onFilterChange();
+  }
+
+  protected setFilterStatus(status: KpiStatus | ''): void {
+    this.filterStatus = status;
+    this.onFilterChange();
+  }
+
   protected clearFilters(): void {
     this.filterText = '';
     this.filterModule = '';
