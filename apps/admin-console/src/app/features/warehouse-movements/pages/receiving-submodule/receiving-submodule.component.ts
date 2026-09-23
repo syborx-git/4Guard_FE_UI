@@ -21,6 +21,7 @@ import {
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
 import { PrintCancellationLayoutComponent } from '../../components/print-layouts/print-cancellation-layout.component';
+import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
 
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 
@@ -36,6 +37,7 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
     LeaderAuthModalComponent,
     PrintReceptionLayoutComponent,
     PrintCancellationLayoutComponent,
+    BayOccupancySelectorComponent,
   ],
   templateUrl: './receiving-submodule.component.html',
   styleUrl: './receiving-submodule.component.css',
@@ -80,6 +82,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Modal Plano de Andenes Interactivo
   showDockMapModal = signal(false);
+
+  // Modal Selector Visual de Bahías (22 Pallets)
+  showBaySelectorModal = signal(false);
+
+  // Modal Re-etiquetado Selectivo de UAs (SSCC GS1-128)
+  showRelabelModal = signal(false);
+  selectedPalletIdsForRelabel = signal<Set<string>>(new Set());
+  relabelReason = signal<string>('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+  isRelabelling = signal<boolean>(false);
 
   // Modal Edición de Ficha de Caseta
   showEditCasetaModal = signal(false);
@@ -1061,6 +1072,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL (1 AÑO / 365 DÍAS)
+    if (exp) {
+      const expDate = new Date(exp + 'T00:00:00Z');
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const diffDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 365) {
+        this.toast.error(`🛑 Candado de Calidad: El lote cuenta con sólo ${diffDays} días restantes (< 1 año / 365 días). No se permite la descarga física.`);
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -1292,6 +1315,100 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const list = this.palletStream().filter((p) => p.id !== palletId);
     this.palletStream.set(list);
     this.toast.info('Tarima removida de la descarga');
+  }
+
+  // ── SELECTOR VISUAL DE BAHÍAS (22 PALLETS) ──
+  openBaySelector(): void {
+    this.showBaySelectorModal.set(true);
+  }
+
+  onBaySelected(res: BaySelectionResult): void {
+    this.altaForm.patchValue({
+      storageLocation: res.locationCode,
+      storageLocationId: res.locationId || res.locationCode,
+    });
+    this.showBaySelectorModal.set(false);
+    if (res.isOverride) {
+      this.toast.info(`Bahía ${res.locationCode} asignada con Anulación de Administrador.`);
+    } else {
+      this.toast.success(`Bahía ${res.locationCode} asignada correctamente.`);
+    }
+  }
+
+  // ── RE-ETIQUETADO SELECTIVO DE UAS (SSCC GS1-128) ──
+  openRelabelModal(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets || rec.pallets.length === 0) {
+      this.toast.warning('No hay tarimas disponibles en la recepción para re-etiquetar.');
+      return;
+    }
+    const allIds = new Set(rec.pallets.map((p) => p.id));
+    this.selectedPalletIdsForRelabel.set(allIds);
+    this.relabelReason.set('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+    this.showRelabelModal.set(true);
+  }
+
+  closeRelabelModal(): void {
+    this.showRelabelModal.set(false);
+  }
+
+  togglePalletRelabelSelection(id: string): void {
+    this.selectedPalletIdsForRelabel.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  toggleSelectAllPalletsForRelabel(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets) return;
+    const current = this.selectedPalletIdsForRelabel();
+    if (current.size === rec.pallets.length) {
+      this.selectedPalletIdsForRelabel.set(new Set());
+    } else {
+      this.selectedPalletIdsForRelabel.set(new Set(rec.pallets.map((p) => p.id)));
+    }
+  }
+
+  executeRelabelUas(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.id) return;
+    const palletIds = Array.from(this.selectedPalletIdsForRelabel());
+    if (palletIds.length === 0) {
+      this.toast.warning('Selecciona al menos una tarima para re-etiquetar.');
+      return;
+    }
+
+    const payload = {
+      palletIds,
+      reason: this.relabelReason().trim() || 'Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128',
+    };
+
+    this.isRelabelling.set(true);
+    this.movementsApi.relabelUas(rec.id, payload).subscribe({
+      next: (mappings) => {
+        this.isRelabelling.set(false);
+        this.showRelabelModal.set(false);
+        this.toast.success(`Se re-etiquetaron ${mappings?.length || palletIds.length} tarimas exitosamente con SSCC 4Guard.`);
+        if (rec.id) {
+          this.movementsApi.getReceptionById(rec.id).subscribe({
+            next: (fullData) => {
+              const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+              this.selectedReception.set(mapped);
+              this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
+              this.patchAltaFormWithReception(mapped);
+              this.movementsService.loadInitialBackendData();
+            },
+          });
+        }
+      },
+      error: (err) => {
+        this.isRelabelling.set(false);
+        this.toast.error(err?.error?.message || 'Error al re-etiquetar las tarimas.');
+      },
+    });
   }
 
   // ── CANCELACIÓN EXTRAORDINARIA DE RECEPCIÓN ──

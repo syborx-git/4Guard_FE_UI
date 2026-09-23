@@ -374,6 +374,29 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  relabelUas(id: string, body: { palletIds: string[]; reason?: string }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.receptionsUrl}/${id}/relabel-uas`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  getRemissionTree(folio: string): Observable<any[]> {
+    return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/remissions/${folio}/tree`).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  getBayOccupancy(branchId?: string): Observable<any[]> {
+    const { branchId: bId } = this.getSessionOrg();
+    const branch = branchId || bId;
+    let params = new HttpParams();
+    if (branch) params = params.set('branchId', branch);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/locations/bays/occupancy`, { params }).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
   // ─── 2. CAMBIO DE ALMACÉN (TRAPASOS) ────────────────────────────────────────
 
   createTransfer(body: any): Observable<any> {

@@ -654,9 +654,20 @@
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
               <!-- Autocomplete Bahía Destino -->
               <div class="md:col-span-6 fg-field relative">
-                <label class="fg-label fg-label--required">
-                  Bahía de Destino Disponible
-                </label>
+                <div class="flex items-center justify-between">
+                  <label class="fg-label fg-label--required">
+                    Bahía de Destino Disponible
+                  </label>
+                  <button
+                    type="button"
+                    (click)="openDestBaySelector()"
+                    class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1"
+                    title="Abrir selector visual con semáforo y estándar de 22 pallets"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">warehouse</span>
+                    <span>Selector Visual (22)</span>
+                  </button>
+                </div>
                 <div class="relative flex items-center">
                   <input
                     type="text"
@@ -1584,6 +1595,16 @@
         </div>
       </div>
     </div>
+  }
+
+  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS DESTINO (22 PALLETS) -->
+  @if (showDestBaySelectorModal()) {
+    <fg-bay-occupancy-selector
+      [selectedLocationCode]="selectedDestinationCode()"
+      dialogTitle="Selector Visual de Bahía Destino (Estándar 22 Pallets)"
+      (locationSelected)="onDestBaySelected($event)"
+      (closed)="showDestBaySelectorModal.set(false)"
+    ></fg-bay-occupancy-selector>
   }
 
 </div>
