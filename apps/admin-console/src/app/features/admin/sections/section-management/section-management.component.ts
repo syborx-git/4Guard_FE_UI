@@ -394,7 +394,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
         branchId: raw.branchId,
         code: raw.code.trim().toUpperCase(),
         name: raw.name.trim(),
-        status: raw.status as 'ACTIVE' | 'INACTIVE',
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
       };
       this.sectionService
         .create(createPayload)
@@ -424,7 +424,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
           branchId: raw.branchId,
           code: raw.code.trim().toUpperCase(),
           name: raw.name.trim(),
-          status: raw.status as 'ACTIVE' | 'INACTIVE',
+          status: (this.selectedSection()?.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
         })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
@@ -525,5 +525,55 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   protected get selectedBranchName(): string {
     const branchId = this.form.get('branchId')?.value;
     return this.branchService.branches().find((b) => b.id === branchId)?.name || '';
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      name: 'Nombre de Nave / Sección',
+      code: 'Código de Sección',
+      status: 'Estado Operativo',
+      branchId: 'ID Sucursal',
+      branchName: 'Sucursal',
+      capacityTarimas: 'Capacidad de Tarimas',
+      posFijas: 'Bahías / Posiciones Fijas',
+      factorEstiba: 'Factor de Estiba',
+      category: 'Categoría Operativa'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activa';
+      if (s === 'INACTIVE') return 'Inactiva';
+      if (s === 'SUSPENDED') return 'Suspendida';
+    }
+    return String(value);
   }
 }

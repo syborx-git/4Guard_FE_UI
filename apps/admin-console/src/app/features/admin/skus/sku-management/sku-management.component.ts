@@ -354,7 +354,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
         description: raw.description ? raw.description.trim() : '',
         weight: Number(raw.weight),
         unit: raw.unit,
-        status: raw.status || 'ACTIVE'
+        status: 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
@@ -379,7 +379,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
         description: raw.description ? raw.description.trim() : '',
         weight: Number(raw.weight),
         unit: raw.unit,
-        status: raw.status || 'ACTIVE'
+        status: this.selectedSku()?.status || 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
@@ -537,5 +537,53 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
 
   protected get hasActiveFilters(): boolean {
     return !!this.filterText() || !!this.filterClientId() || !!this.filterStatus();
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      code: 'Código SKU',
+      description: 'Descripción del Producto',
+      unit: 'Unidad de Medida',
+      weight: 'Peso Unitario (kg)',
+      status: 'Estado Operativo',
+      clientId: 'ID Cliente Depositante',
+      clientName: 'Cliente Depositante'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'SUSPENDED') return 'Suspendido';
+    }
+    return String(value);
   }
 }

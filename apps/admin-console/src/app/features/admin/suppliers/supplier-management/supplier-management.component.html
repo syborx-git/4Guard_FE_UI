@@ -451,35 +451,6 @@
                 />
               </div>
 
-              <!-- Estado -->
-              <div class="supplier-field">
-                <label class="supplier-field__label" for="supplier-status">Estado Operativo *</label>
-                <select
-                  id="supplier-status"
-                  class="supplier-field__input"
-                  formControlName="status">
-                  <option value="ACTIVE">Activo</option>
-                  <option value="INACTIVE">Inactivo</option>
-                  <option value="BLOCKED">Bloqueado (Temporal)</option>
-                </select>
-              </div>
-
-              <!-- Motivo de Bloqueo / Inactividad (si aplica) -->
-              @if (form.get('status')?.value === 'BLOCKED' || form.get('status')?.value === 'INACTIVE') {
-                <div class="supplier-field supplier-field--full">
-                  <label class="supplier-field__label" for="supplier-status-reason">
-                    Motivo de {{ form.get('status')?.value === 'BLOCKED' ? 'Bloqueo *' : 'Inactividad *' }}
-                  </label>
-                  <input
-                    id="supplier-status-reason"
-                    class="supplier-field__input"
-                    type="text"
-                    formControlName="statusReason"
-                    [placeholder]="form.get('status')?.value === 'BLOCKED' ? 'Describe las razones del bloqueo temporal' : 'Describe las razones de la inactividad'"
-                  />
-                </div>
-              }
-
               <!-- Proveedor Preferente -->
               <div class="supplier-field supplier-field--full">
                 <label class="supplier-field__toggle">

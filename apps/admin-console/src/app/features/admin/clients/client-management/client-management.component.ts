@@ -376,7 +376,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
         phone: raw.phone.trim(),
         email: raw.email?.trim() || undefined,
         webPortalPassword: raw.webPortalPassword,
-        status: raw.status,
+        status: 'ACTIVE',
         contacts: raw.contacts || [],
         destinations: raw.destinations || [],
       }).pipe(takeUntil(this.destroy$)).subscribe({
@@ -406,7 +406,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
         phone: raw.phone.trim(),
         email: raw.email?.trim() || undefined,
         webPortalPassword: raw.webPortalPassword,
-        status: raw.status,
+        status: this.selectedClient()?.status || 'ACTIVE',
         contacts: raw.contacts || [],
         destinations: raw.destinations || [],
       }).pipe(takeUntil(this.destroy$)).subscribe({
@@ -559,5 +559,57 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
 
   protected get hasActiveFilters(): boolean {
     return !!this.filterText() || !!this.filterStatus();
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      name: 'Razón Social / Nombre',
+      externalId: 'Código / RFC / Tax ID',
+      taxId: 'RFC / Identificación Fiscal',
+      email: 'Correo de Facturación',
+      phone: 'Teléfono Principal',
+      address: 'Dirección Fiscal / Bodega',
+      status: 'Estado Operativo',
+      contactsCount: 'Total de Contactos',
+      destinationsCount: 'Total de Destinos',
+      organizationId: 'ID Organización',
+      organizationName: 'Organización'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'SUSPENDED') return 'Suspendido';
+    }
+    return String(value);
   }
 }

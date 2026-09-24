@@ -1,7 +1,7 @@
 <div class="orgs-page">
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       HEADER PRINCIPAL — HOMOLOGADO CON TRANSPORTISTAS
+       HEADER PRINCIPAL — HOMOLOGADO
        ════════════════════════════════════════════════════════════════ -->
   <header class="orgs-header">
     <div class="orgs-header__top">
@@ -37,7 +37,7 @@
         type="button"
         (click)="openNewForm()">
         <span class="material-symbols-outlined">add</span>
-        Nuevo tenant
+        Nueva organización
       </button>
     </div>
 
@@ -92,7 +92,7 @@
         <div class="orgs-kpi-card__bar orgs-kpi-card__bar--suspended"></div>
       </div>
 
-      <!-- Tipos -->
+      <!-- Modalidades / Tipos -->
       <div class="orgs-kpi-card orgs-kpi-card--inactive">
         <div class="orgs-kpi-card__icon-wrap">
           <span class="material-symbols-outlined">category</span>
@@ -103,7 +103,7 @@
           } @else {
             <span class="orgs-kpi-card__value">{{ kpiUniqueTypes() }}</span>
           }
-          <span class="orgs-kpi-card__label">TIPOS DE TENANT</span>
+          <span class="orgs-kpi-card__label">MODALIDADES</span>
         </div>
         <div class="orgs-kpi-card__bar orgs-kpi-card__bar--inactive"></div>
       </div>
@@ -266,7 +266,7 @@
           </p>
           <button class="orgs-btn orgs-btn--primary" (click)="openNewForm()" type="button">
             <span class="material-symbols-outlined">add</span>
-            Nuevo tenant
+            Nueva organización
           </button>
         </div>
       } @else {
@@ -277,7 +277,7 @@
           <div class="orgs-form-header">
             <div class="orgs-form-header__info">
               <span class="orgs-form-header__tag">
-                {{ formMode() === 'new' ? 'NUEVA ORGANIZACIÓN' : 'EDICIÓN DE TENANT' }}
+                {{ formMode() === 'new' ? 'NUEVA ORGANIZACIÓN' : 'EDICIÓN DE ORGANIZACIÓN' }}
               </span>
               <h2 class="orgs-form-header__title">
                 {{ formMode() === 'new' ? 'Registrar nueva organización' : selectedOrg()?.name }}
@@ -314,7 +314,7 @@
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required" for="org-code">
-                    Código Identificador (Tenant ID)
+                    Código Identificador
                     @if (formMode() === 'edit') {
                       <span class="fg-lock-tag">(Inmutable)</span>
                     }
@@ -334,28 +334,17 @@
                 </div>
               </div>
 
-              <div class="orgs-form-grid orgs-form-grid--2">
-                <div class="fg-field">
-                  <label class="fg-label" for="org-taxid">Tax ID / RFC Fiscal</label>
-                  <input
-                    id="org-taxid"
-                    class="fg-input"
-                    [class.fg-input--error]="fieldHasError('taxId')"
-                    type="text"
-                    formControlName="taxId"
-                    placeholder="Ej. MX-99887766-A"
-                    maxlength="30"
-                  />
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="org-status">Estado Operativo</label>
-                  <select id="org-status" class="fg-select" formControlName="status">
-                    <option value="ACTIVE">Activo</option>
-                    <option value="SUSPENDED">Suspendido</option>
-                    <option value="INACTIVE">Inactivo</option>
-                  </select>
-                </div>
+              <div class="fg-field">
+                <label class="fg-label" for="org-taxid">Tax ID / RFC Fiscal</label>
+                <input
+                  id="org-taxid"
+                  class="fg-input"
+                  [class.fg-input--error]="fieldHasError('taxId')"
+                  type="text"
+                  formControlName="taxId"
+                  placeholder="Ej. MX-99887766-A"
+                  maxlength="30"
+                />
               </div>
             </section>
 
@@ -373,92 +362,6 @@
                     <option [value]="t.value">{{ t.label }}</option>
                   }
                 </select>
-              </div>
-            </section>
-
-            <!-- Sección 3: Configuración Relacional (Clave / Valor) -->
-            <section class="orgs-form-section">
-              <div class="orgs-section-header">
-                <div class="orgs-section-header__title-wrap">
-                  <h3 class="orgs-form-section__title">
-                    <span class="material-symbols-outlined">tune</span>
-                    Parámetros & Configuración Relacional
-                  </h3>
-                  <p class="orgs-form-section__subtitle">
-                    Administra las configuraciones de la organización como parámetros clave-valor relacionales.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  class="orgs-btn orgs-btn--ghost orgs-btn--sm"
-                  (click)="addSettingRow()"
-                  title="Agregar nuevo parámetro">
-                  <span class="material-symbols-outlined">add</span>
-                  Agregar Parámetro
-                </button>
-              </div>
-
-              <!-- Sugerencias de Parámetros Rápido (Presets) -->
-              <div class="orgs-presets-bar">
-                <span class="orgs-presets-label">Sugerencias rápidas:</span>
-                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('theme', 'dark')">+ theme</button>
-                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('notifications_email', 'true')">+ notifications_email</button>
-                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('max_branches', '5')">+ max_branches</button>
-                <button type="button" class="orgs-preset-chip" (click)="addPresetSetting('timezone', 'America/Mexico_City')">+ timezone</button>
-              </div>
-
-              <!-- Tabla Relacional Clave - Valor -->
-              <div class="orgs-settings-table">
-                @if (settingRows().length === 0) {
-                  <div class="orgs-settings-empty">
-                    <span class="material-symbols-outlined">settings_b_roll</span>
-                    <p>No hay parámetros configurados para esta organización.</p>
-                    <button type="button" class="orgs-btn orgs-btn--ghost orgs-btn--sm" (click)="addSettingRow()">
-                      + Añadir el primer parámetro
-                    </button>
-                  </div>
-                } @else {
-                  <div class="orgs-settings-header-row">
-                    <span class="orgs-settings-col-label">CLAVE / PARÁMETRO</span>
-                    <span class="orgs-settings-col-label">VALOR</span>
-                    <span class="orgs-settings-col-action"></span>
-                  </div>
-
-                  <div class="orgs-settings-list">
-                    @for (row of settingRows(); track $index) {
-                      <div class="orgs-setting-row">
-                        <div class="fg-field">
-                          <input
-                            type="text"
-                            class="fg-input"
-                            placeholder="Ej. theme, max_branches"
-                            [value]="row.key"
-                            (input)="updateSettingKey($index, $any($event.target).value)"
-                          />
-                        </div>
-
-                        <div class="fg-field">
-                          <input
-                            type="text"
-                            class="fg-input"
-                            placeholder="Ej. dark, 5, true"
-                            [value]="row.value"
-                            (input)="updateSettingValue($index, $any($event.target).value)"
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          class="orgs-btn-icon-danger"
-                          (click)="removeSettingRow($index)"
-                          title="Eliminar parámetro">
-                          <span class="material-symbols-outlined">delete</span>
-                        </button>
-                      </div>
-                    }
-                  </div>
-                }
               </div>
             </section>
 
@@ -500,7 +403,7 @@
                     (click)="promptDelete(selectedOrg()!)"
                     aria-label="Desactivar o eliminar esta organización">
                     <span class="material-symbols-outlined">block</span>
-                    Desactivar
+                    Eliminar
                   </button>
 
                 </div>
@@ -521,7 +424,7 @@
                   class="orgs-btn orgs-btn--save"
                   type="submit">
                   <span class="material-symbols-outlined">save</span>
-                  {{ formMode() === 'new' ? 'Crear tenant' : 'Guardar cambios' }}
+                  {{ formMode() === 'new' ? 'Crear organización' : 'Guardar cambios' }}
                 </button>
               </div>
 
@@ -529,65 +432,67 @@
 
           </form>
 
-          <!-- Sección Auditoría en Vivo (GET /api/v1/organizations/{id}/audit) -->
+          <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA HOMOLOGADA ── -->
           @if (formMode() === 'edit' && selectedOrg()) {
-            <section class="carriers-timeline-preview">
-              <header class="carriers-timeline-preview__header">
-                <div class="carriers-timeline-preview__title-group">
-                  <span class="material-symbols-outlined carriers-timeline-preview__icon">history</span>
-                  <h3 class="carriers-timeline-preview__title">Historial de Auditoría en Vivo</h3>
+            <div class="carriers-timeline-preview">
+              <div class="carriers-timeline-preview__header">
+                <div class="carriers-timeline-preview__title">
+                  <span class="material-symbols-outlined text-base">timeline</span>
+                  <span>Línea de Tiempo de Auditoría</span>
                 </div>
-              </header>
-
-              <div class="carriers-timeline-preview__body">
-                @if (isLoadingAudit()) {
-                  <div class="carriers-timeline-skeleton">
-                    <span class="material-symbols-outlined orgs-spin">sync</span>
-                    <span>Cargando bitácora inmutable del Backend...</span>
-                  </div>
-                } @else if (auditEntries().length === 0) {
-                  <p class="carriers-timeline-preview__empty">
-                    Sin registros de auditoría aún para esta organización.
-                  </p>
-                } @else {
-                  <div class="carriers-timeline">
-                    @for (log of auditEntries(); track log.logId) {
-                      <div class="carriers-tl-item">
-                        <div class="carriers-tl-node">
-                          <span class="carriers-tl-node__dot" [class]="getAuditNodeColor(log.action)"></span>
-                          <span class="carriers-tl-node__line"></span>
-                        </div>
-
-                        <div class="carriers-tl-content">
-                          <div class="carriers-tl-header">
-                            <span class="carriers-tl-action">{{ log.action }}</span>
-                            <span class="carriers-tl-user">por &#64;{{ log.username }}</span>
-                            <time class="carriers-tl-time">{{ log.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</time>
-                          </div>
-
-                          <div class="carriers-tl-summary">{{ getAuditSummary(log.action) }}</div>
-
-                          @if (log.details && log.details.length > 0) {
-                            <div class="carriers-tl-details">
-                              @for (detail of log.details; track detail.fieldName) {
-                                <div class="carriers-tl-detail-row">
-                                  <span class="carriers-tl-field">{{ detail.fieldName }}:</span>
-                                  @if (detail.oldValue !== null) {
-                                    <span class="carriers-tl-old">{{ detail.oldValue }}</span>
-                                    <span class="carriers-tl-arrow">→</span>
-                                  }
-                                  <span class="carriers-tl-new">{{ detail.newValue || '(vacío)' }}</span>
-                                </div>
-                              }
-                            </div>
-                          }
-                        </div>
-                      </div>
-                    }
-                  </div>
-                }
+                <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
               </div>
-            </section>
+
+              @if (isLoadingAudit()) {
+                <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4 flex items-center justify-center gap-2">
+                  <span class="material-symbols-outlined animate-spin text-sm">sync</span>
+                  <span>Cargando bitácora de auditoría...</span>
+                </div>
+              } @else if (auditEntries().length === 0) {
+                <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
+                  No hay eventos de auditoría registrados para esta organización.
+                </div>
+              } @else {
+                <div class="carriers-timeline-preview__nodes">
+                  @for (log of auditEntries(); track log.logId || $index; let isLast = $last) {
+                    <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action)">
+                      <div class="carriers-tl-node__dot">
+                        <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
+                      </div>
+                      @if (!isLast) {
+                        <div class="carriers-tl-node__line"></div>
+                      }
+                      <div class="carriers-tl-node__content">
+                        <div class="carriers-tl-node__header">
+                          <span class="carriers-tl-node__action">{{ getAuditSummary(log.action) }}</span>
+                          <span class="carriers-tl-node__tag">&#64;{{ log.username }}</span>
+                        </div>
+
+                        @if (log.details && log.details.length > 0) {
+                          <div class="carriers-tl-node__diffs">
+                            @for (d of log.details; track d.fieldName) {
+                              <div class="carriers-tl-diff">
+                                <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                  <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                  <span class="carriers-tl-diff__arrow">➔</span>
+                                }
+                                <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        <span class="carriers-tl-node__meta">
+                          <span class="material-symbols-outlined text-[13px]">schedule</span>
+                          <span>{{ log.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                        </span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           }
 
         </div>
@@ -602,7 +507,7 @@
     <fg-confirm-dialog
       title="Eliminar Organización"
       [message]="'¿Estás seguro de que deseas eliminar permanentemente la organización ' + deletingOrg()?.name + '?'"
-      confirmLabel="Sí, eliminar tenant"
+      confirmLabel="Sí, eliminar organización"
       [isLoading]="isDeleting()"
       (confirmed)="confirmDelete()"
       (cancelled)="cancelDelete()"

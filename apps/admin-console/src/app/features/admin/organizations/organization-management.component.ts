@@ -17,11 +17,6 @@ import { ConfirmDialogComponent } from '../users/confirm-dialog/confirm-dialog.c
 
 type FormMode = 'idle' | 'new' | 'edit';
 
-export interface SettingRow {
-  key: string;
-  value: string;
-}
-
 function noWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
   if (!control.value) return null;
   return (control.value as string).trim().length === 0 ? { whitespaceOnly: true } : null;
@@ -68,9 +63,6 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
   // ── Estado: Eliminación de Organización ──────────────────
   protected readonly deletingOrg = signal<Organization | null>(null);
   protected readonly isDeleting = signal(false);
-
-  // ── Parámetros Relacionales (Clave / Valor) ───────────────
-  protected readonly settingRows = signal<SettingRow[]>([]);
 
   // ── Formulario Reactivo ─────────────────────────────────
   protected readonly form: FormGroup = this.fb.group({
@@ -206,12 +198,6 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
       status: 'ACTIVE'
     });
 
-    this.settingRows.set([
-      { key: 'theme', value: 'dark' },
-      { key: 'notifications_email', value: 'true' },
-      { key: 'max_branches', value: '5' }
-    ]);
-
     this.form.get('code')?.enable();
   }
 
@@ -223,7 +209,6 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     } else {
       this.formMode.set('idle');
       this.form.reset();
-      this.settingRows.set([]);
     }
   }
 
@@ -240,65 +225,8 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
       status: org.status
     });
 
-    // Mapear configuraciones relacionales a la lista de filas
-    let rows: SettingRow[] = [];
-    if (org.settings) {
-      try {
-        const parsed = typeof org.settings === 'string' ? JSON.parse(org.settings) : org.settings;
-        rows = Object.entries(parsed).map(([key, value]) => ({
-          key,
-          value: value !== null && value !== undefined ? String(value) : ''
-        }));
-      } catch (e) {
-        console.warn('No se pudo parsear el objeto de configuraciones:', e);
-      }
-    }
-    this.settingRows.set(rows);
-
     // Código inmutable en edición
     this.form.get('code')?.disable();
-  }
-
-  // ── Gestión Relacional Clave/Valor ─────────────────────────
-  protected addSettingRow(key = '', value = ''): void {
-    this.settingRows.update(rows => [...rows, { key, value }]);
-  }
-
-  protected addPresetSetting(key: string, defaultValue: string): void {
-    const exists = this.settingRows().some(r => r.key === key);
-    if (!exists) {
-      this.addSettingRow(key, defaultValue);
-    }
-  }
-
-  protected updateSettingKey(index: number, newKey: string): void {
-    this.settingRows.update(rows => {
-      const updated = [...rows];
-      updated[index] = { ...updated[index], key: newKey };
-      return updated;
-    });
-  }
-
-  protected updateSettingValue(index: number, newValue: string): void {
-    this.settingRows.update(rows => {
-      const updated = [...rows];
-      updated[index] = { ...updated[index], value: newValue };
-      return updated;
-    });
-  }
-
-  protected removeSettingRow(index: number): void {
-    this.settingRows.update(rows => rows.filter((_, i) => i !== index));
-  }
-
-  private getSettingsAsJsonString(): string {
-    const map: Record<string, string> = {};
-    for (const row of this.settingRows()) {
-      if (row.key && row.key.trim()) {
-        map[row.key.trim()] = row.value !== undefined ? row.value.trim() : '';
-      }
-    }
-    return JSON.stringify(map);
   }
 
   // ── Guardar (Alta / Modificación) ───────────────────────
@@ -313,7 +241,6 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     }
 
     const formVal = this.form.getRawValue();
-    const settingsJson = this.getSettingsAsJsonString();
 
     if (this.formMode() === 'new') {
       const payload: Omit<Organization, 'id' | 'createdAt'> = {
@@ -321,8 +248,8 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
         code: formVal.code.trim().toUpperCase(),
         taxId: formVal.taxId ? formVal.taxId.trim().toUpperCase() : '',
         type: formVal.type,
-        status: formVal.status,
-        settings: settingsJson
+        status: 'ACTIVE',
+        settings: '{}'
       };
 
       this.orgService.create(payload).pipe(takeUntil(this.destroy$)).subscribe({
@@ -346,8 +273,8 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
         name: formVal.name.trim(),
         taxId: formVal.taxId ? formVal.taxId.trim().toUpperCase() : '',
         type: formVal.type,
-        status: formVal.status,
-        settings: settingsJson
+        status: formVal.status || 'ACTIVE',
+        settings: this.selectedOrg()?.settings || '{}'
       };
 
       this.orgService.update(id, payload).pipe(takeUntil(this.destroy$)).subscribe({
@@ -376,7 +303,8 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     this.orgService.toggleStatus(org.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         const nextStatus = org.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-        this.toastService.success(`Organización ${org.name} pasó a estado ${nextStatus}.`);
+        const label = nextStatus === 'ACTIVE' ? 'ACTIVA' : 'SUSPENDIDA';
+        this.toastService.success(`Organización ${org.name} pasó a estado ${label}.`);
         if (this.selectedOrg()?.id === org.id) {
           const updated = this.orgService.organizations().find(o => o.id === org.id);
           if (updated) this.selectOrg(updated);
@@ -412,7 +340,6 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
           this.selectedOrg.set(null);
           this.formMode.set('idle');
           this.form.reset();
-          this.settingRows.set([]);
         }
       },
       error: (err: HttpErrorResponse) => {
@@ -469,20 +396,59 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     return !!this.filterText() || !!this.filterStatus() || !!this.filterType();
   }
 
-  protected getAuditNodeColor(action: string): string {
-    switch (action) {
-      case 'ORGANIZATION_CREATED': return 'org-tl-node--green';
-      case 'ORGANIZATION_UPDATED': return 'org-tl-node--gold';
-      case 'ORGANIZATION_DELETED': return 'org-tl-node--red';
-      default: return 'org-tl-node--blue';
+  protected getAuditIcon(action?: string): string {
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string): string {
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      name: 'Nombre de Organización',
+      code: 'Código / Clave',
+      taxId: 'RFC / Identificación Fiscal',
+      type: 'Tipo de Empresa / Modalidad',
+      status: 'Estado Operativo',
+      settings: 'Configuración JSON'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activa';
+      if (s === 'INACTIVE') return 'Inactiva';
+      if (s === 'SUSPENDED') return 'Suspendida';
     }
+    if (fieldName === 'type') {
+      const s = String(value).toUpperCase();
+      if (s === 'LOGISTICS') return 'Logística / 3PL';
+      if (s === 'MANUFACTURING') return 'Manufactura';
+      if (s === 'RETAIL') return 'Comercio / Retail';
+      if (s === 'DISTRIBUTION') return 'Distribución';
+    }
+    return String(value);
   }
 
   protected getAuditSummary(action: string): string {
     switch (action) {
-      case 'ORGANIZATION_CREATED': return 'Organización registrada en el sistema Multi-Tenant';
-      case 'ORGANIZATION_UPDATED': return 'Modificación de parámetros / estatus operativo';
-      case 'ORGANIZATION_DELETED': return 'Eliminación de tenant';
+      case 'ORGANIZATION_CREATED': return 'Registro y Alta de Organización';
+      case 'ORGANIZATION_UPDATED': return 'Actualización de Datos Operativos';
+      case 'ORGANIZATION_DELETED': return 'Eliminación de Organización';
       default: return action;
     }
   }

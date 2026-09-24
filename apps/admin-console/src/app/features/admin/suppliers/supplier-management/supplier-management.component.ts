@@ -590,8 +590,8 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
       commercialName: raw.commercialName?.trim() || undefined,
       taxId:          normalizedTaxId,
       type:           raw.type,
-      status:         raw.status,
-      statusReason:   raw.statusReason?.trim() || undefined,
+      status:         this.formMode() === 'new' ? 'ACTIVE' : (this.selectedSupplier()?.status || 'ACTIVE'),
+      statusReason:   this.formMode() === 'new' ? undefined : (this.selectedSupplier()?.statusReason || undefined),
       preferred:      !!raw.preferred,
       notes:          raw.notes?.trim() || undefined,
 

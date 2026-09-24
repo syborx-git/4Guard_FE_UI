@@ -352,8 +352,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
         branchId: raw.branchId,
         branchName: branchName,
         role: raw.role,
-        status: raw.status,
-        isEnabled: raw.status === 'ACTIVE',
+        status: 'ACTIVE',
+        isEnabled: true,
         changePasswordRequired: false,
         failedAttempts: 0,
         lockedUntil: null,
@@ -392,6 +392,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
       });
     } else if (mode === 'edit' && this.selectedUser()) {
       const userId = this.selectedUser()!.id;
+      const currentStatus = this.selectedUser()?.status || 'ACTIVE';
       this.userAdminService.update(userId, {
         firstName: raw.firstName.trim(),
         lastName: raw.lastName.trim(),
@@ -400,8 +401,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
         role: raw.role,
         branchId: raw.branchId,
         branchName: branchName,
-        status: raw.status,
-        isEnabled: raw.status === 'ACTIVE'
+        status: currentStatus,
+        isEnabled: currentStatus === 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
