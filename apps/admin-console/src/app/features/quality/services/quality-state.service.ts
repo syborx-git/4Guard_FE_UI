@@ -4,8 +4,9 @@
  * Maneja datos locales y lógica reactiva de Bloqueos, Liberaciones y Verificaciones de Carga.
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { UnitOfMeasure } from '@4guard/shared-core';
+import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
 import {
   QualityBlockItem,
   QualityRelease,
@@ -20,6 +21,8 @@ import {
   providedIn: 'root'
 })
 export class QualityStateService {
+
+  private movementsService = inject(WarehouseMovementsService);
 
   // ══════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO: BLOQUEOS (PRODUCTO NO CONFORME)
@@ -388,6 +391,12 @@ export class QualityStateService {
     return created;
   }
 
+  updateBlock(updatedBlock: QualityBlockItem): void {
+    this.blocks.update(list =>
+      list.map(b => b.id === updatedBlock.id ? { ...updatedBlock } : b)
+    );
+  }
+
   releaseBlock(
     blockId: string,
     releaseData: {
@@ -439,6 +448,19 @@ export class QualityStateService {
 
     // 3. Agregar a la lista de liberaciones
     this.releases.update(list => [newRelease, ...list]);
+
+    // 4. Si la liberación se aprueba para distribución, actualizar inventario global disponible
+    if (releaseData.destination === 'DISTRIBUTION') {
+      this.movementsService.addReleasedInventoryStock({
+        sku: block.sku,
+        description: block.description,
+        clientName: block.clientName,
+        batchNumber: block.batchNumber,
+        quantity: block.quantity,
+        locationId: block.locationId || 'LOC-QM-RELEASED',
+        destination: releaseData.destination
+      });
+    }
 
     return newRelease;
   }
@@ -551,10 +573,10 @@ export class QualityStateService {
       },
       {
         id: 'crit-prod-9',
-        label: 'Otros criterios específicos.',
+        label: 'Otros:',
         value: 'NA',
-        actionIfNo: 'Evaluación puntual de calidad.',
-        responsible: 'Calidad.',
+        actionIfNo: '',
+        responsible: '',
         observations: '',
         isCritical: false
       }

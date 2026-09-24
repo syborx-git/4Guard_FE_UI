@@ -357,6 +357,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     remisionControl?.updateValueAndValidity();
   }
 
+  protected getQrBaseUrl(): string {
+    const origin = window.location.origin;
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      // En desarrollo local (localhost), Safari en el celular no puede resolver 'localhost'.
+      // Apuntamos automáticamente al dominio desplegado de Netlify/Cloudify para pruebas con el smartphone.
+      return 'https://guard.netlify.app';
+    }
+    return origin;
+  }
+
   // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
   protected generateDriverPass(): void {
     this.isGeneratingPass.set(true);
@@ -645,7 +655,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected openQrModal(): void {
-    if (!this.qrModalUrl()) {
+    // Si ya existe un pase PENDING_DRIVER activo, reutilizarlo para no generar pases huérfanos
+    const existingPending = this.activePasses().find(p => p.status === 'PENDING_DRIVER');
+    if (existingPending) {
+      this.qrModalToken.set(existingPending.token);
+      this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${existingPending.token}`);
+      this.showQrModal.set(true);
+    } else if (!this.qrModalUrl()) {
       this.generateDriverPass();
     } else {
       this.showQrModal.set(true);

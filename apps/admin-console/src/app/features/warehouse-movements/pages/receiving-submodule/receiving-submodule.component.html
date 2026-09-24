@@ -33,7 +33,7 @@
     </div>
 
     <!-- ── BARRA DONDE ESTABA EL SLIDE ANTERIOR: TABS A LA IZQUIERDA Y BOTÓN ACCIÓN A LA DERECHA ── -->
-    <div class="movements-toolbar-row">
+    <div class="movements-toolbar-row" fgStarBorder fgSpecularGlow>
       <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
         <a
           routerLink="/warehouse-movements/receiving"
@@ -98,7 +98,7 @@
   <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
   <div class="movement-kpi-grid">
     <!-- Total Recepciones -->
-    <div class="movement-kpi-card movement-kpi-card--primary">
+    <div class="movement-kpi-card movement-kpi-card--primary" fgStarBorder fgSpecularGlow>
       <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">local_shipping</span>
       </div>
@@ -110,7 +110,7 @@
     </div>
 
     <!-- En Caseta / Registradas -->
-    <div class="movement-kpi-card movement-kpi-card--warning">
+    <div class="movement-kpi-card movement-kpi-card--warning" fgStarBorder fgSpecularGlow>
       <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">shield_person</span>
       </div>
@@ -122,7 +122,7 @@
     </div>
 
     <!-- En Proceso / Andén (Asignadas + En Descarga + Por Auditar) -->
-    <div class="movement-kpi-card movement-kpi-card--info">
+    <div class="movement-kpi-card movement-kpi-card--info" fgStarBorder fgSpecularGlow>
       <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">forklift</span>
       </div>
@@ -134,7 +134,7 @@
     </div>
 
     <!-- Completadas / Cierres -->
-    <div class="movement-kpi-card movement-kpi-card--success">
+    <div class="movement-kpi-card movement-kpi-card--success" fgStarBorder fgSpecularGlow>
       <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">check_circle</span>
       </div>
@@ -146,7 +146,7 @@
     </div>
 
     <!-- Canceladas -->
-    <div class="movement-kpi-card movement-kpi-card--danger">
+    <div class="movement-kpi-card movement-kpi-card--danger" fgStarBorder fgSpecularGlow>
       <div class="movement-kpi-card__icon">
         <span class="material-symbols-outlined">cancel</span>
       </div>
@@ -162,7 +162,7 @@
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
     <!-- ── 2A. LEFT PANEL: DIRECTORIO Y BÚSQUEDA MASTER (col-span-4) ── -->
-    <aside class="carriers-directory lg:col-span-4" aria-label="Directorio de recepciones">
+    <aside class="carriers-directory lg:col-span-4" fgStarBorder fgSpecularGlow aria-label="Directorio de recepciones">
       
       <!-- Buscador y Filtros -->
       <div class="carriers-directory__filters">
@@ -275,7 +275,7 @@
       
       <!-- ── WORKBENCH DETALLE DE LA RECEPCIÓN SELECCIONADA ── -->
       @if (selectedReception(); as rec) {
-        <div class="synexia-card p-5 space-y-6">
+        <div class="synexia-card p-5 space-y-6" fgStarBorder fgSpecularGlow>
           
           <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
           <div class="receiving-breadcrumb-bar">
@@ -306,6 +306,15 @@
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
             <div class="flex items-center gap-2">
               @if (rec.status !== 'CANCELLED') {
+                <button
+                  type="button"
+                  (click)="reportPalletToQuality()"
+                  class="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 hover:bg-amber-500/25 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all"
+                  title="Reportar anomalía o producto no conforme a Calidad (PNC)"
+                >
+                  <span class="material-symbols-outlined text-sm">warning</span>
+                  <span>Reportar PNC (Calidad)</span>
+                </button>
                 <button
                   type="button"
                   (click)="openChangeRemisionModal()"
@@ -1333,6 +1342,14 @@
                     @if (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') {
                       <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            (click)="reportPalletToQuality(pallet)"
+                            class="text-amber-500 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-200 p-1.5 rounded-lg transition-colors hover:bg-amber-500/10"
+                            title="Reportar esta tarima a Calidad (PNC)"
+                          >
+                            <span class="material-symbols-outlined text-base">warning</span>
+                          </button>
                           <button
                             type="button"
                             (click)="openEditPalletModal(pallet)"

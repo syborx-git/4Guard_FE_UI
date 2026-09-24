@@ -47,7 +47,7 @@
   <div class="dashboard__grid">
 
     <!-- ─ 1. Risk Gauge ───────────────────────────── -->
-    <div class="dash-card dash-card--gauge" id="risk-gauge-card" fgSpecularGlow>
+    <div class="dash-card dash-card--gauge" id="risk-gauge-card" fgStarBorder fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           crisis_alert
@@ -79,7 +79,7 @@
 
     <!-- ─ 2. Saturación del Almacén ──────────────── -->
     <div class="dash-card dash-card--saturation" id="saturation-card" (click)="navigateToMap()" role="button"
-      tabindex="0" (keydown.enter)="navigateToMap()" aria-label="Ver mapa 2D de saturación del almacén" fgSpecularGlow>
+      tabindex="0" (keydown.enter)="navigateToMap()" aria-label="Ver mapa 2D de saturación del almacén" fgStarBorder fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           warehouse
@@ -139,7 +139,7 @@
 
     <!-- ─ 3. KPI Cards ────────────────────────────── -->
     @for (card of kpiCards(); track card.id) {
-    <div class="dash-card dash-card--kpi" [id]="card.id" fgSpecularGlow>
+    <div class="dash-card dash-card--kpi" [id]="card.id" fgStarBorder fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           @switch (card.id) {
@@ -187,7 +187,7 @@
     }
 
     <!-- ─ 4. Panel de Alertas Críticas ───────────── -->
-    <div class="dash-card dash-card--alerts" id="alerts-panel" fgSpecularGlow>
+    <div class="dash-card dash-card--alerts" id="alerts-panel" fgStarBorder fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
           notifications
@@ -227,7 +227,7 @@
   <!-- ── MODAL LIMPIO: DESGLOSE POR BODEGA & TIPO DE EMPAQUE ────── -->
   @if (isBreakdownModalOpen()) {
     <div class="bd-modal-backdrop animate-fade-in" (click)="closeBreakdownModal()">
-      <div class="bd-modal-dialog animate-scale-up" (click)="$event.stopPropagation()" fgSpecularGlow>
+      <div class="bd-modal-dialog animate-scale-up" (click)="$event.stopPropagation()" fgStarBorder fgSpecularGlow>
         
         <!-- Header del Modal -->
         <div class="bd-modal-header">
@@ -267,6 +267,7 @@
                   class="bd-packaging-card"
                   [class.is-selected]="selectedPackaging() === opt.id"
                   (click)="selectPackaging(opt.id)"
+                  fgStarBorder fgSpecularGlow
                 >
                   <span class="bd-pkg-icon">{{ opt.icon }}</span>
                   <div class="bd-pkg-info">
@@ -290,7 +291,7 @@
 
             <div class="bd-warehouses-grid space-y-4">
               @for (wh of calculatedWarehouses(); track wh.id) {
-                <div class="bd-wh-card" [class.is-critical]="wh.isCritical">
+                <div class="bd-wh-card" [class.is-critical]="wh.isCritical" fgStarBorder fgSpecularGlow>
                   <div class="bd-wh-header">
                     <div class="flex items-center gap-2">
                       <span class="bd-wh-code">{{ wh.code }}</span>

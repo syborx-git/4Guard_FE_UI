@@ -2621,5 +2621,32 @@ export class WarehouseMovementsService {
 
     return fullDispatch;
   }
+
+  // ── LIBERACIÓN DE CALIDAD QM A INVENTARIO DISPONIBLE ──
+  addReleasedInventoryStock(blockData: {
+    sku: string;
+    description: string;
+    clientName: string;
+    batchNumber: string;
+    quantity: number;
+    locationId?: string;
+    destination: string;
+  }): void {
+    const newBatch: InventoryBatch = {
+      remisionNo: `REM-LIB-${Date.now().toString().slice(-4)}`,
+      client: blockData.clientName,
+      productId: blockData.sku,
+      productName: blockData.description,
+      lotNumber: blockData.batchNumber,
+      elaborationDate: new Date().toISOString().slice(0, 10),
+      expirationDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      availablePallets: Math.ceil(blockData.quantity / 45) || 1,
+      totalPieces: blockData.quantity,
+      locationCode: blockData.locationId || 'LOC-QM-RELEASED',
+      pallets: []
+    };
+
+    this.inventoryBatchesSignal.update((list) => [newBatch, ...list]);
+  }
 }
 

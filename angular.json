@@ -35,7 +35,8 @@
             },
             "assets": [
               { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" },
-              { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" }
+              { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" },
+              { "glob": "_redirects", "input": "apps/admin-console/src", "output": "/" }
             ],
             "styles": ["apps/admin-console/src/styles.scss"],
             "scripts": []
@@ -149,7 +150,8 @@
             "assets": [
               { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" },
               { "glob": "favicon.ico", "input": "apps/rf-terminal/src", "output": "/" },
-              { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" }
+              { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" },
+              { "glob": "_redirects", "input": "apps/rf-terminal/src", "output": "/" }
             ],
             "styles": ["apps/rf-terminal/src/styles.scss"],
             "scripts": []

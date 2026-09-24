@@ -23,6 +23,11 @@ import { PrintReceptionLayoutComponent } from '../../components/print-layouts/pr
 import { PrintCancellationLayoutComponent } from '../../components/print-layouts/print-cancellation-layout.component';
 import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
 
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+import { QualityStateService } from '../../../quality/services/quality-state.service';
+import { UnitOfMeasure } from '@4guard/shared-core';
+
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 
 @Component({
@@ -38,6 +43,8 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
     PrintReceptionLayoutComponent,
     PrintCancellationLayoutComponent,
     BayOccupancySelectorComponent,
+    StarBorderDirective,
+    SpecularGlowDirective,
   ],
   templateUrl: './receiving-submodule.component.html',
   styleUrl: './receiving-submodule.component.css',
@@ -47,6 +54,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   protected readonly Math      = Math;
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
+  private readonly qualityState = inject(QualityStateService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
@@ -1033,6 +1041,37 @@ export class ReceivingSubmoduleComponent implements OnInit {
       })
     );
     this.toast.success(`Lote ${lotNum} asignado a la UA.`);
+  }
+
+  reportPalletToQuality(pallet?: ReceptionPalletItem): void {
+    const current = this.selectedReception();
+    const sku = pallet?.productId || current?.productId || 'SKU-REC-DEF';
+    const desc = pallet?.description || current?.productName || 'Producto en Recepción';
+    const client = current?.checkIn?.client || 'Cliente General';
+    const batch = pallet?.lotNumber || current?.lotNumber || current?.checkIn?.docNumber || 'LOT-REC-2026';
+    const qty = pallet?.pieces || Number(this.altaForm.value.piecesPerPallet) || 45;
+
+    const newBlock = this.qualityState.createBlock({
+      sku,
+      description: desc,
+      clientId: current?.checkIn?.clientCode || 'cli-01',
+      clientName: client,
+      batchNumber: batch,
+      sscc: pallet?.palletCode || `SSCC-${Date.now()}`,
+      quantity: qty,
+      unitOfMeasure: UnitOfMeasure.BOX,
+      locationId: current?.checkIn?.rampNumber ? `RAMPA-0${current.checkIn.rampNumber}` : 'LOC-REC-DOCK-01',
+      stage: 'INBOUND_UNLOAD',
+      defectCategory: 'MATERIAL',
+      defectCriteria: ['Material con daño físico / anomalía en recepción'],
+      severity: 'WARNING',
+      status: 'BLOCKED',
+      reportedBy: `${this.authState.currentUser()?.fullName || this.authState.currentUser()?.username || 'Operador Recepción'} (Andén)`,
+      notes: `Reporte PNC generado desde Recepción de Mercancías para Folio #${current?.folio || 'N/A'}${pallet ? ' (Tarima UA ' + pallet.palletCode + ')' : ''}`,
+      evidenceFiles: []
+    });
+
+    this.toast.success(`⚠️ Reporte a Calidad (PNC) creado exitosamente con Folio #${newBlock.folio}`);
   }
 
   loadAuditLogs(folioOrId: string): void {
