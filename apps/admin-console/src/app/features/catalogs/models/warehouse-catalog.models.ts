@@ -74,3 +74,13 @@ export interface WarehouseBay {
   lastMovement: string;
   rawPosition: PositionDetail;
 }
+
+export interface InitializeSectionRequest {
+  category: string;
+  posFijas: number;
+  capacidadTarimas: number;
+  factorEstiba: string;
+  notes?: string;
+  generateLocations?: boolean;
+  authorizedSkuIds?: string[];
+}

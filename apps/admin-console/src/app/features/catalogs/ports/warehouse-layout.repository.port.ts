@@ -3,7 +3,8 @@ import { Observable } from 'rxjs';
 import {
   WarehouseSection,
   PositionDetail,
-  WarehouseTopologyData
+  WarehouseTopologyData,
+  InitializeSectionRequest
 } from '../models/warehouse-catalog.models';
 
 export interface WarehouseLayoutRepositoryPort {
@@ -17,6 +18,7 @@ export interface WarehouseLayoutRepositoryPort {
     meta?: { reasonCode?: string; comment?: string }
   ): Observable<PositionDetail>;
   getBlockReasons(): Observable<string[]>;
+  initializeSection(sectionId: string, payload: InitializeSectionRequest): Observable<any>;
 }
 
 export const WAREHOUSE_LAYOUT_REPOSITORY = new InjectionToken<WarehouseLayoutRepositoryPort>(

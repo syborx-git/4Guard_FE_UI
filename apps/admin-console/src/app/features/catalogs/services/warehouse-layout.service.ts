@@ -5,11 +5,13 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import {
   WarehouseSection,
   PositionDetail,
   PositionStatus,
-  WarehouseLayoutStats
+  WarehouseLayoutStats,
+  InitializeSectionRequest
 } from '../models/warehouse-catalog.models';
 import { WAREHOUSE_LAYOUT_REPOSITORY } from '../ports/warehouse-layout.repository.port';
 
@@ -210,5 +212,15 @@ export class WarehouseLayoutService {
         this._positionsVersion.update(v => v + 1);
       }
     });
+  }
+
+  initializeSection(sectionId: string, payload: InitializeSectionRequest): Observable<any> {
+    return this.repository.initializeSection(sectionId, payload).pipe(
+      tap(() => {
+        this._positionsCache.delete(sectionId);
+        this.loadTopology();
+        this.loadAllPositions();
+      })
+    );
   }
 }

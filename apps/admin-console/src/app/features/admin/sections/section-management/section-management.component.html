@@ -456,6 +456,55 @@
               </div>
             </fieldset>
 
+            <!-- SECCIÓN INTERMEDIA — Topología 2D & Estiba Operativa -->
+            @if (formMode() === 'edit' && selectedSection()) {
+              <fieldset class="sections-form-section">
+                <legend class="sections-form-section__legend">
+                  <span class="material-symbols-outlined">warehouse</span>
+                  Capacidad de Almacenamiento & Topología 2D
+                </legend>
+
+                <div class="sections-setup-card">
+                  <div class="sections-setup-card__left">
+                    <div class="sections-setup-card__badge" [class.sections-setup-card__badge--loaded]="(selectedSection()?.posFijas ?? 0) > 0">
+                      <span class="material-symbols-outlined">
+                        {{ (selectedSection()?.posFijas ?? 0) > 0 ? 'verified' : 'pending_actions' }}
+                      </span>
+                      <span>{{ (selectedSection()?.posFijas ?? 0) > 0 ? 'ACTIVA EN PLANO 2D' : 'PENDIENTE DE ACTIVACIÓN' }}</span>
+                    </div>
+                    <div class="sections-setup-card__details">
+                      <span class="sections-setup-card__stat">
+                        <strong>{{ selectedSection()?.posFijas ?? 0 }}</strong> bahías
+                      </span>
+                      <span class="sections-setup-card__sep">·</span>
+                      <span class="sections-setup-card__stat">
+                        <strong>{{ (selectedSection()?.capacidadTarimas ?? 0) | number }}</strong> tarimas totales
+                      </span>
+                      <span class="sections-setup-card__sep">·</span>
+                      <span class="sections-setup-card__stat">
+                        {{ selectedSection()?.factorEstiba || '22 tarimas/pos' }}
+                      </span>
+                      @if (selectedSection()?.category) {
+                        <span class="sections-setup-card__sep">·</span>
+                        <span class="sections-setup-card__stat">
+                          {{ selectedSection()?.category }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="sections-btn sections-btn--primary"
+                    style="background: #F59E0B; color: #0F172A;"
+                    (click)="openSetupModal(selectedSection())">
+                    <span class="material-symbols-outlined">tune</span>
+                    {{ (selectedSection()?.posFijas ?? 0) > 0 ? 'Reconfigurar Nave' : 'Configurar y Activar Nave' }}
+                  </button>
+                </div>
+              </fieldset>
+            }
+
             <!-- SECCIÓN 2 — Control & Auditoría (solo lectura en edición) ──── -->
             @if (formMode() === 'edit' && selectedSection()) {
               <fieldset class="sections-form-section sections-form-section--readonly">
@@ -605,5 +654,12 @@
     </main>
 
   </div>
+
+  <!-- ── Modal Reutilizable de Configuración y Activación de Nave ── -->
+  <fg-warehouse-section-setup-modal
+    [(isOpen)]="isSetupModalOpen"
+    [section]="setupModalSection()"
+    (saved)="onSectionSetupSaved($event)"
+  ></fg-warehouse-section-setup-modal>
 
 </div>

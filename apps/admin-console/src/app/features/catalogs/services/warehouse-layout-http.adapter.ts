@@ -10,7 +10,8 @@ import {
   PositionDetail,
   PositionStatus,
   WarehouseLayoutStats,
-  WarehouseTopologyData
+  WarehouseTopologyData,
+  InitializeSectionRequest
 } from '../models/warehouse-catalog.models';
 
 interface ApiResponse<T> {
@@ -83,6 +84,13 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
   getBlockReasons(): Observable<string[]> {
     return this.http.get<ApiResponse<{ code: string; description: string }[]>>(`${this.baseUrl}/catalogs/block-reasons`).pipe(
       map(res => (res.data || []).map(r => r.description))
+    );
+  }
+
+  initializeSection(sectionId: string, payload: InitializeSectionRequest): Observable<any> {
+    const url = `${environment.apiBaseUrl}/api/v1/warehouse-sections/${sectionId}/initialize`;
+    return this.http.post<ApiResponse<any>>(url, payload).pipe(
+      map(res => res.data)
     );
   }
 

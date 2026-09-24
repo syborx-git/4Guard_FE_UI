@@ -1493,3 +1493,66 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Topología & Estiba Setup Card ────────────────────────── */
+.sections-setup-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+}
+
+.sections-setup-card__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sections-setup-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #94A3B8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  width: fit-content;
+}
+
+.sections-setup-card__badge--loaded {
+  background: rgba(0, 137, 123, 0.15);
+  color: #00897B;
+  border-color: rgba(0, 137, 123, 0.35);
+}
+
+.sections-setup-card__badge .material-symbols-outlined {
+  font-size: 15px;
+}
+
+.sections-setup-card__details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.sections-setup-card__stat strong {
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.sections-setup-card__sep {
+  color: #94A3B8;
+}
+
