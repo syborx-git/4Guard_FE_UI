@@ -17,6 +17,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { InventoryState, InventoryStatus, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
 import { SpecularGlowDirective } from '../../shared/directives/specular-glow.directive';
+import { StarBorderDirective } from '../../shared/directives/star-border.directive';
 
 export type PackagingType = 'FRASCOS' | 'BARRILES' | 'PRODUCTO_TERMINADO';
 
@@ -59,7 +60,7 @@ interface Alert {
 @Component({
   selector: 'fg-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, SpecularGlowDirective],
+  imports: [CommonModule, SpecularGlowDirective, StarBorderDirective],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })

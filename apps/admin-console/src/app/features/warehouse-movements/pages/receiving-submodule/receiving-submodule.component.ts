@@ -21,6 +21,12 @@ import {
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
 import { PrintCancellationLayoutComponent } from '../../components/print-layouts/print-cancellation-layout.component';
+import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
+
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+import { QualityStateService } from '../../../quality/services/quality-state.service';
+import { UnitOfMeasure } from '@4guard/shared-core';
 
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 
@@ -36,6 +42,9 @@ export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
     LeaderAuthModalComponent,
     PrintReceptionLayoutComponent,
     PrintCancellationLayoutComponent,
+    BayOccupancySelectorComponent,
+    StarBorderDirective,
+    SpecularGlowDirective,
   ],
   templateUrl: './receiving-submodule.component.html',
   styleUrl: './receiving-submodule.component.css',
@@ -45,6 +54,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   protected readonly Math      = Math;
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
+  private readonly qualityState = inject(QualityStateService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
@@ -80,6 +90,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Modal Plano de Andenes Interactivo
   showDockMapModal = signal(false);
+
+  // Modal Selector Visual de Bahías (22 Pallets)
+  showBaySelectorModal = signal(false);
+
+  // Modal Re-etiquetado Selectivo de UAs (SSCC GS1-128)
+  showRelabelModal = signal(false);
+  selectedPalletIdsForRelabel = signal<Set<string>>(new Set());
+  relabelReason = signal<string>('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+  isRelabelling = signal<boolean>(false);
 
   // Modal Edición de Ficha de Caseta
   showEditCasetaModal = signal(false);
@@ -387,6 +406,48 @@ export class ReceivingSubmoduleComponent implements OnInit {
     );
   });
 
+  // ── AUTOCOMPLETE PREDICTIVO DE MONTACARGUISTA ──
+  operatorSearchQuery = signal<string>('');
+  isOperatorDropdownOpen = signal<boolean>(false);
+  filteredForkliftOperators = computed(() => {
+    const q = this.operatorSearchQuery().toLowerCase().trim();
+    const list = this.forkliftOperators();
+    if (!q) return list;
+    return list.filter(
+      (op) =>
+        (op.name && op.name.toLowerCase().includes(q)) ||
+        (op.code && op.code.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE PROVEEDOR ──
+  supplierSearchQuery = signal<string>('');
+  isSupplierDropdownOpen = signal<boolean>(false);
+  filteredSuppliers = computed(() => {
+    const q = this.supplierSearchQuery().toLowerCase().trim();
+    const list = this.suppliers();
+    if (!q) return list;
+    return list.filter(
+      (s) =>
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.code && s.code.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE TIPO DE TARIMA ──
+  palletTypeSearchQuery = signal<string>('');
+  isPalletTypeDropdownOpen = signal<boolean>(false);
+  filteredPalletTypes = computed(() => {
+    const q = this.palletTypeSearchQuery().toLowerCase().trim();
+    const list = this.palletTypes;
+    if (!q) return list;
+    return list.filter(
+      (pt) =>
+        pt[0].toLowerCase().includes(q) ||
+        pt[1].toLowerCase().includes(q)
+    );
+  });
+
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
   checkInForm = this.fb.group({
     carrierLineCode: [''],
@@ -609,6 +670,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
     this.skuSearchQuery.set('');
     this.isSkuDropdownOpen.set(false);
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+    this.supplierSearchQuery.set('');
+    this.isSupplierDropdownOpen.set(false);
+    this.palletTypeSearchQuery.set('');
+    this.isPalletTypeDropdownOpen.set(false);
   }
 
   // Iniciar registro de nuevo arribo en Caseta de Seguridad
@@ -673,9 +740,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     } else {
       this.skuSearchQuery.set('');
     }
+    this.isSkuDropdownOpen.set(false);
+
+    // Sincronizar montacarguista
+    this.operatorSearchQuery.set(defaultOperator || '');
+    this.isOperatorDropdownOpen.set(false);
+
+    // Sincronizar proveedor
+    this.supplierSearchQuery.set(rec.supplierName || '');
+    this.isSupplierDropdownOpen.set(false);
 
     const hasConfiguredProduct = !!(rec.productId || rec.skuCode || (rec.pallets && rec.pallets.length > 0));
     const palletTypeValue = hasConfiguredProduct ? (rec.selectedPalletType || ('' as any)) : ('' as any);
+
+    // Sincronizar tipo de tarima
+    const ptLabel = palletTypeValue ? (PALLET_TYPE_LABELS[palletTypeValue as PalletType] || palletTypeValue) : '';
+    this.palletTypeSearchQuery.set(ptLabel);
+    this.isPalletTypeDropdownOpen.set(false);
 
     const rawObs = rec.observations || '';
     const isCasetaChecklist = rawObs.includes('[FORMATO F01') || rawObs.includes('Arribo en Caseta');
@@ -704,9 +785,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const primaryExp = rec.expirationDate || rec.checkIn?.expirationDate || '';
     const primaryElab = rec.elaborationDate || rec.checkIn?.elaborationDate || '';
 
-    const initialLots: Array<{ lotNumber: string; elaborationDate?: string; expirationDate: string }> = [];
+    const initialLots: Array<{ id?: string; lotNumber: string; elaborationDate?: string; expirationDate: string; shelfLifeDaysRemaining?: number }> = [];
     if (primaryLot) {
       initialLots.push({ lotNumber: primaryLot, elaborationDate: primaryElab, expirationDate: primaryExp });
+    }
+
+    if ((rec as any).lots && Array.isArray((rec as any).lots)) {
+      (rec as any).lots.forEach((lt: any) => {
+        if (lt.lotNumber && !initialLots.some((l) => l.lotNumber === lt.lotNumber)) {
+          initialLots.push({
+            id: lt.id,
+            lotNumber: lt.lotNumber,
+            expirationDate: lt.expirationDate || '',
+            elaborationDate: lt.elaborationDate || '',
+            shelfLifeDaysRemaining: lt.shelfLifeDaysRemaining,
+          });
+        }
+      });
     }
 
     if (rec.pallets && rec.pallets.length > 0) {
@@ -715,22 +810,88 @@ export class ReceivingSubmoduleComponent implements OnInit {
           initialLots.push({
             lotNumber: p.lotNumber,
             expirationDate: p.expirationDate || primaryExp,
+            elaborationDate: (p as any).elaborationDate || primaryElab,
           });
         }
       });
     }
 
-    const finalList = initialLots.length > 0 ? initialLots : [{ lotNumber: 'LOT-2026-N1', expirationDate: primaryExp }];
-    this.lotsList.set(finalList);
-    this.selectedScanningLot.set(primaryLot || finalList[0].lotNumber);
+    const finalList = initialLots;
+    this.lotsList.set(finalList as any);
+
+    if (finalList.length > 0) {
+      const activeLotNum = primaryLot || finalList[0].lotNumber;
+      this.selectedScanningLot.set(activeLotNum);
+      const activeLotObj = finalList.find((l) => l.lotNumber === activeLotNum) || finalList[0];
+      this.altaForm.patchValue({
+        lotNumber: activeLotObj.lotNumber,
+        expirationDate: activeLotObj.expirationDate || '',
+        elaborationDate: activeLotObj.elaborationDate || '',
+      });
+    } else {
+      this.selectedScanningLot.set('');
+      this.altaForm.patchValue({
+        lotNumber: '',
+        expirationDate: '',
+        elaborationDate: '',
+      });
+    }
   }
 
-  // ── MÉTODOS DE CONTROL DE LOTES POR UA (CRITERIO 1) ──
+  // ── MÉTODOS DE CONTROL DE LOTES POR UA (CRITERIO 1 & 2) ──
+  getActiveLot(): { lotNumber: string; elaborationDate?: string; expirationDate: string } | undefined {
+    const selected = this.selectedScanningLot();
+    if (selected) {
+      const found = this.lotsList().find((l) => l.lotNumber === selected);
+      if (found) return found;
+    }
+    const lotNum = (this.altaForm.value.lotNumber || '').trim().toUpperCase();
+    if (lotNum) {
+      const found = this.lotsList().find((l) => l.lotNumber === lotNum);
+      if (found) return found;
+    }
+    return this.lotsList().length > 0 ? this.lotsList()[0] : undefined;
+  }
+
+  getActiveLotShelfLifeDays(): number | null {
+    const lot = this.getActiveLot();
+    return this.getLotShelfLifeDays(lot);
+  }
+
+  getLotShelfLifeDays(lot?: { lotNumber: string; elaborationDate?: string; expirationDate: string }): number | null {
+    const targetLot = lot || this.getActiveLot();
+    if (!targetLot || !targetLot.expirationDate) return null;
+    const expDate = new Date(targetLot.expirationDate + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    return Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  getPalletsCountForLot(lotNum: string): number {
+    if (!lotNum) return 0;
+    return this.palletStream().filter((p) => p.lotNumber === lotNum).length;
+  }
+
+  isShelfLifeCompliant(days: number | null): boolean {
+    return days != null && days >= 365;
+  }
+
   openAddLotModal(): void {
     this.newLotForm.reset({
       lotNumber: '',
-      elaborationDate: this.altaForm.value.elaborationDate || '',
-      expirationDate: this.altaForm.value.expirationDate || '',
+      elaborationDate: '',
+      expirationDate: '',
+    });
+    this.showAddLotModal.set(true);
+  }
+
+  openEditActiveLotModal(): void {
+    const lot = this.getActiveLot();
+    this.newLotForm.reset({
+      lotNumber: lot?.lotNumber || this.selectedScanningLot() || '',
+      elaborationDate: lot?.elaborationDate || '',
+      expirationDate: lot?.expirationDate || '',
     });
     this.showAddLotModal.set(true);
   }
@@ -742,7 +903,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   saveNewLot(): void {
     if (this.newLotForm.invalid) {
       this.newLotForm.markAllAsTouched();
-      this.toast.warning('Ingresa el número de lote y fecha de caducidad.');
+      this.toast.warning('Ingresa el número de lote y fecha de caducidad obligatoria.');
       return;
     }
 
@@ -762,15 +923,95 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    if (this.lotsList().some((l) => l.lotNumber === lotNum)) {
-      this.toast.info(`El lote ${lotNum} ya está registrado.`);
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL OBLIGATORIO (≥ 1 AÑO / 365 DÍAS)
+    if (exp) {
+      const expDate = new Date(exp + 'T00:00:00Z');
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const diffDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 365) {
+        this.toast.error(`🛑 Candado de Calidad: El lote cuenta con sólo ${diffDays} días de vida útil restantes (< 1 año / 365 días requeridos). No se permite el registro de lotes que no cumplan la vigencia mínima.`);
+        return;
+      }
+    }
+
+    const existingIndex = this.lotsList().findIndex((l) => l.lotNumber === lotNum);
+    if (existingIndex >= 0) {
+      this.lotsList.update((list) => {
+        const copy = [...list];
+        copy[existingIndex] = { ...copy[existingIndex], lotNumber: lotNum, elaborationDate: elab, expirationDate: exp };
+        return copy;
+      });
+      this.toast.success(`Lote ${lotNum} actualizado con éxito.`);
     } else {
       this.lotsList.update((list) => [...list, { lotNumber: lotNum, elaborationDate: elab, expirationDate: exp }]);
-      this.toast.success(`Lote ${lotNum} agregado a la sesión de recepción.`);
+      this.toast.success(`Lote ${lotNum} registrado y agregado a la sesión.`);
+    }
+
+    // Persistir en Backend si la recepción ya existe
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId)) {
+      this.movementsApi.addReceptionLot(recId, {
+        lotNumber: lotNum,
+        elaborationDate: elab || undefined,
+        expirationDate: exp || undefined,
+      }).subscribe({
+        next: (savedLot: any) => {
+          if (savedLot && savedLot.id) {
+            this.lotsList.update((list) =>
+              list.map((l) => (l.lotNumber === lotNum ? { ...l, id: savedLot.id } : l))
+            );
+          }
+        },
+        error: (err: any) => {
+          console.warn('Sync addReceptionLot:', err);
+        },
+      });
     }
 
     this.selectedScanningLot.set(lotNum);
+    this.altaForm.patchValue({
+      lotNumber: lotNum,
+      expirationDate: exp,
+      elaborationDate: elab,
+    });
+
     this.closeAddLotModal();
+  }
+
+  removeLotFromSession(lotNum: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    const inUse = this.palletStream().some((p) => p.lotNumber === lotNum);
+    if (inUse) {
+      this.toast.warning(`El lote ${lotNum} está asignado a una o más tarimas en la descarga.`);
+      return;
+    }
+    const ok = window.confirm(`¿Desea eliminar el lote ${lotNum} de la sesión de recepción?`);
+    if (!ok) return;
+
+    const targetLot = this.lotsList().find((l) => l.lotNumber === lotNum);
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId) && (targetLot as any)?.id) {
+      this.movementsApi.deleteReceptionLot(recId, (targetLot as any).id).subscribe({
+        error: (err: any) => console.warn('Sync deleteReceptionLot:', err),
+      });
+    }
+
+    this.lotsList.update((list) => list.filter((l) => l.lotNumber !== lotNum));
+    const remaining = this.lotsList();
+    if (this.selectedScanningLot() === lotNum) {
+      if (remaining.length > 0) {
+        this.selectLotForScanning(remaining[0].lotNumber);
+      } else {
+        this.selectedScanningLot.set('');
+        this.altaForm.patchValue({
+          lotNumber: '',
+          expirationDate: '',
+          elaborationDate: '',
+        });
+      }
+    }
+    this.toast.info(`Lote ${lotNum} eliminado de la sesión.`);
   }
 
   selectLotForScanning(lotNum: string): void {
@@ -779,8 +1020,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (matched) {
       this.altaForm.patchValue({
         lotNumber: matched.lotNumber,
-        expirationDate: matched.expirationDate || this.altaForm.value.expirationDate,
-        elaborationDate: matched.elaborationDate || this.altaForm.value.elaborationDate,
+        expirationDate: matched.expirationDate || '',
+        elaborationDate: matched.elaborationDate || '',
       });
     }
   }
@@ -800,6 +1041,37 @@ export class ReceivingSubmoduleComponent implements OnInit {
       })
     );
     this.toast.success(`Lote ${lotNum} asignado a la UA.`);
+  }
+
+  reportPalletToQuality(pallet?: ReceptionPalletItem): void {
+    const current = this.selectedReception();
+    const sku = pallet?.productId || current?.productId || 'SKU-REC-DEF';
+    const desc = pallet?.description || current?.productName || 'Producto en Recepción';
+    const client = current?.checkIn?.client || 'Cliente General';
+    const batch = pallet?.lotNumber || current?.lotNumber || current?.checkIn?.docNumber || 'LOT-REC-2026';
+    const qty = pallet?.pieces || Number(this.altaForm.value.piecesPerPallet) || 45;
+
+    const newBlock = this.qualityState.createBlock({
+      sku,
+      description: desc,
+      clientId: current?.checkIn?.clientCode || 'cli-01',
+      clientName: client,
+      batchNumber: batch,
+      sscc: pallet?.palletCode || `SSCC-${Date.now()}`,
+      quantity: qty,
+      unitOfMeasure: UnitOfMeasure.BOX,
+      locationId: current?.checkIn?.rampNumber ? `RAMPA-0${current.checkIn.rampNumber}` : 'LOC-REC-DOCK-01',
+      stage: 'INBOUND_UNLOAD',
+      defectCategory: 'MATERIAL',
+      defectCriteria: ['Material con daño físico / anomalía en recepción'],
+      severity: 'WARNING',
+      status: 'BLOCKED',
+      reportedBy: `${this.authState.currentUser()?.fullName || this.authState.currentUser()?.username || 'Operador Recepción'} (Andén)`,
+      notes: `Reporte PNC generado desde Recepción de Mercancías para Folio #${current?.folio || 'N/A'}${pallet ? ' (Tarima UA ' + pallet.palletCode + ')' : ''}`,
+      evidenceFiles: []
+    });
+
+    this.toast.success(`⚠️ Reporte a Calidad (PNC) creado exitosamente con Folio #${newBlock.folio}`);
   }
 
   loadAuditLogs(folioOrId: string): void {
@@ -1061,6 +1333,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL (1 AÑO / 365 DÍAS)
+    if (exp) {
+      const expDate = new Date(exp + 'T00:00:00Z');
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const diffDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 365) {
+        this.toast.error(`🛑 Candado de Calidad: El lote cuenta con sólo ${diffDays} días restantes (< 1 año / 365 días). No se permite la descarga física.`);
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -1292,6 +1576,100 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const list = this.palletStream().filter((p) => p.id !== palletId);
     this.palletStream.set(list);
     this.toast.info('Tarima removida de la descarga');
+  }
+
+  // ── SELECTOR VISUAL DE BAHÍAS (22 PALLETS) ──
+  openBaySelector(): void {
+    this.showBaySelectorModal.set(true);
+  }
+
+  onBaySelected(res: BaySelectionResult): void {
+    this.altaForm.patchValue({
+      storageLocation: res.locationCode,
+      storageLocationId: res.locationId || res.locationCode,
+    });
+    this.showBaySelectorModal.set(false);
+    if (res.isOverride) {
+      this.toast.info(`Bahía ${res.locationCode} asignada con Anulación de Administrador.`);
+    } else {
+      this.toast.success(`Bahía ${res.locationCode} asignada correctamente.`);
+    }
+  }
+
+  // ── RE-ETIQUETADO SELECTIVO DE UAS (SSCC GS1-128) ──
+  openRelabelModal(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets || rec.pallets.length === 0) {
+      this.toast.warning('No hay tarimas disponibles en la recepción para re-etiquetar.');
+      return;
+    }
+    const allIds = new Set(rec.pallets.map((p) => p.id));
+    this.selectedPalletIdsForRelabel.set(allIds);
+    this.relabelReason.set('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+    this.showRelabelModal.set(true);
+  }
+
+  closeRelabelModal(): void {
+    this.showRelabelModal.set(false);
+  }
+
+  togglePalletRelabelSelection(id: string): void {
+    this.selectedPalletIdsForRelabel.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  toggleSelectAllPalletsForRelabel(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets) return;
+    const current = this.selectedPalletIdsForRelabel();
+    if (current.size === rec.pallets.length) {
+      this.selectedPalletIdsForRelabel.set(new Set());
+    } else {
+      this.selectedPalletIdsForRelabel.set(new Set(rec.pallets.map((p) => p.id)));
+    }
+  }
+
+  executeRelabelUas(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.id) return;
+    const palletIds = Array.from(this.selectedPalletIdsForRelabel());
+    if (palletIds.length === 0) {
+      this.toast.warning('Selecciona al menos una tarima para re-etiquetar.');
+      return;
+    }
+
+    const payload = {
+      palletIds,
+      reason: this.relabelReason().trim() || 'Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128',
+    };
+
+    this.isRelabelling.set(true);
+    this.movementsApi.relabelUas(rec.id, payload).subscribe({
+      next: (mappings) => {
+        this.isRelabelling.set(false);
+        this.showRelabelModal.set(false);
+        this.toast.success(`Se re-etiquetaron ${mappings?.length || palletIds.length} tarimas exitosamente con SSCC 4Guard.`);
+        if (rec.id) {
+          this.movementsApi.getReceptionById(rec.id).subscribe({
+            next: (fullData) => {
+              const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+              this.selectedReception.set(mapped);
+              this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
+              this.patchAltaFormWithReception(mapped);
+              this.movementsService.loadInitialBackendData();
+            },
+          });
+        }
+      },
+      error: (err) => {
+        this.isRelabelling.set(false);
+        this.toast.error(err?.error?.message || 'Error al re-etiquetar las tarimas.');
+      },
+    });
   }
 
   // ── CANCELACIÓN EXTRAORDINARIA DE RECEPCIÓN ──
@@ -1594,6 +1972,99 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (prod) {
       this.selectProductSku(prod);
     }
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE MONTACARGUISTA ──
+  onOperatorInput(value: string): void {
+    this.operatorSearchQuery.set(value);
+    this.isOperatorDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ forkliftOperator: '' });
+      return;
+    }
+
+    const exact = this.forkliftOperators().find(
+      (op) => op.name.toLowerCase() === val.toLowerCase() || op.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ forkliftOperator: exact.name });
+    }
+  }
+
+  selectForkliftOperator(op: { code: string; name: string }): void {
+    this.altaForm.patchValue({ forkliftOperator: op.name });
+    this.operatorSearchQuery.set(op.name);
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  clearOperatorSelection(): void {
+    this.altaForm.patchValue({ forkliftOperator: '' });
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE PROVEEDOR ──
+  onSupplierInput(value: string): void {
+    this.supplierSearchQuery.set(value);
+    this.isSupplierDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ supplierName: '' });
+      return;
+    }
+
+    const exact = this.suppliers().find(
+      (s) => s.name.toLowerCase() === val.toLowerCase() || s.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ supplierName: exact.name });
+    }
+  }
+
+  selectSupplier(sup: { code: string; name: string }): void {
+    this.altaForm.patchValue({ supplierName: sup.name });
+    this.supplierSearchQuery.set(sup.name);
+    this.isSupplierDropdownOpen.set(false);
+  }
+
+  clearSupplierSelection(): void {
+    this.altaForm.patchValue({ supplierName: '' });
+    this.supplierSearchQuery.set('');
+    this.isSupplierDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE TIPO DE TARIMA ──
+  onPalletTypeInput(value: string): void {
+    this.palletTypeSearchQuery.set(value);
+    this.isPalletTypeDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ selectedPalletType: '' as any });
+      return;
+    }
+
+    const exact = this.palletTypes.find(
+      (pt) => pt[0].toLowerCase() === val.toLowerCase() || pt[1].toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ selectedPalletType: exact[0] });
+    }
+  }
+
+  selectPalletType(pt: [PalletType, string]): void {
+    this.altaForm.patchValue({ selectedPalletType: pt[0] });
+    this.palletTypeSearchQuery.set(pt[1]);
+    this.isPalletTypeDropdownOpen.set(false);
+  }
+
+  clearPalletTypeSelection(): void {
+    this.altaForm.patchValue({ selectedPalletType: '' as any });
+    this.palletTypeSearchQuery.set('');
+    this.isPalletTypeDropdownOpen.set(false);
   }
 
   // ── ESCÁNER Y CARGA RÁPIDA DE UAs CON CANDADO ANTI-DUPLICADOS & ORDEN DESCENDENTE ──

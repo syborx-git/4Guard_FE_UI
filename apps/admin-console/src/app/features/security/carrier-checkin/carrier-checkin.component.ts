@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { WarehouseMovementsApiService } from '../../warehouse-movements/services/warehouse-movements-api.service';
+import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
 
 @Component({
   selector: 'fg-carrier-checkin',
@@ -15,6 +16,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(WarehouseMovementsApiService);
+  private readonly movementsService = inject(WarehouseMovementsService);
 
   @ViewChild('signatureCanvas') signatureCanvasRef?: ElementRef<HTMLCanvasElement>;
 
@@ -29,6 +31,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
 
   protected readonly sealList = signal<string[]>([]);
   protected readonly tempSealInput = signal<string>('');
+
+  // Tipo de Documento para Descarga: REMISION | FACTURA
+  protected readonly dischargeDocType = signal<'REMISION' | 'FACTURA'>('REMISION');
 
   // Catálogos dinámicos desde Base de Datos
   protected readonly clientsList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>([]);
@@ -91,6 +96,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     observaciones: [''],
     declaracionVerdad: [false, Validators.requiredTrue]
   });
+
+  protected setDischargeDocType(type: 'REMISION' | 'FACTURA'): void {
+    this.dischargeDocType.set(type);
+  }
 
   ngOnInit(): void {
     this.loadCatalogs();
@@ -262,7 +271,30 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       next: (pass: any) => {
         this.isLoadingPass.set(false);
         if (pass) {
-          this.applyPassDataToForm(pass);
+          if (pass.operationType) {
+            this.onOperationChange(pass.operationType as 'CARGA' | 'DESCARGA');
+          }
+          if (pass.clientName) this.checkInForm.patchValue({ clientName: pass.clientName, clientCode: pass.clientCode || '' });
+          if (pass.carrierLine) this.checkInForm.patchValue({ carrierLine: pass.carrierLine, carrierLineCode: pass.carrierLineCode || '' });
+          if (pass.driverName) this.checkInForm.patchValue({ nombreOperador: pass.driverName });
+          if (pass.tractorPlates) this.checkInForm.patchValue({ placasTracto: pass.tractorPlates });
+          if (pass.boxPlates) this.checkInForm.patchValue({ placasCaja: pass.boxPlates });
+          if (pass.docNumber) {
+            if (pass.operationType === 'CARGA') {
+              this.checkInForm.patchValue({ noCartaPorte: pass.docNumber, remision: '' });
+            } else {
+              this.checkInForm.patchValue({ remision: pass.docNumber, noCartaPorte: '' });
+              const upperDoc = String(pass.docNumber).toUpperCase();
+              if (upperDoc.startsWith('FACT') || upperDoc.includes('FACTURA')) {
+                this.dischargeDocType.set('FACTURA');
+              } else {
+                this.dischargeDocType.set('REMISION');
+              }
+            }
+          }
+          if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
+            this.sealList.set(pass.sealNumbers);
+          }
         }
       },
       error: () => {
@@ -331,9 +363,11 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     if (val === 'CARGA') {
       cartaCtrl?.setValidators([Validators.required]);
       remCtrl?.clearValidators();
+      remCtrl?.setValue('');
     } else {
       remCtrl?.setValidators([Validators.required]);
       cartaCtrl?.clearValidators();
+      cartaCtrl?.setValue('');
     }
     cartaCtrl?.updateValueAndValidity();
     remCtrl?.updateValueAndValidity();
@@ -365,7 +399,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         missing.push('Número de Carta Porte (Obligatorio en Carga)');
       }
       if (f.operacion === 'DESCARGA' && (!f.remision || !f.remision.trim())) {
-        missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
+        const docName = this.dischargeDocType() === 'FACTURA' ? 'Número de Factura' : 'Número de Remisión';
+        missing.push(`${docName} (Obligatorio en Descarga)`);
       }
     } else if (step === 2) {
       if (this.tempSealInput().trim()) {
@@ -570,6 +605,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.isSubmitting.set(false);
         this.savePassToLocalStorage(tokenToSend, payload);
         this.submitSuccess.set(true);
+        this.movementsService.reloadReceptions();
       },
       error: () => {
         // Fallback resiliente: Si el backend en Render da 0 Unknown Error o falla por CORS/Cold start,

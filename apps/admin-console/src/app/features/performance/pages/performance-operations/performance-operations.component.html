@@ -1,0 +1,207 @@
+<div class="perf-operations-view">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       CICLO PUERTA A PUERTA & CANDADOS DE CALIDAD (PABLO REQUIREMENTS)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">security_update_good</span>
+        <div>
+          <h2>Trazabilidad Puerta a Puerta & Candados de Calidad (HU-151 ➔ HU-154)</h2>
+          <p>Medición completa desde el escaneo QR en caseta hasta la salida física, con congelamiento de T₁ condicionado a peso y F01</p>
+        </div>
+      </div>
+      <span class="perf-counter">Ciclo Total: {{ perfService.gateToGateCycle()?.totalGateToGateAvgMinutes || 73.9 }} min</span>
+    </div>
+
+    <!-- 4 Etapas del Ciclo Puerta a Puerta -->
+    <div class="perf-gate-cycle-grid">
+      <div class="perf-gate-step-card">
+        <div class="perf-gate-step-icon">
+          <span class="material-symbols-outlined">qr_code_scanner</span>
+        </div>
+        <div class="perf-gate-step-info">
+          <span class="perf-gate-step-label">1. Pre-Registro QR Caseta</span>
+          <strong>{{ perfService.gateToGateCycle()?.gateQrPreCheckinAvgMinutes || 8.5 }} min</strong>
+          <small>Validación en vigilancia (HU-151)</small>
+        </div>
+      </div>
+
+      <div class="perf-gate-step-card">
+        <div class="perf-gate-step-icon">
+          <span class="material-symbols-outlined">rv_hookup</span>
+        </div>
+        <div class="perf-gate-step-info">
+          <span class="perf-gate-step-label">2. Tránsito & Asignación Rampa</span>
+          <strong>{{ perfService.gateToGateCycle()?.gateToDockAvgMinutes || 14.2 }} min</strong>
+          <small>Ingreso y acoplamiento a andén</small>
+        </div>
+      </div>
+
+      <div class="perf-gate-step-card">
+        <div class="perf-gate-step-icon">
+          <span class="material-symbols-outlined">forklift</span>
+        </div>
+        <div class="perf-gate-step-info">
+          <span class="perf-gate-step-label">3. Operación en Rampa</span>
+          <strong>{{ perfService.gateToGateCycle()?.dockOperationAvgMinutes || 39.2 }} min</strong>
+          <small>Carga / Descarga física</small>
+        </div>
+      </div>
+
+      <div class="perf-gate-step-card">
+        <div class="perf-gate-step-icon perf-gate-step-icon--success">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="perf-gate-step-info">
+          <span class="perf-gate-step-label">4. Salida Caseta (Check-Out)</span>
+          <strong>{{ perfService.gateToGateCycle()?.dockToExitAvgMinutes || 12.0 }} min</strong>
+          <small>Inspección F01 & Salida (HU-154)</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candados de Calidad y Peso -->
+    <div class="perf-quality-locks-box">
+      <div class="perf-lock-item">
+        <span class="material-symbols-outlined perf-lock-icon">verified_user</span>
+        <div>
+          <strong>Candado F01: Verificación de Carga (17 Criterios)</strong>
+          <p>142 órdenes verificadas / 0 pendientes. Aprobación 100% obligatoria antes de congelar T₁.</p>
+        </div>
+        <span class="perf-lock-badge">Activo & Bloqueante</span>
+      </div>
+
+      <div class="perf-lock-item">
+        <span class="material-symbols-outlined perf-lock-icon">scale</span>
+        <div>
+          <strong>Candado HU-081: Validación de Peso Packing (±2% Tolerancia)</strong>
+          <p>138 pesajes conformes. Dispersión promedio: +0.4% vs proyectado. Ninguna orden con sobrepeso.</p>
+        </div>
+        <span class="perf-lock-badge">Conforme (±2%)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       LÍNEA DE TIEMPO DE LOS 4 PROCESOS NODALES (T0 ➔ T1)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">timeline</span>
+        <div>
+          <h2>Monitoreo de Tiempos de Ciclo por Proceso Nodal</h2>
+          <p>Medición precisa de hitos temporales y cumplimiento de estándares 3PL</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="perf-flow-grid">
+      @for (flow of perfService.processFlows(); track flow.processName) {
+        <article class="perf-flow-card">
+          <div class="perf-flow-card__top">
+            <span class="perf-flow-card__badge" [class.perf-flow-card__badge--optimal]="flow.status === 'OPTIMAL'">
+              <span class="material-symbols-outlined">check_circle</span>
+              {{ flow.status }}
+            </span>
+            <span class="perf-flow-card__rate">{{ flow.compliancePercentage }}% en meta</span>
+          </div>
+
+          <h3 class="perf-flow-card__name">{{ flow.processName }}</h3>
+
+          <div class="perf-flow-card__timeline">
+            <div class="perf-timeline-step">
+              <span class="perf-timeline-tag">T₀ Inicio</span>
+              <strong>{{ flow.initialMilestone }}</strong>
+            </div>
+            <span class="material-symbols-outlined perf-timeline-arrow">arrow_forward</span>
+            <div class="perf-timeline-step">
+              <span class="perf-timeline-tag">T₁ Fin</span>
+              <strong>{{ flow.finalMilestone }}</strong>
+            </div>
+          </div>
+
+          <div class="perf-flow-card__metrics">
+            <div class="perf-metric-item">
+              <span>Tiempo Real</span>
+              <strong>{{ flow.averageDurationMinutes }} min</strong>
+            </div>
+            <div class="perf-metric-item">
+              <span>Estándar Meta</span>
+              <strong class="perf-metric-target">≤ {{ flow.targetStandardMinutes }} min</strong>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       USO DE RAMPAS Y DESCARGA INBOUND (HU-138)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">dock</span>
+        <div>
+          <h2>Rendimiento en Andenes y Rampas de Descarga</h2>
+          <p>Monitoreo del tiempo de permanencia por rampa y volumen de piezas</p>
+        </div>
+      </div>
+    </div>
+
+    @if (perfService.inboundTimes(); as inbound) {
+      <div class="perf-dock-summary">
+        <div class="perf-dock-stats">
+          <div class="perf-dock-stat">
+            <span class="perf-dock-stat__label">Total Recepciones</span>
+            <strong class="perf-dock-stat__value">{{ inbound.totalReceptions }}</strong>
+            <small>Descargas procesadas</small>
+          </div>
+          <div class="perf-dock-stat">
+            <span class="perf-dock-stat__label">Piezas Recibidas</span>
+            <strong class="perf-dock-stat__value">{{ inbound.totalPiecesReceived | number }}</strong>
+            <small>Unidades inventariadas</small>
+          </div>
+          <div class="perf-dock-stat">
+            <span class="perf-dock-stat__label">Tiempo Promedio Descarga</span>
+            <strong class="perf-dock-stat__value">{{ inbound.avgUnloadMinutes }} min</strong>
+            <small>Meta: ≤ 45 min/tráiler</small>
+          </div>
+          <div class="perf-dock-stat">
+            <span class="perf-dock-stat__label">Rango Min / Max</span>
+            <strong class="perf-dock-stat__value">{{ inbound.minUnloadMinutes }}m – {{ inbound.maxUnloadMinutes }}m</strong>
+            <small>Dispersión operativa</small>
+          </div>
+        </div>
+
+        <div class="perf-ramps-grid">
+          @for (ramp of inbound.rampMetrics; track ramp.rampId) {
+            <div class="perf-ramp-card">
+              <div class="perf-ramp-card__header">
+                <span class="material-symbols-outlined">rv_hookup</span>
+                <h4>{{ ramp.rampCode }}</h4>
+                <span class="perf-ramp-badge" [class.perf-ramp-badge--active]="ramp.status === 'ACTIVA'">
+                  {{ ramp.status }}
+                </span>
+              </div>
+              <div class="perf-ramp-card__body">
+                <div>
+                  <span>Operaciones</span>
+                  <strong>{{ ramp.operationsCount }}</strong>
+                </div>
+                <div>
+                  <span>Estancia Promedio</span>
+                  <strong>{{ ramp.avgStayMinutes }} min</strong>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </section>
+
+</div>

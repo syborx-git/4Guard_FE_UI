@@ -632,4 +632,63 @@ h2.page-title,
   opacity: 1 !important;
 }
 
+/* ══════════════════════════════════════════════════════════
+   REACT BITS STAR BORDER — LUXURY GOLD (#D4AF37)
+   Animación de borde con luz dorada recorriendo los modales
+   ══════════════════════════════════════════════════════════ */
+.star-border-container {
+  position: relative !important;
+  border-radius: var(--radius-card, 20px) !important;
+  overflow: hidden !important;
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease !important;
+}
+
+.border-gradient-bottom,
+.border-gradient-top {
+  display: none !important;
+}
+
+/* Capa del bordesito animado (Máscara fina y suave de 1.5px en Oro Lujo 24K) */
+.star-border-container::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: -1.5px !important;
+  border-radius: inherit !important;
+  padding: 1.5px !important; /* Bordesito más sutil de 1.5px */
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 150deg,
+    rgba(184, 134, 11, 0.25) 175deg,
+    rgba(235, 205, 135, 0.65) 205deg,
+    rgba(212, 175, 55, 0.75) 235deg,
+    rgba(165, 120, 18, 0.35) 265deg,
+    transparent 295deg,
+    transparent 360deg
+  ) !important;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask-composite: exclude !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  opacity: 0.32 !important; /* Suave y discreto en reposo */
+  filter: drop-shadow(0 0 3px rgba(212, 175, 55, 0.2)) !important;
+  transition: opacity 300ms ease, filter 300ms ease !important;
+  animation: star-border-spin 6.5s linear infinite !important;
+}
+
+/* Estado Hover: Al pasar el cursor, se intensifica suavemente */
+.star-border-container:hover::before {
+  opacity: 0.85 !important;
+  animation-duration: 2.5s !important;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.55)) drop-shadow(0 0 3px rgba(235, 205, 135, 0.45)) !important;
+}
+
+.star-border-container:hover {
+  border-color: rgba(212, 175, 55, 0.55) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.10), 0 0 20px rgba(212, 175, 55, 0.22) !important;
+  transform: translateY(-2px) !important;
+}
+
+
 

@@ -143,11 +143,17 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── TOOLBAR DONDE ESTABA EL SLIDE ANTERIOR (TABS A LA IZQ, BOTÓN A LA DER) ── */
 .movements-toolbar-row {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
 }
 
 .movements-tabs-nav {
@@ -349,58 +355,208 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   BREADCRUMB & STATUS BADGES DE ALTO CONTRASTE (4GUARD WMS)
+   ───────────────────────────────────────────────────────────── */
+.receiving-breadcrumb-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+@media (min-width: 640px) {
+  .receiving-breadcrumb-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.receiving-breadcrumb-bar__path {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.receiving-breadcrumb__icon {
+  font-size: 1.25rem !important;
+  color: #1e293b !important;
+}
+
+:host-context(.theme-dark) .receiving-breadcrumb__icon,
+:host-context(.dark) .receiving-breadcrumb__icon {
+  color: #e2e8f0 !important;
+}
+
+.receiving-breadcrumb__module {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b !important;
+  letter-spacing: 0.01em;
+}
+
+:host-context(.theme-dark) .receiving-breadcrumb__module,
+:host-context(.dark) .receiving-breadcrumb__module {
+  color: #cbd5e1 !important;
+}
+
+.receiving-breadcrumb__sep {
+  font-size: 1rem !important;
+  color: #475569 !important;
+}
+
+:host-context(.theme-dark) .receiving-breadcrumb__sep,
+:host-context(.dark) .receiving-breadcrumb__sep {
+  color: #94a3b8 !important;
+}
+
+.receiving-breadcrumb__client {
+  font-family: var(--font-display) !important;
+  font-size: 1.05rem !important;
+  font-weight: 850 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+:host-context(.theme-dark) .receiving-breadcrumb__client,
+:host-context(.dark) .receiving-breadcrumb__client {
+  color: #ffffff !important;
+}
+
+.receiving-breadcrumb__folio {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #855b14 !important;
+  background: rgba(197, 168, 107, 0.16);
+  border: 1px solid rgba(197, 168, 107, 0.45);
+  border-radius: 6px;
+  padding: 2.5px 8.5px;
+  letter-spacing: 0.03em;
+}
+
+:host-context(.theme-dark) .receiving-breadcrumb__folio,
+:host-context(.dark) .receiving-breadcrumb__folio {
+  color: #fde68a !important;
+  background: rgba(208, 175, 103, 0.22);
+  border-color: rgba(208, 175, 103, 0.50);
+}
+
 .transportistas-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 10px;
+  padding: 3px 12px;
   border-radius: var(--radius-badge);
   font-family: var(--font-body);
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 800;
   letter-spacing: 0.03em;
 }
 
 .transportistas-status-badge--active,
 .status-badge--completed {
-  background: var(--c-success-bg);
-  color: var(--c-success);
-  border: 1px solid var(--c-success-bdr);
+  background: rgba(32, 132, 87, 0.16);
+  color: #064e3b !important;
+  border: 1.5px solid rgba(32, 132, 87, 0.45);
+}
+
+:host-context(.theme-dark) .transportistas-status-badge--active,
+:host-context(.dark) .transportistas-status-badge--active,
+:host-context(.theme-dark) .status-badge--completed,
+:host-context(.dark) .status-badge--completed {
+  background: rgba(16, 185, 129, 0.22);
+  color: #a7f3d0 !important;
+  border-color: rgba(16, 185, 129, 0.50);
 }
 
 .transportistas-status-badge--registered,
 .status-badge--registered {
-  background: rgba(217, 119, 6, 0.12);
-  color: #b45309;
-  border: 1px solid rgba(217, 119, 6, 0.28);
+  background: rgba(217, 119, 6, 0.18);
+  color: #92400e !important;
+  border: 1.5px solid rgba(217, 119, 6, 0.45);
+}
+
+:host-context(.theme-dark) .transportistas-status-badge--registered,
+:host-context(.dark) .transportistas-status-badge--registered,
+:host-context(.theme-dark) .status-badge--registered,
+:host-context(.dark) .status-badge--registered {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fde68a !important;
+  border-color: rgba(245, 158, 11, 0.50);
 }
 
 .transportistas-status-badge--assigned,
 .status-badge--assigned {
-  background: rgba(30, 64, 175, 0.12);
-  color: #1d4ed8;
-  border: 1px solid rgba(30, 64, 175, 0.28);
+  background: rgba(30, 64, 175, 0.18);
+  color: #1e3a8a !important;
+  border: 1.5px solid rgba(30, 64, 175, 0.45);
+}
+
+:host-context(.theme-dark) .transportistas-status-badge--assigned,
+:host-context(.dark) .transportistas-status-badge--assigned,
+:host-context(.theme-dark) .status-badge--assigned,
+:host-context(.dark) .status-badge--assigned {
+  background: rgba(59, 130, 246, 0.22);
+  color: #bfdbfe !important;
+  border-color: rgba(59, 130, 246, 0.50);
 }
 
 .transportistas-status-badge--progress,
 .status-badge--progress {
-  background: rgba(8, 145, 178, 0.12);
-  color: #0891b2;
-  border: 1px solid rgba(8, 145, 178, 0.28);
+  background: rgba(8, 145, 178, 0.18);
+  color: #155e75 !important;
+  border: 1.5px solid rgba(8, 145, 178, 0.45);
+}
+
+:host-context(.theme-dark) .transportistas-status-badge--progress,
+:host-context(.dark) .transportistas-status-badge--progress,
+:host-context(.theme-dark) .status-badge--progress,
+:host-context(.dark) .status-badge--progress {
+  background: rgba(6, 182, 212, 0.22);
+  color: #a5f3fc !important;
+  border-color: rgba(6, 182, 212, 0.50);
 }
 
 .transportistas-status-badge--discharged,
 .status-badge--discharged {
-  background: rgba(124, 58, 237, 0.12);
-  color: #7c3aed;
-  border: 1px solid rgba(124, 58, 237, 0.28);
+  background: rgba(124, 58, 237, 0.18);
+  color: #5b21b6 !important;
+  border: 1.5px solid rgba(124, 58, 237, 0.45);
+}
+
+:host-context(.theme-dark) .transportistas-status-badge--discharged,
+:host-context(.dark) .transportistas-status-badge--discharged,
+:host-context(.theme-dark) .status-badge--discharged,
+:host-context(.dark) .status-badge--discharged {
+  background: rgba(139, 92, 246, 0.22);
+  color: #ddd6fe !important;
+  border-color: rgba(139, 92, 246, 0.50);
 }
 
 .transportistas-status-badge--cancelled,
 .status-badge--cancelled {
-  background: var(--c-danger-bg);
-  color: var(--c-danger);
-  border: 1px solid var(--c-danger-bdr);
+  background: rgba(200, 73, 73, 0.18);
+  color: #7f1d1d !important;
+  border: 1.5px solid rgba(200, 73, 73, 0.45);
+}
+
+:host-context(.theme-dark) .transportistas-status-badge--cancelled,
+:host-context(.dark) .transportistas-status-badge--cancelled,
+:host-context(.theme-dark) .status-badge--cancelled,
+:host-context(.dark) .status-badge--cancelled {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fecaca !important;
+  border-color: rgba(239, 68, 68, 0.50);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -496,29 +652,31 @@ h1, h2, h3, h4, h5, h6 {
    ───────────────────────────────────────────────────────────── */
 .movement-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1400px) {
   .movement-kpi-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .movement-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 540px) {
   .movement-kpi-grid {
     grid-template-columns: 1fr;
   }
 }
 
 .movement-kpi-card {
+  position: relative;
+  overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
@@ -608,9 +766,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .movement-kpi-card__value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum", "lnum";
   line-height: 1.1;
   color: var(--text-primary);
   margin: 2px 0;
@@ -2119,16 +2279,54 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .logistics-command-cell--highlight {
-  background: rgba(59, 130, 246, 0.09);
-  border: 1.5px solid rgba(59, 130, 246, 0.3);
-  padding: 0.4rem 0.65rem;
-  border-radius: 0.625rem;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(219, 234, 254, 0.55) 100%);
+  border: 1.5px solid rgba(37, 99, 235, 0.35);
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+  transition: all 0.2s ease;
 }
 
 :host-context(.theme-dark) .logistics-command-cell--highlight,
 :host-context(.dark) .logistics-command-cell--highlight {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: rgba(59, 130, 246, 0.45);
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.btn-bay-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  color: #ffffff !important;
+  font-family: var(--font-body);
+  font-weight: 750;
+  font-size: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.btn-bay-action:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+.btn-bay-action:active {
+  transform: scale(0.97);
+}
+
+:host-context(.theme-dark) .btn-bay-action,
+:host-context(.dark) .btn-bay-action {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: rgba(147, 197, 253, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .logistics-command-label {
@@ -2197,7 +2395,7 @@ h1, h2, h3, h4, h5, h6 {
   color: #000000 !important;
 }
 
-/* ── DROPDOWN PREDICTIVO FLOTANTE DE SKUs ── */
+/* ── DROPDOWN PREDICTIVO FLOTANTE DE SKUs Y CATÁLOGOS (HOMOLOGADO) ── */
 .sku-autocomplete-dropdown {
   position: absolute;
   z-index: 50;
@@ -2205,8 +2403,8 @@ h1, h2, h3, h4, h5, h6 {
   top: 100%;
   margin-top: 0.375rem;
   width: 100%;
-  min-width: 480px;
-  max-width: 95vw;
+  min-width: 280px;
+  max-width: min(540px, 92vw);
   max-height: 18rem;
   overflow-y: auto;
   border-radius: 0.75rem;
@@ -2215,9 +2413,14 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.1) !important;
 }
 
+.sku-autocomplete-dropdown--right {
+  left: auto !important;
+  right: 0 !important;
+}
+
 @media (min-width: 640px) {
   .sku-autocomplete-dropdown {
-    min-width: 540px;
+    min-width: 320px;
   }
 }
 
@@ -2307,7 +2510,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 0;
   top: 100%;
   margin-top: 0.375rem;
-  min-width: 320px;
+  min-width: 280px;
   max-width: 90vw;
   border-radius: 0.75rem;
   padding: 0.75rem 1rem;
@@ -2318,6 +2521,11 @@ h1, h2, h3, h4, h5, h6 {
   background: #ffffff !important;
   border: 2px solid #f59e0b !important;
   box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.18) !important;
+}
+
+.sku-autocomplete-empty--right {
+  left: auto !important;
+  right: 0 !important;
 }
 
 /* Modo oscuro explícito */
@@ -3206,6 +3414,460 @@ h1, h2, h3, h4, h5, h6 {
 :host-context(.dark) .reception-completed-banner__desc strong {
   color: #ffffff !important;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   LOT HUB DECK: CONTROL DE LOTES EN SESIÓN (SDD 4GUARD)
+   ───────────────────────────────────────────────────────────── */
+.lot-hub {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(76, 86, 105, 0.15));
+  border-radius: var(--radius-card, 14px);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+:host-context(.theme-dark) .lot-hub,
+:host-context(.dark) .lot-hub {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.lot-hub__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background: var(--bg-subtle, rgba(23, 32, 51, 0.025));
+  border-bottom: 1px solid var(--border-subtle, rgba(76, 86, 105, 0.12));
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+:host-context(.theme-dark) .lot-hub__header,
+:host-context(.dark) .lot-hub__header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.lot-hub__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-primary, #1c2940);
+}
+
+:host-context(.theme-dark) .lot-hub__title,
+:host-context(.dark) .lot-hub__title {
+  color: var(--text-primary, #f1f5f9);
+}
+
+.lot-hub__count-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.12));
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.3));
+  color: var(--text-gold, #9b7626);
+}
+
+:host-context(.theme-dark) .lot-hub__count-badge,
+:host-context(.dark) .lot-hub__count-badge {
+  color: var(--text-gold, #e1c47c);
+}
+
+.lot-hub__btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 8px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.12));
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.35));
+  color: var(--text-gold, #9b7626);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lot-hub__btn-add:hover {
+  background: var(--gold, #c5a86b);
+  color: #0f172a;
+  border-color: var(--gold, #c5a86b);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(197, 168, 107, 0.35);
+}
+
+:host-context(.theme-dark) .lot-hub__btn-add,
+:host-context(.dark) .lot-hub__btn-add {
+  color: #f8fafc;
+  background: rgba(208, 175, 103, 0.18);
+  border-color: rgba(208, 175, 103, 0.4);
+}
+
+:host-context(.theme-dark) .lot-hub__btn-add:hover,
+:host-context(.dark) .lot-hub__btn-add:hover {
+  background: var(--gold, #d0af67);
+  color: #0b1119;
+}
+
+/* ── LOT CARDS SELECTOR (GRID MODERNO) ── */
+.lot-hub__deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+}
+
+.lot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-subtle, rgba(76, 86, 105, 0.15));
+  background: var(--bg-card, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+}
+
+:host-context(.theme-dark) .lot-card,
+:host-context(.dark) .lot-card {
+  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.lot-card:hover {
+  border-color: var(--gold, #c5a86b);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.lot-card--active {
+  border-color: var(--gold, #c5a86b) !important;
+  background: linear-gradient(145deg, rgba(197, 168, 107, 0.12), rgba(255, 255, 255, 0.9)) !important;
+  box-shadow: 0 0 0 1px var(--gold, #c5a86b), 0 6px 16px rgba(197, 168, 107, 0.2) !important;
+}
+
+:host-context(.theme-dark) .lot-card--active,
+:host-context(.dark) .lot-card--active {
+  background: linear-gradient(145deg, rgba(208, 175, 103, 0.22), rgba(15, 23, 42, 0.85)) !important;
+  box-shadow: 0 0 0 1px var(--gold, #d0af67), 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.lot-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lot-card__code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--text-primary, #1c2940);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+:host-context(.theme-dark) .lot-card__code,
+:host-context(.dark) .lot-card__code {
+  color: var(--text-primary, #f1f5f9);
+}
+
+.lot-card--active .lot-card__code {
+  color: var(--text-gold, #9b7626);
+}
+
+:host-context(.theme-dark) .lot-card--active .lot-card__code,
+:host-context(.dark) .lot-card--active .lot-card__code {
+  color: var(--gold-light, #e1c47c);
+}
+
+.lot-card__badge-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #10b981;
+  color: #ffffff;
+}
+
+.lot-card__btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #8b94a3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lot-card__btn-delete:hover {
+  background: rgba(229, 57, 53, 0.12);
+  color: #e53935;
+}
+
+.lot-card__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  color: var(--text-secondary, #5a6477);
+}
+
+:host-context(.theme-dark) .lot-card__bottom,
+:host-context(.dark) .lot-card__bottom {
+  color: var(--text-secondary, #94a3b8);
+}
+
+.lot-card__exp-date {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── ACTIVE LOT STATUS STRIP (FRANJA INFERIOR) ── */
+.lot-hub__active-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  background: var(--bg-subtle, rgba(23, 32, 51, 0.025));
+  border-top: 1px solid var(--border-subtle, rgba(76, 86, 105, 0.12));
+}
+
+:host-context(.theme-dark) .lot-hub__active-strip,
+:host-context(.dark) .lot-hub__active-strip {
+  background: rgba(255, 255, 255, 0.025);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.lot-active-data {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.lot-active-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.lot-active-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #8b94a3);
+}
+
+:host-context(.theme-dark) .lot-active-label,
+:host-context(.dark) .lot-active-label {
+  color: var(--text-muted, #64748b);
+}
+
+.lot-active-val {
+  font-family: var(--font-mono, monospace);
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: var(--text-primary, #1c2940);
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(76, 86, 105, 0.15));
+}
+
+:host-context(.theme-dark) .lot-active-val,
+:host-context(.dark) .lot-active-val {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.lot-active-val--lotcode {
+  background: var(--gold-bg, rgba(197, 168, 107, 0.15));
+  border-color: var(--gold-border, rgba(197, 168, 107, 0.35));
+  color: var(--text-gold, #9b7626);
+}
+
+:host-context(.theme-dark) .lot-active-val--lotcode,
+:host-context(.dark) .lot-active-val--lotcode {
+  color: var(--gold-light, #e1c47c);
+}
+
+.lot-active-badge-shelf {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(32, 132, 87, 0.12);
+  border: 1px solid rgba(32, 132, 87, 0.3);
+  color: #15803d;
+}
+
+:host-context(.theme-dark) .lot-active-badge-shelf,
+:host-context(.dark) .lot-active-badge-shelf {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #86efac;
+}
+
+.lot-active-badge-shelf--warning {
+  background: rgba(217, 119, 6, 0.12);
+  border-color: rgba(217, 119, 6, 0.3);
+  color: #b45309;
+}
+
+:host-context(.theme-dark) .lot-active-badge-shelf--warning,
+:host-context(.dark) .lot-active-badge-shelf--warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+
+.lot-active-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.lot-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 8px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(76, 86, 105, 0.2));
+  color: var(--text-primary, #1c2940);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.lot-btn-edit:hover {
+  border-color: var(--gold, #c5a86b);
+  color: var(--text-gold, #9b7626);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+:host-context(.theme-dark) .lot-btn-edit,
+:host-context(.dark) .lot-btn-edit {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+:host-context(.theme-dark) .lot-btn-edit:hover,
+:host-context(.dark) .lot-btn-edit:hover {
+  border-color: var(--gold, #d0af67);
+  color: var(--gold-light, #e1c47c);
+}
+
+/* ── EMPTY STATE ── */
+.lot-hub__empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lot-hub__empty-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.lot-hub__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.12));
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.3));
+  color: var(--text-gold, #9b7626);
+  flex-shrink: 0;
+}
+
+:host-context(.theme-dark) .lot-hub__empty-icon,
+:host-context(.dark) .lot-hub__empty-icon {
+  color: var(--text-gold, #e1c47c);
+}
+
+.lot-hub__empty-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-primary, #1c2940);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:host-context(.theme-dark) .lot-hub__empty-title,
+:host-context(.dark) .lot-hub__empty-title {
+  color: var(--text-primary, #f1f5f9);
+}
+
+.lot-hub__empty-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #5a6477);
+  margin-top: 0.15rem;
+}
+
+:host-context(.theme-dark) .lot-hub__empty-desc,
+:host-context(.dark) .lot-hub__empty-desc {
+  color: var(--text-secondary, #94a3b8);
+}
+
 
 
 

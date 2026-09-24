@@ -258,6 +258,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .movement-kpi-card {
+  position: relative;
+  overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
@@ -340,9 +342,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .movement-kpi-card__value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum", "lnum";
   line-height: 1.1;
   color: var(--text-primary);
   margin: 2px 0;
