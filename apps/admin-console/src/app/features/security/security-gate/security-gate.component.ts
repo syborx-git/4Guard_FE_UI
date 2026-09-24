@@ -386,47 +386,23 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       docNumber: formVal.operacion === 'CARGA' ? formVal.noCartaPorte : formVal.remision,
     };
 
-    const passData = {
-      v: 1,
-      ts: Date.now(),
-      op: payload.operationType,
-      cc: payload.clientCode,
-      cn: payload.clientName,
-      clc: payload.carrierLineCode,
-      cln: payload.carrierLine,
-      dn: payload.driverName,
-      tp: payload.tractorPlates,
-      doc: payload.docNumber || ''
-    };
-
-    const jsonStr = JSON.stringify(passData);
-    let encodedStr = '';
-    try {
-      encodedStr = btoa(encodeURIComponent(jsonStr)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    } catch {
-      encodedStr = Date.now().toString();
-    }
-
-    const smartToken = `PASS-4G-${encodedStr}`;
-
-    this.movementsService.movementsApi.generatePass({ ...payload, token: smartToken }).subscribe({
+    this.movementsService.movementsApi.generatePass(payload).subscribe({
       next: (res: any) => {
         this.isGeneratingPass.set(false);
-        const token = res.token || smartToken;
+        const token = res.token || res.generatedFolio || ('PASS-4G-' + Date.now());
         this.qrModalToken.set(token);
         const baseUrl = this.getPublicBaseUrl();
         this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
         this.showQrModal.set(true);
-        this.savePassToLocalStorage(token, { ...payload, status: 'PENDING_DRIVER' });
         this.reloadActivePasses();
       },
       error: () => {
         this.isGeneratingPass.set(false);
-        this.qrModalToken.set(smartToken);
+        const fallbackToken = 'PASS-4G-' + Date.now();
+        this.qrModalToken.set(fallbackToken);
         const baseUrl = this.getPublicBaseUrl();
-        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${smartToken}`);
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}`);
         this.showQrModal.set(true);
-        this.savePassToLocalStorage(smartToken, { ...payload, status: 'PENDING_DRIVER' });
         this.reloadActivePasses();
       }
     });
@@ -471,6 +447,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
       for (const p of pendingLocal) {
         if (p && p.token) {
+          // Si ya hay pases en el backend, no duplicar con tokens temporales PASS-4G-
+          if (p.token.startsWith('PASS-4G-') && backendPasses.length > 0) {
+            continue;
+          }
           const existing = mergedMap.get(p.token);
           if (!existing) {
             mergedMap.set(p.token, p);
@@ -589,10 +569,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         matchedClientName = foundClient.name;
       }
     }
-    if (!matchedClientName && this.clients().length > 0) {
-      matchedClientCode = this.clients()[0].code;
-      matchedClientName = this.clients()[0].name;
-    }
 
     // Resolver Línea Transportista en el catálogo
     let matchedCarrierCode = pass.carrierLineCode || '';
@@ -606,10 +582,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         matchedCarrierCode = foundCarrier.code;
         matchedCarrierName = foundCarrier.name;
       }
-    }
-    if (!matchedCarrierName && this.carrierLines().length > 0) {
-      matchedCarrierCode = this.carrierLines()[0].code;
-      matchedCarrierName = this.carrierLines()[0].name;
     }
 
     // Resolver Tipo de Transporte y Medidas
@@ -939,6 +911,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         carrierLineCode: found.code,
         carrierLine: found.name,
       });
+    } else {
+      this.checkInForm.patchValue({
+        carrierLineCode: '',
+        carrierLine: '',
+      });
     }
   }
 
@@ -948,6 +925,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.checkInForm.patchValue({
         clientCode: found.code,
         client: found.name,
+      });
+    } else {
+      this.checkInForm.patchValue({
+        clientCode: '',
+        client: '',
       });
     }
   }
@@ -988,6 +970,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.checkInForm.patchValue({
         rampCode: found.code,
         rampNumber: found.rampNumber,
+      });
+    } else {
+      this.checkInForm.patchValue({
+        rampCode: '',
+        rampNumber: 0,
       });
     }
   }
@@ -1213,10 +1200,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected resetFormFieldsOnly(): void {
-    const firstClient = this.clients()[0];
-    const firstCarrier = this.carrierLines()[0];
-    const firstRamp = this.ramps()[0];
-
     this.checkInForm.reset({
       controlNumber: 'F01-PO-CP-7.1.3-03',
       revisionNumber: '01',
@@ -1225,17 +1208,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       fecha: this.getCurrentDateString(),
       noCartaPorte: '',
       remision: '',
-      clientCode: firstClient ? firstClient.code : '',
-      client: firstClient ? firstClient.name : '',
+      clientCode: '',
+      client: '',
       procedimiento: 'Recepción',
       operacion: 'DESCARGA',
       horaEntrada: this.getCurrentTimeString(),
       horaSalida: '',
-      carrierLineCode: firstCarrier ? firstCarrier.code : '',
-      carrierLine: firstCarrier ? firstCarrier.name : '',
+      carrierLineCode: '',
+      carrierLine: '',
       nombreOperador: '',
-      rampCode: firstRamp ? firstRamp.code : 'R-01',
-      rampNumber: firstRamp ? firstRamp.rampNumber : 1,
+      rampCode: '',
+      rampNumber: 0,
       placasTracto: '',
       noEcoTractor: '',
       placasCaja: '',
@@ -1272,6 +1255,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.sealList.set([]);
     this.tempSealInput.set('');
     this.activeToken.set(null);
+    this.isCustomTransportType.set(false);
+    this.isCustomBoxDimension.set(false);
+    this.customTransportInput.set('');
+    this.customBoxDimensionInput.set('');
   }
 
   protected resetForm(): void {

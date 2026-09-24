@@ -1,0 +1,163 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+    
+    <!-- Modal Header -->
+    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+          <span class="material-symbols-outlined text-xl">warehouse</span>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ dialogTitle }}</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Capacidad estándar: 22 Pallets por Bahía con Semáforo en Tiempo Real</p>
+        </div>
+      </div>
+      <button type="button" (click)="closeModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <span class="material-symbols-outlined text-xl">close</span>
+      </button>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="px-6 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+      <div class="relative flex-1">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+        <input
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Buscar bahía por código o nave..."
+          class="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+        />
+      </div>
+      <button type="button" (click)="loadBays()" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors">
+        <span class="material-symbols-outlined text-base">refresh</span>
+        <span>Recargar</span>
+      </button>
+    </div>
+
+    <!-- Bay List Content -->
+    <div class="p-6 overflow-y-auto flex-1 space-y-3">
+      @if (loading()) {
+        <div class="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
+          <span class="material-symbols-outlined animate-spin text-3xl text-amber-500">progress_activity</span>
+          <span class="text-xs font-medium">Calculando matriz de cubicaje y ocupación...</span>
+        </div>
+      } @else if (filteredBays().length === 0) {
+        <div class="py-12 text-center text-slate-500 text-xs">
+          No se encontraron bahías activas con el filtro indicado.
+        </div>
+      } @else {
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          @for (bay of filteredBays(); track bay.id) {
+            <div
+              (click)="selectBay(bay)"
+              [ngClass]="{
+                'border-amber-500 bg-amber-500/10': selectedBay()?.id === bay.id,
+                'opacity-50 cursor-not-allowed': bay.isBlocked || bay.status !== 'ACTIVE'
+              }"
+              class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 hover:border-amber-400 dark:hover:border-amber-500 transition-all cursor-pointer relative flex flex-col justify-between gap-2.5 shadow-sm"
+            >
+              <!-- Header with Badges -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-sm text-slate-900 dark:text-white">{{ bay.code }}</span>
+                  @if (bay.isRecommended) {
+                    <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
+                      <span class="material-symbols-outlined text-xs">recommend</span> Sugerida
+                    </span>
+                  }
+                </div>
+
+                <!-- Traffic light badge -->
+                @if (bay.trafficLight === 'GREEN') {
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Disponible
+                  </span>
+                } @else if (bay.trafficLight === 'AMBER') {
+                  <span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 text-[10px] font-bold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Ocupación Alta
+                  </span>
+                } @else {
+                  <span class="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 text-[10px] font-bold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Saturada
+                  </span>
+                }
+              </div>
+
+              <!-- Section & Location info -->
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>{{ bay.sectionName }}</span>
+                <span class="font-medium text-slate-700 dark:text-slate-300">{{ bay.currentStoredPallets }} / {{ bay.capacityPallets }} Pallets</span>
+              </div>
+
+              <!-- Progress Semaphore Bar -->
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-200 dark:border-slate-700">
+                <div
+                  class="h-full rounded-full transition-all duration-300"
+                  [ngClass]="bay.trafficLight === 'GREEN' ? 'bg-emerald-500' : (bay.trafficLight === 'AMBER' ? 'bg-amber-500' : 'bg-rose-500')"
+                  [style.width]="bay.occupancyPercentage + '%'"
+                ></div>
+              </div>
+
+              <div class="text-right text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                {{ bay.occupancyPercentage }}% Ocupado
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Admin Override Form (Pablo) -->
+      @if (showOverrideForm() && allowAdminOverride) {
+        <div class="mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 animate-fade-in">
+          <div class="flex items-center gap-2 mb-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+            <span class="material-symbols-outlined text-base">shield_person</span>
+            <span>Anulación Manual de Sugerencia (Override Administrador - Pablo)</span>
+          </div>
+          <p class="text-[11px] text-amber-700 dark:text-amber-400 mb-2">
+            Ha seleccionado una bahía distinta a la recomendada por el algoritmo de cubicaje. Ingrese el motivo para registrarlo en la bitácora de auditoría inmutable:
+          </p>
+          <input
+            type="text"
+            [ngModel]="overrideReason()"
+            (ngModelChange)="overrideReason.set($event)"
+            placeholder="Ej: Acomodo estratégico por consolidación de lote de alta rotación..."
+            class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 font-medium"
+          />
+        </div>
+      }
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between">
+      <div class="text-xs text-slate-600 dark:text-slate-400">
+        @if (selectedBay()) {
+          Seleccionada: <strong class="text-slate-900 dark:text-white">{{ selectedBay()?.code }}</strong>
+          ({{ selectedBay()?.currentStoredPallets }}/{{ selectedBay()?.capacityPallets }} Pallets)
+        } @else {
+          Ninguna bahía seleccionada
+        }
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          (click)="closeModal()"
+          class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          (click)="confirmSelection()"
+          [disabled]="!selectedBay()"
+          class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+        >
+          <span class="material-symbols-outlined text-base">check</span>
+          <span>Asignar Bahía</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

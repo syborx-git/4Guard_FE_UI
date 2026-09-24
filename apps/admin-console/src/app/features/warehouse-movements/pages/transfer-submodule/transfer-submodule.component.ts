@@ -17,6 +17,7 @@ import {
   ReceptionPalletItem,
 } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
+import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
 
 export interface ForkliftOperatorOption {
   id: string;
@@ -30,7 +31,7 @@ export interface ForkliftOperatorOption {
 @Component({
   selector: 'fg-transfer-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, PrintTransferLayoutComponent],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, PrintTransferLayoutComponent, BayOccupancySelectorComponent],
   templateUrl: './transfer-submodule.component.html',
   styleUrl: './transfer-submodule.component.css',
 })
@@ -408,6 +409,21 @@ export class TransferSubmoduleComponent implements OnInit {
   destSearchQuery = signal<string>('');
   isDestDropdownOpen = signal<boolean>(false);
   selectedDestinationCode = signal('');
+  showDestBaySelectorModal = signal<boolean>(false);
+
+  openDestBaySelector(): void {
+    this.showDestBaySelectorModal.set(true);
+  }
+
+  onDestBaySelected(res: BaySelectionResult): void {
+    this.selectDestinationLocation(res.locationCode);
+    this.showDestBaySelectorModal.set(false);
+    if (res.isOverride) {
+      this.toast.info(`Bahía destino ${res.locationCode} seleccionada con Anulación de Administrador.`);
+    } else {
+      this.toast.success(`Bahía destino ${res.locationCode} seleccionada correctamente.`);
+    }
+  }
 
   selectDestinationLocation(code: string): void {
     this.selectedDestinationCode.set(code);

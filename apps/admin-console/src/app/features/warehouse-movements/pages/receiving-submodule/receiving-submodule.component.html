@@ -239,14 +239,14 @@
                 </span>
               </div>
 
-              <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <div class="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
                 <span class="carrier-item__subtitle truncate">Rem: {{ rec.checkIn.docNumber }}</span>
-                <span class="text-[10px] font-mono opacity-80">{{ rec.createdAt ? (rec.createdAt.slice(0, 10)) : '' }}</span>
+                <span class="text-[10px] font-mono opacity-90">{{ rec.createdAt ? (rec.createdAt.slice(0, 10)) : '' }}</span>
               </div>
 
               <div class="flex items-center justify-between mt-0.5">
                 <span class="carrier-item__tag font-mono">#{{ rec.folio }}</span>
-                <span class="text-[10px] text-slate-500 font-medium">Rampa {{ rec.checkIn.rampNumber }}</span>
+                <span class="text-[11px] text-slate-800 dark:text-slate-200 font-bold">Rampa {{ rec.checkIn.rampNumber }}</span>
               </div>
 
               @if (rec.productName) {
@@ -278,13 +278,13 @@
         <div class="synexia-card p-5 space-y-6" fgStarBorder fgSpecularGlow>
           
           <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
-            <div class="flex items-center gap-2 flex-wrap text-xs">
-              <span class="material-symbols-outlined text-base text-slate-700 dark:text-slate-300">local_shipping</span>
-              <span class="text-slate-700 dark:text-slate-300 font-bold">Movimientos</span>
-              <span class="material-symbols-outlined text-xs text-slate-400">chevron_right</span>
-              <strong class="text-slate-950 dark:text-slate-50 font-black text-sm">{{ rec.checkIn.client }}</strong>
-              <span class="font-mono text-xs font-bold text-gold px-2.5 py-0.5 rounded-md bg-gold/10 border border-gold/30">FOLIO #{{ rec.folio }}</span>
+          <div class="receiving-breadcrumb-bar">
+            <div class="receiving-breadcrumb-bar__path">
+              <span class="material-symbols-outlined receiving-breadcrumb__icon">local_shipping</span>
+              <span class="receiving-breadcrumb__module">Movimientos</span>
+              <span class="material-symbols-outlined receiving-breadcrumb__sep">chevron_right</span>
+              <h2 class="receiving-breadcrumb__client" [title]="rec.checkIn.client">{{ rec.checkIn.client }}</h2>
+              <span class="receiving-breadcrumb__folio">FOLIO #{{ rec.folio }}</span>
               <span
                 class="transportistas-status-badge"
                 [class.transportistas-status-badge--registered]="rec.status === 'REGISTERED'"
@@ -465,106 +465,283 @@
 
               <!-- Bahía Asignada Automáticamente por WMS & Rampa (5 cols) -->
               <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-5">
-                <div class="flex items-center justify-between">
-                  <span class="logistics-command-label text-blue-700 dark:text-blue-300">
+                <div class="flex items-center justify-between gap-1.5 flex-wrap">
+                  <span class="logistics-command-label text-blue-800 dark:text-blue-300 font-extrabold flex items-center gap-1">
                     <span class="material-symbols-outlined text-xs">warehouse</span>
-                    Bahía WMS Asignada (Auto-Slotting)
+                    <span>Bahía WMS Asignada</span>
                   </span>
-                  <span class="text-[10px] font-mono font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
-                    Andén {{ rec.checkIn.rampNumber || 1 }}
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                      Andén {{ rec.checkIn.rampNumber || 1 }}
+                    </span>
+                    <button
+                      type="button"
+                      (click)="openBaySelector()"
+                      class="btn-bay-action"
+                      title="Ver mapa de ocupación en tiempo real y reasignar bahía (Semáforo estándar 22 tarimas)"
+                    >
+                      <span class="material-symbols-outlined text-xs">grid_view</span>
+                      <span>Cambiar Bahía (22)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 mt-1.5 pt-1 border-t border-blue-200/60 dark:border-blue-800/40">
+                  <span
+                    (click)="openBaySelector()"
+                    class="font-mono font-black text-slate-950 dark:text-white text-sm truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                    [title]="'Haga clic para cambiar bahía: ' + (rec.storageLocation || altaForm.value.storageLocation || 'LOC-A-01-N1')"
+                  >
+                    {{ rec.storageLocation || altaForm.value.storageLocation || 'LOC-A-01-N1' }}
+                  </span>
+                  <span class="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-300/80 dark:border-blue-700 flex items-center gap-1 shrink-0">
+                    <span class="material-symbols-outlined text-[11px]">bolt</span>
+                    <span>Auto-Slotting</span>
                   </span>
                 </div>
-                <span class="font-mono font-black text-blue-900 dark:text-blue-200 text-sm mt-0.5 block truncate" [title]="rec.storageLocation || altaForm.value.storageLocation || 'Pasillo A - Rack 01 - Nivel 1'">
-                  {{ rec.storageLocation || altaForm.value.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}
-                </span>
               </div>
             </div>
           </div>
 
-          <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y PRODUCTO -->
+          <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y CONTROL DE LOTES -->
           @if (rec.status === 'REGISTERED') {
-            <form [formGroup]="altaForm" class="space-y-3.5 pt-1">
-              <div class="form-section__legend flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined">inventory_2</span>
-                  <span>PARÁMETROS DE LA RECEPCIÓN Y CONTROL DE LOTES</span>
-                </div>
-                <button
-                  type="button"
-                  (click)="openAddLotModal()"
-                  class="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 flex items-center gap-1 transition-all"
-                  title="Registrar nuevo lote para asignar a las tarimas de esta recepción"
-                >
-                  <span class="material-symbols-outlined text-xs">add_circle</span>
-                  <span>+ Agregar Lote a Sesión</span>
-                </button>
+            <form [formGroup]="altaForm" class="space-y-4 pt-1">
+              <div class="form-section__legend">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span>PARÁMETROS DE LA RECEPCIÓN Y CONTROL DE LOTES</span>
               </div>
 
-              <!-- Selector visual de Lotes de la Sesión -->
-              @if (lotsList().length > 0) {
-                <div class="flex items-center gap-2 flex-wrap p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-xs">
-                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lotes Registrados:</span>
-                  @for (lt of lotsList(); track lt.lotNumber) {
+              <!-- HUB DE CONTROL DE LOTES EN SESIÓN (SDD 4GUARD) -->
+              <div class="lot-hub">
+                @if (lotsList().length === 0) {
+                  <!-- Empty State cuando no hay lote cargado -->
+                  <div class="lot-hub__empty">
+                    <div class="lot-hub__empty-left">
+                      <div class="lot-hub__empty-icon">
+                        <span class="material-symbols-outlined text-xl">inventory</span>
+                      </div>
+                      <div>
+                        <div class="lot-hub__empty-title">
+                          <span>Sin Lote Registrado en Sesión</span>
+                          <span class="badge-gold">Requerido</span>
+                        </div>
+                        <p class="lot-hub__empty-desc">
+                          Registre el número de lote y su fecha de caducidad para habilitar la descarga física y la asignación de montacarguista.
+                        </p>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      (click)="selectLotForScanning(lt.lotNumber)"
-                      class="px-2.5 py-1 rounded-lg font-mono text-xs font-bold border transition-all flex items-center gap-1.5"
-                      [class.bg-amber-500]="selectedScanningLot() === lt.lotNumber"
-                      [class.text-slate-950]="selectedScanningLot() === lt.lotNumber"
-                      [class.border-amber-600]="selectedScanningLot() === lt.lotNumber"
-                      [class.bg-white]="selectedScanningLot() !== lt.lotNumber"
-                      [class.dark:bg-slate-900]="selectedScanningLot() !== lt.lotNumber"
-                      [class.text-slate-700]="selectedScanningLot() !== lt.lotNumber"
-                      [class.dark:text-slate-300]="selectedScanningLot() !== lt.lotNumber"
-                      [class.border-slate-300]="selectedScanningLot() !== lt.lotNumber"
-                      [class.dark:border-slate-700]="selectedScanningLot() !== lt.lotNumber"
-                      [title]="'Caducidad: ' + (lt.expirationDate || 'N/A')"
+                      (click)="openAddLotModal()"
+                      class="lot-hub__btn-add"
                     >
-                      <span>📦 {{ lt.lotNumber }}</span>
-                      @if (lt.expirationDate) {
-                        <span class="text-[10px] opacity-75 font-normal">({{ lt.expirationDate }})</span>
-                      }
-                      @if (selectedScanningLot() === lt.lotNumber) {
-                        <span class="material-symbols-outlined text-[13px] font-black">check</span>
-                      }
+                      <span class="material-symbols-outlined text-sm">add_circle</span>
+                      <span>+ Dar de Alta Lote</span>
                     </button>
+                  </div>
+                } @else {
+                  <!-- Cabecera del Hub de Lotes -->
+                  <div class="lot-hub__header">
+                    <div class="lot-hub__title">
+                      <span class="material-symbols-outlined text-sm text-amber-600 dark:text-amber-400">qr_code_2</span>
+                      <span>Lotes en Sesión de Recepción</span>
+                      <span class="lot-hub__count-badge">{{ lotsList().length }} {{ lotsList().length === 1 ? 'Lote' : 'Lotes' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="openAddLotModal()"
+                      class="lot-hub__btn-add"
+                      title="Registrar nuevo lote para asignar a las tarimas de esta recepción"
+                    >
+                      <span class="material-symbols-outlined text-sm">add_circle</span>
+                      <span>+ Agregar Lote a Sesión</span>
+                    </button>
+                  </div>
+
+                  <!-- Deck de Tarjetas de Lote (Grid Responsivo Limpio) -->
+                  <div class="lot-hub__deck">
+                    @for (lt of lotsList(); track lt.lotNumber) {
+                      <div
+                        class="lot-card"
+                        [class.lot-card--active]="selectedScanningLot() === lt.lotNumber"
+                        (click)="selectLotForScanning(lt.lotNumber)"
+                      >
+                        <div class="lot-card__top">
+                          <div class="lot-card__code">
+                            <span class="material-symbols-outlined text-sm">inventory_2</span>
+                            <span>{{ lt.lotNumber }}</span>
+                          </div>
+                          <div class="flex items-center gap-1.5">
+                            @if (selectedScanningLot() === lt.lotNumber) {
+                              <span class="lot-card__badge-active">
+                                <span class="material-symbols-outlined text-[11px]">check</span>
+                                <span>Activo</span>
+                              </span>
+                            }
+                            <button
+                              type="button"
+                              (click)="removeLotFromSession(lt.lotNumber, $event)"
+                              class="lot-card__btn-delete"
+                              [title]="'Quitar lote ' + lt.lotNumber + ' de la sesión'"
+                            >
+                              <span class="material-symbols-outlined text-[13px]">close</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="lot-card__bottom">
+                          <div class="lot-card__exp-date">
+                            <span class="material-symbols-outlined text-xs opacity-60">event</span>
+                            <span>{{ lt.expirationDate || 'Sin caducidad' }}</span>
+                          </div>
+                          @if (getLotShelfLifeDays(lt); as d) {
+                            <span
+                              class="text-[9.5px] font-bold font-mono px-1.5 py-0.2 rounded"
+                              [class.text-emerald-700]="isShelfLifeCompliant(d)"
+                              [class.bg-emerald-500-10]="isShelfLifeCompliant(d)"
+                              [class.text-amber-700]="!isShelfLifeCompliant(d)"
+                              [class.bg-amber-500-10]="!isShelfLifeCompliant(d)"
+                            >
+                              {{ d }}d vida útil
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Franja Inferior de Lote Activo (Consola de Estado y Fechas) -->
+                  @if (getActiveLot(); as activeLot) {
+                    <div class="lot-hub__active-strip">
+                      <div class="lot-active-data">
+                        <div class="lot-active-item">
+                          <span class="lot-active-label">Lote Activo:</span>
+                          <span class="lot-active-val lot-active-val--lotcode">
+                            📦 {{ activeLot.lotNumber }}
+                          </span>
+                        </div>
+                        <div class="lot-active-item">
+                          <span class="lot-active-label">Caducidad:</span>
+                          <span class="lot-active-val">
+                            📅 {{ activeLot.expirationDate || 'N/A' }}
+                          </span>
+                        </div>
+                        @if (activeLot.elaborationDate) {
+                          <div class="lot-active-item">
+                            <span class="lot-active-label">Elaboración:</span>
+                            <span class="lot-active-val">
+                              🏭 {{ activeLot.elaborationDate }}
+                            </span>
+                          </div>
+                        }
+                        @if (getActiveLotShelfLifeDays(); as days) {
+                          <span
+                            class="lot-active-badge-shelf"
+                            [class.lot-active-badge-shelf--warning]="!isShelfLifeCompliant(days)"
+                          >
+                            <span class="material-symbols-outlined text-[12px]">verified</span>
+                            <span>{{ days }} días vida útil ({{ isShelfLifeCompliant(days) ? 'Conforme ≥ 1 año' : 'Candado menor a 1 año' }})</span>
+                          </span>
+                        }
+                        @if (getPalletsCountForLot(activeLot.lotNumber); as pCount) {
+                          <span class="text-[10.5px] font-mono opacity-60">
+                            ({{ pCount }} {{ pCount === 1 ? 'tarima vinculada' : 'tarimas vinculadas' }})
+                          </span>
+                        }
+                      </div>
+
+                      <div class="lot-active-actions">
+                        <button
+                          type="button"
+                          (click)="openEditActiveLotModal()"
+                          class="lot-btn-edit"
+                          title="Modificar fecha de caducidad o datos de este lote"
+                        >
+                          <span class="material-symbols-outlined text-xs">edit_calendar</span>
+                          <span>Editar Fechas</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+
+              <!-- GRID DE 12 COLUMNAS: PARÁMETROS OPERATIVOS DE DESCARGA -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
+                <!-- Montacarguista: 3 columnas -->
+                <div class="fg-field relative col-span-1 sm:col-span-1 lg:col-span-3">
+                  <label class="fg-label fg-label--required">Montacarguista</label>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="operatorSearchQuery()"
+                      (input)="onOperatorInput($any($event.target).value)"
+                      (focus)="isOperatorDropdownOpen.set(true)"
+                      placeholder="Buscar montacarguista..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      autocomplete="off"
+                    />
+                    @if (operatorSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="clearOperatorSelection()"
+                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Limpiar montacarguista seleccionado"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
+                    }
+                  </div>
+
+                  <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
+                  @if (isOperatorDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isOperatorDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de Montacarguistas -->
+                  @if (isOperatorDropdownOpen() && filteredForkliftOperators().length > 0) {
+                    <div class="sku-autocomplete-dropdown">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">engineering</span>
+                          <span>Coincidencias ({{ filteredForkliftOperators().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (op of filteredForkliftOperators(); track (op.code || op.name)) {
+                        <button
+                          type="button"
+                          (click)="selectForkliftOperator(op)"
+                          class="sku-autocomplete-item"
+                          [class.sku-autocomplete-item--selected]="altaForm.get('forkliftOperator')?.value === op.name"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span class="sku-autocomplete-badge">{{ op.code || getInitials(op.name) }}</span>
+                            <span class="sku-autocomplete-name">{{ op.name }}</span>
+                          </div>
+                          @if (altaForm.get('forkliftOperator')?.value === op.name) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isOperatorDropdownOpen() && filteredForkliftOperators().length === 0 && operatorSearchQuery()) {
+                    <div class="sku-autocomplete-empty">
+                      No se encontraron montacarguistas con "{{ operatorSearchQuery() }}"
+                    </div>
                   }
                 </div>
-              }
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
-                <div class="fg-field lg:col-span-2">
-                  <label class="fg-label fg-label--required">Lote Activo</label>
-                  <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="Ej. LOT-2026-A1" />
-                </div>
-
-                <div class="fg-field lg:col-span-2">
-                  <label class="fg-label">F. Elaboración</label>
-                  <input type="date" formControlName="elaborationDate" class="fg-input font-bold !text-slate-950" />
-                </div>
-
-                <div class="fg-field lg:col-span-2">
-                  <label class="fg-label fg-label--required">Fecha de Caducidad</label>
-                  <input type="date" formControlName="expirationDate" class="fg-input font-bold !text-slate-950" />
-                </div>
-
-                <div class="fg-field lg:col-span-3">
-                  <label class="fg-label fg-label--required">Montacarguista</label>
-                  <select formControlName="forkliftOperator" class="fg-input font-bold !text-slate-950">
-                    <option value="">-- Selecciona montacarguista --</option>
-                    @for (op of forkliftOperators(); track op.code) {
-                      <option [value]="op.name">{{ op.name }}</option>
-                    }
-                  </select>
-                </div>
-
-                <div class="fg-field lg:col-span-3">
+                <!-- Rampa de Recepción: 3 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-3">
                   <div class="flex items-center justify-between">
                     <label class="fg-label fg-label--required">Rampa de Recepción</label>
                     <button
                       type="button"
                       (click)="showDockMapModal.set(true)"
-                      class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                      class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
                       title="Abrir mapa visual de andenes"
                     >
                       <span class="material-symbols-outlined text-[13px]">grid_view</span>
@@ -580,7 +757,139 @@
                   </select>
                 </div>
 
-                <!-- FILA 2: Producto (SKU) cupo 4, Piezas cupo 3, Tipo Tarima cupo 2, Proveedor cupo 3 -->
+                <!-- Proveedor: 3 columnas -->
+                <div class="fg-field relative col-span-1 sm:col-span-1 lg:col-span-3">
+                  <label class="fg-label fg-label--required">Proveedor</label>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="supplierSearchQuery()"
+                      (input)="onSupplierInput($any($event.target).value)"
+                      (focus)="isSupplierDropdownOpen.set(true)"
+                      placeholder="Buscar proveedor..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      autocomplete="off"
+                    />
+                    @if (supplierSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="clearSupplierSelection()"
+                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Limpiar proveedor seleccionado"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
+                    }
+                  </div>
+
+                  <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
+                  @if (isSupplierDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isSupplierDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de Proveedores -->
+                  @if (isSupplierDropdownOpen() && filteredSuppliers().length > 0) {
+                    <div class="sku-autocomplete-dropdown">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">store</span>
+                          <span>Coincidencias ({{ filteredSuppliers().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (sup of filteredSuppliers(); track (sup.code || sup.name)) {
+                        <button
+                          type="button"
+                          (click)="selectSupplier(sup)"
+                          class="sku-autocomplete-item"
+                          [class.sku-autocomplete-item--selected]="altaForm.get('supplierName')?.value === sup.name"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span class="sku-autocomplete-badge">{{ sup.code || 'PROV' }}</span>
+                            <span class="sku-autocomplete-name">{{ sup.name }}</span>
+                          </div>
+                          @if (altaForm.get('supplierName')?.value === sup.name) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isSupplierDropdownOpen() && filteredSuppliers().length === 0 && supplierSearchQuery()) {
+                    <div class="sku-autocomplete-empty">
+                      No se encontraron proveedores con "{{ supplierSearchQuery() }}"
+                    </div>
+                  }
+                </div>
+
+                <!-- Tipo de Tarima: 3 columnas -->
+                <div class="fg-field relative col-span-1 sm:col-span-1 lg:col-span-3">
+                  <label class="fg-label fg-label--required">Tipo de Tarima</label>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="palletTypeSearchQuery()"
+                      (input)="onPalletTypeInput($any($event.target).value)"
+                      (focus)="isPalletTypeDropdownOpen.set(true)"
+                      placeholder="Buscar tipo de tarima..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      autocomplete="off"
+                    />
+                    @if (palletTypeSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="clearPalletTypeSelection()"
+                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Limpiar tipo de tarima seleccionado"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
+                    }
+                  </div>
+
+                  <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
+                  @if (isPalletTypeDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isPalletTypeDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de Tipos de Tarima -->
+                  @if (isPalletTypeDropdownOpen() && filteredPalletTypes().length > 0) {
+                    <div class="sku-autocomplete-dropdown sku-autocomplete-dropdown--right">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">pallet</span>
+                          <span>Coincidencias ({{ filteredPalletTypes().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (pt of filteredPalletTypes(); track pt[0]) {
+                        <button
+                          type="button"
+                          (click)="selectPalletType(pt)"
+                          class="sku-autocomplete-item"
+                          [class.sku-autocomplete-item--selected]="altaForm.get('selectedPalletType')?.value === pt[0]"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span class="sku-autocomplete-badge">{{ pt[0] }}</span>
+                            <span class="sku-autocomplete-name">{{ pt[1] }}</span>
+                          </div>
+                          @if (altaForm.get('selectedPalletType')?.value === pt[0]) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isPalletTypeDropdownOpen() && filteredPalletTypes().length === 0 && palletTypeSearchQuery()) {
+                    <div class="sku-autocomplete-empty sku-autocomplete-empty--right">
+                      No se encontraron tipos de tarima con "{{ palletTypeSearchQuery() }}"
+                    </div>
+                  }
+                </div>
+
+                <!-- FILA 2: Producto (SKU) 4 col, Piezas por Tarima 2 col, Observaciones 6 col -->
                 <div class="fg-field relative col-span-1 sm:col-span-2 lg:col-span-4">
                   <label class="fg-label fg-label--required">Producto (SKU)</label>
                   <div class="relative flex items-center">
@@ -597,7 +906,7 @@
                       <button
                         type="button"
                         (click)="clearSkuSelection()"
-                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded"
+                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar SKU seleccionado"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
@@ -612,7 +921,7 @@
                     <div class="fixed inset-0 z-40" (click)="isSkuDropdownOpen.set(false)"></div>
                   }
 
-                  <!-- Lista Predictiva Flotante de SKUs (Fondo blanco limpio, borde dorado/ámbar, texto negro de alto contraste) -->
+                  <!-- Lista Predictiva Flotante de SKUs -->
                   @if (isSkuDropdownOpen() && filteredProducts().length > 0) {
                     <div class="sku-autocomplete-dropdown">
                       <div class="sku-autocomplete-header">
@@ -646,36 +955,14 @@
                   }
                 </div>
 
-                <!-- Piezas por Tarima: 3 columnas -->
-                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-3">
+                <!-- Piezas por Tarima: 2 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-2">
                   <label class="fg-label fg-label--required">Piezas por Tarima</label>
                   <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono text-center font-black !text-slate-950" placeholder="0" />
                 </div>
 
-                <!-- Tipo de Tarima: 2 columnas -->
-                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-2">
-                  <label class="fg-label fg-label--required">Tipo de Tarima</label>
-                  <select formControlName="selectedPalletType" class="fg-input font-bold !text-slate-950">
-                    <option value="">-- Selecciona tipo de tarima --</option>
-                    @for (pt of palletTypes; track pt[0]) {
-                      <option [value]="pt[0]">{{ pt[1] }}</option>
-                    }
-                  </select>
-                </div>
-
-                <!-- Proveedor: 3 columnas -->
-                <div class="fg-field col-span-1 sm:col-span-2 lg:col-span-3">
-                  <label class="fg-label fg-label--required">Proveedor</label>
-                  <select formControlName="supplierName" class="fg-input font-bold !text-slate-950">
-                    <option value="">-- Selecciona proveedor --</option>
-                    @for (sup of suppliers(); track sup.code) {
-                      <option [value]="sup.name">{{ sup.name }}</option>
-                    }
-                  </select>
-                </div>
-
-                <!-- Observaciones: 12 columnas -->
-                <div class="fg-field col-span-1 sm:col-span-2 lg:col-span-12">
+                <!-- Observaciones: 6 columnas -->
+                <div class="fg-field col-span-1 sm:col-span-2 lg:col-span-6">
                   <label class="fg-label">Observaciones de la Descarga</label>
                   <input type="text" formControlName="observations" class="fg-input font-medium !text-slate-950" placeholder="Ej. Ingreso directo andén 4 sin incidentes..." />
                 </div>
@@ -963,9 +1250,24 @@
 
           <!-- 5. SECCIÓN 4: RESUMEN Y DETALLE DE TARIMAS DESCARGADAS -->
           <div class="space-y-3 pt-1">
-            <div class="form-section__legend">
-              <span class="material-symbols-outlined">analytics</span>
-              <span>RESUMEN Y DETALLE DE TARIMAS DESCARGADAS</span>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="form-section__legend mb-0">
+                <span class="material-symbols-outlined">analytics</span>
+                <span>RESUMEN Y DETALLE DE TARIMAS DESCARGADAS</span>
+              </div>
+              <div class="flex items-center gap-2">
+                @if (palletStream().length > 0 && rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
+                  <button
+                    type="button"
+                    (click)="openRelabelModal()"
+                    class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                    title="Re-etiquetar tarimas selectivas con SSCC GS1-128 (Pablo)"
+                  >
+                    <span class="material-symbols-outlined text-sm">qr_code_2</span>
+                    <span>Cambiar UAs (SSCC)</span>
+                  </button>
+                }
+              </div>
             </div>
 
             <!-- TOTALIZADORES EN VIVO -->
@@ -2156,7 +2458,7 @@
     </div>
   }
 
-  <!-- ── MODAL: AGREGAR NUEVO LOTE A LA SESIÓN DE RECEPCIÓN (CRITERIO 1 & 2) ── -->
+  <!-- ── MODAL: AGREGAR / EDITAR LOTE EN LA SESIÓN DE RECEPCIÓN (CRITERIO 1 & 2) ── -->
   @if (showAddLotModal()) {
     <div class="modal-overlay p-4 animate-fade-in" (click)="closeAddLotModal()">
       <div class="modal-card max-w-md w-full p-5 space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
@@ -2166,11 +2468,11 @@
               <span class="material-symbols-outlined text-lg">batch_prediction</span>
             </div>
             <div>
-              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase">Agregar Lote a Sesión</h3>
-              <p class="text-[11px] text-slate-500">Permite asociar diferentes lotes por Unidad de Almacén (UA)</p>
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase">Dar de Alta / Modificar Lote</h3>
+              <p class="text-[11px] text-slate-500">Asigne el código de lote y su fecha de caducidad para la descarga</p>
             </div>
           </div>
-          <button type="button" (click)="closeAddLotModal()" class="text-slate-400 hover:text-slate-600">
+          <button type="button" (click)="closeAddLotModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
             <span class="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
@@ -2199,13 +2501,107 @@
           </div>
 
           <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
-            <button type="button" (click)="closeAddLotModal()" class="btn-ghost text-xs px-3.5 py-1.5 rounded-lg">Cancelar</button>
-            <button type="submit" class="btn-save text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1">
-              <span class="material-symbols-outlined text-sm">add</span>
+            <button type="button" (click)="closeAddLotModal()" class="btn-ghost text-xs px-3.5 py-1.5 rounded-lg cursor-pointer">Cancelar</button>
+            <button type="submit" class="btn-save text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-sm">check_circle</span>
               <span>Guardar Lote</span>
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS (22 PALLETS) -->
+  @if (showBaySelectorModal()) {
+    <fg-bay-occupancy-selector
+      [selectedLocationCode]="altaForm.value.storageLocation"
+      (locationSelected)="onBaySelected($event)"
+      (closed)="showBaySelectorModal.set(false)"
+    ></fg-bay-occupancy-selector>
+  }
+
+  <!-- MODAL: CAMBIO SELECTIVO DE UAS (SSCC GS1-128) -->
+  @if (showRelabelModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-xl w-full flex flex-col max-h-[85vh] overflow-hidden">
+        
+        <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <span class="material-symbols-outlined text-xl">qr_code_2</span>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Cambio Selectivo de UAs (SSCC GS1-128)</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Preserva la UA original del proveedor en la bitácora inmutable</p>
+            </div>
+          </div>
+          <button (click)="closeRelabelModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+            <span class="font-bold text-slate-700 dark:text-slate-300">Tarimas Recibidas ({{ palletStream().length }})</span>
+            <button type="button" (click)="toggleSelectAllPalletsForRelabel()" class="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline">
+              {{ selectedPalletIdsForRelabel().size === palletStream().length ? 'Deseleccionar Todas' : 'Seleccionar Todas' }}
+            </button>
+          </div>
+
+          <div class="max-h-60 overflow-y-auto space-y-2">
+            @for (pallet of palletStream(); track pallet.id) {
+              <label class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                <div class="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedPalletIdsForRelabel().has(pallet.id)"
+                    (change)="togglePalletRelabelSelection(pallet.id)"
+                    class="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                  />
+                  <div>
+                    <span class="font-mono font-bold text-slate-900 dark:text-white">Tarima #{{ pallet.palletNumber }}: {{ pallet.palletCode }}</span>
+                    @if (pallet.isUaRelabelled) {
+                      <span class="ml-2 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold">Ya Re-etiquetada</span>
+                    }
+                  </div>
+                </div>
+                <span class="font-mono text-[11px] text-slate-500">{{ pallet.pieces }} PZAS</span>
+              </label>
+            }
+          </div>
+
+          <div>
+            <label class="fg-label font-bold text-slate-700 dark:text-slate-300">Motivo del Re-etiquetado</label>
+            <input
+              type="text"
+              [ngModel]="relabelReason()"
+              (ngModelChange)="relabelReason.set($event)"
+              placeholder="Ej. Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128"
+              class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white mt-1"
+            />
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between">
+          <span class="text-xs text-slate-500">{{ selectedPalletIdsForRelabel().size }} tarima(s) seleccionada(s)</span>
+          <div class="flex items-center gap-2">
+            <button (click)="closeRelabelModal()" class="btn-ghost text-xs px-3.5 py-2 rounded-xl">Cancelar</button>
+            <button
+              (click)="executeRelabelUas()"
+              [disabled]="isRelabelling() || selectedPalletIdsForRelabel().size === 0"
+              class="btn-save text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 disabled:opacity-40"
+            >
+              @if (isRelabelling()) {
+                <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                <span>Generando SSCC...</span>
+              } @else {
+                <span class="material-symbols-outlined text-sm">qr_code</span>
+                <span>Aplicar Re-etiquetado</span>
+              }
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   }

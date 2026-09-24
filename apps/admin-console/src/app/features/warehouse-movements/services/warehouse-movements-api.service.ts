@@ -90,10 +90,10 @@ export class WarehouseMovementsApiService {
   }
 
   generatePass(body: any): Observable<any> {
-    const token = body.token || ('PASS-4G-' + Date.now());
+    const fallbackToken = 'PASS-4G-' + Date.now();
     const passObj = {
       id: 'pass-' + Date.now(),
-      token: token,
+      token: fallbackToken,
       status: 'PENDING_DRIVER',
       operationType: body.operationType || 'DESCARGA',
       clientCode: body.clientCode || '',
@@ -109,13 +109,23 @@ export class WarehouseMovementsApiService {
       updatedAt: new Date().toISOString()
     };
 
-    const currentList = this.loadLocalPassesFromStorage().filter(p => p.token !== token);
-    currentList.unshift(passObj);
-    this.saveLocalPassesToStorage(currentList);
-
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/generate`, body).pipe(
-      map((res) => res?.data || passObj),
-      catchError(() => of(passObj))
+      map((res) => {
+        const pass = res?.data || passObj;
+        // Sincronizar en localStorage exclusivamente el token devuelto por el Backend
+        const currentList = this.loadLocalPassesFromStorage().filter(
+          p => p.token !== pass.token && p.token !== fallbackToken && !p.token?.startsWith('PASS-4G-')
+        );
+        currentList.unshift(pass);
+        this.saveLocalPassesToStorage(currentList);
+        return pass;
+      }),
+      catchError(() => {
+        const currentList = this.loadLocalPassesFromStorage().filter(p => p.token !== fallbackToken);
+        currentList.unshift(passObj);
+        this.saveLocalPassesToStorage(currentList);
+        return of(passObj);
+      })
     );
   }
 
@@ -269,6 +279,10 @@ export class WarehouseMovementsApiService {
     }
     for (const l of localList) {
       if (l && l.token && !deletedSet.has(l.token) && !deletedSet.has(l.id)) {
+        // Si ya hay pases sincronizados desde el backend, ignorar tokens temporales PASS-4G-
+        if (l.token.startsWith('PASS-4G-') && backendList.length > 0) {
+          continue;
+        }
         const existing = mapByToken.get(l.token);
         if (!existing) {
           mapByToken.set(l.token, l);
@@ -338,6 +352,24 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  getReceptionLots(receptionId: string): Observable<any[]> {
+    return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/${receptionId}/lots`).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  addReceptionLot(receptionId: string, body: { lotNumber: string; elaborationDate?: string; expirationDate?: string; notes?: string }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.receptionsUrl}/${receptionId}/lots`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  deleteReceptionLot(receptionId: string, lotId: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.receptionsUrl}/${receptionId}/lots/${lotId}`).pipe(
+      map(() => undefined)
+    );
+  }
+
   updatePallet(receptionId: string, palletId: string, body: any): Observable<any> {
     return this.http.put<ApiResponse<any>>(`${this.receptionsUrl}/${receptionId}/pallets/${palletId}`, body).pipe(
       map((res) => res.data)
@@ -370,6 +402,29 @@ export class WarehouseMovementsApiService {
 
   getReceptionAudit(id: string): Observable<any[]> {
     return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/${id}/audit`).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  relabelUas(id: string, body: { palletIds: string[]; reason?: string }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.receptionsUrl}/${id}/relabel-uas`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  getRemissionTree(folio: string): Observable<any[]> {
+    return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/remissions/${folio}/tree`).pipe(
+      map((res) => res.data || [])
+    );
+  }
+
+  getBayOccupancy(branchId?: string): Observable<any[]> {
+    const { branchId: bId } = this.getSessionOrg();
+    const branch = branchId || bId;
+    let params = new HttpParams();
+    if (branch) params = params.set('branchId', branch);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/locations/bays/occupancy`, { params }).pipe(
       map((res) => res.data || [])
     );
   }
