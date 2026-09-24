@@ -292,12 +292,12 @@ export class ShellComponent implements OnInit, OnDestroy {
       route: '/receiving',
     },
     {
-      id: 'traductor',
-      name: 'TRADUCTOR',
+      id: 'whatsapp',
+      name: 'WHATSAPP',
       category: 'google',
-      icon: 'translate',
-      iconBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-      url: 'https://translate.google.com',
+      icon: 'chat',
+      iconBg: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+      url: 'https://web.whatsapp.com',
     },
     {
       id: 'tutoriales',

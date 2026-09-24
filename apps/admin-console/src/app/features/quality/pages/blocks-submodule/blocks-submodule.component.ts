@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { QualityStateService } from '../../services/quality-state.service';
+import { WarehouseMovementsService } from '../../../warehouse-movements/services/warehouse-movements.service';
 import {
   QualityBlockItem,
   DetectionStage,
@@ -52,6 +53,7 @@ export interface AvailableInventoryOption {
 })
 export class BlocksSubmoduleComponent {
   protected readonly qualityState = inject(QualityStateService);
+  protected readonly movementsService = inject(WarehouseMovementsService);
   private readonly router = inject(Router);
 
   constructor() {
@@ -265,7 +267,7 @@ export class BlocksSubmoduleComponent {
   protected readonly newBlockNotes = signal('');
   protected readonly selectedCriteriaList = signal<string[]>([]);
 
-  // Opciones de inventario disponibles (EXCLUYE automáticamente lotes que ya están bloqueados en el sistema)
+  // Opciones de inventario disponibles (Sincronizado con Inventario Global WMS y excluyendo bloqueos activos)
   protected readonly unblockedInventoryOptions = computed(() => {
     const blockedSsccs = new Set(
       this.qualityState.blocks()
@@ -278,7 +280,35 @@ export class BlocksSubmoduleComponent {
         .map(b => b.batchNumber.toLowerCase())
     );
 
-    return this.availableInventoryOptions.filter(opt =>
+    const liveWmsBatches: AvailableInventoryOption[] = (this.movementsService.inventoryBatches() || []).map((b, idx) => ({
+      id: `wms-live-${b.remisionNo || b.lotNumber || idx}`,
+      sourceType: 'STORAGE' as const,
+      groupLabel: '2. Inventario Global WMS',
+      sku: b.productId,
+      description: b.productName,
+      clientName: b.client,
+      batchNumber: b.lotNumber || b.remisionNo,
+      sscc: b.pallets && b.pallets.length > 0 ? b.pallets[0].palletCode : `37613049${String(idx).padStart(4, '0')}0001`,
+      locationId: b.locationCode || 'A-01-N1',
+      availableQty: b.totalPieces || (b.availablePallets ? b.availablePallets * 45 : 480),
+      unitOfMeasure: UnitOfMeasure.UNIT,
+      suggestedStage: 'STORAGE' as const,
+      suggestedCategory: 'MATERIAL' as const,
+    }));
+
+    const combined = [...liveWmsBatches, ...this.availableInventoryOptions];
+    const seen = new Set<string>();
+    const uniqueList: AvailableInventoryOption[] = [];
+
+    for (const item of combined) {
+      const key = `${item.sku}-${item.batchNumber}-${item.sscc}`.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueList.push(item);
+      }
+    }
+
+    return uniqueList.filter(opt =>
       !blockedSsccs.has(opt.sscc.toLowerCase()) && !blockedBatches.has(opt.batchNumber.toLowerCase())
     );
   });
@@ -286,7 +316,7 @@ export class BlocksSubmoduleComponent {
   // Item seleccionado actualmente
   protected readonly selectedInventoryItem = computed(() => {
     const id = this.selectedInventoryId();
-    return this.availableInventoryOptions.find(opt => opt.id === id) || null;
+    return this.unblockedInventoryOptions().find(opt => opt.id === id) || null;
   });
 
   // Opciones de inventario filtradas en tiempo real por Proveedor/Cliente + SSCC, Lote, SKU o Ubicación
@@ -296,7 +326,8 @@ export class BlocksSubmoduleComponent {
     let list = this.unblockedInventoryOptions();
 
     if (supplierFilter !== 'ALL') {
-      list = list.filter(opt => opt.clientName.toLowerCase().includes(supplierFilter.toLowerCase()));
+      const clientKey = supplierFilter.split(' ')[0].toLowerCase();
+      list = list.filter(opt => opt.clientName.toLowerCase().includes(clientKey));
     }
 
     if (!term) return list;
@@ -488,6 +519,75 @@ export class BlocksSubmoduleComponent {
 
   protected setModalSupplierFilter(supplier: string): void {
     this.modalSupplierFilter.set(supplier);
+    this.isSearchDropdownOpen.set(true);
+
+    const matches = this.filteredModalInventoryOptions();
+    if (matches.length > 0) {
+      this.selectInventoryItem(matches[0]);
+    }
+  }
+
+  protected setManualStage(stage: DetectionStage): void {
+    this.newBlockStage.set(stage);
+    const allowed = this.getAllowedCategoriesForStage(stage);
+    if (!allowed.some(c => c.key === this.newBlockCategory())) {
+      this.newBlockCategory.set(allowed[0].key);
+    }
+  }
+
+  // ── MODAL DE EDICIÓN DE BLOQUEO / FOLIO PNC ─────────────────
+  protected readonly isEditModalOpen = signal(false);
+  protected readonly editingBlock = signal<QualityBlockItem | null>(null);
+  protected readonly editQty = signal<number>(0);
+  protected readonly editNotes = signal<string>('');
+  protected readonly editCriteriaList = signal<string[]>([]);
+
+  protected openEditBlockModal(block: QualityBlockItem): void {
+    this.editingBlock.set(block);
+    this.editQty.set(block.quantity);
+    this.editNotes.set(block.notes || '');
+    this.editCriteriaList.set([...block.defectCriteria]);
+    this.isEditModalOpen.set(true);
+  }
+
+  protected closeEditModal(): void {
+    this.isEditModalOpen.set(false);
+    this.editingBlock.set(null);
+  }
+
+  protected toggleEditCriterion(crit: string): void {
+    const current = this.editCriteriaList();
+    if (current.includes(crit)) {
+      this.editCriteriaList.set(current.filter(c => c !== crit));
+    } else {
+      this.editCriteriaList.set([...current, crit]);
+    }
+  }
+
+  protected saveBlockEdits(): void {
+    const current = this.editingBlock();
+    if (!current) return;
+
+    if (this.editQty() <= 0) {
+      alert('La cantidad retenida debe ser mayor a 0.');
+      return;
+    }
+
+    if (this.editCriteriaList().length === 0) {
+      alert('Debe conservar al menos un criterio de defecto para el folio.');
+      return;
+    }
+
+    const updated: QualityBlockItem = {
+      ...current,
+      quantity: this.editQty(),
+      notes: this.editNotes().trim(),
+      defectCriteria: this.editCriteriaList(),
+      severity: this.editCriteriaList().some(c => c.includes('plaga') || c.includes('humedad') || c.includes('Caducó')) ? 'CRITICAL' : 'WARNING'
+    };
+
+    this.qualityState.updateBlock(updated);
+    this.closeEditModal();
   }
 
   protected activateCatalogMode(): void {

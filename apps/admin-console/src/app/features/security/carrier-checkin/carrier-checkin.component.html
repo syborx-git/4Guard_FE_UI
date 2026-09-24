@@ -174,17 +174,49 @@
             </div>
 
             @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
-              <div class="form-group">
-                <label class="form-label" for="remision">Número de Remisión / Factura *</label>
-                <input 
-                  id="remision" 
-                  type="text" 
-                  formControlName="remision" 
-                  class="form-input" 
-                  placeholder="Ej. REM-88492 o FACT-1029" />
+              <div class="doc-type-group mt-3">
+                <label class="form-label">Tipo de Documento de Descarga *</label>
+                <div class="doc-type-selector">
+                  <button 
+                    type="button" 
+                    class="doc-type-btn" 
+                    [class.doc-type-btn--active]="dischargeDocType() === 'REMISION'"
+                    (click)="setDischargeDocType('REMISION')">
+                    <span class="doc-type-icon">📄</span>
+                    <span>Remisión</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    class="doc-type-btn" 
+                    [class.doc-type-btn--active]="dischargeDocType() === 'FACTURA'"
+                    (click)="setDischargeDocType('FACTURA')">
+                    <span class="doc-type-icon">🧾</span>
+                    <span>Factura</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group mt-3">
+                @if (dischargeDocType() === 'REMISION') {
+                  <label class="form-label" for="remision">Número de Remisión *</label>
+                  <input 
+                    id="remision" 
+                    type="text" 
+                    formControlName="remision" 
+                    class="form-input" 
+                    placeholder="Ej. REM-88492" />
+                } @else {
+                  <label class="form-label" for="remision">Número de Factura *</label>
+                  <input 
+                    id="remision" 
+                    type="text" 
+                    formControlName="remision" 
+                    class="form-input" 
+                    placeholder="Ej. FACT-1029" />
+                }
               </div>
             } @else {
-              <div class="form-group">
+              <div class="form-group mt-3">
                 <label class="form-label" for="noCartaPorte">Número de Carta Porte *</label>
                 <input 
                   id="noCartaPorte" 
