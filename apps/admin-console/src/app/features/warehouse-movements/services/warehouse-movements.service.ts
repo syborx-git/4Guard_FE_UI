@@ -1261,6 +1261,9 @@ export class WarehouseMovementsService {
       palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
       observations: p.observations || '',
       status: p.status || 'SCANNED',
+      lotNumber: p.lotNumber || r.lotNumber || '',
+      expirationDate: p.expirationDate || r.expirationDate || '',
+      docNumber: resolvedDoc || '',
     }));
 
     const resolvedDoc =
@@ -1309,13 +1312,14 @@ export class WarehouseMovementsService {
       storageLocationCode: r.storageLocationCode || '',
       observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
       pallets: pallets,
+      lots: r.lots || [],
       createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : (r.checkIn?.receptionTime || ''),
       completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
       cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
       capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
       leaderAuthorizedBy: r.leaderAuthorizedBy || '',
       cancellationReason: r.cancellationReason || '',
-    };
+    } as ReceptionHeader;
   }
 
   // Persiste avances de descarga (parámetros y tarimas) en el Backend (wms.warehouse_reception_pallets)
@@ -1376,6 +1380,8 @@ export class WarehouseMovementsService {
             pieces: p.pieces,
             palletType: p.palletTypeId,
             observations: p.observations || '',
+            lotNumber: p.lotNumber || formVals.lotNumber || null,
+            expirationDate: p.expirationDate || formVals.expirationDate || null,
           }));
           return this.movementsApi.addReceptionPallets(receptionId, palletPayload).pipe(
             catchError((_: any) => of([]))

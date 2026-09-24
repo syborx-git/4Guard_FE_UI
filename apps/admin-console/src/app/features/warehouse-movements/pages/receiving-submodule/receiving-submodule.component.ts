@@ -398,6 +398,48 @@ export class ReceivingSubmoduleComponent implements OnInit {
     );
   });
 
+  // ── AUTOCOMPLETE PREDICTIVO DE MONTACARGUISTA ──
+  operatorSearchQuery = signal<string>('');
+  isOperatorDropdownOpen = signal<boolean>(false);
+  filteredForkliftOperators = computed(() => {
+    const q = this.operatorSearchQuery().toLowerCase().trim();
+    const list = this.forkliftOperators();
+    if (!q) return list;
+    return list.filter(
+      (op) =>
+        (op.name && op.name.toLowerCase().includes(q)) ||
+        (op.code && op.code.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE PROVEEDOR ──
+  supplierSearchQuery = signal<string>('');
+  isSupplierDropdownOpen = signal<boolean>(false);
+  filteredSuppliers = computed(() => {
+    const q = this.supplierSearchQuery().toLowerCase().trim();
+    const list = this.suppliers();
+    if (!q) return list;
+    return list.filter(
+      (s) =>
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.code && s.code.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE TIPO DE TARIMA ──
+  palletTypeSearchQuery = signal<string>('');
+  isPalletTypeDropdownOpen = signal<boolean>(false);
+  filteredPalletTypes = computed(() => {
+    const q = this.palletTypeSearchQuery().toLowerCase().trim();
+    const list = this.palletTypes;
+    if (!q) return list;
+    return list.filter(
+      (pt) =>
+        pt[0].toLowerCase().includes(q) ||
+        pt[1].toLowerCase().includes(q)
+    );
+  });
+
   // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
   checkInForm = this.fb.group({
     carrierLineCode: [''],
@@ -620,6 +662,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
     this.skuSearchQuery.set('');
     this.isSkuDropdownOpen.set(false);
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+    this.supplierSearchQuery.set('');
+    this.isSupplierDropdownOpen.set(false);
+    this.palletTypeSearchQuery.set('');
+    this.isPalletTypeDropdownOpen.set(false);
   }
 
   // Iniciar registro de nuevo arribo en Caseta de Seguridad
@@ -684,9 +732,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     } else {
       this.skuSearchQuery.set('');
     }
+    this.isSkuDropdownOpen.set(false);
+
+    // Sincronizar montacarguista
+    this.operatorSearchQuery.set(defaultOperator || '');
+    this.isOperatorDropdownOpen.set(false);
+
+    // Sincronizar proveedor
+    this.supplierSearchQuery.set(rec.supplierName || '');
+    this.isSupplierDropdownOpen.set(false);
 
     const hasConfiguredProduct = !!(rec.productId || rec.skuCode || (rec.pallets && rec.pallets.length > 0));
     const palletTypeValue = hasConfiguredProduct ? (rec.selectedPalletType || ('' as any)) : ('' as any);
+
+    // Sincronizar tipo de tarima
+    const ptLabel = palletTypeValue ? (PALLET_TYPE_LABELS[palletTypeValue as PalletType] || palletTypeValue) : '';
+    this.palletTypeSearchQuery.set(ptLabel);
+    this.isPalletTypeDropdownOpen.set(false);
 
     const rawObs = rec.observations || '';
     const isCasetaChecklist = rawObs.includes('[FORMATO F01') || rawObs.includes('Arribo en Caseta');
@@ -715,9 +777,23 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const primaryExp = rec.expirationDate || rec.checkIn?.expirationDate || '';
     const primaryElab = rec.elaborationDate || rec.checkIn?.elaborationDate || '';
 
-    const initialLots: Array<{ lotNumber: string; elaborationDate?: string; expirationDate: string }> = [];
+    const initialLots: Array<{ id?: string; lotNumber: string; elaborationDate?: string; expirationDate: string; shelfLifeDaysRemaining?: number }> = [];
     if (primaryLot) {
       initialLots.push({ lotNumber: primaryLot, elaborationDate: primaryElab, expirationDate: primaryExp });
+    }
+
+    if ((rec as any).lots && Array.isArray((rec as any).lots)) {
+      (rec as any).lots.forEach((lt: any) => {
+        if (lt.lotNumber && !initialLots.some((l) => l.lotNumber === lt.lotNumber)) {
+          initialLots.push({
+            id: lt.id,
+            lotNumber: lt.lotNumber,
+            expirationDate: lt.expirationDate || '',
+            elaborationDate: lt.elaborationDate || '',
+            shelfLifeDaysRemaining: lt.shelfLifeDaysRemaining,
+          });
+        }
+      });
     }
 
     if (rec.pallets && rec.pallets.length > 0) {
@@ -726,22 +802,88 @@ export class ReceivingSubmoduleComponent implements OnInit {
           initialLots.push({
             lotNumber: p.lotNumber,
             expirationDate: p.expirationDate || primaryExp,
+            elaborationDate: (p as any).elaborationDate || primaryElab,
           });
         }
       });
     }
 
-    const finalList = initialLots.length > 0 ? initialLots : [{ lotNumber: 'LOT-2026-N1', expirationDate: primaryExp }];
-    this.lotsList.set(finalList);
-    this.selectedScanningLot.set(primaryLot || finalList[0].lotNumber);
+    const finalList = initialLots;
+    this.lotsList.set(finalList as any);
+
+    if (finalList.length > 0) {
+      const activeLotNum = primaryLot || finalList[0].lotNumber;
+      this.selectedScanningLot.set(activeLotNum);
+      const activeLotObj = finalList.find((l) => l.lotNumber === activeLotNum) || finalList[0];
+      this.altaForm.patchValue({
+        lotNumber: activeLotObj.lotNumber,
+        expirationDate: activeLotObj.expirationDate || '',
+        elaborationDate: activeLotObj.elaborationDate || '',
+      });
+    } else {
+      this.selectedScanningLot.set('');
+      this.altaForm.patchValue({
+        lotNumber: '',
+        expirationDate: '',
+        elaborationDate: '',
+      });
+    }
   }
 
-  // ── MÉTODOS DE CONTROL DE LOTES POR UA (CRITERIO 1) ──
+  // ── MÉTODOS DE CONTROL DE LOTES POR UA (CRITERIO 1 & 2) ──
+  getActiveLot(): { lotNumber: string; elaborationDate?: string; expirationDate: string } | undefined {
+    const selected = this.selectedScanningLot();
+    if (selected) {
+      const found = this.lotsList().find((l) => l.lotNumber === selected);
+      if (found) return found;
+    }
+    const lotNum = (this.altaForm.value.lotNumber || '').trim().toUpperCase();
+    if (lotNum) {
+      const found = this.lotsList().find((l) => l.lotNumber === lotNum);
+      if (found) return found;
+    }
+    return this.lotsList().length > 0 ? this.lotsList()[0] : undefined;
+  }
+
+  getActiveLotShelfLifeDays(): number | null {
+    const lot = this.getActiveLot();
+    return this.getLotShelfLifeDays(lot);
+  }
+
+  getLotShelfLifeDays(lot?: { lotNumber: string; elaborationDate?: string; expirationDate: string }): number | null {
+    const targetLot = lot || this.getActiveLot();
+    if (!targetLot || !targetLot.expirationDate) return null;
+    const expDate = new Date(targetLot.expirationDate + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    return Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  getPalletsCountForLot(lotNum: string): number {
+    if (!lotNum) return 0;
+    return this.palletStream().filter((p) => p.lotNumber === lotNum).length;
+  }
+
+  isShelfLifeCompliant(days: number | null): boolean {
+    return days != null && days >= 365;
+  }
+
   openAddLotModal(): void {
     this.newLotForm.reset({
       lotNumber: '',
-      elaborationDate: this.altaForm.value.elaborationDate || '',
-      expirationDate: this.altaForm.value.expirationDate || '',
+      elaborationDate: '',
+      expirationDate: '',
+    });
+    this.showAddLotModal.set(true);
+  }
+
+  openEditActiveLotModal(): void {
+    const lot = this.getActiveLot();
+    this.newLotForm.reset({
+      lotNumber: lot?.lotNumber || this.selectedScanningLot() || '',
+      elaborationDate: lot?.elaborationDate || '',
+      expirationDate: lot?.expirationDate || '',
     });
     this.showAddLotModal.set(true);
   }
@@ -753,7 +895,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   saveNewLot(): void {
     if (this.newLotForm.invalid) {
       this.newLotForm.markAllAsTouched();
-      this.toast.warning('Ingresa el número de lote y fecha de caducidad.');
+      this.toast.warning('Ingresa el número de lote y fecha de caducidad obligatoria.');
       return;
     }
 
@@ -773,15 +915,95 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    if (this.lotsList().some((l) => l.lotNumber === lotNum)) {
-      this.toast.info(`El lote ${lotNum} ya está registrado.`);
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL OBLIGATORIO (≥ 1 AÑO / 365 DÍAS)
+    if (exp) {
+      const expDate = new Date(exp + 'T00:00:00Z');
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const diffDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 365) {
+        this.toast.error(`🛑 Candado de Calidad: El lote cuenta con sólo ${diffDays} días de vida útil restantes (< 1 año / 365 días requeridos). No se permite el registro de lotes que no cumplan la vigencia mínima.`);
+        return;
+      }
+    }
+
+    const existingIndex = this.lotsList().findIndex((l) => l.lotNumber === lotNum);
+    if (existingIndex >= 0) {
+      this.lotsList.update((list) => {
+        const copy = [...list];
+        copy[existingIndex] = { ...copy[existingIndex], lotNumber: lotNum, elaborationDate: elab, expirationDate: exp };
+        return copy;
+      });
+      this.toast.success(`Lote ${lotNum} actualizado con éxito.`);
     } else {
       this.lotsList.update((list) => [...list, { lotNumber: lotNum, elaborationDate: elab, expirationDate: exp }]);
-      this.toast.success(`Lote ${lotNum} agregado a la sesión de recepción.`);
+      this.toast.success(`Lote ${lotNum} registrado y agregado a la sesión.`);
+    }
+
+    // Persistir en Backend si la recepción ya existe
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId)) {
+      this.movementsApi.addReceptionLot(recId, {
+        lotNumber: lotNum,
+        elaborationDate: elab || undefined,
+        expirationDate: exp || undefined,
+      }).subscribe({
+        next: (savedLot: any) => {
+          if (savedLot && savedLot.id) {
+            this.lotsList.update((list) =>
+              list.map((l) => (l.lotNumber === lotNum ? { ...l, id: savedLot.id } : l))
+            );
+          }
+        },
+        error: (err: any) => {
+          console.warn('Sync addReceptionLot:', err);
+        },
+      });
     }
 
     this.selectedScanningLot.set(lotNum);
+    this.altaForm.patchValue({
+      lotNumber: lotNum,
+      expirationDate: exp,
+      elaborationDate: elab,
+    });
+
     this.closeAddLotModal();
+  }
+
+  removeLotFromSession(lotNum: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    const inUse = this.palletStream().some((p) => p.lotNumber === lotNum);
+    if (inUse) {
+      this.toast.warning(`El lote ${lotNum} está asignado a una o más tarimas en la descarga.`);
+      return;
+    }
+    const ok = window.confirm(`¿Desea eliminar el lote ${lotNum} de la sesión de recepción?`);
+    if (!ok) return;
+
+    const targetLot = this.lotsList().find((l) => l.lotNumber === lotNum);
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId) && (targetLot as any)?.id) {
+      this.movementsApi.deleteReceptionLot(recId, (targetLot as any).id).subscribe({
+        error: (err: any) => console.warn('Sync deleteReceptionLot:', err),
+      });
+    }
+
+    this.lotsList.update((list) => list.filter((l) => l.lotNumber !== lotNum));
+    const remaining = this.lotsList();
+    if (this.selectedScanningLot() === lotNum) {
+      if (remaining.length > 0) {
+        this.selectLotForScanning(remaining[0].lotNumber);
+      } else {
+        this.selectedScanningLot.set('');
+        this.altaForm.patchValue({
+          lotNumber: '',
+          expirationDate: '',
+          elaborationDate: '',
+        });
+      }
+    }
+    this.toast.info(`Lote ${lotNum} eliminado de la sesión.`);
   }
 
   selectLotForScanning(lotNum: string): void {
@@ -790,8 +1012,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (matched) {
       this.altaForm.patchValue({
         lotNumber: matched.lotNumber,
-        expirationDate: matched.expirationDate || this.altaForm.value.expirationDate,
-        elaborationDate: matched.elaborationDate || this.altaForm.value.elaborationDate,
+        expirationDate: matched.expirationDate || '',
+        elaborationDate: matched.elaborationDate || '',
       });
     }
   }
@@ -1711,6 +1933,99 @@ export class ReceivingSubmoduleComponent implements OnInit {
     if (prod) {
       this.selectProductSku(prod);
     }
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE MONTACARGUISTA ──
+  onOperatorInput(value: string): void {
+    this.operatorSearchQuery.set(value);
+    this.isOperatorDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ forkliftOperator: '' });
+      return;
+    }
+
+    const exact = this.forkliftOperators().find(
+      (op) => op.name.toLowerCase() === val.toLowerCase() || op.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ forkliftOperator: exact.name });
+    }
+  }
+
+  selectForkliftOperator(op: { code: string; name: string }): void {
+    this.altaForm.patchValue({ forkliftOperator: op.name });
+    this.operatorSearchQuery.set(op.name);
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  clearOperatorSelection(): void {
+    this.altaForm.patchValue({ forkliftOperator: '' });
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE PROVEEDOR ──
+  onSupplierInput(value: string): void {
+    this.supplierSearchQuery.set(value);
+    this.isSupplierDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ supplierName: '' });
+      return;
+    }
+
+    const exact = this.suppliers().find(
+      (s) => s.name.toLowerCase() === val.toLowerCase() || s.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ supplierName: exact.name });
+    }
+  }
+
+  selectSupplier(sup: { code: string; name: string }): void {
+    this.altaForm.patchValue({ supplierName: sup.name });
+    this.supplierSearchQuery.set(sup.name);
+    this.isSupplierDropdownOpen.set(false);
+  }
+
+  clearSupplierSelection(): void {
+    this.altaForm.patchValue({ supplierName: '' });
+    this.supplierSearchQuery.set('');
+    this.isSupplierDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE TIPO DE TARIMA ──
+  onPalletTypeInput(value: string): void {
+    this.palletTypeSearchQuery.set(value);
+    this.isPalletTypeDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ selectedPalletType: '' as any });
+      return;
+    }
+
+    const exact = this.palletTypes.find(
+      (pt) => pt[0].toLowerCase() === val.toLowerCase() || pt[1].toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ selectedPalletType: exact[0] });
+    }
+  }
+
+  selectPalletType(pt: [PalletType, string]): void {
+    this.altaForm.patchValue({ selectedPalletType: pt[0] });
+    this.palletTypeSearchQuery.set(pt[1]);
+    this.isPalletTypeDropdownOpen.set(false);
+  }
+
+  clearPalletTypeSelection(): void {
+    this.altaForm.patchValue({ selectedPalletType: '' as any });
+    this.palletTypeSearchQuery.set('');
+    this.isPalletTypeDropdownOpen.set(false);
   }
 
   // ── ESCÁNER Y CARGA RÁPIDA DE UAs CON CANDADO ANTI-DUPLICADOS & ORDEN DESCENDENTE ──

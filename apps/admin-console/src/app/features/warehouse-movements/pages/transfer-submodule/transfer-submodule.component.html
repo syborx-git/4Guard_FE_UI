@@ -960,13 +960,13 @@
         <div class="synexia-card p-5 space-y-6 animate-fade-up">
 
           <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
-            <div class="flex items-center gap-2 flex-wrap text-xs">
-              <span class="material-symbols-outlined text-base text-slate-700 dark:text-slate-300">compare_arrows</span>
-              <span class="text-slate-700 dark:text-slate-300 font-bold">Movimientos</span>
-              <span class="material-symbols-outlined text-xs text-slate-400">chevron_right</span>
-              <strong class="text-slate-950 dark:text-slate-50 font-bold text-sm">{{ selectedTransfer()!.originLocation }} ➔ {{ selectedTransfer()!.destinationLocation }}</strong>
-              <span class="font-mono text-xs font-bold text-gold px-2.5 py-0.5 rounded-md bg-gold/10 border border-gold/30">FOLIO #{{ selectedTransfer()!.folio }}</span>
+          <div class="receiving-breadcrumb-bar">
+            <div class="receiving-breadcrumb-bar__path">
+              <span class="material-symbols-outlined receiving-breadcrumb__icon">compare_arrows</span>
+              <span class="receiving-breadcrumb__module">Movimientos</span>
+              <span class="material-symbols-outlined receiving-breadcrumb__sep">chevron_right</span>
+              <h2 class="receiving-breadcrumb__client">{{ selectedTransfer()!.originLocation }} ➔ {{ selectedTransfer()!.destinationLocation }}</h2>
+              <span class="receiving-breadcrumb__folio">FOLIO #{{ selectedTransfer()!.folio }}</span>
               <span
                 class="transportistas-status-badge"
                 [class.transportistas-status-badge--active]="selectedTransfer()?.status !== 'CANCELLED'"
