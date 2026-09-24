@@ -87,21 +87,21 @@ import { LoadVerification } from '../../models/quality.models';
 
       <!-- Subtítulo de Criterios de Producto -->
       <div class="bg-slate-800 text-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider mb-1 flex justify-between items-center">
-        <span>1. CONDICIONES GENERALES VISUALES — CRITERIOS DE PRODUCTO</span>
-        <span class="text-[8px] font-normal opacity-80">Marcar con ✓ según corresponda</span>
+        <span>CONDICIONES GENERALES VISUALES</span>
+        <span class="text-[8px] font-normal opacity-80">Instrucciones: Marcar con una ✓ según corresponda o n/a.</span>
       </div>
 
       <!-- Tabla 1: Criterios de Producto -->
       <table class="w-full border-collapse border border-black mb-2 text-[8px] sm:text-[9px] font-mono text-left">
         <thead>
           <tr class="bg-slate-100 border-b border-black font-bold uppercase">
-            <th class="p-1 border-r border-black w-[38%]">Criterio de Producto</th>
-            <th class="p-1 border-r border-black text-center w-[6%]">SI</th>
-            <th class="p-1 border-r border-black text-center w-[6%]">NO</th>
-            <th class="p-1 border-r border-black text-center w-[6%]">N/A</th>
-            <th class="p-1 border-r border-black w-[22%]">Acción Normativa</th>
-            <th class="p-1 border-r border-black w-[11%]">Resp.</th>
-            <th class="p-1 w-[11%]">Obs.</th>
+            <th class="p-1 border-r border-black w-[38%]">Criterios de Producto</th>
+            <th class="p-1 border-r border-black text-center w-[5%]">SI</th>
+            <th class="p-1 border-r border-black text-center w-[5%]">NO</th>
+            <th class="p-1 border-r border-black text-center w-[5%]">N/A</th>
+            <th class="p-1 border-r border-black w-[23%]">Acción</th>
+            <th class="p-1 border-r border-black w-[12%]">Responsable</th>
+            <th class="p-1 w-[12%]">Observaciones</th>
           </tr>
         </thead>
         <tbody>

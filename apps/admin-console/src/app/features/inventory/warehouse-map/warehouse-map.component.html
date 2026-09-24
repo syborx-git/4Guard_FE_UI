@@ -49,7 +49,7 @@
   </header>
 
   <!-- BARRA INTEGRADA DE ALMACENES & CLAVE CROMÁTICA -->
-  <div class="wmap__toolbar-card">
+  <div class="wmap__toolbar-card" fgStarBorder fgSpecularGlow>
     <div class="wmap__toolbar-top">
       <div class="wmap__wh-bar-header">
         <span class="material-symbols-outlined text-amber-500 text-sm">domain</span>
@@ -114,6 +114,7 @@
       [class.is-active]="satFilter() === 'ALL'"
       (click)="toggleSaturationFilter('ALL')"
       title="Mostrar todas las bahías"
+      fgStarBorder fgSpecularGlow
     >
       <span class="map-stat__val">{{ stats().total }}</span>
       <span class="map-stat__lbl">Bahías total</span>
@@ -125,6 +126,7 @@
       [class.is-active]="satFilter() === 'HIGH'"
       (click)="toggleSaturationFilter('HIGH')"
       title="Filtrar solo bahías con alta saturación (>85%)"
+      fgStarBorder fgSpecularGlow
     >
       <span class="map-stat__val">{{ stats().highOcc }}</span>
       <span class="map-stat__lbl">Alta saturación</span>
@@ -136,6 +138,7 @@
       [class.is-active]="satFilter() === 'MID'"
       (click)="toggleSaturationFilter('MID')"
       title="Filtrar solo bahías con saturación media (40-85%)"
+      fgStarBorder fgSpecularGlow
     >
       <span class="map-stat__val">{{ stats().medOcc }}</span>
       <span class="map-stat__lbl">Saturación media</span>
@@ -147,6 +150,7 @@
       [class.is-active]="satFilter() === 'LOW'"
       (click)="toggleSaturationFilter('LOW')"
       title="Filtrar solo bahías con baja saturación (<40%)"
+      fgStarBorder fgSpecularGlow
     >
       <span class="map-stat__val">{{ stats().lowOcc }}</span>
       <span class="map-stat__lbl">Baja saturación</span>
@@ -158,6 +162,7 @@
       [class.is-active]="satFilter() === 'BLOCKED'"
       (click)="toggleSaturationFilter('BLOCKED')"
       title="Filtrar solo bahías bloqueadas por QM"
+      fgStarBorder fgSpecularGlow
     >
       <span class="map-stat__val">{{ stats().blocked }}</span>
       <span class="map-stat__lbl">Bloqueadas</span>

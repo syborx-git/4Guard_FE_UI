@@ -11,6 +11,9 @@ import { RouterLink } from '@angular/router';
 import { LocationService } from '../../admin/services/location.service';
 import { AuthState } from '../../../core/auth/auth.state';
 
+import { StarBorderDirective } from '../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../shared/directives/specular-glow.directive';
+
 export interface WarehouseDef {
   id: string;
   code: string;
@@ -42,7 +45,7 @@ export type SaturationFilterType = 'ALL' | 'HIGH' | 'MID' | 'LOW' | 'BLOCKED';
 @Component({
   selector: 'fg-warehouse-map',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, StarBorderDirective, SpecularGlowDirective],
   templateUrl: './warehouse-map.component.html',
   styleUrl: './warehouse-map.component.css',
 })

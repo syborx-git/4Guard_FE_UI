@@ -284,6 +284,51 @@
   color: var(--gold-light);
 }
 
+/* ── Selector de Tipo de Documento en Descarga ── */
+.doc-type-group {
+  margin-top: 0.85rem;
+}
+
+.doc-type-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.doc-type-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  background: #0b1119;
+  border: 1px solid var(--bdr-dark);
+  border-radius: 10px;
+  color: #9aa6b4;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.doc-type-btn:hover {
+  border-color: var(--gold-border);
+  background: #111a26;
+  color: #edf1f5;
+}
+
+.doc-type-btn--active {
+  background: rgba(208, 175, 103, 0.14);
+  border-color: var(--gold-primary);
+  color: var(--gold-light);
+  box-shadow: 0 0 14px rgba(208, 175, 103, 0.25);
+}
+
+.doc-type-icon {
+  font-size: 1.1rem;
+}
+
 /* ── Form Inputs ── */
 .form-group {
   margin-bottom: 0.95rem;

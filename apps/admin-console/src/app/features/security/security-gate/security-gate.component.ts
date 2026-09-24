@@ -348,6 +348,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     remisionControl?.updateValueAndValidity();
   }
 
+  protected getQrBaseUrl(): string {
+    const origin = window.location.origin;
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      // En desarrollo local (localhost), Safari en el celular no puede resolver 'localhost'.
+      // Apuntamos automáticamente al dominio desplegado de Netlify/Cloudify para pruebas con el smartphone.
+      return 'https://guard.netlify.app';
+    }
+    return origin;
+  }
+
   // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
   protected generateDriverPass(): void {
     this.isGeneratingPass.set(true);
@@ -372,8 +382,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.isGeneratingPass.set(false);
         const token = res.token || ('PASS-' + Date.now());
         this.qrModalToken.set(token);
-        const origin = window.location.origin;
-        this.qrModalUrl.set(`${origin}/carrier-checkin?token=${token}`);
+        const baseUrl = this.getQrBaseUrl();
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
         this.showQrModal.set(true);
         this.reloadActivePasses();
       },
@@ -381,7 +391,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.isGeneratingPass.set(false);
         const fallbackToken = 'PASS-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
         this.qrModalToken.set(fallbackToken);
-        this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${fallbackToken}`);
+        const baseUrl = this.getQrBaseUrl();
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}`);
         this.showQrModal.set(true);
       }
     });
@@ -549,7 +560,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     if (!pass || !pass.token) return;
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${pass.token}`);
+    this.qrModalUrl.set(`${this.getQrBaseUrl()}/carrier-checkin?token=${pass.token}`);
     this.showQrModal.set(true);
   }
 
@@ -558,7 +569,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const existingPending = this.activePasses().find(p => p.status === 'PENDING_DRIVER');
     if (existingPending) {
       this.qrModalToken.set(existingPending.token);
-      this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${existingPending.token}`);
+      this.qrModalUrl.set(`${this.getQrBaseUrl()}/carrier-checkin?token=${existingPending.token}`);
       this.showQrModal.set(true);
     } else if (!this.qrModalUrl()) {
       this.generateDriverPass();

@@ -41,7 +41,7 @@
   --c-info:         #2d7dd2;
   --c-info-bg:      rgba(45, 125, 210, 0.08);
 
-  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
+  --font-display:   'Plus Jakarta Sans', 'Outfit', 'Inter', system-ui, sans-serif;
   --font-body:      'Inter', 'DM Sans', system-ui, sans-serif;
   --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 
@@ -507,11 +507,13 @@
   position: relative;
   z-index: 1;
   color: var(--text-primary);
-  font-family: var(--font-display);
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum", "lnum";
 }
 
 .map-stat__lbl {
