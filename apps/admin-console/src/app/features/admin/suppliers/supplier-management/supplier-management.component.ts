@@ -86,10 +86,12 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
   return null;
 }
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'fg-supplier-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './supplier-management.component.html',
   styleUrl: './supplier-management.component.css',
 })

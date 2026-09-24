@@ -9,7 +9,7 @@
 <div class="supplier-page">
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       HEADER PRINCIPAL
+       HEADER PRINCIPAL — HOMOLOGADO CON CATÁLOGO MAESTRO
        ════════════════════════════════════════════════════════════════ -->
   <header class="supplier-header">
 
@@ -22,14 +22,12 @@
 
         <div class="supplier-header__copy">
           <div class="supplier-header__eyebrow">
-            <span class="supplier-header__eyebrow-tag">HU-125</span>
+            <a routerLink="/admin" class="supplier-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>ADMINISTRACIÓN WMS</span>
+            </a>
             <span class="supplier-header__eyebrow-sep">·</span>
-            <span>Catálogo Maestro 3PL</span>
-            <span class="supplier-header__eyebrow-sep">·</span>
-            <span class="supplier-header__rls-badge">
-              <span class="material-symbols-outlined">shield</span>
-              RLS Habilitado
-            </span>
+            <span>CATÁLOGO MAESTRO</span>
           </div>
           <h1 class="supplier-header__title">Catálogo de Proveedores</h1>
           <p class="supplier-header__subtitle">
@@ -67,7 +65,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ totalCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">Total</span>
+          <span class="supplier-kpi-card__label">TOTAL</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--total"></div>
       </div>
@@ -83,7 +81,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ activeCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">Activos</span>
+          <span class="supplier-kpi-card__label">ACTIVOS</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--active"></div>
       </div>
@@ -99,7 +97,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ unavailableCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">No disponibles</span>
+          <span class="supplier-kpi-card__label">NO DISPONIBLES</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--unavailable"></div>
       </div>
@@ -115,7 +113,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ preferredCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">Preferentes</span>
+          <span class="supplier-kpi-card__label">PREFERENTES</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--preferred"></div>
       </div>

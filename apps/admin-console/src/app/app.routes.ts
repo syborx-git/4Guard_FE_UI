@@ -125,14 +125,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Control de Calidad',
       },
 
-      // Despacho
+      // Despacho (Redirección unificada a Salidas de Almacén)
       {
         path: 'shipping',
-        canActivate: [rbacGuard],
-        data: { module: 'shipping' },
-        loadChildren: () =>
-          import('./features/shipping/shipping.routes').then((m) => m.shippingRoutes),
-        title: '4GUARD WMS — Despacho',
+        redirectTo: 'warehouse-movements/outbound',
+        pathMatch: 'prefix',
       },
 
       // Control de Usuarios y Seguridad (Homologado)
