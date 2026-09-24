@@ -288,10 +288,10 @@ export class LocationService {
       blockers.push(`La cita se encuentra en estado '${appointment.status}' (Inactiva para asignación).`);
     }
 
-    // 3. Validación Documental OC (HU-029)
+    // 3. Validación Documental OC
     const poStatus = appointment.poValidationStatus;
     if (poStatus === 'REJECTED') {
-      blockers.push('La Orden de Compra asociada fue rechazada documentalmente (HU-029).');
+      blockers.push('La Orden de Compra asociada fue rechazada documentalmente.');
     } else if (poStatus === 'PENDING') {
       blockers.push('La Orden de Compra se encuentra pendiente de validación documental.');
     }
