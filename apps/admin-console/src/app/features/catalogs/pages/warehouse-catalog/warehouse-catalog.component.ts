@@ -18,6 +18,7 @@ import {
   PositionStatus,
   WarehouseBay
 } from '../../models/warehouse-catalog.models';
+import { WarehouseSectionSetupModalComponent } from '../../components/warehouse-section-setup-modal/warehouse-section-setup-modal.component';
 
 type WarehouseSubTab = 'topology' | 'bays';
 type InspectorMode = 'view' | 'block';
@@ -25,7 +26,7 @@ type InspectorMode = 'view' | 'block';
 @Component({
   selector: 'fg-warehouse-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, WarehouseSectionSetupModalComponent],
   templateUrl: './warehouse-catalog.component.html',
   styleUrl: './warehouse-catalog.component.css',
 })
@@ -80,6 +81,36 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly inspectorMode     = signal<InspectorMode>('view');
   protected readonly blockReason       = signal<string>('');
   protected readonly blockComment      = signal<string>('');
+
+  // ─── Modal de Configuración / Activación de Nave ──────────────────────────
+  protected readonly isSetupModalOpen = signal<boolean>(false);
+  protected readonly setupModalSection = signal<any>(null);
+
+  protected openSetupModal(section?: WarehouseSection | null): void {
+    const target = section || this.selectedSection();
+    if (!target) return;
+    this.setupModalSection.set({
+      id: target.id,
+      code: target.code,
+      name: target.name,
+      category: target.category,
+      posFijas: target.posFijas,
+      capacidadTarimas: target.capacidadTarimas,
+      factorEstiba: target.factorEstiba,
+      notes: target.notes
+    });
+    this.isSetupModalOpen.set(true);
+  }
+
+  protected onSectionSetupSaved(updatedSection: any): void {
+    this.isSetupModalOpen.set(false);
+    this.layoutService.loadTopology();
+    this.layoutService.loadAllPositions();
+    const cur = this.selectedSection();
+    if (cur && cur.id === updatedSection?.id) {
+      this.layoutService.loadPositionsForSection(cur.id);
+    }
+  }
 
   // ─── Computados: Sección Seleccionada (Pestaña 1) ────────────────────────
   protected readonly isPositionsLoading = computed(() => {

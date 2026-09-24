@@ -39,6 +39,7 @@ import {
 } from '../../services/section.service';
 import { BranchService } from '../../services/branch.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { WarehouseSectionSetupModalComponent } from '../../../catalogs/components/warehouse-section-setup-modal/warehouse-section-setup-modal.component';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ function codeFormatValidator(control: AbstractControl): ValidationErrors | null 
 @Component({
   selector: 'fg-section-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, WarehouseSectionSetupModalComponent],
   templateUrl: './section-management.component.html',
   styleUrl: './section-management.component.css',
 })
@@ -80,6 +81,34 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
+
+  // ─── Modal de Configuración / Activación de Nave ──────────────────────────
+  protected readonly isSetupModalOpen = signal<boolean>(false);
+  protected readonly setupModalSection = signal<any>(null);
+
+  protected openSetupModal(section?: WarehouseSection | null): void {
+    const target = section || this.selectedSection();
+    if (!target) return;
+    this.setupModalSection.set({
+      id: target.id,
+      code: target.code,
+      name: target.name,
+      category: target.category,
+      posFijas: target.posFijas,
+      capacidadTarimas: target.capacidadTarimas,
+      factorEstiba: target.factorEstiba,
+      notes: target.notes
+    });
+    this.isSetupModalOpen.set(true);
+  }
+
+  protected onSectionSetupSaved(updatedSection: any): void {
+    this.isSetupModalOpen.set(false);
+    this.sectionService.loadSections();
+    if (this.selectedSection()?.id === updatedSection?.id) {
+      this.selectedSection.update(s => s ? { ...s, ...updatedSection } : null);
+    }
+  }
 
   // ─── Historial de Auditoría ──────────────────────────────────────────────────
 

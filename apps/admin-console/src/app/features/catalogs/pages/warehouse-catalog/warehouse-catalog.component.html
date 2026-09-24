@@ -240,10 +240,34 @@
                   <p class="wmap__detail-sub">{{ sec.category }} · {{ sec.notes }}</p>
                 </div>
               </div>
-              <button class="wmap__icon-btn" (click)="closeSectionDetail()" title="Cerrar">
-                <span class="material-symbols-outlined">close</span>
-              </button>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <button class="wmap__icon-btn" (click)="openSetupModal(sec)" title="Configurar Parámetros de Nave">
+                  <span class="material-symbols-outlined">tune</span>
+                </button>
+                <button class="wmap__icon-btn" (click)="closeSectionDetail()" title="Cerrar">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
             </div>
+
+            <!-- Callout de activación si la nave está PENDING o sin posiciones -->
+            @if (sec.posFijas === 0 || sec.status === 'PENDING') {
+              <div class="wmap__setup-callout">
+                <div class="wmap__setup-callout-ico">
+                  <span class="material-symbols-outlined">build_circle</span>
+                </div>
+                <div class="wmap__setup-callout-body">
+                  <h4 class="wmap__setup-callout-title">Nave pendiente de activación</h4>
+                  <p class="wmap__setup-callout-desc">
+                    Esta área física ya está delimitada en el plano SVG. Configura sus parámetros de estiba y genera sus bahías operativas.
+                  </p>
+                  <button class="wmap__setup-callout-btn" type="button" (click)="openSetupModal(sec)">
+                    <span class="material-symbols-outlined">add_task</span>
+                    <span>Configurar y Activar Nave</span>
+                  </button>
+                </div>
+              </div>
+            }
 
             @if (sectionMetrics(); as m) {
               <div class="wmap__detail-kpis">
@@ -603,5 +627,12 @@
       </div>
     </div>
   }
+
+  <!-- ── Modal Reutilizable de Configuración y Activación de Nave ── -->
+  <fg-warehouse-section-setup-modal
+    [(isOpen)]="isSetupModalOpen"
+    [section]="setupModalSection()"
+    (saved)="onSectionSetupSaved($event)"
+  ></fg-warehouse-section-setup-modal>
 
 </div>

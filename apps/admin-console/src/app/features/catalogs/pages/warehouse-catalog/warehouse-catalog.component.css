@@ -925,3 +925,68 @@
   .wmap__detail { width: 100%; height: 350px; border-left: none; border-top: 1px solid rgba(255, 255, 255, 0.08); }
   .catalog-sub-page { padding: 1rem; }
 }
+
+/* ─── Callout de Activación de Nave Pendiente ─────────────── */
+.wmap__setup-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(17, 31, 58, 0.6) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.wmap__setup-callout-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wmap__setup-callout-body {
+  flex: 1;
+}
+
+.wmap__setup-callout-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #F8FAFC;
+}
+
+.wmap__setup-callout-desc {
+  margin: 0.25rem 0 0.75rem 0;
+  font-size: 0.75rem;
+  color: #CBD5E1;
+  line-height: 1.35;
+}
+
+.wmap__setup-callout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: #F59E0B;
+  color: #0F172A;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  transition: all 150ms ease;
+}
+
+.wmap__setup-callout-btn:hover {
+  background: #D97706;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
+}
+

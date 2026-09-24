@@ -1,0 +1,229 @@
+@if (isOpen() && section()) {
+  <div class="setup-modal__backdrop" (click)="close()">
+    <div class="setup-modal__dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      
+      <!-- ── Header ── -->
+      <header class="setup-modal__header">
+        <div class="setup-modal__header-left">
+          <div class="setup-modal__icon-wrap">
+            <span class="material-symbols-outlined">warehouse</span>
+          </div>
+          <div>
+            <h3 class="setup-modal__title">Configurar y Activar Nave</h3>
+            <span class="setup-modal__subtitle">{{ section()?.code }} — {{ section()?.name }}</span>
+          </div>
+        </div>
+        <button class="setup-modal__close-btn" type="button" (click)="close()" [disabled]="isSaving()" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <!-- ── Notice Banner ── -->
+      <div class="setup-modal__notice">
+        <span class="material-symbols-outlined setup-modal__notice-icon">architecture</span>
+        <div class="setup-modal__notice-text">
+          <strong>Geometría y Topología 2D fijas:</strong> Las coordenadas del plano civil ya están pre-mapeadas. Configura aquí los parámetros de almacenamiento y estiba operativa.
+        </div>
+      </div>
+
+      <!-- ── Error Alert ── -->
+      @if (errorMessage()) {
+        <div class="setup-modal__error-alert">
+          <span class="material-symbols-outlined">error</span>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      <!-- ── Form Body ── -->
+      <div class="setup-modal__body">
+
+        <!-- Categoría Operativa -->
+        <div class="setup-field">
+          <label class="setup-field__label" for="category-select">
+            Giro Operativo / Categoría <span class="setup-field__req">*</span>
+          </label>
+          <div class="setup-field__select-wrap">
+            <select
+              id="category-select"
+              class="setup-field__select"
+              [ngModel]="category()"
+              (ngModelChange)="category.set($event)">
+              @for (cat of categoryOptions; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+            <span class="material-symbols-outlined setup-field__select-arrow">expand_more</span>
+          </div>
+        </div>
+
+        <!-- Parámetros de Estiba (2 Columnas) -->
+        <div class="setup-grid-2">
+          
+          <!-- Posiciones Fijas -->
+          <div class="setup-field">
+            <label class="setup-field__label" for="pos-fijas-input">
+              Posiciones Fijas <span class="setup-field__req">*</span>
+            </label>
+            <div class="setup-counter">
+              <button
+                type="button"
+                class="setup-counter__btn"
+                (click)="setPosFijas(posFijas() - 1)"
+                [disabled]="posFijas() <= 1">
+                <span class="material-symbols-outlined">remove</span>
+              </button>
+              <input
+                id="pos-fijas-input"
+                type="number"
+                class="setup-counter__input"
+                [ngModel]="posFijas()"
+                (ngModelChange)="setPosFijas($event)"
+                min="1"
+                max="1000" />
+              <button
+                type="button"
+                class="setup-counter__btn"
+                (click)="setPosFijas(posFijas() + 1)">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+            </div>
+            <span class="setup-field__hint">Total de bahías/cajones a numerar</span>
+          </div>
+
+          <!-- Factor de Estiba -->
+          <div class="setup-field">
+            <label class="setup-field__label" for="factor-select">
+              Factor de Estiba <span class="setup-field__req">*</span>
+            </label>
+            <div class="setup-field__select-wrap">
+              <select
+                id="factor-select"
+                class="setup-field__select"
+                [ngModel]="factorEstiba()"
+                (ngModelChange)="factorEstiba.set($event)">
+                @for (fac of factorOptions; track fac) {
+                  <option [value]="fac">{{ fac }}</option>
+                }
+              </select>
+              <span class="material-symbols-outlined setup-field__select-arrow">expand_more</span>
+            </div>
+            <span class="setup-field__hint">Capacidad estándar por posición</span>
+          </div>
+
+        </div>
+
+        <!-- KPI Card Calculado en Vivo -->
+        <div class="setup-kpi-banner">
+          <div class="setup-kpi-banner__left">
+            <div class="setup-kpi-banner__icon">
+              <span class="material-symbols-outlined">pallet</span>
+            </div>
+            <div>
+              <div class="setup-kpi-banner__eyebrow">Capacidad Total de Almacenamiento</div>
+              <div class="setup-kpi-banner__formula">
+                {{ posFijas() }} bahías × {{ tarimasPorPos() }} tarimas/bahía
+              </div>
+            </div>
+          </div>
+          <div class="setup-kpi-banner__value">
+            {{ capacidadTarimas() | number }}
+            <span class="setup-kpi-banner__unit">Tarimas</span>
+          </div>
+        </div>
+
+        <!-- Materiales / SKUs Autorizados -->
+        <div class="setup-field">
+          <div class="setup-field__header-row">
+            <label class="setup-field__label">SKUs y Materiales Autorizados</label>
+            <span class="setup-field__badge-count">{{ selectedSkuIds().length }} seleccionados</span>
+          </div>
+          
+          <div class="setup-sku-search">
+            <span class="material-symbols-outlined setup-sku-search__icon">search</span>
+            <input
+              type="text"
+              class="setup-sku-search__input"
+              placeholder="Buscar SKU por código o descripción..."
+              [ngModel]="skuSearch()"
+              (ngModelChange)="skuSearch.set($event)" />
+          </div>
+
+          <div class="setup-sku-list">
+            @for (sku of filteredSkus(); track sku.id) {
+              <div
+                class="setup-sku-chip"
+                [class.setup-sku-chip--selected]="isSkuSelected(sku.id)"
+                (click)="toggleSku(sku.id)">
+                <span class="material-symbols-outlined setup-sku-chip__check">
+                  {{ isSkuSelected(sku.id) ? 'check_box' : 'check_box_outline_blank' }}
+                </span>
+                <span class="setup-sku-chip__code">{{ sku.code }}</span>
+                <span class="setup-sku-chip__name">{{ sku.name }}</span>
+              </div>
+            } @empty {
+              <div class="setup-sku-empty">
+                No se encontraron SKUs que coincidan con la búsqueda.
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Generar Ubicaciones Automáticamente (Checkbox) -->
+        <div class="setup-checkbox-row" (click)="generateLocations.set(!generateLocations())">
+          <div class="setup-checkbox" [class.setup-checkbox--checked]="generateLocations()">
+            <span class="material-symbols-outlined">
+              {{ generateLocations() ? 'check' : '' }}
+            </span>
+          </div>
+          <div class="setup-checkbox-row__content">
+            <div class="setup-checkbox-row__title">Generar cuadrícula de ubicaciones físicas automáticamente</div>
+            <div class="setup-checkbox-row__desc">
+              Crea los registros consecutivos en wms.locations con nomenclatura estándar (ej. POS-{{ getCleanPrefix() }}-001 a POS-{{ getCleanPrefix() }}-{{ getPaddedPosCount() }}).
+            </div>
+          </div>
+        </div>
+
+        <!-- Notas Operativas -->
+        <div class="setup-field">
+          <label class="setup-field__label" for="notes-textarea">
+            Notas u Observaciones Operativas
+          </label>
+          <textarea
+            id="notes-textarea"
+            class="setup-field__textarea"
+            rows="2"
+            placeholder="Instrucciones especiales, tipo de racks o restricciones..."
+            [ngModel]="notes()"
+            (ngModelChange)="notes.set($event)">
+          </textarea>
+        </div>
+
+      </div>
+
+      <!-- ── Footer Actions ── -->
+      <footer class="setup-modal__footer">
+        <button
+          type="button"
+          class="setup-btn setup-btn--secondary"
+          (click)="close()"
+          [disabled]="isSaving()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="setup-btn setup-btn--primary"
+          (click)="submit()"
+          [disabled]="isSaving() || posFijas() <= 0">
+          @if (isSaving()) {
+            <span class="setup-spinner"></span>
+            <span>Inicializando Nave...</span>
+          } @else {
+            <span class="material-symbols-outlined">check_circle</span>
+            <span>Guardar y Activar Nave</span>
+          }
+        </button>
+      </footer>
+
+    </div>
+  </div>
+}
