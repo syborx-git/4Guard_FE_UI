@@ -498,7 +498,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   KPI CARDS GRID (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT)
+   KPI CARDS GRID (ESTILO HOMOLOGADO SECURITY GATE / SYNEXIA LUXURY)
    ───────────────────────────────────────────────────────────── */
 .movement-kpi-grid {
   display: grid;
@@ -529,28 +529,35 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 18px;
-  padding: 14px 18px;
+  border-radius: var(--radius-card);
+  padding: 1rem 1.15rem;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
   box-shadow: var(--shadow-card);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 84px;
+  min-height: 82px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
 }
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
+.movement-kpi-card--primary:hover { border-color: var(--gold-border); }
+.movement-kpi-card--warning:hover { border-color: var(--c-warning-bdr); }
+.movement-kpi-card--info:hover { border-color: var(--c-info-bdr); }
+.movement-kpi-card--success:hover { border-color: var(--c-success-bdr); }
+.movement-kpi-card--danger:hover { border-color: var(--c-danger-bdr); }
+
 .movement-kpi-card__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -563,15 +570,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .movement-kpi-card--primary .movement-kpi-card__icon {
-  background: var(--gold-bg);
-  color: var(--text-gold);
-  border: 1px solid var(--gold-border);
+  background: rgba(37, 99, 235, 0.10);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
 }
 
 .movement-kpi-card--warning .movement-kpi-card__icon {
   background: var(--c-warning-bg);
   color: var(--c-warning);
   border: 1px solid var(--c-warning-bdr);
+}
+
+.movement-kpi-card--info .movement-kpi-card__icon {
+  background: rgba(147, 51, 234, 0.10);
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.25);
 }
 
 .movement-kpi-card--success .movement-kpi-card__icon {
@@ -586,12 +599,6 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--c-danger-bdr);
 }
 
-.movement-kpi-card--info .movement-kpi-card__icon {
-  background: var(--c-info-bg);
-  color: var(--c-info);
-  border: 1px solid var(--c-info-bdr);
-}
-
 .movement-kpi-card__info {
   display: flex;
   flex-direction: column;
@@ -600,11 +607,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .movement-kpi-card__label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   line-height: 1.2;
 }
 
@@ -620,8 +627,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .movement-kpi-card__sub {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
   font-weight: 500;
   line-height: 1.2;
 }

@@ -310,16 +310,17 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
-  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  background: linear-gradient(145deg, #172033, #25324a);
+  border: 1px solid rgba(197, 168, 107, 0.35);
   box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22);
   flex-shrink: 0;
 }
 
 .module-header__icon {
-  color: #ffffff;
+  color: var(--gold-light);
   font-size: 26px;
 }
 
@@ -365,8 +366,8 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 
 .module-header__title {
   font-family: var(--font-display);
-  font-size: 1.7rem;
-  font-weight: 500;
+  font-size: 1.65rem;
+  font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--text-primary);
   margin: 0;
@@ -374,9 +375,10 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 }
 
 .module-header__subtitle {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   margin: 0;
+  line-height: 1.35;
 }
 
 /* ── BARRA DE CONTROL (SLIDE DE PESTAÑAS + BOTÓN ACCIÓN) ── */
@@ -388,41 +390,44 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
   flex-wrap: wrap;
 }
 
-/* ── SLIDE DE PESTAÑAS (PILL NAV) ── */
+/* ── SLIDE DE PESTAÑAS (PILL NAV HOMOLOGADO) ── */
 .module-tabs-nav {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-card);
-  padding: 0.35rem;
+  padding: 0.3rem;
   border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
 }
 
 .module-tab-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.45rem 0.95rem;
+  padding: 0.5rem 1rem;
   border-radius: 10px;
   font-family: var(--font-body);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: all 0.18s ease;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
 .module-tab-btn:hover {
   color: var(--text-primary);
-  background: rgba(23, 32, 51, 0.05);
+  background: rgba(197, 168, 107, 0.08);
 }
 
 .module-tab-btn.tab-active {
-  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  background: linear-gradient(145deg, #172033, #25324a);
   color: #ffffff;
+  border-color: rgba(197, 168, 107, 0.35);
   box-shadow: 0 4px 14px rgba(23, 32, 51, 0.22);
 }
 
@@ -430,22 +435,135 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
   color: var(--gold-light);
 }
 
-/* ── BOTÓN DE ACCIÓN PRINCIPAL (PRESTIGE GOLD) ── */
-.btn-primary-gold {
-  display: inline-flex;
+/* ── CUADRÍCULA DE MÉTRICAS KPI (4 O 5 COLUMNAS) ── */
+.module-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.module-kpi-grid--5cols {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 1280px) {
+  .module-kpi-grid,
+  .module-kpi-grid--5cols {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .module-kpi-grid,
+  .module-kpi-grid--5cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .module-kpi-grid,
+  .module-kpi-grid--5cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.module-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.15rem;
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 1.25rem;
-  border-radius: var(--radius-btn);
-  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
-  color: #0f172a;
-  font-family: var(--font-body);
+  gap: 1rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 82px;
+  box-sizing: border-box;
+}
+
+.module-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.module-kpi-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.module-kpi-card__icon .material-symbols-outlined {
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+/* Matriz de Colores Pastel Semánticos */
+.module-kpi-card--primary .module-kpi-card__icon {
+  background: rgba(37, 99, 235, 0.10);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.module-kpi-card--warning .module-kpi-card__icon {
+  background: var(--c-warning-bg);
+  color: var(--c-warning);
+  border: 1px solid var(--c-warning-bdr);
+}
+
+.module-kpi-card--info .module-kpi-card__icon {
+  background: rgba(147, 51, 234, 0.10);
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.25);
+}
+
+.module-kpi-card--success .module-kpi-card__icon {
+  background: var(--c-success-bg);
+  color: var(--c-success);
+  border: 1px solid var(--c-success-bdr);
+}
+
+.module-kpi-card--danger .module-kpi-card__icon {
+  background: var(--c-danger-bg);
+  color: var(--c-danger);
+  border: 1px solid var(--c-danger-bdr);
+}
+
+.module-kpi-card__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.module-kpi-card__label {
+  font-size: 0.65rem;
   font-weight: 700;
-  font-size: 0.82rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(184, 134, 11, 0.25);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.module-kpi-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 2px 0;
+}
+
+.module-kpi-card__sub {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .btn-primary-gold:hover {

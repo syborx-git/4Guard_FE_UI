@@ -59,20 +59,21 @@
 }
 
 /* ── Dark Mode Override ──────────────────────────────────────────────── */
-:host-context(.theme-dark) {
-  --ac-bg:          #0b101d;
-  --ac-surface:     rgba(17, 24, 39, 0.92);
-  --ac-surface-2:   #162032;
-  --ac-surface-3:   #1c283f;
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --ac-bg:          #0b1119;
+  --ac-surface:     rgba(17, 26, 38, 0.94);
+  --ac-surface-2:   #16212f;
+  --ac-surface-3:   #1f2d3e;
   --ac-border:      rgba(255, 255, 255, 0.08);
   --ac-border-mid:  rgba(255, 255, 255, 0.14);
   --ac-hover:       rgba(255, 255, 255, 0.04);
 
-  --ac-txt-1:  #eaeff8;
-  --ac-txt-2:  #94a3b8;
-  --ac-txt-3:  #5c6e8c;
+  --ac-txt-1:  #edf1f5;
+  --ac-txt-2:  #9aa6b4;
+  --ac-txt-3:  #667585;
 
-  --ac-sh:     0 12px 36px rgba(0, 0, 0, 0.5);
+  --ac-sh:     0 16px 36px rgba(0, 0, 0, 0.40);
 }
 
 /* ════════════════════════════════════════════════════════════════════════

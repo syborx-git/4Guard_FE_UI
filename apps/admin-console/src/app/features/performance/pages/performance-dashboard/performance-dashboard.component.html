@@ -1,0 +1,610 @@
+<div class="perf-dashboard-view">
+
+  @if (perfService.executiveKpis(); as kpi) {
+    <!-- ═══════════════════════════════════════════════════════════════════
+         1. MACRO KPIS EJECUTIVOS CON METAS DINÁMICAS Y ACCIÓN DE EDICIÓN
+         ════════════════════════════════════════════════════════════════ -->
+    <div class="perf-kpi-grid">
+      <!-- 1. Ocupación de Almacén -->
+      <article class="perf-card" [ngClass]="'perf-card--' + occStatus().toLowerCase()">
+        <div class="perf-card__header">
+          <div class="perf-card__icon-wrap">
+            <span class="material-symbols-outlined">warehouse</span>
+          </div>
+          <button type="button" class="perf-card__btn-edit" (click)="openTargetsModal()" title="Editar meta de ocupación">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: {{ perfService.userTargets().targetOccupancyPercentage }}%</span>
+          </button>
+        </div>
+        <div class="perf-card__body">
+          <span class="perf-card__label">Ocupación Almacén</span>
+          <div class="perf-card__number-row">
+            <span class="perf-card__value">{{ kpi.warehouseOccupancyPercentage }}</span>
+            <span class="perf-card__unit">%</span>
+          </div>
+          <!-- Mini barra visual -->
+          <div class="perf-mini-gauge">
+            <div
+              class="perf-mini-gauge__fill"
+              [style.width.%]="kpi.warehouseOccupancyPercentage"
+              [ngClass]="'gauge-fill--' + occStatus().toLowerCase()">
+            </div>
+            <div class="perf-mini-gauge__target-line" [style.left.%]="perfService.userTargets().targetOccupancyPercentage" title="Meta fijada"></div>
+          </div>
+          <p class="perf-card__sub">{{ (100 - kpi.warehouseOccupancyPercentage).toFixed(1) }}% de espacio disponible</p>
+        </div>
+      </article>
+
+      <!-- 2. Exactitud de Inventario (IRA) -->
+      <article class="perf-card" [ngClass]="'perf-card--' + iraStatus().toLowerCase()">
+        <div class="perf-card__header">
+          <div class="perf-card__icon-wrap">
+            <span class="material-symbols-outlined">inventory_2</span>
+          </div>
+          <button type="button" class="perf-card__btn-edit" (click)="openTargetsModal()" title="Editar meta IRA">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: ≥ {{ perfService.userTargets().targetIraPercentage }}%</span>
+          </button>
+        </div>
+        <div class="perf-card__body">
+          <span class="perf-card__label">Precisión Inventario (IRA)</span>
+          <div class="perf-card__number-row">
+            <span class="perf-card__value">{{ kpi.inventoryAccuracyPercentage }}</span>
+            <span class="perf-card__unit">%</span>
+          </div>
+          <div class="perf-mini-gauge">
+            <div
+              class="perf-mini-gauge__fill"
+              [style.width.%]="kpi.inventoryAccuracyPercentage"
+              [ngClass]="'gauge-fill--' + iraStatus().toLowerCase()">
+            </div>
+            <div class="perf-mini-gauge__target-line" [style.left.%]="perfService.userTargets().targetIraPercentage" title="Meta fijada"></div>
+          </div>
+          <p class="perf-card__sub">Confiabilidad en conteos cíclicos</p>
+        </div>
+      </article>
+
+      <!-- 3. Cumplimiento OTIF -->
+      <article class="perf-card" [ngClass]="'perf-card--' + otifStatus().toLowerCase()">
+        <div class="perf-card__header">
+          <div class="perf-card__icon-wrap">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <button type="button" class="perf-card__btn-edit" (click)="openTargetsModal()" title="Editar meta OTIF">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: ≥ {{ perfService.userTargets().targetOtifPercentage }}%</span>
+          </button>
+        </div>
+        <div class="perf-card__body">
+          <span class="perf-card__label">Nivel de Servicio (OTIF)</span>
+          <div class="perf-card__number-row">
+            <span class="perf-card__value">{{ kpi.onTimeDeliveryPercentage }}</span>
+            <span class="perf-card__unit">%</span>
+          </div>
+          <div class="perf-mini-gauge">
+            <div
+              class="perf-mini-gauge__fill"
+              [style.width.%]="kpi.onTimeDeliveryPercentage"
+              [ngClass]="'gauge-fill--' + otifStatus().toLowerCase()">
+            </div>
+            <div class="perf-mini-gauge__target-line" [style.left.%]="perfService.userTargets().targetOtifPercentage" title="Meta fijada"></div>
+          </div>
+          <p class="perf-card__sub">A tiempo y órdenes completas</p>
+        </div>
+      </article>
+
+      <!-- 4. Dock-to-Stock Promedio -->
+      <article class="perf-card" [ngClass]="'perf-card--' + dtsStatus().toLowerCase()">
+        <div class="perf-card__header">
+          <div class="perf-card__icon-wrap">
+            <span class="material-symbols-outlined">hourglass_top</span>
+          </div>
+          <button type="button" class="perf-card__btn-edit" (click)="openTargetsModal()" title="Editar meta Dock-to-Stock">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: ≤ {{ perfService.userTargets().targetDockToStockHours }}h</span>
+          </button>
+        </div>
+        <div class="perf-card__body">
+          <span class="perf-card__label">Dock-to-Stock</span>
+          <div class="perf-card__number-row">
+            <span class="perf-card__value">{{ kpi.avgDockToStockHours }}</span>
+            <span class="perf-card__unit">hrs</span>
+          </div>
+          <div class="perf-mini-gauge">
+            <div
+              class="perf-mini-gauge__fill"
+              [style.width.%]="(kpi.avgDockToStockHours / (perfService.userTargets().targetDockToStockHours * 1.5)) * 100"
+              [ngClass]="'gauge-fill--' + dtsStatus().toLowerCase()">
+            </div>
+          </div>
+          <p class="perf-card__sub">De andén de descarga a rack</p>
+        </div>
+      </article>
+
+      <!-- 5. Order Cycle Time -->
+      <article class="perf-card" [ngClass]="'perf-card--' + octStatus().toLowerCase()">
+        <div class="perf-card__header">
+          <div class="perf-card__icon-wrap">
+            <span class="material-symbols-outlined">timer</span>
+          </div>
+          <button type="button" class="perf-card__btn-edit" (click)="openTargetsModal()" title="Editar meta Ciclo de Orden">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: ≤ {{ perfService.userTargets().targetOrderCycleHours }}h</span>
+          </button>
+        </div>
+        <div class="perf-card__body">
+          <span class="perf-card__label">Ciclo de Orden</span>
+          <div class="perf-card__number-row">
+            <span class="perf-card__value">{{ kpi.avgOrderCycleHours }}</span>
+            <span class="perf-card__unit">hrs</span>
+          </div>
+          <div class="perf-mini-gauge">
+            <div
+              class="perf-mini-gauge__fill"
+              [style.width.%]="(kpi.avgOrderCycleHours / (perfService.userTargets().targetOrderCycleHours * 1.5)) * 100"
+              [ngClass]="'gauge-fill--' + octStatus().toLowerCase()">
+            </div>
+          </div>
+          <p class="perf-card__sub">De liberación a despacho final</p>
+        </div>
+      </article>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         2. GRÁFICA VISUAL INTERACTIVA DE TENDENCIA DE THROUGHPUT EN VIVO
+         ════════════════════════════════════════════════════════════════ -->
+    <section class="perf-surface perf-chart-surface">
+      <div class="perf-surface__header">
+        <div class="perf-surface__title-row">
+          <span class="material-symbols-outlined perf-surface__icon">analytics</span>
+          <div>
+            <h3>Evolución de Throughput Operativo (Jornada de 24 Horas)</h3>
+            <p>Monitoreo continuo de movimientos por hora vs. meta de operaciones</p>
+          </div>
+        </div>
+
+        <div class="perf-chart-header-actions">
+          <!-- View Switcher (Spline vs Bars) -->
+          <div class="perf-chart-toggle-group">
+            <button
+              type="button"
+              class="perf-chart-toggle-btn"
+              [class.perf-chart-toggle-btn--active]="chartViewMode() === 'spline'"
+              (click)="setChartViewMode('spline')">
+              <span class="material-symbols-outlined">show_chart</span>
+              <span>Tendencia</span>
+            </button>
+            <button
+              type="button"
+              class="perf-chart-toggle-btn"
+              [class.perf-chart-toggle-btn--active]="chartViewMode() === 'bars'"
+              (click)="setChartViewMode('bars')">
+              <span class="material-symbols-outlined">equalizer</span>
+              <span>Desglose</span>
+            </button>
+          </div>
+
+          <!-- Dynamic Legend -->
+          <div class="perf-chart-legend">
+            @if (chartViewMode() === 'spline') {
+              <span class="legend-item"><span class="legend-dot legend-dot--total"></span> Throughput Real</span>
+              <span class="legend-item"><span class="legend-dot legend-dot--target"></span> Meta Horaria</span>
+            } @else {
+              <span class="legend-item"><span class="legend-dot legend-dot--inbound"></span> Inbound</span>
+              <span class="legend-item"><span class="legend-dot legend-dot--outbound"></span> Outbound</span>
+              <span class="legend-item"><span class="legend-dot legend-dot--target"></span> Meta</span>
+            }
+          </div>
+
+          <span class="perf-badge-pulse">
+            <span class="perf-pulse-dot"></span>
+            En vivo
+          </span>
+        </div>
+      </div>
+
+      <div class="perf-chart-container">
+        <!-- SVG Interactive Area, Spline & Bars Chart -->
+        <svg viewBox="0 0 800 210" class="perf-svg-chart" preserveAspectRatio="none">
+          <defs>
+            <!-- Area Gradient -->
+            <linearGradient id="chartSplineArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.32" />
+              <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.12" />
+              <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+            </linearGradient>
+
+            <!-- Line Glow Gradient -->
+            <linearGradient id="chartSplineStroke" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#38bdf8" />
+              <stop offset="45%" stop-color="#60a5fa" />
+              <stop offset="75%" stop-color="#34d399" />
+              <stop offset="100%" stop-color="#e0c87a" />
+            </linearGradient>
+
+            <!-- Bar Inbound Gradient -->
+            <linearGradient id="barInboundGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#38bdf8" />
+              <stop offset="100%" stop-color="#2563eb" />
+            </linearGradient>
+
+            <!-- Bar Outbound Gradient -->
+            <linearGradient id="barOutboundGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#34d399" />
+              <stop offset="100%" stop-color="#059669" />
+            </linearGradient>
+          </defs>
+
+          <!-- Y-Axis Grid Lines & Numerical Labels -->
+          <g class="perf-chart-grid-group">
+            <!-- 25 mov/h -->
+            <text x="48" y="34" class="perf-chart-y-label">25</text>
+            <line x1="56" y1="30" x2="770" y2="30" class="perf-chart-grid-line" />
+
+            <!-- 20 mov/h -->
+            <text x="48" y="64" class="perf-chart-y-label">20</text>
+            <line x1="56" y1="60" x2="770" y2="60" class="perf-chart-grid-line" />
+
+            <!-- 15 mov/h -->
+            <text x="48" y="94" class="perf-chart-y-label">15</text>
+            <line x1="56" y1="90" x2="770" y2="90" class="perf-chart-grid-line" />
+
+            <!-- 10 mov/h -->
+            <text x="48" y="124" class="perf-chart-y-label">10</text>
+            <line x1="56" y1="120" x2="770" y2="120" class="perf-chart-grid-line" />
+
+            <!-- 5 mov/h -->
+            <text x="48" y="154" class="perf-chart-y-label">5</text>
+            <line x1="56" y1="150" x2="770" y2="150" class="perf-chart-grid-line" />
+
+            <!-- Baseline (0) -->
+            <text x="48" y="184" class="perf-chart-y-label">0</text>
+            <line x1="56" y1="180" x2="770" y2="180" class="perf-chart-baseline" />
+          </g>
+
+          <!-- Target (Meta) Reference Line -->
+          <path
+            [attr.d]="targetSplinePath()"
+            class="perf-chart-target-line" />
+
+          <!-- MODE 1: SMOOTH SPLINE AREA -->
+          @if (chartViewMode() === 'spline') {
+            <!-- Smooth Gradient Area Fill -->
+            <path
+              [attr.d]="splineAreaPath()"
+              fill="url(#chartSplineArea)" />
+
+            <!-- Smooth Dynamic Spline Stroke -->
+            <path
+              [attr.d]="splinePath()"
+              fill="none"
+              stroke="url(#chartSplineStroke)"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round" />
+
+            <!-- Vertical Crosshair Line on Hover -->
+            @if (hoveredPoint(); as hp) {
+              <line
+                [attr.x1]="hp.cx"
+                y1="25"
+                [attr.x2]="hp.cx"
+                y2="180"
+                class="perf-chart-crosshair" />
+            }
+
+            <!-- Data Point Circles (Interactive) -->
+            @for (pt of chartPoints(); track pt.hour) {
+              <g
+                class="perf-chart-node-group"
+                (mouseenter)="setHoveredPoint(pt)"
+                (mouseleave)="setHoveredPoint(null)">
+                <!-- Hit area invisible circle -->
+                <circle [attr.cx]="pt.cx" [attr.cy]="pt.cy" r="18" fill="transparent" style="cursor: pointer;" />
+
+                <!-- Outer Halo Pulse on Hover -->
+                @if (hoveredPoint()?.hour === pt.hour) {
+                  <circle
+                    [attr.cx]="pt.cx"
+                    [attr.cy]="pt.cy"
+                    r="10"
+                    class="perf-chart-dot-halo" />
+                }
+
+                <!-- Solid Crisp Dot -->
+                <circle
+                  [attr.cx]="pt.cx"
+                  [attr.cy]="pt.cy"
+                  r="4.5"
+                  class="perf-chart-dot"
+                  [class.perf-chart-dot--hovered]="hoveredPoint()?.hour === pt.hour" />
+              </g>
+            }
+          }
+
+          <!-- MODE 2: STACKED THROUGHPUT BARS (INBOUND + OUTBOUND) -->
+          @if (chartViewMode() === 'bars') {
+            @for (pt of chartPoints(); track pt.hour) {
+              <g
+                class="perf-chart-bar-group"
+                [class.perf-chart-bar-group--hovered]="hoveredPoint()?.hour === pt.hour"
+                (mouseenter)="setHoveredPoint(pt)"
+                (mouseleave)="setHoveredPoint(null)">
+                <!-- Hit area -->
+                <rect [attr.x]="pt.cx - 20" y="25" width="40" height="155" fill="transparent" style="cursor: pointer;" />
+
+                <!-- Inbound Bar (Lower) -->
+                <rect
+                  [attr.x]="pt.cx - 14"
+                  [attr.y]="pt.inboundY"
+                  width="28"
+                  [attr.height]="pt.barInboundHeight"
+                  rx="2"
+                  fill="url(#barInboundGrad)"
+                  class="perf-bar-segment" />
+
+                <!-- Outbound Bar (Upper Stacked) -->
+                <rect
+                  [attr.x]="pt.cx - 14"
+                  [attr.y]="pt.outboundY"
+                  width="28"
+                  [attr.height]="pt.barOutboundHeight"
+                  rx="2"
+                  fill="url(#barOutboundGrad)"
+                  class="perf-bar-segment" />
+
+                <!-- Total Value on top of bar -->
+                <text
+                  [attr.x]="pt.cx"
+                  [attr.y]="pt.cy - 6"
+                  class="perf-bar-total-label">
+                  {{ pt.total }}
+                </text>
+              </g>
+            }
+          }
+
+          <!-- X-Axis Timestamps (Directly aligned in SVG coordinates) -->
+          @for (pt of chartPoints(); track pt.hour) {
+            <text
+              [attr.x]="pt.cx"
+              y="200"
+              class="perf-chart-x-svg-label"
+              [class.perf-chart-x-svg-label--active]="hoveredPoint()?.hour === pt.hour"
+              (mouseenter)="setHoveredPoint(pt)"
+              (mouseleave)="setHoveredPoint(null)">
+              {{ pt.hour }}
+            </text>
+          }
+        </svg>
+
+        <!-- Tooltip Hover Popover -->
+        @if (hoveredPoint(); as hp) {
+          <div class="perf-chart-tooltip" [style.left.px]="hp.cx > 500 ? (hp.cx - 210) : (hp.cx + 20)">
+            <div class="tooltip-header">
+              <span class="material-symbols-outlined">schedule</span>
+              <strong>Ventana: {{ hp.hour }} hrs</strong>
+            </div>
+            <div class="tooltip-body">
+              <div class="tooltip-row">
+                <span class="t-badge t-badge--inbound">Inbound:</span>
+                <strong>{{ hp.inbound }} tarimas</strong>
+              </div>
+              <div class="tooltip-row">
+                <span class="t-badge t-badge--outbound">Outbound:</span>
+                <strong>{{ hp.outbound }} órdenes</strong>
+              </div>
+              <div class="tooltip-row tooltip-row--total">
+                <span>Throughput Total:</span>
+                <strong class="text-gold font-mono">{{ hp.total }} mov/h</strong>
+              </div>
+              <div class="tooltip-row tooltip-row--target">
+                <span>Meta Horaria:</span>
+                <span class="text-muted">{{ hp.target }} mov/h</span>
+                <span
+                  class="delta-tag"
+                  [class.delta-tag--positive]="hp.total >= hp.target"
+                  [class.delta-tag--negative]="hp.total < hp.target">
+                  {{ hp.total >= hp.target ? '+' : '' }}{{ (((hp.total - hp.target) / hp.target) * 100).toFixed(0) }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Quick KPI Counters debajo de la gráfica -->
+      <div class="perf-chart-kpi-footer">
+        <div class="perf-footer-stat">
+          <span class="stat-label">Recepciones Inbound</span>
+          <strong class="stat-val text-primary">{{ kpi.totalReceptionsToday }}</strong>
+          <small>Camiones procesados</small>
+        </div>
+        <div class="perf-footer-stat">
+          <span class="stat-label">Despachos Outbound</span>
+          <strong class="stat-val text-primary">{{ kpi.totalOutboundsToday }}</strong>
+          <small>Órdenes enviadas</small>
+        </div>
+        <div class="perf-footer-stat">
+          <span class="stat-label">Movimientos Hoy</span>
+          <strong class="stat-val text-gold">{{ kpi.totalMovementsToday }}</strong>
+          <small>Tarimas maniobradas</small>
+        </div>
+        <div class="perf-footer-stat">
+          <span class="stat-label">Incidencias Activas</span>
+          <strong class="stat-val" [class.text-success]="kpi.activeIncidencesCount === 0" [class.text-warning]="kpi.activeIncidencesCount > 0">
+            {{ kpi.activeIncidencesCount }}
+          </strong>
+          <small>{{ kpi.activeIncidencesCount > 0 ? 'En resolución' : 'Todo en orden' }}</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         3. GRÁFICA COMPARATIVA DE BARRAS DE PROCESOS NODALES & CANDADOS
+         ════════════════════════════════════════════════════════════════ -->
+    <div class="perf-two-col-grid">
+      <!-- Procesos Nodales con Gráfica de Barras Visual -->
+      <section class="perf-surface">
+        <div class="perf-surface__header">
+          <div class="perf-surface__title-row">
+            <span class="material-symbols-outlined perf-surface__icon">bar_chart</span>
+            <div>
+              <h3>Tiempos de Procesos Nodales (T₀ ➔ T₁)</h3>
+              <p>Comparativa visual de tiempo real vs. estándar meta</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="perf-process-bars-list">
+          @for (flow of perfService.processFlows(); track flow.processName) {
+            <div class="perf-process-bar-item">
+              <div class="perf-process-bar-top">
+                <div class="process-name-row">
+                  <strong>{{ flow.processName }}</strong>
+                  <small class="text-muted">{{ flow.initialMilestone }} ➔ {{ flow.finalMilestone }}</small>
+                </div>
+                <div class="process-values-row">
+                  <span class="real-time font-mono"><strong>{{ flow.averageDurationMinutes }}</strong> min</span>
+                  <span class="target-time font-mono">Meta: ≤ {{ flow.targetStandardMinutes }}m</span>
+                  <span class="compliance-badge" [class.compliance-badge--optimal]="flow.status === 'OPTIMAL'">
+                    {{ flow.compliancePercentage }}%
+                  </span>
+                </div>
+              </div>
+
+              <!-- Visual Comparison Bar -->
+              <div class="perf-dual-progress-track">
+                <div
+                  class="perf-dual-progress-fill"
+                  [style.width.%]="(flow.averageDurationMinutes / (flow.targetStandardMinutes * 1.3)) * 100"
+                  [class.fill--optimal]="flow.status === 'OPTIMAL'">
+                </div>
+                <div
+                  class="perf-dual-target-marker"
+                  [style.left.%]="(flow.targetStandardMinutes / (flow.targetStandardMinutes * 1.3)) * 100"
+                  title="Meta Estándar">
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Candados de Calidad y Ciclo de Caseta -->
+      <section class="perf-surface">
+        <div class="perf-surface__header">
+          <div class="perf-surface__title-row">
+            <span class="material-symbols-outlined perf-surface__icon">security_update_good</span>
+            <div>
+              <h3>Candados de Calidad & Ciclo de Caseta</h3>
+              <p>Requisitos de congelamiento de tiempo final (T₁) y tiempo de patio</p>
+            </div>
+          </div>
+          <button type="button" class="perf-time-tag" (click)="openTargetsModal()" title="Editar meta de caseta">
+            <span class="material-symbols-outlined" style="font-size: 14px;">timer</span>
+            <span>Meta: ≤ {{ perfService.userTargets().targetGateToGateMinutes }}m</span>
+          </button>
+        </div>
+
+        <!-- Gate to Gate Ring / Card -->
+        <div class="perf-gate-summary-card">
+          <div class="perf-gate-ring-wrap">
+            <div class="perf-gate-ring-number">
+              <strong>{{ perfService.gateToGateCycle()?.totalGateToGateAvgMinutes || 73.9 }}</strong>
+              <small>minutos</small>
+            </div>
+          </div>
+          <div class="perf-gate-details">
+            <span class="gate-label">Ciclo Puerta a Puerta (Caseta QR ➔ Salida)</span>
+            <p>97.4% de transportes liberados dentro de la meta estipulada</p>
+            <div class="gate-steps-mini">
+              <span>QR: 8.5m</span> · <span>Rampa: 39.2m</span> · <span>Salida: 12.0m</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Candados -->
+        <div class="perf-locks-list">
+          <div class="perf-lock-row">
+            <div class="perf-lock-icon perf-lock-icon--success">
+              <span class="material-symbols-outlined">verified_user</span>
+            </div>
+            <div class="perf-lock-info">
+              <strong>Checklist F01 (17 Criterios de Inspección)</strong>
+              <p>142 órdenes verificadas sin anomalías. Aprobación 100% obligatoria.</p>
+            </div>
+            <span class="perf-status-badge perf-status-badge--optimal">100% Conforme</span>
+          </div>
+
+          <div class="perf-lock-row">
+            <div class="perf-lock-icon perf-lock-icon--success">
+              <span class="material-symbols-outlined">scale</span>
+            </div>
+            <div class="perf-lock-info">
+              <strong>Tolerancia de Peso Packing (±2%)</strong>
+              <p>138 pesajes conformes en báscula (dispersión promedio: +0.4%).</p>
+            </div>
+            <span class="perf-status-badge perf-status-badge--optimal">Aprobado</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         4. ANDENES Y RAMPAS DE DESCARGA EN VIVO
+         ════════════════════════════════════════════════════════════════ -->
+    @if (perfService.inboundTimes(); as inbound) {
+      <section class="perf-surface">
+        <div class="perf-surface__header">
+          <div class="perf-surface__title-row">
+            <span class="material-symbols-outlined perf-surface__icon">dock</span>
+            <div>
+              <h3>Monitoreo de Andenes y Rampas de Descarga</h3>
+              <p>Estadía promedio por andén (Meta: ≤ {{ perfService.userTargets().targetInboundUnloadMinutes }} min/tráiler)</p>
+            </div>
+          </div>
+          <button type="button" class="perf-card__btn-edit" (click)="openTargetsModal()">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: {{ perfService.userTargets().targetInboundUnloadMinutes }}m</span>
+          </button>
+        </div>
+
+        <div class="perf-ramps-compact-grid">
+          @for (ramp of inbound.rampMetrics; track ramp.rampId) {
+            <div class="perf-ramp-compact-card">
+              <div class="perf-ramp-compact-header">
+                <strong>{{ ramp.rampCode }}</strong>
+                <span class="perf-ramp-tag" [class.perf-ramp-tag--active]="ramp.status === 'ACTIVA'">
+                  {{ ramp.status }}
+                </span>
+              </div>
+              <div class="perf-ramp-compact-body">
+                <div>
+                  <small class="text-muted block">Operaciones</small>
+                  <strong>{{ ramp.operationsCount }} descargas</strong>
+                </div>
+                <div class="text-right">
+                  <small class="text-muted block">Estadía Promedio</small>
+                  <strong class="font-mono text-gold">{{ ramp.avgStayMinutes }} min</strong>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  } @else {
+    <!-- Skeletons durante la carga -->
+    <div class="perf-kpi-grid">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="perf-card perf-skeleton-card">
+          <div class="perf-skeleton-line" style="width: 40px; height: 40px; border-radius: 10px;"></div>
+          <div class="perf-skeleton-line" style="width: 60%; height: 16px;"></div>
+          <div class="perf-skeleton-line" style="width: 80%; height: 28px;"></div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
