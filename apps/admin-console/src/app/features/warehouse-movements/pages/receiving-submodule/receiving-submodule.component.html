@@ -82,15 +82,6 @@
             <span class="dock-summary-badge dock-summary-badge--all-free">Todos Libres (12)</span>
           }
         </button>
-
-        <a
-          routerLink="/security"
-          class="btn-new-reception"
-          aria-label="Registrar arribo en caseta de seguridad"
-        >
-          <span class="material-symbols-outlined">security</span>
-          <span>Registrar Arribo en Caseta</span>
-        </a>
       </div>
     </div>
   </header>
@@ -158,128 +149,247 @@
     </div>
   </div>
 
-  <!-- ── 2. MAIN WORKBENCH GRID (MASTER-DETAIL) ── -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-
-    <!-- ── 2A. LEFT PANEL: DIRECTORIO Y BÚSQUEDA MASTER (col-span-4) ── -->
-    <aside class="carriers-directory lg:col-span-4" fgStarBorder fgSpecularGlow aria-label="Directorio de recepciones">
-      
-      <!-- Buscador y Filtros -->
-      <div class="carriers-directory__filters">
-        <div class="carriers-search">
-          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
-          <input
-            type="search"
-            class="carriers-search__input"
-            [ngModel]="searchQuery()"
-            (ngModelChange)="searchQuery.set($event)"
-            placeholder="Buscar por Folio, Remisión, Cliente..."
-            autocomplete="off"
-            aria-label="Buscar recepción"
-          />
-        </div>
-
-        <div class="carriers-filters-row">
-          <div class="carriers-filter-group">
-            <select
-              class="carriers-filter-select"
-              [ngModel]="statusFilter()"
-              (ngModelChange)="statusFilter.set($event)"
-              aria-label="Filtrar por estado"
-            >
-              <option value="ALL">Todos los estados</option>
-              <option value="REGISTERED">1. Registradas (Caseta)</option>
-              <option value="ASSIGNED">2. Asignadas (Andén)</option>
-              <option value="IN_PROGRESS">3. En Descarga</option>
-              <option value="DISCHARGED">4. Por Auditar (Descarga Finalizada)</option>
-              <option value="COMPLETED">5. Completadas</option>
-              <option value="CANCELLED">6. Canceladas</option>
-            </select>
+  <!-- ── 2. EXECUTIVE DIRECTORY OR FULL-WIDTH WORKBENCH ── -->
+  @if (!selectedReception()) {
+    <!-- ═══════════════════════════════════════════════════════════════
+         DIRECTORIO EJECUTIVO DE RECEPCIONES (PIXEL-PERFECT MOCKUP)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="executive-directory-card" fgStarBorder fgSpecularGlow>
+      <!-- Header Row: Dot + Title + Count Pill + Hint + Subtitle -->
+      <div class="directory-header-row">
+        <div class="directory-header-left">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="directory-header-dot"></span>
+            <h2 class="directory-header-title">Directorio General de Recepciones</h2>
+            <span class="directory-count-pill">{{ filteredReceptions().length }} órdenes</span>
+            <span class="directory-header-hint">· Haz clic en cualquier recepción para abrir su expediente completo</span>
           </div>
+          <p class="directory-header-sub">
+            Supervisión en tiempo real de unidades asignadas, control FIFO/FEFO y precintos de seguridad.
+          </p>
         </div>
-
-        <!-- Sugerencia de búsqueda extendida -->
-        <p class="carriers-search__hint">
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Busca por folio, remisión, cliente o producto
-        </p>
       </div>
 
-      <!-- Lista de Recepciones Master -->
-      <div class="carriers-directory__list">
-        @for (rec of filteredReceptions(); track rec.folio) {
-          <div
-            (click)="selectReception(rec)"
-            [class.carrier-item--selected]="selectedReception()?.folio === rec.folio"
-            class="carrier-item"
-          >
-            <!-- Avatar Iniciales -->
-            <div class="carrier-avatar avatar--client">
-              {{ getInitials(rec.checkIn.client) }}
-            </div>
+      <!-- Controls Row: Search Input with ⌘K + Filter Pills -->
+      <div class="directory-controls-row">
+        <!-- Search Input -->
+        <div class="directory-search-wrapper">
+          <span class="material-symbols-outlined directory-search-icon">search</span>
+          <input
+            type="search"
+            class="directory-search-input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por folio, cliente, rampa, chofer o sello de seguridad..."
+            autocomplete="off"
+          />
+          <span class="directory-search-kbd">⌘K</span>
+        </div>
 
-            <div class="carrier-item__body">
-              <div class="carrier-item__header">
-                <span class="carrier-item__name" [title]="rec.checkIn.client">{{ rec.checkIn.client }}</span>
+        <!-- Filter Pills -->
+        <div class="directory-filter-pills" role="group" aria-label="Filtrar por estado">
+          <button
+            type="button"
+            (click)="toggleStatusFilter('ALL')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('ALL')"
+          >
+            <span>Todos ({{ kpiTotal() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('REGISTERED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('REGISTERED')"
+          >
+            <span class="filter-pill-dot dot--amber"></span>
+            <span>En Caseta</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('IN_PROGRESS')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('IN_PROGRESS')"
+          >
+            <span class="filter-pill-dot dot--purple"></span>
+            <span>En Andén</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('COMPLETED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('COMPLETED')"
+          >
+            <span class="filter-pill-dot dot--emerald"></span>
+            <span>Verificado</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('CANCELLED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('CANCELLED')"
+          >
+            <span class="filter-pill-dot dot--rose"></span>
+            <span>Canceladas ({{ kpiCancelled() }})</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive Cards Grid -->
+      @if (filteredReceptions().length > 0) {
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          @for (rec of filteredReceptions(); track rec.folio) {
+            <div
+              class="executive-card"
+              (click)="selectReception(rec)"
+            >
+              <!-- Card Top: Avatar + Title/Subtitle + Status Badge -->
+              <div class="executive-card-head">
+                <div class="executive-avatar">
+                  {{ getInitials(rec.checkIn.client) }}
+                </div>
+                <div class="executive-title-group">
+                  <h3 class="executive-title" [title]="rec.checkIn.client">
+                    {{ rec.checkIn.client }}
+                  </h3>
+                  <p class="executive-subtitle" [title]="rec.productName ? rec.productName : ('Remisión: ' + (rec.checkIn.docNumber || 'S/N'))">
+                    {{ rec.productName ? rec.productName : ('Remisión: ' + (rec.checkIn.docNumber || 'S/N')) }}
+                  </p>
+                </div>
                 <span
-                  class="carrier-status-badge"
-                  [class.status-badge--registered]="rec.status === 'REGISTERED'"
-                  [class.status-badge--assigned]="rec.status === 'ASSIGNED'"
-                  [class.status-badge--progress]="rec.status === 'IN_PROGRESS'"
-                  [class.status-badge--discharged]="rec.status === 'DISCHARGED'"
-                  [class.status-badge--completed]="rec.status === 'COMPLETED'"
-                  [class.status-badge--cancelled]="rec.status === 'CANCELLED'"
+                  class="executive-status-badge"
+                  [class.badge--caseta]="rec.status === 'REGISTERED'"
+                  [class.badge--anden]="rec.status === 'ASSIGNED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED'"
+                  [class.badge--verificado]="rec.status === 'COMPLETED'"
+                  [class.badge--cancelado]="rec.status === 'CANCELLED'"
                 >
                   @if (rec.status === 'REGISTERED') { Caseta }
-                  @else if (rec.status === 'ASSIGNED') { Asignada }
-                  @else if (rec.status === 'IN_PROGRESS') { En Descarga }
-                  @else if (rec.status === 'DISCHARGED') { Por Auditar }
-                  @else if (rec.status === 'COMPLETED') { Completado }
+                  @else if (rec.status === 'ASSIGNED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') { En Andén }
+                  @else if (rec.status === 'COMPLETED') { Verificado }
                   @else if (rec.status === 'CANCELLED') { Cancelado }
                 </span>
               </div>
 
-              <div class="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
-                <span class="carrier-item__subtitle truncate">Rem: {{ rec.checkIn.docNumber }}</span>
-                <span class="text-[10px] font-mono opacity-90">{{ rec.createdAt ? (rec.createdAt.slice(0, 10)) : '' }}</span>
+              <!-- Folio & Date/Time Row -->
+              <div class="executive-folio-row">
+                <span class="executive-folio-badge">
+                  #{{ rec.folio }}
+                </span>
+                <span class="executive-time-text">
+                  <span class="material-symbols-outlined text-[13px] opacity-70">schedule</span>
+                  <span>{{ formatDateDisplay(rec.createdAt, rec.checkIn.receptionTime) }}</span>
+                </span>
               </div>
 
-              <div class="flex items-center justify-between mt-0.5">
-                <span class="carrier-item__tag font-mono">#{{ rec.folio }}</span>
-                <span class="text-[11px] text-slate-800 dark:text-slate-200 font-bold">Rampa {{ rec.checkIn.rampNumber }}</span>
+              <!-- 2-Col Details Box -->
+              <div class="executive-details-box">
+                <div class="executive-detail-col">
+                  <span class="executive-detail-label">UBICACIÓN ANDÉN</span>
+                  <div class="executive-detail-val">
+                    <span class="filter-pill-dot dot--amber"></span>
+                    <span>Rampa {{ rec.checkIn.rampNumber }}</span>
+                  </div>
+                </div>
+                <div class="executive-detail-col">
+                  <span class="executive-detail-label">PRECINTO / SELLO</span>
+                  <div class="executive-detail-val font-mono" [title]="rec.checkIn.sealNumber || (rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0 ? rec.checkIn.sealNumbers[0] : (rec.checkIn.docNumber || 'Pendiente'))">
+                    {{ rec.checkIn.sealNumber || (rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0 ? rec.checkIn.sealNumbers[0] : (rec.checkIn.docNumber || 'Pendiente')) }}
+                  </div>
+                </div>
               </div>
 
-              @if (rec.productName) {
-                <div class="carrier-item__meta truncate mt-0.5" [title]="rec.productName">
-                  {{ rec.productName }}
+              <!-- Progress Bar: Fase Operativa de la Remisión (Fase 1 a 5) -->
+              @if (getReceptionPhaseInfo(rec.status); as phase) {
+                <div class="executive-progress-section">
+                  <div class="executive-progress-labels">
+                    <span class="executive-progress-title">
+                      <span class="material-symbols-outlined text-[13px] align-middle mr-0.5 opacity-70">flag</span>
+                      <span>Fase: <strong>{{ phase.phaseLabel }}</strong></span>
+                    </span>
+                    <span
+                      class="executive-progress-count font-mono"
+                      [class.text-amber-600]="phase.phaseNumber === 1"
+                      [class.text-blue-600]="phase.phaseNumber === 2"
+                      [class.text-cyan-600]="phase.phaseNumber === 3"
+                      [class.text-purple-600]="phase.phaseNumber === 4"
+                      [class.text-emerald-600]="phase.phaseNumber === 5"
+                      [class.text-rose-600]="phase.phaseNumber === 0"
+                    >
+                      @if (phase.phaseNumber === 0) {
+                        Cancelada
+                      } @else {
+                        Fase {{ phase.phaseNumber }} de 5 ({{ phase.percentage }}%)
+                      }
+                    </span>
+                  </div>
+                  <div class="executive-progress-track">
+                    <div
+                      class="executive-progress-fill"
+                      [ngClass]="phase.colorClass"
+                      [style.width]="phase.progressWidth"
+                    ></div>
+                  </div>
                 </div>
               }
+
+              <!-- Card Footer -->
+              <div class="executive-card-footer">
+                <div class="executive-verif-badge">
+                  <span class="material-symbols-outlined text-sm font-bold">check</span>
+                  <span>FIFO verificado</span>
+                </div>
+                <div class="executive-link">
+                  <span>Ver expediente →</span>
+                </div>
+              </div>
             </div>
+          }
+        </div>
+      } @else {
+        <!-- Empty State -->
+        <div class="p-12 text-center space-y-3 bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+          <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+            <span class="material-symbols-outlined text-3xl">search_off</span>
           </div>
-        } @empty {
-          <div class="text-center py-10 px-4 text-slate-400">
-            <span class="material-symbols-outlined text-3xl opacity-40 mb-1">search_off</span>
-            <p class="text-xs font-medium">No se encontraron recepciones</p>
-          </div>
-        }
-      </div>
-
-      <!-- Footer con conteo -->
-      <div class="carriers-directory__footer">
-        <span class="carriers-count">{{ filteredReceptions().length }} recepciones</span>
-      </div>
-    </aside>
-
-    <!-- ── 2B. RIGHT PANEL: PANTALLA UNIFICADA DE RECEPCIÓN Y DESCARGA (col-span-8) ── -->
-    <div class="lg:col-span-8 space-y-4">
-      
-      <!-- ── WORKBENCH DETALLE DE LA RECEPCIÓN SELECCIONADA ── -->
-      @if (selectedReception(); as rec) {
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">No se encontraron recepciones</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            No hay registros que coincidan con la búsqueda o con el filtro de estado seleccionado.
+          </p>
+          <button
+            type="button"
+            (click)="searchQuery.set(''); toggleStatusFilter('ALL')"
+            class="btn-ghost text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5 font-bold"
+          >
+            <span class="material-symbols-outlined text-sm">restart_alt</span>
+            <span>Restablecer Filtros</span>
+          </button>
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- ═══════════════════════════════════════════════════════════════
+         DETALLE 100% ANCHO (WORKBENCH DE RECEPCIÓN SELECCIONADA)
+         ═══════════════════════════════════════════════════════════════ -->
+    @if (selectedReception(); as rec) {
+      <div class="w-full space-y-4">
         <div class="synexia-card p-5 space-y-6" fgStarBorder fgSpecularGlow>
           
           <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
           <div class="receiving-breadcrumb-bar">
             <div class="receiving-breadcrumb-bar__path">
+              <button
+                type="button"
+                (click)="closeReceptionDetail()"
+                class="btn-back-directory mr-2"
+                title="Volver al Directorio de Recepciones"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+                <span>Directorio</span>
+              </button>
               <span class="material-symbols-outlined receiving-breadcrumb__icon">local_shipping</span>
               <span class="receiving-breadcrumb__module">Movimientos</span>
               <span class="material-symbols-outlined receiving-breadcrumb__sep">chevron_right</span>
@@ -490,9 +600,9 @@
                   <span
                     (click)="openBaySelector()"
                     class="font-mono font-black text-slate-950 dark:text-white text-sm truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-                    [title]="'Haga clic para cambiar bahía: ' + (rec.storageLocation || altaForm.value.storageLocation || 'LOC-A-01-N1')"
+                    [title]="'Haga clic para cambiar bahía: ' + (selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'LOC-A-01-N1')"
                   >
-                    {{ rec.storageLocation || altaForm.value.storageLocation || 'LOC-A-01-N1' }}
+                    {{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'LOC-A-01-N1' }}
                   </span>
                   <span class="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-300/80 dark:border-blue-700 flex items-center gap-1 shrink-0">
                     <span class="material-symbols-outlined text-[11px]">bolt</span>
@@ -1032,7 +1142,7 @@
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Tipo de Tarima</span>
-                  <span class="reception-readonly-val">{{ rec.selectedPalletType }}</span>
+                  <span class="reception-readonly-val">{{ getPalletTypeLabel(rec.selectedPalletType) }}</span>
                 </div>
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Proveedor</span>
@@ -1223,7 +1333,7 @@
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Tipo de Tarima</span>
-                  <span class="reception-readonly-val">{{ rec.selectedPalletType }}</span>
+                  <span class="reception-readonly-val">{{ getPalletTypeLabel(rec.selectedPalletType) }}</span>
                 </div>
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Proveedor</span>
@@ -1256,12 +1366,21 @@
                 <span>RESUMEN Y DETALLE DE TARIMAS DESCARGADAS</span>
               </div>
               <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="onVerifyUa()"
+                  class="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                  title="Auditar y verificar UAs escaneadas físicamente en andén"
+                >
+                  <span class="material-symbols-outlined text-sm">fact_check</span>
+                  <span>Verificar UAs ({{ verifiedPalletCount() }}/{{ palletStream().length }})</span>
+                </button>
                 @if (palletStream().length > 0 && rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
                   <button
                     type="button"
                     (click)="openRelabelModal()"
                     class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-                    title="Re-etiquetar tarimas selectivas con SSCC GS1-128 (Pablo)"
+                    title="Re-etiquetar tarimas selectivas con SSCC GS1-128"
                   >
                     <span class="material-symbols-outlined text-sm">qr_code_2</span>
                     <span>Cambiar UAs (SSCC)</span>
@@ -1585,26 +1704,9 @@
             }
           </div>
         </div>
-      } @else {
-        <!-- ── ESTADO INICIAL: SIN SELECCIÓN (ESTILO OFICIAL WMS) ── -->
-        <div class="transfers-empty-state shadow-sm">
-          <div class="transfers-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined transfers-empty-state__icon">move_to_inbox</span>
-          </div>
-          <h2 class="transfers-empty-state__title">Mesa de Operaciones de Recepción</h2>
-          <p class="transfers-empty-state__desc">
-            Selecciona una unidad arribada desde <strong>Caseta de Seguridad</strong> en la lista lateral para continuar con la asignación de andén, montacarguista y descarga física.
-          </p>
-          <a
-            class="branches-btn--primary flex items-center gap-2"
-            routerLink="/security"
-          >
-            <span class="material-symbols-outlined text-base">security</span>
-            <span>Ir a Caseta de Seguridad &amp; Control de Arribo</span>
-          </a>
-        </div>
-      }
-    </div>
+      </div>
+    }
+  }
 
   <!-- ════════════════════════════════════════════════════════════════
        MONITOR DE ESTATUS DE UNIDADES EN PATIO Y RAMPAS (REINGENIERÍA)
@@ -1764,10 +1866,8 @@
           </table>
         </div>
       </div>
-
     </div>
   }
-  </div>
 
   <!-- ── 4. MODAL: EDICIÓN DE TARIMA INDIVIDUAL (ADMINISTRADOR) ── -->
   @if (showEditPalletModal()) {
@@ -2183,6 +2283,147 @@
             <fg-print-cancellation-layout [reception]="printRec"></fg-print-cancellation-layout>
           }
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL: VERIFICACIÓN Y AUDITORÍA DE UAS ESCANEADAS ── -->
+  @if (showUaVerificationModal()) {
+    <div class="modal-overlay p-3 sm:p-4 animate-fade-in" (click)="closeUaVerificationModal()">
+      <div class="modal-card max-w-4xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: min(88vh, 760px);" (click)="$event.stopPropagation()">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <span class="material-symbols-outlined text-xl">fact_check</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Auditoría y Verificación de UAs Escaneadas</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Pase de lista físico y control de calidad de tarimas en andén</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeUaVerificationModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Metric Badges Bar -->
+        <div class="p-3.5 bg-slate-100/50 dark:bg-slate-950/40 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-blue-300 font-semibold border border-blue-500/20">
+              Total: {{ palletStream().length }} UAs
+            </span>
+            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
+              ✓ {{ verifiedPalletCount() }} Verificadas
+            </span>
+            @if (palletStream().length - verifiedPalletCount() > 0) {
+              <span class="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20">
+                ⏳ {{ palletStream().length - verifiedPalletCount() }} Pendientes
+              </span>
+            }
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="markAllPalletsVerified(true)"
+              class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+            >
+              <span class="material-symbols-outlined text-sm">done_all</span>
+              <span>Marcar todas verificadas</span>
+            </button>
+            <button
+              type="button"
+              (click)="markAllPalletsVerified(false)"
+              class="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-medium flex items-center gap-1 transition-all"
+            >
+              <span class="material-symbols-outlined text-sm">remove_done</span>
+              <span>Desmarcar todas</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Table -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+          <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <th class="py-2.5 px-3 w-12 text-center">#</th>
+                  <th class="py-2.5 px-3">UA / Código SSCC</th>
+                  <th class="py-2.5 px-3">SKU & Descripción</th>
+                  <th class="py-2.5 px-3">Lote & Vencimiento</th>
+                  <th class="py-2.5 px-3 text-right">Cantidad</th>
+                  <th class="py-2.5 px-3 text-center w-28">Estado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                @if (palletStream().length === 0) {
+                  <tr>
+                    <td colspan="6" class="py-8 text-center text-slate-500">
+                      <span class="material-symbols-outlined text-3xl mb-1 text-slate-400 block">inventory_2</span>
+                      <p class="font-bold text-sm">No hay tarimas/UAs registradas en esta recepción aún.</p>
+                      <p class="text-xs text-slate-400 mt-0.5">Las UAs escaneadas o asignadas se mostrarán aquí para su validación física.</p>
+                    </td>
+                  </tr>
+                }
+                @for (p of palletStream(); track (p.id || $index)) {
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" [ngClass]="verifiedPalletIds().has(p.id) ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''" (click)="toggleVerifyPallet(p.id)">
+                    <td class="py-2.5 px-3 text-center font-bold text-slate-500">
+                      {{ p.palletNumber || ($index + 1) }}
+                    </td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-100">
+                      {{ p.palletCode || p.internalUaCode || p.supplierUaCode || ('UA-' + ($index + 1)) }}
+                    </td>
+                    <td class="py-2.5 px-3">
+                      <div class="font-bold text-slate-800 dark:text-slate-200">{{ p.productId || p.skuCode || 'N/A' }}</div>
+                      <div class="text-[11px] text-slate-500 truncate max-w-xs">{{ p.description || p.productName || '—' }}</div>
+                    </td>
+                    <td class="py-2.5 px-3">
+                      <span class="inline-block px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                        Lote: {{ p.lotNumber || 'S/L' }}
+                      </span>
+                      @if (p.expirationDate) {
+                        <div class="text-[10px] text-slate-400 mt-0.5">Vence: {{ p.expirationDate }}</div>
+                      }
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-black text-slate-800 dark:text-slate-100">
+                      {{ p.pieces || 0 }} PZS
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      <button
+                        type="button"
+                        (click)="$event.stopPropagation(); toggleVerifyPallet(p.id)"
+                        class="px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 mx-auto border"
+                        [ngClass]="verifiedPalletIds().has(p.id)
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700'">
+                        <span class="material-symbols-outlined text-sm">{{ verifiedPalletIds().has(p.id) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                        <span>{{ verifiedPalletIds().has(p.id) ? 'Verificada' : 'Pendiente' }}</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80">
+          <div class="text-xs text-slate-500">
+            Total verificado: <strong class="text-slate-700 dark:text-slate-300">{{ verifiedPalletCount() }} de {{ palletStream().length }} tarimas</strong>
+          </div>
+          <button
+            type="button"
+            (click)="closeUaVerificationModal()"
+            class="btn-save text-xs px-5 py-2 font-bold rounded-xl shadow-md"
+          >
+            Listo / Confirmar
+          </button>
+        </div>
+
       </div>
     </div>
   }

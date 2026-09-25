@@ -352,8 +352,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
         branchId: raw.branchId,
         branchName: branchName,
         role: raw.role,
-        status: raw.status,
-        isEnabled: raw.status === 'ACTIVE',
+        status: 'ACTIVE',
+        isEnabled: true,
         changePasswordRequired: false,
         failedAttempts: 0,
         lockedUntil: null,
@@ -392,6 +392,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
       });
     } else if (mode === 'edit' && this.selectedUser()) {
       const userId = this.selectedUser()!.id;
+      const currentStatus = this.selectedUser()?.status || 'ACTIVE';
       this.userAdminService.update(userId, {
         firstName: raw.firstName.trim(),
         lastName: raw.lastName.trim(),
@@ -400,8 +401,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
         role: raw.role,
         branchId: raw.branchId,
         branchName: branchName,
-        status: raw.status,
-        isEnabled: raw.status === 'ACTIVE'
+        status: currentStatus,
+        isEnabled: currentStatus === 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
@@ -614,13 +615,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   protected getAuditColorClass(action: string): string {
     switch (action) {
-      case 'USER_CREATED': return 'users-tl-node--emerald';
-      case 'USER_UPDATED': return 'users-tl-node--blue';
-      case 'LOGIN': return 'users-tl-node--purple';
-      case 'PASSWORD_RESET': return 'users-tl-node--amber';
-      case 'STATUS_CHANGE': return 'users-tl-node--indigo';
-      case 'USER_DELETED': return 'users-tl-node--red';
-      default: return 'users-tl-node--blue';
+      case 'USER_CREATED': return 'carriers-tl-node--emerald';
+      case 'USER_UPDATED': return 'carriers-tl-node--blue';
+      case 'LOGIN': return 'carriers-tl-node--purple';
+      case 'PASSWORD_RESET': return 'carriers-tl-node--amber';
+      case 'STATUS_CHANGE': return 'carriers-tl-node--indigo';
+      case 'USER_DELETED': return 'carriers-tl-node--red';
+      default: return 'carriers-tl-node--blue';
     }
   }
 
@@ -634,6 +635,36 @@ export class UsersListComponent implements OnInit, OnDestroy {
       case 'USER_DELETED': return 'Eliminación de cuenta de usuario';
       default: return action;
     }
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      username: 'Usuario',
+      email: 'Correo Electrónico',
+      firstName: 'Nombre',
+      lastName: 'Apellido',
+      role: 'Rol de Sistema',
+      branchId: 'Sucursal / Sede',
+      status: 'Estado',
+      active: 'Activo'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'BLOCKED') return 'Bloqueado';
+    }
+    if (fieldName === 'role') {
+      return this.getRoleLabel(value);
+    }
+    return String(value);
   }
 
   protected isSelectedUser(user: UserAdminItem): boolean {

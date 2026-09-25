@@ -9,7 +9,7 @@
 <div class="supplier-page">
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       HEADER PRINCIPAL
+       HEADER PRINCIPAL — HOMOLOGADO CON CATÁLOGO MAESTRO
        ════════════════════════════════════════════════════════════════ -->
   <header class="supplier-header">
 
@@ -22,14 +22,12 @@
 
         <div class="supplier-header__copy">
           <div class="supplier-header__eyebrow">
-            <span class="supplier-header__eyebrow-tag">HU-125</span>
+            <a routerLink="/admin" class="supplier-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>ADMINISTRACIÓN WMS</span>
+            </a>
             <span class="supplier-header__eyebrow-sep">·</span>
-            <span>Catálogo Maestro 3PL</span>
-            <span class="supplier-header__eyebrow-sep">·</span>
-            <span class="supplier-header__rls-badge">
-              <span class="material-symbols-outlined">shield</span>
-              RLS Habilitado
-            </span>
+            <span>CATÁLOGO MAESTRO</span>
           </div>
           <h1 class="supplier-header__title">Catálogo de Proveedores</h1>
           <p class="supplier-header__subtitle">
@@ -67,7 +65,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ totalCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">Total</span>
+          <span class="supplier-kpi-card__label">TOTAL</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--total"></div>
       </div>
@@ -83,7 +81,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ activeCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">Activos</span>
+          <span class="supplier-kpi-card__label">ACTIVOS</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--active"></div>
       </div>
@@ -99,7 +97,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ unavailableCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">No disponibles</span>
+          <span class="supplier-kpi-card__label">NO DISPONIBLES</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--unavailable"></div>
       </div>
@@ -115,7 +113,7 @@
           } @else {
             <span class="supplier-kpi-card__value">{{ preferredCount() }}</span>
           }
-          <span class="supplier-kpi-card__label">Preferentes</span>
+          <span class="supplier-kpi-card__label">PREFERENTES</span>
         </div>
         <div class="supplier-kpi-card__bar supplier-kpi-card__bar--preferred"></div>
       </div>
@@ -452,35 +450,6 @@
                   placeholder="EmpaquesNorte"
                 />
               </div>
-
-              <!-- Estado -->
-              <div class="supplier-field">
-                <label class="supplier-field__label" for="supplier-status">Estado Operativo *</label>
-                <select
-                  id="supplier-status"
-                  class="supplier-field__input"
-                  formControlName="status">
-                  <option value="ACTIVE">Activo</option>
-                  <option value="INACTIVE">Inactivo</option>
-                  <option value="BLOCKED">Bloqueado (Temporal)</option>
-                </select>
-              </div>
-
-              <!-- Motivo de Bloqueo / Inactividad (si aplica) -->
-              @if (form.get('status')?.value === 'BLOCKED' || form.get('status')?.value === 'INACTIVE') {
-                <div class="supplier-field supplier-field--full">
-                  <label class="supplier-field__label" for="supplier-status-reason">
-                    Motivo de {{ form.get('status')?.value === 'BLOCKED' ? 'Bloqueo *' : 'Inactividad *' }}
-                  </label>
-                  <input
-                    id="supplier-status-reason"
-                    class="supplier-field__input"
-                    type="text"
-                    formControlName="statusReason"
-                    [placeholder]="form.get('status')?.value === 'BLOCKED' ? 'Describe las razones del bloqueo temporal' : 'Describe las razones de la inactividad'"
-                  />
-                </div>
-              }
 
               <!-- Proveedor Preferente -->
               <div class="supplier-field supplier-field--full">
@@ -944,51 +913,57 @@
 
             <!-- ── Historial real de auditoría (Timeline) ── -->
             @if (canViewAudit()) {
-              <div class="supplier-timeline-preview" style="border-style: solid; margin-top: 1.25rem;">
-                <div class="supplier-timeline-preview__header" style="border-bottom-style: solid; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;">
-                  <span class="material-symbols-outlined" style="font-size: 16px;">history</span>
-                  <span>Historial de Cambios y Auditoría</span>
+              <div class="carriers-timeline-preview">
+                <div class="carriers-timeline-preview__header">
+                  <div class="carriers-timeline-preview__title">
+                    <span class="material-symbols-outlined text-base">timeline</span>
+                    <span>Línea de Tiempo de Auditoría</span>
+                  </div>
+                  <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
                 </div>
 
                 @if (auditEntries().length === 0) {
-                  <p class="supplier-timeline-preview__desc" style="padding: 0.9rem 1rem; margin: 0; font-size: 0.76rem; color: var(--text-secondary);">
+                  <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
                     No hay registros de cambios disponibles para este proveedor.
-                  </p>
+                  </div>
                 } @else {
-                  <div class="supplier-timeline-preview__nodes" style="display: flex; flex-direction: column; padding: 1rem 1rem 1rem 1.25rem; gap: 0.75rem;">
-                    @for (entry of auditEntries(); track entry.logId; let last = $last) {
-                      <div class="supplier-tl-node" [ngClass]="'supplier-tl-node--' + (entry.timelineColor || 'update')" style="display: flex; align-items: flex-start; gap: 0.75rem; position: relative;">
-                        
-                        <div class="supplier-tl-node__dot" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; position: relative; z-index: 1;">
-                          <span class="material-symbols-outlined" style="font-size: 15px;">{{ entry.timelineIcon || 'info' }}</span>
+                  <div class="carriers-timeline-preview__nodes">
+                    @for (log of auditEntries(); track log.logId || $index; let isLast = $last) {
+                      <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action, log.timelineColor)">
+                        <div class="carriers-tl-node__dot">
+                          <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action, log.timelineIcon) }}</span>
                         </div>
-                        
-                        <div class="supplier-tl-node__line" [class.supplier-tl-node__line--last]="last"></div>
-                        
-                        <div class="supplier-tl-node__content" style="display: flex; flex-direction: column; gap: 0.15rem; padding-top: 0.3rem;">
-                          <span class="supplier-tl-node__action" style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">
-                            {{ entry.summary }}
-                          </span>
-                          
-                          @if (entry.details && entry.details.length > 0) {
-                            <div style="font-size: 0.72rem; color: var(--text-secondary); margin: 0.15rem 0; display: flex; flex-direction: column; gap: 0.1rem;">
-                              @for (det of entry.details; track det.fieldName) {
-                                @if (det.fieldName !== 'statusReason') {
-                                  <div>
-                                    <strong style="color: var(--text-muted);">{{ det.fieldName }}:</strong> 
-                                    <span style="text-decoration: line-through; opacity: 0.6; margin-right: 0.25rem;">{{ det.oldValue || 'nulo' }}</span>
-                                    <span>→ {{ det.newValue || 'nulo' }}</span>
+                        @if (!isLast) {
+                          <div class="carriers-tl-node__line"></div>
+                        }
+                        <div class="carriers-tl-node__content">
+                          <div class="carriers-tl-node__header">
+                            <span class="carriers-tl-node__action">{{ log.summary }}</span>
+                            <span class="carriers-tl-node__tag">&#64;{{ log.username }}</span>
+                          </div>
+
+                          @if (log.details && log.details.length > 0) {
+                            <div class="carriers-tl-node__diffs">
+                              @for (d of log.details; track d.fieldName) {
+                                @if (d.fieldName !== 'statusReason') {
+                                  <div class="carriers-tl-diff">
+                                    <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                    @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                      <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                      <span class="carriers-tl-diff__arrow">➔</span>
+                                    }
+                                    <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                                   </div>
                                 }
                               }
                             </div>
                           }
-                          
-                          <span class="supplier-tl-node__meta" style="font-size: 0.68rem; color: var(--text-secondary);">
-                            Por {{ entry.username }} · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm' }}
+
+                          <span class="carriers-tl-node__meta">
+                            <span class="material-symbols-outlined text-[13px]">schedule</span>
+                            <span>{{ log.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
                           </span>
                         </div>
-                        
                       </div>
                     }
                   </div>

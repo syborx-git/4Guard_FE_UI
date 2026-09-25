@@ -74,6 +74,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     // Chofer & Unidad
     nombreOperador: ['', [Validators.required, Validators.minLength(3)]],
     driverLicense: [''],
+    driverPhone: [''],
     placasTracto: ['', [Validators.required, Validators.minLength(3)]],
     noEcoTractor: [''],
     placasCaja: ['', [Validators.required, Validators.minLength(3)]],
@@ -583,6 +584,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       carrierLine: f.carrierLine,
       driverName: f.nombreOperador,
       driverLicense: f.driverLicense,
+      driverPhone: f.driverPhone,
       tractorPlates: (f.placasTracto || '').toUpperCase(),
       noEcoTractor: f.noEcoTractor,
       boxPlates: (f.placasCaja || '').toUpperCase(),

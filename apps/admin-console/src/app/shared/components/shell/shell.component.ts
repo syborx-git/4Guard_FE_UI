@@ -313,17 +313,9 @@ export class ShellComponent implements OnInit, OnDestroy {
       category: 'wms',
       icon: 'tune',
       iconBg: 'linear-gradient(135deg, #d4af37 0%, #85581a 100%)',
-      badge: 'HU-131',
+      badge: 'MOTOR',
       badgeBg: '#b8860b',
       route: '/business-rules',
-    },
-    {
-      id: 'divisas',
-      name: 'DIVISAS',
-      category: 'wms',
-      icon: 'currency_exchange',
-      iconBg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-      route: '/currency-exchange',
     },
   ];
 
@@ -479,7 +471,6 @@ export class ShellComponent implements OnInit, OnDestroy {
     },
     { label: 'Seguridad', route: '/security', icon: 'security', module: 'security' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
-    { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
     { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },

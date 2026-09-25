@@ -534,7 +534,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     const dto: CreateCarrierRequest = {
       businessName:          raw.businessName?.trim() || '',
       tradeName:             raw.tradeName?.trim() || '',
-      status:                raw.status || 'ACTIVE',
+      status:                this.formMode() === 'new' ? 'ACTIVE' : (this.selectedCarrier()?.status || 'ACTIVE'),
       supportedVehicleTypes: Array.from(this.selectedVehicleTypes),
       notes:                 raw.notes?.trim() || undefined,
       rfc:                   raw.rfc?.trim() ? raw.rfc.trim().toUpperCase() : undefined,
@@ -749,4 +749,57 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   }
 
   protected readonly selectedStatus = computed(() => this.selectedCarrier()?.status ?? null);
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      legalName: 'Razón Social',
+      tradeName: 'Nombre Comercial',
+      code: 'Código / Clave',
+      rfc: 'RFC / Identificación Fiscal',
+      carrierType: 'Tipo de Transportista',
+      status: 'Estado Operativo',
+      contactName: 'Nombre de Contacto',
+      phone: 'Teléfono Principal',
+      email: 'Correo Electrónico',
+      notes: 'Notas Operativas',
+      observations: 'Observaciones',
+      statusChangeReason: 'Motivo de Estado'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'SUSPENDED') return 'Suspendido';
+    }
+    return String(value);
+  }
 }

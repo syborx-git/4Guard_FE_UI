@@ -223,18 +223,18 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
 
   protected getAuditIcon(action: string): string {
     const act = (action || '').toUpperCase();
-    if (act.includes('CREATE') || act.includes('CREATED')) return 'add_circle';
-    if (act.includes('DELETE') || act.includes('DELETED')) return 'delete';
+    if (act.includes('CREATE') || act.includes('CREATED') || act.includes('ALTA')) return 'add_circle';
+    if (act.includes('DELETE') || act.includes('DELETED') || act.includes('BAJA')) return 'delete_forever';
     if (act.includes('STATUS') || act.includes('TOGGLE')) return 'swap_horiz';
     return 'edit';
   }
 
   protected getAuditColorClass(action: string): string {
     const act = (action || '').toUpperCase();
-    if (act.includes('CREATE') || act.includes('CREATED')) return 'tl-node--success';
-    if (act.includes('DELETE') || act.includes('DELETED')) return 'tl-node--danger';
-    if (act.includes('STATUS') || act.includes('TOGGLE')) return 'tl-node--warning';
-    return 'tl-node--info';
+    if (act.includes('CREATE') || act.includes('CREATED') || act.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (act.includes('DELETE') || act.includes('DELETED') || act.includes('BAJA')) return 'carriers-tl-node--red';
+    if (act.includes('STATUS') || act.includes('TOGGLE')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
   }
 
   protected getAuditSummary(action: string): string {
@@ -243,6 +243,33 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
     if (act.includes('DELETE') || act.includes('DELETED')) return 'Eliminación de turno';
     if (act.includes('STATUS') || act.includes('TOGGLE')) return 'Cambio de estatus';
     return 'Modificación de parámetros';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      code: 'Código de Turno',
+      name: 'Nombre del Turno',
+      description: 'Descripción',
+      startTime: 'Hora Inicio',
+      endTime: 'Hora Fin',
+      operatingDays: 'Días Operativos',
+      status: 'Estado',
+      restBreakMinutes: 'Minutos de Descanso',
+      toleranceMinutes: 'Minutos de Tolerancia'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+    }
+    return String(value);
   }
 
   // ─── Gestión de Selección y Navegación ────────────────────────────────────
@@ -411,7 +438,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         startTime: formatTime(val.startTime),
         endTime: formatTime(val.endTime),
         operatingDays: val.operatingDays,
-        status: val.status,
+        status: 'ACTIVE',
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
         scopeType: 'BRANCH',
@@ -444,7 +471,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         startTime: formatTime(val.startTime),
         endTime: formatTime(val.endTime),
         operatingDays: val.operatingDays,
-        status: val.status,
+        status: selected.status || 'ACTIVE',
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
         scopeType: 'BRANCH',

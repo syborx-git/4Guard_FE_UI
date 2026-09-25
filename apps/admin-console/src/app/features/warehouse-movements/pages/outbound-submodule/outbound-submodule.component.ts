@@ -71,6 +71,9 @@ export interface OutboundPalletItem {
   isSuggestedFefo: boolean;
 }
 
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+
 @Component({
   selector: 'fg-outbound-submodule',
   standalone: true,
@@ -79,6 +82,8 @@ export interface OutboundPalletItem {
     FormsModule,
     RouterLink,
     RouterLinkActive,
+    StarBorderDirective,
+    SpecularGlowDirective,
     PrintDispatchLayoutComponent,
     PrintOutboundCancellationLayoutComponent,
   ],
@@ -1642,23 +1647,101 @@ export class OutboundSubmoduleComponent implements OnInit {
     }
   }
 
-  // ── DIRECTORIO (LISTA IZQUIERDA) ──────────────────────────────────────────
+  // Filtros Multi-Estado Píldoras
+  activeStatusFilters = signal<string[]>([]);
+
+  toggleStatusFilter(status: string): void {
+    if (status === 'ALL') {
+      this.activeStatusFilters.set([]);
+      this.statusFilter.set('ALL');
+      return;
+    }
+    const current = this.activeStatusFilters();
+    if (current.includes(status)) {
+      const updated = current.filter(s => s !== status);
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : (updated.length === 0 ? 'ALL' : 'MULTI'));
+    } else {
+      const updated = [...current, status];
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : 'MULTI');
+    }
+  }
+
+  isStatusFilterActive(status: string): boolean {
+    if (status === 'ALL') return this.activeStatusFilters().length === 0;
+    return this.activeStatusFilters().includes(status);
+  }
+
+  getOutboundPhaseInfo(status: string): {
+    phaseNumber: number;
+    phaseLabel: string;
+    percentage: number;
+    colorClass: string;
+    progressWidth: string;
+  } {
+    switch (status) {
+      case 'REGISTERED':
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Pre-registro', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+      case 'ASSIGNED':
+        return { phaseNumber: 2, phaseLabel: '2. Asignación Rampa & MC', percentage: 40, colorClass: 'fill--blue', progressWidth: '40%' };
+      case 'IN_PROGRESS':
+        return { phaseNumber: 3, phaseLabel: '3. En Carga RF Andén', percentage: 60, colorClass: 'fill--cyan', progressWidth: '60%' };
+      case 'LOADED':
+        return { phaseNumber: 4, phaseLabel: '4. Por Auditar · Carga Lista', percentage: 80, colorClass: 'fill--purple', progressWidth: '80%' };
+      case 'COMPLETED':
+        return { phaseNumber: 5, phaseLabel: '5. Despachada / Cerrada', percentage: 100, colorClass: 'fill--emerald', progressWidth: '100%' };
+      case 'CANCELLED':
+        return { phaseNumber: 0, phaseLabel: 'Cancelada / Revocada', percentage: 100, colorClass: 'fill--rose', progressWidth: '100%' };
+      default:
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Pre-registro', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+    }
+  }
+
+  formatDateDisplay(dateStr?: string): string {
+    let d = (dateStr || '').replace(/,+$/, '').trim();
+    if (d.includes('T')) d = d.slice(0, 10);
+    if (!d) d = '25/9/2026';
+    return d;
+  }
+
+  closeOutboundDetail(): void {
+    this.selectedOutbound.set(null);
+    this.formMode.set('idle');
+  }
+
+  // ── DIRECTORIO GENERAL DE SALIDAS ──────────────────────────────────────────
   filteredOutbounds = computed(() => {
     const list = this.svc.outbounds();
     const q = this.searchQuery().trim().toLowerCase();
+    const multi = this.activeStatusFilters();
     const st = this.statusFilter();
 
     return list.filter((o) => {
-      const matchStatus = st === 'ALL' || o.status === st;
+      let matchStatus = true;
+      if (multi.length > 0) {
+        matchStatus = multi.some((m) => {
+          if (m === 'IN_PROGRESS') return o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED';
+          return o.status === m;
+        });
+      } else if (st !== 'ALL') {
+        if (st === 'IN_PROGRESS') {
+          matchStatus = o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED';
+        } else {
+          matchStatus = o.status === st;
+        }
+      }
       if (!matchStatus) return false;
+
       if (!q) return true;
       return (
         o.folio.toLowerCase().includes(q) ||
         o.clientName.toLowerCase().includes(q) ||
-        o.carrierName.toLowerCase().includes(q) ||
+        (o.carrierName && o.carrierName.toLowerCase().includes(q)) ||
         (o.forkliftOperator && o.forkliftOperator.toLowerCase().includes(q)) ||
         o.sealNumber.toLowerCase().includes(q) ||
-        o.destinationName.toLowerCase().includes(q)
+        o.destinationName.toLowerCase().includes(q) ||
+        (o.driverName && o.driverName.toLowerCase().includes(q))
       );
     });
   });

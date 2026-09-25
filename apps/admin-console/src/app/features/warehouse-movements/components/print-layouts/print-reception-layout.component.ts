@@ -146,11 +146,12 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div>TOTAL PIEZAS: <span class="font-mono font-black text-xs">{{ totalPieces | number:'1.0-0' }} PZAS</span></div>
       </div>
 
-      <!-- Footer: Capturó + Firma de Conformidad -->
-      <div class="grid grid-cols-2 gap-10 items-end text-[9.5px] pt-1 uppercase">
+      <!-- Footer: Capturó + Vigilante / Firma Física + Firma de Conformidad -->
+      <div class="grid grid-cols-2 gap-10 items-end text-[9.5px] pt-2 uppercase mt-1">
         <div>
-          <p class="font-bold text-slate-800">CAPTURÓ: <span class="font-black text-black">{{ capturedByName }}</span></p>
-          <p class="text-[7.5px] text-slate-500 font-sans tracking-wide">Documento auditado oficial 4GUARD WMS</p>
+          <p class="font-bold text-slate-800 mb-2">CAPTURÓ: <span class="font-black text-black">{{ capturedByName }}</span></p>
+          <div class="border-b border-black w-56 mb-1"></div>
+          <p class="text-[8px] font-bold text-slate-700 tracking-tight">NOMBRE Y FIRMA FÍSICA DEL VIGILANTE / CASETA</p>
         </div>
 
         <div class="text-center">
@@ -163,12 +164,20 @@ import { AuthState } from '../../../../core/auth/auth.state';
   `,
   styles: [`
     @media print {
+      @page {
+        size: letter portrait;
+        margin: 8mm;
+      }
       .print-container {
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
+        page-break-inside: avoid !important;
+      }
+      table, tr, td, th {
+        page-break-inside: avoid !important;
       }
     }
   `]

@@ -5,9 +5,10 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
 import { DockItem, DockOperationalStatus } from '../../catalogs/models/warehouse-location.models';
 import { ReceptionAppointment } from '../../receiving/models/reception-appointment.models';
 import { DockEligibilityCheck, DockRecommendation } from '../../receiving/models/dock-assignment.models';
@@ -123,6 +124,7 @@ const INITIAL_DOCKS_SEED: Record<string, DockItem> = {
 @Injectable({ providedIn: 'root' })
 export class LocationService {
   private readonly http = inject(HttpClient);
+  private readonly API_URL = `${environment.apiBaseUrl}/api/v1/locations`;
 
   // Signals de compatibilidad Admin Panel & Layout
   readonly locations = signal<Location[]>([]);
@@ -138,40 +140,59 @@ export class LocationService {
   }
 
   loadLocations(): Observable<Location[]> {
-    return this.http.get<LocationListResponse>('/api/v1/locations').pipe(
+    return this.http.get<LocationListResponse>(this.API_URL).pipe(
       map((res) => {
         const list = res.data || [];
         this.locations.set(list);
         return list;
       }),
-      catchError(() => {
-        const fallback = this.locations();
-        return of(fallback);
+      catchError((err: HttpErrorResponse) => {
+        return throwError(() => err);
       })
     );
   }
 
   getLocations(): Observable<LocationListResponse> {
-    return this.http.get<LocationListResponse>('/api/v1/locations').pipe(
-      catchError(() => of({ success: true, message: 'Mock data', data: this.locations() }))
+    return this.http.get<LocationListResponse>(this.API_URL).pipe(
+      tap((res) => {
+        if (res.data) {
+          this.locations.set(res.data);
+        }
+      }),
+      catchError((err: HttpErrorResponse) => throwError(() => err))
     );
   }
 
   create(payload: any): Observable<LocationResponse> {
-    return this.http.post<LocationResponse>('/api/v1/locations', payload).pipe(
-      catchError(() => of({ success: true, message: 'Creado', data: { id: `LOC-${Date.now()}`, ...payload, status: 'ACTIVE' } }))
+    return this.http.post<LocationResponse>(this.API_URL, payload).pipe(
+      tap((res) => {
+        if (res.data) {
+          this.locations.update((list) => [...list, res.data]);
+        }
+      }),
+      catchError((err: HttpErrorResponse) => throwError(() => err))
     );
   }
 
   update(id: string, payload: any): Observable<LocationResponse> {
-    return this.http.put<LocationResponse>(`/api/v1/locations/${id}`, payload).pipe(
-      catchError(() => of({ success: true, message: 'Actualizado', data: { id, ...payload, status: 'ACTIVE' } }))
+    return this.http.put<LocationResponse>(`${this.API_URL}/${id}`, payload).pipe(
+      tap((res) => {
+        if (res.data) {
+          this.locations.update((list) => list.map((loc) => (loc.id === id ? res.data : loc)));
+        }
+      }),
+      catchError((err: HttpErrorResponse) => throwError(() => err))
     );
   }
 
   changeStatus(id: string, status: string, reason?: string): Observable<LocationResponse> {
-    return this.http.patch<LocationResponse>(`/api/v1/locations/${id}/status`, { status, reason }).pipe(
-      catchError(() => of({ success: true, message: 'Estado actualizado', data: { id, status: status as any } as Location }))
+    return this.http.patch<LocationResponse>(`${this.API_URL}/${id}/status`, { status, reason }).pipe(
+      tap((res) => {
+        if (res.data) {
+          this.locations.update((list) => list.map((loc) => (loc.id === id ? res.data : loc)));
+        }
+      }),
+      catchError((err: HttpErrorResponse) => throwError(() => err))
     );
   }
 
@@ -180,14 +201,17 @@ export class LocationService {
   }
 
   delete(id: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`/api/v1/locations/${id}`).pipe(
-      catchError(() => of({ success: true, message: 'Eliminado' }))
+    return this.http.delete<{ success: boolean; message: string }>(`${this.API_URL}/${id}`).pipe(
+      tap(() => {
+        this.locations.update((list) => list.filter((loc) => loc.id !== id));
+      }),
+      catchError((err: HttpErrorResponse) => throwError(() => err))
     );
   }
 
   getLocationAudit(id: string): Observable<LocationAuditResponse> {
-    return this.http.get<LocationAuditResponse>(`/api/v1/locations/${id}/audit`).pipe(
-      catchError(() => of({ success: true, message: 'Audit log', data: [] }))
+    return this.http.get<LocationAuditResponse>(`${this.API_URL}/${id}/audit`).pipe(
+      catchError((err: HttpErrorResponse) => throwError(() => err))
     );
   }
 
@@ -264,10 +288,10 @@ export class LocationService {
       blockers.push(`La cita se encuentra en estado '${appointment.status}' (Inactiva para asignación).`);
     }
 
-    // 3. Validación Documental OC (HU-029)
+    // 3. Validación Documental OC
     const poStatus = appointment.poValidationStatus;
     if (poStatus === 'REJECTED') {
-      blockers.push('La Orden de Compra asociada fue rechazada documentalmente (HU-029).');
+      blockers.push('La Orden de Compra asociada fue rechazada documentalmente.');
     } else if (poStatus === 'PENDING') {
       blockers.push('La Orden de Compra se encuentra pendiente de validación documental.');
     }
