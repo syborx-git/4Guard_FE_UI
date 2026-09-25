@@ -531,12 +531,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
     docNumber: [''],
   });
 
-  // ── ESTADO DE MODAL LÍDER E IMPRESIÓN ──
+  // ── ESTADO DE MODAL LÍDER, VERIFICACIÓN DE UAS E IMPRESIÓN ──
   leaderModalTitle = signal('');
   leaderAction = signal<'COMPLETE' | 'CANCEL' | null>(null);
   cancellationJustification = signal('');
   printType = signal<'RECEPTION' | 'CANCELLATION' | null>(null);
   selectedPrintReception = signal<ReceptionHeader | null>(null);
+
+  // Verificación de UAs escaneadas
+  showUaVerificationModal = signal(false);
+  verifiedPalletIds = signal<Set<string>>(new Set());
+  verifiedPalletCount = computed(() => this.verifiedPalletIds().size);
 
   // ── COMPUTADOS DEL WORKBENCH ──
   kpiTotal = computed(() => this.movementsService.receptions().length);
@@ -2295,5 +2300,39 @@ export class ReceivingSubmoduleComponent implements OnInit {
   closePrintModal(): void {
     this.showPrintModal.set(false);
     this.selectedPrintReception.set(null);
+  }
+
+  // ── AUDITORÍA Y VERIFICACIÓN DE UAS ──
+  openUaVerificationModal(): void {
+    this.showUaVerificationModal.set(true);
+  }
+
+  closeUaVerificationModal(): void {
+    this.showUaVerificationModal.set(false);
+  }
+
+  toggleVerifyPallet(palletId: string): void {
+    this.verifiedPalletIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(palletId)) {
+        next.delete(palletId);
+      } else {
+        next.add(palletId);
+      }
+      return next;
+    });
+  }
+
+  markAllPalletsVerified(): void {
+    const allIds = new Set(this.palletStream().map((p) => p.id));
+    this.verifiedPalletIds.set(allIds);
+    this.toast.success('Todas las UAs marcadas como conformes y verificadas.');
+  }
+
+  confirmUaVerification(): void {
+    const total = this.palletStream().length;
+    const verified = this.verifiedPalletCount();
+    this.toast.success(`Auditoría de UAs confirmada: ${verified}/${total} tarimas conformes.`);
+    this.closeUaVerificationModal();
   }
 }
