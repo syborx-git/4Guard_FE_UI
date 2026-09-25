@@ -870,6 +870,12 @@ h1, h2, h3, h4, h5, h6 {
   padding: 1.75rem;
 }
 
+.modal-card--qr-compact {
+  max-width: 27rem !important;
+  padding: 1.15rem 1.35rem !important;
+  border-radius: 22px !important;
+}
+
 .modal-card h1,
 .modal-card h2,
 .modal-card h3,

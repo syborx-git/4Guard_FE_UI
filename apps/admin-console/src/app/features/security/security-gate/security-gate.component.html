@@ -3,7 +3,7 @@
      HOMOLOGADO CON SYNEXIA THEME ENGINE (LIGHT & DARK DUAL MODE)
      CONFORME A: ui-design-system-light.sdd.md & ui-design-system-dark.sdd.md
      ════════════════════════════════════════════════════════════════ -->
-<div class="security-page">
+<div class="security-page" id="security-page-top">
 
   <!-- ── 1. CABECERA PRINCIPAL HERO (GOLDEN STANDARD) ── -->
   <header class="security-header">
@@ -190,57 +190,7 @@
     </div>
   }
 
-  @if (saveSuccess()) {
-    <div class="security-success-banner animate-fade-in">
-      <div class="security-success-banner__left">
-        <div class="security-success-banner__icon-box">
-          <span class="material-symbols-outlined">task_alt</span>
-        </div>
-        <div class="security-success-banner__content">
-          <div class="security-success-banner__title-row">
-            <h4 class="security-success-banner__title">
-              ¡{{ checkInForm.get('operacion')?.value === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga' }} Registrada con Éxito!
-            </h4>
-            @if (createdFolio()) {
-              <span class="security-success-banner__folio-badge">
-                <span class="material-symbols-outlined text-xs">tag</span>
-                <span>FOLIO: #{{ createdFolio() }}</span>
-              </span>
-            }
-          </div>
-          <div class="security-success-banner__details">
-            <span class="security-success-banner__ramp-chip">
-              <span class="material-symbols-outlined text-xs">warehouse</span>
-              <span>Andén / Rampa: <strong>{{ assignedRampLabel() || 'Asignada' }}</strong></span>
-            </span>
-            <span class="security-success-banner__note">
-              La unidad ha sido autorizada para ingresar al patio e iniciar maniobras en el andén correspondiente.
-            </span>
-          </div>
-        </div>
-      </div>
 
-      <div class="security-success-banner__actions">
-        <button
-          type="button"
-          (click)="openF01Print(lastCompletedPrintItem() || checkInForm.value)"
-          class="btn-primary-gold"
-        >
-          <span class="material-symbols-outlined text-sm">print</span>
-          <span>Imprimir Formato F01</span>
-        </button>
-        <button
-          type="button"
-          (click)="resetForm()"
-          class="btn-banner-close"
-          title="Cerrar aviso y nuevo registro"
-        >
-          <span class="material-symbols-outlined text-sm">close</span>
-          <span>Cerrar Aviso</span>
-        </button>
-      </div>
-    </div>
-  }
 
   @if (errorMessage()) {
     <div class="security-alert security-alert--error animate-fade-in">
@@ -267,7 +217,9 @@
         <div class="security-card p-5">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-amber-500">qr_code_2</span>
+              <div class="w-7 h-7 rounded-full bg-white flex items-center justify-center border border-amber-400/80 shrink-0 p-0.5 shadow-sm">
+                <img src="assets/forbot-avatar.png" alt="4GUARD ForBot" class="w-full h-full object-contain" />
+              </div>
               <span>Pase Digital para Chofer</span>
             </h3>
             <span class="badge-gold">
@@ -276,7 +228,7 @@
           </div>
 
           <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-            Genera un código QR o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su smartphone.
+            Genera un código QR institucional o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su smartphone.
           </p>
 
           <button
@@ -823,7 +775,16 @@
                     </td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-medium">Carta porte</td>
+                    <td class="py-2 px-3 font-medium">
+                      <div class="flex items-center gap-2">
+                        <span>Carta porte</span>
+                        @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
+                        } @else {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">N/A en Descarga</span>
+                        }
+                      </div>
+                    </td>
                     <td class="py-2 px-2 text-center">
                       <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('docCartaPorte', 'SI')" [class.btn-active-si]="checkInForm.get('docCartaPorte')?.value === 'SI'" class="crit-btn">SÍ</button>
@@ -833,7 +794,16 @@
                     <td class="py-2 px-3"><input type="text" formControlName="docCartaPorteObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-medium">Remisión</td>
+                    <td class="py-2 px-3 font-medium">
+                      <div class="flex items-center gap-2">
+                        <span>Remisión</span>
+                        @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
+                        } @else {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">N/A en Carga</span>
+                        }
+                      </div>
+                    </td>
                     <td class="py-2 px-2 text-center">
                       <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('docRemision', 'SI')" [class.btn-active-si]="checkInForm.get('docRemision')?.value === 'SI'" class="crit-btn">SÍ</button>
@@ -1302,68 +1272,88 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════════
-     MODAL A: PASE QR DINÁMICO PARA SMARTPHONE DEL CHOFER
+     MODAL A: PASE QR DINÁMICO PARA SMARTPHONE DEL CHOFER (ALTA LEGIBILIDAD)
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showQrModal()) {
-  <div class="modal-overlay animate-fade-in">
-    <div class="modal-card max-w-md w-full text-center relative">
-      <button
-        type="button"
-        (click)="closeQrModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold cursor-pointer"
-        aria-label="Cerrar modal QR"
-      >
-        ✕
-      </button>
+  <div class="modal-overlay animate-fade-in" (click)="closeQrModal()">
+    <div class="modal-card modal-card--qr-compact text-center relative shadow-2xl" (click)="$event.stopPropagation()">
+      
+      <!-- Encabezado Compacto con Avatar ForBot -->
+      <div class="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-amber-400/80 shrink-0 p-0.5 shadow-sm">
+            <img src="assets/forbot-avatar.png" alt="ForBot AI" class="w-full h-full object-contain" />
+          </div>
+          <div class="text-left">
+            <h3 class="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+              <span>Pase Digital QR</span>
+              <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">4GUARD</span>
+            </h3>
+            <p class="text-[10px] text-slate-500">Auto-registro Chofer F01</p>
+          </div>
+        </div>
 
-      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-3 border border-amber-500/25">
-        <span class="material-symbols-outlined text-2xl">qr_code_2</span>
+        <button
+          type="button"
+          (click)="closeQrModal()"
+          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-base font-bold cursor-pointer p-1 leading-none rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="Cerrar modal QR"
+        >
+          ✕
+        </button>
       </div>
 
-      <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-        Pase Digital QR de Acceso
-      </h3>
-      <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-4">
-        Muestra este código al transportista para que escanee con su smartphone y realice su auto-registro F01.
-      </p>
+      <!-- Render Visual Ampliado del QR (Alta Legibilidad & Error Correction Level H: 30%) -->
+      <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-md inline-block mx-auto mb-2">
+        <div class="relative inline-flex items-center justify-center">
+          <img
+            [src]="'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&ecc=H&data=' + (qrModalUrl() || 'https://4guard.com')"
+            alt="QR Pase Acceso Chofer"
+            class="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded bg-white"
+          />
+          <!-- Avatar Central ForBot con Zona de Aislamiento Blanco (Quiet Buffer) -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-10 h-10 rounded-full bg-white p-0.5 shadow-md border-2 border-white ring-1 ring-amber-400/80 flex items-center justify-center overflow-hidden">
+              <img src="assets/forbot-avatar.png" alt="4GUARD ForBot" class="w-full h-full object-contain" />
+            </div>
+          </div>
+        </div>
 
-      <!-- Render Visual del QR -->
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-md inline-block mb-4">
-        <img
-          [src]="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=' + (qrModalUrl() || 'https://4guard.com')"
-          alt="QR Pase Acceso Chofer"
-          class="w-48 h-48 object-contain mx-auto rounded-lg bg-white"
-        />
-        <div class="mt-2 font-mono font-extrabold text-xs text-slate-900 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-          Token: {{ qrModalToken() }}
+        <div class="mt-1.5 font-mono font-extrabold text-[11px] text-slate-900 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 flex items-center justify-center gap-1.5">
+          <span class="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Folio:</span>
+          <span>{{ qrModalToken() }}</span>
         </div>
       </div>
 
-      <!-- Acciones de Enlace -->
-      <div class="space-y-2">
-        <button
-          type="button"
-          (click)="openDriverPortalInNewTab()"
-          class="w-full btn-primary-gold justify-center py-2.5 text-xs shadow"
-        >
-          <span class="material-symbols-outlined text-base">open_in_new</span>
-          <span>Abrir Portal Móvil del Chofer</span>
-        </button>
+      <!-- Acciones de Enlace Compactas -->
+      <div class="space-y-1.5">
+        <div class="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            (click)="openDriverPortalInNewTab()"
+            class="btn-primary-gold justify-center py-1.5 px-2 text-[11px] shadow w-full"
+            title="Abrir en pestaña nueva"
+          >
+            <span class="material-symbols-outlined text-sm">open_in_new</span>
+            <span>Abrir Portal</span>
+          </button>
 
-        <button
-          type="button"
-          (click)="copyQrUrl()"
-          class="w-full btn-secondary-outline justify-center py-2 text-xs"
-        >
-          <span class="material-symbols-outlined text-sm">content_copy</span>
-          <span>Copiar Enlace al Portapapeles</span>
-        </button>
+          <button
+            type="button"
+            (click)="copyQrUrl()"
+            class="btn-secondary-outline justify-center py-1.5 px-2 text-[11px] w-full"
+            title="Copiar enlace al portapapeles"
+          >
+            <span class="material-symbols-outlined text-sm">content_copy</span>
+            <span>Copiar Enlace</span>
+          </button>
+        </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+        <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-800">
           <button
             type="button"
             (click)="generateNewDriverPass()"
-            class="btn-modal-secondary"
+            class="btn-modal-secondary py-1 px-2 text-[11px]"
           >
             <span class="material-symbols-outlined text-sm">restart_alt</span>
             <span>Nuevo QR</span>
@@ -1372,15 +1362,15 @@
           <button
             type="button"
             (click)="discardCurrentQrPass()"
-            class="btn-modal-danger"
+            class="btn-modal-danger py-1 px-2 text-[11px]"
           >
             <span class="material-symbols-outlined text-sm">delete_outline</span>
-            <span>Descartar Pase</span>
+            <span>Descartar</span>
           </button>
         </div>
 
         @if (copyNotice()) {
-          <p class="text-xs text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
+          <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
         }
       </div>
     </div>

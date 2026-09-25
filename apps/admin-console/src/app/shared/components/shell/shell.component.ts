@@ -317,14 +317,6 @@ export class ShellComponent implements OnInit, OnDestroy {
       badgeBg: '#b8860b',
       route: '/business-rules',
     },
-    {
-      id: 'divisas',
-      name: 'DIVISAS',
-      category: 'wms',
-      icon: 'currency_exchange',
-      iconBg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-      route: '/currency-exchange',
-    },
   ];
 
   protected readonly filteredWaffleItems = computed(() => {
