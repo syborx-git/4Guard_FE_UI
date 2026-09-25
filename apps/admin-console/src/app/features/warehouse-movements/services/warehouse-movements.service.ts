@@ -1276,6 +1276,18 @@ export class WarehouseMovementsService {
       r.documentNumber ||
       '';
 
+    let opName = r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '';
+    if (opName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opName)) {
+      const match = (this.forkliftOperatorsSignal() || []).find((o: any) => o.id === opName || o.code === opName);
+      if (match) opName = match.name;
+    }
+
+    let supName = r.supplierName || '';
+    if (supName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(supName)) {
+      const match = (this.suppliersSignal() || []).find((s: any) => s.id === supName || s.code === supName);
+      if (match) supName = match.name || supName;
+    }
+
     return {
       id: r.id,
       folio: r.folio || '',
@@ -1290,7 +1302,7 @@ export class WarehouseMovementsService {
         clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
         rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 1) : (r.rampNumber || r.checkIn?.rampNumber || 1),
         rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
-        forkliftOperator: r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '',
+        forkliftOperator: opName,
         forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
         driverName: r.driverName || r.checkIn?.driverName || '',
         tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
@@ -1304,7 +1316,7 @@ export class WarehouseMovementsService {
       productId: r.skuCode || r.skuId || r.productId || '',
       skuCode: r.skuCode || '',
       productName: r.productName || '',
-      supplierName: r.supplierName || '',
+      supplierName: supName,
       piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
       storageLocation: r.storageLocationCode || r.storageLocationName || r.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',

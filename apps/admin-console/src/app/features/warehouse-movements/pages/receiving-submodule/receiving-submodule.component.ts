@@ -538,6 +538,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
   printType = signal<'RECEPTION' | 'CANCELLATION' | null>(null);
   selectedPrintReception = signal<ReceptionHeader | null>(null);
 
+  // Selector y asignación reactiva de Bahía
+  selectedBayName = signal<string>('');
+
   // Verificación de UAs escaneadas
   showUaVerificationModal = signal(false);
   verifiedPalletIds = signal<Set<string>>(new Set());
@@ -769,11 +772,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
       ? ''
       : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
 
+    const bayLoc = rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1';
+    this.selectedBayName.set(bayLoc);
+
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
       elaborationDate: rec.elaborationDate || rec.checkIn?.elaborationDate || '',
       expirationDate: rec.expirationDate || rec.checkIn?.expirationDate || '',
-      storageLocation: rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1',
+      storageLocation: bayLoc,
       storageLocationId: rec.storageLocationId || '',
       forkliftOperator: defaultOperator,
       rampNumber: rec.checkIn?.rampNumber || 1,
@@ -1589,10 +1595,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   onBaySelected(res: BaySelectionResult): void {
+    this.selectedBayName.set(res.locationCode);
     this.altaForm.patchValue({
       storageLocation: res.locationCode,
       storageLocationId: res.locationId || res.locationCode,
     });
+    this.selectedReception.update((r) =>
+      r ? { ...r, storageLocation: res.locationCode, storageLocationId: res.locationId || res.locationCode } : null
+    );
     this.showBaySelectorModal.set(false);
     if (res.isOverride) {
       this.toast.info(`Bahía ${res.locationCode} asignada con Anulación de Administrador.`);
@@ -2302,13 +2312,25 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.selectedPrintReception.set(null);
   }
 
-  // ── AUDITORÍA Y VERIFICACIÓN DE UAS ──
+  // ── AUDITORÍA Y VERIFICACIÓN DE UAS (HALLAZGO 1) ──
+  onVerifyUa(): void {
+    this.openUaVerificationModal();
+  }
+
   openUaVerificationModal(): void {
+    const rec = this.selectedReception();
+    if (this.palletStream().length === 0 && rec?.pallets && rec.pallets.length > 0) {
+      this.palletStream.set([...rec.pallets]);
+    }
     this.showUaVerificationModal.set(true);
   }
 
   closeUaVerificationModal(): void {
     this.showUaVerificationModal.set(false);
+  }
+
+  togglePalletVerification(palletId: string): void {
+    this.toggleVerifyPallet(palletId);
   }
 
   toggleVerifyPallet(palletId: string): void {
@@ -2323,10 +2345,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
     });
   }
 
-  markAllPalletsVerified(): void {
-    const allIds = new Set(this.palletStream().map((p) => p.id));
-    this.verifiedPalletIds.set(allIds);
-    this.toast.success('Todas las UAs marcadas como conformes y verificadas.');
+  markAllPalletsVerified(mark: boolean = true): void {
+    if (mark) {
+      const allIds = new Set(this.palletStream().map((p) => p.id));
+      this.verifiedPalletIds.set(allIds);
+      this.toast.success('Todas las UAs marcadas como conformes y verificadas.');
+    } else {
+      this.verifiedPalletIds.set(new Set());
+      this.toast.info('Verificación de UAs restablecida.');
+    }
   }
 
   confirmUaVerification(): void {
@@ -2334,5 +2361,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const verified = this.verifiedPalletCount();
     this.toast.success(`Auditoría de UAs confirmada: ${verified}/${total} tarimas conformes.`);
     this.closeUaVerificationModal();
+  }
+
+  getPalletTypeLabel(type?: string): string {
+    if (!type) return 'Madera Estándar';
+    return (PALLET_TYPE_LABELS as Record<string, string>)[type] || type;
   }
 }
