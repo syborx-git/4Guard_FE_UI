@@ -33,7 +33,7 @@
     </div>
 
     <!-- ── BARRA CON TABS A LA IZQUIERDA Y BOTÓN A LA DERECHA ── -->
-    <div class="movements-toolbar-row" fgStarBorder fgSpecularGlow>
+    <div class="movements-toolbar-row">
       <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
         <a
           routerLink="/warehouse-movements/receiving"
@@ -1850,7 +1850,8 @@
 
               <!-- Selector Rápido de Rampa y Montacarguista -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 border-t border-amber-500/20 text-xs">
-                <div>
+                <!-- Rampa de Asignación con Autocomplete y Badges -->
+                <div class="relative">
                   <div class="flex items-center justify-between mb-1">
                     <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
                       Rampa de Asignación <span class="text-amber-500">*</span>
@@ -1865,33 +1866,152 @@
                       <span>Plano</span>
                     </button>
                   </div>
-                  <select
-                    [ngModel]="selectedRampNumber()"
-                    (ngModelChange)="selectedRampNumber.set(+$event)"
-                    class="fg-input w-full font-bold"
-                  >
-                    @for (rm of ramps(); track rm.code) {
-                      <option [value]="rm.rampNumber" [disabled]="isRampBusy(rm.rampNumber, selectedOutbound()?.folio)">
-                        {{ getRampDisplayLabel(rm, selectedOutbound()?.folio) }}
-                      </option>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="rampSearchQuery() || (selectedRampNumber() ? 'Rampa ' + (selectedRampNumber() < 10 ? '0' + selectedRampNumber() : selectedRampNumber()) : '')"
+                      (input)="onRampInput($any($event.target).value)"
+                      (focus)="isRampDropdownOpen.set(true)"
+                      placeholder="Seleccionar rampa..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950 dark:!text-white"
+                      autocomplete="off"
+                    />
+                    @if (rampSearchQuery() || selectedRampNumber()) {
+                      <button
+                        type="button"
+                        (click)="clearRampSelection()"
+                        class="absolute right-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Limpiar rampa"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">meeting_room</span>
                     }
-                  </select>
+                  </div>
+
+                  <!-- Backdrop transparente -->
+                  @if (isRampDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isRampDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de Rampas -->
+                  @if (isRampDropdownOpen() && filteredRamps().length > 0) {
+                    <div class="sku-autocomplete-dropdown">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">meeting_room</span>
+                          <span>Rampas de Andén ({{ filteredRamps().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (rm of filteredRamps(); track rm.code) {
+                        <button
+                          type="button"
+                          (click)="selectRamp(rm)"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
+                          [class.opacity-60]="isRampBusy(rm.rampNumber, selectedOutbound()?.folio)"
+                          [class.cursor-not-allowed]="isRampBusy(rm.rampNumber, selectedOutbound()?.folio)"
+                          [class.sku-autocomplete-item--selected]="selectedRampNumber() === rm.rampNumber"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-300 text-blue-950 font-black text-xs flex items-center justify-center shrink-0">
+                              R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-extrabold text-slate-950 dark:text-slate-100 text-xs leading-snug">{{ rm.name }}</span>
+                                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 {{ getRampBadgeInfo(rm, selectedOutbound()?.folio).bgClass }} {{ getRampBadgeInfo(rm, selectedOutbound()?.folio).textClass }} {{ getRampBadgeInfo(rm, selectedOutbound()?.folio).borderClass }}">
+                                  {{ getRampBadgeInfo(rm, selectedOutbound()?.folio).label }}
+                                </span>
+                              </div>
+                              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate">Andén de Operación · {{ rm.code }}</span>
+                            </div>
+                          </div>
+                          @if (selectedRampNumber() === rm.rampNumber) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isRampDropdownOpen() && filteredRamps().length === 0 && rampSearchQuery()) {
+                    <div class="sku-autocomplete-empty">
+                      No se encontraron rampas con "{{ rampSearchQuery() }}"
+                    </div>
+                  }
                 </div>
 
-                <div>
+                <!-- Montacarguista Certificado con Autocomplete -->
+                <div class="relative">
                   <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
                     Montacarguista Certificado <span class="text-amber-500">*</span>
                   </label>
-                  <select
-                    [ngModel]="selectedOperatorId()"
-                    (ngModelChange)="selectedOperatorId.set($event)"
-                    class="fg-input w-full font-bold"
-                  >
-                    <option value="">-- Selecciona montacarguista --</option>
-                    @for (op of forkliftOperators(); track op.id) {
-                      <option [value]="op.id">{{ op.name }} ({{ op.badge }})</option>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="operatorSearchQuery()"
+                      (input)="onOperatorInput($any($event.target).value)"
+                      (focus)="isOperatorDropdownOpen.set(true)"
+                      placeholder="Seleccionar montacarguista..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950 dark:!text-white"
+                      autocomplete="off"
+                    />
+                    @if (operatorSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="clearOperatorSelection()"
+                        class="absolute right-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Limpiar montacarguista"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">engineering</span>
                     }
-                  </select>
+                  </div>
+
+                  <!-- Backdrop transparente -->
+                  @if (isOperatorDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isOperatorDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de Montacarguistas -->
+                  @if (isOperatorDropdownOpen() && filteredForkliftOperators().length > 0) {
+                    <div class="sku-autocomplete-dropdown">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">engineering</span>
+                          <span>Montacarguistas ({{ filteredForkliftOperators().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (op of filteredForkliftOperators(); track op.id) {
+                        <button
+                          type="button"
+                          (click)="selectOperator(op)"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
+                          [class.sku-autocomplete-item--selected]="selectedOperatorId() === op.id"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-bold text-xs flex items-center justify-center shrink-0 border border-amber-300">
+                              {{ getInitials(op.name) }}
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <span class="font-extrabold text-slate-950 dark:text-slate-100 text-xs leading-snug">{{ op.name }}</span>
+                              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
+                            </div>
+                          </div>
+                          @if (selectedOperatorId() === op.id) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base font-bold ml-1">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isOperatorDropdownOpen() && filteredForkliftOperators().length === 0 && operatorSearchQuery()) {
+                    <div class="sku-autocomplete-empty">
+                      No se encontraron montacarguistas para "{{ operatorSearchQuery() }}"
+                    </div>
+                  }
                 </div>
 
                 <div>

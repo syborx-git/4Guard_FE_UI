@@ -129,6 +129,19 @@ export class OutboundSubmoduleComponent implements OnInit {
   // Modal Plano de Andenes Interactivo
   showDockMapModal = signal(false);
   selectedRampNumber = signal<number>(1);
+  rampSearchQuery = signal<string>('');
+  isRampDropdownOpen = signal<boolean>(false);
+  filteredRamps = computed(() => {
+    const q = this.rampSearchQuery().toLowerCase().trim();
+    const list = this.ramps();
+    if (!q) return list;
+    return list.filter(
+      (rm) =>
+        (rm.name && rm.name.toLowerCase().includes(q)) ||
+        (rm.code && rm.code.toLowerCase().includes(q)) ||
+        String(rm.rampNumber).includes(q)
+    );
+  });
   observations = signal<string>('');
 
   // Estados de carga / acción en ciclo operativo
@@ -510,6 +523,74 @@ export class OutboundSubmoduleComponent implements OnInit {
       return `${rm.name} (Ocupada - Salida #${occ.operationFolio})`;
     }
     return `${rm.name} (Ocupada - Folio #${occ.operationFolio})`;
+  }
+
+  onRampInput(value: string): void {
+    this.rampSearchQuery.set(value);
+    this.isRampDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.selectedRampNumber.set(0);
+      return;
+    }
+
+    const exact = this.ramps().find(
+      (rm) => rm.name.toLowerCase() === val.toLowerCase() || String(rm.rampNumber) === val || rm.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact && !this.isRampBusy(exact.rampNumber, this.selectedOutbound()?.folio)) {
+      this.selectedRampNumber.set(exact.rampNumber);
+    }
+  }
+
+  selectRamp(rm: RampItem): void {
+    if (this.isRampBusy(rm.rampNumber, this.selectedOutbound()?.folio)) {
+      this.toast.warning(`La ${rm.name} se encuentra ocupada por otra operación.`);
+      return;
+    }
+    this.selectedRampNumber.set(rm.rampNumber);
+    this.rampSearchQuery.set(rm.name);
+    this.isRampDropdownOpen.set(false);
+  }
+
+  clearRampSelection(): void {
+    this.selectedRampNumber.set(0);
+    this.rampSearchQuery.set('');
+    this.isRampDropdownOpen.set(false);
+  }
+
+  getRampBadgeInfo(rm: RampItem, currentFolio?: string | number): { label: string; bgClass: string; textClass: string; borderClass: string } {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return {
+        label: 'LIBRE',
+        bgClass: 'bg-emerald-100',
+        textClass: 'text-emerald-900',
+        borderClass: 'border-emerald-300'
+      };
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return {
+        label: 'ASIGNADA',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-950',
+        borderClass: 'border-blue-300'
+      };
+    }
+    if (occ.status === 'OCCUPIED_OUTBOUND') {
+      return {
+        label: `SALIDA (#${occ.operationFolio})`,
+        bgClass: 'bg-rose-100',
+        textClass: 'text-rose-900',
+        borderClass: 'border-rose-300'
+      };
+    }
+    return {
+      label: `OCUPADA (#${occ.operationFolio})`,
+      bgClass: 'bg-amber-100',
+      textClass: 'text-amber-900',
+      borderClass: 'border-amber-300'
+    };
   }
 
   // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────

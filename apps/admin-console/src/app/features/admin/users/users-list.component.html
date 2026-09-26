@@ -655,9 +655,15 @@
 
                 <button
                   class="users-btn users-btn--primary"
-                  type="submit">
-                  <span class="material-symbols-outlined">save</span>
-                  Guardar Cambios
+                  type="submit"
+                  [disabled]="isSaving()">
+                  @if (isSaving()) {
+                    <span class="material-symbols-outlined animate-spin">progress_activity</span>
+                    Guardando...
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    Guardar Cambios
+                  }
                 </button>
               </div>
 

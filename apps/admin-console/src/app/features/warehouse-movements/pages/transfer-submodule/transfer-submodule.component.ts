@@ -18,6 +18,8 @@ import {
 } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
 import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
 
 export interface ForkliftOperatorOption {
   id: string;
@@ -31,7 +33,16 @@ export interface ForkliftOperatorOption {
 @Component({
   selector: 'fg-transfer-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, PrintTransferLayoutComponent, BayOccupancySelectorComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RouterLinkActive,
+    PrintTransferLayoutComponent,
+    BayOccupancySelectorComponent,
+    StarBorderDirective,
+    SpecularGlowDirective,
+  ],
   templateUrl: './transfer-submodule.component.html',
   styleUrl: './transfer-submodule.component.css',
 })
@@ -655,6 +666,14 @@ export class TransferSubmoduleComponent implements OnInit {
     this.formMode.set('idle');
     this.selectedTransfer.set(null);
     localStorage.removeItem('4g_active_transfer_folio');
+  }
+
+  toggleStatusFilter(status: string): void {
+    this.statusFilter.set(status);
+  }
+
+  isStatusFilterActive(status: string): boolean {
+    return this.statusFilter() === status;
   }
 
   // Seleccionar un Traspaso del Directorio (Modo Detalle/Solo Lectura)
