@@ -32,8 +32,8 @@
 
     </div>
 
-    <!-- ── BARRA DONDE ESTABA EL SLIDE ANTERIOR: TABS A LA IZQUIERDA Y BOTÓN ACCIÓN A LA DERECHA ── -->
-    <div class="movements-toolbar-row" fgStarBorder fgSpecularGlow>
+    <!-- ── BARRA DE PESTAÑAS FLOTANTE (SEGMENTED CONTROL) & ANDENES ── -->
+    <div class="movements-toolbar-row">
       <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
         <a
           routerLink="/warehouse-movements/receiving"
@@ -816,23 +816,35 @@
                       <div class="sku-autocomplete-header">
                         <div class="sku-autocomplete-header__title">
                           <span class="material-symbols-outlined text-sm">engineering</span>
-                          <span>Coincidencias ({{ filteredForkliftOperators().length }})</span>
+                          <span>Montacarguistas ({{ filteredForkliftOperators().length }})</span>
                         </div>
                         <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
                       </div>
-                      @for (op of filteredForkliftOperators(); track (op.code || op.name)) {
+                      @for (op of filteredForkliftOperators(); track (op.id || op.code || op.name)) {
                         <button
                           type="button"
                           (click)="selectForkliftOperator(op)"
-                          class="sku-autocomplete-item"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
                           [class.sku-autocomplete-item--selected]="altaForm.get('forkliftOperator')?.value === op.name"
                         >
                           <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span class="sku-autocomplete-badge">{{ op.code || getInitials(op.name) }}</span>
-                            <span class="sku-autocomplete-name">{{ op.name }}</span>
+                            <div class="w-7 h-7 rounded-full bg-amber-200 text-amber-950 font-black text-xs flex items-center justify-center shrink-0 border border-amber-400">
+                              {{ getInitials(op.name) }}
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ op.name }}</span>
+                                @if (op.code && !op.code.includes('-') && op.code.length <= 10) {
+                                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded border border-amber-300 shrink-0">{{ op.code }}</span>
+                                }
+                              </div>
+                              @if (op.jobTitle || op.shift) {
+                                <span class="text-[10px] text-slate-700 font-bold truncate">{{ op.jobTitle || 'Montacarguista' }} · {{ op.shift || 'Turno General' }}</span>
+                              }
+                            </div>
                           </div>
                           @if (altaForm.get('forkliftOperator')?.value === op.name) {
-                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
                           }
                         </button>
                       }
@@ -844,27 +856,93 @@
                   }
                 </div>
 
-                <!-- Rampa de Recepción: 3 columnas -->
-                <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-3">
+                <!-- Rampa de Recepción: 3 columnas (Diseño Homologado con Autocomplete y Badges) -->
+                <div class="fg-field relative col-span-1 sm:col-span-1 lg:col-span-3">
                   <div class="flex items-center justify-between">
                     <label class="fg-label fg-label--required">Rampa de Recepción</label>
                     <button
                       type="button"
                       (click)="showDockMapModal.set(true)"
-                      class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      class="text-[10px] font-bold text-amber-700 hover:underline flex items-center gap-0.5 cursor-pointer"
                       title="Abrir mapa visual de andenes"
                     >
                       <span class="material-symbols-outlined text-[13px]">grid_view</span>
                       <span>Plano</span>
                     </button>
                   </div>
-                  <select formControlName="rampNumber" class="fg-input font-bold !text-slate-950">
-                    @for (rm of ramps(); track rm.code) {
-                      <option [value]="rm.rampNumber" [disabled]="isRampBusy(rm.rampNumber, rec.folio)">
-                        {{ getRampDisplayLabel(rm, rec.folio) }}
-                      </option>
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      [value]="rampSearchQuery()"
+                      (input)="onRampInput($any($event.target).value)"
+                      (focus)="isRampDropdownOpen.set(true)"
+                      placeholder="Seleccionar rampa..."
+                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      autocomplete="off"
+                    />
+                    @if (rampSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="clearRampSelection()"
+                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Limpiar rampa seleccionada"
+                      >
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    } @else {
+                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">meeting_room</span>
                     }
-                  </select>
+                  </div>
+
+                  <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
+                  @if (isRampDropdownOpen()) {
+                    <div class="fixed inset-0 z-40" (click)="isRampDropdownOpen.set(false)"></div>
+                  }
+
+                  <!-- Lista Predictiva Flotante de Rampas -->
+                  @if (isRampDropdownOpen() && filteredRamps().length > 0) {
+                    <div class="sku-autocomplete-dropdown">
+                      <div class="sku-autocomplete-header">
+                        <div class="sku-autocomplete-header__title">
+                          <span class="material-symbols-outlined text-sm">meeting_room</span>
+                          <span>Rampas de Andén ({{ filteredRamps().length }})</span>
+                        </div>
+                        <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                      </div>
+                      @for (rm of filteredRamps(); track rm.code) {
+                        <button
+                          type="button"
+                          (click)="selectRamp(rm)"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
+                          [class.opacity-60]="isRampBusy(rm.rampNumber, rec.folio)"
+                          [class.cursor-not-allowed]="isRampBusy(rm.rampNumber, rec.folio)"
+                          [class.sku-autocomplete-item--selected]="altaForm.get('rampNumber')?.value === rm.rampNumber"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-300 text-blue-950 font-black text-xs flex items-center justify-center shrink-0">
+                              R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ rm.name }}</span>
+                                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 {{ getRampBadgeInfo(rm, rec.folio).bgClass }} {{ getRampBadgeInfo(rm, rec.folio).textClass }} {{ getRampBadgeInfo(rm, rec.folio).borderClass }}">
+                                  {{ getRampBadgeInfo(rm, rec.folio).label }}
+                                </span>
+                              </div>
+                              <span class="text-[10px] text-slate-700 font-bold truncate">Andén de Operación · {{ rm.code }}</span>
+                            </div>
+                          </div>
+                          @if (altaForm.get('rampNumber')?.value === rm.rampNumber) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  } @else if (isRampDropdownOpen() && filteredRamps().length === 0 && rampSearchQuery()) {
+                    <div class="sku-autocomplete-empty">
+                      No se encontraron rampas con "{{ rampSearchQuery() }}"
+                    </div>
+                  }
                 </div>
 
                 <!-- Proveedor: 3 columnas -->
@@ -905,23 +983,30 @@
                       <div class="sku-autocomplete-header">
                         <div class="sku-autocomplete-header__title">
                           <span class="material-symbols-outlined text-sm">store</span>
-                          <span>Coincidencias ({{ filteredSuppliers().length }})</span>
+                          <span>Proveedores ({{ filteredSuppliers().length }})</span>
                         </div>
                         <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
                       </div>
-                      @for (sup of filteredSuppliers(); track (sup.code || sup.name)) {
+                      @for (sup of filteredSuppliers(); track (sup.id || sup.code || sup.name)) {
                         <button
                           type="button"
                           (click)="selectSupplier(sup)"
-                          class="sku-autocomplete-item"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
                           [class.sku-autocomplete-item--selected]="altaForm.get('supplierName')?.value === sup.name"
                         >
                           <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span class="sku-autocomplete-badge">{{ sup.code || 'PROV' }}</span>
-                            <span class="sku-autocomplete-name">{{ sup.name }}</span>
+                            <div class="w-7 h-7 rounded-full bg-emerald-200 text-emerald-950 font-black text-xs flex items-center justify-center shrink-0 border border-emerald-400">
+                              {{ getInitials(sup.name) }}
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ sup.name }}</span>
+                                <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-emerald-900 text-white rounded border border-emerald-700 shrink-0">PROV</span>
+                              </div>
+                            </div>
                           </div>
                           @if (altaForm.get('supplierName')?.value === sup.name) {
-                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
                           }
                         </button>
                       }
@@ -971,7 +1056,7 @@
                       <div class="sku-autocomplete-header">
                         <div class="sku-autocomplete-header__title">
                           <span class="material-symbols-outlined text-sm">pallet</span>
-                          <span>Coincidencias ({{ filteredPalletTypes().length }})</span>
+                          <span>Tipos de Tarima ({{ filteredPalletTypes().length }})</span>
                         </div>
                         <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
                       </div>
@@ -979,15 +1064,20 @@
                         <button
                           type="button"
                           (click)="selectPalletType(pt)"
-                          class="sku-autocomplete-item"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
                           [class.sku-autocomplete-item--selected]="altaForm.get('selectedPalletType')?.value === pt[0]"
                         >
                           <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span class="sku-autocomplete-badge">{{ pt[0] }}</span>
-                            <span class="sku-autocomplete-name">{{ pt[1] }}</span>
+                            <div class="w-7 h-7 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center shrink-0">
+                              <span class="material-symbols-outlined text-base">pallet</span>
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ pt[1] }}</span>
+                              <span class="text-[10px] font-mono font-bold text-slate-700 truncate">{{ pt[0] }}</span>
+                            </div>
                           </div>
                           @if (altaForm.get('selectedPalletType')?.value === pt[0]) {
-                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
                           }
                         </button>
                       }
@@ -1037,7 +1127,7 @@
                       <div class="sku-autocomplete-header">
                         <div class="sku-autocomplete-header__title">
                           <span class="material-symbols-outlined text-sm">inventory_2</span>
-                          <span>Coincidencias ({{ filteredProducts().length }})</span>
+                          <span>Catálogo SKU ({{ filteredProducts().length }})</span>
                         </div>
                         <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
                       </div>
@@ -1045,15 +1135,20 @@
                         <button
                           type="button"
                           (click)="selectProductSku(p)"
-                          class="sku-autocomplete-item"
+                          class="sku-autocomplete-item !py-2.5 !px-3"
                           [class.sku-autocomplete-item--selected]="altaForm.get('productId')?.value === p.code || altaForm.get('productId')?.value === p.id"
                         >
                           <div class="flex items-center gap-2.5 min-w-0 flex-1">
                             <span class="sku-autocomplete-badge">{{ p.code }}</span>
-                            <span class="sku-autocomplete-name">{{ p.name }}</span>
+                            <div class="flex flex-col min-w-0 flex-1 text-left">
+                              <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ p.name }}</span>
+                              @if (p.defaultPieces) {
+                                <span class="text-[10px] text-slate-700 font-bold">{{ p.defaultPieces }} pzas/tarima</span>
+                              }
+                            </div>
                           </div>
                           @if (altaForm.get('productId')?.value === p.code || altaForm.get('productId')?.value === p.id) {
-                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold">check_circle</span>
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
                           }
                         </button>
                       }
@@ -2530,14 +2625,93 @@
                 <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="55-XX-11" />
               </div>
 
-              <!-- Andén / Rampa Asignada -->
-              <div class="fg-field sm:col-span-2">
-                <label class="fg-label fg-label--required">Andén / Rampa de Descarga</label>
-                <select formControlName="rampNumber" class="fg-input font-bold !text-slate-950">
-                  @for (rm of ramps(); track rm.code) {
-                    <option [value]="rm.rampNumber">{{ getRampDisplayLabel(rm, selectedReception()?.folio) }}</option>
+              <!-- Andén / Rampa Asignada (Diseño Homologado con Autocomplete y Badges) -->
+              <div class="fg-field sm:col-span-2 relative">
+                <div class="flex items-center justify-between">
+                  <label class="fg-label fg-label--required">Andén / Rampa de Descarga</label>
+                  <button
+                    type="button"
+                    (click)="showDockMapModal.set(true)"
+                    class="text-[10px] font-bold text-amber-700 hover:underline flex items-center gap-0.5 cursor-pointer"
+                    title="Abrir mapa visual de andenes"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">grid_view</span>
+                    <span>Plano</span>
+                  </button>
+                </div>
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    [value]="editRampSearchQuery()"
+                    (input)="onEditRampInput($any($event.target).value)"
+                    (focus)="isEditRampDropdownOpen.set(true)"
+                    placeholder="Seleccionar rampa..."
+                    class="fg-input font-bold w-full pr-8 !text-slate-950"
+                    autocomplete="off"
+                  />
+                  @if (editRampSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearEditRampSelection()"
+                      class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                      title="Limpiar rampa seleccionada"
+                    >
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  } @else {
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">meeting_room</span>
                   }
-                </select>
+                </div>
+
+                <!-- Backdrop transparente -->
+                @if (isEditRampDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isEditRampDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Lista Predictiva Flotante de Rampas -->
+                @if (isEditRampDropdownOpen() && filteredEditRamps().length > 0) {
+                  <div class="sku-autocomplete-dropdown">
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm">meeting_room</span>
+                        <span>Rampas de Andén ({{ filteredEditRamps().length }})</span>
+                      </div>
+                      <span class="sku-autocomplete-header__hint">clic para seleccionar</span>
+                    </div>
+                    @for (rm of filteredEditRamps(); track rm.code) {
+                      <button
+                        type="button"
+                        (click)="selectEditRamp(rm)"
+                        class="sku-autocomplete-item !py-2.5 !px-3"
+                        [class.opacity-60]="isRampBusy(rm.rampNumber, selectedReception()?.folio)"
+                        [class.cursor-not-allowed]="isRampBusy(rm.rampNumber, selectedReception()?.folio)"
+                        [class.sku-autocomplete-item--selected]="editCasetaForm.get('rampNumber')?.value === rm.rampNumber"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-300 text-blue-950 font-black text-xs flex items-center justify-center shrink-0">
+                            R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                          </div>
+                          <div class="flex flex-col min-w-0 flex-1 text-left">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                              <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ rm.name }}</span>
+                              <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 {{ getRampBadgeInfo(rm, selectedReception()?.folio).bgClass }} {{ getRampBadgeInfo(rm, selectedReception()?.folio).textClass }} {{ getRampBadgeInfo(rm, selectedReception()?.folio).borderClass }}">
+                                {{ getRampBadgeInfo(rm, selectedReception()?.folio).label }}
+                              </span>
+                            </div>
+                            <span class="text-[10px] text-slate-700 font-bold truncate">Andén de Operación · {{ rm.code }}</span>
+                          </div>
+                        </div>
+                        @if (editCasetaForm.get('rampNumber')?.value === rm.rampNumber) {
+                          <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1.5">check_circle</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                } @else if (isEditRampDropdownOpen() && filteredEditRamps().length === 0 && editRampSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron rampas con "{{ editRampSearchQuery() }}"
+                  </div>
+                }
               </div>
             </div>
 

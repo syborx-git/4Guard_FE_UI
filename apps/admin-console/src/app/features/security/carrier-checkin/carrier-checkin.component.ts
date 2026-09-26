@@ -20,6 +20,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
 
   @ViewChild('signatureCanvas') signatureCanvasRef?: ElementRef<HTMLCanvasElement>;
 
+  // Theme state: Dark (default) vs Light (high contrast for outdoor sunlight)
+  protected readonly isDarkMode = signal<boolean>(true);
+
   protected readonly currentStep = signal<number>(1);
   protected readonly token = signal<string>('');
   protected readonly isLoadingPass = signal<boolean>(true);
@@ -74,7 +77,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     // Chofer & Unidad
     nombreOperador: ['', [Validators.required, Validators.minLength(3)]],
     driverLicense: [''],
-    driverPhone: [''],
+    driverPhone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
     placasTracto: ['', [Validators.required, Validators.minLength(3)]],
     noEcoTractor: [''],
     placasCaja: ['', [Validators.required, Validators.minLength(3)]],
@@ -98,11 +101,31 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     declaracionVerdad: [false, Validators.requiredTrue]
   });
 
+  protected toggleTheme(): void {
+    const nextTheme = !this.isDarkMode();
+    this.isDarkMode.set(nextTheme);
+    try {
+      localStorage.setItem('4g_carrier_portal_theme', nextTheme ? 'dark' : 'light');
+    } catch {
+      // Ignorar fallback de almacenamiento
+    }
+    this.updateCanvasStroke();
+  }
+
   protected setDischargeDocType(type: 'REMISION' | 'FACTURA'): void {
     this.dischargeDocType.set(type);
   }
 
   ngOnInit(): void {
+    try {
+      const savedTheme = localStorage.getItem('4g_carrier_portal_theme');
+      if (savedTheme === 'light') {
+        this.isDarkMode.set(false);
+      }
+    } catch {
+      // Ignorar fallback
+    }
+
     this.loadCatalogs();
 
     this.route.queryParams.subscribe((params) => {
@@ -272,30 +295,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       next: (pass: any) => {
         this.isLoadingPass.set(false);
         if (pass) {
-          if (pass.operationType) {
-            this.onOperationChange(pass.operationType as 'CARGA' | 'DESCARGA');
-          }
-          if (pass.clientName) this.checkInForm.patchValue({ clientName: pass.clientName, clientCode: pass.clientCode || '' });
-          if (pass.carrierLine) this.checkInForm.patchValue({ carrierLine: pass.carrierLine, carrierLineCode: pass.carrierLineCode || '' });
-          if (pass.driverName) this.checkInForm.patchValue({ nombreOperador: pass.driverName });
-          if (pass.tractorPlates) this.checkInForm.patchValue({ placasTracto: pass.tractorPlates });
-          if (pass.boxPlates) this.checkInForm.patchValue({ placasCaja: pass.boxPlates });
-          if (pass.docNumber) {
-            if (pass.operationType === 'CARGA') {
-              this.checkInForm.patchValue({ noCartaPorte: pass.docNumber, remision: '' });
-            } else {
-              this.checkInForm.patchValue({ remision: pass.docNumber, noCartaPorte: '' });
-              const upperDoc = String(pass.docNumber).toUpperCase();
-              if (upperDoc.startsWith('FACT') || upperDoc.includes('FACTURA')) {
-                this.dischargeDocType.set('FACTURA');
-              } else {
-                this.dischargeDocType.set('REMISION');
-              }
-            }
-          }
-          if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
-            this.sealList.set(pass.sealNumbers);
-          }
+          this.applyPassDataToForm(pass);
         }
       },
       error: () => {
@@ -318,6 +318,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         if (passData.cn) this.checkInForm.patchValue({ clientName: passData.cn, clientCode: passData.cc || '' });
         if (passData.cln) this.checkInForm.patchValue({ carrierLine: passData.cln, carrierLineCode: passData.clc || '' });
         if (passData.dn) this.checkInForm.patchValue({ nombreOperador: passData.dn });
+        if (passData.dp || passData.phone) this.checkInForm.patchValue({ driverPhone: passData.dp || passData.phone });
         if (passData.tp) this.checkInForm.patchValue({ placasTracto: passData.tp });
         if (passData.doc) {
           if (passData.op === 'CARGA') {
@@ -340,6 +341,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     if (pass.clientName) this.checkInForm.patchValue({ clientName: pass.clientName, clientCode: pass.clientCode || '' });
     if (pass.carrierLine) this.checkInForm.patchValue({ carrierLine: pass.carrierLine, carrierLineCode: pass.carrierLineCode || '' });
     if (pass.driverName || pass.nombreOperador) this.checkInForm.patchValue({ nombreOperador: pass.driverName || pass.nombreOperador });
+    if (pass.driverPhone || pass.telefonoChofer) this.checkInForm.patchValue({ driverPhone: pass.driverPhone || pass.telefonoChofer });
     if (pass.tractorPlates || pass.placasTracto) this.checkInForm.patchValue({ placasTracto: pass.tractorPlates || pass.placasTracto });
     if (pass.boxPlates || pass.placasCaja) this.checkInForm.patchValue({ placasCaja: pass.boxPlates || pass.placasCaja });
     
@@ -349,6 +351,12 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.checkInForm.patchValue({ noCartaPorte: doc });
       } else {
         this.checkInForm.patchValue({ remision: doc });
+        const upperDoc = String(doc).toUpperCase();
+        if (upperDoc.startsWith('FACT') || upperDoc.includes('FACTURA')) {
+          this.dischargeDocType.set('FACTURA');
+        } else {
+          this.dischargeDocType.set('REMISION');
+        }
       }
     }
     if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
@@ -409,6 +417,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       }
       if (!f.carrierLine || !f.carrierLine.trim()) missing.push('Línea Transportista / Fletera');
       if (!f.nombreOperador || f.nombreOperador.trim().length < 3) missing.push('Nombre Completo del Operador / Chofer (mínimo 3 letras)');
+      if (!f.driverPhone || !/^[0-9]{10}$/.test(f.driverPhone.trim())) {
+        missing.push('Teléfono Celular de Contacto (10 dígitos para WhatsApp / SMS)');
+      }
       if (!f.tipoTransporte || !f.tipoTransporte.trim()) missing.push('Tipo de Transporte');
       if (!f.medidasCaja || !f.medidasCaja.trim()) missing.push('Medidas de Caja');
       if (!f.placasTracto || f.placasTracto.trim().length < 3) missing.push('Placas de Tracto');
@@ -479,14 +490,20 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.canvasContext = canvas.getContext('2d');
     if (!this.canvasContext) return;
 
-    // Set canvas dimensions based on CSS display width
-    canvas.width = canvas.offsetWidth || 340;
-    canvas.height = 140;
+    // Set canvas internal resolution based on CSS display dimensions
+    const displayWidth = canvas.clientWidth || canvas.offsetWidth || 340;
+    canvas.width = displayWidth;
+    canvas.height = 150;
 
-    this.canvasContext.strokeStyle = '#00f2fe';
-    this.canvasContext.lineWidth = 2.5;
+    this.updateCanvasStroke();
+    this.canvasContext.lineWidth = 2.8;
     this.canvasContext.lineCap = 'round';
     this.canvasContext.lineJoin = 'round';
+  }
+
+  private updateCanvasStroke(): void {
+    if (!this.canvasContext) return;
+    this.canvasContext.strokeStyle = this.isDarkMode() ? '#38bdf8' : '#0f172a';
   }
 
   protected startDrawing(event: MouseEvent | TouchEvent): void {
@@ -494,6 +511,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.isDrawing = true;
     const pos = this.getEventPos(event);
     if (this.canvasContext) {
+      this.updateCanvasStroke();
       this.canvasContext.beginPath();
       this.canvasContext.moveTo(pos.x, pos.y);
     }
@@ -521,12 +539,22 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
 
   private getEventPos(event: MouseEvent | TouchEvent): { x: number; y: number } {
     if (!this.signatureCanvasRef) return { x: 0, y: 0 };
-    const rect = this.signatureCanvasRef.nativeElement.getBoundingClientRect();
+    const canvas = this.signatureCanvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+
     if (event instanceof MouseEvent) {
-      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY
+      };
     }
-    const touch = event.touches[0] || event.changedTouches[0];
-    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    const touch = event.touches[0] || (event as TouchEvent).changedTouches[0];
+    return {
+      x: (touch.clientX - rect.left) * scaleX,
+      y: (touch.clientY - rect.top) * scaleY
+    };
   }
 
   // ── SUBMIT CHOFER ──
@@ -637,6 +665,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         carrierLine: payload.carrierLine,
         driverName: payload.driverName,
         driverLicense: payload.driverLicense,
+        driverPhone: payload.driverPhone,
         tractorPlates: payload.tractorPlates,
         noEcoTractor: payload.noEcoTractor,
         boxPlates: payload.boxPlates,

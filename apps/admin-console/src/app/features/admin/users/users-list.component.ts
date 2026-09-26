@@ -53,6 +53,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly selectedUser = signal<UserAdminItem | null>(null);
   protected readonly formMode = signal<FormMode>('idle');
   protected readonly submitAttempted = signal<boolean>(false);
+  protected readonly isSaving = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
   protected readonly isLoadingUsers = signal<boolean>(true);
@@ -264,13 +265,15 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected startNewUser(): void {
     this.selectedUser.set(null);
     this.formMode.set('new');
+    const firstRole = this.availableRoles()[0]?.name || 'OPERATIONS_MANAGER';
+    const firstBranch = this.availableBranches()[0]?.id || null;
     this.form.reset({
       firstName: '',
       lastName: '',
       username: '',
       email: '',
-      role: UserRole.WAREHOUSE_OPERATOR,
-      branchId: null,
+      role: firstRole,
+      branchId: firstBranch,
       status: 'ACTIVE'
     });
     this.submitAttempted.set(false);
@@ -332,9 +335,22 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      
+      const missingFields: string[] = [];
+      if (this.fieldHasError('firstName')) missingFields.push('Nombre(s)');
+      if (this.fieldHasError('lastName')) missingFields.push('Apellidos');
+      if (this.fieldHasError('username')) missingFields.push('Nombre de Usuario');
+      if (this.fieldHasError('email')) missingFields.push('Correo Electrónico');
+      if (this.fieldHasError('role')) missingFields.push('Rol del Sistema');
+
+      const detail = missingFields.length > 0 
+        ? `Faltan campos obligatorios: ${missingFields.join(', ')}.`
+        : 'Por favor completa todos los campos requeridos (*).';
+      this.toastService.warning(`⚠️ ${detail}`, 4500);
       return;
     }
 
+    this.isSaving.set(true);
     const raw = this.form.getRawValue();
     const branch = this.availableBranches().find(b => b.id === raw.branchId);
     const branchName = branch ? branch.name : (raw.branchId ? 'Sucursal Seleccionada' : 'Acceso Corporativo');
@@ -360,10 +376,12 @@ export class UsersListComponent implements OnInit, OnDestroy {
         permanentlyLocked: false
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: (response) => {
+          this.isSaving.set(false);
           this.saveSuccess.set(true);
           const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
           this.toastService.success(`⚡ Usuario "${fullName}" creado y registrado con éxito en el sistema.`, 4000);
           
+          this.loadUsers();
           const createdUser = response?.data;
           if (createdUser) {
             const mappedItem = this.userAdminService.users().find(u => u.id === createdUser.id);
@@ -371,23 +389,16 @@ export class UsersListComponent implements OnInit, OnDestroy {
               this.selectedUser.set(mappedItem);
               this.loadAuditLogs(mappedItem.id);
             }
-          } else {
-            const emailTrimmed = raw.email.trim().toLowerCase();
-            const usernameTrimmed = raw.username.trim();
-            const createdItem = this.userAdminService.users().find(u => u.email === emailTrimmed || u.username === usernameTrimmed);
-            if (createdItem) {
-              this.selectedUser.set(createdItem);
-              this.loadAuditLogs(createdItem.id);
-            }
           }
           this.formMode.set('edit');
           this.submitAttempted.set(false);
           setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
+          this.isSaving.set(false);
           const msg = err?.error?.message || err?.message || 'Error al crear el usuario en la base de datos.';
           this.backendError.set(msg);
-          this.toastService.error(msg, 4500);
+          this.toastService.error(`❌ ${msg}`, 5000);
         }
       });
     } else if (mode === 'edit' && this.selectedUser()) {
@@ -405,9 +416,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
         isEnabled: currentStatus === 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
+          this.isSaving.set(false);
           this.saveSuccess.set(true);
           const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
           this.toastService.success(`⚡ Usuario "${fullName}" actualizado con éxito.`, 4000);
+          this.loadUsers();
           const updated = this.userAdminService.users().find(u => u.id === userId);
           if (updated) {
             this.selectedUser.set(updated);
@@ -418,11 +431,14 @@ export class UsersListComponent implements OnInit, OnDestroy {
           setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
+          this.isSaving.set(false);
           const msg = err?.error?.message || err?.message || 'Error al actualizar el usuario en la base de datos.';
           this.backendError.set(msg);
-          this.toastService.error(msg, 4500);
+          this.toastService.error(`❌ ${msg}`, 5000);
         }
       });
+    } else {
+      this.isSaving.set(false);
     }
   }
 

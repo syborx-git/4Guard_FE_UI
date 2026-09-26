@@ -304,13 +304,21 @@ export class WarehouseMovementsService {
     this.reloadSuppliers();
 
     // 3. Montacarguistas
+    this.forkliftAdminService.loadOperators().subscribe({
+      next: () => {},
+      error: () => {},
+    });
+
     this.movementsApi.getForkliftOperators().subscribe({
       next: (ops: any) => {
         if (ops && ops.length > 0) {
           this.forkliftOperatorsSignal.set(
             ops.map((o: any) => ({
-              code: o.id || o.code,
+              id: o.id,
+              code: (o.code && !o.code.includes('-') && o.code.length <= 10) ? o.code : (o.licenseNumberDc3 || 'MC'),
               name: o.fullName || `${o.firstName || ''} ${o.lastNamePaternal || o.lastName || ''} ${o.lastNameMaternal || ''}`.trim() || o.name || 'Montacarguista',
+              jobTitle: o.jobTitle || 'Montacarguista',
+              shift: o.shift || (o as any).shiftName || 'Turno General',
             }))
           );
         }
@@ -437,8 +445,9 @@ export class WarehouseMovementsService {
         if (sups && sups.length > 0) {
           this.suppliersSignal.set(
             sups.map((s: any) => ({
-              code: s.id || s.code,
-              name: s.legalName || s.commercialName || s.tradeName || s.name,
+              id: s.id,
+              code: (s.code && !s.code.includes('-') && s.code.length <= 15) ? s.code : (s.supplierCode || 'PROV'),
+              name: s.commercialName || s.legalName || s.tradeName || s.name || s.businessName || 'Proveedor',
             }))
           );
         }
@@ -956,9 +965,9 @@ export class WarehouseMovementsService {
       ? carrierItem.code
       : (isUuid(data.carrierLineCode) ? data.carrierLineCode : null);
 
-    const opItem = this.forkliftOperatorsSignal().find((o) => o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
-    const forkliftOperatorId = (opItem && isUuid(opItem.code))
-      ? opItem.code
+    const opItem = this.forkliftOperators().find((o) => o.id === data.forkliftOperatorCode || o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
+    const forkliftOperatorId = (opItem && opItem.id && isUuid(opItem.id))
+      ? opItem.id
       : (isUuid(data.forkliftOperatorCode) ? data.forkliftOperatorCode : null);
 
     const rampItem = this.rampsSignal().find(
