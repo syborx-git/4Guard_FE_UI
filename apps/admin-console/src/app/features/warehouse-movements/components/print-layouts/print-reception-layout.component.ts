@@ -8,155 +8,169 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="reception" class="print-container bg-white text-black p-4 sm:p-5 max-w-full mx-auto font-sans border border-slate-300 rounded-sm shadow-sm text-[10px] leading-tight">
+    <div *ngIf="reception" class="print-container bg-white text-black p-3 sm:p-4 max-w-full mx-auto font-sans border border-slate-300 rounded-sm shadow-sm text-[8.5px] leading-tight select-none">
       
       <!-- Top Header & Logo Institucional -->
-      <div class="flex justify-between items-center mb-2 pb-1.5 border-b-2 border-black">
-        <div class="flex items-center gap-2.5">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-8 w-auto max-w-[40px] object-contain rounded" />
+      <div class="flex justify-between items-center mb-1 pb-1 border-b-2 border-black">
+        <div class="flex items-center gap-2">
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-6 sm:h-7 w-auto max-w-[34px] object-contain rounded" />
           <div>
-            <h1 class="text-sm sm:text-base font-black tracking-tight text-black leading-none mb-0.5">4-GUARD WMS</h1>
-            <p class="text-[8.5px] text-slate-700 font-bold uppercase tracking-tight">
-              Calle. Industria Automotriz sin número, Colonia el Coecillo, municipio de Toluca, Estado de México, C.P 50246.
+            <h1 class="text-xs sm:text-sm font-black tracking-tight text-black leading-none mb-0.5">4-GUARD WMS</h1>
+            <p class="text-[7.5px] text-slate-700 font-bold uppercase tracking-tight">
+              Calle. Industria Automotriz sin número, Colonia el Coecillo, Toluca, Edo. Méx., C.P 50246.
             </p>
           </div>
         </div>
 
         <div class="text-right shrink-0">
-          <span class="text-[9px] font-bold text-slate-700 block uppercase">FECHA DE IMPRESIÓN</span>
-          <span class="text-xs font-mono font-black text-black">{{ printDate }}</span>
+          <span class="text-[8px] font-bold text-slate-700 block uppercase">FECHA DE IMPRESIÓN</span>
+          <span class="text-[10px] font-mono font-black text-black">{{ printDate }}</span>
         </div>
       </div>
 
-      <!-- Main Title (Quitar "pauta de." por especificación oficial) -->
-      <div class="text-center mb-2">
-        <h2 class="text-xs sm:text-sm font-black uppercase tracking-widest text-black border-y-2 border-black py-0.5 inline-block px-8">
+      <!-- Main Title -->
+      <div class="text-center mb-1">
+        <h2 class="text-xs font-black uppercase tracking-wider text-black border-y-2 border-black py-0.5 inline-block px-6">
           RECEPCIÓN DE MERCANCÍA
         </h2>
       </div>
 
-      <!-- Header Grid Metadata: 2 Columnas Estructuradas en MAYÚSCULAS y Espacio Optimizado -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-1 text-[9.5px] mb-2.5 border border-black p-2 rounded-sm bg-slate-50/50 uppercase">
+      <!-- Header Grid Metadata: 2 Columnas Optimizadas -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0.5 text-[8.5px] mb-1.5 border border-black p-1.5 rounded-sm bg-slate-50/60 uppercase">
         
         <!-- Columna Izquierda: Logística & Transporte -->
-        <div class="space-y-1">
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+        <div class="space-y-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">NO. RECEPCIÓN:</span>
-            <span class="font-black text-xs font-mono text-black text-right flex-1 min-w-0">#{{ reception.folio }}</span>
+            <span class="font-black text-[10px] font-mono text-black text-right flex-1 min-w-0">#{{ reception.folio }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">FECHA RECEPCIÓN:</span>
             <span class="font-bold text-black text-right flex-1 min-w-0 font-mono">{{ formatDateDMY(reception.createdAt || reception.checkIn.docDate) }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">LÍNEA TRANSPORTADORA:</span>
             <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.carrierLine || '').toUpperCase() }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">OPERADOR / CHOFER:</span>
             <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.driverName || '-').toUpperCase() }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">PLACAS (TRACTO / CAJA):</span>
             <span class="font-mono font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.tractorPlates || '-').toUpperCase() }} / {{ (reception.checkIn.boxPlates || '-').toUpperCase() }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5">
+          <div class="flex justify-between items-start gap-1">
             <span class="font-bold text-slate-700 shrink-0">MONTACARGUISTA / RAMPA:</span>
-            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.forkliftOperator || '').toUpperCase() }} (RAMPA {{ reception.checkIn.rampNumber }})</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.forkliftOperator || '').toUpperCase() }} (RAMPA {{ rampDisplay }})</span>
           </div>
         </div>
 
         <!-- Columna Derecha: Documentación, Cliente & Almacenaje -->
-        <div class="space-y-1">
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+        <div class="space-y-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">NO. DOCUMENTO / REMISIÓN:</span>
             <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ reception.checkIn.docNumber }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
-            <span class="font-bold text-slate-700 shrink-0">FECHA CADUCIDAD:</span>
-            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ formatDateDMY(reception.expirationDate) }}</span>
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">FECHA(S) CADUCIDAD:</span>
+            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ displayExpirationSummary }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">CLIENTE:</span>
             <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.client || '').toUpperCase() }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
-            <span class="font-bold text-slate-700 shrink-0">LOTE DE PRODUCTO:</span>
-            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ reception.lotNumber || 'N/A' }}</span>
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">LOTE(S) DE PRODUCTO:</span>
+            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0 text-amber-900">{{ displayLotSummary }}</span>
           </div>
 
-          <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">LUGAR DE ALMACENAJE:</span>
             <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.storageLocation || 'BODEGA PRINCIPAL').toUpperCase() }}</span>
           </div>
 
-          <div class="flex justify-between items-center gap-1.5 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-            <span class="font-bold text-[9px] uppercase text-amber-900 shrink-0">SELLOS DE SEGURIDAD:</span>
-            <span class="font-mono font-black text-[9.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ (reception.checkIn.sealNumbers && reception.checkIn.sealNumbers.length > 0) ? reception.checkIn.sealNumbers.join(', ') : (reception.checkIn.sealNumber || 'N/A') }}</span>
+          <div class="flex justify-between items-center gap-1 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">
+            <span class="font-bold text-[8px] uppercase text-amber-900 shrink-0">SELLOS DE SEGURIDAD:</span>
+            <span class="font-mono font-black text-[8.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ (reception.checkIn.sealNumbers && reception.checkIn.sealNumbers.length > 0) ? reception.checkIn.sealNumbers.join(', ') : (reception.checkIn.sealNumber || 'N/A') }}</span>
           </div>
         </div>
 
       </div>
 
-      <!-- Tabla de Tarimas (Detalle Oficial con Remisión y Caducidad por UA) -->
-      <div class="mb-2 border border-black rounded-sm overflow-hidden">
-        <table class="w-full text-left text-[8.5px] sm:text-[9px] border-collapse font-sans uppercase">
+      <!-- Tabla de Tarimas (Detalle Oficial con Remisión, Lote y Caducidad por UA) -->
+      <div class="mb-1 border border-black rounded-sm overflow-hidden">
+        <table class="w-full text-left text-[7.5px] sm:text-[8px] border-collapse font-sans uppercase">
           <thead>
             <tr class="border-b border-black font-black uppercase bg-slate-200 text-slate-950">
-              <th class="py-0.5 px-1.5 border-r border-black text-center w-8">N. TARIMA</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono">CÓDIGO TARIMA (UA)</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono text-center">NO. REMISIÓN</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono">SKU</th>
-              <th class="py-0.5 px-1.5 border-r border-black">DESCRIPCIÓN</th>
-              <th class="py-0.5 px-1.5 border-r border-black">PROVEEDOR</th>
-              <th class="py-0.5 px-1.5 border-r border-black">TIPO TARIMA</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono text-center">CADUCIDAD</th>
-              <th class="py-0.5 px-1.5 border-r border-black text-right">CANT X TARIMA</th>
-              <th class="py-0.5 px-1.5">OBSERVACIONES</th>
+              <th class="py-0.5 px-1 border-r border-black text-center w-6">N°</th>
+              <th class="py-0.5 px-1 border-r border-black font-mono">CÓDIGO TARIMA (UA)</th>
+              <th class="py-0.5 px-1 border-r border-black font-mono text-center">REMISIÓN</th>
+              <th class="py-0.5 px-1 border-r border-black font-mono">SKU</th>
+              <th class="py-0.5 px-1 border-r border-black">DESCRIPCIÓN</th>
+              <th class="py-0.5 px-1 border-r border-black">PROVEEDOR</th>
+              <th class="py-0.5 px-1 border-r border-black">TIPO TARIMA</th>
+              <th class="py-0.5 px-1 border-r border-black font-mono text-center">LOTE</th>
+              <th class="py-0.5 px-1 border-r border-black font-mono text-center">CADUCIDAD</th>
+              <th class="py-0.5 px-1 border-r border-black text-right">CANTIDAD</th>
+              <th class="py-0.5 px-1">OBS</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of reception.pallets; let idx = index" class="border-b border-slate-300 hover:bg-slate-50">
-              <td class="py-0.5 px-1.5 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-bold font-mono text-slate-950">{{ item.palletCode }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ item.docNumber || reception.checkIn.docNumber || '-' }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-mono font-bold">{{ item.productId }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-semibold">{{ item.description }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black text-[8px]">{{ item.supplierName || '-' }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black text-[8px]">{{ item.palletTypeLabel }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ formatDateDMY(item.expirationDate || reception.expirationDate) }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black text-right font-black font-mono">{{ item.pieces | number:'1.0-0' }} PZAS</td>
-              <td class="py-0.5 px-1.5 italic text-slate-600 text-[8px]">{{ item.observations || '-' }}</td>
+              <td class="py-0.5 px-1 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-bold font-mono text-slate-950">{{ item.palletCode }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold">{{ item.docNumber || reception.checkIn.docNumber || '-' }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono font-bold">{{ item.productId }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-semibold max-w-[140px] truncate" [title]="item.description">{{ item.description }}</td>
+              <td class="py-0.5 px-1 border-r border-black text-[7.5px] max-w-[80px] truncate">{{ item.supplierName || '-' }}</td>
+              <td class="py-0.5 px-1 border-r border-black text-[7.5px]">{{ item.palletTypeLabel }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-amber-900">{{ item.lotNumber || reception.lotNumber || '-' }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold">{{ formatDateDMY(item.expirationDate || reception.expirationDate) }}</td>
+              <td class="py-0.5 px-1 border-r border-black text-right font-black font-mono whitespace-nowrap">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+              <td class="py-0.5 px-1 italic text-slate-600 text-[7px] max-w-[50px] truncate">{{ item.observations || '-' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Totales -->
-      <div class="flex justify-between items-center text-[10px] font-bold border-b-2 border-black pb-1 mb-3 bg-slate-100 px-2.5 py-1 rounded uppercase">
-        <div>TOTAL TARIMAS: <span class="font-mono font-black text-xs">{{ totalPallets }}</span></div>
-        <div>TOTAL PIEZAS: <span class="font-mono font-black text-xs">{{ totalPieces | number:'1.0-0' }} PZAS</span></div>
+      <div class="flex justify-between items-center text-[8.5px] font-bold border-b-2 border-black pb-0.5 mb-2 bg-slate-100 px-2 py-0.5 rounded uppercase">
+        <div>TOTAL TARIMAS: <span class="font-mono font-black text-[10px]">{{ totalPallets }}</span></div>
+        <div>LOTES TOTALES: <span class="font-mono font-black text-[10px] text-amber-900">{{ uniqueLots.length || 1 }}</span></div>
+        <div>TOTAL PIEZAS: <span class="font-mono font-black text-[10px]">{{ totalPieces | number:'1.0-0' }} PZAS</span></div>
       </div>
 
-      <!-- Footer: Capturó + Vigilante / Firma Física + Firma de Conformidad -->
-      <div class="grid grid-cols-2 gap-10 items-end text-[9.5px] pt-2 uppercase mt-1">
+      <!-- Footer Operativo: Entregó (Chofer / Transportista) y Recibió (Almacén / Montacarguista / Líder) -->
+      <div class="grid grid-cols-2 gap-8 items-end text-[8.5px] pt-1 uppercase mt-1">
         <div>
-          <p class="font-bold text-slate-800 mb-2">CAPTURÓ: <span class="font-black text-black">{{ capturedByName }}</span></p>
-          <div class="border-b border-black w-56 mb-1"></div>
-          <p class="text-[8px] font-bold text-slate-700 tracking-tight">NOMBRE Y FIRMA FÍSICA DEL VIGILANTE / CASETA</p>
+          <p class="font-bold text-slate-800 mb-1">
+            ENTREGÓ (CHOFER / TRANSPORTISTA): 
+            <span class="font-black text-black">{{ (reception.checkIn.driverName || 'OPERADOR CONDUCTOR').toUpperCase() }}</span>
+          </p>
+          <div class="border-b border-black w-full mb-0.5"></div>
+          <p class="text-[7.5px] font-bold text-slate-700 tracking-tight">
+            NOMBRE Y FIRMA DE CONFORMIDAD DEL CONDUCTOR / {{ (reception.checkIn.carrierLine || 'LÍNEA TRANSPORTISTA').toUpperCase() }}
+          </p>
         </div>
 
-        <div class="text-center">
-          <div class="border-b-2 border-black w-full mb-1"></div>
-          <p class="font-black text-[9px] tracking-widest uppercase text-slate-950">FIRMA DE CONFORMIDAD</p>
+        <div>
+          <p class="font-bold text-slate-800 mb-1 text-right">
+            RECIBIÓ Y AUTORIZÓ (ALMACÉN WMS): 
+            <span class="font-black text-black">{{ capturedByName }}</span>
+          </p>
+          <div class="border-b-2 border-black w-full mb-0.5"></div>
+          <p class="text-[7.5px] font-bold text-slate-900 tracking-tight text-right">
+            FIRMA DE CONFORMIDAD ALMACÉN / MONTACARGA: {{ (reception.checkIn.forkliftOperator || 'OPERADOR MONTACARGA').toUpperCase() }}
+          </p>
         </div>
       </div>
 
@@ -166,7 +180,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
     @media print {
       @page {
         size: letter portrait;
-        margin: 8mm;
+        margin: 6mm;
       }
       .print-container {
         border: none !important;
@@ -176,7 +190,10 @@ import { AuthState } from '../../../../core/auth/auth.state';
         max-width: 100% !important;
         page-break-inside: avoid !important;
       }
-      table, tr, td, th {
+      table {
+        page-break-inside: avoid !important;
+      }
+      tr, td, th {
         page-break-inside: avoid !important;
       }
     }
@@ -209,6 +226,69 @@ export class PrintReceptionLayoutComponent {
     ).toUpperCase();
   }
 
+  get rampDisplay(): string {
+    const rNum = this.reception?.checkIn?.rampNumber;
+    const rCode = this.reception?.checkIn?.rampCode;
+    if (rNum) return `${rNum}`;
+    if (rCode) {
+      const match = rCode.match(/\d+/);
+      if (match) return `${parseInt(match[0], 10)}`;
+      return rCode;
+    }
+    return '1';
+  }
+
+  get uniqueLots(): string[] {
+    const set = new Set<string>();
+    if (this.reception?.lotNumber && this.reception.lotNumber !== 'N/A' && this.reception.lotNumber !== '01.07.2026') {
+      set.add(this.reception.lotNumber.trim());
+    }
+    if (this.reception?.lots && Array.isArray(this.reception.lots)) {
+      this.reception.lots.forEach((l: any) => {
+        const num = typeof l === 'string' ? l : l?.lotNumber;
+        if (num && num.trim() && num !== 'N/A') set.add(num.trim());
+      });
+    }
+    if (this.reception?.pallets && Array.isArray(this.reception.pallets)) {
+      this.reception.pallets.forEach(p => {
+        if (p.lotNumber && p.lotNumber.trim() && p.lotNumber !== 'N/A') set.add(p.lotNumber.trim());
+      });
+    }
+    return Array.from(set);
+  }
+
+  get displayLotSummary(): string {
+    const lots = this.uniqueLots;
+    if (lots.length === 0) return this.reception?.lotNumber || 'N/A';
+    if (lots.length === 1) return lots[0];
+    return `${lots.join(', ')} (${lots.length} LOTES)`;
+  }
+
+  get uniqueExpirations(): string[] {
+    const set = new Set<string>();
+    if (this.reception?.expirationDate) {
+      set.add(this.formatDateDMY(this.reception.expirationDate));
+    }
+    if (this.reception?.lots && Array.isArray(this.reception.lots)) {
+      this.reception.lots.forEach((l: any) => {
+        if (l?.expirationDate) set.add(this.formatDateDMY(l.expirationDate));
+      });
+    }
+    if (this.reception?.pallets && Array.isArray(this.reception.pallets)) {
+      this.reception.pallets.forEach(p => {
+        if (p.expirationDate) set.add(this.formatDateDMY(p.expirationDate));
+      });
+    }
+    return Array.from(set);
+  }
+
+  get displayExpirationSummary(): string {
+    const exps = this.uniqueExpirations;
+    if (exps.length === 0) return this.formatDateDMY(this.reception?.expirationDate);
+    if (exps.length === 1) return exps[0];
+    return exps.join(', ');
+  }
+
   formatDateDMY(dateVal?: string): string {
     if (!dateVal) return 'N/A';
     const str = String(dateVal).trim();
@@ -220,4 +300,3 @@ export class PrintReceptionLayoutComponent {
     return str;
   }
 }
-

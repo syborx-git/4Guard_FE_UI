@@ -9,13 +9,13 @@
  * - Campos de observaciones vacíos por defecto para llenado manual.
  */
 
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
-import { CheckInCasetaData, RampItem } from '../../warehouse-movements/models/warehouse-movements.models';
+import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import {
@@ -47,6 +47,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private refreshIntervalId: any = null;
+
+  constructor() {
+    effect(() => {
+      const recs = this.movementsService.receptions();
+      const outs = this.movementsService.outbounds();
+      if (recs.length > 0 || outs.length > 0) {
+        this.mergeInYardPasses(this.inYardPasses());
+      }
+    });
+  }
 
   // ── Navegación por Pestañas ───────────────────────────────────────────────
   protected readonly activeTab = signal<SecurityGateTab>('REGISTRATION');
@@ -248,6 +258,61 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return `${hrs}h ${mins}m`;
   }
 
+  protected formatRampDisplay(item: any): string {
+    if (!item) return 'R-01';
+
+    // 1. Si viene rampNumber numérico explícito y válido (1 a 50)
+    if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
+      const num = Number(item.rampNumber);
+      return `R-${String(num).padStart(2, '0')}`;
+    }
+
+    // 2. Extraer cualquier código o ID disponible
+    const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
+    if (code) {
+      // Si es un código con prefijo conocido o formato legible (LOC-RAMP-06, RAMPA-02, R-03)
+      if (code.toUpperCase().includes('RAMP') || code.toUpperCase().startsWith('R-') || code.toUpperCase().startsWith('LOC-RAMP-') || code.toLowerCase().startsWith('rampa')) {
+        const digitMatch = code.match(/(\d+)/);
+        if (digitMatch) {
+          const num = parseInt(digitMatch[1], 10);
+          if (!isNaN(num) && num > 0 && num <= 50) {
+            return `R-${String(num).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // Si es un UUID (36 caracteres con guiones)
+      if (/^[0-9a-fA-F-]{36}$/.test(code)) {
+        // Buscar coincidencia en catálogo activo de rampas
+        const found = this.ramps().find(r => r.id === code || r.code === code);
+        if (found) {
+          return found.name || `R-${String(found.rampNumber).padStart(2, '0')}`;
+        }
+        // Buscar en catálogo estándar de rampas
+        const std = STANDARD_WAREHOUSE_RAMPS.find(r => r.id === code || r.code === code);
+        if (std) {
+          return `R-${String(std.rampNumber).padStart(2, '0')}`;
+        }
+
+        // Mapeo determinístico hash a R-01 .. R-12
+        try {
+          const hex = code.replace(/-/g, '').slice(-4);
+          const val = (parseInt(hex, 16) % 12) + 1;
+          return `R-${String(val).padStart(2, '0')}`;
+        } catch {
+          return 'R-01';
+        }
+      }
+
+      // Si es un texto corto libre legible
+      if (code.length <= 15 && !code.includes('-')) {
+        return code;
+      }
+    }
+
+    return item.rampNumber ? `R-${String(item.rampNumber).padStart(2, '0')}` : 'R-01';
+  }
+
   protected readonly filteredInYardPasses = computed(() => {
     let list = this.inYardPasses();
     const filter = this.inYardFilter();
@@ -368,6 +433,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected reloadAllData(): void {
+    this.movementsService.reloadReceptions();
     this.reloadActivePasses();
     this.reloadInYardPasses();
     this.reloadHistoryPasses();
@@ -563,12 +629,120 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
-        this.inYardPasses.set(passes || []);
+        this.mergeInYardPasses(passes || []);
       },
       error: () => {
         this.isLoadingInYard.set(false);
+        this.mergeInYardPasses([]);
       }
     });
+  }
+
+  private mergeInYardPasses(backendPasses: any[]): void {
+    const mergedMap = new Map<string, any>();
+    const exitTokensOrFolios = new Set<string>();
+
+    // 1. Folios que ya salieron de la planta
+    for (const h of this.historyPasses()) {
+      if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
+      if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
+    }
+
+    // 2. Pases devueltos por el backend
+    for (const p of backendPasses || []) {
+      const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+      mergedMap.set(key, p);
+    }
+
+    // 3. Recepciones registradas en el WMS (Inbound)
+    const activeReceptions = this.movementsService.receptions();
+    for (const r of activeReceptions) {
+      if (r.status === 'CANCELLED') continue;
+      const key = (r.folio || r.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (!mergedMap.has(key)) {
+        const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
+          ? r.checkIn.sealNumbers
+          : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
+
+        const isReady = r.status === 'COMPLETED';
+
+        mergedMap.set(key, {
+          id: r.id || ('rec-' + r.folio),
+          token: r.folio,
+          generatedFolio: r.folio,
+          status: 'COMPLETED',
+          operationType: 'DESCARGA',
+          operacion: 'DESCARGA',
+          clientCode: r.checkIn?.clientCode || '',
+          clientName: r.checkIn?.client || 'Cliente General',
+          carrierLineCode: r.checkIn?.carrierLineCode || '',
+          carrierLine: r.checkIn?.carrierLine || 'Transportista',
+          driverName: r.checkIn?.driverName || 'Operador Transportista',
+          tractorPlates: r.checkIn?.tractorPlates || '-',
+          boxPlates: r.checkIn?.boxPlates || '-',
+          economicNumber: r.checkIn?.economicNumber || '',
+          boxDimensions: r.checkIn?.medidasCaja || '53 Pies',
+          transportType: r.checkIn?.transportType || 'Caja Seca',
+          sealNumbers: seals,
+          docNumber: r.checkIn?.docNumber || ('REM-' + r.folio),
+          docDate: r.checkIn?.docDate || r.createdAt,
+          receptionTime: r.checkIn?.receptionTime || '09:00',
+          rampNumber: r.checkIn?.rampNumber || 1,
+          rampCode: r.checkIn?.rampCode || (r.checkIn?.rampNumber ? `R-${r.checkIn.rampNumber}` : 'R-01'),
+          observations: r.observations || r.checkIn?.observations || '',
+          warehouseStatus: r.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: r.createdAt
+        });
+      }
+    }
+
+    // 4. Salidas registradas en el WMS (Outbound)
+    const activeOutbounds = this.movementsService.outbounds();
+    for (const o of activeOutbounds) {
+      if (o.status === 'CANCELLED') continue;
+      const key = (o.folio || o.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (!mergedMap.has(key)) {
+        const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
+        const isReady = o.status === 'COMPLETED' || o.status === 'LOADED';
+
+        mergedMap.set(key, {
+          id: o.id || ('out-' + o.folio),
+          token: o.folio,
+          generatedFolio: o.folio,
+          status: 'COMPLETED',
+          operationType: 'CARGA',
+          operacion: 'CARGA',
+          clientCode: o.clientCode || '',
+          clientName: o.clientName || 'Cliente General',
+          carrierLineCode: o.carrierCode || '',
+          carrierLine: o.carrierName || 'Transportista',
+          driverName: o.driverName || 'Operador Transportista',
+          tractorPlates: o.tractorPlates || '-',
+          boxPlates: o.boxPlates || '-',
+          economicNumber: o.economicNumber || '',
+          boxDimensions: '53 Pies',
+          transportType: o.transportType || 'TRAILER',
+          sealNumbers: seals,
+          docNumber: o.remisionNo || ('SAL-' + o.folio),
+          docDate: o.dispatchedAt || this.getCurrentDateString(),
+          receptionTime: o.timestamp || '09:00',
+          rampNumber: o.rampNumber || 1,
+          rampCode: o.rampCode || (o.rampNumber ? `R-${o.rampNumber}` : 'R-01'),
+          observations: o.observations || '',
+          warehouseStatus: o.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: o.dispatchedAt || new Date().toISOString()
+        });
+      }
+    }
+
+    this.inYardPasses.set(Array.from(mergedMap.values()));
   }
 
   protected reloadHistoryPasses(): void {
@@ -797,7 +971,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.selectedCheckOutPass.set(pass);
     this.checkOutForm.reset({
       departureTime: this.getCurrentTimeString(),
-      exitSealNumbers: pass.sealNumbers?.join(', ') || '',
+      exitSealNumbers: '',
       exitObservations: '',
       guardNotes: ''
     });

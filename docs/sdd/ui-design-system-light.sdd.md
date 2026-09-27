@@ -89,6 +89,15 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 }
 ```
 
+### 2.1 Regla Obligatoria de Estricto Alto Contraste Tipográfico (PROHIBIDO EL USO DE GRIS CLARO EN TEXTO)
+
+> [!CAUTION]
+> **PROHIBICIÓN ESTRICTA DE GRISES CLAROS / DESLAVADOS EN TEXTO:**
+> 1. **Cero Texto en Gris Claro:** Queda terminantemente prohibido utilizar tonos grises claros o medios (`#8b94a3`, `#94a3b8`, `#cbd5e1`, `#e2e8f0`, `text-slate-400`, `text-slate-300`, `text-gray-400`, etc.) en celdas de tablas, folios, transportistas, choferes, placas, horarios, estatus o información operativa.
+> 2. **Color de Texto Base en Tablas y Formularios:** Todo texto de datos en modo claro debe usar estrictamente `#0f172a` (Negro Profundo / Slate 950) o `#172033` (Midnight Navy), con un peso tipográfico mínimo de `font-semibold` (600) u `font-bold` (700-800).
+> 3. **Subtítulos y Metadatos Secundarios:** Deben usar obligatoriamente `#1e293b` (Slate 800) o `#334155` (Slate 700), garantizando un ratio de contraste superior a 7:1 (WCAG AAA).
+> 4. **Prohibición de clases `dark:text-slate-50` / `dark:text-slate-100` sobre fondos claros:** No se deben aplicar utilidades `dark:text-...` de forma indiscriminada que vuelvan el texto blanco o invisible.
+
 ---
 
 ## 3. Estructura de Pantalla Estándar (Plantilla de Módulo)

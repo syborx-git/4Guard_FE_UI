@@ -1256,6 +1256,17 @@ export class WarehouseMovementsService {
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
     if (!r) return {} as ReceptionHeader;
+
+    const resolvedDoc =
+      r.docNumber ||
+      r.doc_number ||
+      r.checkIn?.docNumber ||
+      r.checkIn?.doc_number ||
+      r.remisionNo ||
+      r.remision_no ||
+      r.documentNumber ||
+      '';
+
     const hasSkuOrPallets = !!(r.skuId || r.skuCode || r.productSku || r.productId || (r.pallets && r.pallets.length > 0));
     const pType = hasSkuOrPallets ? ((r.palletType as PalletType) || (r.selectedPalletType as PalletType) || ('' as any)) : ('' as any);
     const pallets = (r.pallets || []).map((p: any) => ({
@@ -1274,16 +1285,6 @@ export class WarehouseMovementsService {
       expirationDate: p.expirationDate || r.expirationDate || '',
       docNumber: resolvedDoc || '',
     }));
-
-    const resolvedDoc =
-      r.docNumber ||
-      r.doc_number ||
-      r.checkIn?.docNumber ||
-      r.checkIn?.doc_number ||
-      r.remisionNo ||
-      r.remision_no ||
-      r.documentNumber ||
-      '';
 
     let opName = r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '';
     if (opName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opName)) {
@@ -1376,7 +1377,10 @@ export class WarehouseMovementsService {
 
     const paramPayload = {
       skuId: skuId,
+      skuCode: formVals.productId || null,
+      productName: formVals.productName || null,
       supplierId: supplierId,
+      supplierName: formVals.supplierName || null,
       lotNumber: formVals.lotNumber,
       elaborationDate: formVals.elaborationDate || null,
       expirationDate: formVals.expirationDate || null,
@@ -1405,7 +1409,10 @@ export class WarehouseMovementsService {
             expirationDate: p.expirationDate || formVals.expirationDate || null,
           }));
           return this.movementsApi.addReceptionPallets(receptionId, palletPayload).pipe(
-            catchError((_: any) => of([]))
+            catchError((err: any) => {
+              console.warn('Sync addReceptionPallets warn:', err);
+              return of([]);
+            })
           );
         } else {
           return of([]);

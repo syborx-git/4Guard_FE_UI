@@ -175,6 +175,7 @@ export interface ReceptionHeader {
   selectedPalletType: PalletType;
   observations?: string;
   pallets: ReceptionPalletItem[];
+  lots?: any[];
   createdAt: string;
   completedAt?: string;
   cancelledAt?: string;

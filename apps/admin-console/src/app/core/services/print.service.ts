@@ -41,26 +41,36 @@ export class PrintService {
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10; // Margen simétrico de 10mm
-    const printWidth = pageWidth - (margin * 2);
-    const printHeight = (canvas.height * printWidth) / canvas.width;
+    const margin = 8; // Margen simétrico optimizado de 8mm
+    const maxUsableWidth = pageWidth - (margin * 2);
+    const maxUsableHeight = pageHeight - (margin * 2);
 
-    if (printHeight <= pageHeight - (margin * 2)) {
-      // Documento estándar en 1 página exacta
-      pdf.addImage(imgData, 'PNG', margin, margin, printWidth, printHeight);
+    let printWidth = maxUsableWidth;
+    let printHeight = (canvas.height * printWidth) / canvas.width;
+
+    // Si el contenido cabe o excede ligeramente (hasta 35%, ej. 22-28 tarimas),
+    // auto-escalar para que entre en 1 sola hoja de forma impecable sin cortar filas
+    if (printHeight <= maxUsableHeight * 1.35) {
+      if (printHeight > maxUsableHeight) {
+        const scaleFactor = maxUsableHeight / printHeight;
+        printHeight = maxUsableHeight;
+        printWidth = printWidth * scaleFactor;
+      }
+      const xOffset = margin + (maxUsableWidth - printWidth) / 2;
+      pdf.addImage(imgData, 'PNG', xOffset, margin, printWidth, printHeight);
     } else {
-      // Documento multi-página si es extenso
+      // Documento multi-página extenso
       let heightLeft = printHeight;
       let position = margin;
 
       pdf.addImage(imgData, 'PNG', margin, position, printWidth, printHeight);
-      heightLeft -= (pageHeight - margin * 2);
+      heightLeft -= maxUsableHeight;
 
       while (heightLeft > 0) {
         position = heightLeft - printHeight + margin;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', margin, position, printWidth, printHeight);
-        heightLeft -= (pageHeight - margin * 2);
+        heightLeft -= maxUsableHeight;
       }
     }
 

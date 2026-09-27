@@ -1073,7 +1073,6 @@
                             </div>
                             <div class="flex flex-col min-w-0 flex-1 text-left">
                               <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ pt[1] }}</span>
-                              <span class="text-[10px] font-mono font-bold text-slate-700 truncate">{{ pt[0] }}</span>
                             </div>
                           </div>
                           @if (altaForm.get('selectedPalletType')?.value === pt[0]) {
@@ -1142,9 +1141,6 @@
                             <span class="sku-autocomplete-badge">{{ p.code }}</span>
                             <div class="flex flex-col min-w-0 flex-1 text-left">
                               <span class="font-extrabold text-slate-950 text-xs leading-snug">{{ p.name }}</span>
-                              @if (p.defaultPieces) {
-                                <span class="text-[10px] text-slate-700 font-bold">{{ p.defaultPieces }} pzas/tarima</span>
-                              }
                             </div>
                           </div>
                           @if (altaForm.get('productId')?.value === p.code || altaForm.get('productId')?.value === p.id) {
@@ -1203,18 +1199,40 @@
 
               <!-- Vista de Parámetros Asignados -->
               <div class="reception-readonly-grid">
-                <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Lote de Recepción</span>
-                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
-                </div>
-                <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Fecha de Elaboración</span>
-                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'N/A' }}</span>
-                </div>
-                <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Fecha de Caducidad</span>
-                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
-                </div>
+                @if (lotsList().length > 1) {
+                  <div class="reception-readonly-item sm:col-span-3">
+                    <span class="reception-readonly-label flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">layers</span>
+                      <span>Lotes de Recepción ({{ lotsList().length }} Lotes Registrados)</span>
+                    </span>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                      @for (lt of lotsList(); track lt.lotNumber) {
+                        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs font-mono font-bold">
+                          <span class="text-amber-800 dark:text-amber-300">{{ lt.lotNumber }}</span>
+                          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Exp: {{ lt.expirationDate || 'N/A' }}</span>
+                          @if (getPalletsCountForLot(lt.lotNumber); as count) {
+                            @if (count > 0) {
+                              <span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">{{ count }} UAs</span>
+                            }
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                } @else {
+                  <div class="reception-readonly-item">
+                    <span class="reception-readonly-label">Lote de Recepción</span>
+                    <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
+                  </div>
+                  <div class="reception-readonly-item">
+                    <span class="reception-readonly-label">Fecha de Elaboración</span>
+                    <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'N/A' }}</span>
+                  </div>
+                  <div class="reception-readonly-item">
+                    <span class="reception-readonly-label">Fecha de Caducidad</span>
+                    <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
+                  </div>
+                }
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
                   <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
@@ -1394,18 +1412,40 @@
               </div>
 
               <div class="reception-readonly-grid">
-                <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Lote de Recepción</span>
-                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
-                </div>
-                <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Fecha de Elaboración</span>
-                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'N/A' }}</span>
-                </div>
-                <div class="reception-readonly-item">
-                  <span class="reception-readonly-label">Fecha de Caducidad</span>
-                  <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
-                </div>
+                @if (lotsList().length > 1) {
+                  <div class="reception-readonly-item sm:col-span-3">
+                    <span class="reception-readonly-label flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">layers</span>
+                      <span>Lotes de Recepción ({{ lotsList().length }} Lotes Registrados)</span>
+                    </span>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                      @for (lt of lotsList(); track lt.lotNumber) {
+                        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs font-mono font-bold">
+                          <span class="text-amber-800 dark:text-amber-300">{{ lt.lotNumber }}</span>
+                          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Exp: {{ lt.expirationDate || 'N/A' }}</span>
+                          @if (getPalletsCountForLot(lt.lotNumber); as count) {
+                            @if (count > 0) {
+                              <span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">{{ count }} UAs</span>
+                            }
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                } @else {
+                  <div class="reception-readonly-item">
+                    <span class="reception-readonly-label">Lote de Recepción</span>
+                    <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber }}</span>
+                  </div>
+                  <div class="reception-readonly-item">
+                    <span class="reception-readonly-label">Fecha de Elaboración</span>
+                    <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'N/A' }}</span>
+                  </div>
+                  <div class="reception-readonly-item">
+                    <span class="reception-readonly-label">Fecha de Caducidad</span>
+                    <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate }}</span>
+                  </div>
+                }
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
                   <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
@@ -1461,20 +1501,11 @@
                 <span>RESUMEN Y DETALLE DE TARIMAS DESCARGADAS</span>
               </div>
               <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  (click)="onVerifyUa()"
-                  class="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                  title="Auditar y verificar UAs escaneadas físicamente en andén"
-                >
-                  <span class="material-symbols-outlined text-sm">fact_check</span>
-                  <span>Verificar UAs ({{ verifiedPalletCount() }}/{{ palletStream().length }})</span>
-                </button>
                 @if (palletStream().length > 0 && rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
                   <button
                     type="button"
                     (click)="openRelabelModal()"
-                    class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                    class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                     title="Re-etiquetar tarimas selectivas con SSCC GS1-128"
                   >
                     <span class="material-symbols-outlined text-sm">qr_code_2</span>
@@ -1662,25 +1693,6 @@
                   <span class="material-symbols-outlined text-base">verified</span>
                   <span>Aprobar Recepción y Finalizar Ciclo (F01)</span>
                 }
-              </button>
-            </div>
-          } @else if (rec.status === 'COMPLETED') {
-            <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-3 border-t border-subtle">
-              <button
-                type="button"
-                (click)="openChangeRemisionModal()"
-                class="btn-secondary-outline flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs w-full sm:w-auto justify-center"
-              >
-                <span class="material-symbols-outlined text-sm">edit_document</span>
-                <span>Cambiar No. de Remisión</span>
-              </button>
-              <button
-                type="button"
-                (click)="openPrintPreview(rec)"
-                class="btn-primary-gold flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900"
-              >
-                <span class="material-symbols-outlined text-base">print</span>
-                <span>Imprimir Documento F01</span>
               </button>
             </div>
           }
@@ -2876,18 +2888,18 @@
   <!-- ── MODAL: AGREGAR / EDITAR LOTE EN LA SESIÓN DE RECEPCIÓN (CRITERIO 1 & 2) ── -->
   @if (showAddLotModal()) {
     <div class="modal-overlay p-4 animate-fade-in" (click)="closeAddLotModal()">
-      <div class="modal-card max-w-md w-full p-5 space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="modal-card max-w-md w-full p-5 space-y-4" (click)="$event.stopPropagation()">
         <div class="flex items-center justify-between border-b border-subtle pb-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
               <span class="material-symbols-outlined text-lg">batch_prediction</span>
             </div>
             <div>
-              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase">Dar de Alta / Modificar Lote</h3>
-              <p class="text-[11px] text-slate-500">Asigne el código de lote y su fecha de caducidad para la descarga</p>
+              <h3 class="relabel-modal-title uppercase">Dar de Alta / Modificar Lote</h3>
+              <p class="relabel-modal-subtitle">Asigne el código de lote y su fecha de caducidad para la descarga</p>
             </div>
           </div>
-          <button type="button" (click)="closeAddLotModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <button type="button" (click)="closeAddLotModal()" class="relabel-modal-close-btn">
             <span class="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
@@ -2898,7 +2910,7 @@
             <input
               type="text"
               formControlName="lotNumber"
-              class="fg-input font-mono font-bold uppercase w-full !text-slate-950"
+              class="fg-input relabel-reason-input font-mono font-bold uppercase w-full"
               placeholder="Ej. LOT-2026-N2"
               autofocus
             />
@@ -2907,17 +2919,17 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="fg-label">Fecha Elaboración</label>
-              <input type="date" formControlName="elaborationDate" class="fg-input font-bold w-full !text-slate-950" />
+              <input type="date" formControlName="elaborationDate" class="fg-input relabel-reason-input font-bold w-full" />
             </div>
             <div>
               <label class="fg-label fg-label--required">Fecha Caducidad</label>
-              <input type="date" formControlName="expirationDate" class="fg-input font-bold w-full !text-slate-950" />
+              <input type="date" formControlName="expirationDate" class="fg-input relabel-reason-input font-bold w-full" />
             </div>
           </div>
 
           <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
             <button type="button" (click)="closeAddLotModal()" class="btn-ghost text-xs px-3.5 py-1.5 rounded-lg cursor-pointer">Cancelar</button>
-            <button type="submit" class="btn-save text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 cursor-pointer">
+            <button type="submit" class="btn-primary-gold text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1 cursor-pointer">
               <span class="material-symbols-outlined text-sm">check_circle</span>
               <span>Guardar Lote</span>
             </button>
@@ -2938,74 +2950,74 @@
 
   <!-- MODAL: CAMBIO SELECTIVO DE UAS (SSCC GS1-128) -->
   @if (showRelabelModal()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-xl w-full flex flex-col max-h-[85vh] overflow-hidden">
+    <div class="modal-overlay p-4 animate-fade-in" (click)="closeRelabelModal()">
+      <div class="modal-card max-w-xl w-full flex flex-col max-h-[85vh] overflow-hidden" (click)="$event.stopPropagation()">
         
-        <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40">
+        <div class="modal-header flex items-center justify-between px-6 py-4 border-b">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <div class="relabel-modal-icon-wrap">
               <span class="material-symbols-outlined text-xl">qr_code_2</span>
             </div>
             <div>
-              <h3 class="text-base font-bold text-slate-900 dark:text-white">Cambio Selectivo de UAs (SSCC GS1-128)</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Preserva la UA original del proveedor en la bitácora inmutable</p>
+              <h3 class="relabel-modal-title">Cambio Selectivo de UAs (SSCC GS1-128)</h3>
+              <p class="relabel-modal-subtitle">Preserva la UA original del proveedor en la bitácora inmutable</p>
             </div>
           </div>
-          <button (click)="closeRelabelModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button (click)="closeRelabelModal()" class="relabel-modal-close-btn" title="Cerrar modal">
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
-        <div class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
-            <span class="font-bold text-slate-700 dark:text-slate-300">Tarimas Recibidas ({{ palletStream().length }})</span>
-            <button type="button" (click)="toggleSelectAllPalletsForRelabel()" class="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline">
+        <div class="modal-body p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+          <div class="flex items-center justify-between pb-2 border-b border-subtle">
+            <span class="relabel-section-title">Tarimas Recibidas ({{ palletStream().length }})</span>
+            <button type="button" (click)="toggleSelectAllPalletsForRelabel()" class="relabel-toggle-all-btn">
               {{ selectedPalletIdsForRelabel().size === palletStream().length ? 'Deseleccionar Todas' : 'Seleccionar Todas' }}
             </button>
           </div>
 
-          <div class="max-h-60 overflow-y-auto space-y-2">
+          <div class="relabel-pallet-list max-h-60 overflow-y-auto space-y-2">
             @for (pallet of palletStream(); track pallet.id) {
-              <label class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
-                <div class="flex items-center gap-2.5">
+              <label class="relabel-pallet-item flex items-center justify-between p-3 rounded-xl cursor-pointer" [class.is-selected]="selectedPalletIdsForRelabel().has(pallet.id)">
+                <div class="flex items-center gap-3">
                   <input
                     type="checkbox"
                     [checked]="selectedPalletIdsForRelabel().has(pallet.id)"
                     (change)="togglePalletRelabelSelection(pallet.id)"
-                    class="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                    class="relabel-checkbox"
                   />
                   <div>
-                    <span class="font-mono font-bold text-slate-900 dark:text-white">Tarima #{{ pallet.palletNumber }}: {{ pallet.palletCode }}</span>
+                    <div class="relabel-pallet-code">Tarima #{{ pallet.palletNumber }}: {{ pallet.palletCode }}</div>
                     @if (pallet.isUaRelabelled) {
-                      <span class="ml-2 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold">Ya Re-etiquetada</span>
+                      <span class="relabel-already-badge">Ya Re-etiquetada</span>
                     }
                   </div>
                 </div>
-                <span class="font-mono text-[11px] text-slate-500">{{ pallet.pieces }} PZAS</span>
+                <span class="relabel-pallet-pieces">{{ pallet.pieces }} PZAS</span>
               </label>
             }
           </div>
 
-          <div>
-            <label class="fg-label font-bold text-slate-700 dark:text-slate-300">Motivo del Re-etiquetado</label>
+          <div class="space-y-1">
+            <label class="relabel-section-title">Motivo del Re-etiquetado</label>
             <input
               type="text"
               [ngModel]="relabelReason()"
               (ngModelChange)="relabelReason.set($event)"
               placeholder="Ej. Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128"
-              class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white mt-1"
+              class="fg-input relabel-reason-input w-full mt-1"
             />
           </div>
         </div>
 
-        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between">
-          <span class="text-xs text-slate-500">{{ selectedPalletIdsForRelabel().size }} tarima(s) seleccionada(s)</span>
+        <div class="modal-footer px-6 py-4 border-t flex items-center justify-between">
+          <span class="relabel-selected-summary">{{ selectedPalletIdsForRelabel().size }} tarima(s) seleccionada(s)</span>
           <div class="flex items-center gap-2">
             <button (click)="closeRelabelModal()" class="btn-ghost text-xs px-3.5 py-2 rounded-xl">Cancelar</button>
             <button
               (click)="executeRelabelUas()"
               [disabled]="isRelabelling() || selectedPalletIdsForRelabel().size === 0"
-              class="btn-save text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 disabled:opacity-40"
+              class="btn-primary-gold text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 disabled:opacity-40"
             >
               @if (isRelabelling()) {
                 <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
