@@ -44,7 +44,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
 
   // ── Estado de la vista ───────────────────────────────────
   protected readonly selectedOrg = signal<Organization | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -118,6 +118,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
 
   // ── Ciclo de Vida ────────────────────────────────────────
   ngOnInit(): void {
+    this.openNewForm();
     this.loadOrganizations();
   }
 
@@ -202,14 +203,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const current = this.selectedOrg();
-    if (current) {
-      this.populateForm(current);
-      this.formMode.set('edit');
-    } else {
-      this.formMode.set('idle');
-      this.form.reset();
-    }
+    this.openNewForm();
   }
 
   private populateForm(org: Organization): void {

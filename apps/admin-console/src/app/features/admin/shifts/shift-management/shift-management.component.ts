@@ -109,7 +109,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   protected readonly statusLabels = SHIFT_STATUS_LABELS;
 
   // Estados locales con Signals
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly isSubmitting = signal<boolean>(false);
   protected readonly formError = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
@@ -157,6 +157,8 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       this.populateForm(currentSelected);
       this.formMode.set('edit');
       this.loadAuditLogs(currentSelected.id);
+    } else {
+      this.forceStartNewShift();
     }
   }
 

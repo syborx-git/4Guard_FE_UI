@@ -68,7 +68,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedClient = signal<Client | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -167,6 +167,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewClient();
     this.loadOrganizations();
     this.loadClients();
   }
@@ -289,16 +290,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const client = this.selectedClient();
-    if (client) {
-      this.formMode.set('edit');
-      this.populateForm(client);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewClient();
   }
 
   private populateForm(client: Client): void {

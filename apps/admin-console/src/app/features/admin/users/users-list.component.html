@@ -305,27 +305,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="users-detail" aria-label="Detalle del usuario">
 
-      @if (formMode() === 'idle') {
-        <div class="users-empty-state">
-          <div class="users-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined users-empty-state__icon">manage_accounts</span>
-          </div>
-          <h2 class="users-empty-state__title">Sin selección</h2>
-          <p class="users-empty-state__desc">
-            Selecciona un usuario de la lista para consultar su información y auditoría,
-            o registra un nuevo usuario en el sistema.
-          </p>
-          <button
-            class="users-btn users-btn--primary"
-            type="button"
-            (click)="startNewUser()"
-            aria-label="Registrar nuevo usuario">
-            <span class="material-symbols-outlined">person_add</span>
-            Nuevo usuario
-          </button>
-        </div>
-      } @else {
-        <div class="users-form-container">
+      <div class="users-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="users-form-header">
@@ -672,7 +652,6 @@
           </form>
 
         </div>
-      }
 
     </main>
 

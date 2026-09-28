@@ -61,6 +61,8 @@ export class WarehouseSectionSetupModalComponent implements OnInit {
   // Categorías estándar
   readonly categoryOptions: string[] = [
     'Secos & Producto Terminado',
+    'Culinarios & Salsas',
+    'Envase & Vidrio',
     'Materia Prima & Insumos',
     'Empaque & Vidrio Industrial',
     'General Central & Palletizado',
@@ -73,12 +75,21 @@ export class WarehouseSectionSetupModalComponent implements OnInit {
 
   // Factores de estiba estándar
   readonly factorOptions: string[] = [
+    '40 tarimas/pos',
+    '30 tarimas/pos',
     '22 tarimas/pos',
     '20 tarimas/pos',
-    '40 tarimas/pos',
     '15 tarimas/pos',
     '10 tarimas/pos'
   ];
+
+  readonly displayedCategoryOptions = computed<string[]>(() => {
+    const cur = this.category();
+    if (cur && !this.categoryOptions.includes(cur)) {
+      return [cur, ...this.categoryOptions];
+    }
+    return this.categoryOptions;
+  });
 
   // Cálculo reactivo de tarimas por posición
   readonly tarimasPorPos = computed<number>(() => {
@@ -123,7 +134,7 @@ export class WarehouseSectionSetupModalComponent implements OnInit {
         this.selectedSkuIds.set([]);
         this.errorMessage.set(null);
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {

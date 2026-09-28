@@ -327,29 +327,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="skus-detail" aria-label="Detalle del producto">
 
-      @if (formMode() === 'idle') {
-        <div class="skus-empty-state">
-          <div class="skus-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined skus-empty-state__icon">inventory_2</span>
-          </div>
-          <h2 class="skus-empty-state__title">Sin selección</h2>
-          <p class="skus-empty-state__desc">
-            Selecciona un producto / SKU del directorio para consultar su información,
-            o registra uno nuevo.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="skus-btn skus-btn--primary"
-              type="button"
-              (click)="startNewSku()"
-              aria-label="Registrar nuevo producto">
-              <span class="material-symbols-outlined">add</span>
-              Nuevo SKU
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="skus-form-container">
+      <div class="skus-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="skus-form-header">
@@ -691,7 +669,6 @@
 
           </form>
         </div>
-      }
 
     </main>
 
