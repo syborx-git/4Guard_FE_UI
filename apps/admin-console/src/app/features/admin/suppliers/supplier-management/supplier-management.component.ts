@@ -107,7 +107,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   // ─── Estado del Componente (Signals) ────────────────────────────────────────
 
   protected readonly selectedSupplier = signal<Supplier | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly statusDialogMode = signal<StatusDialogMode>('none');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -297,6 +297,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     this.branchService.loadBranches().pipe(takeUntil(this.destroy$)).subscribe();
 
     this.setupScopeReactivity();
+    this.startNewSupplier();
   }
 
   ngOnDestroy(): void {
@@ -446,7 +447,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
       this.formMode.set('edit');
       this.populateForm(current);
     } else {
-      this.formMode.set('idle');
+      this.startNewSupplier();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);

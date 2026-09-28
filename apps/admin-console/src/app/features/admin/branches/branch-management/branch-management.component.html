@@ -259,29 +259,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="branches-detail" aria-label="Detalle de la sucursal">
 
-      @if (formMode() === 'idle') {
-        <div class="branches-empty-state">
-          <div class="branches-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined branches-empty-state__icon">domain</span>
-          </div>
-          <h2 class="branches-empty-state__title">Sin selección</h2>
-          <p class="branches-empty-state__desc">
-            Selecciona una sucursal de la lista para consultar su información,
-            o registra una nueva.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="branches-btn branches-btn--primary"
-              type="button"
-              (click)="startNewBranch()"
-              aria-label="Registrar nueva sucursal">
-              <span class="material-symbols-outlined">add</span>
-              Nueva sucursal
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="branches-form-container">
+      <div class="branches-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="branches-form-header">
@@ -607,7 +585,6 @@
 
           </form>
         </div>
-      }
 
     </main>
 

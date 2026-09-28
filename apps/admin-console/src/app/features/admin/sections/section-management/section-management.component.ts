@@ -77,7 +77,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la vista ──────────────────────────────────────────────────────
 
   protected readonly selectedSection = signal<WarehouseSection | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -200,6 +200,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadData();
+    this.startNewSection();
   }
 
   ngOnDestroy(): void {
@@ -235,6 +236,12 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.isLoading.set(false);
+          if (this.formMode() === 'new' && !this.form.get('branchId')?.value) {
+            const firstBranch = this.branchService.branches()[0];
+            if (firstBranch) {
+              this.form.patchValue({ branchId: firstBranch.id });
+            }
+          }
         },
         error: (err: HttpErrorResponse) => {
           this.isLoading.set(false);
@@ -286,8 +293,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
       this.populateForm(section);
       this.loadAuditLogs(section.id);
     } else {
-      this.formMode.set('idle');
-      this.auditEntries.set([]);
+      this.startNewSection();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);

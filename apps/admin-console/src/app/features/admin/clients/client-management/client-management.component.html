@@ -294,29 +294,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="clients-detail" aria-label="Detalle del cliente">
 
-      @if (formMode() === 'idle') {
-        <div class="clients-empty-state">
-          <div class="clients-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined clients-empty-state__icon">partner_exchange</span>
-          </div>
-          <h2 class="clients-empty-state__title">Sin selección</h2>
-          <p class="clients-empty-state__desc">
-            Selecciona una empresa depositante de la lista para consultar su matriz de contactos y bodegas de entrega,
-            o registra un nuevo cliente.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="clients-btn clients-btn--primary"
-              type="button"
-              (click)="startNewClient()"
-              aria-label="Registrar nuevo cliente">
-              <span class="material-symbols-outlined">add</span>
-              Nuevo cliente
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="clients-form-container">
+      <div class="clients-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="clients-form-header">
@@ -801,7 +779,6 @@
 
           </form>
         </div>
-      }
 
     </main>
 

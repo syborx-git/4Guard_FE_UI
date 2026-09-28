@@ -333,17 +333,6 @@
          ───────────────────────────────────────────────────────────── -->
     <section class="supplier-detail" aria-label="Detalle del proveedor">
 
-      @if (formMode() === 'idle') {
-        <!-- Estado vacío / Sin selección -->
-        <div class="supplier-detail__empty">
-          <span class="material-symbols-outlined supplier-detail__empty-icon">storefront</span>
-          <h2 class="supplier-detail__empty-title">Selecciona un proveedor</h2>
-          <p class="supplier-detail__empty-desc">
-            Elige un proveedor del directorio para consultar o editar sus datos, o crea uno nuevo en el catálogo maestro.
-          </p>
-        </div>
-      } @else {
-
         <form [formGroup]="form" (ngSubmit)="saveSupplier()" class="supplier-form" autocomplete="off">
 
           <!-- Título del formulario -->
@@ -1031,7 +1020,6 @@
           </div>
 
         </form>
-      }
     </section>
 
   </div>

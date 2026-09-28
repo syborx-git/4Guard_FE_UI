@@ -51,7 +51,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   // ── Estado de la vista ───────────────────────────────────
   protected readonly selectedUser = signal<UserAdminItem | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly isSaving = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -217,6 +217,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
       error: (err) => console.error('Error al precargar roles de la BD:', err)
     });
     this.loadUsers();
+    this.startNewUser();
   }
 
   ngOnDestroy(): void {
@@ -290,7 +291,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
       this.formMode.set('edit');
       this.populateForm(user);
     } else {
-      this.formMode.set('idle');
+      this.startNewUser();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);

@@ -559,11 +559,11 @@
   flex: 1;
   min-height: 600px;
   max-height: 720px;
-  background: var(--svg-canvas-bg);
-  border: 1px solid var(--border-card);
+  background: #0a1018;
+  border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), inset 0 0 60px rgba(0, 0, 0, 0.4);
 }
 
 .wmap__blueprint-pan {
@@ -584,66 +584,203 @@
   display: block;
 }
 
-.wmap__grid-line {
-  color: var(--svg-grid-color);
+/* ─── CAD: Edificio y Perímetro ─────────────────────────── */
+
+.cad__building-wall {
+  fill: rgba(15, 23, 42, 0.55);
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 2.5;
 }
 
-/* Polígonos SVG */
-.wmap__poly {
-  fill: rgba(30, 41, 59, 0.7);
-  stroke: rgba(255, 255, 255, 0.15);
+.cad__building-wall-inner {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 12, 6;
+}
+
+/* ─── CAD: Cotas / Dimensiones ──────────────────────────── */
+
+.cad__dim-line {
+  stroke: rgba(197, 168, 107, 0.3);
+  stroke-width: 0.7;
+}
+
+.cad__dim-tick {
+  stroke: rgba(197, 168, 107, 0.4);
+  stroke-width: 0.8;
+}
+
+.cad__dim-text {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  fill: rgba(197, 168, 107, 0.55);
+  text-anchor: middle;
+}
+
+.cad__dim-text--vertical {
+  text-anchor: middle;
+}
+
+/* ─── CAD: Rampas de Carga / Docks ──────────────────────── */
+
+.cad__dock {
+  fill: rgba(30, 41, 59, 0.5);
+  stroke: rgba(234, 195, 73, 0.35);
+  stroke-width: 1;
+}
+
+.cad__dock-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 700;
+  fill: rgba(234, 195, 73, 0.7);
+  text-anchor: middle;
+}
+
+/* ─── CAD: Carriles de Tráfico ──────────────────────────── */
+
+.cad__traffic-lane {
+  stroke: rgba(99, 102, 241, 0.12);
   stroke-width: 1.5;
-  transition: fill 200ms ease, stroke 200ms ease, stroke-width 200ms ease;
+  stroke-dasharray: 10, 8;
+}
+
+/* ─── CAD: Textura de Racks ─────────────────────────────── */
+
+.cad__rack-fill {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.cad__zone-group {
+  transition: opacity 150ms ease;
+}
+
+/* ─── CAD: Rosa de los Vientos ──────────────────────────── */
+
+.cad__compass-n {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: rgba(234, 195, 73, 0.85);
+  text-anchor: middle;
+}
+
+.cad__compass-dir {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(255, 255, 255, 0.35);
+  text-anchor: middle;
+}
+
+/* ─── CAD: Barra de Escala Métrica ──────────────────────── */
+
+.cad__scale-line {
+  stroke: rgba(197, 168, 107, 0.4);
+  stroke-width: 1;
+}
+
+.cad__scale-tick {
+  stroke: rgba(197, 168, 107, 0.5);
+  stroke-width: 0.8;
+}
+
+.cad__scale-text {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(197, 168, 107, 0.5);
+  text-anchor: middle;
+}
+
+/* ─── CAD: Cartela / Title Block ────────────────────────── */
+
+.cad__titleblock-bg {
+  fill: rgba(0, 0, 0, 0.5);
+  stroke: rgba(197, 168, 107, 0.25);
+  stroke-width: 0.8;
+}
+
+.cad__titleblock-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: rgba(197, 168, 107, 0.85);
+  letter-spacing: 2px;
+}
+
+.cad__titleblock-sub {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(255, 255, 255, 0.4);
+}
+
+.cad__titleblock-rev {
+  font-family: var(--font-mono);
+  font-size: 6px;
+  fill: rgba(255, 255, 255, 0.25);
+}
+
+/* ─── Polígonos SVG (Naves del Almacén) ─────────────────── */
+
+.wmap__poly {
+  fill: rgba(15, 23, 42, 0.45);
+  stroke: rgba(148, 163, 184, 0.2);
+  stroke-width: 1.2;
+  transition: fill 200ms ease, stroke 200ms ease, stroke-width 200ms ease, filter 200ms ease;
   cursor: pointer;
 }
 
 .wmap__poly--active {
-  fill: rgba(16, 185, 129, 0.12);
-  stroke: rgba(16, 185, 129, 0.45);
+  fill: rgba(16, 185, 129, 0.08);
+  stroke: rgba(16, 185, 129, 0.4);
+  stroke-width: 1.5;
 }
 
 .wmap__poly--active:hover {
-  fill: rgba(16, 185, 129, 0.28);
-  stroke: var(--c-success);
+  fill: rgba(16, 185, 129, 0.22);
+  stroke: rgba(16, 185, 129, 0.75);
   stroke-width: 2.5;
+  filter: url(#glow-active-cat);
 }
 
 .wmap__poly--pending {
-  fill: rgba(245, 158, 11, 0.08);
-  stroke: rgba(245, 158, 11, 0.35);
-  stroke-dasharray: 4, 3;
+  fill: rgba(245, 158, 11, 0.04);
+  stroke: rgba(245, 158, 11, 0.28);
+  stroke-dasharray: 6, 4;
 }
 
 .wmap__poly--pending:hover {
-  fill: rgba(245, 158, 11, 0.20);
-  stroke: var(--c-warning);
-  stroke-width: 2.5;
+  fill: rgba(245, 158, 11, 0.15);
+  stroke: rgba(245, 158, 11, 0.6);
+  stroke-width: 2;
 }
 
 .wmap__poly--selected {
-  fill: rgba(197, 168, 107, 0.30) !important;
+  fill: rgba(197, 168, 107, 0.22) !important;
   stroke: var(--gold) !important;
-  stroke-width: 3 !important;
+  stroke-width: 2.5 !important;
   filter: url(#glow-selected-cat);
 }
 
 .wmap__poly-label {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  fill: #f8fafc;
+  fill: #e2e8f0;
   pointer-events: none;
   text-anchor: middle;
+  letter-spacing: 0.5px;
 }
 
 .wmap__poly-label--pending {
-  fill: #fbbf24;
+  fill: rgba(251, 191, 36, 0.75);
 }
 
 .wmap__poly-sub {
-  font-family: var(--font-body);
-  font-size: 10px;
-  fill: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  fill: rgba(148, 163, 184, 0.65);
   pointer-events: none;
   text-anchor: middle;
 }

@@ -321,29 +321,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="carriers-detail" aria-label="Detalle del transportista">
 
-      @if (formMode() === 'idle') {
-        <div class="carriers-empty-state">
-          <div class="carriers-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined carriers-empty-state__icon">local_shipping</span>
-          </div>
-          <h2 class="carriers-empty-state__title">Sin selección</h2>
-          <p class="carriers-empty-state__desc">
-            Selecciona un transportista de la lista para consultar su información,
-            o registra uno nuevo.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="carriers-btn carriers-btn--primary"
-              type="button"
-              (click)="startNewCarrier()"
-              aria-label="Registrar nuevo transportista">
-              <span class="material-symbols-outlined">add</span>
-              Nuevo transportista
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="carriers-form-container">
+      <div class="carriers-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="carriers-form-header">
@@ -868,7 +846,6 @@
 
           </form>
         </div>
-      }
 
     </main>
   </div>
