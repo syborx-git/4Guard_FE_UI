@@ -1896,29 +1896,76 @@
                   </div>
                   <div>
                     <h3 class="outbound-phase-title">
-                      Fase 1: Pre-registro en Caseta · Asignar Andén &amp; Montacarguista
+                      Fase 1: Pre-registro en Caseta · Asignar Andén, Tarimas &amp; Montacarguista
                     </h3>
                     <p class="outbound-phase-desc">
-                      El transporte arribó a patio. Asigna la rampa de carga (1-12) y el montacarguista responsable para despachar la orden a su terminal RF.
+                      El transporte arribó a patio. Selecciona las tarimas a despachar (FEFO) y asigna la rampa y montacarguista para enviar la orden a su terminal RF.
                     </p>
+                    <div class="flex items-center gap-2 text-[11px] font-bold mt-2 flex-wrap">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border {{ (selectedRampNumber() && selectedOperatorId()) ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700' : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' }}">
+                        <span class="material-symbols-outlined text-xs">{{ (selectedRampNumber() && selectedOperatorId()) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                        <span>Paso 1: Rampa &amp; Operador {{ (selectedRampNumber() && selectedOperatorId()) ? '(Listo)' : '(Pendiente)' }}</span>
+                      </span>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border {{ (selectedOutbound()!.items.length > 0) ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700' : 'bg-amber-50 text-amber-950 border-amber-400 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700' }}">
+                        <span class="material-symbols-outlined text-xs">{{ (selectedOutbound()!.items.length > 0) ? 'check_circle' : 'pending' }}</span>
+                        <span>Paso 2: Tarimas a Despachar ({{ selectedOutbound()!.items.length }} UAs)</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  [disabled]="isAssigningRamp() || !selectedOperatorId()"
-                  (click)="assignRampAndOperatorAction()"
-                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50 cursor-pointer"
-                  title="Bloquear rampa y despachar orden a terminal RF del montacarguista"
-                >
-                  @if (isAssigningRamp()) {
-                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                    <span>Asignando...</span>
+                <div class="flex items-center gap-2 flex-wrap shrink-0">
+                  @if (selectedOutbound()!.items.length === 0) {
+                    <!-- Si no hay tarimas, resaltar como botón principal asignar tarimas primero -->
+                    <button
+                      type="button"
+                      (click)="openPalletPickerModal()"
+                      class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-4 py-2.5 rounded-xl text-slate-900 shadow-md cursor-pointer hover:scale-[1.02] transition-transform"
+                      title="Abrir selector de tarimas de inventario con regla FEFO"
+                    >
+                      <span class="material-symbols-outlined text-base">add_shopping_cart</span>
+                      <span>1. Seleccionar Tarimas (FEFO)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      [disabled]="isAssigningRamp() || !selectedOperatorId()"
+                      (click)="assignRampAndOperatorAction()"
+                      class="flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                      title="Asignar andén y notificar al montacarguista (requiere tarimas asignadas)"
+                    >
+                      <span class="material-symbols-outlined text-base">send_to_mobile</span>
+                      <span>2. Notificar Terminal RF</span>
+                    </button>
                   } @else {
-                    <span class="material-symbols-outlined text-base">send_to_mobile</span>
-                    <span>Asignar Andén y Notificar Terminal RF</span>
+                    <!-- Si ya hay tarimas asignadas, permitir notificar y botón secundario para modificar -->
+                    <button
+                      type="button"
+                      (click)="openPalletPickerModal()"
+                      class="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      title="Modificar tarimas asignadas"
+                    >
+                      <span class="material-symbols-outlined text-base">edit_note</span>
+                      <span>Modificar Tarimas ({{ selectedOutbound()!.items.length }})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      [disabled]="isAssigningRamp() || !selectedOperatorId()"
+                      (click)="assignRampAndOperatorAction()"
+                      class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md cursor-pointer disabled:opacity-50"
+                      title="Bloquear rampa y despachar orden a terminal RF del montacarguista"
+                    >
+                      @if (isAssigningRamp()) {
+                        <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                        <span>Asignando...</span>
+                      } @else {
+                        <span class="material-symbols-outlined text-base">send_to_mobile</span>
+                        <span>Asignar Andén y Notificar Terminal RF ({{ selectedOutbound()!.items.length }} Tarimas)</span>
+                      }
+                    </button>
                   }
-                </button>
+                </div>
               </div>
 
               <!-- Selector Rápido de Rampa y Montacarguista -->
@@ -2389,22 +2436,22 @@
 
             @if (selectedOutbound()!.items.length === 0) {
               <!-- Empty State para órdenes creadas desde Caseta sin tarimas -->
-              <div class="p-8 text-center bg-amber-500/10 dark:bg-amber-950/30 border-2 border-dashed border-amber-500/30 rounded-2xl my-3 flex flex-col items-center justify-center gap-3 animate-fade-in">
-                <div class="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 shadow-inner">
+              <div class="p-8 text-center bg-white dark:bg-slate-900 border-2 border-dashed border-amber-400 dark:border-amber-600/50 rounded-2xl my-3 flex flex-col items-center justify-center gap-3 animate-fade-in shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center border border-amber-300 dark:border-amber-700 shadow-sm">
                   <span class="material-symbols-outlined text-3xl font-bold">pallet</span>
                 </div>
                 <div>
-                  <h4 class="font-black text-sm text-slate-950 dark:text-slate-100 uppercase tracking-wide">
+                  <h4 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                     Salida de Caseta sin Tarimas Asignadas
                   </h4>
-                  <p class="text-xs text-slate-600 dark:text-slate-400 max-w-lg mt-1 font-medium">
-                    Esta salida fue registrada en caseta con el transporte de <strong>{{ selectedOutbound()!.clientName }}</strong>. Para que el montacarguista reciba la orden en su terminal RF y comience el escaneo en andén, selecciona las tarimas o aplica la regla <strong>FEFO</strong>.
+                  <p class="text-xs text-slate-700 dark:text-slate-300 max-w-lg mt-1 font-medium leading-relaxed">
+                    Esta salida fue registrada en caseta con el transporte de <strong class="text-slate-950 dark:text-white">{{ selectedOutbound()!.clientName }}</strong>. Para que el montacarguista reciba la orden en su terminal RF con la lista de carga, selecciona las tarimas o aplica la regla <strong class="text-amber-700 dark:text-amber-400">FEFO</strong>.
                   </p>
                 </div>
                 <button
                   type="button"
                   (click)="openPalletPickerModal()"
-                  class="btn-primary-gold px-5 py-2.5 rounded-xl text-xs font-black text-slate-900 shadow-md flex items-center gap-2 cursor-pointer mt-1 hover:scale-[1.02] transition-transform"
+                  class="btn-primary-gold px-6 py-2.5 rounded-xl text-xs font-black text-slate-950 shadow-md flex items-center gap-2 cursor-pointer mt-1 hover:scale-[1.02] transition-transform"
                 >
                   <span class="material-symbols-outlined text-base">add_shopping_cart</span>
                   <span>Asignar Tarimas del Cliente (FEFO)</span>

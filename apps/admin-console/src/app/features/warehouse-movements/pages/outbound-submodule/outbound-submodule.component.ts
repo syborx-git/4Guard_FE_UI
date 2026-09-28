@@ -1865,6 +1865,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
     const isMissingDest = !cur.destinationName;
     const isMissingSeal = !cur.sealNumber || cur.sealNumber === 'PENDIENTE_ANDEN' || cur.sealNumber === 'PENDIENTE' || cur.sealNumber === 'S/S';
+    const isMissingItems = !cur.items || cur.items.length === 0;
 
     if (isMissingDest && isMissingSeal) {
       this.toast.warning('Debes asignar la Planta de Destino y el Número de Sello Oficial antes de despachar a andén.');
@@ -1877,6 +1878,12 @@ export class OutboundSubmoduleComponent implements OnInit {
     } else if (isMissingSeal) {
       this.toast.warning('Debes registrar el Número de Sello Oficial (obligatorio) antes de despachar a andén.');
       this.openEditCasetaModal();
+      return;
+    }
+
+    if (isMissingItems) {
+      this.toast.warning('Debes asignar las tarimas/productos (FEFO) del inventario antes de notificar al montacarguista.');
+      this.openPalletPickerModal();
       return;
     }
 
