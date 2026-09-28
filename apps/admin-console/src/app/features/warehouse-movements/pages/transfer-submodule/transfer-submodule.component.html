@@ -548,8 +548,8 @@
               <div class="md:col-span-6">
                 <div class="caseta-summary-card h-full flex items-center" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
                   <div class="caseta-summary-item">
-                    <span class="caseta-summary-label">Ubicación</span>
-                    <span class="caseta-summary-value truncate">{{ selectedOriginCode() ? (originStock().zone || 'General') : '--' }}</span>
+                    <span class="caseta-summary-label">Zona / Sección</span>
+                    <span class="caseta-summary-value truncate">{{ selectedOriginCode() ? formatZone(originStock().zone) : '--' }}</span>
                   </div>
                   <div class="caseta-summary-item">
                     <span class="caseta-summary-label">Posición</span>
@@ -906,8 +906,8 @@
                     <span class="caseta-summary-value truncate">{{ selectedDestinationCode() ? formatWarehouse(destStock().warehouseName) : '--' }}</span>
                   </div>
                   <div class="caseta-summary-item">
-                    <span class="caseta-summary-label">Zona Física</span>
-                    <span class="caseta-summary-value truncate">{{ selectedDestinationCode() ? (destStock().zone || 'Zona A') : '--' }}</span>
+                    <span class="caseta-summary-label">Zona / Sección</span>
+                    <span class="caseta-summary-value truncate">{{ selectedDestinationCode() ? formatZone(destStock().zone) : '--' }}</span>
                   </div>
                   <div class="caseta-summary-item">
                     <span class="caseta-summary-label">Capacidad</span>

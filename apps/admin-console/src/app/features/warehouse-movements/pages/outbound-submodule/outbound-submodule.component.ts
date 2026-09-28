@@ -156,7 +156,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.showAuditTimeline.update((v) => !v);
   }
 
-  // Modal de Modificación de Ficha Operativa (Caseta / Transporte)
+  // Modal de Modificación de Ficha Operativa (Caseta / Transporte / Destino / Sello)
   showEditCasetaModal = signal(false);
   editCarrierCode = signal('');
   editDriverName = signal('');
@@ -168,6 +168,24 @@ export class OutboundSubmoduleComponent implements OnInit {
   editDestinationId = signal('');
   isUpdatingCaseta = signal(false);
 
+  // Computed: Destinos disponibles para el modal (filtrados por cliente o catálogo completo)
+  editDestinations = computed(() => {
+    const ob = this.selectedOutbound();
+    const all = this.allDestinations();
+    if (!ob || !ob.clientCode) return all;
+    const clientSpecific = all.filter((d) => !d.clientCode || d.clientCode === ob.clientCode);
+    return clientSpecific.length > 0 ? clientSpecific : all;
+  });
+
+  // Computed: Dirección del destino seleccionado en el modal para preview inmediato
+  selectedEditDestinationAddress = computed(() => {
+    const destId = this.editDestinationId();
+    if (!destId) return null;
+    const d = this.allDestinations().find((item) => item.id === destId);
+    if (!d) return null;
+    return `${d.address || ''}${d.city ? ' — ' + d.city : ''}${d.state ? ', ' + d.state : ''}`.trim() || null;
+  });
+
   openEditCasetaModal(): void {
     const ob = this.selectedOutbound();
     if (!ob) return;
@@ -175,10 +193,22 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.editDriverName.set(ob.driverName || '');
     this.editTractorPlates.set(ob.tractorPlates || '');
     this.editBoxPlates.set(ob.boxPlates || '');
-    this.editSealNumber.set(ob.sealNumber || '');
+    const seal = (ob.sealNumber === 'PENDIENTE_ANDEN' || ob.sealNumber === 'S/S' || ob.sealNumber === 'PENDIENTE') ? '' : (ob.sealNumber || '');
+    this.editSealNumber.set(seal);
     this.editEconomicNumber.set(ob.economicNumber || '');
     this.editBoxEconomicNumber.set(ob.boxEconomicNumber || '');
-    this.editDestinationId.set(ob.destinationId || '');
+
+    // Resolviendo el ID del destino si no venía asignado de caseta
+    let matchedDestId = ob.destinationId || '';
+    if (!matchedDestId && ob.destinationName) {
+      const match = this.allDestinations().find(
+        (d) => d.name?.toLowerCase() === ob.destinationName?.toLowerCase()
+      );
+      if (match) {
+        matchedDestId = match.id;
+      }
+    }
+    this.editDestinationId.set(matchedDestId);
     this.showEditCasetaModal.set(true);
   }
 
@@ -189,6 +219,12 @@ export class OutboundSubmoduleComponent implements OnInit {
     const dest = this.allDestinations().find((d) => d.id === this.editDestinationId());
 
     this.isUpdatingCaseta.set(true);
+    const sealVal = this.editSealNumber().trim() || ob.sealNumber || 'PENDIENTE_ANDEN';
+    const destName = dest ? dest.name : (this.editDestinationId() ? ob.destinationName : (ob.destinationName || ''));
+    const destAddress = dest
+      ? `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`
+      : (ob.destinationAddress || '');
+
     const updated: WarehouseOutbound = {
       ...ob,
       carrierCode: this.editCarrierCode() || ob.carrierCode,
@@ -196,16 +232,19 @@ export class OutboundSubmoduleComponent implements OnInit {
       driverName: this.editDriverName() || ob.driverName,
       tractorPlates: this.editTractorPlates() || ob.tractorPlates,
       boxPlates: this.editBoxPlates() || ob.boxPlates,
-      sealNumber: this.editSealNumber() || ob.sealNumber,
+      sealNumber: sealVal,
       economicNumber: this.editEconomicNumber() || ob.economicNumber,
       boxEconomicNumber: this.editBoxEconomicNumber() || ob.boxEconomicNumber,
       destinationId: this.editDestinationId() || ob.destinationId,
-      destinationName: dest ? dest.name : ob.destinationName,
+      destinationName: destName,
+      destinationAddress: destAddress,
     };
+
+    const isUUID = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
 
     if (ob.id && ob.id.includes('-')) {
       this.movementsApi.updateOutbound(ob.id, {
-        carrierId: updated.carrierCode,
+        carrierId: isUUID(this.editCarrierCode()) ? this.editCarrierCode() : undefined,
         carrierName: updated.carrierName,
         driverName: updated.driverName,
         tractorPlates: updated.tractorPlates,
@@ -213,8 +252,9 @@ export class OutboundSubmoduleComponent implements OnInit {
         sealNumber: updated.sealNumber,
         economicNumber: updated.economicNumber,
         boxEconomicNumber: updated.boxEconomicNumber,
-        destinationId: updated.destinationId,
+        destinationId: isUUID(this.editDestinationId()) ? this.editDestinationId() : undefined,
         destinationName: updated.destinationName,
+        destinationAddress: updated.destinationAddress,
       }).subscribe({
         next: () => {
           this.isUpdatingCaseta.set(false);
@@ -229,7 +269,7 @@ export class OutboundSubmoduleComponent implements OnInit {
           this.selectedOutbound.set(updated);
           this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id || o.folio === ob.folio ? updated : o)));
           this.showEditCasetaModal.set(false);
-          this.toast.success('Ficha operativa actualizada.');
+          this.toast.success('Ficha operativa actualizada localmente.');
         },
       });
     } else {
@@ -1691,8 +1731,8 @@ export class OutboundSubmoduleComponent implements OnInit {
   finishOutboundLoadingAction(): void {
     const cur = this.selectedOutbound();
     if (!cur) return;
-    const seals = this.sealNumber() || cur.sealNumber;
-    if (!seals || !seals.trim()) {
+    const seals = this.tempFinishSealNumber()?.trim() || this.sealNumber()?.trim() || (cur.sealNumber !== 'PENDIENTE_ANDEN' ? cur.sealNumber : '');
+    if (!seals) {
       this.toast.warning('Debes capturar el número de sello o precinto colocado en las puertas de la caja.');
       return;
     }
@@ -1704,11 +1744,40 @@ export class OutboundSubmoduleComponent implements OnInit {
     }
 
     const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
-    const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
-    if (updated) {
-      this.selectedOutbound.set(updated);
-      this.loadAuditLogs(updated.id || updated.folio);
-      this.toast.success(`Carga física finalizada y sellos registrados para #${updated.folio}. Listo para auditoría.`);
+    this.isFinishingLoading.set(true);
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'LOADED',
+        sealNumber: seals,
+      }).subscribe({
+        next: () => {
+          this.isFinishingLoading.set(false);
+          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Carga física finalizada y sello '${seals}' registrado para #${updated.folio}. Listo para auditoría.`);
+          }
+        },
+        error: () => {
+          this.isFinishingLoading.set(false);
+          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Carga física finalizada y sello '${seals}' registrado localmente.`);
+          }
+        }
+      });
+    } else {
+      this.isFinishingLoading.set(false);
+      const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.toast.success(`Carga física finalizada y sellos registrados para #${updated.folio}. Listo para auditoría.`);
+      }
     }
   }
 

@@ -273,6 +273,18 @@ export class TransferSubmoduleComponent implements OnInit {
     return selectedCount > 0 && selectedCount < visible.length;
   });
 
+  // Formato legible para zona de almacén (ej. ZA -> Zona A, ZB -> Zona B)
+  formatZone(zone?: string): string {
+    if (!zone) return 'Zona General';
+    const clean = zone.trim().toUpperCase();
+    if (clean === 'ZA') return 'Zona A';
+    if (clean === 'ZB') return 'Zona B';
+    if (clean === 'ZC') return 'Zona C';
+    if (clean === 'ZD') return 'Zona D';
+    if (clean.startsWith('Z') && clean.length === 2) return `Zona ${clean.substring(1)}`;
+    return zone;
+  }
+
   // Formato legible para código de bahía (elimina "N/A" mostrando nombre de bahía/rack real)
   getLocationDisplayCode(locOrCode: LocationStockInfo | string | undefined | null): string {
     if (!locOrCode) return '--';
