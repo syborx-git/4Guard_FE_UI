@@ -7,7 +7,7 @@ import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Item, InventoryStatus, UnitOfMeasure, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
-import { QualityInspectionModalComponent } from '../components/quality-inspection-modal/quality-inspection-modal.component';
+import { QualityInspectionModalComponent, InspectionStatusUpdateEvent } from '../components/quality-inspection-modal/quality-inspection-modal.component';
 import { SpecularGlowDirective } from '../../../shared/directives/specular-glow.directive';
 
 @Component({
@@ -212,7 +212,7 @@ export class QualityListComponent {
   }
 
   // Actualiza el estado del lote en tiempo real tras dictamen en el modal
-  protected handleStatusUpdate(event: { itemId: string; newStatus: InventoryStatus; notes: string }): void {
+  protected handleStatusUpdate(event: InspectionStatusUpdateEvent): void {
     this.items.update(list =>
       list.map(i => {
         if (i.id === event.itemId) {

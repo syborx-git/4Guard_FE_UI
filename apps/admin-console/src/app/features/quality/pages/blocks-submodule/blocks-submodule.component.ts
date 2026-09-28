@@ -14,10 +14,15 @@ import {
   DetectionStage,
   DefectCategory,
   DETECTION_STAGE_LABELS,
-  DEFECT_CATEGORY_LABELS
+  DEFECT_CATEGORY_LABELS,
+  ReleaseAuthorizerType,
+  ReleaseSupportType,
+  ReleaseDestination,
+  RELEASE_DESTINATION_LABELS,
+  AttachedEvidence
 } from '../../models/quality.models';
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
-import { QualityInspectionModalComponent } from '../../components/quality-inspection-modal/quality-inspection-modal.component';
+import { QualityInspectionModalComponent, InspectionStatusUpdateEvent } from '../../components/quality-inspection-modal/quality-inspection-modal.component';
 import { Item, InventoryStatus, UnitOfMeasure } from '@4guard/shared-core';
 
 export interface CatalogProductItem {
@@ -430,7 +435,7 @@ export class BlocksSubmoduleComponent {
     return Array.from(new Set(clients));
   });
 
-  // Lotes filtrados reactivamente
+  // Lotes filtrados reactivamente (Pestaña 1: Bloqueos y Producto No Conforme Activo)
   protected readonly filteredBlocks = computed(() => {
     const stage = this.selectedStage();
     const category = this.selectedCategory();
@@ -438,6 +443,8 @@ export class BlocksSubmoduleComponent {
     const q = this.searchQuery().toLowerCase().trim();
 
     return this.qualityState.blocks().filter(b => {
+      // Pestaña 1 muestra únicamente Producto No Conforme y Bloqueos Activos (BLOCKED y UNDER_INSPECTION)
+      if (b.status === 'RELEASED') return false;
       if (stage !== 'ALL' && b.stage !== stage) return false;
       if (category !== 'ALL' && b.defectCategory !== category) return false;
       if (client && b.clientName !== client) return false;
@@ -535,18 +542,16 @@ export class BlocksSubmoduleComponent {
     }
   }
 
-  // ── MODAL DE EDICIÓN DE BLOQUEO / FOLIO PNC ─────────────────
+  // ── MODAL DE ACTUALIZACIÓN DE ETAPA Y ESTATUS DEL FOLIO ─────────────
   protected readonly isEditModalOpen = signal(false);
   protected readonly editingBlock = signal<QualityBlockItem | null>(null);
-  protected readonly editQty = signal<number>(0);
-  protected readonly editNotes = signal<string>('');
-  protected readonly editCriteriaList = signal<string[]>([]);
+  protected readonly editStage = signal<DetectionStage>('INBOUND_UNLOAD');
+  protected readonly editStatus = signal<'BLOCKED' | 'UNDER_INSPECTION' | 'RELEASED'>('BLOCKED');
 
   protected openEditBlockModal(block: QualityBlockItem): void {
     this.editingBlock.set(block);
-    this.editQty.set(block.quantity);
-    this.editNotes.set(block.notes || '');
-    this.editCriteriaList.set([...block.defectCriteria]);
+    this.editStage.set(block.stage);
+    this.editStatus.set(block.status);
     this.isEditModalOpen.set(true);
   }
 
@@ -555,38 +560,32 @@ export class BlocksSubmoduleComponent {
     this.editingBlock.set(null);
   }
 
-  protected toggleEditCriterion(crit: string): void {
-    const current = this.editCriteriaList();
-    if (current.includes(crit)) {
-      this.editCriteriaList.set(current.filter(c => c !== crit));
-    } else {
-      this.editCriteriaList.set([...current, crit]);
-    }
-  }
-
   protected saveBlockEdits(): void {
     const current = this.editingBlock();
     if (!current) return;
 
-    if (this.editQty() <= 0) {
-      alert('La cantidad retenida debe ser mayor a 0.');
-      return;
-    }
-
-    if (this.editCriteriaList().length === 0) {
-      alert('Debe conservar al menos un criterio de defecto para el folio.');
-      return;
-    }
-
+    const newStage = this.editStage();
+    const newStatus = this.editStatus();
     const updated: QualityBlockItem = {
       ...current,
-      quantity: this.editQty(),
-      notes: this.editNotes().trim(),
-      defectCriteria: this.editCriteriaList(),
-      severity: this.editCriteriaList().some(c => c.includes('plaga') || c.includes('humedad') || c.includes('Caducó')) ? 'CRITICAL' : 'WARNING'
+      stage: newStage,
+      status: newStatus
     };
 
     this.qualityState.updateBlock(updated);
+
+    if (newStatus === 'RELEASED') {
+      this.movementsService.addReleasedInventoryStock({
+        sku: current.sku,
+        description: current.description,
+        clientName: current.clientName,
+        batchNumber: current.batchNumber,
+        quantity: current.quantity,
+        locationId: current.locationId || 'A-01-N1',
+        destination: 'INVENTARIO_DISPONIBLE'
+      });
+    }
+
     this.closeEditModal();
   }
 
@@ -725,20 +724,142 @@ export class BlocksSubmoduleComponent {
     this.selectedItemForInspection.set(null);
   }
 
-  protected handleInspectionStatusUpdate(event: { itemId: string; newStatus: InventoryStatus; notes: string }): void {
+  // ── MODAL DE DICTAMEN FORMAL DE LIBERACIÓN Y DESTINO FINAL ──
+  protected readonly isReleaseModalOpen = signal(false);
+  protected readonly selectedBlockToRelease = signal<QualityBlockItem | null>(null);
+  protected readonly releaseAuthorizerType = signal<ReleaseAuthorizerType>('QUALITY_4GUARD');
+  protected readonly releaseSupportType = signal<ReleaseSupportType>('FORMAL_ACT');
+  protected readonly releaseSupportCustomType = signal('');
+  protected readonly releaseSupportSubject = signal('');
+  protected readonly releaseSupportFileName = signal('dictamen_inspeccion_qm.pdf');
+  protected readonly releaseAuthorizedByName = signal('Laura Valdés (Auditora QM)');
+  protected readonly releaseAuthorizedByPosition = signal('Superintendencia de Aseguramiento de Calidad');
+  protected readonly releaseDestination = signal<ReleaseDestination>('DISTRIBUTION');
+  protected readonly releaseDecisionNotes = signal('');
+  protected readonly releaseEvidenceFiles = signal<AttachedEvidence[]>([]);
+  protected readonly destinationLabels = RELEASE_DESTINATION_LABELS;
+
+  protected openReleaseDictamenModal(block: QualityBlockItem, prefillNotes?: string, evidenceFiles?: AttachedEvidence[]): void {
+    this.selectedBlockToRelease.set(block);
+    this.releaseAuthorizerType.set('QUALITY_4GUARD');
+    this.releaseSupportType.set('FORMAL_ACT');
+    this.releaseSupportCustomType.set('');
+    this.releaseSupportSubject.set(`Dictamen de Inspección Técnica Conforme - Lote ${block.batchNumber}`);
+    this.releaseAuthorizedByName.set('Laura Valdés (Auditora QM)');
+    this.releaseAuthorizedByPosition.set('Superintendencia de Aseguramiento de Calidad');
+    this.releaseDestination.set('DISTRIBUTION');
+    this.releaseDecisionNotes.set(prefillNotes || 'Checklist de Calidad F01 validado 5/5 conforme. Se autoriza liberación formal.');
+    this.releaseEvidenceFiles.set(evidenceFiles || block.evidenceFiles || []);
+    this.isReleaseModalOpen.set(true);
+  }
+
+  protected closeReleaseModal(): void {
+    this.isReleaseModalOpen.set(false);
+    this.selectedBlockToRelease.set(null);
+  }
+
+  protected setReleaseDestination(dest: ReleaseDestination): void {
+    this.releaseDestination.set(dest);
+  }
+
+  protected onReleaseFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const MAX_SIZE_MB = 15;
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+    Array.from(input.files).forEach(file => {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        alert(`Formato no permitido: ${file.name}. Use JPG, PNG, WEBP o PDF.`);
+        return;
+      }
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        alert(`El archivo "${file.name}" supera el límite de ${MAX_SIZE_MB} MB.`);
+        return;
+      }
+
+      const isImage = file.type.startsWith('image/');
+      const sizeStr = file.size < 1024 * 1024
+        ? `${(file.size / 1024).toFixed(0)} KB`
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newEvidence: AttachedEvidence = {
+          id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name: file.name,
+          size: sizeStr,
+          type: isImage ? 'image' : 'pdf',
+          url: reader.result as string,
+          uploadedAt: new Date().toISOString()
+        };
+        this.releaseEvidenceFiles.update(files => [...files, newEvidence]);
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  }
+
+  protected removeReleaseEvidenceFile(fileId: string): void {
+    this.releaseEvidenceFiles.update(files => files.filter(f => f.id !== fileId));
+  }
+
+  protected submitFormalRelease(): void {
+    const block = this.selectedBlockToRelease();
+    if (!block) return;
+
+    if (this.releaseSupportType() === 'OTHER' && !this.releaseSupportCustomType().trim()) {
+      alert('Por favor especifique el tipo de soporte documental en el campo requerido.');
+      return;
+    }
+
+    if (!this.releaseAuthorizedByName().trim() || !this.releaseAuthorizedByPosition().trim()) {
+      alert('Debe ingresar el Nombre y Puesto de la persona que autoriza la liberación.');
+      return;
+    }
+
+    if (!this.releaseDecisionNotes().trim() || this.releaseDecisionNotes().length < 5) {
+      alert('Debe ingresar la justificación técnica del dictamen (mínimo 5 caracteres).');
+      return;
+    }
+
+    const created = this.qualityState.releaseBlock(block.id, {
+      authorizerType: this.releaseAuthorizerType(),
+      supportType: this.releaseSupportType(),
+      supportCustomType: this.releaseSupportType() === 'OTHER' ? this.releaseSupportCustomType().trim() : undefined,
+      supportSubject: this.releaseSupportSubject() || `Dictamen de Liberación Lote ${block.batchNumber}`,
+      supportFileName: this.releaseSupportFileName(),
+      authorizedByName: this.releaseAuthorizedByName(),
+      authorizedByPosition: this.releaseAuthorizedByPosition(),
+      destination: this.releaseDestination(),
+      decisionNotes: this.releaseDecisionNotes(),
+      evidenceFiles: this.releaseEvidenceFiles()
+    });
+
+    this.closeReleaseModal();
+    alert(`✅ ¡Liberación ${created?.folio} registrada exitosamente!\n\n• Destino: ${this.destinationLabels[this.releaseDestination()].label}\n• Estatus: Lote transferido formalmente a Pestaña 2 (Liberaciones).`);
+  }
+
+  protected handleInspectionStatusUpdate(event: InspectionStatusUpdateEvent): void {
+    const targetBlock = this.qualityState.blocks().find(b => b.id === event.itemId);
+    if (!targetBlock) return;
+
     if (event.newStatus === InventoryStatus.AVAILABLE) {
-      // Si fue aprobado, redirigir o actualizar
-      this.qualityState.blocks.update(list =>
-        list.map(b => b.id === event.itemId ? { ...b, status: 'RELEASED', notes: event.notes } : b)
-      );
+      // 1. Cerrar el modal de inspección técnica
+      this.closeInspectionModal();
+
+      // 2. Abrir INMEDIATAMENTE el modal de Dictamen Formal de Destino pre-llenado con datos del lote y evidencias
+      this.openReleaseDictamenModal(targetBlock, event.notes, event.evidenceFiles);
     } else {
-      this.qualityState.blocks.update(list =>
-        list.map(b => b.id === event.itemId ? { ...b, status: 'BLOCKED', notes: event.notes } : b)
-      );
+      // 3. Retención obligatoria por No Conformidad en Pestaña 1
+      this.qualityState.blockAndRetain(targetBlock.id, event.notes, event.evidenceFiles);
+
+      alert(`🛑 Lote ${targetBlock.batchNumber} retenido como PRODUCTO NO CONFORME (Bloqueado QM).\n\n• Estatus: Bloqueado en Cuarentena\n• Dictamen y evidencias fotográficas/PDF registrados en el historial del lote.`);
     }
   }
 
   protected navigateToReleases(block: QualityBlockItem): void {
-    this.router.navigate(['/quality/releases'], { queryParams: { blockId: block.id } });
+    this.openReleaseDictamenModal(block);
   }
 }

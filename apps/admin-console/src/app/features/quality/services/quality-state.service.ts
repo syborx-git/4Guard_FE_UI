@@ -14,7 +14,11 @@ import {
   VerificationCriterion,
   ReleaseDestination,
   ReleaseAuthorizerType,
-  ReleaseSupportType
+  ReleaseSupportType,
+  AttachedEvidence,
+  QualityClaim,
+  ClaimStage,
+  ClaimDefectType
 } from '../models/quality.models';
 
 @Injectable({
@@ -322,7 +326,93 @@ export class QualityStateService {
   ]);
 
   // ══════════════════════════════════════════════════════════════════
-  // 4. COMPUTED KPIS (TOTALIZADORES EN TIEMPO REAL)
+  // 4. ESTADO REACTIVO: RECLAMOS E INCIDENCIAS DE CALIDAD (F01)
+  // ══════════════════════════════════════════════════════════════════
+
+  readonly claims = signal<QualityClaim[]>([
+    {
+      id: 'rec-001',
+      folio: 'REC-2026-0041',
+      date: '2026-08-29',
+      time: '14:20',
+      stage: 'INBOUND_UNLOAD',
+      sku: 'LALA-MILK-1L',
+      productDescription: 'Leche Lala Entera UHT 1L (Tarima 80 Cajas)',
+      clientName: 'Lala S.A. de C.V.',
+      batchNumber: 'LOT-2026-LALA-901',
+      remisionNumber: 'REM-2026-LALA-8812',
+      defectType: 'BAD_CONDITIONS',
+      defectCustomType: '',
+      damagedQty: 24,
+      lostQty: 8,
+      associatedCost: 14850,
+      currency: 'MXN',
+      authorizedByName: 'Laura Valdés',
+      authorizedByPosition: 'Auditora QM',
+      observations: 'Filtración por empaque secundario roto durante maniobra de descarga.',
+      evidenceFiles: [
+        { id: 'ev-rec-1', name: 'foto_evidencia_cajas_rotas.jpg', size: '1.8 MB', type: 'image', uploadedAt: '2026-08-29T14:22:00Z' }
+      ],
+      status: 'OPEN',
+      createdAt: '2026-08-29T14:20:00Z',
+      updatedAt: '2026-08-29T14:25:00Z'
+    },
+    {
+      id: 'rec-002',
+      folio: 'REC-2026-0042',
+      date: '2026-08-28',
+      time: '11:15',
+      stage: 'STORAGE',
+      sku: 'NESP-COFFEE-BOX',
+      productDescription: 'Cápsulas Nespresso Ristretto Intenso Master Box',
+      clientName: 'Nestlé México S.A.',
+      batchNumber: 'LOT-NES-2026-449',
+      remisionNumber: 'REM-2026-NES-4491',
+      defectType: 'NON_COMPLIANT_SPEC',
+      defectCustomType: '',
+      damagedQty: 15,
+      lostQty: 0,
+      associatedCost: 8900,
+      currency: 'MXN',
+      authorizedByName: 'Ing. Fernando Treviño',
+      authorizedByPosition: 'Superintendente QM',
+      observations: 'Código de barras de empaque master desfasado respecto a remisión electrónica.',
+      evidenceFiles: [
+        { id: 'ev-rec-2', name: 'dictamen_especificacion_nestle.pdf', size: '540 KB', type: 'pdf', uploadedAt: '2026-08-28T11:18:00Z' }
+      ],
+      status: 'IN_REVIEW',
+      createdAt: '2026-08-28T11:15:00Z',
+      updatedAt: '2026-08-28T11:30:00Z'
+    },
+    {
+      id: 'rec-003',
+      folio: 'REC-2026-0043',
+      date: '2026-08-27',
+      time: '16:50',
+      stage: 'OUTBOUND_LOAD',
+      sku: 'BIMBO-BREAD-680G',
+      productDescription: 'Pan Cero Cero Bimbo 680g (Tarima 80 Cajas)',
+      clientName: 'Bimbo de México S.A.',
+      batchNumber: 'LOT-BIM-2026-902',
+      remisionNumber: 'REM-2026-BIM-9920',
+      defectType: 'QUANTITY_DISCREPANCY',
+      defectCustomType: '',
+      damagedQty: 0,
+      lostQty: 12,
+      associatedCost: 19600,
+      currency: 'MXN',
+      authorizedByName: 'Carlos Mendoza',
+      authorizedByPosition: 'Supervisor de Andén',
+      observations: 'Faltante físico de 12 cajas al momento del entarimado y cotejo de remisión.',
+      evidenceFiles: [],
+      status: 'CLOSED',
+      createdAt: '2026-08-27T16:50:00Z',
+      updatedAt: '2026-08-27T17:10:00Z'
+    }
+  ]);
+
+  // ══════════════════════════════════════════════════════════════════
+  // 5. COMPUTED KPIS (TOTALIZADORES EN TIEMPO REAL)
   // ══════════════════════════════════════════════════════════════════
 
   readonly kpiTotalActiveBlocks = computed(() =>
@@ -365,6 +455,27 @@ export class QualityStateService {
     this.loadVerifications().filter(v => v.status !== 'APROBADO').length
   );
 
+  // KPIs Pestaña 4: Reclamos e Incidencias F01
+  readonly kpiTotalClaims = computed(() =>
+    this.claims().length
+  );
+
+  readonly kpiTotalMonthlyClaims = computed(() =>
+    this.claims().length
+  );
+
+  readonly kpiTotalDamagedQty = computed(() =>
+    this.claims().reduce((acc, c) => acc + (Number(c.damagedQty) || 0), 0)
+  );
+
+  readonly kpiTotalLostQty = computed(() =>
+    this.claims().reduce((acc, c) => acc + (Number(c.lostQty) || 0), 0)
+  );
+
+  readonly kpiTotalClaimsCost = computed(() =>
+    this.claims().reduce((acc, c) => acc + (Number(c.associatedCost) || 0), 0)
+  );
+
   // ══════════════════════════════════════════════════════════════════
   // 5. EVENTOS GLOBALES DE UI / ACCIONES RÁPIDAS
   // ══════════════════════════════════════════════════════════════════
@@ -402,12 +513,14 @@ export class QualityStateService {
     releaseData: {
       authorizerType: ReleaseAuthorizerType;
       supportType: ReleaseSupportType;
+      supportCustomType?: string;
       supportSubject: string;
       supportFileName?: string;
       authorizedByName: string;
       authorizedByPosition: string;
       destination: ReleaseDestination;
       decisionNotes: string;
+      evidenceFiles?: AttachedEvidence[];
     }
   ): QualityRelease | null {
     const block = this.blocks().find(b => b.id === blockId);
@@ -416,6 +529,9 @@ export class QualityStateService {
     // 1. Crear el registro formal de liberación
     const relId = `rel-${Date.now()}`;
     const relFolio = `LIB-2026-${String(this.releases().length + 1).padStart(4, '0')}`;
+
+    const supportFile = releaseData.supportFileName ||
+      (releaseData.evidenceFiles && releaseData.evidenceFiles.length > 0 ? releaseData.evidenceFiles[0].name : undefined);
 
     const newRelease: QualityRelease = {
       id: relId,
@@ -430,20 +546,31 @@ export class QualityStateService {
       unitOfMeasure: block.unitOfMeasure,
       authorizerType: releaseData.authorizerType,
       supportType: releaseData.supportType,
+      supportCustomType: releaseData.supportCustomType,
       supportSubject: releaseData.supportSubject,
-      supportFileName: releaseData.supportFileName,
+      supportFileName: supportFile,
       authorizedByName: releaseData.authorizedByName,
       authorizedByPosition: releaseData.authorizedByPosition,
       destination: releaseData.destination,
       decisionNotes: releaseData.decisionNotes,
+      evidenceFiles: releaseData.evidenceFiles || [],
       releasedByUserId: 'usr-active-01',
       releasedByUserName: 'Laura Valdés (Auditora QM)',
       releasedAt: new Date().toISOString()
     };
 
-    // 2. Actualizar estado del bloqueo a RELEASED
+    // 2. Actualizar estado del bloqueo a RELEASED y fusionar evidencias
+    const mergedEvidence = [...(block.evidenceFiles || [])];
+    if (releaseData.evidenceFiles) {
+      for (const ev of releaseData.evidenceFiles) {
+        if (!mergedEvidence.some(e => e.id === ev.id || e.name === ev.name)) {
+          mergedEvidence.push(ev);
+        }
+      }
+    }
+
     this.blocks.update(list =>
-      list.map(b => b.id === blockId ? { ...b, status: 'RELEASED' } : b)
+      list.map(b => b.id === blockId ? { ...b, status: 'RELEASED', notes: releaseData.decisionNotes || b.notes, evidenceFiles: mergedEvidence } : b)
     );
 
     // 3. Agregar a la lista de liberaciones
@@ -463,6 +590,26 @@ export class QualityStateService {
     }
 
     return newRelease;
+  }
+
+  blockAndRetain(blockId: string, notes: string, evidenceFiles: AttachedEvidence[] = []): void {
+    this.blocks.update(list =>
+      list.map(b => {
+        if (b.id !== blockId) return b;
+        const mergedEvidence = [...(b.evidenceFiles || [])];
+        for (const ev of evidenceFiles) {
+          if (!mergedEvidence.some(e => e.id === ev.id || e.name === ev.name)) {
+            mergedEvidence.push(ev);
+          }
+        }
+        return {
+          ...b,
+          status: 'BLOCKED',
+          notes: notes || b.notes,
+          evidenceFiles: mergedEvidence
+        };
+      })
+    );
   }
 
   createLoadVerification(data: Omit<LoadVerification, 'id' | 'folio' | 'createdAt' | 'updatedAt'>): LoadVerification {
@@ -666,4 +813,32 @@ export class QualityStateService {
       overrides[c.id] ? { ...c, ...overrides[c.id] } : c
     );
   }
+
+  // ══════════════════════════════════════════════════════════════════
+  // 7. MÉTODOS DE RECLAMOS E INCIDENCIAS (F01)
+  // ══════════════════════════════════════════════════════════════════
+
+  createClaim(data: Omit<QualityClaim, 'id' | 'folio' | 'createdAt' | 'updatedAt'>): QualityClaim {
+    const id = `rec-${Date.now()}`;
+    const folio = `REC-2026-${String(this.claims().length + 1).padStart(4, '0')}`;
+    const now = new Date().toISOString();
+
+    const created: QualityClaim = {
+      ...data,
+      id,
+      folio,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.claims.update(list => [created, ...list]);
+    return created;
+  }
+
+  updateClaim(updated: QualityClaim): void {
+    this.claims.update(list =>
+      list.map(c => c.id === updated.id ? { ...updated, updatedAt: new Date().toISOString() } : c)
+    );
+  }
 }
+

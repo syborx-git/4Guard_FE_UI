@@ -1,0 +1,665 @@
+<!-- claims-submodule.component.html — Submódulo 4: KPIs y Reclamos (F01) -->
+<div class="claims-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       1. TABLERO DE KPIS EJECUTIVOS (DASHBOARD MENSUAL)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="claims-kpi-row" aria-label="Indicadores ejecutivos de calidad y reclamos">
+    
+    <!-- KPI 1: Total Reclamos -->
+    <div class="claims-kpi-card claims-kpi-card--primary" fgSpecularGlow>
+      <div class="claims-kpi-card__icon">
+        <span class="material-symbols-outlined">query_stats</span>
+      </div>
+      <div class="claims-kpi-card__content">
+        <span class="claims-kpi-card__label">TOTAL RECLAMOS (MES)</span>
+        <strong class="claims-kpi-card__value">{{ qualityState.kpiTotalMonthlyClaims() }}</strong>
+        <span class="claims-kpi-card__sub">Incidencias registradas</span>
+      </div>
+    </div>
+
+    <!-- KPI 2: Material Dañado -->
+    <div class="claims-kpi-card claims-kpi-card--warning" fgSpecularGlow>
+      <div class="claims-kpi-card__icon">
+        <span class="material-symbols-outlined">broken_image</span>
+      </div>
+      <div class="claims-kpi-card__content">
+        <span class="claims-kpi-card__label">MATERIAL DAÑADO</span>
+        <strong class="claims-kpi-card__value">{{ qualityState.kpiTotalDamagedQty() }}</strong>
+        <span class="claims-kpi-card__sub">Cajas / Pzas afectadas</span>
+      </div>
+    </div>
+
+    <!-- KPI 3: Material Perdido / Merma -->
+    <div class="claims-kpi-card claims-kpi-card--danger" fgSpecularGlow>
+      <div class="claims-kpi-card__icon">
+        <span class="material-symbols-outlined">delete_sweep</span>
+      </div>
+      <div class="claims-kpi-card__content">
+        <span class="claims-kpi-card__label">MATERIAL PERDIDO / MERMA</span>
+        <strong class="claims-kpi-card__value">{{ qualityState.kpiTotalLostQty() }}</strong>
+        <span class="claims-kpi-card__sub">Bajas definitivas</span>
+      </div>
+    </div>
+
+    <!-- KPI 4: Costo Total por Reclamos -->
+    <div class="claims-kpi-card claims-kpi-card--cost" fgSpecularGlow>
+      <div class="claims-kpi-card__icon">
+        <span class="material-symbols-outlined">payments</span>
+      </div>
+      <div class="claims-kpi-card__content">
+        <span class="claims-kpi-card__label">COSTO TOTAL POR RECLAMOS</span>
+        <strong class="claims-kpi-card__value text-gold">{{ formatCurrency(qualityState.kpiTotalClaimsCost()) }}</strong>
+        <span class="claims-kpi-card__sub">Impacto económico consolidado</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       2. BARRA DE HERRAMIENTAS Y FILTROS DEL CONCENTRADO
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="claims-toolbar-card" fgSpecularGlow>
+    
+    <div class="claims-toolbar-left">
+      <!-- Buscador Global -->
+      <div class="claims-search-wrap">
+        <span class="material-symbols-outlined claims-search-icon">search</span>
+        <input
+          type="text"
+          class="claims-search-input"
+          placeholder="Buscar por Folio, Lote, Remisión, Cliente, SKU..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+        @if (searchQuery()) {
+          <button type="button" class="btn-clear-search" (click)="searchQuery.set('')">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        }
+      </div>
+
+      <!-- Pills de Filtro por Etapa -->
+      <div class="claims-stage-pills">
+        @for (opt of stageFilterOptions; track opt.key) {
+          <button
+            type="button"
+            class="claims-pill-btn"
+            [class.is-active]="selectedStageFilter() === opt.key"
+            (click)="selectedStageFilter.set(opt.key)"
+          >
+            <span class="material-symbols-outlined text-xs">{{ opt.icon }}</span>
+            <span>{{ opt.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="claims-toolbar-right">
+      <!-- Filtro por Defecto -->
+      <select
+        class="claims-select-filter"
+        [ngModel]="selectedDefectFilter()"
+        (ngModelChange)="selectedDefectFilter.set($event)"
+      >
+        @for (def of defectFilterOptions; track def.key) {
+          <option [value]="def.key">{{ def.label }}</option>
+        }
+      </select>
+
+      <!-- Botón Principal: Registrar Nuevo Reclamo -->
+      <button type="button" class="btn-create-claim" (click)="openCreateClaimModal()">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>+ Registrar Nuevo Reclamo</span>
+      </button>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       3. TABLA HISTÓRICA CONCENTRADORA DE RECLAMOS
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="claims-table-card card-surface" fgSpecularGlow>
+    
+    <div class="claims-table-header">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-gold-light">receipt_long</span>
+        <h3 class="claims-table-title">Concentrado de Reclamos e Incidencias de Calidad</h3>
+      </div>
+      <span class="claims-count-badge">{{ filteredClaims().length }} registros encontrados</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="claims-table" aria-label="Concentrado de reclamos de calidad">
+        <thead>
+          <tr>
+            <th>Folio / Fecha</th>
+            <th>Etapa Operativa</th>
+            <th>Producto & Cliente</th>
+            <th>Lote & Remisión</th>
+            <th>Tipo de Defecto</th>
+            <th>Impacto Físico</th>
+            <th>Costo Asociado</th>
+            <th>Soporte / Evidencia</th>
+            <th class="text-right">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (claim of filteredClaims(); track claim.id) {
+            <tr class="claims-row">
+              
+              <!-- 1. Folio & Fecha -->
+              <td>
+                <div class="flex flex-col gap-0.5">
+                  <span class="claim-folio-badge font-mono">{{ claim.folio }}</span>
+                  <span class="text-[11px] text-slate-500">{{ claim.date }} · {{ claim.time }}</span>
+                </div>
+              </td>
+
+              <!-- 2. Etapa Operativa -->
+              <td>
+                <span class="stage-badge" [class.stage-badge--inbound]="claim.stage === 'INBOUND_UNLOAD'" [class.stage-badge--storage]="claim.stage === 'STORAGE'" [class.stage-badge--outbound]="claim.stage === 'OUTBOUND_LOAD'">
+                  <span class="material-symbols-outlined text-xs">{{ stageLabels[claim.stage].icon }}</span>
+                  <span>{{ stageLabels[claim.stage].short }}</span>
+                </span>
+              </td>
+
+              <!-- 3. Producto & Cliente -->
+              <td>
+                <div class="sku-cell">
+                  <strong class="sku-name">{{ claim.sku }}</strong>
+                  <span class="sku-desc" [title]="claim.productDescription">{{ claim.productDescription }}</span>
+                  <span class="client-tag">{{ claim.clientName }}</span>
+                </div>
+              </td>
+
+              <!-- 4. LOTE Y REMISIÓN (CAMPOS INDEPENDIENTES) -->
+              <td>
+                <div class="lot-rem-box">
+                  <div class="flex items-center gap-1">
+                    <span class="lot-tag-lbl">LOTE:</span>
+                    <strong class="lot-tag-val font-mono">{{ claim.batchNumber }}</strong>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="rem-tag-lbl">REM:</span>
+                    <span class="rem-tag-val font-mono">{{ claim.remisionNumber }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- 5. Tipo de Defecto -->
+              <td>
+                <span class="defect-badge">
+                  {{ claim.defectType === 'OTHER' ? (claim.defectCustomType || 'Otro') : defectLabels[claim.defectType] }}
+                </span>
+              </td>
+
+              <!-- 6. Impacto Físico -->
+              <td>
+                <div class="impact-cell">
+                  @if (claim.damagedQty > 0) {
+                    <span class="impact-pill impact-pill--damaged">
+                      <span class="material-symbols-outlined text-xs">broken_image</span>
+                      <span>{{ claim.damagedQty }} Dañadas</span>
+                    </span>
+                  }
+                  @if (claim.lostQty > 0) {
+                    <span class="impact-pill impact-pill--lost">
+                      <span class="material-symbols-outlined text-xs">delete</span>
+                      <span>{{ claim.lostQty }} Merma</span>
+                    </span>
+                  }
+                  @if (claim.damagedQty === 0 && claim.lostQty === 0) {
+                    <span class="text-xs text-slate-400">Sin merma física</span>
+                  }
+                </div>
+              </td>
+
+              <!-- 7. Costo Asociado -->
+              <td>
+                <strong class="cost-val font-mono text-emerald-600 dark:text-emerald-400">
+                  {{ formatCurrency(claim.associatedCost) }}
+                </strong>
+              </td>
+
+              <!-- 8. Evidencias / Archivos -->
+              <td>
+                <div class="evidence-count-cell">
+                  @if (claim.evidenceFiles && claim.evidenceFiles.length > 0) {
+                    <span class="evidence-badge" title="Archivos adjuntos disponibles">
+                      <span class="material-symbols-outlined text-xs">attach_file</span>
+                      <span>{{ claim.evidenceFiles.length }} archivo(s)</span>
+                    </span>
+                  } @else {
+                    <span class="text-xs text-slate-400">Sin archivo</span>
+                  }
+                </div>
+              </td>
+
+              <!-- 9. Acción -->
+              <td class="text-right">
+                <button type="button" class="btn-table-action" (click)="openClaimDetail(claim)" title="Ver detalle del reclamo">
+                  <span class="material-symbols-outlined text-sm">visibility</span>
+                  <span>Ver Detalle</span>
+                </button>
+              </td>
+
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="empty-state-cell">
+                <div class="empty-state-wrap">
+                  <span class="material-symbols-outlined empty-state-icon">find_in_page</span>
+                  <h4>No se encontraron reclamos registrados</h4>
+                  <p>No hay incidencias que coincidan con los filtros seleccionados o la búsqueda.</p>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       4. MODAL DE CAPTURA DE NUEVO RECLAMO E INCIDENCIA
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (isCreateModalOpen()) {
+    <div class="modal-backdrop" (click)="closeCreateClaimModal()">
+      <div class="modal-card modal-card--lg" (click)="$event.stopPropagation()">
+        
+        <!-- Header -->
+        <header class="modal-header">
+          <div class="modal-header__left">
+            <div class="modal-icon-badge modal-icon-badge--gold">
+              <span class="material-symbols-outlined">assignment_late</span>
+            </div>
+            <div>
+              <span class="modal-eyebrow">REGISTRO DE INCIDENCIA DE CALIDAD (F01)</span>
+              <h3 class="modal-title">Captura Integral de Reclamo Operativo</h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeCreateClaimModal()" title="Cerrar modal">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <!-- Body -->
+        <div class="modal-body space-y-4">
+          
+          <!-- ── PASO 1: INFORMACIÓN GENERAL Y PRODUCTO AFECTADO ── -->
+          <div class="modal-step-section">
+            <div class="step-header">
+              <div class="step-badge">1</div>
+              <span class="step-title">Información General, Etapa y Lote/Remisión</span>
+            </div>
+
+            <!-- Selector de Etapa Operativa -->
+            <div class="stage-selector-grid mt-2">
+              <button
+                type="button"
+                class="stage-select-card"
+                [class.is-selected]="newStage() === 'INBOUND_UNLOAD'"
+                (click)="newStage.set('INBOUND_UNLOAD')"
+              >
+                <span class="material-symbols-outlined text-xl">move_to_inbox</span>
+                <strong>1. Descarga</strong>
+                <span>Recepción en andén</span>
+              </button>
+
+              <button
+                type="button"
+                class="stage-select-card"
+                [class.is-selected]="newStage() === 'STORAGE'"
+                (click)="newStage.set('STORAGE')"
+              >
+                <span class="material-symbols-outlined text-xl">shelves</span>
+                <strong>2. Almacenamiento</strong>
+                <span>Racks / Traspasos</span>
+              </button>
+
+              <button
+                type="button"
+                class="stage-select-card"
+                [class.is-selected]="newStage() === 'OUTBOUND_LOAD'"
+                (click)="newStage.set('OUTBOUND_LOAD')"
+              >
+                <span class="material-symbols-outlined text-xl">local_shipping</span>
+                <strong>3. Carga</strong>
+                <span>Embarque / Despacho</span>
+              </button>
+            </div>
+
+            <!-- Fecha y Hora -->
+            <div class="form-row-grid mt-3">
+              <div>
+                <label class="form-label">Fecha de Detección</label>
+                <input type="date" class="form-input" [ngModel]="newDate()" (ngModelChange)="newDate.set($event)" />
+              </div>
+              <div>
+                <label class="form-label">Hora</label>
+                <input type="time" class="form-input" [ngModel]="newTime()" (ngModelChange)="newTime.set($event)" />
+              </div>
+            </div>
+
+            <!-- Selección de Producto / Cliente -->
+            <div class="mt-3">
+              <label class="form-label">Producto Afectado (Catálogo Sugerido)</label>
+              <select class="form-input" [ngModel]="newSku()" (ngModelChange)="onPresetProductChange($event)">
+                @for (preset of productPresets; track preset.sku) {
+                  <option [value]="preset.sku">{{ preset.sku }} — {{ preset.description }} ({{ preset.client }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- CAMPOS INDEPENDIENTES: LOTE Y REMISIÓN -->
+            <div class="form-row-grid mt-3">
+              <div>
+                <label class="form-label">
+                  <span class="text-amber-500 font-bold">*</span> Número de Lote (Batch)
+                </label>
+                <input
+                  type="text"
+                  class="form-input font-mono font-bold"
+                  [ngModel]="newBatchNumber()"
+                  (ngModelChange)="newBatchNumber.set($event)"
+                  placeholder="Ej. LOT-2026-LALA-901"
+                />
+              </div>
+
+              <div>
+                <label class="form-label">
+                  <span class="text-amber-500 font-bold">*</span> Folio de Remisión / Factura
+                </label>
+                <input
+                  type="text"
+                  class="form-input font-mono font-bold"
+                  [ngModel]="newRemisionNumber()"
+                  (ngModelChange)="newRemisionNumber.set($event)"
+                  placeholder="Ej. REM-2026-8812"
+                />
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── PASO 2: TIPOLOGÍA DEL DEFECTO ── -->
+          <div class="modal-step-section">
+            <div class="step-header">
+              <div class="step-badge">2</div>
+              <span class="step-title">Tipología del Defecto o Discrepancia</span>
+            </div>
+
+            <div class="mt-2">
+              <label class="form-label">Causal del Reclamo</label>
+              <select class="form-input" [ngModel]="newDefectType()" (ngModelChange)="newDefectType.set($event)">
+                <option value="BAD_CONDITIONS">Malas condiciones (Empaque roto / Tarima dañada / Humedad)</option>
+                <option value="NON_COMPLIANT_SPEC">No cumple con especificación (Código / Rotulado / Caducidad)</option>
+                <option value="QUANTITY_DISCREPANCY">Discrepancia en cantidad (Faltante / Sobrante físico)</option>
+                <option value="OTHER">Otro (Especificar)</option>
+              </select>
+            </div>
+
+            <!-- Campo condicional cuando se selecciona 'Otro' -->
+            @if (newDefectType() === 'OTHER') {
+              <div class="mt-3">
+                <label class="form-label">
+                  <span class="text-amber-500 font-bold">*</span> Especifique el tipo de defecto
+                </label>
+                <input
+                  type="text"
+                  class="form-input"
+                  [ngModel]="newDefectCustomType()"
+                  (ngModelChange)="newDefectCustomType.set($event)"
+                  placeholder="Describa brevemente la causal no contemplada en el catálogo..."
+                />
+              </div>
+            }
+          </div>
+
+          <!-- ── PASO 3: MÉTRICAS DE IMPACTO FÍSICO Y FINANCIERO ── -->
+          <div class="modal-step-section">
+            <div class="step-header">
+              <div class="step-badge">3</div>
+              <span class="step-title">Impacto Físico y Financiero</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+              <div>
+                <label class="form-label">Material Dañado (Cajas/Pzas)</label>
+                <div class="input-with-icon">
+                  <span class="material-symbols-outlined input-icon text-amber-500">broken_image</span>
+                  <input
+                    type="number"
+                    min="0"
+                    class="form-input font-bold"
+                    [ngModel]="newDamagedQty()"
+                    (ngModelChange)="newDamagedQty.set($event)"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label">Material Perdido / Merma</label>
+                <div class="input-with-icon">
+                  <span class="material-symbols-outlined input-icon text-red-500">delete</span>
+                  <input
+                    type="number"
+                    min="0"
+                    class="form-input font-bold"
+                    [ngModel]="newLostQty()"
+                    (ngModelChange)="newLostQty.set($event)"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label">Costo Asociado ($ MXN)</label>
+                <div class="input-with-icon">
+                  <span class="material-symbols-outlined input-icon text-emerald-500">payments</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    class="form-input font-bold text-emerald-600 dark:text-emerald-400"
+                    [ngModel]="newAssociatedCost()"
+                    (ngModelChange)="newAssociatedCost.set($event)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PASO 4: SOPORTE, AUTORIZADOR Y EVIDENCIAS ── -->
+          <div class="modal-step-section">
+            <div class="step-header">
+              <div class="step-badge">4</div>
+              <span class="step-title">Soporte Documental, Autorizador y Evidencias</span>
+            </div>
+
+            <div class="form-row-grid mt-2">
+              <div>
+                <label class="form-label">
+                  <span class="text-amber-500 font-bold">*</span> Nombre de Quién Autoriza / Reporta
+                </label>
+                <input
+                  type="text"
+                  class="form-input"
+                  [ngModel]="newAuthorizedByName()"
+                  (ngModelChange)="newAuthorizedByName.set($event)"
+                  placeholder="Ej. Laura Valdés"
+                />
+              </div>
+
+              <div>
+                <label class="form-label">Puesto / Cargo</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  [ngModel]="newAuthorizedByPosition()"
+                  (ngModelChange)="newAuthorizedByPosition.set($event)"
+                  placeholder="Ej. Auditora QM"
+                />
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label class="form-label">Observaciones y Justificación Técnica</label>
+              <textarea
+                rows="2"
+                class="form-input"
+                [ngModel]="newObservations()"
+                (ngModelChange)="newObservations.set($event)"
+                placeholder="Describa el dictamen preliminar, acuerdos con cliente o acciones inmediatas..."
+              ></textarea>
+            </div>
+
+            <!-- Carga de Evidencia Fotográfica o PDF -->
+            <div class="release-evidence-upload-box mt-3">
+              <label class="form-label flex items-center justify-between">
+                <span class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
+                  <span class="material-symbols-outlined text-sm text-gold-light">attach_file</span>
+                  <span>Evidencias Fotográficas y Actas PDF</span>
+                </span>
+                <span class="text-[11px] text-slate-500 font-normal">JPG, PNG, WEBP, PDF · Máx 15MB</span>
+              </label>
+
+              <input
+                #claimFileInputRef
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.pdf"
+                multiple
+                style="display:none"
+                (change)="onFileSelected($event)"
+              />
+
+              <div class="release-dropzone" (click)="claimFileInputRef.click()">
+                <span class="material-symbols-outlined release-dropzone__icon">cloud_upload</span>
+                <div class="release-dropzone__text">
+                  <strong>Arrastre fotos del daño o formato PDF de la no conformidad</strong>
+                  <span>o haga clic para examinar archivos desde su equipo</span>
+                </div>
+                <button type="button" class="btn-browse-evidence" (click)="$event.stopPropagation(); claimFileInputRef.click()">
+                  <span class="material-symbols-outlined text-xs">add_photo_alternate</span>
+                  <span>Examinar Archivo</span>
+                </button>
+              </div>
+
+              @if (newEvidenceFiles().length > 0) {
+                <div class="release-evidence-list mt-2">
+                  @for (file of newEvidenceFiles(); track file.id) {
+                    <div class="release-evidence-pill" [class.release-evidence-pill--pdf]="file.type === 'pdf'">
+                      @if (file.type === 'image' && file.url) {
+                        <img [src]="file.url" [alt]="file.name" class="evidence-pill-img" />
+                      } @else if (file.type === 'image') {
+                        <span class="material-symbols-outlined evidence-pill-icon text-blue-500">image</span>
+                      } @else {
+                        <span class="material-symbols-outlined evidence-pill-icon text-red-500">picture_as_pdf</span>
+                      }
+                      <div class="evidence-pill-meta">
+                        <span class="evidence-pill-name" [title]="file.name">{{ file.name }}</span>
+                        <span class="evidence-pill-size">{{ file.size }}</span>
+                      </div>
+                      <button type="button" class="evidence-pill-del" (click)="removeEvidenceFile(file.id)" title="Eliminar archivo">
+                        <span class="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeCreateClaimModal()">Cancelar</button>
+          <button type="button" class="btn-confirm-gold" (click)="saveNewClaim()">
+            <span class="material-symbols-outlined">save</span>
+            <span>Guardar y Registrar Reclamo</span>
+          </button>
+        </footer>
+
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       5. MODAL DE DETALLE DEL RECLAMO
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (isDetailModalOpen() && selectedClaim()) {
+    <div class="modal-backdrop" (click)="closeClaimDetail()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        
+        <header class="modal-header">
+          <div class="modal-header__left">
+            <div class="modal-icon-badge modal-icon-badge--gold">
+              <span class="material-symbols-outlined">receipt_long</span>
+            </div>
+            <div>
+              <span class="modal-eyebrow">DETALLE DEL RECLAMO</span>
+              <h3 class="modal-title font-mono">{{ selectedClaim()!.folio }}</h3>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeClaimDetail()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="modal-body space-y-3">
+          
+          <div class="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
+            <div>
+              <span class="text-[11px] text-slate-500 uppercase font-bold block">Producto</span>
+              <strong class="text-sm text-slate-800 dark:text-slate-100">{{ selectedClaim()!.sku }}</strong>
+              <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{{ selectedClaim()!.productDescription }}</p>
+            </div>
+            <div>
+              <span class="text-[11px] text-slate-500 uppercase font-bold block">Cliente</span>
+              <strong class="text-sm text-slate-800 dark:text-slate-100">{{ selectedClaim()!.clientName }}</strong>
+              <div class="mt-1 flex items-center gap-2">
+                <span class="text-xs text-amber-600 font-mono font-bold">LOTE: {{ selectedClaim()!.batchNumber }}</span>
+                <span class="text-xs text-blue-600 font-mono">REM: {{ selectedClaim()!.remisionNumber }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+              <span class="text-[10px] text-slate-500 font-bold block uppercase">Material Dañado</span>
+              <strong class="text-base text-amber-600">{{ selectedClaim()!.damagedQty }} Pzas</strong>
+            </div>
+            <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+              <span class="text-[10px] text-slate-500 font-bold block uppercase">Material Perdido</span>
+              <strong class="text-base text-red-600">{{ selectedClaim()!.lostQty }} Pzas</strong>
+            </div>
+            <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+              <span class="text-[10px] text-slate-500 font-bold block uppercase">Costo Asociado</span>
+              <strong class="text-base text-emerald-600">{{ formatCurrency(selectedClaim()!.associatedCost) }}</strong>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+            <span class="text-[11px] text-slate-500 font-bold block uppercase">Autorizador y Dictamen</span>
+            <div class="text-xs text-slate-700 dark:text-slate-200 font-semibold mt-1">
+              {{ selectedClaim()!.authorizedByName }} — <span class="text-slate-500 font-normal">{{ selectedClaim()!.authorizedByPosition }}</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 bg-white dark:bg-slate-900 p-2 rounded border border-slate-100 dark:border-slate-800">
+              "{{ selectedClaim()!.observations }}"
+            </p>
+          </div>
+
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeClaimDetail()">Cerrar</button>
+        </footer>
+
+      </div>
+    </div>
+  }
+
+</div>

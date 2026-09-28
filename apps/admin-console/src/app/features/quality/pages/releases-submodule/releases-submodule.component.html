@@ -385,6 +385,7 @@
                 <option value="EMAIL">Correo Electrónico Oficial</option>
                 <option value="ELECTRONIC_MEDIA">Medios Electrónicos (Ticket / Sistema)</option>
                 <option value="FORMAL_ACT">Acta / Oficio Formal Firmado</option>
+                <option value="OTHER">Otro (Especificar)</option>
               </select>
             </div>
             <div>
@@ -393,7 +394,24 @@
             </div>
           </div>
 
-          <div class="form-row-grid">
+          <!-- Campo condicional cuando se selecciona 'Otro' -->
+          @if (supportType() === 'OTHER') {
+            <div class="form-row-single mt-3">
+              <label class="form-label" for="support-custom-type">
+                <span class="text-amber-500 font-bold">*</span> Especifique el Medio o Soporte Documental
+              </label>
+              <input
+                id="support-custom-type"
+                type="text"
+                class="form-input"
+                [ngModel]="supportCustomType()"
+                (ngModelChange)="supportCustomType.set($event)"
+                placeholder="Ej. Minuta técnica firmada, Circular extraordinaria, WhatsApp gerencial..."
+              />
+            </div>
+          }
+
+          <div class="form-row-grid mt-3">
             <div>
               <label class="form-label" for="auth-name">Nombre de Quién Autoriza</label>
               <input id="auth-name" type="text" class="form-input" [ngModel]="authorizedByName()" (ngModelChange)="authorizedByName.set($event)" placeholder="Ej. Ing. Mariana Garza">
@@ -402,6 +420,64 @@
               <label class="form-label" for="auth-pos">Puesto / Cargo del Autorizador</label>
               <input id="auth-pos" type="text" class="form-input" [ngModel]="authorizedByPosition()" (ngModelChange)="authorizedByPosition.set($event)" placeholder="Ej. Gerente de Calidad">
             </div>
+          </div>
+
+          <!-- MÓDULO PARA ADJUNTAR FORMATO DE IMAGEN O PDF DE AUTORIZACIÓN -->
+          <div class="release-evidence-upload-box mt-3">
+            <label class="form-label flex items-center justify-between">
+              <span class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
+                <span class="material-symbols-outlined text-sm text-gold-light">attach_file</span>
+                <span>Evidencia Documental / Fotográfica de la Autorización (PDF o Imagen)</span>
+              </span>
+              <span class="text-[11px] text-slate-500 font-normal">JPG, PNG, WEBP, PDF · Máx 15MB</span>
+            </label>
+
+            <!-- Input oculto para carga de archivos -->
+            <input
+              #releaseFileInputRef
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,.pdf"
+              multiple
+              style="display:none"
+              (change)="onReleaseFileSelected($event)"
+            />
+
+            <!-- Dropzone interactivo -->
+            <div class="release-dropzone" (click)="releaseFileInputRef.click()">
+              <span class="material-symbols-outlined release-dropzone__icon">cloud_upload</span>
+              <div class="release-dropzone__text">
+                <strong>Arrastre aquí la foto o formato PDF de la autorización</strong>
+                <span>o haga clic para seleccionar archivo desde su equipo</span>
+              </div>
+              <button type="button" class="btn-browse-evidence" (click)="$event.stopPropagation(); releaseFileInputRef.click()">
+                <span class="material-symbols-outlined text-xs">add_photo_alternate</span>
+                <span>Examinar Archivo</span>
+              </button>
+            </div>
+
+            <!-- Previsualización de archivos adjuntados -->
+            @if (releaseEvidenceFiles().length > 0) {
+              <div class="release-evidence-list mt-2">
+                @for (file of releaseEvidenceFiles(); track file.id) {
+                  <div class="release-evidence-pill" [class.release-evidence-pill--pdf]="file.type === 'pdf'">
+                    @if (file.type === 'image' && file.url) {
+                      <img [src]="file.url" [alt]="file.name" class="evidence-pill-img" />
+                    } @else if (file.type === 'image') {
+                      <span class="material-symbols-outlined evidence-pill-icon text-blue-500">image</span>
+                    } @else {
+                      <span class="material-symbols-outlined evidence-pill-icon text-red-500">picture_as_pdf</span>
+                    }
+                    <div class="evidence-pill-meta">
+                      <span class="evidence-pill-name" [title]="file.name">{{ file.name }}</span>
+                      <span class="evidence-pill-size">{{ file.size }}</span>
+                    </div>
+                    <button type="button" class="evidence-pill-del" (click)="removeReleaseEvidenceFile(file.id)" title="Eliminar archivo">
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
           </div>
         </div>
 

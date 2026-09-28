@@ -151,6 +151,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     remision: ['', Validators.required], // Requerido dinámicamente si es DESCARGA
     clientCode: ['', Validators.required],
     client: ['', Validators.required],
+    clientNameCustom: [''],
     procedimiento: ['Recepción', Validators.required],
     operacion: ['DESCARGA', Validators.required], // CARGA | DESCARGA
     horaEntrada: [this.getCurrentTimeString(), Validators.required],
@@ -159,6 +160,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // 2. DATOS DEL TRANSPORTE
     carrierLineCode: ['', Validators.required],
     carrierLine: ['', Validators.required],
+    carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
     driverPhone: [''],
     rampCode: ['', Validators.required],
@@ -614,6 +616,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // Resolver Cliente en el catálogo si viene en el pase
     let matchedClientCode = pass.clientCode || '';
     let matchedClientName = pass.clientName || pass.client || '';
+    let matchedClientCustom = '';
     if (matchedClientCode || matchedClientName) {
       const foundClient = this.clients().find(c => 
         (matchedClientCode && (c.code === matchedClientCode || c.code.toLowerCase() === matchedClientCode.toLowerCase())) ||
@@ -622,12 +625,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (foundClient) {
         matchedClientCode = foundClient.code;
         matchedClientName = foundClient.name;
+      } else if (matchedClientName) {
+        matchedClientCode = 'OTRO';
+        matchedClientCustom = matchedClientName;
       }
     }
 
     // Resolver Línea Transportista en el catálogo si viene en el pase
     let matchedCarrierCode = pass.carrierLineCode || '';
     let matchedCarrierName = pass.carrierLine || pass.carrier || '';
+    let matchedCarrierCustom = '';
     if (matchedCarrierCode || matchedCarrierName) {
       const foundCarrier = this.carrierLines().find(c =>
         (matchedCarrierCode && (c.code === matchedCarrierCode || c.code.toLowerCase() === matchedCarrierCode.toLowerCase())) ||
@@ -636,6 +643,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (foundCarrier) {
         matchedCarrierCode = foundCarrier.code;
         matchedCarrierName = foundCarrier.name;
+      } else if (matchedCarrierName) {
+        matchedCarrierCode = 'OTRO';
+        matchedCarrierCustom = matchedCarrierName;
       }
     }
 
@@ -650,10 +660,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.checkInForm.patchValue({
       clientCode: matchedClientCode,
       client: matchedClientName,
+      clientNameCustom: matchedClientCustom,
       carrierLineCode: matchedCarrierCode,
       carrierLine: matchedCarrierName,
+      carrierLineCustom: matchedCarrierCustom,
       nombreOperador: driverNameVal,
-      driverPhone: pass.driverPhone || pass.telefonoChofer || pass.phone || '',
+      driverPhone: pass.driverPhone || pass.telefonoChofer || pass.telefonoOperador || pass.phone || '',
       placasTracto: tractorPlatesVal,
       noEcoTractor: ecoNumberVal,
       placasCaja: boxPlatesVal,
@@ -972,33 +984,65 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── MANEJO DE SELECTS ──────────────────────────────────────────────────────
   protected onCarrierLineSelect(code: string): void {
-    const found = this.carrierLines().find((c) => c.code === code);
-    if (found) {
+    if (code === 'OTRO') {
+      const customVal = this.checkInForm.get('carrierLineCustom')?.value;
       this.checkInForm.patchValue({
-        carrierLineCode: found.code,
-        carrierLine: found.name,
+        carrierLineCode: 'OTRO',
+        carrierLine: customVal || ''
       });
     } else {
-      this.checkInForm.patchValue({
-        carrierLineCode: '',
-        carrierLine: '',
-      });
+      const found = this.carrierLines().find((c) => c.code === code);
+      if (found) {
+        this.checkInForm.patchValue({
+          carrierLineCode: found.code,
+          carrierLine: found.name,
+          carrierLineCustom: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          carrierLineCode: '',
+          carrierLine: '',
+          carrierLineCustom: ''
+        });
+      }
     }
   }
 
+  protected onCustomCarrierLineInput(val: string): void {
+    this.checkInForm.patchValue({
+      carrierLine: val
+    });
+  }
+
   protected onClientSelect(code: string): void {
-    const found = this.clients().find((c) => c.code === code);
-    if (found) {
+    if (code === 'OTRO') {
+      const customVal = this.checkInForm.get('clientNameCustom')?.value;
       this.checkInForm.patchValue({
-        clientCode: found.code,
-        client: found.name,
+        clientCode: 'OTRO',
+        client: customVal || ''
       });
     } else {
-      this.checkInForm.patchValue({
-        clientCode: '',
-        client: '',
-      });
+      const found = this.clients().find((c) => c.code === code);
+      if (found) {
+        this.checkInForm.patchValue({
+          clientCode: found.code,
+          client: found.name,
+          clientNameCustom: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          clientCode: '',
+          client: '',
+          clientNameCustom: ''
+        });
+      }
     }
+  }
+
+  protected onCustomClientInput(val: string): void {
+    this.checkInForm.patchValue({
+      client: val
+    });
   }
 
   protected onTransportTypeSelect(val: string): void {
@@ -1086,6 +1130,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
 
     const formVal = this.checkInForm.value;
+
+    // Si seleccionó OTRO cliente, asegurar que tome el valor especificado
+    if (formVal.clientCode === 'OTRO') {
+      const customName = (formVal.clientNameCustom || formVal.client || '').trim();
+      formVal.client = customName;
+      this.checkInForm.patchValue({ client: customName });
+    }
+
+    // Si seleccionó OTRA línea transportista, asegurar que tome el valor especificado
+    if (formVal.carrierLineCode === 'OTRO') {
+      const customCarrier = (formVal.carrierLineCustom || formVal.carrierLine || '').trim();
+      formVal.carrierLine = customCarrier;
+      this.checkInForm.patchValue({ carrierLine: customCarrier });
+    }
+
     const missing: string[] = [];
 
     if (!formVal.fecha) missing.push('Fecha');
@@ -1095,7 +1154,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (formVal.operacion === 'DESCARGA' && (!formVal.remision || !formVal.remision.trim())) {
       missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
     }
-    if (!formVal.clientCode || !formVal.client) missing.push('Cliente Destinatario');
+    if (!formVal.clientCode || !formVal.client || !formVal.client.trim()) missing.push('Cliente Destinatario');
     if (!formVal.rampCode || !formVal.rampNumber) missing.push('Andén / Rampa Asignada');
     if (!formVal.carrierLineCode || !formVal.carrierLine) missing.push('Línea Transportista');
     if (!formVal.nombreOperador || !formVal.nombreOperador.trim()) missing.push('Nombre del Operador / Chofer');
@@ -1129,7 +1188,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
       `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
       `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtranos}, Plagas=${formVal.revIndiciosPlagas}`,
-      `Firmas: Vigilancia=${formVal.responsableVigilanciaNombre || 'Guardia'} | Chofer=${formVal.transportistaNombre || formVal.nombreOperador}`
+      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
     ].join(' | ');
 
     const checkInData: CheckInCasetaData = {
@@ -1143,6 +1202,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       rampCode: formVal.rampCode,
       rampNumber: Number(formVal.rampNumber) || 1,
       driverName: formVal.nombreOperador,
+      driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
       boxPlates: (formVal.placasCaja || '').toUpperCase(),
       sealNumbers: seals,
@@ -1162,7 +1222,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         rampNumber: Number(formVal.rampNumber) || 1,
         rampCode: formVal.rampCode,
         driverName: formVal.nombreOperador,
-        driverPhone: formVal.driverPhone,
+        driverPhone: formVal.driverPhone || '',
         tractorPlates: (formVal.placasTracto || '').toUpperCase().trim(),
         boxPlates: (formVal.placasCaja || '').toUpperCase().trim(),
         noEcoTractor: formVal.noEcoTractor,
@@ -1294,13 +1354,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       remision: '',
       clientCode: '',
       client: '',
+      clientNameCustom: '',
       procedimiento: 'Recepción',
       operacion: 'DESCARGA',
       horaEntrada: this.getCurrentTimeString(),
       horaSalida: '',
       carrierLineCode: '',
       carrierLine: '',
+      carrierLineCustom: '',
       nombreOperador: '',
+      driverPhone: '',
       rampCode: '',
       rampNumber: 0,
       placasTracto: '',
