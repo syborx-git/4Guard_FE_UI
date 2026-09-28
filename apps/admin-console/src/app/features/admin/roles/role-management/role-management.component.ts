@@ -63,7 +63,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedRole = signal<Role | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -181,6 +181,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewRole();
     this.loadRolesAndPermissions();
   }
 
@@ -266,16 +267,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const role = this.selectedRole();
-    if (role) {
-      this.formMode.set('edit');
-      this.populateForm(role);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewRole();
   }
 
   private populateForm(role: Role): void {

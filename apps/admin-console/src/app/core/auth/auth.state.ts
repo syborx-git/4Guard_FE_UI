@@ -270,12 +270,8 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing (HU-140)
       case 'business-rules':
         return true; // Acceso total habilitado para evaluación (HU-131)
-      case 'currency-exchange':
-        return true; // Acceso total habilitado para evaluación (HU-148)
       case 'alerts-config':
         return true; // Acceso total habilitado para evaluación (HU-134)
-      case 'license-management':
-        return true; // Acceso total habilitado para evaluación (HU-139)
       case 'security':
         return true; // Acceso total al nuevo módulo autónomo de Seguridad (Caseta)
       case 'user-activity':

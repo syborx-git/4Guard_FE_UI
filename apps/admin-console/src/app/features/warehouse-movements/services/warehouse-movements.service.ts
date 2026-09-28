@@ -304,13 +304,21 @@ export class WarehouseMovementsService {
     this.reloadSuppliers();
 
     // 3. Montacarguistas
+    this.forkliftAdminService.loadOperators().subscribe({
+      next: () => {},
+      error: () => {},
+    });
+
     this.movementsApi.getForkliftOperators().subscribe({
       next: (ops: any) => {
         if (ops && ops.length > 0) {
           this.forkliftOperatorsSignal.set(
             ops.map((o: any) => ({
-              code: o.id || o.code,
+              id: o.id,
+              code: (o.code && !o.code.includes('-') && o.code.length <= 10) ? o.code : (o.licenseNumberDc3 || 'MC'),
               name: o.fullName || `${o.firstName || ''} ${o.lastNamePaternal || o.lastName || ''} ${o.lastNameMaternal || ''}`.trim() || o.name || 'Montacarguista',
+              jobTitle: o.jobTitle || 'Montacarguista',
+              shift: o.shift || (o as any).shiftName || 'Turno General',
             }))
           );
         }
@@ -437,8 +445,9 @@ export class WarehouseMovementsService {
         if (sups && sups.length > 0) {
           this.suppliersSignal.set(
             sups.map((s: any) => ({
-              code: s.id || s.code,
-              name: s.legalName || s.commercialName || s.tradeName || s.name,
+              id: s.id,
+              code: (s.code && !s.code.includes('-') && s.code.length <= 15) ? s.code : (s.supplierCode || 'PROV'),
+              name: s.commercialName || s.legalName || s.tradeName || s.name || s.businessName || 'Proveedor',
             }))
           );
         }
@@ -956,9 +965,9 @@ export class WarehouseMovementsService {
       ? carrierItem.code
       : (isUuid(data.carrierLineCode) ? data.carrierLineCode : null);
 
-    const opItem = this.forkliftOperatorsSignal().find((o) => o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
-    const forkliftOperatorId = (opItem && isUuid(opItem.code))
-      ? opItem.code
+    const opItem = this.forkliftOperators().find((o) => o.id === data.forkliftOperatorCode || o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
+    const forkliftOperatorId = (opItem && opItem.id && isUuid(opItem.id))
+      ? opItem.id
       : (isUuid(data.forkliftOperatorCode) ? data.forkliftOperatorCode : null);
 
     const rampItem = this.rampsSignal().find(
@@ -1276,6 +1285,18 @@ export class WarehouseMovementsService {
       r.documentNumber ||
       '';
 
+    let opName = r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '';
+    if (opName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opName)) {
+      const match = (this.forkliftOperatorsSignal() || []).find((o: any) => o.id === opName || o.code === opName);
+      if (match) opName = match.name;
+    }
+
+    let supName = r.supplierName || '';
+    if (supName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(supName)) {
+      const match = (this.suppliersSignal() || []).find((s: any) => s.id === supName || s.code === supName);
+      if (match) supName = match.name || supName;
+    }
+
     return {
       id: r.id,
       folio: r.folio || '',
@@ -1290,7 +1311,7 @@ export class WarehouseMovementsService {
         clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
         rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 1) : (r.rampNumber || r.checkIn?.rampNumber || 1),
         rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
-        forkliftOperator: r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '',
+        forkliftOperator: opName,
         forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
         driverName: r.driverName || r.checkIn?.driverName || '',
         tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
@@ -1304,7 +1325,7 @@ export class WarehouseMovementsService {
       productId: r.skuCode || r.skuId || r.productId || '',
       skuCode: r.skuCode || '',
       productName: r.productName || '',
-      supplierName: r.supplierName || '',
+      supplierName: supName,
       piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
       storageLocation: r.storageLocationCode || r.storageLocationName || r.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',

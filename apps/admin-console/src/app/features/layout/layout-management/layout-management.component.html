@@ -291,24 +291,6 @@
     <!-- ── PANEL DERECHO: Editor / Detalle ────────────────────────────────── -->
     <main class="lm-editor" aria-label="Editor de ubicación">
 
-      @if (!isCreating() && !selectedLoc()) {
-      <!-- Estado inicial: Sin selección ── -->
-      <div class="lm-empty-state">
-        <div class="lm-empty-state__icon-wrap" aria-hidden="true">
-          <span class="material-symbols-outlined lm-empty-state__icon">location_on</span>
-        </div>
-        <h2 class="lm-empty-state__title">Sin selección</h2>
-        <p class="lm-empty-state__desc">
-          Selecciona una ubicación del árbol izquierdo para consultar su información,
-          o registra una nueva ubicación física.
-        </p>
-        <button class="btn btn--primary" type="button" id="btn-empty-new-location" (click)="onNewLocation()">
-          <span class="material-symbols-outlined" aria-hidden="true">add</span>
-          Nueva ubicación
-        </button>
-      </div>
-      } @else {
-
       <div class="lm-form-container">
 
         <!-- ── Encabezado del editor ── -->
@@ -691,7 +673,6 @@
         </div>
 
       </div><!-- /lm-form-container -->
-      }
     </main>
 
   </div><!-- /lm-body -->

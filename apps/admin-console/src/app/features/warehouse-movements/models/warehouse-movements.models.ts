@@ -68,8 +68,11 @@ export const STANDARD_WAREHOUSE_RAMPS: RampItem[] = Array.from({ length: 12 }, (
 });
 
 export interface ForkliftOperatorItem {
+  id?: string;
   code: string;
   name: string;
+  jobTitle?: string;
+  shift?: string;
 }
 
 export interface CheckInCasetaData {

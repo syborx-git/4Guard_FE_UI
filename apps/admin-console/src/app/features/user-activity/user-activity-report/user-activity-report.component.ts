@@ -520,7 +520,7 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
         <div style="display: flex; align-items: center; gap: 12px;">
           <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" style="height: 44px; width: auto; object-fit: contain; border-radius: 6px;" />
           <div>
-            <div class="brand">4GUARD <span>WMS</span> — HU-146</div>
+            <div class="brand">4GUARD <span>WMS</span> — Auditoría de Actividad</div>
             <div class="subtitle">Consola de Consulta y Trazabilidad de Actividad por Usuario</div>
           </div>
         </div>

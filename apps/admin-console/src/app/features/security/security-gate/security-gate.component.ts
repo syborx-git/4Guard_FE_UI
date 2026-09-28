@@ -17,6 +17,7 @@ import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
 import { CheckInCasetaData, RampItem } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
@@ -43,6 +44,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly printService = inject(PrintService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private refreshIntervalId: any = null;
 
@@ -160,7 +162,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     carrierLine: ['', Validators.required],
     carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
-    telefonoOperador: [''],
+    driverPhone: [''],
     rampCode: ['', Validators.required],
     rampNumber: [0, Validators.required],
     placasTracto: ['', Validators.required],
@@ -181,8 +183,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     eppChalecoObs: [''],
 
     // 3. REVISIÓN DEL TRANSPORTE — Documentos
-    docCartaPorte: ['SI', Validators.required],
-    docCartaPorteObs: [''],
+    docCartaPorte: ['NO', Validators.required],
+    docCartaPorteObs: ['N/A - Operación de Descarga/Recepción'],
     docRemision: ['SI', Validators.required],
     docRemisionObs: [''],
 
@@ -321,6 +323,39 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ── Scroll Automático al Inicio de la Página ──────────────────────────────
+  protected scrollToTop(): void {
+    const doScroll = () => {
+      // 1. Contenedor principal con scroll de la Shell (#main-content / .shell__content)
+      const mainContent = document.getElementById('main-content') || document.querySelector('.shell__content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        mainContent.scrollTop = 0;
+      }
+
+      // 2. Anclaje de la cabecera del módulo de caseta
+      const pageTop = document.getElementById('security-page-top') || document.querySelector('.security-header') || document.querySelector('.security-page');
+      if (pageTop && typeof pageTop.scrollIntoView === 'function') {
+        pageTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // 3. Fallbacks del navegador para window, documentElement y body
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      if (document.documentElement) {
+        document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.documentElement.scrollTop = 0;
+      }
+      if (document.body) {
+        document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.body.scrollTop = 0;
+      }
+    };
+
+    doScroll();
+    setTimeout(doScroll, 80);
+    setTimeout(doScroll, 220);
+  }
+
   // ── Cambio de Pestaña ─────────────────────────────────────────────────────
   protected setTab(tab: SecurityGateTab): void {
     this.activeTab.set(tab);
@@ -331,6 +366,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     } else {
       this.reloadActivePasses();
     }
+    this.scrollToTop();
   }
 
   protected reloadAllData(): void {
@@ -349,11 +385,23 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (val === 'CARGA') {
       cartaControl?.setValidators([Validators.required]);
       remisionControl?.clearValidators();
-      this.checkInForm.patchValue({ procedimiento: 'Embarque' });
+      this.checkInForm.patchValue({
+        procedimiento: 'Embarque',
+        docCartaPorte: 'SI',
+        docCartaPorteObs: '',
+        docRemision: 'NO',
+        docRemisionObs: 'N/A - Operación de Carga/Embarque'
+      });
     } else {
       remisionControl?.setValidators([Validators.required]);
       cartaControl?.clearValidators();
-      this.checkInForm.patchValue({ procedimiento: 'Recepción' });
+      this.checkInForm.patchValue({
+        procedimiento: 'Recepción',
+        docRemision: 'SI',
+        docRemisionObs: '',
+        docCartaPorte: 'NO',
+        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción'
+      });
     }
 
     cartaControl?.updateValueAndValidity();
@@ -546,20 +594,26 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected loadDriverSubmission(pass: any): void {
     if (!pass) return;
+
+    // 1. Limpiar estado previo del formulario para evitar datos residuales
+    this.resetFormFieldsOnly();
     this.activeToken.set(pass.token);
 
+    // 2. Tipo de Operación
     const opVal = pass.operationType || pass.operacion || 'DESCARGA';
     this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
 
+    // 3. Extraer solo valores reales del pase (sin strings por defecto inventados)
     const driverNameVal = pass.driverName || pass.nombreOperador || pass.operatorName || pass.driver_name || '';
     const tractorPlatesVal = pass.tractorPlates || pass.placasTracto || pass.truckPlates || pass.plates || '';
     const boxPlatesVal = pass.boxPlates || pass.placasCaja || pass.trailerPlates || '';
-    const boxDimensionsVal = pass.boxDimensions || pass.medidasCaja || pass.boxSize || '53 Pies';
-    const transportTypeVal = pass.transportType || pass.tipoTransporte || pass.vehicleType || 'Caja Seca';
-    const ecoNumberVal = pass.economicNumber || pass.noEcoTractor || pass.ecoTractor || 'ECO-01';
+    const boxDimensionsVal = pass.boxDimensions || pass.medidasCaja || pass.boxSize || '';
+    const transportTypeVal = pass.transportType || pass.tipoTransporte || pass.vehicleType || '';
+    const ecoNumberVal = pass.economicNumber || pass.noEcoTractor || pass.ecoTractor || '';
     const docNumberVal = pass.docNumber || pass.remision || pass.noCartaPorte || '';
+    const isSubmitted = pass.status === 'SUBMITTED';
 
-    // Resolver Cliente en el catálogo
+    // Resolver Cliente en el catálogo si viene en el pase
     let matchedClientCode = pass.clientCode || '';
     let matchedClientName = pass.clientName || pass.client || '';
     let matchedClientCustom = '';
@@ -577,7 +631,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Resolver Línea Transportista en el catálogo
+    // Resolver Línea Transportista en el catálogo si viene en el pase
     let matchedCarrierCode = pass.carrierLineCode || '';
     let matchedCarrierName = pass.carrierLine || pass.carrier || '';
     let matchedCarrierCustom = '';
@@ -595,7 +649,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Resolver Tipo de Transporte y Medidas
+    // Resolver Tipo de Transporte y Medidas si vienen personalizados
     if (transportTypeVal && !this.transportTypesList().includes(transportTypeVal)) {
       this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), transportTypeVal, 'Otro (Especificar)']);
     }
@@ -611,14 +665,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       carrierLine: matchedCarrierName,
       carrierLineCustom: matchedCarrierCustom,
       nombreOperador: driverNameVal,
-      telefonoOperador: pass.driverPhone || pass.telefonoOperador || '',
+      driverPhone: pass.driverPhone || pass.telefonoChofer || pass.telefonoOperador || pass.phone || '',
       placasTracto: tractorPlatesVal,
       noEcoTractor: ecoNumberVal,
       placasCaja: boxPlatesVal,
       medidasCaja: boxDimensionsVal,
       tipoTransporte: transportTypeVal,
       transportistaNombre: driverNameVal,
-      transportistaFirma: true,
+      transportistaFirma: isSubmitted || !!pass.driverSignature,
     });
 
     if (docNumberVal) {
@@ -631,6 +685,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
       this.sealList.set(pass.sealNumbers);
+    } else {
+      this.sealList.set([]);
     }
 
     if (pass.checklistData) {
@@ -653,8 +709,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
 
     this.showPassListModal.set(false);
-    this.scanSuccessMessage.set(`¡Datos del Pase #${pass.token} cargados! Chofer: ${pass.driverName || 'S/N'}, Placas: ${pass.tractorPlates || 'S/P'}.`);
-    setTimeout(() => this.scanSuccessMessage.set(null), 6000);
+    if (isSubmitted) {
+      this.toast.success(`¡Datos del Pase #${pass.token} completados por el transportista cargados en caseta!`);
+    } else {
+      this.toast.info(`Pase #${pass.token} vinculado. El transportista aún no completa el formulario móvil, puedes llenarlo manualmente.`);
+    }
   }
 
   // ── MÉTODOS DEL MODAL DE QR DE PRUEBA ─────────────────────────────────────
@@ -697,6 +756,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.deleteDriverPass(found);
     } else if (currentToken) {
       this.movementsService.movementsApi.deletePass(currentToken, currentToken).subscribe();
+      if (this.activeToken() === currentToken) {
+        this.resetForm();
+      }
     }
     this.qrModalUrl.set('');
     this.qrModalToken.set('');
@@ -712,6 +774,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const passId = pass.id || pass.token;
     const passToken = pass.token || pass.id;
 
+    // Si el pase que se está eliminando es el que actualmente está cargado en caseta, limpiar el formulario
+    if (this.activeToken() === passToken || this.activeToken() === passId) {
+      this.resetForm();
+    }
+
     this.movementsService.movementsApi.deletePass(passId, passToken).subscribe({
       next: () => {
         this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
@@ -719,8 +786,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.qrModalUrl.set('');
           this.qrModalToken.set('');
         }
-        this.passActionNotice.set(`Pase #${passToken} descartado correctamente.`);
-        setTimeout(() => this.passActionNotice.set(null), 4000);
+        this.toast.info(`Pase #${passToken} descartado.`);
       },
       error: () => {
         this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
@@ -728,8 +794,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.qrModalUrl.set('');
           this.qrModalToken.set('');
         }
-        this.passActionNotice.set(`Pase #${passToken} removido.`);
-        setTimeout(() => this.passActionNotice.set(null), 4000);
+        this.toast.info(`Pase #${passToken} descartado.`);
       }
     });
   }
@@ -738,7 +803,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected openCheckOutModal(pass: any): void {
     if (!pass) return;
     if (!pass.isReadyForExit) {
-      alert('Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que el Líder de Almacén autorice y finalice la recepción (F01) antes de proceder con el Check-Out.');
+      this.toast.warning('Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que Almacén autorice y finalice la recepción antes del Check-Out.');
       return;
     }
     this.selectedCheckOutPass.set(pass);
@@ -780,15 +845,15 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.isCheckingOut.set(false);
         this.closeCheckOutModal();
         this.reloadAllData();
-        this.checkOutSuccessNotice.set(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada con éxito a las ${payload.departureTime}!`);
-        setTimeout(() => this.checkOutSuccessNotice.set(null), 6000);
+        this.toast.success(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada con éxito a las ${payload.departureTime}!`);
+        this.scrollToTop();
 
         // Abrir inmediatamente la vista de impresión del Formato F01
         this.openF01Print(res || pass);
       },
       error: (err) => {
         this.isCheckingOut.set(false);
-        alert(err?.error?.message || 'Error al procesar la salida en el servidor.');
+        this.toast.error(err?.error?.message || 'Error al procesar la salida en el servidor.');
       }
     });
   }
@@ -1106,7 +1171,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (missing.length > 0 || this.checkInForm.invalid) {
       this.checkInForm.markAllAsTouched();
       this.errorMessage.set(`⚠️ No se puede registrar. Faltan los siguientes campos obligatorios: ${missing.join(', ')}`);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.scrollToTop();
       return;
     }
 
@@ -1123,7 +1188,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
       `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
       `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtranos}, Plagas=${formVal.revIndiciosPlagas}`,
-      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.telefonoOperador || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
+      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
     ].join(' | ');
 
     const checkInData: CheckInCasetaData = {
@@ -1137,7 +1202,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       rampCode: formVal.rampCode,
       rampNumber: Number(formVal.rampNumber) || 1,
       driverName: formVal.nombreOperador,
-      driverPhone: formVal.telefonoOperador || '',
+      driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
       boxPlates: (formVal.placasCaja || '').toUpperCase(),
       sealNumbers: seals,
@@ -1157,7 +1222,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         rampNumber: Number(formVal.rampNumber) || 1,
         rampCode: formVal.rampCode,
         driverName: formVal.nombreOperador,
-        driverPhone: formVal.telefonoOperador || '',
+        driverPhone: formVal.driverPhone || '',
         tractorPlates: (formVal.placasTracto || '').toUpperCase().trim(),
         boxPlates: (formVal.placasCaja || '').toUpperCase().trim(),
         noEcoTractor: formVal.noEcoTractor,
@@ -1177,7 +1242,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           const folio = passRes?.generatedFolio || passRes?.folio || this.activeToken() || 'OK';
           this.createdFolio.set(folio);
           this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
-          this.saveSuccess.set(true);
 
           const printSnapshot = {
             ...formVal,
@@ -1188,7 +1252,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
           };
           this.lastCompletedPrintItem.set(printSnapshot);
-          this.resetFormFieldsOnly();
+          this.resetForm();
+
+          // Notificación flotante del sistema y scroll al menú superior
+          const opLabel = op === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga';
+          this.toast.success(`¡${opLabel} registrada con éxito! Folio #${folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+          this.scrollToTop();
 
           this.reloadAllData();
           this.movementsService.reloadReceptions();
@@ -1198,6 +1267,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.isSaving.set(false);
           const msg = err?.error?.message || err?.message || 'Error al completar el pase en el servidor';
           this.errorMessage.set(msg);
+          this.toast.error(msg, 4500);
+          this.scrollToTop();
         }
       });
     } else {
@@ -1208,7 +1279,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             this.createdFolio.set(outbound.folio);
             this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
-            this.saveSuccess.set(true);
 
             const printSnapshot = {
               ...formVal,
@@ -1219,7 +1289,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
               rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
             };
             this.lastCompletedPrintItem.set(printSnapshot);
-            this.resetFormFieldsOnly();
+            this.resetForm();
+
+            // Notificación flotante del sistema y scroll al menú superior
+            this.toast.success(`¡Carga / Salida registrada con éxito! Folio #${outbound.folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+            this.scrollToTop();
 
             this.reloadAllData();
             this.movementsService.reloadOutbounds();
@@ -1228,6 +1302,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             const msg = err?.error?.message || err?.message || 'Error al registrar la salida / carga en el servidor';
             this.errorMessage.set(msg);
+            this.toast.error(msg, 4500);
+            this.scrollToTop();
           }
         });
       } else {
@@ -1236,7 +1312,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             this.createdFolio.set(header.folio);
             this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
-            this.saveSuccess.set(true);
 
             const printSnapshot = {
               ...formVal,
@@ -1247,7 +1322,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
               rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
             };
             this.lastCompletedPrintItem.set(printSnapshot);
-            this.resetFormFieldsOnly();
+            this.resetForm();
+
+            // Notificación flotante del sistema y scroll al menú superior
+            this.toast.success(`¡Recepción / Descarga registrada con éxito! Folio #${header.folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+            this.scrollToTop();
 
             this.reloadAllData();
             this.movementsService.reloadReceptions();
@@ -1256,6 +1335,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             const msg = err?.error?.message || err?.message || 'Error al registrar el check-in en el servidor';
             this.errorMessage.set(msg);
+            this.toast.error(msg, 4500);
+            this.scrollToTop();
           }
         });
       }
@@ -1282,7 +1363,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       carrierLine: '',
       carrierLineCustom: '',
       nombreOperador: '',
-      telefonoOperador: '',
+      driverPhone: '',
       rampCode: '',
       rampNumber: 0,
       placasTracto: '',
@@ -1299,8 +1380,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       eppCubrebocasObs: '',
       eppChaleco: 'SI',
       eppChalecoObs: '',
-      docCartaPorte: 'SI',
-      docCartaPorteObs: '',
+      docCartaPorte: 'NO',
+      docCartaPorteObs: 'N/A - Operación de Descarga/Recepción',
       docRemision: 'SI',
       docRemisionObs: '',
       revInteriorCaja: 'SI',

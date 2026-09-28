@@ -40,7 +40,7 @@ export class ForkliftOperatorsComponent implements OnInit {
 
   // ─── Selección y Modos ──────────────────────────────────────────────────────
   protected readonly selectedOperatorId      = signal<string | null>(null);
-  protected readonly formMode                = signal<FormMode>('idle');
+  protected readonly formMode                = signal<FormMode>('create');
   protected readonly selectedOperatorForDelete = signal<ForkliftOperator | null>(null);
 
   // ─── Búsqueda y Filtros ─────────────────────────────────────────────────────
@@ -139,6 +139,7 @@ export class ForkliftOperatorsComponent implements OnInit {
       console.warn('Cargando turnos desde respaldo local:', e);
     }
 
+    this.startNewOperator();
     this.reloadOperators();
   }
 
@@ -146,9 +147,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     const orgId = this.forkliftService.getSessionOrgId();
     this.forkliftService.loadOperators(orgId).subscribe({
       next: (list) => {
-        if (list.length > 0 && !this.selectedOperatorId()) {
-          this.selectOperator(list[0]);
-        } else if (this.selectedOperatorId()) {
+        if (this.selectedOperatorId()) {
           const current = list.find((op) => op.id === this.selectedOperatorId());
           if (current) {
             this.populateForm(current);
@@ -320,11 +319,8 @@ export class ForkliftOperatorsComponent implements OnInit {
     const selected = this.selectedOperator();
     if (selected) {
       this.populateForm(selected);
-    } else if (this.filteredOperators().length > 0) {
-      this.selectOperator(this.filteredOperators()[0]);
     } else {
-      this.formMode.set('idle');
-      this.resetForm();
+      this.startNewOperator();
     }
   }
 

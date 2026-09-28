@@ -125,14 +125,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Control de Calidad',
       },
 
-      // Despacho
+      // Despacho (Redirección unificada a Salidas de Almacén)
       {
         path: 'shipping',
-        canActivate: [rbacGuard],
-        data: { module: 'shipping' },
-        loadChildren: () =>
-          import('./features/shipping/shipping.routes').then((m) => m.shippingRoutes),
-        title: '4GUARD WMS — Despacho',
+        redirectTo: 'warehouse-movements/outbound',
+        pathMatch: 'prefix',
       },
 
       // Control de Usuarios y Seguridad (Homologado)
@@ -288,16 +285,6 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Motor de Reglas de Negocio',
       },
 
-      // Divisas y Tipos de Cambio (HU-148)
-      {
-        path: 'currency-exchange',
-        canActivate: [rbacGuard],
-        data: { module: 'currency-exchange' },
-        loadChildren: () =>
-          import('./features/currency-exchange/currency-exchange.routes').then((m) => m.currencyExchangeRoutes),
-        title: '4GUARD WMS — Divisas y Tipos de Cambio',
-      },
-
       // Configuración de Alertas y Notificaciones (HU-134)
       {
         path: 'alerts-config',
@@ -306,18 +293,6 @@ export const adminRoutes: Routes = [
         loadChildren: () =>
           import('./features/alerts-config/alerts-config.routes').then((m) => m.alertsConfigRoutes),
         title: '4GUARD WMS — Configuración de Alertas y Notificaciones',
-      },
-
-      // Gestión de Licencias del WMS (HU-139)
-      {
-        path: 'licenses',
-        canActivate: [rbacGuard],
-        data: { module: 'license-management' },
-        loadChildren: () =>
-          import('./features/license-management/license-management.routes').then(
-            (m) => m.licenseManagementRoutes
-          ),
-        title: '4GUARD WMS — Licencias y Capacidades del WMS',
       },
 
       // Movimientos de Almacén (Recepción, Traspasos, Outbound)

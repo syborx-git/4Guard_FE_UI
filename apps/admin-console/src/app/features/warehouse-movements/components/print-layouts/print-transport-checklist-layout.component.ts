@@ -30,6 +30,8 @@ export interface TransportChecklistPrintData {
   // Datos del Transporte
   lineaTransporte?: string;
   nombreOperador?: string;
+  telefonoChofer?: string;
+  driverPhone?: string;
   noRampa?: string | number;
   placasTracto?: string;
   noEcoTractor?: string;
@@ -321,12 +323,12 @@ export interface TransportChecklistPrintData {
                 <span class="font-bold">Nombre:</span>
                 <span class="font-semibold ml-1">{{ data.responsableVigilanciaNombre || 'Guardia en Turno' }}</span>
               </div>
-              <div class="h-14 border-b border-dashed border-slate-400 flex items-center justify-center">
-                <div class="text-center text-[9px] text-slate-700 font-serif italic">
-                  [ Sello Digital de Caseta Autorizado ]
-                </div>
+              <div class="h-12 border-b border-dashed border-slate-400 flex items-center justify-center">
+                <span class="text-center text-[8.5px] text-slate-400 font-serif italic">
+                  (Firma autógrafa del guardia de caseta)
+                </span>
               </div>
-              <div class="text-center text-[8.5px] font-bold text-slate-600 mt-1 uppercase">Firma Vigilancia</div>
+              <div class="text-center text-[8px] font-bold text-slate-700 mt-1 uppercase">Nombre y Firma Física del Vigilante / Caseta</div>
             </td>
 
             <!-- Columna Transportista -->
@@ -335,12 +337,12 @@ export interface TransportChecklistPrintData {
                 <span class="font-bold">Nombre:</span>
                 <span class="font-semibold ml-1">{{ data.transportistaNombre || data.nombreOperador || 'Operador Chofer' }}</span>
               </div>
-              <div class="h-14 border-b border-dashed border-slate-400 flex items-center justify-center">
-                <span class="text-center text-[9px] text-slate-400 font-serif italic">
-                  (Firma autógrafa del operador)
+              <div class="h-12 border-b border-dashed border-slate-400 flex items-center justify-center">
+                <span class="text-center text-[8.5px] text-slate-400 font-serif italic">
+                  (Firma autógrafa del chofer transportista)
                 </span>
               </div>
-              <div class="text-center text-[8.5px] font-bold text-slate-600 mt-1 uppercase">Firma Transportista</div>
+              <div class="text-center text-[8px] font-bold text-slate-700 mt-1 uppercase">Nombre y Firma del Transportista</div>
             </td>
           </tr>
         </tbody>
@@ -355,7 +357,18 @@ export interface TransportChecklistPrintData {
     </div>
   `,
   styles: [`
+    @page {
+      size: letter portrait;
+      margin: 8mm;
+    }
     @media print {
+      body, html {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       .f01-print-sheet {
         width: 100% !important;
         max-width: 100% !important;
@@ -363,9 +376,16 @@ export interface TransportChecklistPrintData {
         margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
       }
       table {
-        page-break-inside: avoid;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      tr, td, th {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
     }
   `]

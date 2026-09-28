@@ -161,6 +161,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
       : (rec.checkIn.sealNumber ? [rec.checkIn.sealNumber] : []);
     this.editCasetaSeals.set(seals);
     this.tempEditSealInput.set('');
+    const rNum = rec.checkIn.rampNumber || 1;
+    const matchedRamp = this.ramps().find((rm) => rm.rampNumber === rNum);
+    this.editRampSearchQuery.set(matchedRamp ? matchedRamp.name : `Rampa ${rNum}`);
+    this.isEditRampDropdownOpen.set(false);
     this.showEditCasetaModal.set(true);
   }
 
@@ -292,6 +296,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.toast.info(`Rampa ${ramp.rampNumber} seleccionada.`);
       } else if (this.formMode() === 'detail' && this.selectedReception()?.status === 'REGISTERED') {
         this.altaForm.patchValue({ rampNumber: ramp.rampNumber });
+        this.rampSearchQuery.set(ramp.name || `Rampa ${ramp.rampNumber}`);
         this.toast.info(`Rampa ${ramp.rampNumber} asignada al Folio #${this.selectedReception()?.folio}`);
       }
       this.showDockMapModal.set(false);
@@ -416,7 +421,39 @@ export class ReceivingSubmoduleComponent implements OnInit {
     return list.filter(
       (op) =>
         (op.name && op.name.toLowerCase().includes(q)) ||
-        (op.code && op.code.toLowerCase().includes(q))
+        (op.code && op.code.toLowerCase().includes(q)) ||
+        (op.jobTitle && op.jobTitle.toLowerCase().includes(q)) ||
+        (op.shift && op.shift.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE RAMPA DE RECEPCIÓN ──
+  rampSearchQuery = signal<string>('');
+  isRampDropdownOpen = signal<boolean>(false);
+  filteredRamps = computed(() => {
+    const q = this.rampSearchQuery().toLowerCase().trim();
+    const list = this.ramps();
+    if (!q) return list;
+    return list.filter(
+      (rm) =>
+        (rm.name && rm.name.toLowerCase().includes(q)) ||
+        (rm.code && rm.code.toLowerCase().includes(q)) ||
+        String(rm.rampNumber).includes(q)
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE RAMPA EN MODAL EDICIÓN CASETA ──
+  editRampSearchQuery = signal<string>('');
+  isEditRampDropdownOpen = signal<boolean>(false);
+  filteredEditRamps = computed(() => {
+    const q = this.editRampSearchQuery().toLowerCase().trim();
+    const list = this.ramps();
+    if (!q) return list;
+    return list.filter(
+      (rm) =>
+        (rm.name && rm.name.toLowerCase().includes(q)) ||
+        (rm.code && rm.code.toLowerCase().includes(q)) ||
+        String(rm.rampNumber).includes(q)
     );
   });
 
@@ -531,12 +568,20 @@ export class ReceivingSubmoduleComponent implements OnInit {
     docNumber: [''],
   });
 
-  // ── ESTADO DE MODAL LÍDER E IMPRESIÓN ──
+  // ── ESTADO DE MODAL LÍDER, VERIFICACIÓN DE UAS E IMPRESIÓN ──
   leaderModalTitle = signal('');
   leaderAction = signal<'COMPLETE' | 'CANCEL' | null>(null);
   cancellationJustification = signal('');
   printType = signal<'RECEPTION' | 'CANCELLATION' | null>(null);
   selectedPrintReception = signal<ReceptionHeader | null>(null);
+
+  // Selector y asignación reactiva de Bahía
+  selectedBayName = signal<string>('');
+
+  // Verificación de UAs escaneadas
+  showUaVerificationModal = signal(false);
+  verifiedPalletIds = signal<Set<string>>(new Set());
+  verifiedPalletCount = computed(() => this.verifiedPalletIds().size);
 
   // ── COMPUTADOS DEL WORKBENCH ──
   kpiTotal = computed(() => this.movementsService.receptions().length);
@@ -545,20 +590,100 @@ export class ReceivingSubmoduleComponent implements OnInit {
   kpiCompleted = computed(() => this.movementsService.receptions().filter((r) => r.status === 'COMPLETED').length);
   kpiCancelled = computed(() => this.movementsService.receptions().filter((r) => r.status === 'CANCELLED').length);
 
+  // Filtros Multi-Estado Píldoras
+  activeStatusFilters = signal<string[]>([]);
+
+  toggleStatusFilter(status: string): void {
+    if (status === 'ALL') {
+      this.activeStatusFilters.set([]);
+      this.statusFilter.set('ALL');
+      return;
+    }
+    const current = this.activeStatusFilters();
+    if (current.includes(status)) {
+      const updated = current.filter(s => s !== status);
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : (updated.length === 0 ? 'ALL' : 'MULTI'));
+    } else {
+      const updated = [...current, status];
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : 'MULTI');
+    }
+  }
+
+  isStatusFilterActive(status: string): boolean {
+    if (status === 'ALL') return this.activeStatusFilters().length === 0;
+    return this.activeStatusFilters().includes(status);
+  }
+
+  getReceptionPhaseInfo(status: string): {
+    phaseNumber: number;
+    phaseLabel: string;
+    percentage: number;
+    colorClass: string;
+    progressWidth: string;
+  } {
+    switch (status) {
+      case 'REGISTERED':
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Arribo', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+      case 'ASSIGNED':
+        return { phaseNumber: 2, phaseLabel: '2. En Andén · Asignada', percentage: 40, colorClass: 'fill--blue', progressWidth: '40%' };
+      case 'IN_PROGRESS':
+        return { phaseNumber: 3, phaseLabel: '3. En Descarga Activa', percentage: 60, colorClass: 'fill--cyan', progressWidth: '60%' };
+      case 'DISCHARGED':
+        return { phaseNumber: 4, phaseLabel: '4. Por Auditar · Concluida', percentage: 80, colorClass: 'fill--purple', progressWidth: '80%' };
+      case 'COMPLETED':
+        return { phaseNumber: 5, phaseLabel: '5. Verificado · En Stock', percentage: 100, colorClass: 'fill--emerald', progressWidth: '100%' };
+      case 'CANCELLED':
+        return { phaseNumber: 0, phaseLabel: 'Cancelada / Revocada', percentage: 100, colorClass: 'fill--rose', progressWidth: '100%' };
+      default:
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Arribo', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+    }
+  }
+
+  formatDateDisplay(dateStr?: string, timeStr?: string): string {
+    let d = (dateStr || '').replace(/,+$/, '').trim();
+    if (d.includes('T')) d = d.slice(0, 10);
+    if (!d) d = '25/9/2026';
+    const t = (timeStr || '').replace(/^,+/, '').trim();
+    return t ? `${d} · ${t}` : d;
+  }
+
+  closeReceptionDetail(): void {
+    this.selectedReception.set(null);
+    this.formMode.set('idle');
+  }
+
   filteredReceptions = computed(() => {
     const list = this.movementsService.receptions();
     const q = this.searchQuery().toLowerCase().trim();
+    const multi = this.activeStatusFilters();
     const st = this.statusFilter();
 
     return list.filter((r) => {
-      const matchStatus = st === 'ALL' || r.status === st;
+      let matchStatus = true;
+      if (multi.length > 0) {
+        matchStatus = multi.some((m) => {
+          if (m === 'IN_PROGRESS') return r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
+          return r.status === m;
+        });
+      } else if (st !== 'ALL') {
+        if (st === 'IN_PROGRESS') {
+          matchStatus = r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
+        } else {
+          matchStatus = r.status === st;
+        }
+      }
+
       const matchQuery =
         !q ||
         r.folio.toLowerCase().includes(q) ||
-        r.checkIn.docNumber.toLowerCase().includes(q) ||
-        r.checkIn.client.toLowerCase().includes(q) ||
-        r.productName.toLowerCase().includes(q) ||
-        r.productId.toLowerCase().includes(q);
+        (r.checkIn?.docNumber && r.checkIn.docNumber.toLowerCase().includes(q)) ||
+        (r.checkIn?.client && r.checkIn.client.toLowerCase().includes(q)) ||
+        (r.checkIn?.driverName && r.checkIn.driverName.toLowerCase().includes(q)) ||
+        (r.checkIn?.sealNumber && r.checkIn.sealNumber.toLowerCase().includes(q)) ||
+        (r.productName && r.productName.toLowerCase().includes(q)) ||
+        (r.productId && r.productId.toLowerCase().includes(q));
 
       return matchStatus && matchQuery;
     });
@@ -764,11 +889,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
       ? ''
       : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
 
+    const bayLoc = rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1';
+    this.selectedBayName.set(bayLoc);
+
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
       elaborationDate: rec.elaborationDate || rec.checkIn?.elaborationDate || '',
       expirationDate: rec.expirationDate || rec.checkIn?.expirationDate || '',
-      storageLocation: rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1',
+      storageLocation: bayLoc,
       storageLocationId: rec.storageLocationId || '',
       forkliftOperator: defaultOperator,
       rampNumber: rec.checkIn?.rampNumber || 1,
@@ -1584,10 +1712,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   onBaySelected(res: BaySelectionResult): void {
+    this.selectedBayName.set(res.locationCode);
     this.altaForm.patchValue({
       storageLocation: res.locationCode,
       storageLocationId: res.locationId || res.locationCode,
     });
+    this.selectedReception.update((r) =>
+      r ? { ...r, storageLocation: res.locationCode, storageLocationId: res.locationId || res.locationCode } : null
+    );
     this.showBaySelectorModal.set(false);
     if (res.isOverride) {
       this.toast.info(`Bahía ${res.locationCode} asignada con Anulación de Administrador.`);
@@ -2036,6 +2168,110 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.isSupplierDropdownOpen.set(false);
   }
 
+  // ── MANEJADORES DE AUTOCOMPLETE RAMPA ──
+  onRampInput(value: string): void {
+    this.rampSearchQuery.set(value);
+    this.isRampDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ rampNumber: '' as any });
+      return;
+    }
+
+    const exact = this.ramps().find(
+      (rm) => rm.name.toLowerCase() === val.toLowerCase() || String(rm.rampNumber) === val || rm.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact && !this.isRampBusy(exact.rampNumber, this.selectedReception()?.folio)) {
+      this.altaForm.patchValue({ rampNumber: exact.rampNumber });
+    }
+  }
+
+  selectRamp(rm: RampItem): void {
+    if (this.isRampBusy(rm.rampNumber, this.selectedReception()?.folio)) {
+      this.toast.warning(`La ${rm.name} se encuentra ocupada por otra operación.`);
+      return;
+    }
+    this.altaForm.patchValue({ rampNumber: rm.rampNumber });
+    this.rampSearchQuery.set(rm.name);
+    this.isRampDropdownOpen.set(false);
+  }
+
+  clearRampSelection(): void {
+    this.altaForm.patchValue({ rampNumber: '' as any });
+    this.rampSearchQuery.set('');
+    this.isRampDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE RAMPA EN MODAL EDICIÓN CASETA ──
+  onEditRampInput(value: string): void {
+    this.editRampSearchQuery.set(value);
+    this.isEditRampDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.editCasetaForm.patchValue({ rampNumber: '' as any });
+      return;
+    }
+
+    const exact = this.ramps().find(
+      (rm) => rm.name.toLowerCase() === val.toLowerCase() || String(rm.rampNumber) === val || rm.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact && !this.isRampBusy(exact.rampNumber, this.selectedReception()?.folio)) {
+      this.editCasetaForm.patchValue({ rampNumber: exact.rampNumber });
+    }
+  }
+
+  selectEditRamp(rm: RampItem): void {
+    if (this.isRampBusy(rm.rampNumber, this.selectedReception()?.folio)) {
+      this.toast.warning(`La ${rm.name} se encuentra ocupada por otra operación.`);
+      return;
+    }
+    this.editCasetaForm.patchValue({ rampNumber: rm.rampNumber });
+    this.editRampSearchQuery.set(rm.name);
+    this.isEditRampDropdownOpen.set(false);
+  }
+
+  clearEditRampSelection(): void {
+    this.editCasetaForm.patchValue({ rampNumber: '' as any });
+    this.editRampSearchQuery.set('');
+    this.isEditRampDropdownOpen.set(false);
+  }
+
+  getRampBadgeInfo(rm: RampItem, currentFolio?: string | number): { label: string; bgClass: string; textClass: string; borderClass: string } {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return {
+        label: 'LIBRE',
+        bgClass: 'bg-emerald-100',
+        textClass: 'text-emerald-900',
+        borderClass: 'border-emerald-300'
+      };
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return {
+        label: 'ASIGNADA',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-950',
+        borderClass: 'border-blue-300'
+      };
+    }
+    if (occ.status === 'OCCUPIED_INBOUND') {
+      return {
+        label: `OCUPADA (#${occ.operationFolio})`,
+        bgClass: 'bg-rose-100',
+        textClass: 'text-rose-900',
+        borderClass: 'border-rose-300'
+      };
+    }
+    return {
+      label: `SALIDA (#${occ.operationFolio})`,
+      bgClass: 'bg-amber-100',
+      textClass: 'text-amber-900',
+      borderClass: 'border-amber-300'
+    };
+  }
+
   // ── MANEJADORES DE AUTOCOMPLETE TIPO DE TARIMA ──
   onPalletTypeInput(value: string): void {
     this.palletTypeSearchQuery.set(value);
@@ -2295,5 +2531,61 @@ export class ReceivingSubmoduleComponent implements OnInit {
   closePrintModal(): void {
     this.showPrintModal.set(false);
     this.selectedPrintReception.set(null);
+  }
+
+  // ── AUDITORÍA Y VERIFICACIÓN DE UAS (HALLAZGO 1) ──
+  onVerifyUa(): void {
+    this.openUaVerificationModal();
+  }
+
+  openUaVerificationModal(): void {
+    const rec = this.selectedReception();
+    if (this.palletStream().length === 0 && rec?.pallets && rec.pallets.length > 0) {
+      this.palletStream.set([...rec.pallets]);
+    }
+    this.showUaVerificationModal.set(true);
+  }
+
+  closeUaVerificationModal(): void {
+    this.showUaVerificationModal.set(false);
+  }
+
+  togglePalletVerification(palletId: string): void {
+    this.toggleVerifyPallet(palletId);
+  }
+
+  toggleVerifyPallet(palletId: string): void {
+    this.verifiedPalletIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(palletId)) {
+        next.delete(palletId);
+      } else {
+        next.add(palletId);
+      }
+      return next;
+    });
+  }
+
+  markAllPalletsVerified(mark: boolean = true): void {
+    if (mark) {
+      const allIds = new Set(this.palletStream().map((p) => p.id));
+      this.verifiedPalletIds.set(allIds);
+      this.toast.success('Todas las UAs marcadas como conformes y verificadas.');
+    } else {
+      this.verifiedPalletIds.set(new Set());
+      this.toast.info('Verificación de UAs restablecida.');
+    }
+  }
+
+  confirmUaVerification(): void {
+    const total = this.palletStream().length;
+    const verified = this.verifiedPalletCount();
+    this.toast.success(`Auditoría de UAs confirmada: ${verified}/${total} tarimas conformes.`);
+    this.closeUaVerificationModal();
+  }
+
+  getPalletTypeLabel(type?: string): string {
+    if (!type) return 'Madera Estándar';
+    return (PALLET_TYPE_LABELS as Record<string, string>)[type] || type;
   }
 }

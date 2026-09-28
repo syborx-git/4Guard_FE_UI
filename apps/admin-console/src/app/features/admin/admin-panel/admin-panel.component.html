@@ -454,9 +454,6 @@
           <li [class.active]="selectedModule() === 'suppliers'" (click)="selectModule('suppliers')">
             <span class="material-symbols-outlined">storefront</span> Proveedores
           </li>
-          <li (click)="selectModule('currency-exchange')">
-            <span class="material-symbols-outlined">currency_exchange</span> Divisas y Cambio
-          </li>
         </ul>
       </div>
 
@@ -474,9 +471,6 @@
           </li>
           <li (click)="selectModule('sessions')">
             <span class="material-symbols-outlined">group</span> Sesiones Activas
-          </li>
-          <li (click)="selectModule('licenses')">
-            <span class="material-symbols-outlined">workspace_premium</span> Gestión de Licencias
           </li>
         </ul>
       </div>
@@ -1201,7 +1195,7 @@
             </select>
           </div>
           <div class="field-group col-12">
-            <label class="field-group__label">Configuración JSONB del Tenant</label>
+            <label class="field-group__label">Configuración de Organización</label>
             <textarea class="field-group__textarea" [(ngModel)]="formModel.settings" rows="4"></textarea>
           </div>
         </div>

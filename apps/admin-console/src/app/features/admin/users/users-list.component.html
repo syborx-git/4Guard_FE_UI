@@ -28,7 +28,7 @@
             <span class="users-header__eyebrow-sep">·</span>
             <span>Seguridad y Control</span>
           </div>
-          <h1 class="users-header__title">Usuarios</h1>
+          <h1 class="users-header__title">Control de Usuarios y Seguridad</h1>
           <p class="users-header__subtitle">
             Administra los accesos, roles, permisos y la auditoría de operarios y supervisores del WMS
           </p>
@@ -305,27 +305,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="users-detail" aria-label="Detalle del usuario">
 
-      @if (formMode() === 'idle') {
-        <div class="users-empty-state">
-          <div class="users-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined users-empty-state__icon">manage_accounts</span>
-          </div>
-          <h2 class="users-empty-state__title">Sin selección</h2>
-          <p class="users-empty-state__desc">
-            Selecciona un usuario de la lista para consultar su información y auditoría,
-            o registra un nuevo usuario en el sistema.
-          </p>
-          <button
-            class="users-btn users-btn--primary"
-            type="button"
-            (click)="startNewUser()"
-            aria-label="Registrar nuevo usuario">
-            <span class="material-symbols-outlined">person_add</span>
-            Nuevo usuario
-          </button>
-        </div>
-      } @else {
-        <div class="users-form-container">
+      <div class="users-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="users-form-header">
@@ -503,18 +483,6 @@
                   </select>
                 </div>
 
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
-                  <select
-                    id="status"
-                    class="fg-select"
-                    formControlName="status"
-                    aria-required="true">
-                    <option value="ACTIVE">Activo</option>
-                    <option value="INACTIVE">Inactivo</option>
-                  </select>
-                </div>
-
               </div>
             </fieldset>
 
@@ -566,51 +534,59 @@
                 </div>
 
                 <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA (BE GET /api/v1/users/{id}/audit) ── -->
-                <div class="users-timeline-preview">
-                  <div class="users-timeline-preview__header">
-                    <span class="material-symbols-outlined">history</span>
-                    <span>Historial de Cambios y Auditoría</span>
+                <div class="carriers-timeline-preview">
+                  <div class="carriers-timeline-preview__header">
+                    <div class="carriers-timeline-preview__title">
+                      <span class="material-symbols-outlined text-base">timeline</span>
+                      <span>Línea de Tiempo de Auditoría</span>
+                    </div>
+                    <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
                   </div>
 
                   @if (isLoadingAudit()) {
-                    <div class="users-timeline-preview__loading">
-                      <span class="material-symbols-outlined spin">sync</span>
-                      <span>Cargando historial de auditoría desde el servidor…</span>
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4 flex items-center justify-center gap-2">
+                      <span class="material-symbols-outlined animate-spin text-sm">sync</span>
+                      <span>Cargando bitácora de auditoría...</span>
                     </div>
                   } @else if (auditEntries().length === 0) {
-                    <p class="users-timeline-preview__empty">
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
                       No se encontraron registros de auditoría para este usuario.
-                    </p>
+                    </div>
                   } @else {
-                    <div class="users-timeline-preview__nodes">
-                      @for (entry of auditEntries(); track entry.logId; let last = $last) {
-                        <div class="users-tl-node {{ getAuditColorClass(entry.action) }}">
-                          <div class="users-tl-node__dot">
-                            <span class="material-symbols-outlined">{{ getAuditIcon(entry.action) }}</span>
+                    <div class="carriers-timeline-preview__nodes">
+                      @for (entry of auditEntries(); track entry.logId || $index; let isLast = $last) {
+                        <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
+                          <div class="carriers-tl-node__dot">
+                            <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
                           </div>
-                          <div class="users-tl-node__line" [class.users-tl-node__line--last]="last"></div>
-                          <div class="users-tl-node__content">
-                            <div class="users-tl-node__header">
-                              <span class="users-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
-                              <span class="users-tl-node__tag">{{ entry.action }}</span>
+                          @if (!isLast) {
+                            <div class="carriers-tl-node__line"></div>
+                          }
+                          <div class="carriers-tl-node__content">
+                            <div class="carriers-tl-node__header">
+                              <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
+                              <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
                             </div>
 
                             @if (entry.details && entry.details.length > 0) {
-                              <div class="users-tl-node__diffs">
-                                @for (det of entry.details; track det.fieldName) {
-                                  <div class="users-tl-diff">
-                                    <span class="users-tl-diff__field">{{ det.fieldName }}:</span>
-                                    <span class="users-tl-diff__old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
-                                    <span class="material-symbols-outlined users-tl-diff__arrow">arrow_forward</span>
-                                    <span class="users-tl-diff__new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                              <div class="carriers-tl-node__diffs">
+                                @for (d of entry.details; track d.fieldName) {
+                                  <div class="carriers-tl-diff">
+                                    <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                    @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                      <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                      <span class="carriers-tl-diff__arrow">➔</span>
+                                    }
+                                    <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                                   </div>
                                 }
                               </div>
                             }
 
-                            <div class="users-tl-node__meta">
-                              Ejecutado por <strong>&#64;{{ entry.username }}</strong> · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}
-                            </div>
+                            <span class="carriers-tl-node__meta">
+                              <span class="material-symbols-outlined text-[13px]">schedule</span>
+                              <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                            </span>
                           </div>
                         </div>
                       }
@@ -659,9 +635,15 @@
 
                 <button
                   class="users-btn users-btn--primary"
-                  type="submit">
-                  <span class="material-symbols-outlined">save</span>
-                  Guardar Cambios
+                  type="submit"
+                  [disabled]="isSaving()">
+                  @if (isSaving()) {
+                    <span class="material-symbols-outlined animate-spin">progress_activity</span>
+                    Guardando...
+                  } @else {
+                    <span class="material-symbols-outlined">save</span>
+                    Guardar Cambios
+                  }
                 </button>
               </div>
 
@@ -670,7 +652,6 @@
           </form>
 
         </div>
-      }
 
     </main>
 

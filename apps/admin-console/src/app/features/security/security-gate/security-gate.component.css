@@ -870,6 +870,12 @@ h1, h2, h3, h4, h5, h6 {
   padding: 1.75rem;
 }
 
+.modal-card--qr-compact {
+  max-width: 27rem !important;
+  padding: 1.15rem 1.35rem !important;
+  border-radius: 22px !important;
+}
+
 .modal-card h1,
 .modal-card h2,
 .modal-card h3,
@@ -1209,4 +1215,374 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--c-danger-bdr);
   color: var(--text-primary);
   border-left: 4px solid var(--c-danger);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   13. TARJETA DE CHOFERES EN ESPERA & PASES QR (SINCRONIZACIÓN LIGHT / DARK)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.driver-pass-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.driver-pass-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-border);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-card-hover);
+}
+
+.driver-pass-card__top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px;
+}
+
+.driver-pass-card__top-bar--descarga {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+}
+
+.driver-pass-card__top-bar--carga {
+  background: linear-gradient(90deg, #d97706, #f59e0b);
+}
+
+.driver-pass-card__top-bar--submitted {
+  background: linear-gradient(90deg, #059669, #10b981);
+}
+
+/* Badge de Operación (CARGA / DESCARGA) */
+.pass-op-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+.pass-op-badge--descarga {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+:host-context(.dark) .pass-op-badge--descarga,
+:host-context(.theme-dark) .pass-op-badge--descarga {
+  background: rgba(37, 99, 235, 0.22);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.pass-op-badge--carga {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+:host-context(.dark) .pass-op-badge--carga,
+:host-context(.theme-dark) .pass-op-badge--carga {
+  background: rgba(217, 119, 6, 0.22);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+/* Token Monospace Pill */
+.pass-token-pill {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  user-select: all;
+}
+
+:host-context(.dark) .pass-token-pill,
+:host-context(.theme-dark) .pass-token-pill {
+  background: rgba(30, 41, 59, 0.85);
+  color: #e2e8f0;
+  border-color: rgba(71, 85, 105, 0.65);
+}
+
+/* Badge de Estado del Pase */
+.pass-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-badge);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pass-status-pill--active {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+:host-context(.dark) .pass-status-pill--active,
+:host-context(.theme-dark) .pass-status-pill--active {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.pass-status-pill--submitted {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+:host-context(.dark) .pass-status-pill--submitted,
+:host-context(.theme-dark) .pass-status-pill--submitted {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+/* Encabezado y Chofer */
+.pass-driver-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  line-height: 1.25;
+}
+
+:host-context(.dark) .pass-driver-title,
+:host-context(.theme-dark) .pass-driver-title {
+  color: #f8fafc;
+}
+
+.pass-driver-desc {
+  font-size: 0.7rem;
+  color: #475569;
+  margin-top: 0.2rem;
+  line-height: 1.25;
+}
+
+:host-context(.dark) .pass-driver-desc,
+:host-context(.theme-dark) .pass-driver-desc {
+  color: #94a3b8;
+}
+
+.pass-driver-desc--submitted {
+  color: #047857 !important;
+  font-weight: 700;
+}
+
+:host-context(.dark) .pass-driver-desc--submitted,
+:host-context(.theme-dark) .pass-driver-desc--submitted {
+  color: #34d399 !important;
+}
+
+/* Micro Grid de Datos (Placas / Línea de Transporte) */
+.pass-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+:host-context(.dark) .pass-meta-grid,
+:host-context(.theme-dark) .pass-meta-grid {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(51, 65, 85, 0.55);
+}
+
+.pass-meta-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pass-meta-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+:host-context(.dark) .pass-meta-label,
+:host-context(.theme-dark) .pass-meta-label {
+  color: #94a3b8;
+}
+
+.pass-meta-val {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host-context(.dark) .pass-meta-val,
+:host-context(.theme-dark) .pass-meta-val {
+  color: #f1f5f9;
+}
+
+.pass-meta-val--mono {
+  font-family: var(--font-mono);
+}
+
+/* Botones de Acción de Tarjeta */
+.pass-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.pass-btn-qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-btn);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pass-btn-qr:hover {
+  background: #fef3c7;
+  transform: translateY(-1px);
+}
+
+:host-context(.dark) .pass-btn-qr,
+:host-context(.theme-dark) .pass-btn-qr {
+  background: rgba(217, 119, 6, 0.18);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+
+:host-context(.dark) .pass-btn-qr:hover,
+:host-context(.theme-dark) .pass-btn-qr:hover {
+  background: rgba(217, 119, 6, 0.28);
+}
+
+.pass-btn-load {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.28);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pass-btn-load:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.38);
+}
+
+.pass-btn-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-btn);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pass-btn-del:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+:host-context(.dark) .pass-btn-del,
+:host-context(.theme-dark) .pass-btn-del {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.30);
+  color: #fca5a5;
+}
+
+:host-context(.dark) .pass-btn-del:hover,
+:host-context(.theme-dark) .pass-btn-del:hover {
+  background: rgba(239, 68, 68, 0.26);
+}
+
+/* Empty State & Notificaciones */
+.pass-empty-state {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+}
+
+:host-context(.dark) .pass-empty-state,
+:host-context(.theme-dark) .pass-empty-state {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(71, 85, 105, 0.6);
+}
+
+.pass-notice-banner {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+:host-context(.dark) .pass-notice-banner,
+:host-context(.theme-dark) .pass-notice-banner {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
 }
