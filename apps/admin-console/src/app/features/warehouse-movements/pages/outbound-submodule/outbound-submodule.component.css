@@ -4991,6 +4991,131 @@ input[type="number"] {
   color: #fbbf24;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   MODAL DE ASIGNACIÓN DE TARIMAS (FEFO) - 100% HOMOLOGADO LIGHT / DARK
+   ══════════════════════════════════════════════════════════════════ */
+.pallet-picker-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+:host-context(.dark) .pallet-picker-card,
+:host-context(.theme-dark) .pallet-picker-card {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: rgba(51, 65, 85, 0.7) !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+.pallet-picker-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+:host-context(.dark) .pallet-picker-header,
+:host-context(.theme-dark) .pallet-picker-header {
+  background: #0f172a !important;
+  border-bottom-color: rgba(51, 65, 85, 0.7) !important;
+}
+
+.pallet-picker-search-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.875rem !important;
+}
+
+:host-context(.dark) .pallet-picker-search-box,
+:host-context(.theme-dark) .pallet-picker-search-box {
+  background: rgba(30, 41, 59, 0.5) !important;
+  border-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+.pallet-picker-chip {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease;
+}
+
+.pallet-picker-chip:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.pallet-picker-chip--active {
+  background: #fef3c7 !important;
+  color: #78350f !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2) !important;
+}
+
+:host-context(.dark) .pallet-picker-chip,
+:host-context(.theme-dark) .pallet-picker-chip {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+:host-context(.dark) .pallet-picker-chip--active,
+:host-context(.theme-dark) .pallet-picker-chip--active {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+.pallet-picker-manifest-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.875rem !important;
+}
+
+:host-context(.dark) .pallet-picker-manifest-box,
+:host-context(.theme-dark) .pallet-picker-manifest-box {
+  background: rgba(30, 41, 59, 0.5) !important;
+  border-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+.pallet-picker-manifest-empty {
+  background: #ffffff !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+:host-context(.dark) .pallet-picker-manifest-empty,
+:host-context(.theme-dark) .pallet-picker-manifest-empty {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-color: rgba(51, 65, 85, 0.6) !important;
+  color: #94a3b8 !important;
+}
+
+.pallet-picker-manifest-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+:host-context(.dark) .pallet-picker-manifest-item,
+:host-context(.theme-dark) .pallet-picker-manifest-item {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.pallet-picker-footer {
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+:host-context(.dark) .pallet-picker-footer,
+:host-context(.theme-dark) .pallet-picker-footer {
+  background: #0f172a !important;
+  border-top-color: rgba(51, 65, 85, 0.7) !important;
+}
+
 
 
 

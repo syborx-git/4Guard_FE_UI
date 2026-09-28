@@ -3644,25 +3644,25 @@
        ════════════════════════════════════════════════════════════════ -->
   @if (showPalletPickerModal() && selectedOutbound()) {
     <div class="modal-overlay p-3 sm:p-4 animate-fade-in" (click)="closePalletPickerModal()">
-      <div class="modal-card max-w-5xl w-full max-h-[92vh] flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="pallet-picker-card max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden" (click)="$event.stopPropagation()">
         
         <!-- Header del Modal -->
-        <div class="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
+        <div class="pallet-picker-header flex items-center justify-between p-4 sm:p-5 shrink-0">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 text-amber-700 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
-              <span class="material-symbols-outlined text-2xl">pallet</span>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+              <span class="material-symbols-outlined text-2xl font-bold">pallet</span>
             </div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="font-black text-base text-slate-950 dark:text-slate-100 uppercase tracking-wide">
+                <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                   Asignación de Tarimas e Inventario (FEFO)
                 </h3>
-                <span class="font-mono text-xs font-black text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-700">
+                <span class="font-mono text-xs font-black text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-700">
                   {{ selectedOutbound()!.folio }}
                 </span>
               </div>
-              <p class="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                Cliente: <strong class="text-slate-900 dark:text-slate-200">{{ selectedOutbound()!.clientName }}</strong> · Destino: <strong class="text-slate-900 dark:text-slate-200">{{ selectedOutbound()!.destinationName || 'Pendiente' }}</strong> · Rampa: <strong class="text-slate-900 dark:text-slate-200">{{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Sin asignar' }}</strong>
+              <p class="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+                Cliente: <strong class="text-slate-900 dark:text-white">{{ selectedOutbound()!.clientName }}</strong> · Destino: <strong class="text-slate-900 dark:text-white">{{ selectedOutbound()!.destinationName || 'Pendiente' }}</strong> · Rampa: <strong class="text-slate-900 dark:text-white">{{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Sin asignar' }}</strong>
               </p>
             </div>
           </div>
@@ -3677,60 +3677,60 @@
         </div>
 
         <!-- Cuerpo del Modal (Scrollable) -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-white dark:bg-slate-900">
 
           <!-- 1. Buscador Predictivo de SKU y Escáner de UA -->
-          <div class="relative bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+          <div class="pallet-picker-search-box relative p-3.5 space-y-2.5">
             <div class="flex items-center justify-between flex-wrap gap-1">
-              <label class="outbound-field-label">
+              <label class="outbound-field-label !mb-0 font-extrabold text-slate-900 dark:text-slate-100">
                 <span>Buscar por SKU, Nombre, Código UA, Bahía, Lote o Escanear con Pistola</span>
                 <span class="req">*</span>
               </label>
-              <span class="text-[11px] font-medium text-slate-500">
+              <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 {{ availableCatalogSkus().length }} productos disponibles · {{ inStockSkusCount() }} con stock
               </span>
             </div>
 
             <!-- Modos de Búsqueda y Escaneo Rápido -->
             <div class="flex items-center gap-1.5 flex-wrap pb-0.5">
-              <span class="text-[10px] font-bold text-slate-500 mr-1">Filtrar por:</span>
+              <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mr-1">Filtrar por:</span>
               <button
                 type="button"
                 (click)="setPalletSearchMode('ALL')"
-                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
-                [ngClass]="palletSearchMode() === 'ALL' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'ALL'"
               >
                 🌐 Todo
               </button>
               <button
                 type="button"
                 (click)="setPalletSearchMode('SKU')"
-                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
-                [ngClass]="palletSearchMode() === 'SKU' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'SKU'"
               >
                 🏷️ Producto / SKU
               </button>
               <button
                 type="button"
                 (click)="setPalletSearchMode('UA')"
-                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
-                [ngClass]="palletSearchMode() === 'UA' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'UA'"
               >
                 📦 Código UA / SSCC
               </button>
               <button
                 type="button"
                 (click)="setPalletSearchMode('LOCATION')"
-                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
-                [ngClass]="palletSearchMode() === 'LOCATION' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'LOCATION'"
               >
                 📍 Bahía / Ubicación
               </button>
               <button
                 type="button"
                 (click)="setPalletSearchMode('LOT')"
-                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
-                [ngClass]="palletSearchMode() === 'LOT' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'LOT'"
               >
                 ⏳ Lote / Caducidad
               </button>
@@ -3744,7 +3744,7 @@
                 (focus)="onSkuInputFocus()"
                 (keydown.enter)="handleScannerOrSearchSubmit()"
                 placeholder="Escribe código de producto, nombre, bahía (ej. A-01), lote o escanea código de barras/UA con pistola..."
-                class="fg-input font-bold w-full pr-10 text-xs"
+                class="fg-input font-bold w-full pr-10 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 autocomplete="off"
               />
               @if (skuSearchQuery() || selectedSkuCode()) {
@@ -4029,15 +4029,15 @@
           }
 
           <!-- 3. Manifiesto Acumulativo de Despacho (Dispatch Basket) -->
-          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4 space-y-3">
-            <div class="flex items-center justify-between">
+          <div class="pallet-picker-manifest-box p-4 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-amber-600">shopping_cart_checkout</span>
                 <h4 class="font-black text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                   Manifiesto Acumulativo de Despacho
                 </h4>
               </div>
-              <div class="flex items-center gap-2 text-xs font-bold font-mono text-amber-700 dark:text-amber-400">
+              <div class="flex items-center gap-2 text-xs font-bold font-mono text-amber-800 dark:text-amber-300">
                 <span>{{ totalSelectedPallets() }} Tarima(s)</span>
                 <span>·</span>
                 <span>{{ totalSelectedPieces() | number }} Piezas</span>
@@ -4047,23 +4047,24 @@
             </div>
 
             @if (selectedPalletItems().length === 0) {
-              <div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-white/60 dark:bg-slate-900/60">
-                <span class="material-symbols-outlined text-2xl text-slate-400 block mb-1">inventory_2</span>
-                <span>No hay tarimas seleccionadas todavía. Selecciona un producto arriba y agrega tarimas o aplica la regla FEFO.</span>
+              <div class="pallet-picker-manifest-empty p-6 text-center text-xs rounded-xl flex flex-col items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-3xl text-slate-400">inventory_2</span>
+                <span class="font-bold text-slate-700 dark:text-slate-300">No hay tarimas seleccionadas todavía.</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">Selecciona un producto arriba y agrega tarimas o aplica la regla FEFO.</span>
               </div>
             } @else {
               <div class="space-y-2 max-h-52 overflow-y-auto">
                 @for (group of manifestGroupedBySku(); track group.skuCode) {
-                  <div class="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-xs">
+                  <div class="pallet-picker-manifest-item p-2.5 rounded-lg flex items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-900 font-bold text-[10px] flex items-center justify-center shrink-0">
+                      <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-950 font-bold text-[10px] flex items-center justify-center shrink-0 border border-amber-300">
                         {{ group.totalPallets }}T
                       </div>
                       <div class="min-w-0 flex-1">
                         <div class="font-extrabold text-slate-900 dark:text-slate-100 truncate">
                           {{ group.productName }}
                         </div>
-                        <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <div class="text-[10px] font-mono text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                           <span>SKU: {{ group.skuCode }}</span>
                           <span>·</span>
                           <span>{{ group.totalPieces | number }} pz</span>
@@ -4075,7 +4076,7 @@
                     <button
                       type="button"
                       (click)="removeSkuFromManifest(group.skuCode)"
-                      class="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
+                      class="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
                       title="Quitar todas las tarimas de este SKU"
                     >
                       <span class="material-symbols-outlined text-sm">delete</span>
@@ -4090,17 +4091,17 @@
         </div>
 
         <!-- Footer del Modal -->
-        <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between gap-3 shrink-0">
-          <div class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+        <div class="pallet-picker-footer p-4 flex items-center justify-between gap-3 shrink-0">
+          <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-            <span>Total a despachar: <strong>{{ totalSelectedPallets() }} tarimas ({{ totalSelectedPieces() | number }} pz)</strong></span>
+            <span>Total a despachar: <strong class="text-slate-950 dark:text-white">{{ totalSelectedPallets() }} tarimas ({{ totalSelectedPieces() | number }} pz)</strong></span>
           </div>
 
           <div class="flex items-center gap-2">
             <button
               type="button"
               (click)="closePalletPickerModal()"
-              class="btn-ghost text-xs px-4 py-2 rounded-xl font-bold cursor-pointer"
+              class="px-4 py-2 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -4108,7 +4109,7 @@
               type="button"
               [disabled]="isSavingPalletSelection() || totalSelectedPallets() === 0"
               (click)="savePalletSelectionToOrder()"
-              class="btn-primary-gold text-xs px-5 py-2 rounded-xl font-black flex items-center gap-1.5 shadow-md text-slate-900 disabled:opacity-50 cursor-pointer hover:scale-[1.02] transition-transform"
+              class="btn-primary-gold text-xs px-5 py-2.5 rounded-xl font-black flex items-center gap-1.5 shadow-md text-slate-950 disabled:opacity-50 cursor-pointer hover:scale-[1.02] transition-transform"
             >
               @if (isSavingPalletSelection()) {
                 <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
