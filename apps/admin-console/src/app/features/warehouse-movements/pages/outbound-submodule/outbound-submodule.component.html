@@ -2435,27 +2435,11 @@
             </div>
 
             @if (selectedOutbound()!.items.length === 0) {
-              <!-- Empty State para órdenes creadas desde Caseta sin tarimas -->
-              <div class="p-8 text-center bg-white dark:bg-slate-900 border-2 border-dashed border-amber-400 dark:border-amber-600/50 rounded-2xl my-3 flex flex-col items-center justify-center gap-3 animate-fade-in shadow-sm">
-                <div class="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center border border-amber-300 dark:border-amber-700 shadow-sm">
-                  <span class="material-symbols-outlined text-3xl font-bold">pallet</span>
-                </div>
-                <div>
-                  <h4 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-                    Salida de Caseta sin Tarimas Asignadas
-                  </h4>
-                  <p class="text-xs text-slate-700 dark:text-slate-300 max-w-lg mt-1 font-medium leading-relaxed">
-                    Esta salida fue registrada en caseta con el transporte de <strong class="text-slate-950 dark:text-white">{{ selectedOutbound()!.clientName }}</strong>. Para que el montacarguista reciba la orden en su terminal RF con la lista de carga, selecciona las tarimas o aplica la regla <strong class="text-amber-700 dark:text-amber-400">FEFO</strong>.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  (click)="openPalletPickerModal()"
-                  class="btn-primary-gold px-6 py-2.5 rounded-xl text-xs font-black text-slate-950 shadow-md flex items-center gap-2 cursor-pointer mt-1 hover:scale-[1.02] transition-transform"
-                >
-                  <span class="material-symbols-outlined text-base">add_shopping_cart</span>
-                  <span>Asignar Tarimas del Cliente (FEFO)</span>
-                </button>
+              <!-- Estado vacío limpio y minimalista sin botones duplicados -->
+              <div class="py-10 px-4 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl my-2 flex flex-col items-center justify-center gap-1.5 bg-slate-50/50 dark:bg-slate-900/30">
+                <span class="material-symbols-outlined text-3xl text-slate-400 dark:text-slate-500">inventory_2</span>
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Sin tarimas asignadas a esta salida</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">Utiliza el botón superior "+ Asignar Tarimas del Cliente (FEFO)" para seleccionar productos y UAs del inventario.</span>
               </div>
             } @else {
               <!-- Tabla de Tarimas Asignadas -->
