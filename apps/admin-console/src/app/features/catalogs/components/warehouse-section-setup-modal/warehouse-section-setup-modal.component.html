@@ -1,6 +1,6 @@
 @if (isOpen() && section()) {
   <div class="setup-modal__backdrop" (click)="close()">
-    <div class="setup-modal__dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="setup-modal__dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="setup-modal-title">
       
       <!-- ── Header ── -->
       <header class="setup-modal__header">
@@ -9,33 +9,33 @@
             <span class="material-symbols-outlined">warehouse</span>
           </div>
           <div>
-            <h3 class="setup-modal__title">Configurar y Activar Nave</h3>
+            <h3 id="setup-modal-title" class="setup-modal__title">Configurar y Activar Nave</h3>
             <span class="setup-modal__subtitle">{{ section()?.code }} — {{ section()?.name }}</span>
           </div>
         </div>
-        <button class="setup-modal__close-btn" type="button" (click)="close()" [disabled]="isSaving()" aria-label="Cerrar">
+        <button class="setup-modal__close-btn" type="button" (click)="close()" [disabled]="isSaving()" aria-label="Cerrar modal">
           <span class="material-symbols-outlined">close</span>
         </button>
       </header>
 
-      <!-- ── Notice Banner ── -->
-      <div class="setup-modal__notice">
-        <span class="material-symbols-outlined setup-modal__notice-icon">architecture</span>
-        <div class="setup-modal__notice-text">
-          <strong>Geometría y Topología 2D fijas:</strong> Las coordenadas del plano civil ya están pre-mapeadas. Configura aquí los parámetros de almacenamiento y estiba operativa.
-        </div>
-      </div>
-
-      <!-- ── Error Alert ── -->
-      @if (errorMessage()) {
-        <div class="setup-modal__error-alert">
-          <span class="material-symbols-outlined">error</span>
-          <span>{{ errorMessage() }}</span>
-        </div>
-      }
-
-      <!-- ── Form Body ── -->
+      <!-- ── Scrollable Body ── -->
       <div class="setup-modal__body">
+
+        <!-- ── Notice Banner ── -->
+        <div class="setup-modal__notice">
+          <span class="material-symbols-outlined setup-modal__notice-icon">architecture</span>
+          <div class="setup-modal__notice-text">
+            <strong>Geometría y Topología 2D fijas:</strong> Las coordenadas del plano civil ya están pre-mapeadas. Configura aquí los parámetros de almacenamiento y estiba operativa.
+          </div>
+        </div>
+
+        <!-- ── Error Alert ── -->
+        @if (errorMessage()) {
+          <div class="setup-modal__error-alert">
+            <span class="material-symbols-outlined">error</span>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
 
         <!-- Categoría Operativa -->
         <div class="setup-field">
@@ -48,7 +48,7 @@
               class="setup-field__select"
               [ngModel]="category()"
               (ngModelChange)="category.set($event)">
-              @for (cat of categoryOptions; track cat) {
+              @for (cat of displayedCategoryOptions(); track cat) {
                 <option [value]="cat">{{ cat }}</option>
               }
             </select>
@@ -69,7 +69,8 @@
                 type="button"
                 class="setup-counter__btn"
                 (click)="setPosFijas(posFijas() - 1)"
-                [disabled]="posFijas() <= 1">
+                [disabled]="posFijas() <= 1"
+                aria-label="Disminuir posiciones">
                 <span class="material-symbols-outlined">remove</span>
               </button>
               <input
@@ -83,7 +84,8 @@
               <button
                 type="button"
                 class="setup-counter__btn"
-                (click)="setPosFijas(posFijas() + 1)">
+                (click)="setPosFijas(posFijas() + 1)"
+                aria-label="Aumentar posiciones">
                 <span class="material-symbols-outlined">add</span>
               </button>
             </div>
@@ -171,9 +173,9 @@
         <!-- Generar Ubicaciones Automáticamente (Checkbox) -->
         <div class="setup-checkbox-row" (click)="generateLocations.set(!generateLocations())">
           <div class="setup-checkbox" [class.setup-checkbox--checked]="generateLocations()">
-            <span class="material-symbols-outlined">
-              {{ generateLocations() ? 'check' : '' }}
-            </span>
+            @if (generateLocations()) {
+              <span class="material-symbols-outlined">check</span>
+            }
           </div>
           <div class="setup-checkbox-row__content">
             <div class="setup-checkbox-row__title">Generar cuadrícula de ubicaciones físicas automáticamente</div>

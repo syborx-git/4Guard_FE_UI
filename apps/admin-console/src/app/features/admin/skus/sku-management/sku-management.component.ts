@@ -61,7 +61,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedSku = signal<ProductSku | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -182,6 +182,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewSku();
     this.loadClients();
     this.loadSkus();
   }
@@ -287,16 +288,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const sku = this.selectedSku();
-    if (sku) {
-      this.formMode.set('edit');
-      this.populateForm(sku);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewSku();
   }
 
   private populateForm(sku: ProductSku): void {

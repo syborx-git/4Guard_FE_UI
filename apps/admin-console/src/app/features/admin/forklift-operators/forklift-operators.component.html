@@ -319,27 +319,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="carriers-detail" aria-label="Detalle del montacarguista">
 
-      @if (formMode() === 'idle' && !selectedOperator()) {
-        <!-- Estado Vacío cuando no hay selección -->
-        <div class="carriers-empty-state">
-          <div class="carriers-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined carriers-empty-state__icon">engineering</span>
-          </div>
-          <h2 class="carriers-empty-state__title">Sin selección</h2>
-          <p class="carriers-empty-state__desc">
-            Selecciona un montacarguista del directorio para consultar su certificación DC-3, turno y vigencia operativa, o registra uno nuevo.
-          </p>
-          <button
-            class="carriers-btn carriers-btn--primary"
-            type="button"
-            (click)="startNewOperator()"
-            aria-label="Registrar nuevo montacarguista">
-            <span class="material-symbols-outlined">add</span>
-            Nuevo montacarguista
-          </button>
-        </div>
-      } @else {
-        <div #formSection class="carriers-form-container">
+      <div #formSection class="carriers-form-container">
 
           <!-- ── Barra de Título del Formulario ── -->
           <div class="carriers-form-header">
@@ -651,15 +631,13 @@
               }
 
               <div class="carriers-form-actions__main">
-                @if (formMode() !== 'idle') {
-                  <button
-                    type="button"
-                    (click)="cancelForm()"
-                    class="carriers-btn carriers-btn--ghost"
-                  >
-                    Cancelar
-                  </button>
-                }
+                <button
+                  type="button"
+                  (click)="cancelForm()"
+                  class="carriers-btn carriers-btn--ghost"
+                >
+                  Cancelar
+                </button>
 
                 <button
                   type="submit"
@@ -675,7 +653,6 @@
           </form>
 
         </div>
-      }
 
     </main>
 

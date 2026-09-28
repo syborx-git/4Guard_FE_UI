@@ -114,7 +114,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la vista ──────────────────────────────────────────────────────
 
   protected readonly selectedCarrier = signal<Carrier | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly statusDialogMode = signal<StatusDialogMode>('none');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -253,6 +253,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCarriers();
+    this.startNewCarrier();
   }
 
   ngOnDestroy(): void {
@@ -350,7 +351,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       this.formMode.set('edit');
       this.populateForm(carrier);
     } else {
-      this.formMode.set('idle');
+      this.startNewCarrier();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);

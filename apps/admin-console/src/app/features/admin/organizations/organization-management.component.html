@@ -254,24 +254,8 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="orgs-detail" aria-label="Detalle de la organización">
 
-      @if (formMode() === 'idle') {
-        <!-- Estado Inicial Vacío Homologado -->
-        <div class="orgs-empty-state">
-          <div class="orgs-empty-state__graphic">
-            <span class="material-symbols-outlined orgs-empty-state__icon">corporate_fare</span>
-          </div>
-          <h2 class="orgs-empty-state__title">Sin selección</h2>
-          <p class="orgs-empty-state__subtitle">
-            Selecciona una organización de la lista para consultar su información, o registra una nueva.
-          </p>
-          <button class="orgs-btn orgs-btn--primary" (click)="openNewForm()" type="button">
-            <span class="material-symbols-outlined">add</span>
-            Nueva organización
-          </button>
-        </div>
-      } @else {
-        <!-- Formulario Activo Homologado -->
-        <div class="orgs-form-wrap">
+      <!-- Formulario Activo Homologado -->
+      <div class="orgs-form-wrap">
 
           <!-- Header del Formulario -->
           <div class="orgs-form-header">
@@ -496,7 +480,6 @@
           }
 
         </div>
-      }
 
     </main>
 

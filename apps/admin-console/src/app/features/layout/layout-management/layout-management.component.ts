@@ -165,7 +165,7 @@ export class LayoutManagementComponent implements OnInit {
   });
 
   // ── Estado del formulario ──────────────────────────────────────────────────
-  readonly isCreating    = signal(false);
+  readonly isCreating    = signal(true);
   readonly isDirty       = signal(false);
   readonly isSaving      = signal(false);
   readonly saveError     = signal<string | null>(null);
@@ -214,6 +214,7 @@ export class LayoutManagementComponent implements OnInit {
   // ── Ciclo de vida ──────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.onNewLocation();
     this.loadData();
   }
 
@@ -239,6 +240,17 @@ export class LayoutManagementComponent implements OnInit {
                 zones.forEach(z => next.add(z.id));
                 return next;
               });
+              if (this.isCreating() && !this.editForm.controls['zoneId'].value) {
+                const firstBranch = this.branchService.branches()[0];
+                const firstZone = zones[0];
+                if (firstBranch) {
+                  this.editForm.patchValue({ warehouseId: firstBranch.id, warehouseName: firstBranch.name });
+                }
+                if (firstZone) {
+                  this.editForm.patchValue({ zoneId: firstZone.id, zoneCode: firstZone.code, zoneName: firstZone.name });
+                }
+                this.autoGenerateCodeAndName();
+              }
             }
           },
         });
@@ -330,11 +342,10 @@ export class LayoutManagementComponent implements OnInit {
     this.isDirty.set(false);
     this.saveError.set(null);
     this.formSubmitted.set(false);
-    if (this.isCreating()) {
-      this.isCreating.set(false);
-      this.selectedId.set(null);
-    } else if (this.selectedLoc()) {
+    if (this.selectedLoc()) {
       this._patchForm(this.selectedLoc()!);
+    } else {
+      this.onNewLocation();
     }
   }
 

@@ -64,7 +64,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedBranch = signal<Branch | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -159,6 +159,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewBranch();
     this.loadOrganizations();
     this.loadBranches();
   }
@@ -233,16 +234,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const branch = this.selectedBranch();
-    if (branch) {
-      this.formMode.set('edit');
-      this.populateForm(branch);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewBranch();
   }
 
   private populateForm(branch: Branch): void {

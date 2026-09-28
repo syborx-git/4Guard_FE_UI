@@ -305,29 +305,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="roles-detail" aria-label="Detalle de rol y matriz de permisos">
 
-      @if (formMode() === 'idle') {
-        <div class="roles-empty-state">
-          <div class="roles-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined roles-empty-state__icon">shield_person</span>
-          </div>
-          <h2 class="roles-empty-state__title">Sin selección</h2>
-          <p class="roles-empty-state__desc">
-            Selecciona un rol del directorio para consultar o modificar sus privilegios y matriz de permisos,
-            o crea un nuevo perfil de acceso.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="roles-btn roles-btn--primary"
-              type="button"
-              (click)="startNewRole()"
-              aria-label="Registrar nuevo rol">
-              <span class="material-symbols-outlined">add_moderator</span>
-              Nuevo Rol
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="roles-form-container">
+      <div class="roles-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="roles-form-header">
@@ -649,7 +627,6 @@
 
           </form>
         </div>
-      }
 
     </main>
 
