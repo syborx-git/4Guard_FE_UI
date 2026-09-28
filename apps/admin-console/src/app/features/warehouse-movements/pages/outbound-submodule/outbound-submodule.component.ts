@@ -1200,18 +1200,44 @@ export class OutboundSubmoduleComponent implements OnInit {
     return list;
   });
 
-  // Tarimas coincidentes por código de UA / SSCC o Lote para la búsqueda predictiva
+  // ── MOTOR DE BÚSQUEDA MULTI-CRITERIO Y ESCÁNER DE CÓDIGO DE BARRAS ─────────
+  palletSearchMode = signal<'ALL' | 'SKU' | 'UA' | 'LOCATION' | 'LOT'>('ALL');
+
+  setPalletSearchMode(mode: 'ALL' | 'SKU' | 'UA' | 'LOCATION' | 'LOT'): void {
+    this.palletSearchMode.set(mode);
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  // Tarimas coincidentes por código de UA / SSCC, Lote, Bahía, Caducidad o SKU
   matchingPalletUas = computed<OutboundPalletItem[]>(() => {
     const q = this.skuSearchQuery().toLowerCase().trim();
-    if (!q || q.length < 2) return [];
-    return this.allFlatPalletsInWarehouse().filter(
-      (p) =>
-        p.palletCode.toLowerCase().includes(q) ||
-        p.lotNumber.toLowerCase().includes(q)
-    ).slice(0, 8);
+    if (!q || q.length < 1) return [];
+    const mode = this.palletSearchMode();
+    const all = this.allFlatPalletsInWarehouse();
+
+    return all.filter((p) => {
+      const matchUa = p.palletCode.toLowerCase().includes(q) || (p.id && p.id.toLowerCase().includes(q));
+      const matchLot = p.lotNumber && p.lotNumber.toLowerCase().includes(q);
+      const matchLoc = p.locationCode && p.locationCode.toLowerCase().includes(q);
+      const matchProd = (p.productId && p.productId.toLowerCase().includes(q)) || (p.description && p.description.toLowerCase().includes(q));
+      const matchDate = p.expirationDate && p.expirationDate.toLowerCase().includes(q);
+
+      switch (mode) {
+        case 'UA': return matchUa;
+        case 'LOT': return matchLot || matchDate;
+        case 'LOCATION': return matchLoc;
+        case 'SKU': return matchProd;
+        case 'ALL':
+        default:
+          return matchUa || matchLot || matchLoc || matchProd || matchDate;
+      }
+    }).slice(0, 12);
   });
 
   filteredAvailableSkus = computed(() => {
+    const mode = this.palletSearchMode();
+    if (mode === 'UA' || mode === 'LOCATION') return [];
+
     const skus = this.availableCatalogSkus();
     const q = this.skuSearchQuery().toLowerCase().trim();
     if (!q) return skus;
@@ -1264,14 +1290,19 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // Manejo de lectura con pistola de código de barras / tablet / teclado
   handleScannerOrSearchSubmit(): void {
-    const rawVal = this.skuSearchQuery().trim();
+    let rawVal = this.skuSearchQuery().trim();
     if (!rawVal) return;
 
+    // Limpiar posibles prefijos GS1 de escáneres ópticos (ej. ]C1, ]e0, etc.)
+    rawVal = rawVal.replace(/^\][A-Za-z0-9]{2}/, '').trim();
     const val = rawVal.toLowerCase();
 
-    // 1. Buscar si coincide exactamente con una UA / Código de tarima física
+    // 1. Buscar coincidencia exacta o por sufijo con código de UA / SSCC
     const matchingPallet = this.allFlatPalletsInWarehouse().find(
-      (p) => p.palletCode.toLowerCase() === val || p.palletCode.toLowerCase().endsWith(val)
+      (p) =>
+        p.palletCode.toLowerCase() === val ||
+        p.palletCode.toLowerCase().endsWith(val) ||
+        (p.id && p.id.toLowerCase() === val)
     );
 
     if (matchingPallet) {
@@ -1279,7 +1310,17 @@ export class OutboundSubmoduleComponent implements OnInit {
       return;
     }
 
-    // 2. Buscar coincidencia exacta por SKU Code
+    // 2. Buscar por Bahía / Ubicación exacta (ej. A-01-01)
+    const palletsInBay = this.allFlatPalletsInWarehouse().filter(
+      (p) => p.locationCode && p.locationCode.toLowerCase() === val
+    );
+    if (palletsInBay.length > 0) {
+      this.palletSearchMode.set('LOCATION');
+      this.isSkuDropdownOpen.set(true);
+      return;
+    }
+
+    // 3. Buscar coincidencia exacta por SKU Code
     const matchingSku = this.availableCatalogSkus().find(
       (s) =>
         s.skuCode.toLowerCase() === val ||
@@ -1291,17 +1332,17 @@ export class OutboundSubmoduleComponent implements OnInit {
       return;
     }
 
-    // 3. Si hay un solo resultado de producto filtrado, seleccionarlo
-    const filtered = this.filteredAvailableSkus();
-    if (filtered.length === 1) {
-      this.selectSku(filtered[0]);
-      return;
-    }
-
-    // Si hay una sola UA coincidente, seleccionarla
+    // 4. Si hay una sola UA coincidente, seleccionarla directamente
     const uas = this.matchingPalletUas();
     if (uas.length === 1) {
       this.selectPalletByUa(uas[0]);
+      return;
+    }
+
+    // 5. Si hay un solo resultado de producto filtrado, seleccionarlo
+    const filtered = this.filteredAvailableSkus();
+    if (filtered.length === 1) {
+      this.selectSku(filtered[0]);
       return;
     }
 
@@ -1310,17 +1351,17 @@ export class OutboundSubmoduleComponent implements OnInit {
   }
 
   selectPalletByUa(pallet: OutboundPalletItem): void {
-    // Añadir la tarima directamente al carro acumulado del manifiesto sin forzar el banner de producto ni tabla de inventario
+    // Añadir la tarima directamente al carro acumulado del manifiesto
     if (!this.selectedPalletIds().includes(pallet.id)) {
       this.selectedPalletIds.update((ids) => [...ids, pallet.id]);
       this.toast.success(
-        `⚡ Tarima [UA: ${pallet.palletCode}] agregada directamente al manifiesto (${pallet.description || pallet.productId} · ${pallet.pieces} pz).`
+        `⚡ Escáner UA: [${pallet.palletCode}] agregada al despacho (${pallet.description || pallet.productId} · Bahía: ${pallet.locationCode} · ${pallet.pieces} pz).`
       );
     } else {
       this.toast.info(`La tarima [UA: ${pallet.palletCode}] ya está en el manifiesto.`);
     }
 
-    // Limpiar el campo de escáner y resetear SKU enfocado para que no abra el banner ni la tabla
+    // Limpiar el campo de escáner para permitir escanear la siguiente tarima de inmediato
     this.selectedSkuCode.set('');
     this.skuSearchQuery.set('');
     this.isSkuDropdownOpen.set(false);
@@ -1340,6 +1381,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     }
     this.selectedSkuCode.set('');
     this.skuSearchQuery.set('');
+    this.palletSearchMode.set('ALL');
     this.requestedPalletsCount.set(0);
     this.isSkuDropdownOpen.set(true);
   }

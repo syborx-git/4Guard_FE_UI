@@ -3680,15 +3680,60 @@
         <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
 
           <!-- 1. Buscador Predictivo de SKU y Escáner de UA -->
-          <div class="relative bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
-            <div class="flex items-center justify-between">
+          <div class="relative bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+            <div class="flex items-center justify-between flex-wrap gap-1">
               <label class="outbound-field-label">
-                <span>Buscar Producto / SKU del Catálogo o Escanear Código de UA</span>
+                <span>Buscar por SKU, Nombre, Código UA, Bahía, Lote o Escanear con Pistola</span>
                 <span class="req">*</span>
               </label>
               <span class="text-[11px] font-medium text-slate-500">
                 {{ availableCatalogSkus().length }} productos disponibles · {{ inStockSkusCount() }} con stock
               </span>
+            </div>
+
+            <!-- Modos de Búsqueda y Escaneo Rápido -->
+            <div class="flex items-center gap-1.5 flex-wrap pb-0.5">
+              <span class="text-[10px] font-bold text-slate-500 mr-1">Filtrar por:</span>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('ALL')"
+                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
+                [ngClass]="palletSearchMode() === 'ALL' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+              >
+                🌐 Todo
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('SKU')"
+                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
+                [ngClass]="palletSearchMode() === 'SKU' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+              >
+                🏷️ Producto / SKU
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('UA')"
+                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
+                [ngClass]="palletSearchMode() === 'UA' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+              >
+                📦 Código UA / SSCC
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('LOCATION')"
+                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
+                [ngClass]="palletSearchMode() === 'LOCATION' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+              >
+                📍 Bahía / Ubicación
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('LOT')"
+                class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition-colors cursor-pointer"
+                [ngClass]="palletSearchMode() === 'LOT' ? 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+              >
+                ⏳ Lote / Caducidad
+              </button>
             </div>
 
             <div class="relative flex items-center">
@@ -3698,7 +3743,7 @@
                 (input)="onSkuInput($any($event.target).value)"
                 (focus)="onSkuInputFocus()"
                 (keydown.enter)="handleScannerOrSearchSubmit()"
-                placeholder="Escribe código de producto, nombre (ej. Café, Leche) o escanea UA..."
+                placeholder="Escribe código de producto, nombre, bahía (ej. A-01), lote o escanea código de barras/UA con pistola..."
                 class="fg-input font-bold w-full pr-10 text-xs"
                 autocomplete="off"
               />
