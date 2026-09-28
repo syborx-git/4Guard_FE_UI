@@ -318,11 +318,11 @@ h1, h2, h3, h4, h5, h6 {
 /* ── 1. KPI CARDS GRID (ESTILO HOMOLOGADO SECURITY GATE / SYNEXIA LUXURY) ── */
 .quality-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .quality-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -442,10 +442,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .quality-kpi-card__sub {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: 0.01em;
+  transition: color 0.18s ease;
+}
+
+.quality-kpi-card.quality-kpi-card--active .quality-kpi-card__sub {
+  color: var(--text-gold);
+}
+
+.quality-kpi-card:hover .quality-kpi-card__sub {
+  color: var(--text-primary);
 }
 
 /* ── MAIN CONTAINER ── */

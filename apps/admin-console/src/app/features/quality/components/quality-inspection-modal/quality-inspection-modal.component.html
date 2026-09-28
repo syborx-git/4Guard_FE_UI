@@ -150,37 +150,70 @@
           }
         </div>
 
-        <!-- UPLOADER DE EVIDENCIAS Y CERTIFICADOS (CONSERVADO Y OPTIMIZADO) -->
+        <!-- UPLOADER DE EVIDENCIAS Y CERTIFICADOS (INPUT REAL CON PREVIEW) -->
         <div class="qm-uploader-section">
-          <label class="qm-field-label">
-            <span class="material-symbols-outlined">cloud_upload</span>
-            <span>Soporte / Evidencia Fotográfica o Certificado PDF</span>
-          </label>
+          <div class="qm-uploader-header">
+            <label class="qm-field-label">
+              <span class="material-symbols-outlined">cloud_upload</span>
+              <span>Soporte / Evidencia Fotográfica o Certificado PDF</span>
+            </label>
+            @if (attachedFiles().length > 0) {
+              <button type="button" class="qm-link-btn qm-link-btn--danger" (click)="removeAllFiles()">
+                <span class="material-symbols-outlined icon-small">delete_sweep</span>
+                Limpiar todo
+              </button>
+            }
+          </div>
 
-          <div class="qm-dropzone" (click)="addSimulatedFile()">
+          <!-- INPUT OCULTO REAL -->
+          <input
+            #fileInputRef
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,.pdf"
+            multiple
+            style="display:none"
+            (change)="onFilesSelected($event)"
+          />
+
+          <!-- DROPZONE que dispara el input real -->
+          <div class="qm-dropzone" (click)="triggerFileInput()">
             <span class="material-symbols-outlined qm-dropzone-icon">upload_file</span>
             <div class="qm-dropzone-text">
               <strong>Arrastre evidencia fotográfica o certificado PDF aquí</strong>
-              <span>Formatos aceptados: JPG, PNG, PDF (Máx. 15MB)</span>
+              <span>Formatos aceptados: JPG, PNG, WEBP, PDF · Máx. 15 MB por archivo</span>
             </div>
-            <button type="button" class="qm-btn-browse">
+            <button type="button" class="qm-btn-browse" (click)="$event.stopPropagation(); triggerFileInput()">
               <span class="material-symbols-outlined icon-small">add_a_photo</span>
               Adjuntar Evidencia
             </button>
           </div>
 
+          <!-- GRID DE THUMBNAILS Y BADGES DE ARCHIVOS -->
           @if (attachedFiles().length > 0) {
-            <div class="qm-file-list">
+            <div class="qm-evidence-grid">
               @for (file of attachedFiles(); track file.id) {
-                <div class="qm-file-badge">
-                  <span class="material-symbols-outlined qm-file-icon">
-                    {{ file.type === 'image' ? 'image' : 'picture_as_pdf' }}
-                  </span>
-                  <div class="qm-file-info">
-                    <span class="qm-file-name">{{ file.name }}</span>
+                <div class="qm-evidence-card" [class.qm-evidence-card--pdf]="file.type === 'pdf'">
+                  <!-- Thumbnail de imagen con preview real -->
+                  @if (file.type === 'image' && file.dataUrl) {
+                    <div class="qm-evidence-thumb">
+                      <img [src]="file.dataUrl" [alt]="file.name" class="qm-thumb-img" />
+                    </div>
+                  } @else if (file.type === 'image') {
+                    <div class="qm-evidence-thumb qm-evidence-thumb--placeholder">
+                      <span class="material-symbols-outlined">image</span>
+                    </div>
+                  } @else {
+                    <div class="qm-evidence-thumb qm-evidence-thumb--pdf">
+                      <span class="material-symbols-outlined">picture_as_pdf</span>
+                    </div>
+                  }
+
+                  <div class="qm-evidence-meta">
+                    <span class="qm-file-name" [title]="file.name">{{ file.name }}</span>
                     <span class="qm-file-size">{{ file.size }}</span>
                   </div>
-                  <button type="button" class="qm-file-remove" (click)="removeFile(file.id)" title="Eliminar evidencia">
+
+                  <button type="button" class="qm-evidence-remove" (click)="removeFile(file.id)" title="Eliminar evidencia">
                     <span class="material-symbols-outlined">close</span>
                   </button>
                 </div>
@@ -219,8 +252,8 @@
       <div class="qm-footer-right">
         @if (!areCriticalChecksComplete()) {
           <span class="qm-mandatory-warning">
-            <span class="material-symbols-outlined icon-small">info</span>
-            Se requiere validar los 3 criterios OBLIGATORIOS ({{ completedCriticalCount() }}/3)
+            <span class="material-symbols-outlined icon-small">warning</span>
+            Obligatorios pendientes: {{ completedCriticalCount() }}/{{ totalCriticalCount() }}
           </span>
         }
 
@@ -230,8 +263,14 @@
           <span>Bloquear Lote (No Conforme)</span>
         </button>
 
-        <!-- BOTÓN APROBAR Y LIBERAR (HABILITADO SOLO CUANDO SE CUMPLEN LOS 3 OBLIGATORIOS) -->
-        <button type="button" class="qm-btn qm-btn--success" (click)="handleApprove()" [disabled]="!areCriticalChecksComplete()" [title]="!areCriticalChecksComplete() ? 'Debe validar todos los criterios OBLIGATORIOS (3/3) para liberar el lote' : 'Aprobar y Liberar Lote'">
+        <!-- BOTÓN APROBAR Y LIBERAR (HABILITADO SOLO CUANDO SE CUMPLEN TODOS LOS OBLIGATORIOS) -->
+        <button
+          type="button"
+          class="qm-btn qm-btn--success"
+          (click)="handleApprove()"
+          [disabled]="!areCriticalChecksComplete()"
+          [title]="!areCriticalChecksComplete() ? 'Debe validar todos los criterios OBLIGATORIOS (' + totalCriticalCount() + ') para liberar el lote' : 'Aprobar y Liberar Lote'"
+        >
           <span class="material-symbols-outlined">check_circle</span>
           <span>Aprobar y Liberar Lote</span>
         </button>

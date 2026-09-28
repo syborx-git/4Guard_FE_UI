@@ -78,7 +78,8 @@ export type ReleaseAuthorizerType =
 export type ReleaseSupportType = 
   | 'EMAIL'               // Correo electrónico
   | 'ELECTRONIC_MEDIA'    // Medios de comunicación electrónicos
-  | 'FORMAL_ACT';         // Acta o dictamen formal
+  | 'FORMAL_ACT'          // Acta o dictamen formal
+  | 'OTHER';              // Otro medio o soporte documental especificado
 
 export type ReleaseDestination = 
   | 'DISTRIBUTION'        // Liberado para distribución (Disponible / Picking)
@@ -121,10 +122,12 @@ export interface QualityRelease {
   // Soporte y Autorización (Diagrama 2)
   authorizerType: ReleaseAuthorizerType;
   supportType: ReleaseSupportType;
+  supportCustomType?: string;  // Especificación si supportType === 'OTHER'
   supportSubject: string;      // Asunto o ID del correo
   supportFileName?: string;    // Archivo de respaldo adjunto
   authorizedByName: string;    // Nombre de quien autoriza
   authorizedByPosition: string;// Puesto del autorizador
+  evidenceFiles?: AttachedEvidence[]; // Evidencia fotográfica / PDF adjunta de la autorización
   
   // Condición de destino final
   destination: ReleaseDestination;
@@ -197,3 +200,60 @@ export interface LoadVerification {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── 4. RECLAMOS E INCIDENCIAS DE CALIDAD (F01) ─────────────────
+
+export type ClaimStage = 
+  | 'INBOUND_UNLOAD'      // Descarga (Inbound)
+  | 'STORAGE'             // Almacenamiento (Racks / Traspasos)
+  | 'OUTBOUND_LOAD';      // Carga (Outbound / Despacho)
+
+export const CLAIM_STAGE_LABELS: Record<ClaimStage, { label: string; icon: string; short: string }> = {
+  INBOUND_UNLOAD: { label: '1. Descarga (Inbound)', icon: 'move_to_inbox', short: 'Descarga' },
+  STORAGE: { label: '2. Almacenamiento (Racks)', icon: 'shelves', short: 'Racks' },
+  OUTBOUND_LOAD: { label: '3. Carga (Outbound)', icon: 'local_shipping', short: 'Carga' }
+};
+
+export type ClaimDefectType = 
+  | 'NON_COMPLIANT_SPEC'    // No cumple con especificación
+  | 'QUANTITY_DISCREPANCY'   // Discrepancia en cantidad (Faltante / Sobrante)
+  | 'BAD_CONDITIONS'         // Malas condiciones (Empaque / Tarima)
+  | 'OTHER';                 // Otro (Especificar)
+
+export const CLAIM_DEFECT_TYPE_LABELS: Record<ClaimDefectType, string> = {
+  NON_COMPLIANT_SPEC: 'No cumple con especificación',
+  QUANTITY_DISCREPANCY: 'Discrepancia en cantidad',
+  BAD_CONDITIONS: 'Malas condiciones (Empaque / Tarima)',
+  OTHER: 'Otro (Especificar)'
+};
+
+export interface QualityClaim {
+  id: string;
+  folio: string;               // Ej. REC-2026-0012
+  date: string;                // YYYY-MM-DD
+  time: string;                // HH:mm
+  stage: ClaimStage;           // Descarga, Almacenamiento, Carga
+  sku: string;
+  productDescription: string;
+  clientName: string;
+  batchNumber: string;         // Lote (Campo independiente)
+  remisionNumber: string;      // Remisión (Campo independiente)
+  defectType: ClaimDefectType;
+  defectCustomType?: string;   // Texto condicional cuando defectType === 'OTHER'
+  
+  // Métricas de Impacto Físico y Financiero
+  damagedQty: number;          // Material Dañado (unidades / cajas)
+  lostQty: number;             // Material Perdido / Merma
+  associatedCost: number;      // Costo Total Asociado en MXN ($)
+  currency: 'MXN' | 'USD';
+  
+  // Soporte y Autorización
+  authorizedByName: string;
+  authorizedByPosition: string;
+  observations: string;
+  evidenceFiles: AttachedEvidence[];
+  status: 'OPEN' | 'IN_REVIEW' | 'CLOSED' | 'SETTLED';
+  createdAt: string;
+  updatedAt: string;
+}
+

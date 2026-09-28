@@ -30,6 +30,12 @@ export const qualityRoutes: Routes = [
           import('./pages/load-verification-submodule/load-verification-submodule.component').then((m) => m.LoadVerificationSubmoduleComponent),
         title: '4GUARD WMS — Verificación de Carga (F01-PO-GC-8.6-03)',
       },
+      {
+        path: 'claims',
+        loadComponent: () =>
+          import('./pages/claims-submodule/claims-submodule.component').then((m) => m.ClaimsSubmoduleComponent),
+        title: '4GUARD WMS — KPIs y Reclamos (F01)',
+      },
     ],
   },
   {
