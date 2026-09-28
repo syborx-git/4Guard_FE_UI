@@ -734,7 +734,7 @@ export class TransferSubmoduleComponent implements OnInit {
           if (fullTransfer) {
             const mappedPallets: ReceptionPalletItem[] = (fullTransfer.items || []).map((it: any, idx: number) => ({
               id: it.itemId || it.id || `plt-${idx}`,
-              palletNumber: idx + 1,
+              palletNumber: it.palletNumber != null ? it.palletNumber : (idx + 1),
               palletCode: it.palletCode || `UA-${idx + 1}`,
               description: it.skuDescription || 'ALIMENTO BALANCEADO PURINA',
               productId: it.skuCode || '12572733',

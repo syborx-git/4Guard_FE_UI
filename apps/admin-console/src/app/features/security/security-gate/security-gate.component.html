@@ -1087,7 +1087,7 @@
                   </td>
                   <td>
                     <span class="cell-time-val">
-                      {{ formatTimeString(item.receptionTime) }}
+                      {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}
                     </span>
                   </td>
                   <td>
@@ -1237,8 +1237,8 @@
                     <div class="cell-driver-name">{{ item.driverName || 'S/N' }}</div>
                   </td>
                   <td class="td-mono">
-                    <div class="cell-time-val"><span class="cell-plates-label">In:</span> {{ formatTimeString(item.receptionTime) }}</div>
-                    <div class="cell-time-val"><span class="cell-plates-label">Out:</span> {{ formatTimeString(item.departureTime) }}</div>
+                    <div class="cell-time-val"><span class="cell-plates-label">In:</span> {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}</div>
+                    <div class="cell-time-val"><span class="cell-plates-label">Out:</span> {{ formatTimeString(item.departureTime || item.horaSalida || item.exitedAt) }}</div>
                   </td>
                   <td class="td-mono">
                     <div class="cell-time-val" style="color: #b45309 !important;">
@@ -1428,7 +1428,7 @@
         </div>
         <div class="checkout-summary-item">
           <span class="checkout-summary-label">Hora Entrada:</span>
-          <strong class="checkout-summary-val font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime) }}</strong>
+          <strong class="checkout-summary-val font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime || selectedCheckOutPass().horaEntrada || selectedCheckOutPass().createdAt) }}</strong>
         </div>
         <div class="checkout-summary-item">
           <span class="checkout-summary-label">Rampa:</span>

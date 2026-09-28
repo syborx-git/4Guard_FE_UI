@@ -531,6 +531,7 @@ export class WarehouseMovementsService {
             isFifoSuggested: !!b.isFifoSuggested,
             pallets: (b.pallets || []).map((p: any) => ({
               id: p.itemId || p.id,
+              palletNumber: p.palletNumber,
               palletCode: p.palletCode || p.sscc || '',
               description: p.description || b.productName || '',
               productId: p.skuCode || b.skuCode || b.productId || '',
@@ -540,6 +541,7 @@ export class WarehouseMovementsService {
               locationCode: p.locationCode || b.locationCode || 'N/A',
               lotNumber: p.lotNumber || b.lotNumber || '',
               expirationDate: p.expirationDate || b.expirationDate || '',
+              docNumber: b.remisionNo || '',
             })),
           };
         });
@@ -587,6 +589,9 @@ export class WarehouseMovementsService {
           }
         }
         this.receptionsSignal.set(unique);
+        if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
+          this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
+        }
       },
       error: () => {},
     });
@@ -755,31 +760,73 @@ export class WarehouseMovementsService {
       });
     }
 
-    // 3. Enriquecer con lotes/remisiones desde recepciones activas
+    // 3. Enriquecer con datos exactos desde recepciones activas (palletNumber, lote, docNumber, etc.)
     const activeReceptions = this.receptionsSignal();
+    const receptionPalletByCode = new Map<string, any>();
+    const receptionPalletById = new Map<string, any>();
+
+    activeReceptions.forEach((r: any) => {
+      if (r.status !== 'CANCELLED' && r.pallets && r.pallets.length > 0) {
+        r.pallets.forEach((rp: any) => {
+          const checkInDoc = r.checkIn?.docNumber || r.remisionNo || '';
+          if (rp.palletCode) {
+            receptionPalletByCode.set(rp.palletCode.toUpperCase().trim(), { ...rp, checkInDoc, rec: r });
+          }
+          if (rp.supplierUaCode) {
+            receptionPalletByCode.set(rp.supplierUaCode.toUpperCase().trim(), { ...rp, checkInDoc, rec: r });
+          }
+          if (rp.internalUaCode) {
+            receptionPalletByCode.set(rp.internalUaCode.toUpperCase().trim(), { ...rp, checkInDoc, rec: r });
+          }
+          if (rp.id) {
+            receptionPalletById.set(rp.id, { ...rp, checkInDoc, rec: r });
+          }
+        });
+      }
+    });
+
     Object.values(locMap).forEach((loc) => {
       loc.pallets.forEach((pallet) => {
-        if (!pallet.lotNumber || pallet.lotNumber === 'N/A' || !pallet.expirationDate) {
-          const matchRec = activeReceptions.find((r) =>
-            r.status !== 'CANCELLED' &&
-            (r.pallets?.some((rp) => rp.palletCode === pallet.palletCode || rp.id === pallet.id) ||
-             (r.storageLocation && r.storageLocation.toUpperCase().trim() === loc.locationCode))
-          );
-          if (matchRec) {
-            const matchPallet = matchRec.pallets?.find((rp) => rp.palletCode === pallet.palletCode || rp.id === pallet.id);
-            if (matchPallet) {
-              if (!pallet.lotNumber && matchPallet.lotNumber) pallet.lotNumber = matchPallet.lotNumber;
-              if (!pallet.expirationDate && matchPallet.expirationDate) pallet.expirationDate = matchPallet.expirationDate;
-              if (!pallet.docNumber && (matchPallet.docNumber || matchRec.checkIn?.docNumber)) {
-                pallet.docNumber = matchPallet.docNumber || matchRec.checkIn?.docNumber;
-              }
-            } else {
-              if (!pallet.lotNumber && matchRec.lotNumber) pallet.lotNumber = matchRec.lotNumber;
-              if (!pallet.expirationDate && matchRec.expirationDate) pallet.expirationDate = matchRec.expirationDate;
-              if (!pallet.docNumber && matchRec.checkIn?.docNumber) pallet.docNumber = matchRec.checkIn.docNumber;
-            }
+        const codeKey = (pallet.palletCode || '').toUpperCase().trim();
+        const match = (codeKey ? receptionPalletByCode.get(codeKey) : undefined) ||
+                      (pallet.id ? receptionPalletById.get(pallet.id) : undefined);
+
+        if (match) {
+          if (match.palletNumber != null) {
+            pallet.palletNumber = match.palletNumber;
+          }
+          if (!pallet.lotNumber || pallet.lotNumber === 'N/A' || pallet.lotNumber === 'S/L') {
+            if (match.lotNumber) pallet.lotNumber = match.lotNumber;
+            else if (match.rec?.lotNumber) pallet.lotNumber = match.rec.lotNumber;
+          }
+          if (!pallet.expirationDate || pallet.expirationDate === 'N/A') {
+            if (match.expirationDate) pallet.expirationDate = match.expirationDate;
+            else if (match.rec?.expirationDate) pallet.expirationDate = match.rec.expirationDate;
+          }
+          if (!pallet.docNumber || pallet.docNumber === '-' || pallet.docNumber === 'REM-0000') {
+            if (match.docNumber) pallet.docNumber = match.docNumber;
+            else if (match.checkInDoc) pallet.docNumber = match.checkInDoc;
+          }
+          if ((!pallet.supplierName || pallet.supplierName === 'Cliente WMS') && (match.supplierName || match.rec?.supplier || match.rec?.clientName)) {
+            pallet.supplierName = match.supplierName || match.rec?.clientName || match.rec?.supplier;
+          }
+          if ((!pallet.description || pallet.description === 'Producto') && (match.description || match.rec?.productName)) {
+            pallet.description = match.description || match.rec?.productName;
+          }
+          if (!pallet.productId && (match.productId || match.rec?.skuCode)) {
+            pallet.productId = match.productId || match.rec?.skuCode;
           }
         }
+      });
+
+      // Ordenar las tarimas en la bahía de manera consistente y determinista por palletNumber ascendente, NUNCA por código de UA
+      loc.pallets.sort((a, b) => {
+        if (a.palletNumber != null && b.palletNumber != null) {
+          return a.palletNumber - b.palletNumber;
+        }
+        if (a.palletNumber != null) return -1;
+        if (b.palletNumber != null) return 1;
+        return 0;
       });
     });
 

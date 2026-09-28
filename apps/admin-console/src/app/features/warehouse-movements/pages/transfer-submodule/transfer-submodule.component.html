@@ -693,7 +693,7 @@
                         </td>
                         <td class="tarimas-cell-num text-center">
                           <span class="px-2 py-0.5 rounded font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs">
-                            Tarima #{{ pallet.palletNumber || (idx + 1) }}
+                            Tarima #{{ pallet.palletNumber != null ? pallet.palletNumber : (idx + 1) }}
                           </span>
                         </td>
                         <td class="tarimas-cell-code font-mono font-bold text-xs text-slate-800 dark:text-slate-100">
@@ -727,8 +727,10 @@
                             </div>
                           }
                         </td>
-                        <td class="text-right font-black font-mono text-xs text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                          {{ pallet.pieces || 0 }} PZAS
+                        <td class="tarimas-cell-pieces text-right pr-3">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded font-mono font-black text-xs bg-emerald-100/90 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 whitespace-nowrap shadow-2xs">
+                            {{ pallet.pieces || 0 }} PZAS
+                          </span>
                         </td>
                       </tr>
                     } @empty {

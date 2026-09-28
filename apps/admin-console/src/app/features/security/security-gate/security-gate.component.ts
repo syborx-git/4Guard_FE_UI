@@ -652,7 +652,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     for (const p of backendPasses || []) {
       const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
-      mergedMap.set(key, p);
+
+      const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
+      mergedMap.set(key, {
+        ...p,
+        receptionTime: timeVal,
+        horaEntrada: timeVal
+      });
     }
 
     // 3. Recepciones registradas en el WMS (Inbound)
@@ -668,6 +674,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
 
         const isReady = r.status === 'COMPLETED';
+        const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
           id: r.id || ('rec-' + r.folio),
@@ -689,7 +696,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           sealNumbers: seals,
           docNumber: r.checkIn?.docNumber || ('REM-' + r.folio),
           docDate: r.checkIn?.docDate || r.createdAt,
-          receptionTime: r.checkIn?.receptionTime || '09:00',
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
           rampNumber: r.checkIn?.rampNumber || 1,
           rampCode: r.checkIn?.rampCode || (r.checkIn?.rampNumber ? `R-${r.checkIn.rampNumber}` : 'R-01'),
           observations: r.observations || r.checkIn?.observations || '',
@@ -710,6 +718,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (!mergedMap.has(key)) {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
         const isReady = o.status === 'COMPLETED' || o.status === 'LOADED';
+        const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
           id: o.id || ('out-' + o.folio),
@@ -720,6 +729,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           operacion: 'CARGA',
           clientCode: o.clientCode || '',
           clientName: o.clientName || 'Cliente General',
+          carrierCode: o.carrierCode || '',
           carrierLineCode: o.carrierCode || '',
           carrierLine: o.carrierName || 'Transportista',
           driverName: o.driverName || 'Operador Transportista',
@@ -731,7 +741,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           sealNumbers: seals,
           docNumber: o.remisionNo || ('SAL-' + o.folio),
           docDate: o.dispatchedAt || this.getCurrentDateString(),
-          receptionTime: o.timestamp || '09:00',
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
           rampNumber: o.rampNumber || 1,
           rampCode: o.rampCode || (o.rampNumber ? `R-${o.rampNumber}` : 'R-01'),
           observations: o.observations || '',
@@ -1532,11 +1543,36 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected formatTimeString(val: any): string {
     if (!val) return '--:--';
     const str = String(val).trim();
-    if (!str || str === '--:--' || str === 'null' || str === 'undefined') return '--:--';
-    const withoutMillis = str.split('.')[0];
-    if (withoutMillis.includes('T')) {
-      return withoutMillis.split('T')[1];
+    if (!str || str === '--:--' || str === 'null' || str === 'undefined' || str === '-- : --' || str === '-') return '--:--';
+
+    // Si viene en formato ISO (ej. 2026-09-28T04:20:00Z o 2026-09-28T04:20:00.123456)
+    if (str.includes('T')) {
+      const timePart = str.split('T')[1].split('.')[0].replace(/Z|[+-].*$/g, '');
+      const parts = timePart.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+      }
     }
+
+    // Si viene con fecha locale (ej. "27/09/2026, 14:30:00" o "27/09/2026 14:30")
+    if (str.includes(',') || (str.includes('/') && str.includes(':'))) {
+      const segs = str.split(/,|\s+/);
+      for (const seg of segs) {
+        if (seg.includes(':')) {
+          const parts = seg.split(':');
+          if (parts.length >= 2) {
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+          }
+        }
+      }
+    }
+
+    const withoutMillis = str.split('.')[0];
+    const parts = withoutMillis.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+
     return withoutMillis;
   }
 
