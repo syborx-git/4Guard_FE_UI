@@ -88,6 +88,7 @@ export interface CheckInCasetaData {
   forkliftOperatorCode?: string; // ID Montacarguista
   forkliftOperator?: string; // Montacarguista Nombre (asignado en recepción)
   driverName: string;       // Operador (Chofer)
+  driverPhone?: string;     // Teléfono del Chofer
   tractorPlates: string;    // Placas Tracto
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
