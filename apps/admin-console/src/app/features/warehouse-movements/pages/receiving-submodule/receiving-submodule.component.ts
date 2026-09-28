@@ -857,6 +857,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.loadAuditLogs(rec.folio);
     this.patchAltaFormWithReception(rec);
 
+    if (rec.pallets && Array.isArray(rec.pallets)) {
+      for (const p of rec.pallets) {
+        if (p.palletNumber && Number(p.palletNumber) > 0) {
+          this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
+        }
+      }
+    }
+
     if (rec.id) {
       this.movementsApi.getReceptionById(rec.id).subscribe({
         next: (fullData) => {
@@ -866,6 +874,13 @@ export class ReceivingSubmoduleComponent implements OnInit {
           }
           if (!mapped.checkIn?.rampNumber && rec.checkIn?.rampNumber) {
             mapped.checkIn.rampNumber = rec.checkIn.rampNumber;
+          }
+          if (mapped.pallets && Array.isArray(mapped.pallets)) {
+            for (const p of mapped.pallets) {
+              if (p.palletNumber && Number(p.palletNumber) > 0) {
+                this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
+              }
+            }
           }
           this.selectedReception.set(mapped);
           this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
@@ -1204,18 +1219,30 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   assignLotToPallet(palletId: string, lotNum: string): void {
     const matchedLot = this.lotsList().find((l) => l.lotNumber === lotNum);
-    this.palletStream.update((list) =>
-      list.map((p) => {
-        if (p.id === palletId) {
-          return {
-            ...p,
-            lotNumber: lotNum,
-            expirationDate: matchedLot?.expirationDate || p.expirationDate || (this.altaForm.value.expirationDate ?? undefined),
-          };
-        }
-        return p;
-      })
-    );
+    const updatedStream = this.palletStream().map((p) => {
+      if (p.id === palletId) {
+        return {
+          ...p,
+          lotNumber: lotNum,
+          expirationDate: matchedLot?.expirationDate || p.expirationDate || (this.altaForm.value.expirationDate ?? undefined),
+        };
+      }
+      return p;
+    });
+    this.palletStream.set(updatedStream);
+    this.selectedReception.update((rec) => (rec ? { ...rec, pallets: updatedStream } : null));
+
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId) && palletId && isUuid(palletId)) {
+      this.movementsApi.updatePallet(recId, palletId, {
+        lotNumber: lotNum,
+        expirationDate: matchedLot?.expirationDate || undefined,
+      }).subscribe({
+        next: () => {},
+        error: (err: any) => console.warn('Sync assignLotToPallet error:', err)
+      });
+    }
+
     this.toast.success(`Lote ${lotNum} asignado a la UA.`);
   }
 
@@ -1645,6 +1672,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
           status: 'SCANNED',
         },
       ];
+      this.movementsService.updateGlobalMaxPalletNumber(baseNum + 2);
       this.palletStream.set(stream);
     }
 
@@ -2105,18 +2133,29 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.isCompleting.set(false);
           const currentLots = this.lotsList();
           const enrichedPallets = currentStream.map((p, idx) => {
-            let pLot = p.lotNumber;
-            let pExp = p.expirationDate;
+            let rawLot = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber || (p as any).batch_number;
+            let pLot = (rawLot && String(rawLot).trim() && rawLot !== 'N/A' && rawLot !== '-')
+              ? String(rawLot).trim().toUpperCase()
+              : '';
+            let rawExp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+            let pExp = (rawExp && String(rawExp).trim() && rawExp !== 'N/A' && rawExp !== '-')
+              ? String(rawExp).trim()
+              : '';
+
             if (!pLot && currentLots.length > 0) pLot = currentLots[0].lotNumber;
             if (!pExp && pLot) {
-              const matched = currentLots.find(l => l.lotNumber === pLot);
-              if (matched) pExp = matched.expirationDate;
+              const matched = currentLots.find(l => l.lotNumber.toUpperCase() === pLot.toUpperCase());
+              if (matched && matched.expirationDate) pExp = matched.expirationDate;
             }
+            const pDoc = (p.docNumber && String(p.docNumber).trim() && p.docNumber !== 'N/A' && p.docNumber !== '-')
+              ? String(p.docNumber).trim().toUpperCase()
+              : ((p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '');
             return {
               ...p,
               palletNumber: p.palletNumber || (idx + 1),
               lotNumber: pLot || rec.lotNumber || 'N/A',
-              expirationDate: pExp || rec.expirationDate || 'N/A'
+              expirationDate: pExp || rec.expirationDate || 'N/A',
+              docNumber: pDoc || '-'
             };
           });
 
@@ -2468,6 +2507,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     };
 
     // ⬇️ VISUALIZACIÓN DESCENDENTE: Los más recientes se agregan AL PRINCIPIO del arreglo (unshift)
+    this.movementsService.updateGlobalMaxPalletNumber(nextNum);
     this.palletStream.update((list) => [newItem, ...list]);
     this.uaCodeInput.set('');
     this.uaObsInput.set('');
@@ -2479,7 +2519,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }, 10);
   }
 
-  // Obtiene el siguiente consecutivo de tarima global a nivel de almacén/sistema
+  // Obtiene el siguiente consecutivo de tarima global a nivel de almacén/sistema (Garantiza continuidad estricta entre remisiones)
   getNextConsecutivePalletNumber(): number {
     let maxInStream = 0;
     for (const p of this.palletStream()) {
@@ -2567,37 +2607,52 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   openPrintPreview(rec: ReceptionHeader): void {
-    const palletsToPrint = rec.pallets && rec.pallets.length > 0 ? rec.pallets : [...this.palletStream()];
+    const currentStream = this.palletStream();
+    const isCurrentlySelected = this.selectedReception()?.id === rec.id || this.selectedReception()?.folio === rec.folio;
+    const palletsToPrint = (isCurrentlySelected && currentStream && currentStream.length > 0)
+      ? [...currentStream]
+      : (rec.pallets && rec.pallets.length > 0 ? rec.pallets : [...currentStream]);
     const formVals = this.altaForm.value;
     const currentLots = this.lotsList();
 
     const enrichedPallets = palletsToPrint.map((p, idx) => {
-      let pLot = p.lotNumber;
-      let pExp = p.expirationDate;
+      let rawLot = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber || (p as any).batch_number;
+      let pLot = (rawLot && String(rawLot).trim() && rawLot !== 'N/A' && rawLot !== '-')
+        ? String(rawLot).trim().toUpperCase()
+        : '';
+      let rawExp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+      let pExp = (rawExp && String(rawExp).trim() && rawExp !== 'N/A' && rawExp !== '-')
+        ? String(rawExp).trim()
+        : '';
+
       if (!pLot && currentLots.length > 0) {
         pLot = currentLots[0].lotNumber;
       }
       if (!pExp && pLot) {
-        const matched = currentLots.find(l => l.lotNumber === pLot);
-        if (matched) pExp = matched.expirationDate;
+        const matched = currentLots.find(l => l.lotNumber.toUpperCase() === pLot.toUpperCase());
+        if (matched && matched.expirationDate) pExp = matched.expirationDate;
       }
+      const pDoc = (p.docNumber && String(p.docNumber).trim() && p.docNumber !== 'N/A' && p.docNumber !== '-')
+        ? String(p.docNumber).trim().toUpperCase()
+        : ((p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '');
       return {
         ...p,
         palletNumber: p.palletNumber || (idx + 1),
         lotNumber: pLot || rec.lotNumber || formVals.lotNumber || 'N/A',
-        expirationDate: pExp || rec.expirationDate || formVals.expirationDate || 'N/A'
+        expirationDate: pExp || rec.expirationDate || formVals.expirationDate || 'N/A',
+        docNumber: pDoc || '-'
       };
     });
 
     const recToPrint: ReceptionHeader = {
       ...rec,
-      lotNumber: rec.lotNumber || formVals.lotNumber || '01.07.2026',
-      expirationDate: rec.expirationDate || formVals.expirationDate || '2028-07-31',
-      productId: rec.productId || formVals.productId || '12572733',
-      productName: rec.productName || formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: rec.supplierName || formVals.supplierName || 'LE MEXICO S.A DE C.V',
+      lotNumber: rec.lotNumber || formVals.lotNumber || (enrichedPallets.length > 0 ? enrichedPallets[0].lotNumber : 'N/A'),
+      expirationDate: rec.expirationDate || formVals.expirationDate || (enrichedPallets.length > 0 ? enrichedPallets[0].expirationDate : 'N/A'),
+      productId: rec.productId || formVals.productId || (enrichedPallets.length > 0 ? enrichedPallets[0].productId : ''),
+      productName: rec.productName || formVals.productName || (enrichedPallets.length > 0 ? enrichedPallets[0].description : ''),
+      supplierName: rec.supplierName || formVals.supplierName || '',
       piecesPerPallet: rec.piecesPerPallet || formVals.piecesPerPallet || 40,
-      selectedPalletType: rec.selectedPalletType || (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP_NACIONAL',
+      selectedPalletType: rec.selectedPalletType || (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
       pallets: enrichedPallets,
       lots: (rec.lots && rec.lots.length > 0) ? rec.lots : (currentLots.length > 0 ? [...currentLots] : undefined),
       observations: rec.observations || formVals.observations || undefined,

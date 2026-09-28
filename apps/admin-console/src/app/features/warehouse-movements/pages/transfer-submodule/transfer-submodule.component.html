@@ -565,12 +565,29 @@
 
             <!-- CONTROLES DE SELECCIÓN DE CANTIDAD Y TABLA DE TARIMAS -->
             <div class="space-y-3 pt-2">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-surface border border-subtle">
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-amber-600 text-base">pin</span>
-                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Seleccionar Cantidad de Tarimas a Mover:
-                  </span>
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-2.5 p-2.5 rounded-lg bg-surface border border-subtle">
+                <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+                  <div class="relative w-full max-w-md">
+                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">search</span>
+                    <input
+                      type="text"
+                      [ngModel]="palletSearchQuery()"
+                      (ngModelChange)="palletSearchQuery.set($event)"
+                      [disabled]="!selectedOriginCode() || originStock().pallets.length === 0"
+                      placeholder="Buscar por UA, Lote, SKU, Remisión, Descripción..."
+                      class="fg-input pl-8 pr-7 py-1 text-xs w-full font-medium"
+                    />
+                    @if (palletSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="palletSearchQuery.set('')"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-0.5 rounded"
+                        title="Limpiar búsqueda"
+                      >
+                        <span class="material-symbols-outlined text-xs">close</span>
+                      </button>
+                    }
+                  </div>
                 </div>
 
                 @if (selectedOriginCode() && originStock().pallets.length > 0) {
@@ -582,8 +599,8 @@
                         <button
                           type="button"
                           (click)="setQuantityToMove(selectedPalletIds().length - 1)"
-                          [disabled]="selectedPalletIds().length <= 1"
-                          class="px-2 py-1 text-slate-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold"
+                          [disabled]="selectedPalletIds().length <= 0"
+                          class="px-2 py-1 text-slate-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold"
                           title="Reducir una tarima"
                         >
                           -
@@ -592,7 +609,7 @@
                           type="number"
                           [value]="selectedPalletIds().length"
                           (input)="onQuantityInputChange($any($event.target).value)"
-                          min="1"
+                          min="0"
                           [max]="originStock().pallets.length"
                           class="w-12 text-center text-xs font-mono font-bold bg-transparent border-0 focus:ring-0 text-amber-700 dark:text-amber-400 p-0"
                         />
@@ -600,7 +617,7 @@
                           type="button"
                           (click)="setQuantityToMove(selectedPalletIds().length + 1)"
                           [disabled]="selectedPalletIds().length >= originStock().pallets.length"
-                          class="px-2 py-1 text-slate-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold"
+                          class="px-2 py-1 text-slate-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold"
                           title="Aumentar una tarima"
                         >
                           +
@@ -609,31 +626,59 @@
                       <span class="text-[11px] text-slate-500 font-mono">de {{ originStock().pallets.length }}</span>
                     </div>
 
-                    <!-- Botón seleccionar todas / deseleccionar -->
-                    <button
-                      type="button"
-                      (click)="toggleSelectAllPallets()"
-                      class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 transition-colors"
-                    >
-                      {{ selectedPalletIds().length === originStock().pallets.length ? 'Deseleccionar todas' : 'Mover todas (' + originStock().pallets.length + ')' }}
-                    </button>
+                    <!-- Botón Seleccionar Todas -->
+                    @if (selectedPalletIds().length < originStock().pallets.length) {
+                      <button
+                        type="button"
+                        (click)="selectAllPallets()"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[13px]">select_all</span>
+                        <span>Seleccionar todas ({{ originStock().pallets.length }})</span>
+                      </button>
+                    }
+
+                    <!-- Botón Deseleccionar Todas -->
+                    @if (selectedPalletIds().length > 0) {
+                      <button
+                        type="button"
+                        (click)="deselectAllPallets()"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 border border-slate-500/30 transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[13px]">deselect</span>
+                        <span>Deseleccionar todas</span>
+                      </button>
+                    }
                   </div>
                 }
               </div>
 
-              <!-- Tabla de Tarimas con Checkboxes (ID Tarima, Código UA, Producto / SKU) -->
-              <div class="tarimas-table-wrapper max-h-60 overflow-y-auto">
+              <!-- Tabla de Tarimas con Checkboxes (ID Tarima, Código UA, Lote, Caducidad, Remisión, Producto / SKU, Cantidad) -->
+              <div class="tarimas-table-wrapper max-h-72 overflow-y-auto">
                 <table class="tarimas-table w-full">
                   <thead>
                     <tr>
-                      <th class="w-12 text-center">Sel.</th>
-                      <th class="w-32 text-center">ID Tarima</th>
-                      <th class="w-48">Código UA</th>
+                      <th class="w-12 text-center">
+                        <input
+                          type="checkbox"
+                          [checked]="isAllVisiblePalletsSelected()"
+                          (change)="toggleSelectAllPallets()"
+                          [disabled]="filteredOriginPallets().length === 0"
+                          class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer disabled:opacity-40"
+                          title="Seleccionar / Deseleccionar todas las tarimas visibles"
+                        />
+                      </th>
+                      <th class="w-28 text-center font-mono">ID Tarima</th>
+                      <th class="w-44 font-mono">Código UA</th>
+                      <th class="w-32 font-mono text-center">Lote</th>
+                      <th class="w-28 font-mono text-center">Caducidad</th>
+                      <th class="w-28 font-mono text-center">Remisión</th>
                       <th>Producto / SKU</th>
+                      <th class="w-28 text-right font-mono">Cantidad</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (pallet of originStock().pallets; track pallet.id; let idx = $index) {
+                    @for (pallet of filteredOriginPallets(); track pallet.id; let idx = $index) {
                       <tr
                         (click)="togglePalletSelection(pallet.id)"
                         [class.selected-row]="selectedPalletIds().includes(pallet.id)"
@@ -648,28 +693,63 @@
                         </td>
                         <td class="tarimas-cell-num text-center">
                           <span class="px-2 py-0.5 rounded font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs">
-                            Tarima #{{ idx + 1 }}
+                            Tarima #{{ pallet.palletNumber || (idx + 1) }}
                           </span>
                         </td>
-                        <td class="tarimas-cell-code font-mono font-bold text-xs">
+                        <td class="tarimas-cell-code font-mono font-bold text-xs text-slate-800 dark:text-slate-100">
                           {{ pallet.palletCode }}
+                        </td>
+                        <td class="text-center">
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-100/80 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
+                            <span class="material-symbols-outlined text-[12px] text-amber-700 dark:text-amber-400">label</span>
+                            <span>{{ pallet.lotNumber || 'S/L' }}</span>
+                          </span>
+                        </td>
+                        <td class="text-center">
+                          <span class="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                            <span class="material-symbols-outlined text-[12px] text-slate-500">event</span>
+                            <span>{{ pallet.expirationDate || 'N/A' }}</span>
+                          </span>
+                        </td>
+                        <td class="text-center">
+                          <span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-purple-900 dark:text-purple-200 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 whitespace-nowrap">
+                            <span>{{ pallet.docNumber || getLocationRemisiones(selectedOriginCode())[0] || '-' }}</span>
+                          </span>
                         </td>
                         <td class="tarimas-cell-sku">
                           <div class="font-bold text-xs text-primary leading-tight">
                             <span class="font-mono text-amber-700 dark:text-amber-400 mr-2">{{ pallet.productId }}</span>
                             <span>{{ pallet.description }}</span>
                           </div>
-                          @if (pallet.pieces) {
-                            <div class="text-[10px] text-muted font-mono mt-0.5">
-                              {{ pallet.pieces }} piezas por tarima
+                          @if (pallet.supplierName) {
+                            <div class="text-[10px] text-slate-500 truncate mt-0.5">
+                              {{ pallet.supplierName }} · {{ pallet.palletTypeLabel || 'Madera Estándar' }}
                             </div>
                           }
+                        </td>
+                        <td class="text-right font-black font-mono text-xs text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                          {{ pallet.pieces || 0 }} PZAS
                         </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="4" class="p-4 text-center text-slate-500 italic text-xs">
-                          {{ selectedOriginCode() ? 'No hay tarimas disponibles en esta bahía.' : 'Selecciona Bahía de Origen con Stock para listar sus tarimas.' }}
+                        <td colspan="8" class="p-6 text-center text-slate-500 italic text-xs">
+                          @if (!selectedOriginCode()) {
+                            <div class="flex flex-col items-center gap-1">
+                              <span class="material-symbols-outlined text-2xl text-slate-400">warehouse</span>
+                              <span>Selecciona Bahía de Origen con Stock para listar sus tarimas.</span>
+                            </div>
+                          } @else if (originStock().pallets.length === 0) {
+                            <div class="flex flex-col items-center gap-1">
+                              <span class="material-symbols-outlined text-2xl text-amber-500">inventory_2</span>
+                              <span>No hay tarimas disponibles en esta bahía.</span>
+                            </div>
+                          } @else {
+                            <div class="flex flex-col items-center gap-1">
+                              <span class="material-symbols-outlined text-2xl text-slate-400">search_off</span>
+                              <span>No se encontraron tarimas que coincidan con "{{ palletSearchQuery() }}".</span>
+                            </div>
+                          }
                         </td>
                       </tr>
                     }
@@ -677,9 +757,17 @@
                 </table>
               </div>
 
-              <!-- Resumen sutil debajo de la tabla -->
+              <!-- Resumen debajo de la tabla -->
               <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 px-1">
-                <span>Seleccionadas: <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedTotalPallets() }} Tarima(s)</strong> · <strong class="text-emerald-700 dark:text-emerald-400 font-mono">{{ selectedTotalPieces() }} Pzas</strong></span>
+                <span>
+                  Seleccionadas: <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedTotalPallets() }} Tarima(s)</strong> de <strong class="font-mono">{{ originStock().pallets.length }}</strong> · <strong class="text-emerald-700 dark:text-emerald-400 font-mono">{{ selectedTotalPieces() }} Pzas</strong>
+                </span>
+                @if (selectedOriginCode() && originStock().pallets.length > 0 && selectedPalletIds().length === 0) {
+                  <span class="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px]">info</span>
+                    <span>Selecciona las tarimas a mover usando las casillas o el botón "Seleccionar todas"</span>
+                  </span>
+                }
               </div>
             </div>
           </div>

@@ -235,11 +235,43 @@ export class TransferSubmoduleComponent implements OnInit {
   isOriginDropdownOpen = signal<boolean>(false);
   selectedOriginCode = signal('');
   selectedPalletIds = signal<string[]>([]);
-  quantityToMoveInput = signal<number>(1);
+  quantityToMoveInput = signal<number>(0);
+  palletSearchQuery = signal<string>('');
 
-  // Bahias Ocupadas y Disponibles
+  // Bahías Ocupadas y Disponibles
   occupiedLocations = this.movementsService.occupiedLocations;
   availableLocations = this.movementsService.availableLocations;
+
+  // Filtrado reactivo de tarimas en la bahía de origen seleccionada
+  filteredOriginPallets = computed(() => {
+    const list = this.originStock().pallets || [];
+    const q = this.palletSearchQuery().toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((p, idx) => {
+      const matchIndex = `tarima #${idx + 1}`.includes(q) || (p.palletNumber ? `tarima #${p.palletNumber}`.includes(q) : false);
+      const matchCode = p.palletCode ? p.palletCode.toLowerCase().includes(q) : false;
+      const matchSku = p.productId ? p.productId.toLowerCase().includes(q) : false;
+      const matchDesc = p.description ? p.description.toLowerCase().includes(q) : false;
+      const matchLot = p.lotNumber ? p.lotNumber.toLowerCase().includes(q) : false;
+      const matchExp = p.expirationDate ? p.expirationDate.toLowerCase().includes(q) : false;
+      const matchDoc = p.docNumber ? p.docNumber.toLowerCase().includes(q) : false;
+      const matchSup = p.supplierName ? p.supplierName.toLowerCase().includes(q) : false;
+      return matchIndex || matchCode || matchSku || matchDesc || matchLot || matchExp || matchDoc || matchSup;
+    });
+  });
+
+  isAllVisiblePalletsSelected = computed(() => {
+    const visible = this.filteredOriginPallets();
+    const selected = this.selectedPalletIds();
+    return visible.length > 0 && visible.every((p) => selected.includes(p.id));
+  });
+
+  isSomeVisiblePalletsSelected = computed(() => {
+    const visible = this.filteredOriginPallets();
+    const selected = this.selectedPalletIds();
+    const selectedCount = visible.filter((p) => selected.includes(p.id)).length;
+    return selectedCount > 0 && selectedCount < visible.length;
+  });
 
   // Formato legible para código de bahía (elimina "N/A" mostrando nombre de bahía/rack real)
   getLocationDisplayCode(locOrCode: LocationStockInfo | string | undefined | null): string {
@@ -386,16 +418,18 @@ export class TransferSubmoduleComponent implements OnInit {
     const loc = this.movementsService.getLocationInfo(code);
     this.originSearchQuery.set(this.getLocationDisplayCode(loc || code));
     this.isOriginDropdownOpen.set(false);
-    const stock = this.movementsService.getLocationInfo(code);
-    this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
-    this.quantityToMoveInput.set(stock.pallets.length > 0 ? stock.pallets.length : 1);
+    this.palletSearchQuery.set('');
+    // ❌ No seleccionar todas por defecto: Inicia deseleccionado para que el usuario elija libremente
+    this.selectedPalletIds.set([]);
+    this.quantityToMoveInput.set(0);
   }
 
   clearOriginSelection(): void {
     this.selectedOriginCode.set('');
     this.originSearchQuery.set('');
     this.selectedPalletIds.set([]);
-    this.quantityToMoveInput.set(1);
+    this.quantityToMoveInput.set(0);
+    this.palletSearchQuery.set('');
     this.isOriginDropdownOpen.set(false);
   }
 
@@ -403,7 +437,7 @@ export class TransferSubmoduleComponent implements OnInit {
   setQuantityToMove(count: number): void {
     const stock = this.originStock();
     const max = stock.pallets.length;
-    const safeCount = Math.max(1, Math.min(count, max));
+    const safeCount = Math.max(0, Math.min(count, max));
     this.quantityToMoveInput.set(safeCount);
     const selected = stock.pallets.slice(0, safeCount).map((p) => p.id);
     this.selectedPalletIds.set(selected);
@@ -411,9 +445,20 @@ export class TransferSubmoduleComponent implements OnInit {
 
   onQuantityInputChange(val: any): void {
     const num = parseInt(val, 10);
-    if (!isNaN(num) && num > 0) {
+    if (!isNaN(num) && num >= 0) {
       this.setQuantityToMove(num);
     }
+  }
+
+  selectAllPallets(): void {
+    const stock = this.originStock();
+    this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
+    this.quantityToMoveInput.set(stock.pallets.length);
+  }
+
+  deselectAllPallets(): void {
+    this.selectedPalletIds.set([]);
+    this.quantityToMoveInput.set(0);
   }
 
   // ── 3. BUSCADOR & AUTOCOMPLETE DE BAHÍA DESTINO (MÁQUINA DE ESTADOS) ──
@@ -833,24 +878,37 @@ export class TransferSubmoduleComponent implements OnInit {
     }
   }
 
-  // Toggle de seleccion de tarima individual
+  // Toggle de selección de tarima individual
   togglePalletSelection(palletId: string): void {
     this.selectedPalletIds.update((ids) => {
+      let updated: string[];
       if (ids.includes(palletId)) {
-        return ids.filter((id) => id !== palletId);
+        updated = ids.filter((id) => id !== palletId);
       } else {
-        return [...ids, palletId];
+        updated = [...ids, palletId];
       }
+      this.quantityToMoveInput.set(updated.length);
+      return updated;
     });
   }
 
-  // Seleccionar todas o deseleccionar todas
+  // Seleccionar todas o deseleccionar todas (sensible al filtro de búsqueda)
   toggleSelectAllPallets(): void {
-    const stock = this.originStock();
-    if (this.selectedPalletIds().length === stock.pallets.length) {
-      this.selectedPalletIds.set([]);
+    const visible = this.filteredOriginPallets();
+    const current = this.selectedPalletIds();
+    
+    // Si todas las visibles están seleccionadas, deseleccionarlas
+    const allVisibleSelected = visible.length > 0 && visible.every((p) => current.includes(p.id));
+    if (allVisibleSelected) {
+      const visibleIds = new Set(visible.map((p) => p.id));
+      const remaining = current.filter((id) => !visibleIds.has(id));
+      this.selectedPalletIds.set(remaining);
+      this.quantityToMoveInput.set(remaining.length);
     } else {
-      this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
+      // Seleccionar todas las visibles
+      const newSelected = Array.from(new Set([...current, ...visible.map((p) => p.id)]));
+      this.selectedPalletIds.set(newSelected);
+      this.quantityToMoveInput.set(newSelected.length);
     }
   }
 

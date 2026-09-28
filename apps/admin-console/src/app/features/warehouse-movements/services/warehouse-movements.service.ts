@@ -93,6 +93,9 @@ export class WarehouseMovementsService {
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
 
+  // Consecutivo Global de Tarimas (Continuidad estricta entre remisiones y recepciones)
+  private readonly globalMaxPalletNumberSignal = signal<number>(0);
+
   // Readonly Computed Public Exposures
   readonly receptions = this.receptionsSignal.asReadonly();
   readonly pendingReceptions = computed(() =>
@@ -104,6 +107,7 @@ export class WarehouseMovementsService {
   readonly outbounds = this.outboundsSignal.asReadonly();
   readonly locations = this.locationsSignal.asReadonly();
   readonly inventoryBatches = this.inventoryBatchesSignal.asReadonly();
+  readonly globalMaxPalletNumber = this.globalMaxPalletNumberSignal.asReadonly();
 
   // KPIs de Salidas de Almacén (Outbound)
   readonly kpiTotalOutbounds = computed(() => this.outboundsSignal().length);
@@ -269,10 +273,44 @@ export class WarehouseMovementsService {
   readonly transferReasons = TRANSFER_REASONS;
 
   constructor() {
+    try {
+      const cachedMax = localStorage.getItem('4g_global_max_pallet_number');
+      if (cachedMax) {
+        const num = parseInt(cachedMax, 10);
+        if (!isNaN(num) && num > 0) {
+          this.globalMaxPalletNumberSignal.set(num);
+        }
+      }
+    } catch (_) {}
     this.loadInitialBackendData();
   }
 
+  public syncGlobalMaxPalletNumber(): void {
+    this.movementsApi.getNextPalletNumber().subscribe({
+      next: (res: any) => {
+        if (res && res.lastPalletNumber != null) {
+          const lastNum = Number(res.lastPalletNumber);
+          this.updateGlobalMaxPalletNumber(lastNum);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  public updateGlobalMaxPalletNumber(num: number): void {
+    if (num && Number(num) > this.globalMaxPalletNumberSignal()) {
+      const val = Number(num);
+      this.globalMaxPalletNumberSignal.set(val);
+      try {
+        localStorage.setItem('4g_global_max_pallet_number', String(val));
+      } catch (_) {}
+    }
+  }
+
   public loadInitialBackendData(): void {
+    // 0. Sincronizar consecutivo global de tarimas
+    this.syncGlobalMaxPalletNumber();
+
     // 1. Clientes
     this.movementsApi.getClients().subscribe({
       next: (clients: any) => {
@@ -530,6 +568,7 @@ export class WarehouseMovementsService {
   }
 
   public reloadReceptions(): void {
+    this.syncGlobalMaxPalletNumber();
     this.movementsApi.getReceptions().subscribe({
       next: (receptions: any) => {
         const mapped = (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r));
@@ -696,15 +735,19 @@ export class WarehouseMovementsService {
 
           const palletItem: ReceptionPalletItem = {
             id: p.itemId || p.id, // UUID real del item en wms.inventory_items
+            palletNumber: p.palletNumber || p.positionNumber || undefined,
             palletCode: p.palletCode || p.sscc || `UA-${p.itemId?.substring(0, 8) || '001'}`,
-            productId: p.skuCode || b.skuCode || '',
+            productId: p.productId || p.skuCode || b.productId || b.skuCode || '',
             description: p.description || b.productName || '',
-            supplierName: b.clientName || 'Cliente WMS',
+            supplierName: p.supplierName || b.clientName || b.client || 'Cliente WMS',
             pieces: Number(p.pieces || b.totalPieces || 0),
             palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
             palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
             observations: p.observations || '',
             status: 'SCANNED',
+            lotNumber: p.lotNumber || b.lotNumber || '',
+            expirationDate: p.expirationDate || b.expirationDate || '',
+            docNumber: p.docNumber || b.remisionNo || '',
           };
 
           locMap[locCode].pallets.push(palletItem);
@@ -712,7 +755,35 @@ export class WarehouseMovementsService {
       });
     }
 
-    // 3. Recalcular totalizadores para cada ubicación
+    // 3. Enriquecer con lotes/remisiones desde recepciones activas
+    const activeReceptions = this.receptionsSignal();
+    Object.values(locMap).forEach((loc) => {
+      loc.pallets.forEach((pallet) => {
+        if (!pallet.lotNumber || pallet.lotNumber === 'N/A' || !pallet.expirationDate) {
+          const matchRec = activeReceptions.find((r) =>
+            r.status !== 'CANCELLED' &&
+            (r.pallets?.some((rp) => rp.palletCode === pallet.palletCode || rp.id === pallet.id) ||
+             (r.storageLocation && r.storageLocation.toUpperCase().trim() === loc.locationCode))
+          );
+          if (matchRec) {
+            const matchPallet = matchRec.pallets?.find((rp) => rp.palletCode === pallet.palletCode || rp.id === pallet.id);
+            if (matchPallet) {
+              if (!pallet.lotNumber && matchPallet.lotNumber) pallet.lotNumber = matchPallet.lotNumber;
+              if (!pallet.expirationDate && matchPallet.expirationDate) pallet.expirationDate = matchPallet.expirationDate;
+              if (!pallet.docNumber && (matchPallet.docNumber || matchRec.checkIn?.docNumber)) {
+                pallet.docNumber = matchPallet.docNumber || matchRec.checkIn?.docNumber;
+              }
+            } else {
+              if (!pallet.lotNumber && matchRec.lotNumber) pallet.lotNumber = matchRec.lotNumber;
+              if (!pallet.expirationDate && matchRec.expirationDate) pallet.expirationDate = matchRec.expirationDate;
+              if (!pallet.docNumber && matchRec.checkIn?.docNumber) pallet.docNumber = matchRec.checkIn.docNumber;
+            }
+          }
+        }
+      });
+    });
+
+    // 4. Recalcular totalizadores para cada ubicación
     Object.values(locMap).forEach((loc) => {
       loc.totalPallets = loc.pallets.length;
       loc.totalPieces = loc.pallets.reduce((acc, p) => acc + (p.pieces || 0), 0);
@@ -1087,6 +1158,9 @@ export class WarehouseMovementsService {
             palletTypeId: p.palletType,
             status: p.status,
             observations: p.observations,
+            lotNumber: p.lotNumber || res.lotNumber || '',
+            expirationDate: p.expirationDate || res.expirationDate || '',
+            docNumber: p.docNumber || p.remisionNo || res.docNumber || data.docNumber || '',
           })),
           createdAt: res.createdAt ? String(res.createdAt).substring(11, 16) : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
           capturedBy: res.createdBy || 'Caseta de Seguridad',
@@ -1237,9 +1311,19 @@ export class WarehouseMovementsService {
     );
   }
 
-  // Obtiene el número consecutivo máximo de tarimas registrado entre todas las recepciones cargadas
+  // Obtiene el número consecutivo máximo de tarimas registrado entre todas las recepciones cargadas, inventario y backend
   getGlobalMaxPalletNumber(): number {
-    let maxNum = 0;
+    let maxNum = this.globalMaxPalletNumberSignal();
+    try {
+      const stored = localStorage.getItem('4g_global_max_pallet_number');
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed > maxNum) {
+          maxNum = parsed;
+        }
+      }
+    } catch (_) {}
+
     const list = this.receptionsSignal();
     for (const r of list) {
       if (r.pallets && Array.isArray(r.pallets)) {
@@ -1249,6 +1333,21 @@ export class WarehouseMovementsService {
           }
         }
       }
+    }
+
+    const batches = this.inventoryBatchesSignal();
+    for (const b of batches) {
+      if (b.pallets && Array.isArray(b.pallets)) {
+        for (const p of b.pallets) {
+          if ((p as any).palletNumber && Number((p as any).palletNumber) > maxNum) {
+            maxNum = Number((p as any).palletNumber);
+          }
+        }
+      }
+    }
+
+    if (maxNum > this.globalMaxPalletNumberSignal()) {
+      this.updateGlobalMaxPalletNumber(maxNum);
     }
     return maxNum;
   }
@@ -1269,22 +1368,28 @@ export class WarehouseMovementsService {
 
     const hasSkuOrPallets = !!(r.skuId || r.skuCode || r.productSku || r.productId || (r.pallets && r.pallets.length > 0));
     const pType = hasSkuOrPallets ? ((r.palletType as PalletType) || (r.selectedPalletType as PalletType) || ('' as any)) : ('' as any);
-    const pallets = (r.pallets || []).map((p: any) => ({
-      id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
-      palletNumber: p.palletNumber,
-      palletCode: p.palletCode || p.sscc || '',
-      productId: p.skuCode || r.skuCode || r.productId || '',
-      description: p.description || p.productDescription || r.productName || '',
-      supplierName: p.supplierName || r.supplierName || '',
-      pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
-      palletTypeId: p.palletTypeId || p.palletType || pType || 'MADERA_ESTANDAR',
-      palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
-      observations: p.observations || '',
-      status: p.status || 'SCANNED',
-      lotNumber: p.lotNumber || r.lotNumber || '',
-      expirationDate: p.expirationDate || r.expirationDate || '',
-      docNumber: resolvedDoc || '',
-    }));
+    const pallets = (r.pallets || []).map((p: any) => {
+      const pNum = p.palletNumber != null ? Number(p.palletNumber) : undefined;
+      if (pNum && pNum > 0) {
+        this.updateGlobalMaxPalletNumber(pNum);
+      }
+      return {
+        id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
+        palletNumber: pNum,
+        palletCode: p.palletCode || p.sscc || '',
+        productId: p.skuCode || r.skuCode || r.productId || '',
+        description: p.description || p.productDescription || r.productName || '',
+        supplierName: p.supplierName || r.supplierName || '',
+        pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
+        palletTypeId: p.palletTypeId || p.palletType || pType || 'MADERA_ESTANDAR',
+        palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
+        observations: p.observations || '',
+        status: p.status || 'SCANNED',
+        lotNumber: p.lotNumber || (p.receptionLot && p.receptionLot.lotNumber) || r.lotNumber || '',
+        expirationDate: p.expirationDate || (p.receptionLot && p.receptionLot.expirationDate) || r.expirationDate || '',
+        docNumber: p.docNumber || p.remisionNo || p.documentNumber || resolvedDoc || '',
+      };
+    });
 
     let opName = r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '';
     if (opName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opName)) {

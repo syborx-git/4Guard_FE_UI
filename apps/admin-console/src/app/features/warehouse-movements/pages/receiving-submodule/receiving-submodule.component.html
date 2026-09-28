@@ -1555,7 +1555,7 @@
               <tbody>
                 @for (pallet of palletStream(); track pallet.id) {
                   <tr>
-                    <td class="tarimas-cell-num">{{ pallet.palletNumber }}</td>
+                    <td class="tarimas-cell-num">{{ pallet.palletNumber || ($index + 1) }}</td>
                     <td class="tarimas-cell-code font-mono font-bold">{{ pallet.palletCode }}</td>
                     <td class="tarimas-cell-lot">
                       @if (lotsList().length > 1 && (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED')) {

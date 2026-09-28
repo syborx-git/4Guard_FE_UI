@@ -35,8 +35,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
         </h2>
       </div>
 
-      <!-- Header Grid Metadata: 2 Columnas Optimizadas -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0.5 text-[8.5px] mb-1.5 border border-black p-1.5 rounded-sm bg-slate-50/60 uppercase">
+      <!-- Header Grid Metadata: 2 Columnas Estrictas en Pantalla e Impresión -->
+      <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[8.5px] mb-1.5 border border-black p-1.5 rounded-sm bg-slate-50/60 uppercase" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
         
         <!-- Columna Izquierda: Logística & Transporte -->
         <div class="space-y-0.5">
@@ -75,7 +75,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div class="space-y-0.5">
           <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">NO. DOCUMENTO / REMISIÓN:</span>
-            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0">{{ reception.checkIn.docNumber }}</span>
+            <span class="font-black font-mono text-black text-right break-words flex-1 min-w-0 text-amber-950">{{ displayDocSummary }}</span>
           </div>
 
           <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
@@ -128,13 +128,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
             <tr *ngFor="let item of reception.pallets; let idx = index" class="border-b border-slate-300 hover:bg-slate-50">
               <td class="py-0.5 px-1 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
               <td class="py-0.5 px-1 border-r border-black font-bold font-mono text-slate-950">{{ item.palletCode }}</td>
-              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold">{{ item.docNumber || reception.checkIn.docNumber || '-' }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-slate-950 whitespace-nowrap">{{ item.docNumber || (item && item['doc_number']) || (item.receptionLot && item.receptionLot.docNumber) || (item && (item.remisionNo || item.documentNumber)) || reception.checkIn.docNumber || '-' }}</td>
               <td class="py-0.5 px-1 border-r border-black font-mono font-bold">{{ item.productId }}</td>
               <td class="py-0.5 px-1 border-r border-black font-semibold max-w-[140px] truncate" [title]="item.description">{{ item.description }}</td>
               <td class="py-0.5 px-1 border-r border-black text-[7.5px] max-w-[80px] truncate">{{ item.supplierName || '-' }}</td>
               <td class="py-0.5 px-1 border-r border-black text-[7.5px]">{{ item.palletTypeLabel }}</td>
-              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-amber-900">{{ item.lotNumber || reception.lotNumber || '-' }}</td>
-              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold">{{ formatDateDMY(item.expirationDate || reception.expirationDate) }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-amber-900 whitespace-nowrap">{{ item.lotNumber || (item && item['lot_number']) || (item.receptionLot && item.receptionLot.lotNumber) || (item && item['batchNumber']) || reception.lotNumber || '-' }}</td>
+              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold whitespace-nowrap">{{ formatDateDMY(item.expirationDate || (item && item['expiration_date']) || (item.receptionLot && item.receptionLot.expirationDate) || reception.expirationDate) }}</td>
               <td class="py-0.5 px-1 border-r border-black text-right font-black font-mono whitespace-nowrap">{{ item.pieces | number:'1.0-0' }} PZAS</td>
               <td class="py-0.5 px-1 italic text-slate-600 text-[7px] max-w-[50px] truncate">{{ item.observations || '-' }}</td>
             </tr>
@@ -145,12 +145,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <!-- Totales -->
       <div class="flex justify-between items-center text-[8.5px] font-bold border-b-2 border-black pb-0.5 mb-2 bg-slate-100 px-2 py-0.5 rounded uppercase">
         <div>TOTAL TARIMAS: <span class="font-mono font-black text-[10px]">{{ totalPallets }}</span></div>
+        <div *ngIf="uniqueDocNumbers.length > 1">FOLIOS / REMISIONES: <span class="font-mono font-black text-[10px] text-slate-900">{{ uniqueDocNumbers.length }}</span></div>
         <div>LOTES TOTALES: <span class="font-mono font-black text-[10px] text-amber-900">{{ uniqueLots.length || 1 }}</span></div>
         <div>TOTAL PIEZAS: <span class="font-mono font-black text-[10px]">{{ totalPieces | number:'1.0-0' }} PZAS</span></div>
       </div>
 
       <!-- Footer Operativo: Entregó (Chofer / Transportista) y Recibió (Almacén / Montacarguista / Líder) -->
-      <div class="grid grid-cols-2 gap-8 items-end text-[8.5px] pt-1 uppercase mt-1">
+      <div class="grid grid-cols-2 gap-8 items-end text-[8.5px] pt-1 uppercase mt-1" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
         <div>
           <p class="font-bold text-slate-800 mb-1">
             ENTREGÓ (CHOFER / TRANSPORTISTA): 
@@ -189,6 +190,10 @@ import { AuthState } from '../../../../core/auth/auth.state';
         width: 100% !important;
         max-width: 100% !important;
         page-break-inside: avoid !important;
+      }
+      .grid.grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
       table {
         page-break-inside: avoid !important;
@@ -238,47 +243,99 @@ export class PrintReceptionLayoutComponent {
     return '1';
   }
 
+  get uniqueDocNumbers(): string[] {
+    const set = new Set<string>();
+
+    // 1. Recopilar remisiones específicas de cada tarima
+    if (this.reception?.pallets && Array.isArray(this.reception.pallets)) {
+      this.reception.pallets.forEach(p => {
+        const doc = p.docNumber || (p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || (p as any).receptionLot?.docNumber;
+        if (doc && String(doc).trim() && doc !== 'N/A' && doc !== '-') {
+          set.add(String(doc).trim().toUpperCase());
+        }
+      });
+    }
+
+    // 2. Fallback a remisión de cabecera si no hay en tarimas
+    if (set.size === 0 && this.reception?.checkIn?.docNumber && this.reception.checkIn.docNumber !== 'N/A' && this.reception.checkIn.docNumber !== '-') {
+      set.add(this.reception.checkIn.docNumber.trim().toUpperCase());
+    }
+
+    return Array.from(set);
+  }
+
+  get displayDocSummary(): string {
+    const docs = this.uniqueDocNumbers;
+    if (docs.length === 0) return this.reception?.checkIn?.docNumber || 'N/A';
+    if (docs.length === 1) return docs[0];
+    return `${docs.join(', ')} (${docs.length} FOLIOS / REMISIONES)`;
+  }
+
   get uniqueLots(): string[] {
     const set = new Set<string>();
-    if (this.reception?.lotNumber && this.reception.lotNumber !== 'N/A' && this.reception.lotNumber !== '01.07.2026') {
-      set.add(this.reception.lotNumber.trim());
+
+    // 1. Recopilar lotes específicos de cada tarima individual
+    if (this.reception?.pallets && Array.isArray(this.reception.pallets)) {
+      this.reception.pallets.forEach(p => {
+        const num = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber;
+        if (num && String(num).trim() && num !== 'N/A' && num !== '-' && num !== '01.07.2026') {
+          set.add(String(num).trim().toUpperCase());
+        }
+      });
     }
+
+    // 2. Recopilar del catálogo de lotes asociados a la recepción
     if (this.reception?.lots && Array.isArray(this.reception.lots)) {
       this.reception.lots.forEach((l: any) => {
         const num = typeof l === 'string' ? l : l?.lotNumber;
-        if (num && num.trim() && num !== 'N/A') set.add(num.trim());
+        if (num && String(num).trim() && num !== 'N/A' && num !== '-' && num !== '01.07.2026') {
+          set.add(String(num).trim().toUpperCase());
+        }
       });
     }
-    if (this.reception?.pallets && Array.isArray(this.reception.pallets)) {
-      this.reception.pallets.forEach(p => {
-        if (p.lotNumber && p.lotNumber.trim() && p.lotNumber !== 'N/A') set.add(p.lotNumber.trim());
-      });
+
+    // 3. Fallback a lote general solo si no hay lotes individuales definidos
+    if (set.size === 0 && this.reception?.lotNumber && this.reception.lotNumber !== 'N/A' && this.reception.lotNumber !== '-' && this.reception.lotNumber !== '01.07.2026') {
+      set.add(this.reception.lotNumber.trim().toUpperCase());
     }
+
     return Array.from(set);
   }
 
   get displayLotSummary(): string {
     const lots = this.uniqueLots;
-    if (lots.length === 0) return this.reception?.lotNumber || 'N/A';
+    if (lots.length === 0) return (this.reception?.lotNumber && this.reception.lotNumber !== '01.07.2026') ? this.reception.lotNumber : 'N/A';
     if (lots.length === 1) return lots[0];
     return `${lots.join(', ')} (${lots.length} LOTES)`;
   }
 
   get uniqueExpirations(): string[] {
     const set = new Set<string>();
-    if (this.reception?.expirationDate) {
-      set.add(this.formatDateDMY(this.reception.expirationDate));
-    }
-    if (this.reception?.lots && Array.isArray(this.reception.lots)) {
-      this.reception.lots.forEach((l: any) => {
-        if (l?.expirationDate) set.add(this.formatDateDMY(l.expirationDate));
-      });
-    }
+
+    // 1. Recopilar caducidades de cada tarima individual
     if (this.reception?.pallets && Array.isArray(this.reception.pallets)) {
       this.reception.pallets.forEach(p => {
-        if (p.expirationDate) set.add(this.formatDateDMY(p.expirationDate));
+        const exp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+        if (exp && exp !== 'N/A' && exp !== '-') {
+          set.add(this.formatDateDMY(exp));
+        }
       });
     }
+
+    // 2. Recopilar del catálogo de lotes
+    if (this.reception?.lots && Array.isArray(this.reception.lots)) {
+      this.reception.lots.forEach((l: any) => {
+        if (l?.expirationDate && l.expirationDate !== 'N/A' && l.expirationDate !== '-') {
+          set.add(this.formatDateDMY(l.expirationDate));
+        }
+      });
+    }
+
+    // 3. Fallback a caducidad de cabecera
+    if (set.size === 0 && this.reception?.expirationDate && this.reception.expirationDate !== 'N/A' && this.reception.expirationDate !== '-') {
+      set.add(this.formatDateDMY(this.reception.expirationDate));
+    }
+
     return Array.from(set);
   }
 
