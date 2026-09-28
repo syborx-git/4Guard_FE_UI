@@ -1287,11 +1287,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (!formVal.placasTracto || !formVal.placasTracto.trim()) missing.push('Placas del Tracto');
     if (!formVal.noEcoTractor || !formVal.noEcoTractor.trim()) missing.push('No. Económico Tracto');
     if (!formVal.placasCaja || !formVal.placasCaja.trim()) missing.push('Placas de la Caja');
-    if (!formVal.tipoTransporte || !formVal.tipoTransporte.trim()) missing.push('Tipo de Transporte');
-    if (!formVal.medidasCaja || !formVal.medidasCaja.trim()) missing.push('Medidas de Caja');
-
-    if (this.sealList().length === 0 && (!formVal.noSello || !formVal.noSello.trim())) {
-      missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio)');
+    if (formVal.operacion === 'DESCARGA' && this.sealList().length === 0 && (!formVal.noSello || !formVal.noSello.trim())) {
+      missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio en Descarga)');
     }
 
     if (missing.length > 0 || this.checkInForm.invalid) {
@@ -1306,7 +1303,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     const seals: string[] = this.sealList().length > 0 
       ? [...this.sealList()] 
-      : [formVal.noSello.trim().toUpperCase()];
+      : (formVal.noSello && formVal.noSello.trim() 
+          ? [formVal.noSello.trim().toUpperCase()] 
+          : (formVal.operacion === 'CARGA' ? ['PENDIENTE_ANDEN'] : []));
 
     const inspectionObservations = [
       `[FORMATO F01-PO-CP-7.1.3-03] Arribo en Caseta de Seguridad`,

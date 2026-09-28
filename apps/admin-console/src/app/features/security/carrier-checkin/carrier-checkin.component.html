@@ -465,7 +465,14 @@
             <!-- Sellos / Cinchos de Seguridad -->
             <div class="seals-card">
               <div class="seals-header">
-                <span class="seals-title">🔒 Sellos de Seguridad (Cinchos) <span class="req-star">*</span></span>
+                <span class="seals-title">
+                  🔒 Sellos de Seguridad (Cinchos)
+                  @if (checkinForm.get('operacion')?.value === 'DESCARGA') {
+                    <span class="req-star">*</span>
+                  } @else {
+                    <span class="text-xs font-medium text-amber-600 dark:text-amber-400 font-sans ml-1">(Opcional / Se asignan en andén)</span>
+                  }
+                </span>
                 <span class="seals-count">{{ sealList().length }} agregado(s)</span>
               </div>
               <div class="seal-input-row">
@@ -489,7 +496,11 @@
                   </span>
                 }
                 @if (sealList().length === 0) {
-                  <span class="seal-empty-note">⚠️ Ingrese al menos un número de sello o marchamo de seguridad.</span>
+                  @if (checkinForm.get('operacion')?.value === 'DESCARGA') {
+                    <span class="seal-empty-note">⚠️ Ingrese al menos un número de sello o marchamo de seguridad.</span>
+                  } @else {
+                    <span class="text-xs text-slate-500 dark:text-slate-400 italic">ℹ️ En maniobras de Carga, los sellos oficiales se instalarán en el andén al finalizar el embarque.</span>
+                  }
                 }
               </div>
             </div>

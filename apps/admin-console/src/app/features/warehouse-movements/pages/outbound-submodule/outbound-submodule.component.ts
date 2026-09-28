@@ -215,11 +215,21 @@ export class OutboundSubmoduleComponent implements OnInit {
   saveCasetaModifications(): void {
     const ob = this.selectedOutbound();
     if (!ob) return;
+
+    if (!this.editDestinationId()) {
+      this.toast.warning('Debes seleccionar la Planta o Destino de entrega.');
+      return;
+    }
+
+    const sealInput = this.editSealNumber()?.trim();
+    const sealVal = (sealInput && sealInput !== 'PENDIENTE_ANDEN' && sealInput !== 'PENDIENTE' && sealInput !== 'S/S')
+      ? sealInput
+      : (ob.sealNumber || 'PENDIENTE_ANDEN');
+
     const carrier = this.carriers().find((c) => c.code === this.editCarrierCode());
     const dest = this.allDestinations().find((d) => d.id === this.editDestinationId());
 
     this.isUpdatingCaseta.set(true);
-    const sealVal = this.editSealNumber().trim() || ob.sealNumber || 'PENDIENTE_ANDEN';
     const destName = dest ? dest.name : (this.editDestinationId() ? ob.destinationName : (ob.destinationName || ''));
     const destAddress = dest
       ? `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`
@@ -256,10 +266,18 @@ export class OutboundSubmoduleComponent implements OnInit {
         destinationName: updated.destinationName,
         destinationAddress: updated.destinationAddress,
       }).subscribe({
-        next: () => {
+        next: (resp: any) => {
           this.isUpdatingCaseta.set(false);
-          this.selectedOutbound.set(updated);
-          this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? updated : o)));
+          const finalData: WarehouseOutbound = {
+            ...updated,
+            destinationName: resp?.destinationName || updated.destinationName,
+            destinationAddress: resp?.destinationAddress || updated.destinationAddress,
+            destinationId: resp?.destinationId || updated.destinationId,
+            carrierName: resp?.carrierName || updated.carrierName,
+            sealNumber: resp?.sealNumber || updated.sealNumber,
+          };
+          this.selectedOutbound.set(finalData);
+          this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? finalData : o)));
           this.showEditCasetaModal.set(false);
           this.toast.success('Ficha operativa actualizada exitosamente.');
           this.loadAuditLogs(ob.id);
@@ -306,6 +324,148 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   toggleShowCancelPassword(): void {
     this.showCancelPassword.update((v) => !v);
+  }
+
+  // ── MODAL DE SELECCIÓN Y ASIGNACIÓN DE TARIMAS (FEFO / INVENTARIO) ─────────
+  showPalletPickerModal = signal(false);
+  isSavingPalletSelection = signal(false);
+
+  openPalletPickerModal(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    // Si ya tiene ítems en la orden, pre-cargar sus IDs en la selección
+    if (cur.items && cur.items.length > 0) {
+      this.selectedPalletIds.set(cur.items.map((it) => it.id));
+    } else {
+      this.selectedPalletIds.set([]);
+    }
+
+    this.skuSearchQuery.set('');
+    this.selectedSkuCode.set('');
+    this.requestedPalletsCount.set(0);
+    this.fefoQuantityInput.set(1);
+    this.palletTableSearchQuery.set('');
+
+    // Asegurar carga reactiva de lotes e inventario
+    this.svc.reloadInventoryBatches();
+    this.showPalletPickerModal.set(true);
+  }
+
+  closePalletPickerModal(): void {
+    this.showPalletPickerModal.set(false);
+  }
+
+  savePalletSelectionToOrder(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const selectedPallets = this.selectedPalletItems();
+    if (selectedPallets.length === 0) {
+      this.toast.warning('Debes seleccionar al menos una tarima del inventario para asignar a la orden.');
+      return;
+    }
+
+    const selectedItemIds = selectedPallets.map((p) => p.id);
+    const distinctSkus = new Set(selectedPallets.map((p) => p.productId)).size;
+    const totalPieces = selectedPallets.reduce((acc, p) => acc + p.pieces, 0);
+    this.isSavingPalletSelection.set(true);
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        selectedItemIds: selectedItemIds,
+      }).subscribe({
+        next: () => {
+          this.isSavingPalletSelection.set(false);
+          this.showPalletPickerModal.set(false);
+
+          const updated = this.svc.updateOutbound(cur.id, {
+            items: selectedPallets,
+            totalPallets: selectedPallets.length,
+            totalPieces: totalPieces,
+            distinctSkus: distinctSkus,
+          });
+
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.svc.addOutboundAudit(updated.folio, {
+              id: `aud-out-pal-${Date.now()}`,
+              action: 'TARIMAS_ASIGNADAS',
+              actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+              username: this.authState.userFullName() || 'Supervisor WMS',
+              timestamp: new Date().toLocaleString('es-MX'),
+              details: [
+                { fieldName: 'Tarimas Asignadas', newValue: `${selectedPallets.length} tarima(s)` },
+                { fieldName: 'Piezas Totales', newValue: `${totalPieces.toLocaleString()} pz` },
+                { fieldName: 'SKUs Distintos', newValue: `${distinctSkus}` },
+              ],
+            });
+            this.loadAuditLogs(updated.id || updated.folio);
+          }
+
+          this.toast.success(`✓ Se asignaron ${selectedPallets.length} tarimas (${totalPieces.toLocaleString()} pz) a la orden #${cur.folio}.`);
+        },
+        error: () => {
+          this.isSavingPalletSelection.set(false);
+          this.showPalletPickerModal.set(false);
+
+          const updated = this.svc.updateOutbound(cur.id || cur.folio, {
+            items: selectedPallets,
+            totalPallets: selectedPallets.length,
+            totalPieces: totalPieces,
+            distinctSkus: distinctSkus,
+          });
+
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.svc.addOutboundAudit(updated.folio, {
+              id: `aud-out-pal-${Date.now()}`,
+              action: 'TARIMAS_ASIGNADAS',
+              actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+              username: this.authState.userFullName() || 'Supervisor WMS',
+              timestamp: new Date().toLocaleString('es-MX'),
+              details: [
+                { fieldName: 'Tarimas Asignadas', newValue: `${selectedPallets.length} tarima(s)` },
+                { fieldName: 'Piezas Totales', newValue: `${totalPieces.toLocaleString()} pz` },
+                { fieldName: 'SKUs Distintos', newValue: `${distinctSkus}` },
+              ],
+            });
+            this.loadAuditLogs(updated.id || updated.folio);
+          }
+
+          this.toast.success(`✓ Se asignaron ${selectedPallets.length} tarimas localmente a la orden #${cur.folio}.`);
+        }
+      });
+    } else {
+      this.isSavingPalletSelection.set(false);
+      this.showPalletPickerModal.set(false);
+
+      const updated = this.svc.updateOutbound(cur.folio, {
+        items: selectedPallets,
+        totalPallets: selectedPallets.length,
+        totalPieces: totalPieces,
+        distinctSkus: distinctSkus,
+      });
+
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.svc.addOutboundAudit(updated.folio, {
+          id: `aud-out-pal-${Date.now()}`,
+          action: 'TARIMAS_ASIGNADAS',
+          actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+          username: this.authState.userFullName() || 'Supervisor WMS',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Tarimas Asignadas', newValue: `${selectedPallets.length} tarima(s)` },
+            { fieldName: 'Piezas Totales', newValue: `${totalPieces.toLocaleString()} pz` },
+            { fieldName: 'SKUs Distintos', newValue: `${distinctSkus}` },
+          ],
+        });
+        this.loadAuditLogs(updated.folio);
+      }
+
+      this.toast.success(`✓ Se asignaron ${selectedPallets.length} tarimas a la orden #${cur.folio}.`);
+    }
   }
 
   // ── MODAL CAMBIO DE NO. REMISIÓN / CARTA PORTE ──────────────────────────────
@@ -694,7 +854,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       this.driverName()?.trim() &&
       this.selectedTransportType() &&
       this.tractorPlates()?.trim() &&
-      this.boxPlates()?.trim()
+      this.boxPlates()?.trim() &&
+      this.sealNumber()?.trim()
     )
   );
 
@@ -1525,6 +1686,8 @@ export class OutboundSubmoduleComponent implements OnInit {
     return Array.from(map.values());
   });
 
+  getPalletCodeOrId = (it: OutboundItem): string => it.palletCode || it.id;
+
   totalSelectedPallets = computed(() => this.selectedPalletItems().length);
   totalSelectedPieces = computed(() =>
     this.selectedPalletItems().reduce((acc, p) => acc + p.pieces, 0)
@@ -1699,6 +1862,24 @@ export class OutboundSubmoduleComponent implements OnInit {
   assignRampAndOperatorAction(): void {
     const cur = this.selectedOutbound();
     if (!cur) return;
+
+    const isMissingDest = !cur.destinationName;
+    const isMissingSeal = !cur.sealNumber || cur.sealNumber === 'PENDIENTE_ANDEN' || cur.sealNumber === 'PENDIENTE' || cur.sealNumber === 'S/S';
+
+    if (isMissingDest && isMissingSeal) {
+      this.toast.warning('Debes asignar la Planta de Destino y el Número de Sello Oficial antes de despachar a andén.');
+      this.openEditCasetaModal();
+      return;
+    } else if (isMissingDest) {
+      this.toast.warning('Debes asignar la Planta de Destino antes de despachar a andén.');
+      this.openEditCasetaModal();
+      return;
+    } else if (isMissingSeal) {
+      this.toast.warning('Debes registrar el Número de Sello Oficial (obligatorio) antes de despachar a andén.');
+      this.openEditCasetaModal();
+      return;
+    }
+
     const operator = this.selectedOperator();
     const opName = operator?.name || this.operatorSearchQuery() || 'Montacarguista';
     const opId = operator?.id || '';
@@ -1713,17 +1894,132 @@ export class OutboundSubmoduleComponent implements OnInit {
     }
   }
 
+  // ── TERMINAL RF DE ANDÉN / ESCANEO DE UAs (FASE 3: IN_PROGRESS) ─────────────
+  rfBarcodeScanInput = signal<string>('');
+  verifiedPalletCodes = signal<Set<string>>(new Set());
+  lastScanResult = signal<{ success: boolean; message: string; palletCode?: string } | null>(null);
+
+  verifiedPalletsCount = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items) return 0;
+    const verified = this.verifiedPalletCodes();
+    return ob.items.filter((it) => verified.has(it.palletCode) || verified.has(it.id)).length;
+  });
+
+  scanProgressPercent = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items || ob.items.length === 0) return 0;
+    return Math.round((this.verifiedPalletsCount() / ob.items.length) * 100);
+  });
+
+  isAllPalletsVerified = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items || ob.items.length === 0) return false;
+    return this.verifiedPalletsCount() >= ob.items.length;
+  });
+
+  isPalletVerified(pallet: OutboundItem): boolean {
+    const st = this.selectedOutbound()?.status;
+    if (st === 'LOADED' || st === 'COMPLETED') return true;
+    const set = this.verifiedPalletCodes();
+    return set.has(pallet.palletCode) || set.has(pallet.id);
+  }
+
+  processRfBarcodeScan(): void {
+    const raw = this.rfBarcodeScanInput().trim();
+    if (!raw) return;
+    this.rfBarcodeScanInput.set('');
+
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items || ob.items.length === 0) {
+      this.lastScanResult.set({
+        success: false,
+        message: 'No hay tarimas asignadas a esta orden para verificar.',
+        palletCode: raw,
+      });
+      this.toast.warning('No hay tarimas en la orden activa.');
+      return;
+    }
+
+    const cleanInput = raw.toUpperCase();
+    const match = ob.items.find(
+      (it) =>
+        (it.palletCode && it.palletCode.toUpperCase() === cleanInput) ||
+        (it.id && it.id.toUpperCase() === cleanInput)
+    );
+
+    if (match) {
+      const codeKey = match.palletCode || match.id;
+      if (this.verifiedPalletCodes().has(codeKey)) {
+        this.lastScanResult.set({
+          success: false,
+          message: `La tarima ${codeKey} ya fue escaneada y confirmada previamente.`,
+          palletCode: codeKey,
+        });
+        this.toast.warning(`Tarima ${codeKey} ya escaneada.`);
+      } else {
+        this.verifiedPalletCodes.update((set) => {
+          const updated = new Set(set);
+          updated.add(codeKey);
+          return updated;
+        });
+
+        const currentCount = this.verifiedPalletCodes().size;
+        const total = ob.items.length;
+        this.lastScanResult.set({
+          success: true,
+          message: `✓ Tarima ${codeKey} (${match.description}) confirmada y lista para estiba (${currentCount} de ${total}).`,
+          palletCode: codeKey,
+        });
+        this.toast.success(`✓ UA ${codeKey} confirmada (${currentCount}/${total})`);
+
+        if (currentCount >= total) {
+          this.toast.success('¡100% de la carga escaneada y verificada en andén! Coloca el cincho y finaliza la carga.');
+        }
+      }
+    } else {
+      this.lastScanResult.set({
+        success: false,
+        message: `⛔ ¡ALERTA DE SEGURIDAD! La tarima ${raw} NO pertenece a esta orden de salida #${ob.folio}. NO ESTIBAR.`,
+        palletCode: raw,
+      });
+      this.toast.error(`⛔ ¡UA NO VÁLIDA! ${raw} no pertenece a esta orden.`);
+    }
+  }
+
+  confirmAllPalletsManual(): void {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items) return;
+    this.verifiedPalletCodes.update((set) => {
+      const updated = new Set(set);
+      ob.items.forEach((it) => updated.add(it.palletCode || it.id));
+      return updated;
+    });
+    this.lastScanResult.set({
+      success: true,
+      message: 'Todas las tarimas de la orden fueron marcadas como confirmadas por supervisión.',
+    });
+    this.toast.info('Tarimas confirmadas manualmente.');
+  }
+
   // Transición 2 -> 3: Iniciar Carga (ASSIGNED -> IN_PROGRESS)
   startOutboundLoadingAction(): void {
     const cur = this.selectedOutbound();
     if (!cur) return;
+
+    if (!cur.items || cur.items.length === 0) {
+      this.toast.warning('Debes asignar las tarimas de mercancía antes de iniciar las maniobras de carga en andén.');
+      this.openPalletPickerModal();
+      return;
+    }
+
     const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
 
     const updated = this.svc.startOutboundLoading(cur.id || cur.folio, opName);
     if (updated) {
       this.selectedOutbound.set(updated);
       this.loadAuditLogs(updated.id || updated.folio);
-      this.toast.success(`Carga iniciada en andén para salida #${updated.folio}.`);
+      this.toast.success(`Carga iniciada en andén para salida #${updated.folio}. Terminal RF del montacarguista activa.`);
     }
   }
 
@@ -1977,6 +2273,16 @@ export class OutboundSubmoduleComponent implements OnInit {
     localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
     this.loadAuditLogs(outbound.id || outbound.folio);
 
+    this.rfBarcodeScanInput.set('');
+    this.lastScanResult.set(null);
+    if (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') {
+      const allCodes = new Set<string>();
+      (outbound.items || []).forEach((it) => allCodes.add(it.palletCode || it.id));
+      this.verifiedPalletCodes.set(allCodes);
+    } else {
+      this.verifiedPalletCodes.set(new Set());
+    }
+
     if (outbound.id && outbound.id.includes('-')) {
       this.movementsApi.getOutboundById(outbound.id).subscribe({
         next: (full: any) => {
@@ -2002,9 +2308,22 @@ export class OutboundSubmoduleComponent implements OnInit {
 
             const updated: WarehouseOutbound = {
               ...outbound,
+              destinationName: full.destinationName || outbound.destinationName || '',
+              destinationAddress: full.destinationAddress || outbound.destinationAddress || '',
+              destinationId: full.destinationId || outbound.destinationId || '',
+              sealNumber: full.sealNumber || outbound.sealNumber || '',
+              carrierName: full.carrierName || outbound.carrierName || '',
+              carrierCode: full.carrierId || outbound.carrierCode || '',
+              rampNumber: full.rampNumber != null ? full.rampNumber : outbound.rampNumber,
+              rampCode: full.rampCode || outbound.rampCode || '',
+              forkliftOperator: full.forkliftOperatorName || full.forkliftOperator || outbound.forkliftOperator || '',
+              forkliftOperatorId: full.forkliftOperatorId || outbound.forkliftOperatorId || '',
+              driverName: full.driverName || outbound.driverName || '',
+              tractorPlates: full.tractorPlates || outbound.tractorPlates || '',
+              boxPlates: full.boxPlates || outbound.boxPlates || '',
+              status: full.status || outbound.status,
               economicNumber: full.economicNumber || outbound.economicNumber || '',
               boxEconomicNumber: full.boxEconomicNumber || outbound.boxEconomicNumber || '',
-              destinationAddress: full.destinationAddress || outbound.destinationAddress || '',
               dispatchedBy: full.createdBy || outbound.dispatchedBy || currentLoggedIn,
               items: mappedItems.length > 0 ? mappedItems : outbound.items,
               totalPallets: full.totalPallets || outbound.totalPallets,
@@ -2013,6 +2332,12 @@ export class OutboundSubmoduleComponent implements OnInit {
             };
 
             this.selectedOutbound.set(updated);
+
+            if (updated.status === 'LOADED' || updated.status === 'COMPLETED') {
+              const allCodes = new Set<string>();
+              (updated.items || []).forEach((it) => allCodes.add(it.palletCode || it.id));
+              this.verifiedPalletCodes.set(allCodes);
+            }
           }
         },
         error: () => {},
@@ -2029,21 +2354,55 @@ export class OutboundSubmoduleComponent implements OnInit {
       this.movementsApi.getOutboundAudit(targetId).subscribe({
         next: (logs: any[]) => {
           if (logs && logs.length > 0) {
-            const mapped: MovementAuditEntry[] = logs.map((l: any) => ({
-              id: l.id || `aud-${Date.now()}-${Math.random()}`,
-              action: l.action,
-              actionLabel: this.getAuditSummary(l.action),
-              username: l.username || l.authorizedBy || 'Operador WMS',
-              timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : '',
-              details: (l.details || []).map((d: any) => ({
-                fieldName: this.formatFieldLabel(d.fieldName),
-                oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
-                newValue: this.formatFieldValue(d.fieldName, d.newValue),
-              })),
-              reason: l.reason || '',
-              authorizedBy: l.authorizedBy || '',
-              observations: l.observations || '',
-            }));
+            const mapped: MovementAuditEntry[] = logs
+              .map((l: any) => {
+                const isRegistration = l.action && (l.action.includes('REGISTRAD') || l.action.includes('CREATED'));
+                const rawDetails = l.details || [];
+                
+                // Filtrar detalles irrelevantes según el tipo de acción
+                const cleanDetails = rawDetails
+                  .map((d: any) => ({
+                    fieldName: this.formatFieldLabel(d.fieldName),
+                    oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                    newValue: this.formatFieldValue(d.fieldName, d.newValue),
+                  }))
+                  .filter((d: any) => {
+                    if (isRegistration) {
+                      // Al registrar en caseta, no mostrar datos vacíos irrelevantes
+                      const isIrrelevantEmpty =
+                        d.newValue === 'Sin especificar' ||
+                        d.newValue === 'Sin asignar' ||
+                        d.newValue === '0.0' ||
+                        d.newValue === '0' ||
+                        d.newValue === '' ||
+                        d.newValue === 'N/A';
+                      return !isIrrelevantEmpty;
+                    } else {
+                      // En modificaciones, mostrar sólo si hubo cambio real
+                      return d.oldValue !== d.newValue;
+                    }
+                  });
+
+                return {
+                  id: l.id || `aud-${Date.now()}-${Math.random()}`,
+                  action: l.action,
+                  actionLabel: this.getAuditSummary(l.action),
+                  username: l.username || l.authorizedBy || 'Operador WMS',
+                  timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : '',
+                  details: cleanDetails,
+                  reason: l.reason || '',
+                  authorizedBy: l.authorizedBy || '',
+                  observations: l.observations || '',
+                };
+              })
+              .filter((entry: MovementAuditEntry) => {
+                // Descartar tarjetas vacías de modificación sin detalles ni motivo
+                const isRegistration = entry.action && (entry.action.includes('REGISTRAD') || entry.action.includes('CREATED'));
+                const hasDetails = Boolean(entry.details && entry.details.length > 0);
+                const hasReason = Boolean(entry.reason && entry.reason.trim().length > 0);
+                return isRegistration || hasDetails || hasReason;
+              });
+
             const sorted = this.sortAuditEntries(mapped);
             this.auditEntries.set(sorted);
             this.svc.setOutboundAuditLogs(folio, sorted);
@@ -2097,7 +2456,11 @@ export class OutboundSubmoduleComponent implements OnInit {
   getAuditIcon(action: string): string {
     switch (action) {
       case 'SALIDA_REGISTRADA': return 'local_shipping';
-      case 'SALIDA_DESPACHADA': return 'check_circle';
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA': return 'edit_note';
+      case 'SALIDA_ASIGNADA':   return 'dock';
+      case 'SALIDA_DESPACHADA':
+      case 'SALIDA_AUTORIZADA': return 'check_circle';
       case 'SALIDA_CANCELADA':  return 'cancel';
       default:                  return 'history';
     }
@@ -2106,7 +2469,11 @@ export class OutboundSubmoduleComponent implements OnInit {
   getAuditColorClass(action: string): string {
     switch (action) {
       case 'SALIDA_REGISTRADA': return 'carriers-tl-node--emerald';
-      case 'SALIDA_DESPACHADA': return 'carriers-tl-node--blue';
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA': return 'carriers-tl-node--indigo';
+      case 'SALIDA_ASIGNADA':   return 'carriers-tl-node--amber';
+      case 'SALIDA_DESPACHADA':
+      case 'SALIDA_AUTORIZADA': return 'carriers-tl-node--blue';
       case 'SALIDA_CANCELADA':  return 'carriers-tl-node--red';
       default:                  return 'carriers-tl-node--indigo';
     }
@@ -2114,8 +2481,12 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   getAuditSummary(action: string): string {
     switch (action) {
-      case 'SALIDA_REGISTRADA': return 'Despacho Outbound Confirmado';
-      case 'SALIDA_DESPACHADA': return 'Salida Física y Tránsito Confirmado';
+      case 'SALIDA_REGISTRADA': return 'Arribo & Registro en Caseta';
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA': return 'Ficha de Salida Actualizada';
+      case 'SALIDA_ASIGNADA':   return 'Asignación de Andén';
+      case 'SALIDA_DESPACHADA':
+      case 'SALIDA_AUTORIZADA': return 'Despacho Outbound Confirmado';
       case 'SALIDA_CANCELADA':  return 'Cancelación Extraordinaria con Autorización';
       default:                  return action;
     }

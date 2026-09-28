@@ -1130,21 +1130,51 @@ h1, h2, h3, h4, h5, h6 {
 .fg-select {
   font-family: var(--font-body);
   font-size: 0.82rem;
-  font-weight: 500;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
+  font-weight: 600;
+  padding: 0.55rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-input, 8px);
+  color: #0f172a !important;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
 }
 
+:host-context(.theme-dark) .fg-input,
+:host-context(.dark) .fg-input,
+:host-context(.theme-dark) .fg-select,
+:host-context(.dark) .fg-select {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f8fafc !important;
+}
+
+.fg-input::placeholder,
+.fg-select::placeholder {
+  color: #64748b !important;
+  opacity: 0.85;
+}
+
+:host-context(.theme-dark) .fg-input::placeholder,
+:host-context(.dark) .fg-input::placeholder,
+:host-context(.theme-dark) .fg-select::placeholder,
+:host-context(.dark) .fg-select::placeholder {
+  color: #94a3b8 !important;
+}
+
 .fg-input:focus,
 .fg-select:focus {
-  border-color: var(--gold-border);
-  box-shadow: 0 0 0 3px var(--gold-subtle);
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+}
+
+:host-context(.theme-dark) .fg-input:focus,
+:host-context(.dark) .fg-input:focus,
+:host-context(.theme-dark) .fg-select:focus,
+:host-context(.dark) .fg-select:focus {
+  border-color: var(--gold-border, #c5a86b);
+  box-shadow: 0 0 0 3px var(--gold-subtle, rgba(197, 168, 107, 0.2));
 }
 
 .fg-input.mono,
@@ -3412,10 +3442,10 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 1000;
   max-height: 340px;
   overflow-y: auto;
-  background: #ffffff;
-  border: 1.5px solid #dbe2ea;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
   border-radius: 12px;
-  box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 40px -4px rgba(15, 23, 42, 0.2), 0 6px 16px rgba(15, 23, 42, 0.1) !important;
   display: flex;
   flex-direction: column;
   animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3430,14 +3460,14 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.85rem;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 0.65rem;
-  font-weight: 700;
+  padding: 0.6rem 0.85rem;
+  background: #f1f5f9 !important;
+  border-bottom: 1.5px solid #cbd5e1 !important;
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: #0f172a !important;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -3447,11 +3477,14 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  color: #0f172a !important;
+  font-weight: 800 !important;
 }
 
 .sku-autocomplete-header__hint {
   font-family: var(--font-mono, monospace);
-  color: #94a3b8;
+  color: #334155 !important;
+  font-weight: 700 !important;
 }
 
 .sku-autocomplete-item {
@@ -3460,43 +3493,64 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 0.85rem;
-  background: transparent;
+  background: #ffffff !important;
   border: none;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e2e8f0 !important;
   cursor: pointer;
   transition: all 0.12s ease;
   width: 100%;
   text-align: left;
+  color: #0f172a !important;
+}
+
+.sku-autocomplete-item span {
+  color: #0f172a;
+}
+
+.sku-autocomplete-item .text-slate-950,
+.sku-autocomplete-item .text-slate-900,
+.sku-autocomplete-item .sku-autocomplete-name {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.78rem !important;
+}
+
+.sku-autocomplete-item .text-slate-700,
+.sku-autocomplete-item .text-slate-600,
+.sku-autocomplete-item .text-slate-500,
+.sku-autocomplete-item .text-slate-400 {
+  color: #334155 !important;
+  font-weight: 600 !important;
 }
 
 .sku-autocomplete-item:hover {
-  background: #f8fafc;
+  background: #f8fafc !important;
 }
 
 .sku-autocomplete-item--selected {
-  background: #fefce8 !important;
+  background: #fef08a !important;
 }
 
 .sku-autocomplete-item:last-child {
-  border-bottom: none;
+  border-bottom: none !important;
 }
 
 .sku-autocomplete-badge {
   font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  background: #f1f5f9;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  color: #0f172a !important;
+  border: 1px solid #94a3b8;
   flex-shrink: 0;
 }
 
 .sku-autocomplete-name {
   font-size: 0.78rem;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 800;
+  color: #0f172a !important;
   line-height: 1.25;
 }
 
@@ -3504,34 +3558,72 @@ h1, h2, h3, h4, h5, h6 {
   padding: 1.25rem;
   text-align: center;
   font-size: 0.75rem;
-  color: #94a3b8;
+  font-weight: 700;
+  color: #334155 !important;
   font-style: italic;
-  background: #ffffff;
+  background: #ffffff !important;
 }
 
 /* Modo Oscuro para Autocomplete */
 :host-context(.dark) .sku-autocomplete-dropdown,
 :host-context(.theme-dark) .sku-autocomplete-dropdown {
-  background: #0f172a;
-  border-color: #334155;
-  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.5);
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6) !important;
 }
 
 :host-context(.dark) .sku-autocomplete-header,
 :host-context(.theme-dark) .sku-autocomplete-header {
-  background: #1e293b;
-  border-bottom-color: #334155;
-  color: #94a3b8;
+  background: #1e293b !important;
+  border-bottom-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+:host-context(.dark) .sku-autocomplete-header__title,
+:host-context(.theme-dark) .sku-autocomplete-header__title {
+  color: #f1f5f9 !important;
+}
+
+:host-context(.dark) .sku-autocomplete-header__hint,
+:host-context(.theme-dark) .sku-autocomplete-header__hint {
+  color: #94a3b8 !important;
 }
 
 :host-context(.dark) .sku-autocomplete-item,
 :host-context(.theme-dark) .sku-autocomplete-item {
-  border-bottom-color: #1e293b;
+  background: transparent !important;
+  border-bottom-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+:host-context(.dark) .sku-autocomplete-item span,
+:host-context(.theme-dark) .sku-autocomplete-item span {
+  color: #f8fafc;
+}
+
+:host-context(.dark) .sku-autocomplete-item .text-slate-950,
+:host-context(.dark) .sku-autocomplete-item .text-slate-900,
+:host-context(.dark) .sku-autocomplete-item .sku-autocomplete-name,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-950,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-900,
+:host-context(.theme-dark) .sku-autocomplete-item .sku-autocomplete-name {
+  color: #f8fafc !important;
+}
+
+:host-context(.dark) .sku-autocomplete-item .text-slate-700,
+:host-context(.dark) .sku-autocomplete-item .text-slate-600,
+:host-context(.dark) .sku-autocomplete-item .text-slate-500,
+:host-context(.dark) .sku-autocomplete-item .text-slate-400,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-700,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-600,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-500,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-400 {
+  color: #cbd5e1 !important;
 }
 
 :host-context(.dark) .sku-autocomplete-item:hover,
 :host-context(.theme-dark) .sku-autocomplete-item:hover {
-  background: #1e293b;
+  background: #1e293b !important;
 }
 
 :host-context(.dark) .sku-autocomplete-item--selected,
@@ -3541,20 +3633,20 @@ h1, h2, h3, h4, h5, h6 {
 
 :host-context(.dark) .sku-autocomplete-badge,
 :host-context(.theme-dark) .sku-autocomplete-badge {
-  background: #1e293b;
-  color: #f8fafc;
-  border-color: #475569;
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
 }
 
 :host-context(.dark) .sku-autocomplete-name,
 :host-context(.theme-dark) .sku-autocomplete-name {
-  color: #f1f5f9;
+  color: #f1f5f9 !important;
 }
 
 :host-context(.dark) .sku-autocomplete-empty,
 :host-context(.theme-dark) .sku-autocomplete-empty {
-  background: #0f172a;
-  color: #64748b;
+  background: #0f172a !important;
+  color: #94a3b8 !important;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -4033,6 +4125,107 @@ input[type="number"] {
 :host-context(.theme-dark) .logistics-command-value,
 :host-context(.dark) .logistics-command-value {
   color: #f8fafc !important;
+}
+
+/* ── FASE ACTIONS CARDS (100% HOMOLOGADOS LIGHT / DARK SDD) ── */
+.outbound-phase-card {
+  padding: 1.15rem 1.35rem;
+  border-radius: 1rem;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-card, #e2e8f0);
+  border-left: 4px solid var(--gold-primary, #f59e0b) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+:host-context(.theme-dark) .outbound-phase-card,
+:host-context(.dark) .outbound-phase-card {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.08);
+  border-left-color: #fbbf24 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.outbound-phase-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.outbound-phase-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+:host-context(.theme-dark) .outbound-phase-icon-badge,
+:host-context(.dark) .outbound-phase-icon-badge {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+
+.outbound-phase-title {
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0f172a !important;
+  margin: 0;
+  line-height: 1.25;
+}
+
+:host-context(.theme-dark) .outbound-phase-title,
+:host-context(.dark) .outbound-phase-title {
+  color: #f8fafc !important;
+}
+
+.outbound-phase-desc {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #334155 !important;
+  margin: 0.2rem 0 0 0;
+  line-height: 1.4;
+}
+
+:host-context(.theme-dark) .outbound-phase-desc,
+:host-context(.dark) .outbound-phase-desc {
+  color: #cbd5e1 !important;
+}
+
+.outbound-field-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0f172a !important;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
+:host-context(.theme-dark) .outbound-field-label,
+:host-context(.dark) .outbound-field-label {
+  color: #f1f5f9 !important;
+}
+
+.outbound-field-label .req {
+  color: #dc2626 !important;
+  margin-left: 2px;
+}
+
+:host-context(.theme-dark) .outbound-field-label .req,
+:host-context(.dark) .outbound-field-label .req {
+  color: #f87171 !important;
 }
 
 /* ── HORIZONTAL 5-PHASE STEPPER ── */
