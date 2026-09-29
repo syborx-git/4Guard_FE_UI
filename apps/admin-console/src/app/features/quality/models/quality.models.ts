@@ -257,3 +257,20 @@ export interface QualityClaim {
   updatedAt: string;
 }
 
+export interface QualityDashboardKpis {
+  totalActiveBlocks: number;
+  totalBlocked: number;
+  totalUnderInspection: number;
+  totalReleases: number;
+  distributionReleases: number;
+  destructionReleases: number;
+  returnReleases: number;
+  totalVerifications: number;
+  approvedVerifications: number;
+  pendingVerifications: number;
+  totalClaims: number;
+  totalDamagedQty: number;
+  totalLostQty: number;
+  totalClaimsCost: number;
+}
+
