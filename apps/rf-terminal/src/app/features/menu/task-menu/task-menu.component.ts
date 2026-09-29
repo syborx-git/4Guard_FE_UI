@@ -1,42 +1,34 @@
 /**
  * @file task-menu.component.ts
- * @description P7 — Menú de Tareas Maestro del RF Terminal PWA.
- * Adaptado a la Regla de Pablo (Coordinación central de asignación de rampas/racks y flujo de siniestros).
+ * @description Menú de Operaciones Maestro para Terminal RF PWA.
+ * Adaptado con diseño ergonómico de alta visibilidad, soporte dual theme (Light/Dark),
+ * tarjeta Hero de reanudación rápida, 7 módulos táctiles y telemetría de hardware.
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthState, SyncState } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 
-export interface TaskModuleCard {
+export interface RfOperationalModule {
   id: string;
   icon: string;
-  label: string;
-  sublabel: string;
-  tag: string;
+  title: string;
+  description: string;
+  badgeText: string;
+  badgeType: 'amber' | 'sky' | 'purple' | 'emerald' | 'orange' | 'rose' | 'gold';
+  actionLabel: string;
   route: string;
-  color: 'primary' | 'success' | 'warning' | 'info' | 'gold' | 'danger';
 }
 
-export interface TaskSectionGroup {
-  id: string;
+export interface ActiveTaskSummary {
+  folio: string;
   title: string;
   subtitle: string;
-  icon: string;
-  badge: string;
-  modules: TaskModuleCard[];
-}
-
-export interface AssignedReceptionTask {
-  folio: string;
-  rampCode: string;
-  supplierName: string;
-  assignedRackZone: string;
-  totalPallets: number;
-  pendingPallets: number;
-  assignedBy: string; // 'Pablo (Coordinador)'
+  operatorName: string;
+  elapsedMinutes: number;
+  route: string;
 }
 
 @Component({
@@ -52,138 +44,133 @@ export class TaskMenuComponent {
   protected readonly audioService = inject(AudioFeedbackService);
   private readonly router         = inject(Router);
 
-  /** Notificación de Recepción Asignada por Pablo (Coordinador) */
-  protected readonly activeTask = signal<AssignedReceptionTask | null>({
+  // ─── Modal de Reportar Incidencia ────────────────────────────────────────────
+  protected readonly showIncidentModal = signal(false);
+
+  // ─── Tarea Activa en Curso (Hero Target) ────────────────────────────────────
+  protected readonly activeTask = signal<ActiveTaskSummary | null>({
     folio: 'REC-2026-000042',
-    rampCode: 'RAMPA 03',
-    supplierName: 'Distribuidora Alimentos del Norte',
-    assignedRackZone: 'Pasillo 04 — Racks A-01 al A-06',
-    totalPallets: 8,
-    pendingPallets: 5,
-    assignedBy: 'Pablo (Coordinación de Entrada)',
+    title: 'Tarima 5 de 8 • Rampa 03 (Muelle Norte)',
+    subtitle: 'Asignado a: Roberto Sánchez • 14 min transcurridos',
+    operatorName: 'Roberto Sánchez',
+    elapsedMinutes: 14,
+    route: '/putaway',
   });
 
-  /** 3 Fases Lógicas del Flujo de Trabajo en Almacén */
-  protected readonly taskSections: TaskSectionGroup[] = [
+  // ─── 7 Módulos Operativos Táctiles ──────────────────────────────────────────
+  protected readonly modules: RfOperationalModule[] = [
     {
-      id: 'section-inbound',
-      title: '1. Entrada y Guardado',
-      subtitle: 'Descarga en andén y traslado a ubicación preasignada por Coordinación',
+      id: 'mod-receiving',
       icon: 'local_shipping',
-      badge: 'Andén ➔ Rack',
-      modules: [
-        {
-          id: 'btn-reception',
-          icon: 'move_to_inbox',
-          label: 'Recepción en Andén',
-          sublabel: 'Descarga de camión y control de bultos en rampa',
-          tag: 'En Rampa',
-          route: '/receiving',
-          color: 'primary',
-        },
-        {
-          id: 'btn-sscc',
-          icon: 'print',
-          label: 'Imprimir Etiqueta SSCC',
-          sublabel: 'Generar código de tarima GS1 para pegado en andén',
-          tag: 'Nueva Tarima',
-          route: '/receiving',
-          color: 'info',
-        },
-        {
-          id: 'btn-putaway',
-          icon: 'shelves',
-          label: 'Guardar en Rack Asignado',
-          sublabel: 'Trasladar tarima al rack predeterminado por Coordinador',
-          tag: 'Asignado por Pablo',
-          route: '/putaway',
-          color: 'success',
-        },
-      ],
+      title: 'Recepción y Descarga',
+      description: 'Control de bultos en andén, cotejo ciego y validación de tarimas entrantes con escáner.',
+      badgeText: '1 Activa (Rampa 03)',
+      badgeType: 'amber',
+      actionLabel: 'Abrir Recepción',
+      route: '/receiving',
     },
     {
-      id: 'section-operations',
-      title: '2. Movimientos y Surtido',
-      subtitle: 'Operaciones internas de montacargas y preparación de pedidos',
-      icon: 'forklift',
-      badge: 'Piso y Pasillos',
-      modules: [
-        {
-          id: 'btn-transfer',
-          icon: 'swap_horiz',
-          label: 'Traspaso entre Bahías',
-          sublabel: 'Reubicar tarima a otra posición o rack',
-          tag: 'Reubicación',
-          route: '/putaway',
-          color: 'warning',
-        },
-        {
-          id: 'btn-picking',
-          icon: 'shopping_cart',
-          label: 'Surtido de Pedidos',
-          sublabel: 'Recolección guiada por ruta óptima',
-          tag: 'Picking Activo',
-          route: '/picking',
-          color: 'gold',
-        },
-        {
-          id: 'btn-counting',
-          icon: 'format_list_numbered',
-          label: 'Conteo Físico Ciego',
-          sublabel: 'Auditoría física por pasillo sin teóricos',
-          tag: 'Inventario',
-          route: '/counting',
-          color: 'info',
-        },
-      ],
+      id: 'mod-putaway',
+      icon: 'shelves',
+      title: 'Putaway / Guardado',
+      description: 'Ubicación guiada en racks asignados por algoritmo dinámico (Pasillo 04 reservado).',
+      badgeText: '3 Asignaciones',
+      badgeType: 'sky',
+      actionLabel: 'Iniciar Guardado',
+      route: '/putaway',
     },
     {
-      id: 'section-control',
-      title: '3. Calidad, Incidencias y Red',
-      subtitle: 'Inspección de lotes, reporte de siniestros y sincronización offline',
-      icon: 'shield',
-      badge: 'Control & Seguridad',
-      modules: [
-        {
-          id: 'btn-quality',
-          icon: 'verified',
-          label: 'Inspección de Calidad',
-          sublabel: 'Dictamen QM para liberar o retener lote',
-          tag: 'Calidad QM',
-          route: '/quality',
-          color: 'success',
-        },
-        {
-          id: 'btn-anomaly',
-          icon: 'warning',
-          label: 'Reportar Siniestro / Pallet Caído',
-          sublabel: 'Baja a Estado 80 con foto obligatoria (HU-164)',
-          tag: 'Merma / Baja 80',
-          route: '/anomaly',
-          color: 'danger',
-        },
-        {
-          id: 'btn-sync',
-          icon: 'sync',
-          label: 'Sincronizar Datos',
-          sublabel: 'Estado de red y transacciones pendientes',
-          tag: 'Modo Offline',
-          route: '/sync',
-          color: 'primary',
-        },
-      ],
+      id: 'mod-picking',
+      icon: 'shopping_cart_checkout',
+      title: 'Picking / Surtido',
+      description: 'Surtido de pedidos, consolidación de olas de despacho y preparación de tarimas mixtas.',
+      badgeText: '5 Órdenes pendientes',
+      badgeType: 'purple',
+      actionLabel: 'Ver Surtido',
+      route: '/picking',
+    },
+    {
+      id: 'mod-counting',
+      icon: 'checklist_rtl',
+      title: 'Conteo Cíclico e Inventario',
+      description: 'Auditoría física de posiciones, validación ciega de lote y resolución de discrepancias.',
+      badgeText: 'Sin tareas urgentes',
+      badgeType: 'emerald',
+      actionLabel: 'Auditoría',
+      route: '/counting',
+    },
+    {
+      id: 'mod-print',
+      icon: 'print',
+      title: 'Impresión de Etiquetas SSCC',
+      description: 'Generar, duplicar y reimprimir identificadores GS1-128 de tarima completa y máster.',
+      badgeText: 'Zebra ZT411 OK',
+      badgeType: 'orange',
+      actionLabel: 'Imprimir Etiquetas',
+      route: '/receiving',
+    },
+    {
+      id: 'mod-quality',
+      icon: 'verified_user',
+      title: 'Calidad y Bloqueos',
+      description: 'Inspección técnica, reporte de empaque dañado, retenciones y liberación por supervisor.',
+      badgeText: '2 en Cuarentena',
+      badgeType: 'rose',
+      actionLabel: 'Ver Calidad',
+      route: '/quality',
+    },
+    {
+      id: 'mod-security',
+      icon: 'local_police',
+      title: 'Seguridad & Caseta',
+      description: 'Control de accesos de transporte, captura de placas, fotos de sellos y liberación de patio.',
+      badgeText: '4 en Patio',
+      badgeType: 'gold',
+      actionLabel: 'Acceso Caseta',
+      route: '/security',
     },
   ];
 
-  /** Navega al módulo reproduciendo sonido háptico */
+  /** Navegación táctil con feedback sonoro y háptico */
   protected navigate(route: string): void {
     this.audioService.playSuccess();
+    if (navigator.vibrate) {
+      navigator.vibrate(30);
+    }
     this.router.navigate([route]);
   }
 
-  /** Ir directamente a la tarea asignada por Pablo */
-  protected goToAssignedTask(): void {
+  /** Reanudar directamente la tarea activa */
+  protected resumeActiveTask(): void {
+    const task = this.activeTask();
+    if (task) {
+      this.navigate(task.route);
+    }
+  }
+
+  /** Sincronizar datos manualmente */
+  protected manualSync(): void {
     this.audioService.playSuccess();
-    this.router.navigate(['/putaway']);
+    if (navigator.vibrate) {
+      navigator.vibrate([40, 60, 40]);
+    }
+    this.router.navigate(['/sync']);
+  }
+
+  /** Abrir modal de reporte de incidencia */
+  protected openIncidentModal(): void {
+    this.audioService.playWarning();
+    this.showIncidentModal.set(true);
+  }
+
+  /** Cerrar modal de incidencia */
+  protected closeIncidentModal(): void {
+    this.showIncidentModal.set(false);
+  }
+
+  /** Confirmar y redirigir al formulario de anomalía */
+  protected confirmIncidentRedirect(): void {
+    this.showIncidentModal.set(false);
+    this.navigate('/anomaly');
   }
 }

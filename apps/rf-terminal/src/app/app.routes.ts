@@ -84,6 +84,14 @@ export const rfRoutes: Routes = [
         title: '4GUARD Terminal — Sincronización',
       },
 
+      // Seguridad y Caseta de Vigilancia
+      {
+        path: 'security',
+        loadChildren: () =>
+          import('./features/security/security.routes').then((m) => m.securityRoutes),
+        title: '4GUARD Terminal — Seguridad & Caseta',
+      },
+
       // Reporte de anomalía
       {
         path: 'anomaly',

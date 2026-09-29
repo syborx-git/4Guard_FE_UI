@@ -44,13 +44,13 @@ export class RfShellComponent {
 
   // ─── Navegación Inferior (Accesos Rápidos de Piso) ───────────────────────────
   protected readonly navItems: NavItem[] = [
-    { path: '/menu',      icon: 'grid_view',         label: 'Menú'       },
-    { path: '/receiving', icon: 'move_to_inbox',      label: 'Recepción'  },
-    { path: '/putaway',   icon: 'shelves',           label: 'Putaway'    },
-    { path: '/picking',   icon: 'shopping_cart',     label: 'Picking'    },
-    { path: '/counting',  icon: 'format_list_numbered', label: 'Conteo'   },
-    { path: '/quality',   icon: 'verified',          label: 'Calidad'    },
-    { path: '/sync',      icon: 'sync',              label: 'Sync'       },
+    { path: '/menu',      icon: 'grid_view',            label: 'Menú'       },
+    { path: '/receiving', icon: 'local_shipping',       label: 'Recepción'  },
+    { path: '/putaway',   icon: 'shelves',              label: 'Putaway'    },
+    { path: '/picking',   icon: 'shopping_cart_checkout', label: 'Picking'  },
+    { path: '/counting',  icon: 'checklist_rtl',        label: 'Conteo'     },
+    { path: '/security',  icon: 'local_police',         label: 'Seguridad'  },
+    { path: '/sync',      icon: 'sync',                 label: 'Sync'       },
   ];
 
   /** Alterna el tema Dark/Light */

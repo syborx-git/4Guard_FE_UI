@@ -1,0 +1,556 @@
+<!-- ================================================================
+     Módulo de Seguridad & Caseta — Terminal RF PWA (Synexia Dual Theme)
+     ================================================================ -->
+<div class="security-rf-page">
+
+  <!-- ── 1. Cabecera Táctica del Módulo ───────────────────────────── -->
+  <header class="security-rf-header">
+    <div class="security-rf-header__top">
+      <div class="security-rf-header__left">
+        <button type="button" (click)="goBackMenu()" class="btn-back-rf" title="Regresar al Menú Principal">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+        <div class="security-rf-header__icon-wrap">
+          <span class="material-symbols-outlined security-rf-header__icon">local_police</span>
+        </div>
+        <div class="security-rf-header__copy">
+          <div class="security-rf-header__eyebrow">
+            <span>Terminal RF</span>
+            <span class="eyebrow-sep">·</span>
+            <span class="eyebrow-gold">Caseta de Vigilancia &amp; Patio</span>
+          </div>
+          <h1 class="security-rf-header__title">Control de Acceso &amp; Seguridad</h1>
+          <p class="security-rf-header__subtitle">
+            Registro táctil de transportes, captura de sellos y autorización de salidas en patio.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Barra de Pestañas Táctiles (Pill Navigation Industrial) ── -->
+    <div class="security-rf-toolbar">
+      <nav class="security-tabs-nav" aria-label="Pestañas de Seguridad">
+        <button
+          type="button"
+          (click)="setTab('CHECKIN')"
+          [class.tab-active]="activeTab() === 'CHECKIN'"
+          class="security-tab-btn">
+          <span class="material-symbols-outlined">login</span>
+          <span>1. Check-In (Entrada)</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="setTab('YARD')"
+          [class.tab-active]="activeTab() === 'YARD'"
+          class="security-tab-btn">
+          <span class="material-symbols-outlined">local_shipping</span>
+          <span>2. En Patio ({{ yardCount() }})</span>
+          @if (waitingCount() > 0) {
+            <span class="tab-badge-pulse">{{ waitingCount() }}</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          (click)="setTab('CHECKOUT')"
+          [class.tab-active]="activeTab() === 'CHECKOUT'"
+          class="security-tab-btn">
+          <span class="material-symbols-outlined">logout</span>
+          <span>3. Salida / Sellos ({{ readyDepartureCount() }})</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Banner de Alerta / Toast Local ───────────────────────────── -->
+  @if (alertMessage(); as alert) {
+    <div class="rf-alert-banner" [ngClass]="'rf-alert-banner--' + alert.type">
+      <span class="material-symbols-outlined alert-icon">
+        {{ alert.type === 'success' ? 'check_circle' : alert.type === 'warning' ? 'warning' : 'error' }}
+      </span>
+      <span class="alert-text">{{ alert.text }}</span>
+    </div>
+  }
+
+  <!-- ── 2. Cuadrícula de Métricas KPI Rápidas (4 Cards) ───────────── -->
+  <div class="security-kpi-grid">
+    <div class="security-kpi-card security-kpi-card--primary">
+      <div class="security-kpi-card__icon">
+        <span class="material-symbols-outlined">directions_car</span>
+      </div>
+      <div class="security-kpi-card__info">
+        <span class="security-kpi-card__label">EN PATIO TOTAL</span>
+        <strong class="security-kpi-card__value">{{ yardCount() }}</strong>
+        <span class="security-kpi-card__sub">Vehículos en estancia</span>
+      </div>
+    </div>
+
+    <div class="security-kpi-card security-kpi-card--warning">
+      <div class="security-kpi-card__icon">
+        <span class="material-symbols-outlined">hourglass_empty</span>
+      </div>
+      <div class="security-kpi-card__info">
+        <span class="security-kpi-card__label">ESPERA DE RAMPA</span>
+        <strong class="security-kpi-card__value">{{ waitingCount() }}</strong>
+        <span class="security-kpi-card__sub">Pendientes de andén</span>
+      </div>
+    </div>
+
+    <div class="security-kpi-card security-kpi-card--info">
+      <div class="security-kpi-card__icon">
+        <span class="material-symbols-outlined">dock</span>
+      </div>
+      <div class="security-kpi-card__info">
+        <span class="security-kpi-card__label">EN ANDÉN / RAMPA</span>
+        <strong class="security-kpi-card__value">{{ atRampCount() }}</strong>
+        <span class="security-kpi-card__sub">En proceso de descarga</span>
+      </div>
+    </div>
+
+    <div class="security-kpi-card security-kpi-card--success">
+      <div class="security-kpi-card__icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="security-kpi-card__info">
+        <span class="security-kpi-card__label">LISTOS PARA SALIDA</span>
+        <strong class="security-kpi-card__value">{{ readyDepartureCount() }}</strong>
+        <span class="security-kpi-card__sub">Descarga concluida</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Contenido Principal según Pestaña ─────────────────────── -->
+  <div class="security-content-area">
+
+    <!-- ── TAB 1: FORMULARIO TÁCTIL DE ENTRADA (CHECK-IN) ─────────── -->
+    @if (activeTab() === 'CHECKIN') {
+      <div class="security-panel-card animate-fade-in">
+        <div class="panel-header">
+          <div class="panel-header__title-wrap">
+            <span class="material-symbols-outlined panel-header__icon">app_registration</span>
+            <div>
+              <h2 class="panel-header__title">Registro de Arribo en Caseta</h2>
+              <p class="panel-header__subtitle">Captura de tractocamión, chofer, placas y evidencia de sellos de origen.</p>
+            </div>
+          </div>
+          <span class="badge-gold">CHECK-IN ACTIVO</span>
+        </div>
+
+        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-form space-y-4">
+          
+          <!-- Fila: Tipo de Operación -->
+          <div class="form-row form-row--type">
+            <label class="form-label">Tipo de Movimiento:</label>
+            <div class="type-selector-grid">
+              <label class="type-radio-card" [class.type-radio-card--selected]="checkInForm.value.operationType === 'INBOUND'">
+                <input type="radio" formControlName="operationType" value="INBOUND" class="sr-only" />
+                <span class="material-symbols-outlined">archive</span>
+                <span class="type-title">Entrada / Recepción (Inbound)</span>
+              </label>
+
+              <label class="type-radio-card" [class.type-radio-card--selected]="checkInForm.value.operationType === 'OUTBOUND'">
+                <input type="radio" formControlName="operationType" value="OUTBOUND" class="sr-only" />
+                <span class="material-symbols-outlined">unarchive</span>
+                <span class="type-title">Salida / Embarque (Outbound)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Grid de Captura Táctil de Datos -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- Transportista -->
+            <div class="form-field">
+              <label class="form-label" for="carrierName">
+                <span>Línea Transportista *</span>
+              </label>
+              <input
+                id="carrierName"
+                type="text"
+                formControlName="carrierName"
+                placeholder="Ej. Transportes Castores, TUM..."
+                class="rf-input uppercase font-bold" />
+            </div>
+
+            <!-- Nombre Chofer -->
+            <div class="form-field">
+              <label class="form-label" for="driverName">
+                <span>Nombre del Conductor *</span>
+              </label>
+              <input
+                id="driverName"
+                type="text"
+                formControlName="driverName"
+                placeholder="Nombre completo"
+                class="rf-input font-bold" />
+            </div>
+
+            <!-- Placas Tracto -->
+            <div class="form-field">
+              <label class="form-label" for="tractorPlates">
+                <span>Placas Tracto *</span>
+              </label>
+              <input
+                id="tractorPlates"
+                type="text"
+                formControlName="tractorPlates"
+                placeholder="72-AB-9K"
+                class="rf-input font-mono uppercase font-bold text-amber-700 dark:text-amber-400" />
+            </div>
+
+            <!-- Placas Caja / Remolque -->
+            <div class="form-field">
+              <label class="form-label" for="boxPlates">
+                <span>Placas Caja / Remolque *</span>
+              </label>
+              <input
+                id="boxPlates"
+                type="text"
+                formControlName="boxPlates"
+                placeholder="45-TR-2M"
+                class="rf-input font-mono uppercase font-bold text-amber-700 dark:text-amber-400" />
+            </div>
+
+            <!-- Sello Principal -->
+            <div class="form-field">
+              <label class="form-label" for="seal1">
+                <span>Sello Fiscal 1 *</span>
+              </label>
+              <input
+                id="seal1"
+                type="text"
+                formControlName="seal1"
+                placeholder="SL-99412"
+                class="rf-input font-mono uppercase font-bold" />
+            </div>
+
+            <!-- Sello Secundario -->
+            <div class="form-field">
+              <label class="form-label" for="seal2">
+                <span>Sello Fiscal 2 (Opcional)</span>
+              </label>
+              <input
+                id="seal2"
+                type="text"
+                formControlName="seal2"
+                placeholder="SL-99413"
+                class="rf-input font-mono uppercase" />
+            </div>
+
+            <!-- Rampa Asignada Rápida -->
+            <div class="form-field">
+              <label class="form-label" for="assignedRamp">
+                <span>Rampa Asignada (Andén)</span>
+              </label>
+              <select id="assignedRamp" formControlName="assignedRamp" class="rf-input font-bold">
+                <option value="">-- Sin Rampa (A Patio) --</option>
+                <option value="1">Rampa 01</option>
+                <option value="2">Rampa 02</option>
+                <option value="3">Rampa 03</option>
+                <option value="4">Rampa 04</option>
+                <option value="5">Rampa 05</option>
+                <option value="6">Rampa 06</option>
+                <option value="7">Rampa 07</option>
+                <option value="8">Rampa 08</option>
+              </select>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="form-field">
+              <label class="form-label" for="observations">
+                <span>Observaciones</span>
+              </label>
+              <input
+                id="observations"
+                type="text"
+                formControlName="observations"
+                placeholder="Estado físico, sellos intactos..."
+                class="rf-input" />
+            </div>
+
+          </div>
+
+          <!-- ── Captura de Fotografía de Sellos con Compresión Automática ── -->
+          <div class="photo-capture-card">
+            <input
+              #cameraInput
+              type="file"
+              accept="image/*"
+              capture="environment"
+              (change)="onPhotoSelected($event)"
+              class="hidden" />
+
+            <div class="photo-capture-content">
+              @if (!sealPhotoPreview()) {
+                <button
+                  type="button"
+                  (click)="triggerCamera()"
+                  [disabled]="isCompressingPhoto()"
+                  class="btn-camera-trigger"
+                  title="Tomar foto con la cámara del dispositivo">
+                  <span class="material-symbols-outlined text-3xl">photo_camera</span>
+                  <div class="text-left">
+                    <span class="font-bold text-sm block">Capturar Foto de Sellos / Placas</span>
+                    <span class="text-xs text-muted block">Compresión automática Canvas (&le;150 KB)</span>
+                  </div>
+                </button>
+              } @else {
+                <div class="photo-preview-wrap">
+                  <img [src]="sealPhotoPreview()" alt="Evidencia de sellos" class="photo-preview-img" />
+                  <div class="photo-preview-info">
+                    <span class="badge-success">📷 Foto Comprimida OK</span>
+                    <span class="text-xs text-muted font-mono">Formato JPEG 75% (&approx;120 KB)</span>
+                    <button type="button" (click)="removePhoto()" class="btn-remove-photo">
+                      <span class="material-symbols-outlined">delete</span>
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Botón de Envío Táctil Principal -->
+          <div class="form-actions-row">
+            <button
+              type="submit"
+              class="btn-primary-rf-large"
+              [disabled]="checkInForm.invalid">
+              <span class="material-symbols-outlined text-2xl">how_to_reg</span>
+              <span>REGISTRAR ENTRADA Y AUTORIZAR ACCESO</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+    }
+
+    <!-- ── TAB 2: VEHÍCULOS EN PATIO (IN-YARD) ─────────────────────── -->
+    @if (activeTab() === 'YARD') {
+      <div class="security-panel-card animate-fade-in">
+        <div class="panel-header">
+          <div class="panel-header__title-wrap">
+            <span class="material-symbols-outlined panel-header__icon">rv_hookup</span>
+            <div>
+              <h2 class="panel-header__title">Control de Vehículos en Patio y Andenes</h2>
+              <p class="panel-header__subtitle">Monitoreo de tiempo de estancia, estatus de descarga y asignación de rampas.</p>
+            </div>
+          </div>
+          
+          <!-- Buscador Reactivo -->
+          <div class="search-input-wrap">
+            <span class="material-symbols-outlined search-icon">search</span>
+            <input
+              type="search"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="searchQuery.set($event)"
+              placeholder="Buscar por placa, chofer, folio..."
+              class="rf-search-input" />
+          </div>
+        </div>
+
+        <!-- Lista de Tarjetas de Vehículos -->
+        <div class="yard-vehicles-grid">
+          @for (vehicle of filteredVehicles(); track vehicle.id) {
+            <div class="yard-vehicle-card" [class.yard-vehicle-card--waiting]="vehicle.status === 'WAITING_RAMP'">
+              <div class="yard-vehicle-card__header">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">local_shipping</span>
+                  <span class="font-mono font-black text-sm text-slate-950 dark:text-white">{{ vehicle.tractorPlates }}</span>
+                  <span class="text-xs text-muted font-mono">/ Caja: {{ vehicle.boxPlates }}</span>
+                </div>
+                <span class="badge-status" [ngClass]="'badge-status--' + vehicle.status">
+                  {{ getStatusLabel(vehicle.status) }}
+                </span>
+              </div>
+
+              <div class="yard-vehicle-card__body">
+                <div class="vehicle-info-line">
+                  <span class="info-label">Chofer:</span>
+                  <strong class="info-val">{{ vehicle.driverName }}</strong>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Línea:</span>
+                  <span class="info-val truncate">{{ vehicle.carrierName }}</span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Sellos:</span>
+                  <span class="info-val font-mono text-xs font-bold text-amber-800 dark:text-amber-300">
+                    {{ vehicle.sealNumbers.join(', ') }}
+                  </span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Estancia:</span>
+                  <span class="info-val font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                    ⏱ {{ formatMinutesAgo(vehicle.entryTime) }}
+                  </span>
+                </div>
+                @if (vehicle.rampNumber) {
+                  <div class="vehicle-info-line">
+                    <span class="info-label">Rampa:</span>
+                    <span class="info-val badge-ramp">RAMPA 0{{ vehicle.rampNumber }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="yard-vehicle-card__actions">
+                @if (vehicle.status === 'WAITING_RAMP') {
+                  <button
+                    type="button"
+                    (click)="assignRampQuick(vehicle, 3)"
+                    class="btn-action-sm btn-action-sm--gold"
+                    title="Asignar Rampa rápida">
+                    <span class="material-symbols-outlined">dock</span>
+                    <span>Asignar Rampa</span>
+                  </button>
+                } @else if (vehicle.status === 'DISCHARGE_FINISHED') {
+                  <button
+                    type="button"
+                    (click)="openCheckoutModal(vehicle)"
+                    class="btn-action-sm btn-action-sm--green"
+                    title="Proceder a Salida">
+                    <span class="material-symbols-outlined">exit_to_app</span>
+                    <span>Validar Salida</span>
+                  </button>
+                } @else {
+                  <span class="text-[11px] font-bold text-slate-500 font-mono">En Operación en Andén</span>
+                }
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-yard-state">
+              <span class="material-symbols-outlined text-4xl text-muted">local_shipping</span>
+              <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">No hay vehículos registrados en patio con el filtro aplicado.</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── TAB 3: SALIDA / COTEJO DE SELLOS (CHECK-OUT) ─────────────── -->
+    @if (activeTab() === 'CHECKOUT') {
+      <div class="security-panel-card animate-fade-in">
+        <div class="panel-header">
+          <div class="panel-header__title-wrap">
+            <span class="material-symbols-outlined panel-header__icon">verified_user</span>
+            <div>
+              <h2 class="panel-header__title">Cotejo de Sellos Fiscales &amp; Despacho de Salida</h2>
+              <p class="panel-header__subtitle">Validación física final de sellos de seguridad antes de abrir la pluma de egreso.</p>
+            </div>
+          </div>
+          <span class="badge-gold">LIBERACIÓN FINAL</span>
+        </div>
+
+        <div class="checkout-instructions-bar">
+          <span class="material-symbols-outlined text-amber-600 text-xl">info</span>
+          <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+            Selecciona un transporte con estatus <strong>Descarga/Carga Concluida</strong> para cotejar los sellos de salida colocados por el líder de almacén.
+          </p>
+        </div>
+
+        <div class="yard-vehicles-grid mt-4">
+          @for (vehicle of filteredVehicles(); track vehicle.id) {
+            <div class="yard-vehicle-card" [class.yard-vehicle-card--ready]="vehicle.status === 'DISCHARGE_FINISHED'">
+              <div class="yard-vehicle-card__header">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+                  <span class="font-mono font-black text-sm text-slate-950 dark:text-white">{{ vehicle.tractorPlates }}</span>
+                </div>
+                <span class="badge-status badge-status--DISCHARGE_FINISHED">Listo para Salida</span>
+              </div>
+
+              <div class="yard-vehicle-card__body">
+                <div class="vehicle-info-line">
+                  <span class="info-label">Chofer:</span>
+                  <strong class="info-val">{{ vehicle.driverName }}</strong>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Línea:</span>
+                  <span class="info-val truncate">{{ vehicle.carrierName }}</span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Sellos Salida:</span>
+                  <span class="info-val font-mono font-bold text-amber-800 dark:text-amber-300">
+                    {{ vehicle.sealNumbers.join(', ') }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="yard-vehicle-card__actions">
+                <button
+                  type="button"
+                  (click)="openCheckoutModal(vehicle)"
+                  class="btn-primary-rf-large"
+                  style="min-height: 48px;">
+                  <span class="material-symbols-outlined">how_to_reg</span>
+                  <span>COTEJAR SELLOS Y ABRIR PLUMA</span>
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-yard-state">
+              <span class="material-symbols-outlined text-4xl text-muted">check_circle</span>
+              <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">No hay transportes pendientes de salida en este momento.</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <!-- ── 4. Modal Táctil de Liberación y Cotejo de Salida ─────────── -->
+  @if (selectedVehicleForCheckout(); as selectedVeh) {
+    <div class="rf-modal-backdrop" (click)="closeCheckoutModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-2xl text-amber-600">verified</span>
+            <h3 class="rf-modal-title">Cotejo de Salida · {{ selectedVeh.tractorPlates }}</h3>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeCheckoutModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body space-y-3">
+          <div class="modal-info-box">
+            <div><strong>Chofer:</strong> {{ selectedVeh.driverName }}</div>
+            <div><strong>Transportista:</strong> {{ selectedVeh.carrierName }}</div>
+            <div><strong>Placas Caja:</strong> {{ selectedVeh.boxPlates }}</div>
+            <div><strong>Sellos Registrados:</strong> {{ selectedVeh.sealNumbers.join(', ') }}</div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="checkoutSeal">
+              <span>Captura o Escanea el Número de Sello Físico en Puerta *</span>
+            </label>
+            <input
+              id="checkoutSeal"
+              type="text"
+              [ngModel]="checkoutSealInput()"
+              (ngModelChange)="checkoutSealInput.set($event)"
+              placeholder="SL-XXXXX"
+              class="rf-input font-mono uppercase font-black text-lg text-amber-700 dark:text-amber-400" />
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeCheckoutModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+          <button
+            type="button"
+            (click)="confirmCheckout()"
+            [disabled]="!checkoutSealInput().trim()"
+            class="btn-modal-confirm">
+            <span class="material-symbols-outlined">door_open</span>
+            <span>AUTORIZAR SALIDA &amp; REGISTRAR</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
