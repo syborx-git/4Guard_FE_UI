@@ -37,7 +37,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         </div>
 
         <!-- Grid Metadata de Cancelación (2 Columnas Estructuradas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 bg-rose-50/90 p-2.5 border border-rose-200 rounded-md">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 bg-rose-50/90 p-2.5 border border-rose-200 rounded-md" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
           
           <!-- Columna Izquierda -->
           <div class="space-y-1">
@@ -205,7 +205,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         </div>
 
         <!-- Header Grid Metadata: 2 Columnas Estructuradas Homologadas -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 border border-black p-3 rounded-sm bg-slate-50/50">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 border border-black p-3 rounded-sm bg-slate-50/50" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
           
           <!-- Columna Izquierda: Logística del Movimiento -->
           <div class="space-y-1">

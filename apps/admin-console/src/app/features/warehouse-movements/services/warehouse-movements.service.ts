@@ -445,6 +445,7 @@ export class WarehouseMovementsService {
               palletTypeId: 'ESTANDAR',
               palletTypeLabel: 'Estándar',
               locationCode: it.locationCode || 'N/A',
+              inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
             })),
             totalPallets: o.totalPallets || 0,
             totalPieces: o.totalPieces || 0,
@@ -541,7 +542,7 @@ export class WarehouseMovementsService {
               locationCode: p.locationCode || b.locationCode || 'N/A',
               lotNumber: p.lotNumber || b.lotNumber || '',
               expirationDate: p.expirationDate || b.expirationDate || '',
-              docNumber: b.remisionNo || '',
+              docNumber: rem || b.remisionNo || p.docNumber || p.sapFolio || '',
             })),
           };
         });
@@ -677,7 +678,27 @@ export class WarehouseMovementsService {
             outboundDate: o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-MX') : '',
             outboundTime: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '',
             authorizedBy: o.createdBy || '',
-            items: [],
+            items: (o.items || []).map((it: any) => ({
+              id: it.id || it.itemId,
+              palletCode: it.palletCode,
+              productId: it.skuCode || it.productId || '',
+              description: it.skuDescription || it.description || '',
+              lotNumber: it.lotNumber || '',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : '',
+              pieces: it.pieces || 0,
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              locationCode: it.locationCode || 'N/A',
+              inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
+            })),
+            totalPallets: o.totalPallets || (o.items ? o.items.length : 0),
+            totalPieces: o.totalPieces || (o.items ? o.items.reduce((acc: number, it: any) => acc + (it.pieces || 0), 0) : 0),
+            distinctSkus: o.distinctSkus || 0,
+            completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
+            leaderAuthorizedBy: o.leaderAuthorizedBy || '',
+            dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+            dispatchedBy: o.createdBy || 'Admin',
+            timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
           }))
         );
       },
@@ -2389,7 +2410,7 @@ export class WarehouseMovementsService {
   }
 
   // Transición 4 -> 5: Cierre Administrativo y Despacho Formal F03 (LOADED -> COMPLETED)
-  completeOutboundDispatch(folioOrId: string, authorizedBy: string): WarehouseOutbound | null {
+  completeOutboundDispatch(folioOrId: string, authorizedBy: string, items?: OutboundItem[]): WarehouseOutbound | null {
     const list = this.outboundsSignal();
     const cleanKey = (folioOrId || '').trim();
     const target = list.find(
@@ -2397,9 +2418,14 @@ export class WarehouseMovementsService {
     );
     if (!target) return null;
 
+    const resolvedItems = (items && items.length > 0) ? items : (target.items || []);
     const completedTime = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
     const updated: WarehouseOutbound = {
       ...target,
+      items: resolvedItems,
+      totalPallets: resolvedItems.length > 0 ? resolvedItems.length : target.totalPallets,
+      totalPieces: resolvedItems.length > 0 ? resolvedItems.reduce((acc, p) => acc + (p.pieces || 0), 0) : target.totalPieces,
+      distinctSkus: resolvedItems.length > 0 ? new Set(resolvedItems.map((p) => p.productId)).size : target.distinctSkus,
       status: 'COMPLETED',
       completedAt: completedTime,
       leaderAuthorizedBy: authorizedBy,
@@ -2408,12 +2434,12 @@ export class WarehouseMovementsService {
     };
 
     // Descontar UAs de inventario si no se habían descontado
-    if (target.items && target.items.length > 0) {
-      const selectedIds = new Set(target.items.map((p) => p.id));
+    if (resolvedItems && resolvedItems.length > 0) {
+      const selectedIds = new Set(resolvedItems.map((p) => p.id));
       this.inventoryBatchesSignal.update((batches) =>
         batches.map((batch) => {
-          const remaining = batch.pallets.filter((p) => !selectedIds.has(p.id));
-          if (remaining.length === batch.pallets.length) return batch;
+          const remaining = (batch.pallets || []).filter((p) => !selectedIds.has(p.id));
+          if (remaining.length === (batch.pallets || []).length) return batch;
           return {
             ...batch,
             availablePallets: remaining.length,
@@ -2619,17 +2645,57 @@ export class WarehouseMovementsService {
       pallets: remainingOriginPallets,
     };
 
+    const movedPalletsWithNewLoc = palletsToMove.map((p) => ({
+      ...p,
+      location: destination,
+      locationCode: destination,
+    }));
+
     locs[destination] = {
       ...destInfo,
       totalPallets: palletsToMove.length,
       totalPieces: totalPiecesMoved,
       occupancy: palletsToMove.length,
       availableCapacity: Math.max(0, destCap - palletsToMove.length),
-      pallets: palletsToMove,
+      pallets: movedPalletsWithNewLoc,
     };
 
     this.locationsSignal.set(locs);
     this.transfersSignal.update((list) => [newTransfer, ...list]);
+
+    // Actualizar lotes de inventario (inventoryBatchesSignal) reactivamente
+    const movedIds = new Set(dto.selectedPalletIds);
+    const movedCodes = new Set(palletsToMove.map((p) => (p.palletCode || '').toUpperCase().trim()));
+
+    this.inventoryBatchesSignal.update((batches) =>
+      batches.map((batch) => {
+        let hasMovedPallet = false;
+        const updatedPallets = (batch.pallets || []).map((p) => {
+          const isMoved =
+            movedIds.has(p.id) ||
+            (p.palletCode && (movedCodes.has(p.palletCode.toUpperCase().trim()) || movedIds.has(p.palletCode)));
+          if (isMoved) {
+            hasMovedPallet = true;
+            return { ...p, locationCode: destination };
+          }
+          return p;
+        });
+
+        if (hasMovedPallet) {
+          const allInDest = updatedPallets.every((p) => p.locationCode === destination);
+          return {
+            ...batch,
+            locationCode: allInDest ? destination : batch.locationCode,
+            pallets: updatedPallets,
+          };
+        }
+        return batch;
+      })
+    );
+
+    if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
+      this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
+    }
 
     this.addTransferAudit(folio, {
       id: `aud-tr-reg-${Date.now()}`,

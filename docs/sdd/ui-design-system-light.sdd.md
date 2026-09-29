@@ -89,14 +89,18 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 }
 ```
 
-### 2.1 Regla Obligatoria de Estricto Alto Contraste Tipográfico (PROHIBIDO EL USO DE GRIS CLARO EN TEXTO)
+### 2.1 Regla Obligatoria de Estricto Alto Contraste Tipográfico (PROHIBIDO EL USO DE LETRAS BLANCAS O GRISES EN MODO CLARO)
 
 > [!CAUTION]
-> **PROHIBICIÓN ESTRICTA DE GRISES CLAROS / DESLAVADOS EN TEXTO:**
-> 1. **Cero Texto en Gris Claro:** Queda terminantemente prohibido utilizar tonos grises claros o medios (`#8b94a3`, `#94a3b8`, `#cbd5e1`, `#e2e8f0`, `text-slate-400`, `text-slate-300`, `text-gray-400`, etc.) en celdas de tablas, folios, transportistas, choferes, placas, horarios, estatus o información operativa.
-> 2. **Color de Texto Base en Tablas y Formularios:** Todo texto de datos en modo claro debe usar estrictamente `#0f172a` (Negro Profundo / Slate 950) o `#172033` (Midnight Navy), con un peso tipográfico mínimo de `font-semibold` (600) u `font-bold` (700-800).
-> 3. **Subtítulos y Metadatos Secundarios:** Deben usar obligatoriamente `#1e293b` (Slate 800) o `#334155` (Slate 700), garantizando un ratio de contraste superior a 7:1 (WCAG AAA).
-> 4. **Prohibición de clases `dark:text-slate-50` / `dark:text-slate-100` sobre fondos claros:** No se deben aplicar utilidades `dark:text-...` de forma indiscriminada que vuelvan el texto blanco o invisible.
+> **PROHIBICIÓN ESTRICTA DE LETRAS BLANCAS Y GRISES CLAROS EN TODO MODO CLARO (WCAG AAA):**
+> 1. **Cero Letras Blancas en Modo Claro (`#ffffff`, `#fff`, `text-white`, `text-slate-50`, `text-slate-100`):**
+>    - Queda estrictamente prohibido utilizar tipografía blanca o casi blanca sobre fondos claros, lino, marfil, tarjetas (`.card`, `.panel-card`), modales (`.modal-card`), popups de alta/creación o tablas operativas.
+>    - El texto blanco está **ÚNICAMENTE** permitido sobre componentes que tengan un fondo oscuro sólido (por ejemplo, botones principales Midnight Navy o botones verdes de confirmación sólida). En todo el resto de la interfaz en Light Mode, la letra DEBE ser oscura.
+> 2. **Cero Texto en Gris Claro / Deslavado:** Queda terminantemente prohibido utilizar tonos grises claros o medios (`#8b94a3`, `#94a3b8`, `#cbd5e1`, `#e2e8f0`, `text-slate-400`, `text-slate-500`, `text-gray-400`, `text-gray-500`, `#64748b`, etc.) en celdas de tablas, folios, transportistas, choferes, placas, horarios, estatus o información operativa.
+> 3. **Color de Texto Base en Tablas y Formularios:** Todo texto de datos en modo claro debe usar estrictamente `#0f172a` (Negro Profundo / Slate 950) o `#172033` (Midnight Navy), con un peso tipográfico mínimo de `font-semibold` (600) u `font-bold` (700-800).
+> 4. **Subtítulos y Metadatos Secundarios:** Deben usar obligatoriamente `#1e293b` (Slate 800) o `#334155` (Slate 700), garantizando un ratio de contraste superior a 7:1 (WCAG AAA).
+> 5. **Modales, Pop-ups y Formularios de Alta / Creación / Edición:** En todos los diálogos y popups emergentes (`.modal-card`, `.pallet-picker-card`, formularios de alta/creación), las etiquetas (`<label>`), subtítulos de cabecera, leyendas de sección y textos explicativos deben aplicar tonos oscuros de alta legibilidad (`#0f172a`, `#172033`, `#1e293b` o `#334155`). Prohibido usar grises tenues o blancos que vuelvan el texto ilegible o invisible.
+> 6. **Prohibición de clases `dark:text-slate-50` / `dark:text-slate-100` / `dark:text-white` sin selector de contexto oscuro:** No se deben aplicar utilidades `text-white` directas sobre contenedores claros; deben estar siempre condicionadas a `dark:text-white` o a contenedores con fondo oscuro explícito.
 
 ---
 
@@ -695,7 +699,7 @@ Para evitar que textos o botones aparezcan en blanco o con contraste deficiente 
    - En Modo Claro DEBEN renderizarse SIEMPRE en color **Midnight Navy Oscuro (`#172033` / `#1c2940`)** con opacidad al 100%.  
    - Queda estrictamente prohibido el uso de colores blancos (`#ffffff`), grises deslavados o gradientes claros sobre tarjetas o modales en modo claro.
 2. **Subtítulos y Textos Secundarios (`p`, `.modal-card p`, `.text-secondary`):**  
-   - Deben usar color **Slate Steel (`#5a6477` / `#475569`)** garantizando un ratio de contraste WCAG AAA superior a 7:1.
+   - Deben usar obligatoriamente **Slate Oscuro (`#1e293b` / `#334155`)**, garantizando un ratio de contraste WCAG AAA superior a 7:1. Prohibido usar texto blanco o gris deslavado.
 3. **Encapsulamiento de Modales (`.modal-card`, `.modal-overlay`, `.dialog`):**  
    - Todo modal debe definir explícitamente `color: var(--text-primary);` y sobrescribir cualquier selector de encabezado interno:
    ```css

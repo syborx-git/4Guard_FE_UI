@@ -14,6 +14,7 @@ import {
   TransferReasonItem,
   TRANSFER_REASONS,
   MovementAuditEntry,
+  parseAuditTimestamp,
   ReceptionPalletItem,
 } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
@@ -800,22 +801,26 @@ export class TransferSubmoduleComponent implements OnInit {
       next: (logs: any[]) => {
         this.isLoadingAudit.set(false);
         if (logs && logs.length > 0) {
-          const mapped: MovementAuditEntry[] = logs.map((log: any) => ({
-            id: log.id || log.auditId || `aud-${Date.now()}-${Math.random()}`,
-            action: log.action || log.eventType || 'TRASPASO_REGISTRADO',
-            actionLabel: log.actionLabel || log.description || this.getAuditSummary(log.action),
-            username: log.username || log.performedBy || log.createdBy || 'Sistema',
-            timestamp: log.timestamp
-              ? new Date(log.timestamp).toLocaleString('es-MX')
-              : (log.createdAt ? new Date(log.createdAt).toLocaleString('es-MX') : ''),
-            details: (log.details || log.changes || []).map((d: any) => ({
-              fieldName: this.formatFieldLabel(d.fieldName),
-              oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
-              newValue: this.formatFieldValue(d.fieldName, d.newValue),
-            })),
-            reason: log.reason || log.cancellationReason,
-            authorizedBy: log.authorizedBy,
-          }));
+          const mapped: MovementAuditEntry[] = logs.map((log: any) => {
+            const rawTs = log.timestamp || log.createdAt || log.date;
+            return {
+              id: log.id || log.auditId || `aud-${Date.now()}-${Math.random()}`,
+              action: log.action || log.eventType || 'TRASPASO_REGISTRADO',
+              actionLabel: log.actionLabel || log.description || this.getAuditSummary(log.action),
+              username: log.username || log.performedBy || log.createdBy || 'Sistema',
+              timestamp: rawTs
+                ? (isNaN(new Date(rawTs).getTime()) ? String(rawTs) : new Date(rawTs).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }))
+                : (log.timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleString('es-MX') : '')),
+              rawTimestamp: rawTs ? new Date(rawTs).getTime() : Date.now(),
+              details: (log.details || log.changes || []).map((d: any) => ({
+                fieldName: this.formatFieldLabel(d.fieldName),
+                oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                newValue: this.formatFieldValue(d.fieldName, d.newValue),
+              })),
+              reason: log.reason || log.cancellationReason,
+              authorizedBy: log.authorizedBy,
+            };
+          });
           const sorted = this.sortAuditEntries(mapped);
           this.auditEntries.set(sorted);
           this.movementsService.setTransferAuditLogs(transfer.folio, sorted);
@@ -832,26 +837,13 @@ export class TransferSubmoduleComponent implements OnInit {
     });
   }
 
+  // Ordenamiento cronológico inverso: el evento más reciente arriba (top), el más antiguo abajo
   sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
     if (!entries || entries.length === 0) return [];
     return [...entries].sort((a, b) => {
-      const parseDate = (ts?: string) => {
-        if (!ts) return 0;
-        const direct = new Date(ts).getTime();
-        if (!isNaN(direct) && direct > 0) return direct;
-        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-        if (match) {
-          const day = parseInt(match[1], 10);
-          const month = parseInt(match[2], 10) - 1;
-          const year = parseInt(match[3], 10);
-          const hour = match[4] ? parseInt(match[4], 10) : 0;
-          const min = match[5] ? parseInt(match[5], 10) : 0;
-          const sec = match[6] ? parseInt(match[6], 10) : 0;
-          return new Date(year, month, day, hour, min, sec).getTime();
-        }
-        return 0;
-      };
-      return parseDate(b.timestamp) - parseDate(a.timestamp);
+      const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
+      const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
+      return timeB - timeA;
     });
   }
 

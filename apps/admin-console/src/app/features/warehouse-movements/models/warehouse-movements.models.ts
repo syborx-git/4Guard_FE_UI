@@ -391,9 +391,65 @@ export interface MovementAuditEntry {
   actionLabel?: string;
   username: string;
   timestamp: string;
+  rawTimestamp?: string | number | Date;
   details?: MovementAuditDetail[];
   reason?: string;
   authorizedBy?: string;
   observations?: string;
+}
+
+/**
+ * Robust, cross-locale date parser that accurately converts ISO dates, Unix epochs,
+ * and 12-hour/24-hour Spanish (es-MX) formatted date strings (e.g. "28/9/2026, 5:24:59 p.m.")
+ * into milliseconds since epoch for strict chronological sorting.
+ */
+export function parseAuditTimestamp(ts?: string | number | Date | null): number {
+  if (ts == null) return 0;
+  if (typeof ts === 'number') return ts;
+  if (ts instanceof Date) return ts.getTime();
+
+  const clean = String(ts).trim();
+  if (!clean) return 0;
+
+  // 1. Direct standard ISO / UTC string (e.g., "2026-09-28T23:24:59.000Z")
+  if (!clean.includes('/') && (clean.includes('-') || clean.includes('T'))) {
+    const direct = new Date(clean).getTime();
+    if (!isNaN(direct) && direct > 0) return direct;
+  }
+
+  // 2. Parse Mexican / Spanish format: DD/MM/YYYY, HH:mm:ss [a.m./p.m./AM/PM]
+  // Handles strings such as:
+  // "28/9/2026, 11:51:55 a. m."
+  // "28/09/2026, 5:24:59 p.m."
+  // "28/9/2026 17:24:59"
+  // "28/9/2026, 12:12:53 p.m."
+  const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?(?:\s*([ap]\.?\s*m\.?|am|pm))?/i;
+  const match = clean.match(regex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    let hour = match[4] ? parseInt(match[4], 10) : 0;
+    const min = match[5] ? parseInt(match[5], 10) : 0;
+    const sec = match[6] ? parseInt(match[6], 10) : 0;
+    const meridian = match[7] ? match[7].toLowerCase().replace(/[\s.]+/g, '') : null;
+
+    if (meridian) {
+      const isPm = meridian === 'pm' || meridian.includes('p');
+      const isAm = meridian === 'am' || meridian.includes('a');
+      if (isPm && hour < 12) {
+        hour += 12;
+      } else if (isAm && hour === 12) {
+        hour = 0;
+      }
+    }
+
+    const d = new Date(year, month, day, hour, min, sec);
+    return d.getTime();
+  }
+
+  // 3. Fallback direct parsing
+  const fallback = new Date(clean).getTime();
+  return isNaN(fallback) ? 0 : fallback;
 }
 

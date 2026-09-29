@@ -14,6 +14,7 @@ import {
   PalletType,
   PALLET_TYPE_LABELS,
   MovementAuditEntry,
+  parseAuditTimestamp,
   PatioUnitMonitor,
   RampOccupancyStatus,
   RampItem,
@@ -1286,36 +1287,40 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.movementsApi.getReceptionAudit(id).subscribe({
         next: (logs) => {
           if (logs && logs.length > 0) {
-            const mapped: MovementAuditEntry[] = logs.map((l: any) => ({
-              id: l.id || `aud-${Date.now()}-${Math.random()}`,
-              action: l.action,
-              actionLabel: l.actionLabel || this.getAuditSummary(l.action),
-              username: l.username || 'Usuario',
-              timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : (l.timestamp || new Date().toLocaleString('es-MX')),
-              details: (l.details || [])
-                .filter((d: any) => {
-                  const f = (d.fieldName || '').toLowerCase();
-                  if (f.includes('lote') || f === 'lotnumber' || f === 'lot_number') {
-                    if (
-                      l.action === 'DESCARGA_FINALIZADA' ||
-                      l.action === 'DESCARGA_INICIADA' ||
-                      l.action === 'RECEPCION_ASIGNADA' ||
-                      (rec?.lots && rec.lots.length > 1) ||
-                      this.lotsList().length > 1
-                    ) {
-                      return false;
+            const mapped: MovementAuditEntry[] = logs.map((l: any) => {
+              const rawTs = l.timestamp || l.createdAt || l.date;
+              return {
+                id: l.id || `aud-${Date.now()}-${Math.random()}`,
+                action: l.action,
+                actionLabel: l.actionLabel || this.getAuditSummary(l.action),
+                username: l.username || 'Usuario',
+                timestamp: rawTs ? (isNaN(new Date(rawTs).getTime()) ? String(rawTs) : new Date(rawTs).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })) : (l.timestamp || new Date().toLocaleString('es-MX')),
+                rawTimestamp: rawTs ? new Date(rawTs).getTime() : Date.now(),
+                details: (l.details || [])
+                  .filter((d: any) => {
+                    const f = (d.fieldName || '').toLowerCase();
+                    if (f.includes('lote') || f === 'lotnumber' || f === 'lot_number') {
+                      if (
+                        l.action === 'DESCARGA_FINALIZADA' ||
+                        l.action === 'DESCARGA_INICIADA' ||
+                        l.action === 'RECEPCION_ASIGNADA' ||
+                        (rec?.lots && rec.lots.length > 1) ||
+                        this.lotsList().length > 1
+                      ) {
+                        return false;
+                      }
                     }
-                  }
-                  return true;
-                })
-                .map((d: any) => ({
-                  fieldName: this.formatFieldLabel(d.fieldName),
-                  oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
-                  newValue: this.formatFieldValue(d.fieldName, d.newValue),
-                })),
-              reason: l.reason || '',
-              authorizedBy: l.authorizedBy || '',
-            }));
+                    return true;
+                  })
+                  .map((d: any) => ({
+                    fieldName: this.formatFieldLabel(d.fieldName),
+                    oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                    newValue: this.formatFieldValue(d.fieldName, d.newValue),
+                  })),
+                reason: l.reason || '',
+                authorizedBy: l.authorizedBy || '',
+              };
+            });
             const sorted = this.sortAuditEntries(mapped);
             this.auditEntries.set(sorted);
             this.movementsService.setReceptionAuditLogs(folio, sorted);
@@ -1339,23 +1344,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
   sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
     if (!entries || entries.length === 0) return [];
     return [...entries].sort((a, b) => {
-      const parseDate = (ts?: string) => {
-        if (!ts) return 0;
-        const direct = new Date(ts).getTime();
-        if (!isNaN(direct) && direct > 0) return direct;
-        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-        if (match) {
-          const day = parseInt(match[1], 10);
-          const month = parseInt(match[2], 10) - 1;
-          const year = parseInt(match[3], 10);
-          const hour = match[4] ? parseInt(match[4], 10) : 0;
-          const min = match[5] ? parseInt(match[5], 10) : 0;
-          const sec = match[6] ? parseInt(match[6], 10) : 0;
-          return new Date(year, month, day, hour, min, sec).getTime();
-        }
-        return 0;
-      };
-      return parseDate(b.timestamp) - parseDate(a.timestamp);
+      const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
+      const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
+      return timeB - timeA;
     });
   }
 
@@ -1601,26 +1592,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
       });
   }
 
-  // Fase 2 -> 3: Inicio de Descarga en Andén
+  // Fase 2 -> 4: Inicio y Finalización Directa de Descarga en Andén (Mesa Administrativa F01)
   simulateStartDischarge(): void {
-    const current = this.selectedReception();
-    if (!current) return;
-    const op = current.checkIn.forkliftOperator || 'Montacarguista';
-    const recId = current.id || current.folio;
-    this.movementsService.startDischarge(recId, op).subscribe({
-      next: (updated) => {
-        this.selectedReception.set(updated);
-        this.loadAuditLogs(updated.folio);
-        this.toast.success(`Descarga física iniciada por ${op} en Rampa ${updated.checkIn.rampNumber}. Guardada en base de datos.`);
-      },
-      error: (err) => {
-        const msg = err?.error?.message || err?.message || 'Error al iniciar la descarga';
-        this.toast.error(msg);
-      },
-    });
+    this.simulateFinishDischarge();
   }
 
-  // Fase 3 -> 4: Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa)
+  // Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa / Formato F01)
   simulateFinishDischarge(): void {
     const current = this.selectedReception();
     if (!current) return;
@@ -1687,7 +1664,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.selectedReception.set(updated);
           this.palletStream.set(updated.pallets ? [...updated.pallets] : stream);
           this.loadAuditLogs(updated.folio);
-          this.toast.success(`Descarga concluida por montacarguista. Avances guardados en la base de datos y enviados a mesa administrativa.`);
+          this.toast.success(`Solicitud enviada a ${op}. Descarga física concluida en Rampa ${updated.checkIn.rampNumber}. Formato F01 listo para emisión.`);
         },
         error: (err) => {
           const msg = err?.error?.message || err?.message || 'Error al concluir la descarga';
