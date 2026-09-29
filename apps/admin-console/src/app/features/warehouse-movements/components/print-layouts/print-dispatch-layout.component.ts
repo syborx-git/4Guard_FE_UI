@@ -42,7 +42,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
       </div>
 
       <!-- Header Grid Metadata: 2 Columnas Estructuradas en MAYÚSCULAS y Espacio Optimizado -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-1 text-[9.5px] mb-2.5 border border-black p-2 rounded-sm bg-slate-50/50 uppercase">
+      <div class="grid grid-cols-2 gap-x-5 gap-y-1 text-[9.5px] mb-2.5 border border-black p-2 rounded-sm bg-slate-50/50 uppercase" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
         
         <!-- Columna Izquierda: Logística & Transporte -->
         <div class="space-y-1">
@@ -169,6 +169,10 @@ import { AuthState } from '../../../../core/auth/auth.state';
     </div>
   `,
   styles: [`
+    .grid-cols-2 {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
     @media print {
       .print-container {
         border: none !important;
@@ -176,6 +180,10 @@ import { AuthState } from '../../../../core/auth/auth.state';
         padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
+      }
+      .grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
       table {
         page-break-inside: avoid;
@@ -239,8 +247,14 @@ export class PrintDispatchLayoutComponent {
   }
 
   get distinctProductsCount(): number {
-    if (!this.outbound || !this.outbound.items) return 1;
-    return new Set(this.outbound.items.map((it) => it.productId)).size;
+    if (!this.outbound) return 0;
+    if (this.outbound.items && this.outbound.items.length > 0) {
+      return new Set(this.outbound.items.map((it) => it.productId)).size;
+    }
+    if (this.outbound.distinctSkus && this.outbound.distinctSkus > 0) {
+      return this.outbound.distinctSkus;
+    }
+    return (this.outbound.totalPallets && this.outbound.totalPallets > 0) ? 1 : 0;
   }
 
   formatTransportType(type?: TransportType): string {
@@ -249,7 +263,7 @@ export class PrintDispatchLayoutComponent {
   }
 
   formatDateDMY(dateVal?: string): string {
-    if (!dateVal) return 'N/A';
+    if (!dateVal || dateVal === 'N/A' || dateVal === '--' || dateVal === 'null') return 'N/A';
     const str = String(dateVal).trim();
     if (str.includes('/')) return str;
     const parts = str.slice(0, 10).split('-');
@@ -259,5 +273,6 @@ export class PrintDispatchLayoutComponent {
     return str;
   }
 }
+
 
 

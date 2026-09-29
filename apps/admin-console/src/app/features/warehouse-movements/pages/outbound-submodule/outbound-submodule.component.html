@@ -357,8 +357,8 @@
           <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
             <span class="material-symbols-outlined text-3xl">search_off</span>
           </div>
-          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">No se encontraron salidas</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          <h3 class="text-base font-bold text-slate-900 dark:text-slate-100">No se encontraron salidas</h3>
+          <p class="text-xs text-slate-700 dark:text-slate-300 font-medium max-w-md mx-auto">
             No hay registros que coincidan con la búsqueda o con los filtros de estado aplicados.
           </p>
           <button
@@ -685,13 +685,13 @@
                       <button
                         type="button"
                         (click)="clearOperatorSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
+                        class="absolute right-2 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar montacarguista"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
                       </button>
                     } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
+                      <span class="material-symbols-outlined absolute right-2 text-slate-600 dark:text-slate-400 text-base pointer-events-none">expand_more</span>
                     }
                   </div>
 
@@ -722,7 +722,7 @@
                             </div>
                             <div class="flex flex-col min-w-0 flex-1 text-left">
                               <span class="sku-autocomplete-name">{{ op.name }}</span>
-                              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
+                              <span class="text-[10px] text-slate-700 dark:text-slate-300 font-semibold truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
                             </div>
                           </div>
                           @if (selectedOperatorId() === op.id) {
@@ -747,18 +747,18 @@
               <div class="form-section__legend">
                 <span class="material-symbols-outlined text-amber-500">search</span>
                 <span>Buscador de Producto y Escáner de Tarimas (UA)</span>
-                <span class="text-xs text-slate-400 font-normal" style="margin-left:auto;">
+                <span class="text-xs text-slate-700 dark:text-slate-300 font-bold" style="margin-left:auto;">
                   {{ availableCatalogSkus().length }} productos disponibles · {{ inStockSkusCount() }} con stock
                 </span>
               </div>
 
               <!-- Banner de Compatibilidad Pistola / Tablet -->
-              <div class="mb-3.5 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+              <div class="mb-3.5 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-800 dark:text-slate-200 font-medium">
                 <div class="flex items-center gap-2.5">
                   <span class="material-symbols-outlined text-amber-500 text-lg">barcode_scanner</span>
                   <span><strong>Modo Industrial Pistola RF / Tablet:</strong> Dispara el escáner sobre la etiqueta UA o teclea el producto / lote si el código está dañado.</span>
                 </div>
-                <span class="hidden md:inline-block font-mono text-[11px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded">
+                <span class="hidden md:inline-block font-mono text-[11px] text-slate-800 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-700/60 px-2 py-0.5 rounded font-bold">
                   [ENTER] / Disparo para auto-selección
                 </span>
               </div>
@@ -829,11 +829,11 @@
                                 <span class="font-mono font-bold text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded">{{ pallet.palletCode }}</span>
                                 <div class="flex flex-col min-w-0">
                                   <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{{ pallet.description }}</span>
-                                  <span class="text-[10px] font-mono text-slate-500">Lote: {{ pallet.lotNumber }} · {{ pallet.pieces | number }} pz</span>
+                                  <span class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-semibold">Lote: {{ pallet.lotNumber }} · {{ pallet.pieces | number }} pz</span>
                                 </div>
                               </div>
                               <div class="flex items-center gap-2 shrink-0">
-                                <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                   {{ pallet.locationCode }}
                                 </span>
                                 <span class="material-symbols-outlined text-emerald-600 text-base">add_circle</span>
@@ -867,16 +867,16 @@
                             <div class="flex items-center gap-2 flex-wrap">
                               <span class="sku-autocomplete-name font-semibold">{{ sku.productName }}</span>
                               @if (sku.clientName) {
-                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700">
+                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700">
                                   {{ sku.clientName }}
                                 </span>
                               }
                             </div>
-                            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                            <span class="text-[11px] text-slate-700 dark:text-slate-300 font-medium mt-0.5">
                               @if (sku.totalAvailablePallets > 0) {
                                 <strong class="text-amber-700 dark:text-amber-400">{{ sku.totalAvailablePallets }} tarima(s) en inventario</strong> · {{ sku.totalAvailablePieces | number }} pz
                               } @else {
-                                <span class="text-slate-400 dark:text-slate-500">0 tarimas en inventario · 0 pz</span>
+                                <span class="text-slate-700 dark:text-slate-400 font-semibold">0 tarimas en inventario · 0 pz</span>
                               }
                             </span>
                           </div>
@@ -894,7 +894,7 @@
                               </span>
                             }
                           } @else {
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
                               0 tarimas
                             </span>
                           }
@@ -936,7 +936,7 @@
                   <div class="flex items-center gap-2 shrink-0">
                     <span
                       class="text-[11px] font-bold px-2 py-0.5 rounded border"
-                      [ngClass]="selectedSku()!.totalAvailablePallets === 0 ? 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' : (selectedSku()!.pabloColor === 'amber' ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700' : (selectedSku()!.pabloColor === 'rose' ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-700' : 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'))"
+                      [ngClass]="selectedSku()!.totalAvailablePallets === 0 ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' : (selectedSku()!.pabloColor === 'amber' ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700' : (selectedSku()!.pabloColor === 'rose' ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-700' : 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'))"
                     >
                       {{ selectedSku()!.totalAvailablePallets === 0 ? 'Sin stock' : selectedSku()!.pabloLabel }}
                     </span>
@@ -944,7 +944,7 @@
                     <button
                       type="button"
                       (click)="clearSkuSelection($event)"
-                      class="text-[11px] font-bold text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                      class="text-[11px] font-bold text-slate-700 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
                       title="Limpiar y buscar otro producto"
                     >
                       <span class="material-symbols-outlined text-sm">swap_horiz</span>
@@ -959,7 +959,7 @@
                   <!-- Lado Izquierdo: Buscador Local + Contador de Stock -->
                   <div class="flex items-center gap-2 flex-1 min-w-[220px] max-w-full">
                     <div class="relative flex-1 min-w-[130px]">
-                      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
+                      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-xs pointer-events-none">
                         search
                       </span>
                       <input
@@ -974,7 +974,7 @@
                         <button
                           type="button"
                           (click)="clearPalletTableSearch()"
-                          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
                           title="Limpiar filtro"
                         >
                           <span class="material-symbols-outlined text-xs">close</span>
@@ -983,9 +983,9 @@
                     </div>
 
                     <!-- Badge de Inventario Local -->
-                    <div class="hidden md:flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-lg bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 shrink-0 text-slate-600 dark:text-slate-300">
+                    <div class="hidden md:flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-lg bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 shrink-0 text-slate-700 dark:text-slate-300">
                       <span><strong>{{ allAvailablePalletsForCurrentView().length }}</strong> disp.</span>
-                      <span class="text-slate-400">·</span>
+                      <span class="text-slate-600 dark:text-slate-400 font-bold">·</span>
                       <span class="text-amber-600 dark:text-amber-400 font-bold">{{ selectedPalletsCountForCurrentSku() }} en salida</span>
                     </div>
                   </div>
@@ -995,12 +995,12 @@
                     <div class="flex items-center gap-1.5 flex-wrap shrink-0">
                       <!-- Stepper Numérico FEFO -->
                       <div class="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5 shadow-inner h-8">
-                        <span class="text-[10px] font-bold text-slate-400 px-1 hidden sm:inline">FEFO:</span>
+                        <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 px-1 hidden sm:inline">FEFO:</span>
                         <button
                           type="button"
                           (click)="decrementFefoQuantity()"
                           [disabled]="fefoQuantityInput() <= 1"
-                          class="w-5 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 rounded cursor-pointer"
+                          class="w-5 h-6 flex items-center justify-center text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white disabled:opacity-30 rounded cursor-pointer font-bold"
                           title="Disminuir"
                         >
                           <span class="material-symbols-outlined text-xs">remove</span>
@@ -1018,12 +1018,12 @@
                           type="button"
                           (click)="incrementFefoQuantity()"
                           [disabled]="fefoQuantityInput() >= maxAvailablePalletsForCurrentSku()"
-                          class="w-5 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 rounded cursor-pointer"
+                          class="w-5 h-6 flex items-center justify-center text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white disabled:opacity-30 rounded cursor-pointer font-bold"
                           title="Aumentar"
                         >
                           <span class="material-symbols-outlined text-xs">add</span>
                         </button>
-                        <span class="text-[10px] font-mono text-slate-400 pr-1">/ {{ maxAvailablePalletsForCurrentSku() }}</span>
+                        <span class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-bold pr-1">/ {{ maxAvailablePalletsForCurrentSku() }}</span>
                       </div>
 
                       <!-- Botón Agregar FEFO -->
@@ -1060,7 +1060,7 @@
                       <div class="font-bold text-sm text-emerald-800 dark:text-emerald-300">
                         ¡Todas las tarimas disponibles de este producto ya están en el manifiesto de salida!
                       </div>
-                      <p class="text-[11px] text-slate-500 dark:text-slate-400 max-w-md">
+                      <p class="text-[11px] text-slate-700 dark:text-slate-300 font-medium max-w-md">
                         Tienes {{ selectedPalletsCountForCurrentSku() }} tarima(s) en el carro de salida (revisa la Sección 4 abajo). Puedes buscar otro producto arriba o proceder con el despacho.
                       </p>
                       <button
@@ -1073,9 +1073,9 @@
                       </button>
                     </div>
                   } @else {
-                    <div class="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-                      <span class="material-symbols-outlined text-3xl text-slate-400">inventory_2</span>
-                      <span>No se encontraron tarimas disponibles para este producto.</span>
+                    <div class="p-8 text-center text-slate-700 dark:text-slate-300 text-xs flex flex-col items-center justify-center gap-2">
+                      <span class="material-symbols-outlined text-3xl text-slate-600 dark:text-slate-400">inventory_2</span>
+                      <span class="font-bold">No se encontraron tarimas disponibles para este producto.</span>
                       @if (palletTableSearchQuery()) {
                         <button
                           type="button"
@@ -1110,7 +1110,7 @@
                             style="cursor:pointer;"
                             class="transition-colors hover:bg-amber-500/10"
                           >
-                            <td style="text-align:center;" class="font-mono text-xs font-bold text-slate-400">
+                            <td style="text-align:center;" class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                               {{ idx + 1 }}
                             </td>
                             <td>
@@ -1129,7 +1129,7 @@
                                   Tarima #{{ pallet.palletNumber || 1 }}
                                 </span>
                                 @if (pallet.remisionNo) {
-                                  <span class="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                                  <span class="font-mono text-[10px] text-slate-700 dark:text-slate-300 font-semibold">
                                     {{ pallet.remisionNo }}
                                   </span>
                                 }
@@ -1144,7 +1144,7 @@
                             <td>
                               <div class="flex flex-col min-w-0">
                                 <span class="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[200px]">{{ pallet.description }}</span>
-                                <span class="font-mono text-[10px] text-slate-500">SKU: {{ pallet.productId }} · {{ pallet.clientName }}</span>
+                                <span class="font-mono text-[10px] text-slate-700 dark:text-slate-300 font-semibold">SKU: {{ pallet.productId }} · {{ pallet.clientName }}</span>
                               </div>
                             </td>
                             <td class="mono muted font-semibold text-xs">{{ pallet.lotNumber }}</td>
@@ -1195,14 +1195,14 @@
                   <span class="font-bold">4. MANIFIESTO CONSOLIDADO DE DESPACHO (CARRO DE SALIDA)</span>
                 </div>
                 <div class="flex items-center gap-3">
-                  <span class="text-xs text-slate-400 font-normal">
+                  <span class="text-xs text-slate-700 dark:text-slate-300 font-bold">
                     {{ totalSelectedPallets() }} tarima(s) en manifiesto · {{ distinctSkusCount() }} producto(s)
                   </span>
                   @if (totalSelectedPallets() > 0) {
                     <button
                       type="button"
                       (click)="clearAllManifest()"
-                      class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 flex items-center gap-1 font-semibold px-2 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 flex items-center gap-1 font-semibold px-2 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                       title="Vaciar todas las tarimas del manifiesto"
                     >
                       <span class="material-symbols-outlined text-sm">remove_shopping_cart</span>
@@ -1229,7 +1229,7 @@
                     <span class="material-symbols-outlined text-lg">scale</span>
                   </div>
                   <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Total Piezas</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">Total Piezas</span>
                     <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ totalSelectedPieces() | number }} pz</strong>
                   </div>
                 </div>
@@ -1239,7 +1239,7 @@
                     <span class="material-symbols-outlined text-lg">category</span>
                   </div>
                   <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">SKUs Únicos</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">SKUs Únicos</span>
                     <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ distinctSkusCount() }} producto(s)</strong>
                   </div>
                 </div>
@@ -1249,7 +1249,7 @@
                     <span class="material-symbols-outlined text-lg">inventory</span>
                   </div>
                   <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Lotes Involucrados</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">Lotes Involucrados</span>
                     <strong class="text-base font-bold text-slate-900 dark:text-white font-mono">{{ totalLotesInManifest() }} lote(s)</strong>
                   </div>
                 </div>
@@ -1258,7 +1258,7 @@
               <!-- Desglose por SKU en Chips -->
               @if (manifestGroupedBySku().length > 0) {
                 <div class="mb-3 flex items-center gap-2 flex-wrap">
-                  <span class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Productos en Manifiesto:</span>
+                  <span class="text-[11px] font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider">Productos en Manifiesto:</span>
                   @for (group of manifestGroupedBySku(); track group.skuCode) {
                     <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs">
                       <span class="font-mono font-bold text-amber-700 dark:text-amber-300">{{ group.skuCode }}</span>
@@ -1269,7 +1269,7 @@
                       <button
                         type="button"
                         (click)="removeSkuFromManifest(group.skuCode)"
-                        class="text-slate-400 hover:text-rose-500 transition-colors ml-0.5"
+                        class="text-slate-600 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 transition-colors ml-0.5 cursor-pointer"
                         title="Quitar todas las tarimas de este producto"
                       >
                         <span class="material-symbols-outlined text-xs">close</span>
@@ -1284,7 +1284,7 @@
                 <div class="p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 text-center flex flex-col items-center justify-center gap-2">
                   <span class="material-symbols-outlined text-3xl text-amber-500/60">add_shopping_cart</span>
                   <div class="text-xs font-bold text-slate-700 dark:text-slate-300">El manifiesto de despacho está vacío</div>
-                  <p class="text-[11px] text-slate-500 max-w-md">
+                  <p class="text-[11px] text-slate-700 dark:text-slate-300 font-medium max-w-md">
                     Selecciona productos en el buscador de arriba o escanea códigos de barras / UAs para irlos agregando a este carro de salida multi-producto.
                   </p>
                 </div>
@@ -1306,7 +1306,7 @@
                     <tbody>
                       @for (it of selectedPalletItems(); track it.id; let idx = $index) {
                         <tr class="selected-row">
-                          <td style="text-align:center;" class="font-mono text-xs font-bold text-slate-400">
+                          <td style="text-align:center;" class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                             {{ idx + 1 }}
                           </td>
                           <td>
@@ -1314,7 +1314,7 @@
                               <span class="font-bold text-xs text-slate-900 dark:text-slate-100 truncate max-w-[220px]">
                                 {{ it.description }}
                               </span>
-                              <div class="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                              <div class="flex items-center gap-1.5 text-[10px] text-slate-700 dark:text-slate-300 font-semibold font-mono">
                                 <span>SKU: {{ it.productId }}</span>
                                 @if (it.clientName) {
                                   <span>· {{ it.clientName }}</span>
@@ -1330,10 +1330,10 @@
                           <td>
                             <div class="flex items-center gap-1">
                               <span class="font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                                {{ it.inboundRemisionNo || 'REM-S/N' }}
+                                {{ getInboundDocNumber(it) }}
                               </span>
                               @if (it.palletNumber) {
-                                <span class="text-[10px] text-slate-400 font-mono">
+                                <span class="text-[10px] text-slate-700 dark:text-slate-300 font-mono font-bold">
                                   (#{{ it.palletNumber }})
                                 </span>
                               }
@@ -1348,7 +1348,7 @@
                           <td>
                             <div class="flex flex-col min-w-0 font-mono text-xs">
                               <span class="font-semibold text-slate-700 dark:text-slate-300">{{ it.lotNumber }}</span>
-                              <span class="text-[10px] text-slate-400">Cad: {{ it.expirationDate }}</span>
+                              <span class="text-[10px] text-slate-700 dark:text-slate-300 font-semibold">Cad: {{ it.expirationDate }}</span>
                             </div>
                           </td>
                           <td style="text-align:right;" class="mono font-bold text-xs">
@@ -1358,7 +1358,7 @@
                             <button
                               type="button"
                               (click)="removePalletFromManifest(it.id)"
-                              class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-colors mx-auto"
+                              class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-colors mx-auto cursor-pointer"
                               title="Quitar esta tarima del despacho"
                             >
                               <span class="material-symbols-outlined text-sm">close</span>
@@ -1396,7 +1396,7 @@
                   <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Cliente & Destino</span>
-                    <span class="text-[11px] text-slate-500 truncate">{{ selectedClient()?.name || '--' }} → {{ selectedDestination()?.name || '--' }}</span>
+                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-medium truncate">{{ selectedClient()?.name || '--' }} → {{ selectedDestination()?.name || '--' }}</span>
                   </div>
                 </div>
 
@@ -1405,7 +1405,7 @@
                   <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Transporte & Operador</span>
-                    <span class="text-[11px] text-slate-500 truncate">{{ selectedCarrier()?.name }} · {{ driverName() || '--' }} ({{ getTransportLabel(selectedTransportType()) }})</span>
+                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-medium truncate">{{ selectedCarrier()?.name }} · {{ driverName() || '--' }} ({{ getTransportLabel(selectedTransportType()) }})</span>
                   </div>
                 </div>
 
@@ -1414,7 +1414,7 @@
                   <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Eco/Placas & Sello Oficial</span>
-                    <span class="text-[11px] text-slate-500 font-mono truncate">Tracto: {{ economicNumber() || '-' }}/{{ tractorPlates() || '-' }} · Caja: {{ boxEconomicNumber() || '-' }}/{{ boxPlates() || '-' }} · 🔒 {{ sealNumber() }}</span>
+                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-mono font-medium truncate">Tracto: {{ economicNumber() || '-' }}/{{ tractorPlates() || '-' }} · Caja: {{ boxEconomicNumber() || '-' }}/{{ boxPlates() || '-' }} · 🔒 {{ sealNumber() }}</span>
                   </div>
                 </div>
 
@@ -1425,7 +1425,7 @@
                   </span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Manifiesto Consolidado</span>
-                    <span class="text-[11px] text-slate-500 font-mono">{{ totalSelectedPallets() }} UA(s) · {{ totalSelectedPieces() | number }} pzas · {{ distinctSkusCount() }} SKU(s)</span>
+                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-mono font-medium">{{ totalSelectedPallets() }} UA(s) · {{ totalSelectedPieces() | number }} pzas · {{ distinctSkusCount() }} SKU(s)</span>
                   </div>
                 </div>
 
@@ -1436,7 +1436,7 @@
                   </span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Montacarguista Certificado</span>
-                    <span class="text-[11px]" [ngClass]="selectedOperator() ? 'text-slate-500' : 'text-rose-500 font-bold'">
+                    <span class="text-[11px]" [ngClass]="selectedOperator() ? 'text-slate-700 dark:text-slate-300 font-semibold' : 'text-rose-500 font-bold'">
                       {{ selectedOperator() ? (selectedOperator()!.name + ' (' + selectedOperator()!.badge + ')') : 'Asignación obligatoria' }}
                     </span>
                   </div>
@@ -1447,7 +1447,7 @@
                   <span class="material-symbols-outlined text-amber-500 text-base shrink-0 mt-0.5">auto_awesome</span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Políticas de Rotación</span>
-                    <span class="text-[11px] text-slate-500">FEFO y Regla de Pablo validadas</span>
+                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-semibold">FEFO y Regla de Pablo validadas</span>
                   </div>
                 </div>
               </div>
@@ -1525,16 +1525,16 @@
               <span class="material-symbols-outlined">arrow_back</span>
               <span>Directorio</span>
             </button>
-            <span class="material-symbols-outlined text-base text-slate-700 dark:text-slate-300">local_shipping</span>
-            <span>Movimientos</span>
-            <span class="breadcrumb-sep">›</span>
-            <span>Salida de Almacén</span>
-            <span class="breadcrumb-sep">›</span>
-            <strong class="text-slate-950 dark:text-slate-50 font-black">{{ selectedOutbound()!.clientName }}</strong>
-            <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30">FOLIO #{{ selectedOutbound()!.folio }}</span>
+            <span class="material-symbols-outlined text-base text-slate-800 dark:text-slate-200">local_shipping</span>
+            <span class="text-slate-800 dark:text-slate-200 font-bold text-xs">Movimientos</span>
+            <span class="text-slate-600 dark:text-slate-400 font-bold">›</span>
+            <span class="text-slate-800 dark:text-slate-200 font-bold text-xs">Salida de Almacén</span>
+            <span class="text-slate-600 dark:text-slate-400 font-bold">›</span>
+            <strong class="text-slate-950 dark:text-slate-50 font-black text-sm">{{ selectedOutbound()!.clientName }}</strong>
+            <span class="font-mono text-xs font-bold text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/40">FOLIO #{{ selectedOutbound()!.folio }}</span>
             <span style="margin-left:0.5rem;">
               <span
-                class="carrier-status-badge"
+                class="carrier-status-badge font-bold"
                 [class.status-badge--registered]="selectedOutbound()!.status === 'REGISTERED'"
                 [class.status-badge--assigned]="selectedOutbound()!.status === 'ASSIGNED'"
                 [class.status-badge--progress]="selectedOutbound()!.status === 'IN_PROGRESS'"
@@ -1546,23 +1546,13 @@
                 @else if (selectedOutbound()!.status === 'ASSIGNED') { 2. Andén Asignado }
                 @else if (selectedOutbound()!.status === 'IN_PROGRESS') { 3. En Carga }
                 @else if (selectedOutbound()!.status === 'LOADED') { 4. Por Auditar }
-                @else if (selectedOutbound()!.status === 'COMPLETED') { 5. Completado }
+                @else if (selectedOutbound()!.status === 'COMPLETED') { 5. Despacho Concluido }
                 @else if (selectedOutbound()!.status === 'CANCELLED') { Cancelado }
               </span>
             </span>
           </div>
           <div class="outbound-breadcrumb-bar__actions">
             @if (selectedOutbound()?.status !== 'CANCELLED') {
-              <button
-                type="button"
-                (click)="openChangeRemisionModal()"
-                class="btn-secondary-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
-                title="Modificar número de remisión o carta porte con autorización supervisada"
-              >
-                <span class="material-symbols-outlined text-sm text-indigo-500">edit_note</span>
-                <span>Cambiar Remisión</span>
-              </button>
-
               <button
                 type="button"
                 (click)="openCancelModal()"
@@ -1572,7 +1562,13 @@
                 <span>Cancelar</span>
               </button>
             }
-            <button type="button" class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm text-slate-900" (click)="openPrintPreview(selectedOutbound()!)">
+            <button
+              type="button"
+              class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm text-slate-900 disabled:opacity-45 disabled:cursor-not-allowed disabled:grayscale transition-all"
+              [disabled]="selectedOutbound()?.status !== 'COMPLETED' && selectedOutbound()?.status !== 'CANCELLED'"
+              [title]="selectedOutbound()?.status === 'COMPLETED' || selectedOutbound()?.status === 'CANCELLED' ? 'Imprimir formato de salida oficial (F03)' : 'El formato F03 estará disponible una vez concluida la salida (Fase 5 - Despacho)'"
+              (click)="openPrintPreview(selectedOutbound()!)"
+            >
               <span class="material-symbols-outlined" style="font-size:0.85rem;">print</span>
               <span>{{ selectedOutbound()?.status === 'CANCELLED' ? 'Imprimir Cancelación' : 'Imprimir Salida (F03)' }}</span>
             </button>
@@ -1695,11 +1691,23 @@
                   <button
                     type="button"
                     (click)="openEditCasetaModal()"
-                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
-                    title="Modificar datos de caseta, transportista, placas o chofer"
+                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+                    title="Asignar o modificar planta destino, número de sello y transporte"
                   >
-                    <span class="material-symbols-outlined text-sm">edit</span>
-                    <span>Modificar Ficha</span>
+                    <span class="material-symbols-outlined text-sm">
+                      {{ (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) ? 'edit_note' : (!selectedOutbound()!.destinationName ? 'edit_location' : (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S' ? 'lock' : 'edit')) }}
+                    </span>
+                    <span>
+                      @if (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) {
+                        Asignar Planta y Sello
+                      } @else if (!selectedOutbound()!.destinationName) {
+                        Asignar Planta / Destino
+                      } @else if (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S') {
+                        Asignar Número de Sello
+                      } @else {
+                        Modificar Ficha
+                      }
+                    </span>
                   </button>
                 }
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
@@ -1723,14 +1731,24 @@
               </div>
 
               <!-- Destino / Planta -->
-              <div class="logistics-command-cell">
-                <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">pin_drop</span>
-                  Planta / Destino
+              <div class="logistics-command-cell cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para asignar o cambiar Planta / Destino">
+                <span class="logistics-command-label flex items-center justify-between">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs">pin_drop</span>
+                    Planta / Destino
+                  </span>
+                  <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.destinationName">
-                  {{ selectedOutbound()!.destinationName }}
-                </span>
+                @if (selectedOutbound()!.destinationName) {
+                  <span class="logistics-command-value font-bold truncate text-slate-900 dark:text-white" [title]="selectedOutbound()!.destinationName + (selectedOutbound()!.destinationAddress ? ' — ' + selectedOutbound()!.destinationAddress : '')">
+                    {{ selectedOutbound()!.destinationName }}
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 animate-pulse">
+                    <span class="material-symbols-outlined text-xs">add_location_alt</span>
+                    <span>Asignar Planta / Destino</span>
+                  </span>
+                }
               </div>
 
               <!-- Línea Transportista -->
@@ -1775,20 +1793,24 @@
               </div>
 
               <!-- Sellos / Cinchos de Seguridad (4 cols) -->
-              <div class="logistics-command-cell lg:col-span-4">
-                <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">lock</span>
-                  Número de Sello o Cincho
+              <div class="logistics-command-cell lg:col-span-4 cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para capturar o actualizar número de sello">
+                <span class="logistics-command-label flex items-center justify-between">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs">lock</span>
+                    Número de Sello o Cincho
+                  </span>
+                  <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
                 </span>
                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                  @if (selectedOutbound()!.sealNumber && selectedOutbound()!.sealNumber !== 'PENDIENTE_ANDEN') {
+                  @if (selectedOutbound()!.sealNumber && selectedOutbound()!.sealNumber !== 'PENDIENTE_ANDEN' && selectedOutbound()!.sealNumber !== 'S/S' && selectedOutbound()!.sealNumber !== 'PENDIENTE') {
                     <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
                       🔒 {{ selectedOutbound()!.sealNumber }}
                     </span>
                   } @else {
-                    <span class="font-mono text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 flex items-center gap-1">
-                      <span class="material-symbols-outlined text-xs">pending</span>
-                      <span>Pendiente al finalizar carga</span>
+                    <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 flex items-center gap-1 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors animate-pulse">
+                      <span class="material-symbols-outlined text-xs">lock_open</span>
+                      <span>Sello Pendiente (Obligatorio)</span>
+                      <span class="text-[10px] underline ml-1 font-extrabold">+ Asignar Sello</span>
                     </span>
                   }
                 </div>
@@ -1815,46 +1837,145 @@
           <!-- 4. CAJAS DE ACCIÓN OPERATIVA CONTEXTUAL SEGÚN LA FASE ACTIVA -->
           @if (selectedOutbound()!.status === 'REGISTERED') {
             <!-- FASE 1: REGISTRADO EN CASETA — MESA DE CONTROL ASIGNA ANDÉN Y MONTACARGUISTA -->
-            <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4">
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="outbound-phase-card space-y-4">
+              <!-- Alerta contextual si falta asignar Planta / Destino o Sello -->
+              @if (!selectedOutbound()!.destinationName || !selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S') {
+                <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div class="flex items-center gap-2.5 text-amber-900 dark:text-amber-200">
+                    <div class="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-700 dark:text-amber-400 shrink-0">
+                      <span class="material-symbols-outlined text-xl">
+                        {{ (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) ? 'assignment_late' : (!selectedOutbound()!.destinationName ? 'add_location_alt' : 'lock_clock') }}
+                      </span>
+                    </div>
+                    <div>
+                      <strong class="font-black text-xs uppercase tracking-wide block">
+                        @if (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) {
+                          Planta Destino &amp; Sello Obligatorio Pendientes de Asignación
+                        } @else if (!selectedOutbound()!.destinationName) {
+                          Planta / Destino Pendiente de Asignación
+                        } @else {
+                          Número de Sello o Cincho Obligatorio Pendiente
+                        }
+                      </strong>
+                      <span class="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                        @if (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) {
+                          El transporte ingresó desde caseta sin destino ni sello. Por favor asigna la Planta destino y el Número de Sello oficial para completar la pauta.
+                        } @else if (!selectedOutbound()!.destinationName) {
+                          Selecciona la Planta o Centro de Distribución final del cliente para la orden.
+                        } @else {
+                          Captura el número de sello o cincho de seguridad oficial obligatorio.
+                        }
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="openEditCasetaModal()"
+                    class="btn-primary-gold px-4 py-2 rounded-xl text-xs font-bold text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span class="material-symbols-outlined text-sm">
+                      {{ (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) ? 'edit_note' : (!selectedOutbound()!.destinationName ? 'edit_location' : 'lock') }}
+                    </span>
+                    <span>
+                      @if (!selectedOutbound()!.destinationName && (!selectedOutbound()!.sealNumber || selectedOutbound()!.sealNumber === 'PENDIENTE_ANDEN' || selectedOutbound()!.sealNumber === 'PENDIENTE' || selectedOutbound()!.sealNumber === 'S/S')) {
+                        Asignar Planta y Sello
+                      } @else if (!selectedOutbound()!.destinationName) {
+                        Asignar Planta / Destino
+                      } @else {
+                        Asignar Número de Sello
+                      }
+                    </span>
+                  </button>
+                </div>
+              }
+
+              <div class="outbound-phase-header">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center border border-amber-500/40 shrink-0">
+                  <div class="outbound-phase-icon-badge">
                     <span class="material-symbols-outlined text-2xl">forklift</span>
                   </div>
                   <div>
-                    <h3 class="font-black text-xs text-amber-900 dark:text-amber-200 uppercase tracking-wide">
-                      Fase 1: Pre-registro en Caseta · Asignar Andén &amp; Montacarguista
+                    <h3 class="outbound-phase-title">
+                      Fase 1: Pre-registro en Caseta · Asignar Andén, Tarimas &amp; Montacarguista
                     </h3>
-                    <p class="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
-                      El transporte arribó a patio. Asigna la rampa de carga (1-12) y el montacarguista responsable para despachar la orden a su terminal RF.
+                    <p class="outbound-phase-desc">
+                      El transporte arribó a patio. Selecciona las tarimas a despachar (FEFO) y asigna la rampa y montacarguista para enviar la orden a su terminal RF.
                     </p>
+                    <div class="flex items-center gap-2 text-[11px] font-bold mt-2 flex-wrap">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border {{ (selectedRampNumber() && selectedOperatorId()) ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700' : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' }}">
+                        <span class="material-symbols-outlined text-xs">{{ (selectedRampNumber() && selectedOperatorId()) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                        <span>Paso 1: Rampa &amp; Operador {{ (selectedRampNumber() && selectedOperatorId()) ? '(Listo)' : '(Pendiente)' }}</span>
+                      </span>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border {{ (selectedOutbound()!.items.length > 0) ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700' : 'bg-amber-50 text-amber-950 border-amber-400 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700' }}">
+                        <span class="material-symbols-outlined text-xs">{{ (selectedOutbound()!.items.length > 0) ? 'check_circle' : 'pending' }}</span>
+                        <span>Paso 2: Tarimas a Despachar ({{ selectedOutbound()!.items.length }} UAs)</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  [disabled]="isAssigningRamp() || !selectedOperatorId()"
-                  (click)="assignRampAndOperatorAction()"
-                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
-                  title="Bloquear rampa y despachar orden a terminal RF del montacarguista"
-                >
-                  @if (isAssigningRamp()) {
-                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                    <span>Asignando...</span>
+                <div class="flex items-center gap-2 flex-wrap shrink-0">
+                  @if (selectedOutbound()!.items.length === 0) {
+                    <!-- Si no hay tarimas, resaltar como botón principal asignar tarimas primero -->
+                    <button
+                      type="button"
+                      (click)="openPalletPickerModal()"
+                      class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-4 py-2.5 rounded-xl text-slate-900 shadow-md cursor-pointer hover:scale-[1.02] transition-transform"
+                      title="Abrir selector de tarimas de inventario con regla FEFO"
+                    >
+                      <span class="material-symbols-outlined text-base">add_shopping_cart</span>
+                      <span>1. Seleccionar Tarimas (FEFO)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      [disabled]="isAssigningRamp() || !selectedOperatorId()"
+                      (click)="assignRampAndOperatorAction()"
+                      class="flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                      title="Asignar andén y notificar al montacarguista (requiere tarimas asignadas)"
+                    >
+                      <span class="material-symbols-outlined text-base">send_to_mobile</span>
+                      <span>2. Notificar Terminal RF</span>
+                    </button>
                   } @else {
-                    <span class="material-symbols-outlined text-base">send_to_mobile</span>
-                    <span>Asignar Andén y Notificar Terminal RF</span>
+                    <!-- Si ya hay tarimas asignadas, permitir notificar y botón secundario para modificar -->
+                    <button
+                      type="button"
+                      (click)="openPalletPickerModal()"
+                      class="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      title="Modificar tarimas asignadas"
+                    >
+                      <span class="material-symbols-outlined text-base">edit_note</span>
+                      <span>Modificar Tarimas ({{ selectedOutbound()!.items.length }})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      [disabled]="isAssigningRamp() || !selectedOperatorId()"
+                      (click)="assignRampAndOperatorAction()"
+                      class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md cursor-pointer disabled:opacity-50"
+                      title="Bloquear rampa y despachar orden a terminal RF del montacarguista"
+                    >
+                      @if (isAssigningRamp()) {
+                        <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                        <span>Asignando...</span>
+                      } @else {
+                        <span class="material-symbols-outlined text-base">send_to_mobile</span>
+                        <span>Asignar Andén y Notificar Terminal RF ({{ selectedOutbound()!.items.length }} Tarimas)</span>
+                      }
+                    </button>
                   }
-                </button>
+                </div>
               </div>
 
               <!-- Selector Rápido de Rampa y Montacarguista -->
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 border-t border-amber-500/20 text-xs">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
                 <!-- Rampa de Asignación con Autocomplete y Badges -->
                 <div class="relative">
                   <div class="flex items-center justify-between mb-1">
-                    <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
-                      Rampa de Asignación <span class="text-amber-500">*</span>
+                    <label class="outbound-field-label">
+                      <span>Rampa de Asignación</span>
+                      <span class="req">*</span>
                     </label>
                     <button
                       type="button"
@@ -1873,20 +1994,20 @@
                       (input)="onRampInput($any($event.target).value)"
                       (focus)="isRampDropdownOpen.set(true)"
                       placeholder="Seleccionar rampa..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950 dark:!text-white"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (rampSearchQuery() || selectedRampNumber()) {
                       <button
                         type="button"
                         (click)="clearRampSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar rampa"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
                       </button>
                     } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">meeting_room</span>
+                      <span class="material-symbols-outlined absolute right-2 text-slate-600 dark:text-slate-400 text-base pointer-events-none">meeting_room</span>
                     }
                   </div>
 
@@ -1925,7 +2046,7 @@
                                   {{ getRampBadgeInfo(rm, selectedOutbound()?.folio).label }}
                                 </span>
                               </div>
-                              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate">Andén de Operación · {{ rm.code }}</span>
+                              <span class="text-[10px] text-slate-700 dark:text-slate-300 font-bold truncate">Andén de Operación · {{ rm.code }}</span>
                             </div>
                           </div>
                           @if (selectedRampNumber() === rm.rampNumber) {
@@ -1943,8 +2064,9 @@
 
                 <!-- Montacarguista Certificado con Autocomplete -->
                 <div class="relative">
-                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
-                    Montacarguista Certificado <span class="text-amber-500">*</span>
+                  <label class="outbound-field-label">
+                    <span>Montacarguista Certificado</span>
+                    <span class="req">*</span>
                   </label>
                   <div class="relative flex items-center">
                     <input
@@ -1953,20 +2075,20 @@
                       (input)="onOperatorInput($any($event.target).value)"
                       (focus)="isOperatorDropdownOpen.set(true)"
                       placeholder="Seleccionar montacarguista..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950 dark:!text-white"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (operatorSearchQuery()) {
                       <button
                         type="button"
                         (click)="clearOperatorSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar montacarguista"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
                       </button>
                     } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">engineering</span>
+                      <span class="material-symbols-outlined absolute right-2 text-slate-600 dark:text-slate-400 text-base pointer-events-none">engineering</span>
                     }
                   </div>
 
@@ -1998,7 +2120,7 @@
                             </div>
                             <div class="flex flex-col min-w-0 flex-1 text-left">
                               <span class="font-extrabold text-slate-950 dark:text-slate-100 text-xs leading-snug">{{ op.name }}</span>
-                              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
+                              <span class="text-[10px] text-slate-700 dark:text-slate-300 font-semibold truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
                             </div>
                           </div>
                           @if (selectedOperatorId() === op.id) {
@@ -2015,15 +2137,15 @@
                 </div>
 
                 <div>
-                  <label class="font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] block mb-1">
-                    Observaciones para el Operador
+                  <label class="outbound-field-label">
+                    <span>Observaciones para el Operador</span>
                   </label>
                   <input
                     type="text"
                     [ngModel]="observations()"
                     (ngModelChange)="observations.set($event)"
                     placeholder="Instrucciones de estiba o andén..."
-                    class="fg-input w-full text-xs"
+                    class="fg-input w-full font-medium text-xs"
                   />
                 </div>
               </div>
@@ -2037,35 +2159,59 @@
                   <span class="material-symbols-outlined text-2xl">forklift</span>
                 </div>
                 <div>
-                  <h3 class="font-bold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wide">
-                    Fase 2: Andén Asignado · Notificación Enviada a Terminal RF
-                  </h3>
-                  <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-bold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wide">
+                      Fase 2: Andén Asignado · Notificación Enviada a Terminal RF
+                    </h3>
+                    @if (selectedOutbound()!.items.length === 0) {
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/40">
+                        ⚠️ Sin Tarimas Asignadas
+                      </span>
+                    } @else {
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-800 dark:text-blue-200 border border-blue-500/40">
+                        {{ selectedOutbound()!.totalPallets }} Tarima(s) por Surtir
+                      </span>
+                    }
+                  </div>
+                  <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium mt-0.5">
                     Rampa <strong>{{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Asignada' }}</strong> bloqueada. El montacarguista <strong>{{ selectedOutbound()!.forkliftOperator }}</strong> validará el transporte e iniciará el surtido/carga en andén.
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                [disabled]="isStartingLoading()"
-                (click)="startOutboundLoadingAction()"
-                class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap"
-                title="Simular inicio de carga en la terminal del montacarguista"
-              >
-                @if (isStartingLoading()) {
-                  <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                  <span>Iniciando...</span>
-                } @else {
-                  <span class="material-symbols-outlined text-sm">play_arrow</span>
-                  <span>Iniciar Carga en Terminal RF</span>
+              <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                @if (selectedOutbound()!.items.length === 0) {
+                  <button
+                    type="button"
+                    (click)="openPalletPickerModal()"
+                    class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-xl text-slate-900 shadow-md whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
+                    title="Seleccionar y asignar tarimas del inventario a esta orden"
+                  >
+                    <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
+                    <span>Asignar Tarimas (FEFO)</span>
+                  </button>
                 }
-              </button>
+                <button
+                  type="button"
+                  [disabled]="isStartingLoading()"
+                  (click)="startOutboundLoadingAction()"
+                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
+                  title="Notificar al montacarguista y confirmar carga para emitir formato F03"
+                >
+                  @if (isStartingLoading()) {
+                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    <span>Confirmando Carga...</span>
+                  } @else {
+                    <span class="material-symbols-outlined text-sm">send_and_archive</span>
+                    <span>Iniciar Carga &amp; Confirmar (F03)</span>
+                  }
+                </button>
+              </div>
             </div>
 
           } @else if (selectedOutbound()!.status === 'IN_PROGRESS') {
-            <!-- FASE 3: CARGA FÍSICA EN CURSO (TERMINAL MONTACARGUISTA) -->
-            <div class="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-3">
+            <!-- FASE 3: CARGA FÍSICA EN CURSO (TERMINAL RF MONTACARGUISTA) -->
+            <div class="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-4">
               <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/40 shrink-0 animate-pulse">
@@ -2077,37 +2223,92 @@
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-700 dark:text-cyan-300">En Proceso</span>
                     </h3>
                     <p class="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
-                      Montacarguista <strong>{{ selectedOutbound()!.forkliftOperator }}</strong> estibando mercancía en caja de transporte.
+                      Montacarguista <strong>{{ selectedOutbound()!.forkliftOperator }}</strong>: Carga en andén de <strong>{{ selectedOutbound()!.totalPallets }} tarimas</strong>.
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  [disabled]="isFinishingLoading()"
-                  (click)="finishOutboundLoadingAction()"
-                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap"
-                  title="Concluir carga física y notificar a mesa de control"
-                >
-                  @if (isFinishingLoading()) {
-                    <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                    <span>Finalizando...</span>
-                  } @else {
-                    <span class="material-symbols-outlined text-sm">fact_check</span>
-                    <span>Finalizar Carga (Registrar Sellos y Notificar Control)</span>
-                  }
-                </button>
+                <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    (click)="confirmAllPalletsManual()"
+                    class="btn-ghost text-[11px] font-bold px-3 py-1.5 rounded-xl border border-cyan-500/30 text-cyan-900 dark:text-cyan-200 hover:bg-cyan-500/20 cursor-pointer flex items-center gap-1"
+                    title="Confirmar todas las UAs (Excepción supervisada)"
+                  >
+                    <span class="material-symbols-outlined text-sm">done_all</span>
+                    <span>Validar Todas</span>
+                  </button>
+                  <button
+                    type="button"
+                    [disabled]="isFinishingLoading()"
+                    (click)="finishOutboundLoadingAction()"
+                    class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
+                    title="Concluir carga física y proceder directamente a formato F03"
+                  >
+                    @if (isFinishingLoading()) {
+                      <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                      <span>Finalizando...</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-sm">fact_check</span>
+                      <span>Finalizar Carga &amp; Obtener Formato F03</span>
+                    }
+                  </button>
+                </div>
               </div>
 
-              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-cyan-500/30 text-xs">
-                <span class="font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">Número de Sello / Precinto de Puerta:</span>
-                <input
-                  type="text"
-                  [ngModel]="tempFinishSealNumber()"
-                  (ngModelChange)="tempFinishSealNumber.set($event)"
-                  placeholder="Ingresar número de sello final (ej. SL-99201)..."
-                  class="fg-input font-mono uppercase text-xs flex-1"
-                />
+              <!-- BARRA DE PROGRESO DE ESCANEO DE UAs EN ANDÉN -->
+              <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-cyan-500/30 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-sm text-cyan-600">qr_code_scanner</span>
+                    <span>Progreso de Escaneo de UAs en Andén:</span>
+                  </span>
+                  <span class="font-mono font-bold text-cyan-700 dark:text-cyan-300">
+                    {{ verifiedPalletsCount() }} / {{ selectedOutbound()!.items.length || 0 }} Tarimas Verificadas ({{ scanProgressPercent() }}%)
+                  </span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-full transition-all duration-300 rounded-full"
+                    [style.width.%]="scanProgressPercent()"
+                  ></div>
+                </div>
+
+                <!-- LECTOR / PISTOLA RF INPUT -->
+                <div class="flex items-center gap-2 pt-1">
+                  <div class="relative flex-1">
+                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">barcode_reader</span>
+                    <input
+                      type="text"
+                      [ngModel]="rfBarcodeScanInput()"
+                      (ngModelChange)="rfBarcodeScanInput.set($event)"
+                      (keydown.enter)="processRfBarcodeScan()"
+                      placeholder="Escanear código de tarima / UA (ej. UA-100234 o SSCC) y presiona Enter..."
+                      class="fg-input !pl-8 font-mono uppercase text-xs w-full font-bold"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    (click)="processRfBarcodeScan()"
+                    class="btn-primary-gold text-xs px-3.5 py-2 rounded-xl font-bold text-slate-900 shrink-0 cursor-pointer flex items-center gap-1"
+                  >
+                    <span class="material-symbols-outlined text-sm">check</span>
+                    <span>Confirmar UA</span>
+                  </button>
+                </div>
+
+                <!-- FEEDBACK DE ÚLTIMO ESCANEO -->
+                @if (lastScanResult()) {
+                  <div
+                    class="p-2.5 rounded-lg text-xs flex items-center gap-2 font-bold animate-fade-in"
+                    [ngClass]="lastScanResult()!.success ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700' : 'bg-rose-100 text-rose-900 dark:bg-rose-950/60 dark:text-rose-200 border border-rose-300 dark:border-rose-700'"
+                  >
+                    <span class="material-symbols-outlined text-base shrink-0">
+                      {{ lastScanResult()!.success ? 'check_circle' : 'error' }}
+                    </span>
+                    <span>{{ lastScanResult()!.message }}</span>
+                  </div>
+                }
               </div>
             </div>
 
@@ -2133,7 +2334,7 @@
                 type="button"
                 [disabled]="isAuthorizingDispatch()"
                 (click)="openAuthorizeModal()"
-                class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50"
+                class="btn-primary-gold flex items-center gap-1.5 text-xs font-black px-5 py-2.5 rounded-xl text-slate-900 shadow-md shrink-0 whitespace-nowrap disabled:opacity-50 cursor-pointer"
                 title="Aprobar despacho y emitir documento F03 formal con autorización supervisada"
               >
                 @if (isAuthorizingDispatch()) {
@@ -2166,7 +2367,7 @@
               <button
                 type="button"
                 (click)="openPrintPreview(selectedOutbound()!)"
-                class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 flex items-center gap-1.5 text-slate-900"
+                class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm shrink-0 flex items-center gap-1.5 text-slate-900 cursor-pointer"
               >
                 <span class="material-symbols-outlined text-base">print</span>
                 <span>Imprimir Pauta F03</span>
@@ -2183,8 +2384,8 @@
               <p class="text-xs text-rose-300 font-medium">
                 Motivo: "{{ selectedOutbound()!.cancellationReason || 'Cancelado por el administrador.' }}"
               </p>
-              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
-                <span>Autorizado por: <strong class="text-slate-200">{{ selectedOutbound()!.cancelledBy || 'Admin' }}</strong></span>
+              <div class="flex items-center justify-between text-[10px] text-slate-700 dark:text-slate-300 font-mono pt-1 border-t border-rose-500/20">
+                <span>Autorizado por: <strong class="text-slate-900 dark:text-slate-200 font-bold">{{ selectedOutbound()!.cancelledBy || 'Admin' }}</strong></span>
                 <span>Fecha: {{ selectedOutbound()!.cancelledAt || 'Registrado' }}</span>
               </div>
             </div>
@@ -2192,63 +2393,104 @@
 
           <!-- Detalle de Tarimas Despachadas -->
           <div class="form-section">
-            <div class="form-section__legend">
-              <span class="material-symbols-outlined">pallet</span>
-              Tarimas / UAs Despachadas
-              <span style="margin-left:0.5rem;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">
-                Remisión: {{ selectedOutbound()!.remisionNo }}
-              </span>
+            <div class="form-section__legend flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined">pallet</span>
+                <span>Tarimas / UAs Despachadas</span>
+                <span style="margin-left:0.5rem;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">
+                  Remisión: {{ selectedOutbound()!.remisionNo }}
+                </span>
+              </div>
             </div>
 
-            <div class="ua-table-wrapper">
-              <table class="ua-table">
-                <thead>
-                  <tr>
-                    <th>UA / SSCC</th>
-                    <th>Doc. Entrada Origen</th>
-                    <th>Bahía de Origen</th>
-                    <th>SKU</th>
-                    <th>Descripción</th>
-                    <th>Lote</th>
-                    <th>Caducidad</th>
-                    <th style="text-align:right;">Piezas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of selectedOutbound()!.items; track item.id || $index) {
+            @if (selectedOutbound()!.items.length === 0) {
+              <!-- Estado vacío estilizado y elegante conforme al SDD Light / Dark Mode -->
+              <div class="outbound-empty-pallet-card my-3 p-8 sm:p-10 flex flex-col items-center justify-center text-center gap-3">
+                <div class="outbound-empty-pallet-icon">
+                  <span class="material-symbols-outlined text-3xl">pallet</span>
+                </div>
+                <div class="space-y-1">
+                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 tracking-tight">
+                    Sin Tarimas Asignadas al Despacho
+                  </h4>
+                  <p class="text-xs text-slate-800 dark:text-slate-200 max-w-lg mx-auto leading-relaxed font-medium">
+                    Selecciona los productos y tarimas (UAs) desde el botón principal superior
+                    <strong class="text-amber-800 dark:text-amber-400 font-bold">"1. Seleccionar Tarimas (FEFO)"</strong>
+                    en la barra de control para armar el manifiesto de salida.
+                  </p>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[11px] font-bold text-amber-900 dark:text-amber-300 mt-1">
+                  <span class="material-symbols-outlined text-xs text-amber-600">tune</span>
+                  <span>Asignación inteligente por caducidad (FEFO) y escáner de código de barras</span>
+                </div>
+              </div>
+            } @else {
+              <!-- Tabla de Tarimas Asignadas (SDD Luxury) -->
+              <div class="outbound-dispatched-table-wrapper overflow-x-auto">
+                <table class="outbound-dispatched-table">
+                  <thead>
                     <tr>
-                      <td class="mono gold font-bold">{{ item.palletCode || '--' }}</td>
-                      <td>
-                        <span class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          {{ item.inboundRemisionNo || '--' }}
-                        </span>
-                      </td>
-                      <td>
-                        <span class="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300">
-                          <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
-                          {{ item.locationCode || 'N/A' }}
-                        </span>
-                      </td>
-                      <td class="mono muted font-semibold">{{ item.productId || '--' }}</td>
-                      <td class="font-medium">{{ item.description || '--' }}</td>
-                      <td class="mono muted">{{ item.lotNumber || '--' }}</td>
-                      <td class="mono muted">{{ item.expirationDate || '--' }}</td>
-                      <td style="text-align:right;" class="mono font-bold">{{ (item.pieces || 0) | number }} pz</td>
+                      <th>UA / SSCC</th>
+                      <th>Estado en Andén</th>
+                      <th>Doc. Entrada Origen</th>
+                      <th>Bahía de Origen</th>
+                      <th>SKU</th>
+                      <th>Descripción</th>
+                      <th>Lote</th>
+                      <th>Caducidad</th>
+                      <th style="text-align:right;">Piezas</th>
                     </tr>
-                  }
-                </tbody>
-                <tfoot>
-                  <tr style="background:var(--bg-subtle);font-weight:700;">
-                    <td colspan="7" style="padding:0.5rem 0.8rem;font-size:0.75rem;text-align:right;color:var(--text-muted);">
-                      Totales: {{ selectedOutbound()!.totalPallets }} Tarima(s) · {{ selectedOutbound()!.distinctSkus }} SKU(s)
-                    </td>
-                    <td style="text-align:right;padding:0.5rem 0.8rem;font-family:var(--font-mono);font-size:0.85rem;font-weight:800;color:var(--gold);">
-                      {{ selectedOutbound()!.totalPieces | number }} pz
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    @for (item of selectedOutbound()!.items; track item.id || $index) {
+                      <tr>
+                        <td class="outbound-dispatched-ua-code">{{ item.palletCode || '--' }}</td>
+                        <td>
+                          @if (isPalletVerified(item)) {
+                            <span class="outbound-dispatched-status-verified">
+                              <span class="material-symbols-outlined text-xs">check_circle</span>
+                              <span>Verificada / Cargada</span>
+                            </span>
+                          } @else {
+                            <span class="outbound-dispatched-status-pending">
+                              <span class="material-symbols-outlined text-xs">hourglass_top</span>
+                              <span>Pendiente Escaneo</span>
+                            </span>
+                          }
+                        </td>
+                        <td>
+                          <span class="outbound-dispatched-inbound-doc">
+                            <span class="material-symbols-outlined text-xs text-slate-500">description</span>
+                            {{ getInboundDocNumber(item) }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="outbound-dispatched-loc-badge">
+                            <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
+                            {{ item.locationCode || 'N/A' }}
+                          </span>
+                        </td>
+                        <td class="outbound-dispatched-sku">{{ item.productId || '--' }}</td>
+                        <td class="outbound-dispatched-desc">{{ item.description || '--' }}</td>
+                        <td class="outbound-dispatched-mono">{{ item.lotNumber || '--' }}</td>
+                        <td class="outbound-dispatched-mono">{{ item.expirationDate || '--' }}</td>
+                        <td class="outbound-dispatched-pieces">{{ (item.pieces || 0) | number }} pz</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="8" class="outbound-dispatched-tfoot-summary">
+                        Totales: <strong class="font-mono">{{ selectedOutbound()!.totalPallets }}</strong> Tarima(s) · <strong class="font-mono">{{ selectedOutbound()!.distinctSkus }}</strong> SKU(s)
+                      </td>
+                      <td class="outbound-dispatched-tfoot-total-pieces">
+                        {{ selectedOutbound()!.totalPieces | number }} pz
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            }
           </div>
 
           <!-- SECCIÓN DE CONTROL & AUDITORÍA (HOMOLOGADA 4GUARD) -->
@@ -2320,7 +2562,7 @@
                             @for (d of log.details; track d.fieldName) {
                               <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
                                 <span class="carriers-tl-diff__field font-semibold text-secondary">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                                @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                @if (d.oldValue && d.oldValue !== d.newValue && log.action !== 'SALIDA_REGISTRADA' && log.action !== 'RECEPCION_REGISTRADA') {
                                   <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
                                   <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
                                 }
@@ -2467,7 +2709,7 @@
             <div class="confirm-data-row">
               <span class="confirm-data-label">Montacarguista:</span>
               <span class="confirm-data-val font-bold text-slate-900 dark:text-slate-100">
-                {{ selectedOperator()?.name || 'No asignado' }} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">({{ selectedOperator()?.badge || '--' }})</span>
+                {{ selectedOperator()?.name || 'No asignado' }} <span class="text-xs font-bold text-slate-700 dark:text-slate-300">({{ selectedOperator()?.badge || '--' }})</span>
               </span>
             </div>
 
@@ -2483,9 +2725,9 @@
 
           <!-- Desglose Completo de Productos / Mercancía (Soporte Multi-Producto) -->
           <div class="confirm-products-card">
-            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 px-1">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 px-1">
               <span>Mercancía a Despachar ({{ distinctSkusCount() }} Producto{{ distinctSkusCount() > 1 ? 's' : '' }})</span>
-              <span class="text-amber-600 dark:text-amber-400 font-mono">{{ totalSelectedPallets() }} Tarima(s) Total</span>
+              <span class="text-amber-600 dark:text-amber-400 font-mono font-bold">{{ totalSelectedPallets() }} Tarima(s) Total</span>
             </div>
 
             <div class="confirm-products-list">
@@ -2501,7 +2743,7 @@
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
                     <span class="font-bold text-slate-900 dark:text-white">{{ group.totalPallets }} UA(s)</span>
-                    <span class="text-slate-400">·</span>
+                    <span class="text-slate-600 dark:text-slate-400 font-bold">·</span>
                     <span class="text-amber-600 dark:text-amber-400 font-bold">{{ group.totalPieces | number }} pz</span>
                   </div>
                 </div>
@@ -2545,7 +2787,8 @@
   }
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       MODAL 2: ¿DESEA IMPRIMIR DOCUMENTO? (SÍ / NO) — POST-CONFIRMACIÓN
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MODAL: ¿DESEA IMPRIMIR DOCUMENTO? (SÍ / NO) — POST-CONFIRMACIÓN
        ═══════════════════════════════════════════════════════════════════ -->
   @if (showPrintPromptModal() && lastCompletedOutbound()) {
     <div class="modal-overlay" (click)="onConfirmPrintPrompt(false)">
@@ -2557,30 +2800,30 @@
         <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight mb-1">
           Salida de Almacén Registrada
         </h3>
-        <p class="text-xs text-slate-500 mb-3 font-mono">
-          Folio Oficial: <strong class="text-amber-600 dark:text-amber-400 font-bold">#{{ lastCompletedOutbound()?.folio }}</strong>
+        <p class="text-xs text-slate-800 dark:text-slate-200 mb-3 font-mono font-bold">
+          Folio Oficial: <strong class="text-amber-700 dark:text-amber-400 font-extrabold">#{{ lastCompletedOutbound()?.folio }}</strong>
         </p>
 
-        <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1 text-left mb-4">
-          <div class="flex justify-between">
-            <span class="text-slate-400">Cliente:</span>
-            <span class="font-bold text-slate-900 dark:text-slate-100 truncate ml-2">{{ lastCompletedOutbound()?.clientName }}</span>
+        <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs text-slate-800 dark:text-slate-200 space-y-1.5 text-left mb-4">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-600 dark:text-slate-400 font-bold">Cliente:</span>
+            <span class="font-extrabold text-slate-950 dark:text-slate-100 truncate ml-2">{{ lastCompletedOutbound()?.clientName }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Destino:</span>
-            <span class="font-semibold truncate ml-2">{{ lastCompletedOutbound()?.destinationName }}</span>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-600 dark:text-slate-400 font-bold">Destino:</span>
+            <span class="font-bold truncate ml-2 text-slate-900 dark:text-slate-100">{{ lastCompletedOutbound()?.destinationName }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Transportista:</span>
-            <span class="font-semibold truncate ml-2">{{ lastCompletedOutbound()?.carrierName }}</span>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-600 dark:text-slate-400 font-bold">Transportista:</span>
+            <span class="font-bold truncate ml-2 text-slate-900 dark:text-slate-100">{{ lastCompletedOutbound()?.carrierName }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Tarimas / Piezas:</span>
-            <span class="font-mono font-bold">{{ lastCompletedOutbound()?.totalPallets }} UAs ({{ lastCompletedOutbound()?.totalPieces | number }} pzas)</span>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-600 dark:text-slate-400 font-bold">Tarimas / Piezas:</span>
+            <span class="font-mono font-black text-slate-950 dark:text-slate-100">{{ lastCompletedOutbound()?.totalPallets }} UAs ({{ lastCompletedOutbound()?.totalPieces | number }} pzas)</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Sello / Cincho:</span>
-            <span class="font-mono font-bold text-amber-700 dark:text-amber-300">🔒 {{ lastCompletedOutbound()?.sealNumber }}</span>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-600 dark:text-slate-400 font-bold">Sello / Cincho:</span>
+            <span class="font-mono font-bold text-amber-800 dark:text-amber-300">🔒 {{ lastCompletedOutbound()?.sealNumber }}</span>
           </div>
         </div>
 
@@ -2592,14 +2835,14 @@
           <button
             type="button"
             (click)="onConfirmPrintPrompt(false)"
-            class="btn-secondary-outline px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            class="btn-print-action px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300"
           >
             No, finalizar
           </button>
           <button
             type="button"
             (click)="onConfirmPrintPrompt(true)"
-            class="btn-primary-gold px-5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md text-slate-950"
+            class="btn-print-download px-5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md"
           >
             <span class="material-symbols-outlined text-sm">print</span>
             <span>Sí, Imprimir Documento</span>
@@ -2610,19 +2853,19 @@
   }
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       MODAL 2: COMPROBANTE OFICIAL IMPRIMIBLE (HOMOLOGADO)
+       MODAL: COMPROBANTE OFICIAL IMPRIMIBLE (HOMOLOGADO)
        ═══════════════════════════════════════════════════════════════════ -->
   @if (showPrintModal() && selectedPrintOutbound()) {
     <div class="modal-overlay p-2 sm:p-4" (click)="closePrintModal()">
       <div class="modal-card modal-card--print w-full p-3 sm:p-4 space-y-2.5 max-h-[96vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" (click)="$event.stopPropagation()">
 
-        <!-- Header del Modal en UNA SOLA FILA -->
-        <div class="modal-header flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0 print:hidden">
+        <!-- Header del Modal Homologado (Alto Contraste Light & Dark) -->
+        <div class="print-modal-header flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0 print:hidden">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="material-symbols-outlined text-base shrink-0" [ngClass]="selectedPrintOutbound()?.status === 'CANCELLED' ? 'text-rose-600' : 'text-amber-500'">
+            <span class="material-symbols-outlined text-lg shrink-0" [ngClass]="selectedPrintOutbound()?.status === 'CANCELLED' ? 'text-rose-600' : 'text-amber-600 dark:text-amber-400'">
               {{ selectedPrintOutbound()?.status === 'CANCELLED' ? 'cancel' : 'print' }}
             </span>
-            <span class="font-black text-slate-950 dark:text-slate-100 text-xs uppercase tracking-wider truncate">
+            <span class="print-modal-title truncate">
               {{ selectedPrintOutbound()?.status === 'CANCELLED' ? 'Comprobante de Cancelación de Salida' : 'Comprobante Oficial de Salida de Mercancía' }}
             </span>
           </div>
@@ -2631,7 +2874,7 @@
               type="button"
               (click)="downloadDirectPdf()"
               [disabled]="isGeneratingPdf()"
-              class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all hover:scale-[1.02] whitespace-nowrap text-slate-900"
+              class="btn-print-download"
             >
               <span class="material-symbols-outlined text-sm">download</span>
               <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + (selectedPrintOutbound()?.folio || 'Doc') + '.pdf)' }}</span>
@@ -2639,7 +2882,7 @@
             <button
               type="button"
               (click)="triggerBrowserPrint()"
-              class="btn-secondary-outline px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 whitespace-nowrap border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+              class="btn-print-action"
             >
               <span class="material-symbols-outlined text-sm">print</span>
               <span>Imprimir</span>
@@ -2647,7 +2890,7 @@
             <button
               type="button"
               (click)="closePrintModal()"
-              class="btn-secondary-outline px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap text-slate-600 dark:text-slate-300"
+              class="btn-print-close"
             >
               Cerrar
             </button>
@@ -2666,6 +2909,7 @@
       </div>
     </div>
   }
+
 
   <!-- ════════════════════════════════════════════════════════════════
        MODAL: CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR (WMS)
@@ -2816,7 +3060,7 @@
               <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                 Modificar Ficha Operativa de Arribo &amp; Caseta
               </h3>
-              <p class="text-[11px] text-slate-500">
+              <p class="text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
                 Folio #{{ selectedOutbound()?.folio }} — Actualización de datos de transporte y caseta
               </p>
             </div>
@@ -2824,7 +3068,7 @@
           <button
             type="button"
             (click)="showEditCasetaModal.set(false)"
-            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg"
+            class="text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white p-1 rounded-lg"
           >
             <span class="material-symbols-outlined text-lg">close</span>
           </button>
@@ -2841,6 +3085,7 @@
                 (ngModelChange)="editCarrierCode.set($event)"
                 class="fg-input font-bold"
               >
+                <option value="">-- Selecciona Línea Transportista --</option>
                 @for (c of carriers(); track c.code) {
                   <option [value]="c.code">{{ c.name }}</option>
                 }
@@ -2849,16 +3094,33 @@
 
             <!-- Planta / Destino -->
             <div class="fg-field sm:col-span-2">
-              <label class="fg-label fg-label--required">Planta / Destino</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="fg-label fg-label--required font-bold text-slate-900 dark:text-slate-100">
+                  Planta / Destino
+                </label>
+                <span class="text-[10px] text-amber-700 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                  Destino final del cliente
+                </span>
+              </div>
               <select
                 [ngModel]="editDestinationId()"
                 (ngModelChange)="editDestinationId.set($event)"
                 class="fg-input font-bold"
               >
-                @for (d of allDestinations(); track d.id) {
-                  <option [value]="d.id">{{ d.name }}{{ d.city ? ' — ' + d.city : '' }}</option>
+                <option value="">-- Selecciona Planta / Destino --</option>
+                @for (d of editDestinations(); track d.id) {
+                  <option [value]="d.id">{{ d.name }}{{ d.city ? ' — ' + d.city : '' }}{{ d.state ? ', ' + d.state : '' }}</option>
+                }
+                @if (editDestinations().length === 0) {
+                  <option value="" disabled>-- Sin destinos disponibles para este cliente --</option>
                 }
               </select>
+              @if (selectedEditDestinationAddress()) {
+                <div class="mt-1.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-medium flex items-start gap-1.5">
+                  <span class="material-symbols-outlined text-xs text-amber-600 shrink-0 mt-0.5">location_on</span>
+                  <span><strong>Dirección de entrega:</strong> {{ selectedEditDestinationAddress() }}</span>
+                </div>
+              }
             </div>
 
             <!-- Chofer / Operador -->
@@ -2875,14 +3137,22 @@
 
             <!-- Sello Oficial -->
             <div class="fg-field">
-              <label class="fg-label">Número de Sello o Cincho</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="fg-label font-bold text-slate-900 dark:text-slate-100">Número de Sello o Cincho</label>
+                <span class="text-[10px] text-amber-700 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                  {{ editSealNumber() ? 'Asignado' : 'Pendiente de Andén' }}
+                </span>
+              </div>
               <input
                 type="text"
                 [ngModel]="editSealNumber()"
                 (ngModelChange)="editSealNumber.set($event)"
                 class="fg-input font-mono font-bold uppercase"
-                placeholder="SL-88401"
+                placeholder="Ej. SEAL-4G-9001 (Opcional - Se puede colocar al sellar en andén)"
               />
+              <span class="text-[10px] text-slate-700 dark:text-slate-300 font-medium mt-1 block">
+                Número de sello o cincho de seguridad. Si aún está en proceso de carga, se puede asignar al finalizar el embarque.
+              </span>
             </div>
 
             <!-- Placas Tracto -->
@@ -2978,9 +3248,9 @@
             <div>
               <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
                 <span>Plano de Andenes &amp; Rampas de Carga</span>
-                <span class="text-xs font-mono font-normal text-slate-500">(Almacén Central)</span>
+                <span class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">(Almacén Central)</span>
               </h3>
-              <p class="text-xs text-slate-500 font-medium">
+              <p class="text-xs text-slate-700 dark:text-slate-300 font-semibold">
                 Haz clic en una rampa disponible para seleccionarla o en una ocupada para ver su detalle operativo.
               </p>
             </div>
@@ -2988,7 +3258,7 @@
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg"
+            class="text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white p-1.5 rounded-lg"
           >
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
@@ -3006,7 +3276,7 @@
               <span>{{ totalBusyRampsCount() }} Ocupados</span>
             </span>
           </div>
-          <span class="text-[11px] text-slate-500 italic hidden sm:inline">
+          <span class="text-[11px] text-slate-700 dark:text-slate-300 font-semibold italic hidden sm:inline">
             Bloqueo automático hasta notificación de finalización de maniobra
           </span>
         </div>
@@ -3030,13 +3300,13 @@
               <!-- Ilustración de Tráiler / Estado -->
               <div class="dock-bay-body">
                 @if (ramp.status === 'AVAILABLE') {
-                  <span class="material-symbols-outlined text-2xl text-emerald-500/80 mb-0.5">garage_home</span>
-                  <span class="font-black text-[11px] text-emerald-700 dark:text-emerald-400">DISPONIBLE</span>
-                  <span class="text-[9px] text-slate-400 font-medium">clic para asignar</span>
+                  <span class="material-symbols-outlined text-2xl text-emerald-600 mb-0.5">garage_home</span>
+                  <span class="font-black text-[11px] text-emerald-800 dark:text-emerald-400">DISPONIBLE</span>
+                  <span class="text-[9px] text-slate-800 dark:text-slate-300 font-bold">clic para asignar</span>
                 } @else {
-                  <span class="material-symbols-outlined text-2xl text-rose-500 mb-0.5 animate-pulse">local_shipping</span>
-                  <span class="font-black text-[11px] text-rose-700 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
-                  <span class="text-[9px] text-slate-600 dark:text-slate-400 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
+                  <span class="material-symbols-outlined text-2xl text-rose-600 mb-0.5 animate-pulse">local_shipping</span>
+                  <span class="font-black text-[11px] text-rose-800 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
+                  <span class="text-[9px] text-slate-900 dark:text-slate-200 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
                     {{ ramp.docNumber || 'En Operación' }}
                   </span>
                 }
@@ -3355,4 +3625,568 @@
     </div>
   }
 
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL: SELECTOR Y ASIGNADOR DE TARIMAS (FEFO / INVENTARIO CLIENTE)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showPalletPickerModal() && selectedOutbound()) {
+    <div class="modal-overlay p-3 sm:p-4 animate-fade-in" (click)="closePalletPickerModal()">
+      <div class="pallet-picker-card max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden" (click)="$event.stopPropagation()">
+        
+        <!-- Header del Modal -->
+        <div class="pallet-picker-header flex items-center justify-between p-4 sm:p-5 shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+              <span class="material-symbols-outlined text-2xl font-bold">pallet</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                  Asignación de Tarimas e Inventario (FEFO)
+                </h3>
+                <span class="font-mono text-xs font-black text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-700">
+                  {{ selectedOutbound()!.folio }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
+                Cliente: <strong class="text-slate-950 dark:text-white">{{ selectedOutbound()!.clientName }}</strong> · Destino: <strong class="text-slate-950 dark:text-white">{{ selectedOutbound()!.destinationName || 'Pendiente' }}</strong> · Rampa: <strong class="text-slate-950 dark:text-white">{{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Sin asignar' }}</strong>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="closePalletPickerModal()"
+            class="text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white p-1.5 rounded-lg transition-colors cursor-pointer"
+            title="Cerrar modal"
+          >
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal (Scrollable) -->
+        <div class="pallet-picker-body flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+
+          <!-- 1. Buscador Predictivo de SKU y Escáner de UA -->
+          <div class="pallet-picker-search-box relative p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between flex-wrap gap-1">
+              <label class="outbound-field-label !mb-0 font-black text-slate-950 dark:text-slate-100">
+                <span>Buscar por SKU, Nombre, Código UA, Bahía, Lote o Escanear con Pistola</span>
+                <span class="req">*</span>
+              </label>
+              <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                {{ availableCatalogSkus().length }} productos disponibles · {{ inStockSkusCount() }} con stock
+              </span>
+            </div>
+
+            <!-- Modos de Búsqueda y Escaneo Rápido -->
+            <div class="flex items-center gap-1.5 flex-wrap pb-0.5">
+              <span class="text-[10px] font-extrabold text-slate-800 dark:text-slate-200 mr-1">Filtrar por:</span>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('ALL')"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer font-bold"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'ALL'"
+              >
+                🌐 Todo
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('SKU')"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer font-bold"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'SKU'"
+              >
+                🏷️ Producto / SKU
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('UA')"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer font-bold"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'UA'"
+              >
+                📦 Código UA / SSCC
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('LOCATION')"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer font-bold"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'LOCATION'"
+              >
+                📍 Bahía / Ubicación
+              </button>
+              <button
+                type="button"
+                (click)="setPalletSearchMode('LOT')"
+                class="pallet-picker-chip px-2.5 py-0.5 rounded-md text-[11px] cursor-pointer font-bold"
+                [class.pallet-picker-chip--active]="palletSearchMode() === 'LOT'"
+              >
+                ⏳ Lote / Caducidad
+              </button>
+            </div>
+
+            <div class="relative flex items-center">
+              <input
+                type="text"
+                [value]="skuSearchQuery() || (selectedSku() ? selectedSku()!.skuCode + ' — ' + selectedSku()!.productName : '')"
+                (input)="onSkuInput($any($event.target).value)"
+                (focus)="onSkuInputFocus()"
+                (keydown.enter)="handleScannerOrSearchSubmit()"
+                placeholder="Escribe código de producto, nombre, bahía (ej. A-01), lote o escanea código de barras/UA con pistola..."
+                class="pallet-picker-input font-bold w-full pr-10 text-xs py-2 px-3"
+                autocomplete="off"
+              />
+              @if (skuSearchQuery() || selectedSkuCode()) {
+                <button
+                  type="button"
+                  (click)="clearSkuSelection($event)"
+                  class="absolute right-2 text-slate-700 dark:text-slate-200 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                  title="Limpiar búsqueda"
+                >
+                  <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+              } @else {
+                <span class="material-symbols-outlined absolute right-2 text-slate-700 dark:text-slate-300 text-base pointer-events-none">barcode_reader</span>
+              }
+            </div>
+
+            <!-- Backdrop transparente para cerrar dropdown -->
+            @if (isSkuDropdownOpen()) {
+              <div class="fixed inset-0 z-40" (click)="isSkuDropdownOpen.set(false)"></div>
+            }
+
+            <!-- Dropdown Predictivo de SKUs y UAs -->
+            @if (isSkuDropdownOpen() && (filteredAvailableSkus().length > 0 || matchingPalletUas().length > 0)) {
+              <div class="sku-autocomplete-dropdown max-h-72">
+                @if (matchingPalletUas().length > 0) {
+                  <div class="sku-autocomplete-header bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                    <div class="sku-autocomplete-header__title">
+                      <span class="material-symbols-outlined text-sm text-amber-600">pallet</span>
+                      <span>Tarimas Físicas Coincidentes ({{ matchingPalletUas().length }})</span>
+                    </div>
+                    <span class="sku-autocomplete-header__hint">clic para agregar al manifiesto</span>
+                  </div>
+                  @for (p of matchingPalletUas(); track p.id) {
+                    <button
+                      type="button"
+                      (click)="selectPalletByUa(p)"
+                      class="sku-autocomplete-item !py-2.5 !px-3"
+                      [class.sku-autocomplete-item--selected]="isPalletSelected(p.id)"
+                    >
+                      <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div class="w-7 h-7 rounded-lg bg-amber-100 border border-amber-300 text-amber-950 font-mono font-bold text-[10px] flex items-center justify-center shrink-0">
+                          UA
+                        </div>
+                        <div class="flex flex-col min-w-0 flex-1 text-left">
+                          <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-mono font-bold text-slate-950 dark:text-slate-100 text-xs">{{ p.palletCode }}</span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300">
+                              Bahía: {{ p.locationCode }}
+                            </span>
+                            @if (p.clientName) {
+                              <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-300">
+                                {{ p.clientName }}
+                              </span>
+                            }
+                            <span
+                              class="text-[10px] font-mono px-1.5 py-0.2 rounded border"
+                              [ngClass]="p.pabloStatus === 'EXPIRED' ? 'bg-rose-100 text-rose-800 border-rose-300' : (p.pabloStatus === 'PABLO_ALERT' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300')"
+                            >
+                              {{ p.pabloLabel }}
+                            </span>
+                          </div>
+                          <span class="text-[10px] text-slate-700 dark:text-slate-300 font-semibold truncate">
+                            {{ p.productId }} — {{ p.description }} ({{ p.pieces | number }} pz)
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        class="material-symbols-outlined text-base"
+                        [ngClass]="isPalletSelected(p.id) ? 'text-emerald-600 font-bold' : 'text-slate-700 dark:text-slate-300 font-bold'"
+                      >
+                        {{ isPalletSelected(p.id) ? 'check_circle' : 'add_circle' }}
+                      </span>
+                    </button>
+                  }
+                }
+
+                @if (filteredAvailableSkus().length > 0) {
+                  <div class="sku-autocomplete-header">
+                    <div class="sku-autocomplete-header__title">
+                      <span class="material-symbols-outlined text-sm text-amber-500">inventory_2</span>
+                      <span>-- Catálogo de Productos (Todos los Clientes) --</span>
+                    </div>
+                    <span class="sku-autocomplete-header__hint">{{ filteredAvailableSkus().length }} productos</span>
+                  </div>
+                  @for (sku of filteredAvailableSkus(); track sku.skuCode) {
+                    <button
+                      type="button"
+                      (click)="selectSku(sku)"
+                      class="sku-autocomplete-item !py-2.5 !px-3"
+                      [class.sku-autocomplete-item--selected]="selectedSkuCode() === sku.skuCode"
+                      [class.opacity-60]="sku.totalAvailablePallets === 0"
+                    >
+                      <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span class="sku-autocomplete-badge font-mono font-bold">{{ sku.skuCode }}</span>
+                        <div class="flex flex-col min-w-0 flex-1 text-left">
+                          <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-extrabold text-slate-950 dark:text-slate-100 text-xs leading-snug">{{ sku.productName }}</span>
+                            @if (sku.clientName) {
+                              <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700">
+                                {{ sku.clientName }}
+                              </span>
+                            }
+                          </div>
+                          <span class="text-[10px] text-slate-800 dark:text-slate-200 font-bold truncate">
+                            @if (sku.totalAvailablePallets > 0) {
+                              <strong class="text-amber-700 dark:text-amber-400">{{ sku.totalAvailablePallets }} tarima(s) en inventario</strong> · {{ sku.totalAvailablePieces | number }} pz
+                            } @else {
+                              <span class="text-slate-700 dark:text-slate-400 font-semibold">0 tarimas en inventario · 0 pz</span>
+                            }
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0">
+                        @if (sku.totalAvailablePallets > 0) {
+                          @if (sku.pabloStatus === 'PABLO_ALERT') {
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/60 flex items-center gap-1">
+                              <span class="material-symbols-outlined text-xs">hourglass_top</span>
+                              {{ sku.pabloLabel }}
+                            </span>
+                          } @else if (sku.pabloStatus === 'OPTIMAL') {
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+                              {{ sku.pabloLabel }}
+                            </span>
+                          }
+                        } @else {
+                          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                            0 tarimas
+                          </span>
+                        }
+                        @if (selectedSkuCode() === sku.skuCode) {
+                          <span class="material-symbols-outlined text-emerald-600 text-base font-bold ml-1">check_circle</span>
+                        }
+                      </div>
+                    </button>
+                  }
+                }
+              </div>
+            } @else if (isSkuDropdownOpen() && filteredAvailableSkus().length === 0 && matchingPalletUas().length === 0 && skuSearchQuery()) {
+              <div class="sku-autocomplete-empty">
+                No se encontraron productos ni UAs para "{{ skuSearchQuery() }}"
+              </div>
+            }
+          </div>
+
+          <!-- 2. Detalle del SKU Seleccionado y Selección de Tarimas (FEFO) -->
+          @if (selectedSku()) {
+            <div class="pallet-picker-product-card p-4 space-y-3 shadow-sm animate-fade-in">
+              <!-- Header del Producto Activo -->
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 pallet-picker-product-header">
+                <div class="flex items-center gap-2.5">
+                  <div class="pallet-picker-product-icon shrink-0">
+                    <span class="material-symbols-outlined text-xl">inventory_2</span>
+                  </div>
+                  <div>
+                    <h4 class="pallet-picker-product-title">
+                      {{ selectedSku()!.productName }}
+                    </h4>
+                    <div class="flex items-center gap-2 text-[11px] pallet-picker-product-subtitle font-bold">
+                      <span>SKU: <strong class="font-mono">{{ selectedSku()!.skuCode }}</strong></span>
+                      <span>·</span>
+                      <span>Stock: <strong class="text-emerald-700 dark:text-emerald-400">{{ selectedSku()!.totalAvailablePallets }} tarimas disp.</strong></span>
+                      <span>·</span>
+                      <span class="text-amber-700 dark:text-amber-400 font-bold">{{ selectedPalletsCountForCurrentSku() }} en manifiesto</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Controles FEFO Stepper -->
+                @if (maxAvailablePalletsForCurrentSku() > 0) {
+                  <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+                    <div class="flex items-center pallet-picker-stepper p-0.5 h-8">
+                      <span class="text-[10px] font-bold px-1">FEFO:</span>
+                      <button
+                        type="button"
+                        (click)="decrementFefoQuantity()"
+                        [disabled]="fefoQuantityInput() <= 1"
+                        class="w-5 h-6 flex items-center justify-center hover:opacity-80 disabled:opacity-30 rounded cursor-pointer font-bold"
+                        title="Disminuir"
+                      >
+                        <span class="material-symbols-outlined text-xs">remove</span>
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        [max]="maxAvailablePalletsForCurrentSku()"
+                        [value]="fefoQuantityInput()"
+                        (input)="onFefoQuantityInput(+$any($event.target).value)"
+                        (keydown.enter)="addFefoPalletsForCurrentSku()"
+                        class="pallet-picker-qty-input w-7 text-center text-xs font-mono font-bold bg-transparent border-none outline-none p-0"
+                      />
+                      <button
+                        type="button"
+                        (click)="incrementFefoQuantity()"
+                        [disabled]="fefoQuantityInput() >= maxAvailablePalletsForCurrentSku()"
+                        class="w-5 h-6 flex items-center justify-center hover:opacity-80 disabled:opacity-30 rounded cursor-pointer font-bold"
+                        title="Aumentar"
+                      >
+                        <span class="material-symbols-outlined text-xs">add</span>
+                      </button>
+                      <span class="text-[10px] font-mono font-bold pr-1">/ {{ maxAvailablePalletsForCurrentSku() }}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      (click)="addFefoPalletsForCurrentSku()"
+                      class="btn-primary-gold text-xs px-2.5 h-8 rounded-lg font-black flex items-center gap-1 shadow-sm text-slate-950 cursor-pointer"
+                      title="Agregar {{ fefoQuantityInput() }} tarimas prioritarias por fecha de caducidad"
+                    >
+                      <span class="material-symbols-outlined text-sm">bolt</span>
+                      <span>+ Agregar {{ fefoQuantityInput() }} FEFO</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="addAllPalletsForCurrentSku()"
+                      class="pallet-picker-all-btn text-xs px-2.5 h-8 cursor-pointer"
+                      title="Agregar todas las tarimas disponibles"
+                    >
+                      Todas ({{ maxAvailablePalletsForCurrentSku() }})
+                    </button>
+                  </div>
+                }
+              </div>
+
+              <!-- Buscador Rápido Interno de Tarimas (UA / Lote / Bahía) -->
+              <div class="pallet-picker-table-toolbar">
+                <div class="pallet-picker-table-search-box-inner">
+                  <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">search</span>
+                  <input
+                    type="text"
+                    [value]="palletTableSearchQuery()"
+                    (input)="onPalletTableSearchInput($any($event.target).value)"
+                    placeholder="Buscar código UA, lote, bahía o piezas en este producto..."
+                    class="pallet-picker-table-search"
+                  />
+                  @if (palletTableSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearPalletTableSearch()"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer p-0.5"
+                      title="Limpiar búsqueda"
+                    >
+                      <span class="material-symbols-outlined text-xs">close</span>
+                    </button>
+                  }
+                </div>
+
+                <div class="text-[11px] font-bold text-slate-600 dark:text-slate-300 shrink-0 flex items-center gap-1.5 px-1">
+                  <span class="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span>Mostrando <strong class="text-slate-900 dark:text-white font-mono">{{ allAvailablePalletsForCurrentView().length }}</strong> tarima(s)</span>
+                  @if (palletTableSearchQuery()) {
+                    <span class="text-amber-700 dark:text-amber-400 font-bold">(filtrado)</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Tabla de Tarimas Disponibles para este SKU -->
+              @if (allAvailablePalletsForCurrentView().length > 0) {
+                <div class="pallet-picker-table-wrapper">
+                  <table class="pallet-picker-table">
+                    <thead>
+                      <tr>
+                        <th class="w-10 text-center">
+                          <input
+                            type="checkbox"
+                            [checked]="areAllPalletsSelected()"
+                            (change)="toggleAllPallets()"
+                            class="cursor-pointer rounded"
+                            title="Seleccionar todas las tarimas visibles"
+                          />
+                        </th>
+                        <th>Código UA / SSCC</th>
+                        <th>Bahía / Ubicación</th>
+                        <th>Lote</th>
+                        <th>Caducidad</th>
+                        <th>Estatus</th>
+                        <th class="text-right">Piezas</th>
+                        <th class="w-16 text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (pallet of allAvailablePalletsForCurrentView(); track pallet.id) {
+                        <tr
+                          (click)="togglePallet(pallet.id)"
+                          [class.selected-row]="isPalletSelected(pallet.id)"
+                        >
+                          <td class="text-center" (click)="$event.stopPropagation()">
+                            <input
+                              type="checkbox"
+                              [checked]="isPalletSelected(pallet.id)"
+                              (change)="togglePallet(pallet.id)"
+                              class="cursor-pointer rounded"
+                            />
+                          </td>
+                          <td class="pallet-picker-ua-code">
+                            {{ pallet.palletCode }}
+                          </td>
+                          <td>
+                            <span class="pallet-picker-loc-badge">
+                              <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
+                              {{ pallet.locationCode }}
+                            </span>
+                          </td>
+                          <td class="pallet-picker-text-mono">
+                            {{ pallet.lotNumber || 'N/A' }}
+                          </td>
+                          <td class="pallet-picker-text-mono">
+                            {{ pallet.expirationDate || 'N/A' }}
+                          </td>
+                          <td>
+                            <span
+                              [ngClass]="pallet.pabloStatus === 'EXPIRED' ? 'pallet-picker-badge-expired' : (pallet.pabloStatus === 'PABLO_ALERT' ? 'pallet-picker-badge-pablo' : 'pallet-picker-badge-optimo')"
+                            >
+                              {{ pallet.pabloLabel }}
+                            </span>
+                          </td>
+                          <td class="pallet-picker-pieces">
+                            {{ pallet.pieces | number }} pz
+                          </td>
+                          <td class="text-center" (click)="$event.stopPropagation()">
+                            <button
+                              type="button"
+                              (click)="addPalletToManifest(pallet.id, $event)"
+                              class="text-xs font-bold p-1 rounded hover:opacity-80 cursor-pointer"
+                              [title]="isPalletSelected(pallet.id) ? 'Quitar del manifiesto' : 'Agregar al manifiesto'"
+                            >
+                              <span
+                                class="material-symbols-outlined text-base"
+                                [ngClass]="isPalletSelected(pallet.id) ? 'text-rose-500' : 'text-emerald-600'"
+                              >
+                                {{ isPalletSelected(pallet.id) ? 'remove_circle' : 'add_circle' }}
+                              </span>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="p-6 text-center text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex flex-col items-center justify-center gap-1">
+                  <span class="material-symbols-outlined text-2xl text-slate-400">search_off</span>
+                  <span class="font-extrabold text-slate-800 dark:text-slate-200">
+                    @if (palletTableSearchQuery()) {
+                      No se encontraron tarimas para "{{ palletTableSearchQuery() }}"
+                    } @else {
+                      Todas las tarimas de este producto ya han sido agregadas al manifiesto.
+                    }
+                  </span>
+                  @if (palletTableSearchQuery()) {
+                    <button type="button" (click)="clearPalletTableSearch()" class="text-amber-700 dark:text-amber-400 underline font-bold mt-1 cursor-pointer">
+                      Limpiar filtro de búsqueda
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- 3. Manifiesto Acumulativo de Despacho (Dispatch Basket) -->
+          <div class="pallet-picker-manifest-box p-4 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600">shopping_cart_checkout</span>
+                <h4 class="font-black text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                  Manifiesto Acumulativo de Despacho
+                </h4>
+              </div>
+              <div class="flex items-center gap-2 text-xs font-bold font-mono text-amber-800 dark:text-amber-300">
+                <span>{{ totalSelectedPallets() }} Tarima(s)</span>
+                <span>·</span>
+                <span>{{ totalSelectedPieces() | number }} Piezas</span>
+                <span>·</span>
+                <span>{{ distinctSkusCount() }} SKU(s)</span>
+              </div>
+            </div>
+
+            @if (selectedPalletItems().length === 0) {
+              <div class="pallet-picker-manifest-empty p-6 text-center text-xs rounded-xl flex flex-col items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300">inventory_2</span>
+                <span class="font-extrabold text-slate-950 dark:text-slate-100">No hay tarimas seleccionadas todavía.</span>
+                <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200">Selecciona un producto arriba y agrega tarimas o aplica la regla FEFO.</span>
+              </div>
+            } @else {
+              <div class="space-y-2 max-h-52 overflow-y-auto">
+                @for (group of manifestGroupedBySku(); track group.skuCode) {
+                  <div class="pallet-picker-manifest-item p-2.5 rounded-lg flex items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-950 font-bold text-[10px] flex items-center justify-center shrink-0 border border-amber-300">
+                        {{ group.totalPallets }}T
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="font-extrabold text-slate-900 dark:text-slate-100 truncate">
+                          {{ group.productName }}
+                        </div>
+                        <div class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5">
+                          <span>SKU: {{ group.skuCode }}</span>
+                          <span>·</span>
+                          <span>{{ group.totalPieces | number }} pz</span>
+                          <span>·</span>
+                          <span>UAs: {{ group.items.map(getPalletCodeOrId).slice(0, 3).join(', ') }}{{ group.items.length > 3 ? '...' : '' }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="removeSkuFromManifest(group.skuCode)"
+                      class="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
+                      title="Quitar todas las tarimas de este SKU"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                      <span class="hidden sm:inline">Quitar</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="pallet-picker-footer p-4 flex items-center justify-between gap-3 shrink-0">
+          <div class="pallet-picker-total-text flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+            <span>Total a despachar: <strong>{{ totalSelectedPallets() }} tarimas ({{ totalSelectedPieces() | number }} pz)</strong></span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="closePalletPickerModal()"
+              class="pallet-picker-cancel-btn"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              [disabled]="isSavingPalletSelection() || totalSelectedPallets() === 0"
+              (click)="savePalletSelectionToOrder()"
+              class="btn-primary-gold text-xs px-5 py-2.5 rounded-xl font-black flex items-center gap-1.5 shadow-md text-slate-950 disabled:opacity-50 cursor-pointer hover:scale-[1.02] transition-transform"
+            >
+              @if (isSavingPalletSelection()) {
+                <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                <span>Guardando...</span>
+              } @else {
+                <span class="material-symbols-outlined text-sm">done_all</span>
+                <span>Guardar y Asignar {{ totalSelectedPallets() }} Tarimas</span>
+              }
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>
+

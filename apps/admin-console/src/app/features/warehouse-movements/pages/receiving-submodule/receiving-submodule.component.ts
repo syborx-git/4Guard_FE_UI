@@ -14,6 +14,7 @@ import {
   PalletType,
   PALLET_TYPE_LABELS,
   MovementAuditEntry,
+  parseAuditTimestamp,
   PatioUnitMonitor,
   RampOccupancyStatus,
   RampItem,
@@ -434,6 +435,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const q = this.rampSearchQuery().toLowerCase().trim();
     const list = this.ramps();
     if (!q) return list;
+    const currentVal = this.altaForm.get('rampNumber')?.value;
+    const currentRamp = list.find(r => r.rampNumber === currentVal);
+    if (currentRamp && (currentRamp.name.toLowerCase() === q || `rampa ${currentRamp.rampNumber}` === q)) {
+      return list;
+    }
     return list.filter(
       (rm) =>
         (rm.name && rm.name.toLowerCase().includes(q)) ||
@@ -449,6 +455,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const q = this.editRampSearchQuery().toLowerCase().trim();
     const list = this.ramps();
     if (!q) return list;
+    const currentVal = this.editCasetaForm.get('rampNumber')?.value;
+    const currentRamp = list.find(r => r.rampNumber === currentVal);
+    if (currentRamp && (currentRamp.name.toLowerCase() === q || `rampa ${currentRamp.rampNumber}` === q)) {
+      return list;
+    }
     return list.filter(
       (rm) =>
         (rm.name && rm.name.toLowerCase().includes(q)) ||
@@ -478,6 +489,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const q = this.palletTypeSearchQuery().toLowerCase().trim();
     const list = this.palletTypes;
     if (!q) return list;
+    const currentVal = this.altaForm.get('selectedPalletType')?.value;
+    const currentEntry = list.find(pt => pt[0] === currentVal);
+    if (currentEntry && (currentEntry[1].toLowerCase() === q || currentEntry[0].toLowerCase() === q)) {
+      return list;
+    }
     return list.filter(
       (pt) =>
         pt[0].toLowerCase().includes(q) ||
@@ -714,7 +730,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
               id: p.id,
               code: String(p.code || p.id).trim(),
               name: p.name || p.description || p.code,
-              defaultPieces: p.piecesPerPallet || (p.weight ? Math.round(Number(p.weight)) : 480),
+              defaultPieces: p.piecesPerPallet || 0,
             }))
             .sort((a: any, b: any) => {
               const numA = parseInt(a.code, 10);
@@ -742,7 +758,21 @@ export class ReceivingSubmoduleComponent implements OnInit {
         const rec = this.movementsService.findReceptionByFolio(folio);
         if (rec) {
           this.selectReception(rec);
+        } else {
+          this.movementsService.movementsApi.getReceptions({ search: folio }).subscribe({
+            next: (list: any[]) => {
+              if (list && list.length > 0) {
+                const found = this.movementsService.mapReceptionResponseToHeader(list[0]);
+                this.selectReception(found);
+              }
+            },
+            error: () => {},
+          });
         }
+      } else {
+        this.formMode.set('idle');
+        this.selectedReception.set(null);
+        this.palletStream.set([]);
       }
     });
   }
@@ -801,6 +831,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.isSupplierDropdownOpen.set(false);
     this.palletTypeSearchQuery.set('');
     this.isPalletTypeDropdownOpen.set(false);
+    this.rampSearchQuery.set('');
+    this.isRampDropdownOpen.set(false);
   }
 
   // Iniciar registro de nuevo arribo en Caseta de Seguridad
@@ -826,12 +858,30 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.loadAuditLogs(rec.folio);
     this.patchAltaFormWithReception(rec);
 
+    if (rec.pallets && Array.isArray(rec.pallets)) {
+      for (const p of rec.pallets) {
+        if (p.palletNumber && Number(p.palletNumber) > 0) {
+          this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
+        }
+      }
+    }
+
     if (rec.id) {
       this.movementsApi.getReceptionById(rec.id).subscribe({
         next: (fullData) => {
           const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
           if (!mapped.checkIn?.docNumber && rec.checkIn?.docNumber) {
             mapped.checkIn.docNumber = rec.checkIn.docNumber;
+          }
+          if (!mapped.checkIn?.rampNumber && rec.checkIn?.rampNumber) {
+            mapped.checkIn.rampNumber = rec.checkIn.rampNumber;
+          }
+          if (mapped.pallets && Array.isArray(mapped.pallets)) {
+            for (const p of mapped.pallets) {
+              if (p.palletNumber && Number(p.palletNumber) > 0) {
+                this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
+              }
+            }
           }
           this.selectedReception.set(mapped);
           this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
@@ -875,6 +925,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.supplierSearchQuery.set(rec.supplierName || '');
     this.isSupplierDropdownOpen.set(false);
 
+    // Sincronizar rampa asignada desde caseta
+    const assignedRampNum = rec.checkIn?.rampNumber ?? (rec as any).rampNumber;
+    if (assignedRampNum != null && Number(assignedRampNum) > 0) {
+      const num = Number(assignedRampNum);
+      const matchedRamp = this.ramps().find((rm) => rm.rampNumber === num);
+      const rampName = matchedRamp ? matchedRamp.name : `Rampa ${num < 10 ? '0' + num : num}`;
+      this.rampSearchQuery.set(rampName);
+    } else {
+      this.rampSearchQuery.set('');
+    }
+    this.isRampDropdownOpen.set(false);
+
     const hasConfiguredProduct = !!(rec.productId || rec.skuCode || (rec.pallets && rec.pallets.length > 0));
     const palletTypeValue = hasConfiguredProduct ? (rec.selectedPalletType || ('' as any)) : ('' as any);
 
@@ -892,6 +954,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const bayLoc = rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1';
     this.selectedBayName.set(bayLoc);
 
+    const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : 1;
+
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
       elaborationDate: rec.elaborationDate || rec.checkIn?.elaborationDate || '',
@@ -899,7 +963,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       storageLocation: bayLoc,
       storageLocationId: rec.storageLocationId || '',
       forkliftOperator: defaultOperator,
-      rampNumber: rec.checkIn?.rampNumber || 1,
+      rampNumber: rNum,
       productId: matchedProduct ? matchedProduct.code : (rec.skuCode || rec.productId || ''),
       productName: rec.productName || (matchedProduct ? matchedProduct.name : ''),
       supplierName: rec.supplierName || '',
@@ -1156,18 +1220,30 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   assignLotToPallet(palletId: string, lotNum: string): void {
     const matchedLot = this.lotsList().find((l) => l.lotNumber === lotNum);
-    this.palletStream.update((list) =>
-      list.map((p) => {
-        if (p.id === palletId) {
-          return {
-            ...p,
-            lotNumber: lotNum,
-            expirationDate: matchedLot?.expirationDate || p.expirationDate || (this.altaForm.value.expirationDate ?? undefined),
-          };
-        }
-        return p;
-      })
-    );
+    const updatedStream = this.palletStream().map((p) => {
+      if (p.id === palletId) {
+        return {
+          ...p,
+          lotNumber: lotNum,
+          expirationDate: matchedLot?.expirationDate || p.expirationDate || (this.altaForm.value.expirationDate ?? undefined),
+        };
+      }
+      return p;
+    });
+    this.palletStream.set(updatedStream);
+    this.selectedReception.update((rec) => (rec ? { ...rec, pallets: updatedStream } : null));
+
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId) && palletId && isUuid(palletId)) {
+      this.movementsApi.updatePallet(recId, palletId, {
+        lotNumber: lotNum,
+        expirationDate: matchedLot?.expirationDate || undefined,
+      }).subscribe({
+        next: () => {},
+        error: (err: any) => console.warn('Sync assignLotToPallet error:', err)
+      });
+    }
+
     this.toast.success(`Lote ${lotNum} asignado a la UA.`);
   }
 
@@ -1211,20 +1287,40 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.movementsApi.getReceptionAudit(id).subscribe({
         next: (logs) => {
           if (logs && logs.length > 0) {
-            const mapped: MovementAuditEntry[] = logs.map((l: any) => ({
-              id: l.id || `aud-${Date.now()}-${Math.random()}`,
-              action: l.action,
-              actionLabel: l.actionLabel || this.getAuditSummary(l.action),
-              username: l.username || 'Usuario',
-              timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString('es-MX') : (l.timestamp || new Date().toLocaleString('es-MX')),
-              details: (l.details || []).map((d: any) => ({
-                fieldName: this.formatFieldLabel(d.fieldName),
-                oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
-                newValue: this.formatFieldValue(d.fieldName, d.newValue),
-              })),
-              reason: l.reason || '',
-              authorizedBy: l.authorizedBy || '',
-            }));
+            const mapped: MovementAuditEntry[] = logs.map((l: any) => {
+              const rawTs = l.timestamp || l.createdAt || l.date;
+              return {
+                id: l.id || `aud-${Date.now()}-${Math.random()}`,
+                action: l.action,
+                actionLabel: l.actionLabel || this.getAuditSummary(l.action),
+                username: l.username || 'Usuario',
+                timestamp: rawTs ? (isNaN(new Date(rawTs).getTime()) ? String(rawTs) : new Date(rawTs).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })) : (l.timestamp || new Date().toLocaleString('es-MX')),
+                rawTimestamp: rawTs ? new Date(rawTs).getTime() : Date.now(),
+                details: (l.details || [])
+                  .filter((d: any) => {
+                    const f = (d.fieldName || '').toLowerCase();
+                    if (f.includes('lote') || f === 'lotnumber' || f === 'lot_number') {
+                      if (
+                        l.action === 'DESCARGA_FINALIZADA' ||
+                        l.action === 'DESCARGA_INICIADA' ||
+                        l.action === 'RECEPCION_ASIGNADA' ||
+                        (rec?.lots && rec.lots.length > 1) ||
+                        this.lotsList().length > 1
+                      ) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+                  .map((d: any) => ({
+                    fieldName: this.formatFieldLabel(d.fieldName),
+                    oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                    newValue: this.formatFieldValue(d.fieldName, d.newValue),
+                  })),
+                reason: l.reason || '',
+                authorizedBy: l.authorizedBy || '',
+              };
+            });
             const sorted = this.sortAuditEntries(mapped);
             this.auditEntries.set(sorted);
             this.movementsService.setReceptionAuditLogs(folio, sorted);
@@ -1248,23 +1344,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
   sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
     if (!entries || entries.length === 0) return [];
     return [...entries].sort((a, b) => {
-      const parseDate = (ts?: string) => {
-        if (!ts) return 0;
-        const direct = new Date(ts).getTime();
-        if (!isNaN(direct) && direct > 0) return direct;
-        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-        if (match) {
-          const day = parseInt(match[1], 10);
-          const month = parseInt(match[2], 10) - 1;
-          const year = parseInt(match[3], 10);
-          const hour = match[4] ? parseInt(match[4], 10) : 0;
-          const min = match[5] ? parseInt(match[5], 10) : 0;
-          const sec = match[6] ? parseInt(match[6], 10) : 0;
-          return new Date(year, month, day, hour, min, sec).getTime();
-        }
-        return 0;
-      };
-      return parseDate(b.timestamp) - parseDate(a.timestamp);
+      const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
+      const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
+      return timeB - timeA;
     });
   }
 
@@ -1510,26 +1592,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
       });
   }
 
-  // Fase 2 -> 3: Inicio de Descarga en Andén
+  // Fase 2 -> 4: Inicio y Finalización Directa de Descarga en Andén (Mesa Administrativa F01)
   simulateStartDischarge(): void {
-    const current = this.selectedReception();
-    if (!current) return;
-    const op = current.checkIn.forkliftOperator || 'Montacarguista';
-    const recId = current.id || current.folio;
-    this.movementsService.startDischarge(recId, op).subscribe({
-      next: (updated) => {
-        this.selectedReception.set(updated);
-        this.loadAuditLogs(updated.folio);
-        this.toast.success(`Descarga física iniciada por ${op} en Rampa ${updated.checkIn.rampNumber}. Guardada en base de datos.`);
-      },
-      error: (err) => {
-        const msg = err?.error?.message || err?.message || 'Error al iniciar la descarga';
-        this.toast.error(msg);
-      },
-    });
+    this.simulateFinishDischarge();
   }
 
-  // Fase 3 -> 4: Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa)
+  // Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa / Formato F01)
   simulateFinishDischarge(): void {
     const current = this.selectedReception();
     if (!current) return;
@@ -1581,6 +1649,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
           status: 'SCANNED',
         },
       ];
+      this.movementsService.updateGlobalMaxPalletNumber(baseNum + 2);
       this.palletStream.set(stream);
     }
 
@@ -1595,7 +1664,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.selectedReception.set(updated);
           this.palletStream.set(updated.pallets ? [...updated.pallets] : stream);
           this.loadAuditLogs(updated.folio);
-          this.toast.success(`Descarga concluida por montacarguista. Avances guardados en la base de datos y enviados a mesa administrativa.`);
+          this.toast.success(`Solicitud enviada a ${op}. Descarga física concluida en Rampa ${updated.checkIn.rampNumber}. Formato F01 listo para emisión.`);
         },
         error: (err) => {
           const msg = err?.error?.message || err?.message || 'Error al concluir la descarga';
@@ -2039,7 +2108,37 @@ export class ReceivingSubmoduleComponent implements OnInit {
       .subscribe({
         next: (updated) => {
           this.isCompleting.set(false);
-          const finalRec = updated.folio ? updated : { ...rec, status: 'COMPLETED' as const, pallets: currentStream };
+          const currentLots = this.lotsList();
+          const enrichedPallets = currentStream.map((p, idx) => {
+            let rawLot = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber || (p as any).batch_number;
+            let pLot = (rawLot && String(rawLot).trim() && rawLot !== 'N/A' && rawLot !== '-')
+              ? String(rawLot).trim().toUpperCase()
+              : '';
+            let rawExp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+            let pExp = (rawExp && String(rawExp).trim() && rawExp !== 'N/A' && rawExp !== '-')
+              ? String(rawExp).trim()
+              : '';
+
+            if (!pLot && currentLots.length > 0) pLot = currentLots[0].lotNumber;
+            if (!pExp && pLot) {
+              const matched = currentLots.find(l => l.lotNumber.toUpperCase() === pLot.toUpperCase());
+              if (matched && matched.expirationDate) pExp = matched.expirationDate;
+            }
+            const pDoc = (p.docNumber && String(p.docNumber).trim() && p.docNumber !== 'N/A' && p.docNumber !== '-')
+              ? String(p.docNumber).trim().toUpperCase()
+              : ((p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '');
+            return {
+              ...p,
+              palletNumber: p.palletNumber || (idx + 1),
+              lotNumber: pLot || rec.lotNumber || 'N/A',
+              expirationDate: pExp || rec.expirationDate || 'N/A',
+              docNumber: pDoc || '-'
+            };
+          });
+
+          const finalRec: ReceptionHeader = updated.folio
+            ? { ...updated, pallets: enrichedPallets, lots: (currentLots.length > 0 ? [...currentLots] : (updated as any).lots) }
+            : { ...rec, status: 'COMPLETED' as const, pallets: enrichedPallets, lots: (currentLots.length > 0 ? [...currentLots] : rec.lots) };
           this.selectedReception.set(finalRec);
           this.selectedPrintReception.set(finalRec);
           this.printType.set('RECEPTION');
@@ -2385,6 +2484,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     };
 
     // ⬇️ VISUALIZACIÓN DESCENDENTE: Los más recientes se agregan AL PRINCIPIO del arreglo (unshift)
+    this.movementsService.updateGlobalMaxPalletNumber(nextNum);
     this.palletStream.update((list) => [newItem, ...list]);
     this.uaCodeInput.set('');
     this.uaObsInput.set('');
@@ -2396,7 +2496,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }, 10);
   }
 
-  // Obtiene el siguiente consecutivo de tarima global a nivel de almacén/sistema
+  // Obtiene el siguiente consecutivo de tarima global a nivel de almacén/sistema (Garantiza continuidad estricta entre remisiones)
   getNextConsecutivePalletNumber(): number {
     let maxInStream = 0;
     for (const p of this.palletStream()) {
@@ -2484,19 +2584,54 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   openPrintPreview(rec: ReceptionHeader): void {
-    const palletsToPrint = rec.pallets && rec.pallets.length > 0 ? rec.pallets : [...this.palletStream()];
+    const currentStream = this.palletStream();
+    const isCurrentlySelected = this.selectedReception()?.id === rec.id || this.selectedReception()?.folio === rec.folio;
+    const palletsToPrint = (isCurrentlySelected && currentStream && currentStream.length > 0)
+      ? [...currentStream]
+      : (rec.pallets && rec.pallets.length > 0 ? rec.pallets : [...currentStream]);
     const formVals = this.altaForm.value;
+    const currentLots = this.lotsList();
+
+    const enrichedPallets = palletsToPrint.map((p, idx) => {
+      let rawLot = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber || (p as any).batch_number;
+      let pLot = (rawLot && String(rawLot).trim() && rawLot !== 'N/A' && rawLot !== '-')
+        ? String(rawLot).trim().toUpperCase()
+        : '';
+      let rawExp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+      let pExp = (rawExp && String(rawExp).trim() && rawExp !== 'N/A' && rawExp !== '-')
+        ? String(rawExp).trim()
+        : '';
+
+      if (!pLot && currentLots.length > 0) {
+        pLot = currentLots[0].lotNumber;
+      }
+      if (!pExp && pLot) {
+        const matched = currentLots.find(l => l.lotNumber.toUpperCase() === pLot.toUpperCase());
+        if (matched && matched.expirationDate) pExp = matched.expirationDate;
+      }
+      const pDoc = (p.docNumber && String(p.docNumber).trim() && p.docNumber !== 'N/A' && p.docNumber !== '-')
+        ? String(p.docNumber).trim().toUpperCase()
+        : ((p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '');
+      return {
+        ...p,
+        palletNumber: p.palletNumber || (idx + 1),
+        lotNumber: pLot || rec.lotNumber || formVals.lotNumber || 'N/A',
+        expirationDate: pExp || rec.expirationDate || formVals.expirationDate || 'N/A',
+        docNumber: pDoc || '-'
+      };
+    });
 
     const recToPrint: ReceptionHeader = {
       ...rec,
-      lotNumber: rec.lotNumber || formVals.lotNumber || '01.07.2026',
-      expirationDate: rec.expirationDate || formVals.expirationDate || '2028-07-31',
-      productId: rec.productId || formVals.productId || '12572733',
-      productName: rec.productName || formVals.productName || 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1',
-      supplierName: rec.supplierName || formVals.supplierName || 'LE MEXICO S.A DE C.V',
+      lotNumber: rec.lotNumber || formVals.lotNumber || (enrichedPallets.length > 0 ? enrichedPallets[0].lotNumber : 'N/A'),
+      expirationDate: rec.expirationDate || formVals.expirationDate || (enrichedPallets.length > 0 ? enrichedPallets[0].expirationDate : 'N/A'),
+      productId: rec.productId || formVals.productId || (enrichedPallets.length > 0 ? enrichedPallets[0].productId : ''),
+      productName: rec.productName || formVals.productName || (enrichedPallets.length > 0 ? enrichedPallets[0].description : ''),
+      supplierName: rec.supplierName || formVals.supplierName || '',
       piecesPerPallet: rec.piecesPerPallet || formVals.piecesPerPallet || 40,
-      selectedPalletType: rec.selectedPalletType || (formVals.selectedPalletType as PalletType) || 'TARIMA_CHEP_NACIONAL',
-      pallets: palletsToPrint,
+      selectedPalletType: rec.selectedPalletType || (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
+      pallets: enrichedPallets,
+      lots: (rec.lots && rec.lots.length > 0) ? rec.lots : (currentLots.length > 0 ? [...currentLots] : undefined),
       observations: rec.observations || formVals.observations || undefined,
     };
 

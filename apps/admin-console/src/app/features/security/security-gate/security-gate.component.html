@@ -705,7 +705,14 @@
 
               <!-- Sellos de Seguridad (Cinchos) -->
               <div class="sm:col-span-2">
-                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Sellos / Cinchos de Seguridad</label>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Sellos / Cinchos de Seguridad
+                  @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                    <span class="text-amber-600 dark:text-amber-400 font-medium font-sans ml-1">(Opcional / Se asignan en andén)</span>
+                  } @else {
+                    <span class="text-rose-500 font-bold ml-0.5">*</span>
+                  }
+                </label>
                 <div class="flex gap-2">
                   <input
                     type="text"
@@ -1090,43 +1097,52 @@
             </thead>
             <tbody>
               @for (item of filteredInYardPasses(); track item.id || item.token) {
-                <tr [ngClass]="{ 'bg-emerald-500/5': item.isReadyForExit }">
-                  <td class="td-mono">
-                    <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
+                <tr [ngClass]="{ 'tr-ready-exit': item.isReadyForExit }">
+                  <td>
+                    <div class="cell-folio-title">
                       {{ item.generatedFolio || item.token }}
                     </div>
-                    <div class="text-[10px] text-slate-400 font-mono">Token: {{ item.token }}</div>
+                    <div class="cell-token-sub">
+                      Token: <strong class="cell-token-strong">{{ item.token }}</strong>
+                    </div>
                   </td>
                   <td>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                          [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'">
                       {{ item.operationType || 'DESCARGA' }}
                     </span>
                   </td>
                   <td>
-                    <span class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 font-mono font-bold text-xs text-amber-600 dark:text-amber-400">
-                      {{ item.rampCode || (item.rampNumber ? 'R-' + item.rampNumber : 'R-01') }}
+                    <span class="cell-ramp-badge">
+                      {{ formatRampDisplay(item) }}
                     </span>
                   </td>
                   <td>
-                    <div class="font-semibold text-slate-900 dark:text-slate-100">{{ item.carrierLine || 'Transportista' }}</div>
-                    <div class="font-mono text-[10px] text-slate-500">Tracto: {{ item.tractorPlates || '-' }} | Caja: {{ item.boxPlates || '-' }}</div>
+                    <div class="cell-carrier-title">
+                      {{ item.carrierLine || 'Transportista General' }}
+                    </div>
+                    <div class="cell-plates-sub">
+                      <span class="cell-plates-label">Tracto:</span> {{ item.tractorPlates || '-' }} &nbsp;|&nbsp; <span class="cell-plates-label">Caja:</span> {{ item.boxPlates || '-' }}
+                    </div>
                   </td>
                   <td>
-                    <div class="font-semibold">{{ item.driverName || 'S/N' }}</div>
+                    <div class="cell-driver-name">
+                      {{ item.driverName || 'S/N' }}
+                    </div>
                   </td>
-                  <td class="td-mono">
-                    {{ formatTimeString(item.receptionTime) }}
+                  <td>
+                    <span class="cell-time-val">
+                      {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}
+                    </span>
                   </td>
                   <td>
                     @if (item.isReadyForExit) {
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10.5px] border border-emerald-500/30 animate-pulse">
-                        <span class="material-symbols-outlined text-sm">verified</span>
+                      <span class="cell-status-ready animate-pulse">
+                        <span class="material-symbols-outlined text-sm text-emerald-800">verified</span>
                         <span>Autorizado / Listo Salida</span>
                       </span>
                     } @else {
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[10.5px] border border-amber-500/20">
-                        <span class="material-symbols-outlined text-sm animate-spin">sync</span>
+                      <span class="cell-status-maneuver">
+                        <span class="material-symbols-outlined text-sm text-amber-800 animate-spin">sync</span>
                         <span>{{ item.warehouseStatus === 'ASSIGNED' ? 'Asignado a Rampa' : (item.warehouseStatus || 'En Maniobra') }}</span>
                       </span>
                     }
@@ -1136,7 +1152,7 @@
                       <button
                         type="button"
                         (click)="openF01Print(item)"
-                        class="btn-secondary-outline text-[11px] px-2.5 py-1.5 rounded-lg"
+                        class="btn-secondary-outline text-xs font-bold px-2.5 py-1.5 rounded-lg"
                         title="Ver / Imprimir boleta F01"
                       >
                         <span class="material-symbols-outlined text-sm">print</span>
@@ -1147,7 +1163,7 @@
                         <button
                           type="button"
                           (click)="openCheckOutModal(item)"
-                          class="btn-primary-gold text-[11px] px-3.5 py-1.5 rounded-lg"
+                          class="btn-primary-gold text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm"
                           title="Registrar salida de unidad"
                         >
                           <span class="material-symbols-outlined text-sm">logout</span>
@@ -1155,7 +1171,7 @@
                         </button>
                       } @else {
                         <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-subtle cursor-not-allowed select-none"
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-slate-800 border border-slate-400 cursor-not-allowed select-none"
                           title="Maniobra en proceso en almacén. Requiere autorización del Líder antes de dar salida."
                         >
                           <span class="material-symbols-outlined text-xs">lock</span>
@@ -1244,45 +1260,46 @@
               @for (item of historyPasses(); track item.id || item.token) {
                 <tr>
                   <td class="td-mono">
-                    <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
+                    <div class="cell-folio-title">
                       {{ item.generatedFolio || item.token }}
                     </div>
-                    <div class="text-[10px] text-slate-400 font-mono">{{ item.docDate || (item.createdAt | slice:0:10) }}</div>
+                    <div class="cell-token-sub">{{ item.docDate || (item.createdAt | slice:0:10) }}</div>
                   </td>
                   <td>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                          [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'">
                       {{ item.operationType || 'DESCARGA' }}
                     </span>
                   </td>
                   <td>
-                    <div class="font-semibold text-slate-900 dark:text-slate-100">{{ item.clientName || 'General' }}</div>
+                    <div class="cell-carrier-title">{{ item.clientName || 'General' }}</div>
                   </td>
                   <td>
-                    <div>{{ item.carrierLine || 'Transporte' }}</div>
-                    <div class="font-mono text-[10px] text-slate-500">{{ item.tractorPlates || '-' }} / {{ item.boxPlates || '-' }}</div>
+                    <div class="cell-carrier-title">{{ item.carrierLine || 'Transporte' }}</div>
+                    <div class="cell-plates-sub"><span class="cell-plates-label">T:</span> {{ item.tractorPlates || '-' }} | <span class="cell-plates-label">C:</span> {{ item.boxPlates || '-' }}</div>
                   </td>
                   <td>
-                    <div>{{ item.driverName || 'S/N' }}</div>
+                    <div class="cell-driver-name">{{ item.driverName || 'S/N' }}</div>
                   </td>
                   <td class="td-mono">
-                    <div>In: <strong>{{ formatTimeString(item.receptionTime) }}</strong></div>
-                    <div>Out: <strong>{{ formatTimeString(item.departureTime) }}</strong></div>
+                    <div class="cell-time-val"><span class="cell-plates-label">In:</span> {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}</div>
+                    <div class="cell-time-val"><span class="cell-plates-label">Out:</span> {{ formatTimeString(item.departureTime || item.horaSalida || item.exitedAt) }}</div>
                   </td>
-                  <td class="td-mono font-bold text-amber-600 dark:text-amber-400">
-                    {{ calculateDuration(item.receptionTime, item.departureTime) }}
+                  <td class="td-mono">
+                    <div class="cell-time-val cell-time-val--duration">
+                      {{ calculateDuration(item.receptionTime, item.departureTime) }}
+                    </div>
                   </td>
                   <td>
                     @if (item.status === 'COMPLETED_EXIT') {
-                      <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10px] uppercase border border-emerald-500/30">
+                      <span class="cell-status-ready">
                         ✓ Salida Concluida
                       </span>
                     } @else if (item.status === 'COMPLETED') {
-                      <span class="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase">
+                      <span class="cell-op-badge-inbound">
                         En Planta
                       </span>
                     } @else {
-                      <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] uppercase">
+                      <span class="cell-status-maneuver">
                         {{ item.status }}
                       </span>
                     }
@@ -1418,12 +1435,12 @@
      MODAL B: CHECK-OUT Y REGISTRO DE SALIDA DE CASETA
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showCheckOutModal() && selectedCheckOutPass()) {
-  <div class="modal-overlay animate-fade-in">
-    <div class="modal-card max-w-lg w-full space-y-5 relative">
+  <div class="modal-overlay animate-fade-in" (click)="closeCheckOutModal()">
+    <div class="modal-card max-w-lg w-full space-y-5 relative" (click)="$event.stopPropagation()">
       <button
         type="button"
         (click)="closeCheckOutModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold cursor-pointer"
+        class="modal-close-btn"
         aria-label="Cerrar modal check-out"
       >
         ✕
@@ -1437,24 +1454,36 @@
           <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
             Registrar Salida de Planta (Check-Out)
           </h3>
-          <p class="text-xs text-slate-500">
-            Unidad: <strong class="font-mono text-slate-800 dark:text-slate-200">{{ selectedCheckOutPass().tractorPlates || 'S/P' }}</strong> — Folio #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
+          <p class="text-xs text-slate-600 dark:text-slate-300 font-medium">
+            Unidad: <strong class="font-mono text-slate-900 dark:text-slate-100 font-bold">{{ selectedCheckOutPass().tractorPlates || 'S/P' }}</strong> — Folio #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
           </p>
         </div>
       </div>
 
-      <!-- Resumen de Unidad -->
-      <div class="grid grid-cols-2 gap-2 text-xs p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-        <div>Chofer: <strong>{{ selectedCheckOutPass().driverName || 'S/N' }}</strong></div>
-        <div>Transporte: <strong>{{ selectedCheckOutPass().carrierLine || 'General' }}</strong></div>
-        <div>Hora Entrada: <strong class="font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime) }}</strong></div>
-        <div>Rampa: <strong class="font-mono text-amber-600">{{ selectedCheckOutPass().rampCode || 'R-01' }}</strong></div>
+      <!-- Resumen de Unidad (High-Contrast Clean Box) -->
+      <div class="checkout-summary-card">
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Chofer:</span>
+          <strong class="checkout-summary-val">{{ selectedCheckOutPass().driverName || 'S/N' }}</strong>
+        </div>
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Transporte:</span>
+          <strong class="checkout-summary-val">{{ selectedCheckOutPass().carrierLine || 'General' }}</strong>
+        </div>
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Hora Entrada:</span>
+          <strong class="checkout-summary-val font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime || selectedCheckOutPass().horaEntrada || selectedCheckOutPass().createdAt) }}</strong>
+        </div>
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Rampa:</span>
+          <strong class="checkout-summary-val font-mono text-amber-700 dark:text-amber-400 font-bold">{{ formatRampDisplay(selectedCheckOutPass()) }}</strong>
+        </div>
       </div>
 
       <!-- Formulario de Check-Out -->
       <form [formGroup]="checkOutForm" (ngSubmit)="confirmCheckOut()" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          <label class="checkout-form-label">
             Hora Exacta de Salida *
           </label>
           <input
@@ -1465,19 +1494,19 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          <label class="checkout-form-label">
             Sellos / Cinchos de Salida (Opcional)
           </label>
           <input
             type="text"
             formControlName="exitSealNumbers"
-            placeholder="Ej. SEAL-OUT-001, SEAL-OUT-002"
+            placeholder="Dejar en blanco si la unidad salió vacía tras descarga (Opcional)"
             class="form-input text-xs font-mono uppercase"
           />
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          <label class="checkout-form-label">
             Observaciones de Salida
           </label>
           <textarea

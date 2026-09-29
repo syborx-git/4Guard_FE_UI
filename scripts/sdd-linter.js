@@ -85,6 +85,21 @@ function checkFile(filePath) {
       totalWarnings++;
     }
   }
+
+  // Regla 5: Alto Contraste Tipográfico en Light Mode y Modales (SDD Visual Standard v2.0 - Prohibido texto blanco o gris en modo claro)
+  if (filePath.endsWith('.component.html') && content.includes('modal-overlay')) {
+    const prohibitedLowContrastClasses = ['text-slate-400', 'text-gray-400', 'text-slate-300'];
+    const lines = content.split('\n');
+    lines.forEach((line, idx) => {
+      prohibitedLowContrastClasses.forEach(cls => {
+        if (line.includes(cls) && !line.includes('dark:')) {
+          console.warn(`⚠️ [SDD CONTRAST WARNING] ${relativePath}:${idx + 1}`);
+          console.warn(`   -> Uso de clase de bajo contraste '${cls}' en modal. En Light Mode se debe usar #0f172a, #172033, #1e293b o #334155. (SDD Section 2.1)\n`);
+          totalWarnings++;
+        }
+      });
+    });
+  }
 }
 
 scanDirectory(TARGET_DIR);

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './apps/admin-console/src/**/*.{html,ts}',
     './apps/admin-console/src/app/features/warehouse-movements/**/*.{html,ts}',
@@ -11,3 +12,4 @@ module.exports = {
   },
   plugins: [],
 };
+

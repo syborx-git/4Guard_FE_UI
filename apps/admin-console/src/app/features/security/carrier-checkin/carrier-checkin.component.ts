@@ -424,8 +424,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       if (!f.medidasCaja || !f.medidasCaja.trim()) missing.push('Medidas de Caja');
       if (!f.placasTracto || f.placasTracto.trim().length < 3) missing.push('Placas de Tracto');
       if (!f.placasCaja || f.placasCaja.trim().length < 3) missing.push('Placas de Caja');
-      if (this.sealList().length === 0) {
-        missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio)');
+      if (f.operacion === 'DESCARGA' && this.sealList().length === 0) {
+        missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio en Descarga)');
       }
     } else if (step === 3) {
       if (!f.eppZapatos || !f.eppCofia || !f.eppCubrebocas || !f.eppChaleco) {
