@@ -20,6 +20,8 @@ import {
   ClaimStage,
   ClaimDefectType
 } from '../models/quality.models';
+import { environment } from '../../../../environments/environment';
+import { HttpQualityAdapter } from './http-quality.adapter';
 
 @Injectable({
   providedIn: 'root'
@@ -27,6 +29,51 @@ import {
 export class QualityStateService {
 
   private movementsService = inject(WarehouseMovementsService);
+  private qualityAdapter = inject(HttpQualityAdapter);
+
+  constructor() {
+    if (!environment.useMockData) {
+      this.loadInitialData();
+    }
+  }
+
+  loadInitialData(): void {
+    this.qualityAdapter.getBlocks().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          this.blocks.set(data);
+        }
+      },
+      error: (err) => console.warn('[QualityStateService] No se pudieron cargar bloqueos del backend:', err)
+    });
+
+    this.qualityAdapter.getReleases().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          this.releases.set(data);
+        }
+      },
+      error: (err) => console.warn('[QualityStateService] No se pudieron cargar liberaciones del backend:', err)
+    });
+
+    this.qualityAdapter.getVerifications().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          this.loadVerifications.set(data);
+        }
+      },
+      error: (err) => console.warn('[QualityStateService] No se pudieron cargar verificaciones del backend:', err)
+    });
+
+    this.qualityAdapter.getClaims().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          this.claims.set(data);
+        }
+      },
+      error: (err) => console.warn('[QualityStateService] No se pudieron cargar reclamos del backend:', err)
+    });
+  }
 
   // ══════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO: BLOQUEOS (PRODUCTO NO CONFORME)
@@ -499,6 +546,25 @@ export class QualityStateService {
       reportedAt: new Date().toISOString()
     };
     this.blocks.update(list => [created, ...list]);
+
+    if (!environment.useMockData) {
+      this.qualityAdapter.createBlock({
+        sscc: newBlock.sscc,
+        stage: newBlock.stage,
+        defectCategory: newBlock.defectCategory,
+        defectCriteria: newBlock.defectCriteria,
+        severity: newBlock.severity,
+        quantity: newBlock.quantity,
+        notes: newBlock.notes,
+        evidenceFiles: newBlock.evidenceFiles
+      }).subscribe({
+        next: (saved) => {
+          this.blocks.update(list => list.map(b => b.id === id ? saved : b));
+        },
+        error: (err) => console.error('[QualityStateService] Error persistiendo bloqueo en backend:', err)
+      });
+    }
+
     return created;
   }
 
@@ -589,6 +655,27 @@ export class QualityStateService {
       });
     }
 
+    if (!environment.useMockData) {
+      this.qualityAdapter.releaseBlock({
+        blockId: block.id,
+        authorizerType: releaseData.authorizerType,
+        supportType: releaseData.supportType,
+        supportCustomType: releaseData.supportCustomType,
+        supportSubject: releaseData.supportSubject,
+        supportFileName: supportFile,
+        authorizedByName: releaseData.authorizedByName,
+        authorizedByPosition: releaseData.authorizedByPosition,
+        destination: releaseData.destination,
+        decisionNotes: releaseData.decisionNotes,
+        evidenceFiles: releaseData.evidenceFiles
+      }).subscribe({
+        next: (savedRel) => {
+          this.releases.update(list => list.map(r => r.id === relId ? savedRel : r));
+        },
+        error: (err) => console.error('[QualityStateService] Error persistiendo liberación en backend:', err)
+      });
+    }
+
     return newRelease;
   }
 
@@ -626,6 +713,16 @@ export class QualityStateService {
     };
 
     this.loadVerifications.update(list => [created, ...list]);
+
+    if (!environment.useMockData) {
+      this.qualityAdapter.saveVerification(created).subscribe({
+        next: (savedVer) => {
+          this.loadVerifications.update(list => list.map(v => v.id === id ? savedVer : v));
+        },
+        error: (err) => console.error('[QualityStateService] Error persistiendo verificación en backend:', err)
+      });
+    }
+
     return created;
   }
 
@@ -633,6 +730,15 @@ export class QualityStateService {
     this.loadVerifications.update(list =>
       list.map(v => v.id === updated.id ? { ...updated, updatedAt: new Date().toISOString() } : v)
     );
+
+    if (!environment.useMockData) {
+      this.qualityAdapter.saveVerification(updated).subscribe({
+        next: (savedVer) => {
+          this.loadVerifications.update(list => list.map(v => v.id === updated.id ? savedVer : v));
+        },
+        error: (err) => console.error('[QualityStateService] Error actualizando verificación en backend:', err)
+      });
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -832,6 +938,16 @@ export class QualityStateService {
     };
 
     this.claims.update(list => [created, ...list]);
+
+    if (!environment.useMockData) {
+      this.qualityAdapter.createClaim(created).subscribe({
+        next: (savedClaim) => {
+          this.claims.update(list => list.map(c => c.id === id ? savedClaim : c));
+        },
+        error: (err) => console.error('[QualityStateService] Error persistiendo reclamo en backend:', err)
+      });
+    }
+
     return created;
   }
 
