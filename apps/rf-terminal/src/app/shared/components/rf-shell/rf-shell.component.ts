@@ -14,6 +14,10 @@ import { AuthState, SyncState } from '@4guard/shared-core';
 import { RfThemeService } from '../../../core/services/rf-theme.service';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 
+import { OfflineBannerComponent } from '../offline-banner/offline-banner.component';
+import { ToastContainerComponent } from '../toast-container/toast-container.component';
+import { ToastService } from '@4guard/shared-core';
+
 interface NavItem {
   path: string;
   icon: string;
@@ -24,7 +28,15 @@ interface NavItem {
 @Component({
   selector: 'fg-rf-shell',
   standalone: true,
-  imports: [CommonModule, RouterModule, RouterLink, RouterLinkActive, FormsModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    RouterLink,
+    RouterLinkActive,
+    FormsModule,
+    OfflineBannerComponent,
+    ToastContainerComponent
+  ],
   templateUrl: './rf-shell.component.html',
   styleUrl: './rf-shell.component.css',
 })
@@ -34,6 +46,7 @@ export class RfShellComponent implements OnInit, OnDestroy {
   protected readonly authState    = inject(AuthState);
   protected readonly syncState    = inject(SyncState);
   protected readonly audioService = inject(AudioFeedbackService);
+  protected readonly toast        = inject(ToastService);
 
   private clockIntervalId: any = null;
 
@@ -59,6 +72,9 @@ export class RfShellComponent implements OnInit, OnDestroy {
       hour12: false
     });
   });
+
+  // ─── Estado de Scroll del Banner Superior ─────────────────────────────────
+  protected readonly isScrolled = signal(false);
 
   // ─── Menú de Perfil de Usuario & Cierre de Sesión ─────────────────────────
   protected readonly showProfileMenu = signal(false);
@@ -113,11 +129,53 @@ export class RfShellComponent implements OnInit, OnDestroy {
     this.clockIntervalId = setInterval(() => {
       this.currentTime.set(new Date());
     }, 1000);
+
+    // ── Notificaciones de Inicio de Sesión & Solicitudes Asignadas ──
+    setTimeout(() => {
+      const userName = this.displayUserName();
+      const roleName = this.displayRole();
+      this.toast.info(
+        `Bienvenido, ${userName} (${roleName}). Tienes solicitudes de inventario asignadas y listas para operar.`,
+        'SESIÓN INICIADA'
+      );
+    }, 500);
+
+    setTimeout(() => {
+      this.toast.success(
+        'Zone Lease asignado: Pasillo 04 (Zona A) — 28 min de concesión exclusiva para maniobras.',
+        'PASILLO ASIGNADO'
+      );
+    }, 1400);
+
+    if (this.syncState.hasPending()) {
+      setTimeout(() => {
+        this.toast.warning(
+          `Tienes ${this.syncState.pendingCount()} transacciones en cola local pendiente de sincronización.`,
+          'COLA OFFLINE'
+        );
+      }, 2300);
+    }
   }
 
   ngOnDestroy(): void {
     if (this.clockIntervalId) {
       clearInterval(this.clockIntervalId);
+    }
+  }
+
+  // ─── Control de Scroll del Banner Superior ───────────────────────────────
+  onMainScroll(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (target) {
+      this.isScrolled.set(target.scrollTop > 8);
+    }
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    if (scrollY > 8) {
+      this.isScrolled.set(true);
     }
   }
 
@@ -212,5 +270,7 @@ export class RfShellComponent implements OnInit, OnDestroy {
     } else {
       window.dispatchEvent(new CustomEvent('rf:barcode-scanned', { detail: code }));
     }
+
+    this.toast.success(`Código ${code} capturado y validado.`, 'ESCÁNER LÁSER');
   }
 }

@@ -59,8 +59,19 @@ export { AuthService }    from './lib/infrastructure/services/auth.service';
 export { LoginService }    from './lib/infrastructure/services/login.service';
 export { BackendService } from './lib/infrastructure/services/backend.service';
 export type { ApiError, QueryParams } from './lib/infrastructure/services/backend.service';
-export { SyncService }    from './lib/infrastructure/services/sync.service';
+export { SyncService, MAX_OFFLINE_QUEUE_CAPACITY } from './lib/infrastructure/services/sync.service';
 export type { SyncOperation, SyncStatus } from './lib/infrastructure/services/sync.service';
+export { ZoneLeaseService } from './lib/infrastructure/services/zone-lease.service';
+export type { ZoneLeaseStatus } from './lib/infrastructure/services/zone-lease.service';
+export { ToastService } from './lib/infrastructure/services/toast.service';
+export type { ToastType, ToastItem } from './lib/infrastructure/services/toast.service';
+export { OfflineIndexedDb } from './lib/infrastructure/db/offline-indexed-db';
+export type {
+  OfflineTransactionRecord,
+  ZoneLeaseRecord,
+  AuthCacheRecord,
+  SyncConflictRecord,
+} from './lib/infrastructure/db/offline-indexed-db';
 
 // ─── Application — State Stores ───────────────────────────────────────────────
 export { AuthState }      from './lib/application/state/auth.state';

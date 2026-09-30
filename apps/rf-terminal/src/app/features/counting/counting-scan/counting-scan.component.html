@@ -1,91 +1,841 @@
-<!-- apps/rf-terminal/src/app/features/counting/counting-scan/counting-scan.component.html -->
-<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de escaneo de conteo físico">
+<!-- ================================================================
+     Módulo de Conteo Cíclico Ciego (Conteo Físico Puro) — 4GUARD WMS
+     Estándar SDD Dual Theme Homologado 1:1 con Cockpit del Montacarguista
+     Flujo Operativo Factible para Auditoría de Inventarios en Piso
+     ================================================================ -->
+<div class="cockpit-workspace">
 
-  <!-- Input OCULTO — captura el láser industrial -->
+  <!-- Input Oculto Fijo de Captura Continua para Lector Láser Industrial -->
   <input
     #scanInput
     type="text"
     class="scan-hidden-input"
-    [ngModel]="currentInput()"
-    (ngModelChange)="currentInput.set($event)"
-    (input)="onScanInput($event)"
-    (keydown)="onKeydown($event)"
+    [ngModel]="manualInputCode()"
+    (ngModelChange)="manualInputCode.set($event)"
+    (keyup.enter)="processScan(manualInputCode())"
     autocomplete="off"
     spellcheck="false"
-    aria-label="Escáner láser de conteo">
+    tabindex="-1"
+    aria-label="Captura láser de código de barras" />
 
-  <!-- ── Header ──────────────────────────────────────────── -->
-  <div class="rscan__header">
-    <div>
-      <h1 class="rscan__title">🔢 Conteo Físico</h1>
-      <p class="rscan__sub">Ciclo A-2026 · Zona General</p>
+  <!-- ── 1. BARRA SUPERIOR: CONTEXTO OPERATIVO Y TELEMETRÍA ──────────── -->
+  <header class="cockpit-topbar">
+    <div class="topbar-left">
+      <button
+        type="button"
+        (click)="goBackToMenu()"
+        class="btn-back-menu"
+        title="Volver al Menú Principal"
+        aria-label="Volver">
+        <span class="material-symbols-outlined text-xl">arrow_back</span>
+      </button>
+
+      <!-- Escudo / Icono Táctico -->
+      <div class="cockpit-icon-wrap">
+        <span class="material-symbols-outlined cockpit-header-icon">checklist</span>
+      </div>
+
+      <div class="cockpit-title-wrap">
+        <div class="cockpit-badge">
+          <span class="badge-dot-live"></span>
+          <span>Terminal RF</span>
+          <span class="eyebrow-sep">•</span>
+          <span class="eyebrow-gold">Auditoría Conteo Ciego</span>
+          <span class="eyebrow-sep">•</span>
+          <span>Control de Inventario</span>
+        </div>
+        <h1 class="cockpit-title font-display">Panel de Auditoría de Inventario</h1>
+        <p class="cockpit-subtitle font-body">Conteo ciego de alta rotación, validación de presencia en rack y resolución de discrepancias.</p>
+      </div>
     </div>
-    <div class="rscan__progress" role="status"
-      [attr.aria-label]="countedItems() + ' de ' + totalExpected() + ' ítems escaneados'">
-      <span class="rscan__progress-val">{{ countedItems() }}<span class="rscan__progress-sep">/</span>{{ totalExpected() }}</span>
-      <span class="rscan__progress-lbl">Contados</span>
+
+    <!-- Telemetría de Auditor & Acciones Rápidas -->
+    <div class="topbar-right">
+      <div class="telemetry-chip lease-chip" title="Arrendamiento de Pasillo Activo (30 min - HU-155)">
+        <span class="material-symbols-outlined text-amber-500 text-lg">lock_clock</span>
+        <div class="telemetry-text">
+          <span class="telemetry-label font-body">Zone Lease (30m)</span>
+          <span class="telemetry-val font-mono text-amber-600 dark:text-amber-400 font-bold">{{ leaseTimeFormatted() }}</span>
+        </div>
+      </div>
+
+      <div class="telemetry-chip" title="Auditor Responsable">
+        <span class="material-symbols-outlined text-emerald-500 text-lg">verified_user</span>
+        <div class="telemetry-text">
+          <span class="telemetry-label font-body">Auditor</span>
+          <span class="telemetry-val font-body font-bold">{{ auditTask().supervisorName }}</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="resetDemo()"
+        class="btn-reset-demo font-display"
+        title="Reiniciar caso de demostración">
+        <span class="material-symbols-outlined text-lg">restart_alt</span>
+        <span class="hidden md:inline font-bold">Reiniciar Demo</span>
+      </button>
     </div>
-  </div>
+  </header>
 
-  <!-- ── Scan zone ──────────────────────────────────────── -->
-  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
-    [class.rscan__zone--processing]="isProcessing()"
-    aria-label="Zona de escaneo — apunta el lector aquí">
-    <span class="rscan__zone-icon" aria-hidden="true">
-      {{ isProcessing() ? '⟳' : '⬛' }}
-    </span>
-    <span class="rscan__zone-text">
-      {{ isProcessing() ? 'Procesando…' : 'Escanea SKU o SSCC' }}
-    </span>
-    <span class="rscan__zone-sub">o haz clic para enfocar</span>
-  </div>
+  <!-- ── 2. BARRA DE FILTRO CONTEXTUAL (PILLS CON CONTADORES EN VIVO) ───── -->
+  <nav class="filter-pills-bar" aria-label="Filtros de Auditoría">
+    <!-- Todas en Ruta -->
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="currentFilter() === 'ALL'"
+      (click)="setFilter('ALL')">
+      <span class="material-symbols-outlined pill-icon">dashboard</span>
+      <span class="pill-label font-display">Toda la Ruta</span>
+      <span class="pill-count font-mono">{{ filterCounts().all }}</span>
+    </button>
 
-  <!-- Botón de simulación de scan -->
-  <button
-    id="rf-sim-count-btn"
-    class="rscan__sim-btn"
-    (click)="simulateScan(); $event.stopPropagation()">
-    📷 Simular Escaneo
-  </button>
+    <!-- Bahía Actual -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--inbound"
+      [class.active]="currentFilter() === 'CURRENT'"
+      (click)="setFilter('CURRENT')">
+      <span class="material-symbols-outlined pill-icon">location_on</span>
+      <span class="pill-label font-display">Bahía Actual</span>
+      <span class="pill-count font-mono">{{ filterCounts().current }}</span>
+    </button>
 
-  <!-- Error message -->
-  @if (lastError()) {
-    <div class="rscan__error" role="alert" aria-live="assertive">
-      {{ lastError() }}
+    <!-- Pendientes -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--putaway"
+      [class.active]="currentFilter() === 'PENDING'"
+      (click)="setFilter('PENDING')">
+      <span class="material-symbols-outlined pill-icon">hourglass_empty</span>
+      <span class="pill-label font-display">Pendientes</span>
+      <span class="pill-count font-mono">{{ filterCounts().pending }}</span>
+    </button>
+
+    <!-- Auditadas OK -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--outbound"
+      [class.active]="currentFilter() === 'AUDITED'"
+      (click)="setFilter('AUDITED')">
+      <span class="material-symbols-outlined pill-icon">check_circle</span>
+      <span class="pill-label font-display">Auditadas OK</span>
+      <span class="pill-count font-mono">{{ filterCounts().audited }}</span>
+    </button>
+
+    <!-- Con Discrepancia -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--urgent"
+      [class.active]="currentFilter() === 'DISCREPANCY'"
+      (click)="setFilter('DISCREPANCY')">
+      <span class="material-symbols-outlined pill-icon">warning</span>
+      <span class="pill-label font-display">Con Discrepancia</span>
+      <span class="pill-count font-mono pill-count--urgent">{{ filterCounts().discrepancy }}</span>
+    </button>
+  </nav>
+
+  <!-- ── 3. HERO: TARJETA EJECUTIVA DE AUDITORÍA ACTIVA (MASTER COCKPIT CARD) ── -->
+  <section class="hero-active-card hero--inbound">
+
+    <!-- 1. Cabecera Compacta en 1 Sola Línea -->
+    <div class="hero-card-header">
+      <div class="hero-header-left">
+        <div class="mission-type-badge badge--inbound_unload">
+          <span class="material-symbols-outlined text-sm">fact_check</span>
+          <span>CONTEO CIEGO EN PISO</span>
+        </div>
+
+        <span class="hero-folio font-mono">{{ auditTask().folio }}</span>
+
+        <span class="hero-doc-pill">
+          <span class="material-symbols-outlined text-xs">location_on</span>
+          <span>{{ auditTask().zone }}</span>
+        </span>
+
+        <div class="hero-arrival-tag">
+          <span class="material-symbols-outlined text-xs">schedule</span>
+          <span>Ciclo: Alta Rotación (3PL)</span>
+        </div>
+      </div>
+
+      <div class="hero-header-right">
+        <div class="sla-urgent-badge">
+          <span class="sla-pulse-dot"></span>
+          <span class="font-mono font-bold">IRA ≥ 99.5% OBJETIVO</span>
+        </div>
+
+        <div class="hero-status-pill" [class.status--drop]="isRackUnlocked()">
+          <span class="status-dot"></span>
+          <span class="font-display font-bold">
+            {{ isRackUnlocked() ? 'Paso 2: Conteo Físico en Bahía' : 'Paso 1: Candado en Bahía' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Corredor Táctico de Ruta en Pasillo (Sequence Track) -->
+    <div class="hero-route-corridor">
+      @for (loc of auditTask().locations; track loc.id; let idx = $index) {
+        <div
+          class="route-station"
+          [class.station--focus]="idx === currentLocIndex()"
+          (click)="selectLocation(idx)"
+          role="button"
+          tabindex="0">
+          <div class="station-icon-tag">
+            <span class="material-symbols-outlined text-sm" [ngClass]="loc.status === 'AUDITED' ? 'text-emerald-500' : (idx === currentLocIndex() ? 'text-amber-500' : 'text-slate-400')">
+              {{ loc.status === 'AUDITED' ? 'check_circle' : (idx === currentLocIndex() ? 'trip_origin' : 'shelves') }}
+            </span>
+            <span class="station-step-lbl font-mono font-bold">#{{ idx + 1 }}</span>
+          </div>
+          <div class="station-name-text font-body">{{ loc.barcode }}</div>
+          <span class="station-code-chip font-mono font-bold" [ngClass]="{
+            'text-emerald-600 dark:text-emerald-400': loc.status === 'AUDITED',
+            'text-amber-600 dark:text-amber-400': idx === currentLocIndex(),
+            'text-slate-500': loc.status === 'PENDING' && idx !== currentLocIndex()
+          }">
+            {{ loc.status === 'AUDITED' ? 'Auditado' : (idx === currentLocIndex() ? 'En Conteo' : 'Pendiente') }}
+          </span>
+        </div>
+
+        @if (idx < auditTask().locations.length - 1) {
+          <div class="route-corridor-arrow">
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- 3. Grid Dividido: Visor Óptico HUD con Haz Láser + Datos de Bahía y Captura -->
+    <div class="hero-hud-split-grid">
+
+      <!-- Columna Izquierda: Visor de Cámara HUD en Vivo con Haz Láser -->
+      <div class="counting-camera-box">
+        <div class="camera-hud-top-bar">
+          <div class="flex items-center gap-1.5">
+            <span class="live-dot-cam" [class.live-dot-cam--active]="cameraActive()"></span>
+            <span class="font-display font-black text-xs text-slate-800 dark:text-slate-100">
+              {{ cameraActive() ? (currentFacingMode() === 'environment' ? 'Cámara Trasera HUD' : 'Cámara Frontal HUD') : 'Lector Láser Óptico' }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1">
+            @if (cameraActive()) {
+              <button
+                type="button"
+                (click)="switchCamera()"
+                class="btn-cam-mini"
+                title="Girar cámara">
+                <span class="material-symbols-outlined text-xs">flip_camera_ios</span>
+                <span>Girar</span>
+              </button>
+            }
+
+            <button
+              type="button"
+              (click)="toggleCamera()"
+              class="btn-cam-mini"
+              title="Pausar o encender cámara">
+              <span class="material-symbols-outlined text-xs">{{ cameraActive() ? 'videocam_off' : 'videocam' }}</span>
+              <span>{{ cameraActive() ? 'Pausar' : 'Activar' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visor Reticle Interactivo -->
+        <div
+          class="camera-reticle-viewfinder"
+          [class.camera-reticle--unlocked]="isRackUnlocked()"
+          (click)="onCameraTapped()"
+          title="Toca el visor para capturar código automáticamente">
+          
+          <video
+            #cameraVideo
+            class="camera-live-stream"
+            [class.camera-live-stream--visible]="cameraActive()"
+            autoplay
+            playsinline
+            muted></video>
+          
+          <div class="laser-beam-sweep" [class.laser-beam-sweep--green]="isRackUnlocked()"></div>
+          
+          <div class="reticle-bracket bracket-tl"></div>
+          <div class="reticle-bracket bracket-tr"></div>
+          <div class="reticle-bracket bracket-bl"></div>
+          <div class="reticle-bracket bracket-br"></div>
+
+          <!-- Banner Flotante con Objetivo Dinámico -->
+          <div class="reticle-floating-target" [class.reticle-floating-target--unlocked]="isRackUnlocked()">
+            <span class="target-pulse-dot" [class.target-pulse-dot--green]="isRackUnlocked()"></span>
+            <span class="font-display font-extrabold text-xs">
+              {{ isRackUnlocked() ? '🎯 Enfoca código de tarima SSCC o SKU' : '🎯 Enfoca código de rack: ' + currentLocation().barcode }}
+            </span>
+          </div>
+
+          @if (scanFlashActive()) {
+            <div class="scan-flash-overlay"></div>
+          }
+
+          <div class="reticle-tap-hint font-body font-bold">
+            <span class="material-symbols-outlined text-xs text-amber-400">touch_app</span>
+            <span>Toca el visor para capturar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Datos de Bahía y Formulario de Captura Rápida -->
+      <div class="counting-controls-box">
+        
+        <!-- Tarjeta de Ubicación / Bahía -->
+        <div class="hero-meta-col">
+          <div class="meta-product-line">
+            <span class="material-symbols-outlined text-base text-amber-500">warehouse</span>
+            <span class="meta-product-name font-display font-extrabold">{{ currentLocation().rackLabel }}</span>
+            <span class="meta-sku-tag font-mono font-bold">{{ currentLocation().barcode }}</span>
+          </div>
+          <div class="meta-sub-specs font-body">
+            <span>📦 <strong>{{ currentLocPalletsCount() }}</strong> Tarimas registradas ({{ currentLocPhysicalPiecesTotal() }} piezas físicas)</span>
+            <span class="specs-dot">•</span>
+            <span class="font-mono font-bold" [ngClass]="isRackUnlocked() ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
+              {{ isRackUnlocked() ? '✓ Presencia física desbloqueada' : '🔒 Candado activo: Escanea etiqueta de rack' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Formulario Ergonómico según Paso Activo -->
+        <div class="hero-lots-col">
+          @if (!isRackUnlocked()) {
+            <!-- PASO 1: VALIDACIÓN DE PRESENCIA FÍSICA EN BAHÍA (HU-049) -->
+            <div class="rack-locked-panel">
+              <div class="lots-top-bar">
+                <span class="lots-bar-label font-display font-extrabold text-amber-500">
+                  <span class="material-symbols-outlined text-xs">key</span>
+                  <span>Paso 1: Confirmar Presencia Física en Bahía:</span>
+                </span>
+                <span class="badge-candado-lock font-mono">
+                  🔒 CANDADO ACTIVO
+                </span>
+              </div>
+
+              <div class="rack-locked-content-row">
+                <div class="hero-sscc-input-wrap flex-1">
+                  <span class="material-symbols-outlined text-xs text-amber-500">location_on</span>
+                  <input
+                    type="text"
+                    placeholder="Escanea código de rack (ej: {{ currentLocation().barcode }})"
+                    [ngModel]="manualInputCode()"
+                    (ngModelChange)="manualInputCode.set($event)"
+                    (keyup.enter)="unlockCurrentRack()"
+                    class="hero-sscc-input font-mono font-black uppercase" />
+                  <button
+                    type="button"
+                    (click)="unlockCurrentRack()"
+                    class="btn-quick-add-pallet btn-quick-unlock"
+                    title="Desbloquear bahía con código de rack">
+                    <span class="material-symbols-outlined text-sm">qr_code_scanner</span>
+                    <span>📍 VALIDAR BAHÍA</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="rack-locked-hint font-body">
+                <span class="material-symbols-outlined text-sm text-amber-500">info</span>
+                <span>Apunta la cámara o el láser al código <strong>{{ currentLocation().barcode }}</strong> para habilitar el conteo ciego.</span>
+              </div>
+            </div>
+          } @else {
+            <!-- PASO 2: CONTEO FÍSICO CIEGO DE TARIMAS SSCC (HU-049/051) -->
+            <div class="lots-top-bar">
+              <span class="lots-bar-label font-display font-extrabold text-emerald-600 dark:text-emerald-400">
+                <span class="material-symbols-outlined text-xs">barcode_scanner</span>
+                <span>Paso 2: Escanear Tarima SSCC GS1-128 o SKU:</span>
+              </span>
+              <span class="lots-counter-badge font-mono">
+                <strong>{{ currentLocPalletsCount() }}</strong> UA / {{ currentLocPhysicalPiecesTotal() }} pzas
+              </span>
+            </div>
+
+            <div class="conteo-inputs-row">
+              <!-- Input SSCC con Botón Agregar Rápido -->
+              <div class="hero-sscc-input-wrap">
+                <span class="material-symbols-outlined text-xs text-slate-400">qr_code_2</span>
+                <input
+                  type="text"
+                  placeholder="Escanea SSCC (ej: SSCC-175...)"
+                  [ngModel]="manualInputCode()"
+                  (ngModelChange)="manualInputCode.set($event)"
+                  (keyup.enter)="processScan(manualInputCode())"
+                  class="hero-sscc-input font-mono font-black uppercase" />
+                <button
+                  type="button"
+                  (click)="registerCurrentManualPallet()"
+                  class="btn-quick-add-pallet"
+                  title="Registrar tarima en buffer">
+                  <span class="material-symbols-outlined text-sm">add_task</span>
+                  <span>+ AGREGAR</span>
+                </button>
+              </div>
+
+              <!-- Stepper de Piezas Físicas Observadas -->
+              <div class="hero-mini-stepper">
+                <button type="button" (click)="addQuickPieces(-1)" class="btn-mini-step" title="-1 Pieza">
+                  <span class="material-symbols-outlined text-sm">remove</span>
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  [ngModel]="manualInputPieces()"
+                  (ngModelChange)="manualInputPieces.set($event)"
+                  class="mini-stepper-input font-mono font-black" />
+                <button type="button" (click)="addQuickPieces(1)" class="btn-mini-step" title="+1 Pieza">
+                  <span class="material-symbols-outlined text-sm">add</span>
+                </button>
+              </div>
+
+              <!-- Píldoras Rápidas (12 Caja, 48 Pallet, 60) -->
+              <div class="lots-chips-compact-row">
+                <button
+                  type="button"
+                  (click)="setQuickPieces(12)"
+                  class="lot-chip-compact"
+                  [class.lot-chip-compact--active]="manualInputPieces() === 12">
+                  <span class="chip-dot"></span>
+                  <span>12 Caja</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="setQuickPieces(48)"
+                  class="lot-chip-compact"
+                  [class.lot-chip-compact--active]="manualInputPieces() === 48">
+                  <span class="chip-dot"></span>
+                  <span>48 Pallet</span>
+                  <span class="chip-primary-flag">Std</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="setQuickPieces(60)"
+                  class="lot-chip-compact"
+                  [class.lot-chip-compact--active]="manualInputPieces() === 60">
+                  <span class="chip-dot"></span>
+                  <span>60 pzas</span>
+                </button>
+              </div>
+
+              <!-- Input de Lote Físico -->
+              <div class="hero-lot-sub">
+                <span class="material-symbols-outlined text-xs text-amber-500">label</span>
+                <input
+                  type="text"
+                  [ngModel]="manualInputLot()"
+                  (ngModelChange)="manualInputLot.set($event)"
+                  placeholder="LOT-2026-Y01"
+                  class="hero-lot-input font-mono font-bold uppercase" />
+              </div>
+            </div>
+          }
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 4. Barra de Acción Táctil y Herramientas (Hero CTA Bar) -->
+    <div class="hero-action-dock">
+      <!-- Botón Principal Touch CTA -->
+      @if (!isRackUnlocked()) {
+        <button
+          type="button"
+          (click)="unlockCurrentRack()"
+          class="btn-hero-cta btn-cta-pick"
+          title="Validar presencia física en rack">
+          <span class="material-symbols-outlined text-2xl">key</span>
+          <span class="cta-text font-display font-black">
+            VALIDAR PRESENCIA FÍSICA EN RACK ({{ currentLocation().barcode }})
+          </span>
+          <span class="material-symbols-outlined ml-auto text-xl">arrow_forward</span>
+        </button>
+      } @else {
+        <button
+          type="button"
+          (click)="concludeLocationCount()"
+          class="btn-hero-cta btn-cta-pick"
+          [disabled]="currentLocation().itemsCounted.length === 0"
+          title="Concluir conteo en esta ubicación">
+          <span class="material-symbols-outlined text-2xl">fact_check</span>
+          <span class="cta-text font-display font-black">
+            CONCLUIR CONTEO Y REVISAR CONCILIACIÓN ({{ currentLocPalletsCount() }} TARIMAS • {{ currentLocPhysicalPiecesTotal() }} PIEZAS)
+          </span>
+          <span class="material-symbols-outlined ml-auto text-xl">arrow_forward</span>
+        </button>
+      }
+
+      <!-- Barra de Botones Secundarios -->
+      <div class="hero-secondary-toolbar">
+        <button
+          type="button"
+          (click)="openCameraModal()"
+          class="btn-sub-action font-display"
+          title="Abrir visor de cámara óptico">
+          <span class="material-symbols-outlined text-sm text-sky-500">photo_camera</span>
+          <span class="font-bold">Visor de Cámara HUD</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="simScanValidPallet()"
+          class="btn-sub-action font-display"
+          title="Simular escaneo de tarima válida">
+          <span class="material-symbols-outlined text-sm text-amber-500">bolt</span>
+          <span class="font-bold">Simular Tarima (48 pzas)</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="simScanDiscrepancyPallet()"
+          class="btn-sub-action btn-sub-action--danger font-display"
+          title="Simular discrepancia física">
+          <span class="material-symbols-outlined text-sm text-rose-500">warning</span>
+          <span class="font-bold">Discrepancia Física (36 pzas)</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="toggleOfflineSimulation()"
+          class="btn-sub-action font-display"
+          title="Conmutar modo de red">
+          <span class="material-symbols-outlined text-sm" [ngClass]="isOfflineMode() ? 'text-amber-500' : 'text-emerald-500'">
+            {{ isOfflineMode() ? 'cloud_off' : 'wifi' }}
+          </span>
+          <span class="font-bold">{{ isOfflineMode() ? 'Offline (IDB)' : 'En Línea (WMS)' }}</span>
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── 4. COLA DE TARIMAS FÍSICAS REGISTRADAS EN ESTA BAHÍA (FLUJO FIFO) ── -->
+  <section class="queue-section" aria-label="Cola de tarimas registradas">
+    <div class="queue-header">
+      <div class="queue-header-left">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg text-amber-500">inventory_2</span>
+          <h2 class="queue-title font-display font-extrabold">Tarimas Físicas Registradas en esta Bahía</h2>
+        </div>
+        <p class="queue-sub font-body">Buffer de auditoría física registrado localmente para conciliación.</p>
+      </div>
+
+      <div class="queue-header-right">
+        <span class="queue-count-badge font-mono font-bold">
+          {{ currentLocPalletsCount() }} {{ currentLocPalletsCount() === 1 ? 'tarima capturada' : 'tarimas capturadas' }} • {{ currentLocPhysicalPiecesTotal() }} piezas
+        </span>
+      </div>
+    </div>
+
+    <!-- Lista de Tarimas con el mismo estilo de Cockpit -->
+    <div class="queue-missions-list">
+      @for (item of currentLocation().itemsCounted; track item.id) {
+        <article class="mission-queue-card card--inbound">
+          
+          <div class="mission-card-top">
+            <div class="mission-tags-row">
+              <span class="mission-type-pill pill--inbound font-mono font-bold">
+                <span class="material-symbols-outlined text-xs">qr_code_2</span>
+                <span>{{ item.sscc }}</span>
+              </span>
+
+              <span class="mission-doc-badge font-mono font-bold">
+                <span class="material-symbols-outlined text-xs">tag</span>
+                <span>{{ item.sku }}</span>
+              </span>
+
+              <span class="mission-doc-badge font-mono font-bold">
+                <span class="material-symbols-outlined text-xs">barcode</span>
+                <span>Lote: {{ item.physicalLot }}</span>
+              </span>
+
+              <span class="mission-time-tag font-mono">
+                <span class="material-symbols-outlined text-xs">schedule</span>
+                <span>{{ item.scannedAt }}</span>
+              </span>
+
+              @if (item.isOfflineSaved) {
+                <span class="mission-doc-badge text-amber-600 dark:text-amber-400 font-mono font-bold">
+                  <span class="material-symbols-outlined text-xs">cloud_off</span>
+                  <span>Offline (IDB)</span>
+                </span>
+              }
+            </div>
+
+            <div class="mission-card-right-badges">
+              <span class="mission-sla-chip font-mono font-black text-emerald-600 dark:text-emerald-400">
+                {{ item.physicalPieces }} Piezas
+              </span>
+
+              <button
+                type="button"
+                (click)="removeRecord(item.id); $event.stopPropagation()"
+                class="btn-delete-pallet"
+                title="Eliminar registro del buffer">
+                <span class="material-symbols-outlined text-sm text-rose-500">delete</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mission-product-row">
+            <div class="product-info-left">
+              <span class="material-symbols-outlined text-base text-amber-500">package_2</span>
+              <span class="product-name-txt font-display font-extrabold">{{ item.productName }}</span>
+            </div>
+          </div>
+
+        </article>
+      } @empty {
+        <div class="queue-empty-box">
+          <div class="empty-icon-circle">
+            <span class="material-symbols-outlined text-3xl text-slate-400">shelves</span>
+          </div>
+          <p class="empty-title font-display font-bold">Ninguna tarima capturada aún en este rack</p>
+          <p class="empty-sub font-body">Escanea con el láser o abre la cámara para registrar las tarimas presentes físicamente.</p>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── 5. MODAL DE CÁMARA ÓPTICA EN VIVO HUD ───────────────────────────── -->
+  @if (showCameraModal()) {
+    <div class="rf-modal-backdrop" (click)="closeCameraModal()">
+      <div class="rf-modal-card camera-modal-card" (click)="$event.stopPropagation()">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-icon-badge">
+              <span class="material-symbols-outlined text-2xl text-amber-500">videocam</span>
+            </div>
+            <div>
+              <h2 class="rf-modal-title font-display font-black">Lector Óptico en Tiempo Real</h2>
+              <p class="text-xs text-muted font-mono font-bold">Motor QR / GS1-128 / Code-128</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="switchCamera(); $event.stopPropagation()"
+              class="btn-cam-action"
+              title="Girar cámara">
+              <span class="material-symbols-outlined text-base text-amber-500">flip_camera_ios</span>
+              <span class="font-display font-bold text-xs">Girar</span>
+            </button>
+            <button type="button" class="btn-modal-close" (click)="closeCameraModal()">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="rf-modal-body p-0">
+          <div
+            class="camera-viewfinder-box"
+            (click)="onCameraTapped(); $event.stopPropagation()"
+            title="Toca para capturar">
+            <video #cameraVideo class="camera-video-stream camera-video-stream--visible" autoplay playsinline muted></video>
+            <div class="camera-laser-beam camera-laser-beam--unlocked"></div>
+            <div class="reticle-corner corner-tl"></div>
+            <div class="reticle-corner corner-tr"></div>
+            <div class="reticle-corner corner-bl"></div>
+            <div class="reticle-corner corner-br"></div>
+            <div class="reticle-guide-badge">
+              <span class="guide-dot" [ngClass]="isRackUnlocked() ? 'guide-dot--green' : 'guide-dot--amber'"></span>
+              <span class="font-display font-extrabold">
+                {{ isRackUnlocked() ? '🎯 Enfoca código SSCC GS1-128 o SKU' : '🎯 Enfoca código de rack: ' + currentLocation().barcode }}
+              </span>
+            </div>
+            @if (scanFlashActive()) {
+              <div class="scan-flash-overlay"></div>
+            }
+            <div class="reticle-tap-hint font-body font-bold">
+              <span class="material-symbols-outlined text-sm text-amber-400">touch_app</span>
+              <span>Toca el visor para capturar código</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeCameraModal()" class="btn-modal-cancel font-display font-bold w-full">
+            <span>CERRAR VISOR</span>
+          </button>
+        </div>
+      </div>
     </div>
   }
 
-  <!-- ── Buffer de Conteo ────────────────────────────────── -->
-  <div class="rscan__buffer">
-    <h2 class="rscan__buffer-title">
-      Registros Recientes
-      @if (countedItems() > 0) {
-        <span class="rscan__buffer-count" aria-hidden="true">{{ countedItems() }}</span>
-      }
-    </h2>
+  <!-- ── 6. MODAL EJECUTIVO DE CIERRE & RESOLUCIÓN DE DISCREPANCIAS (HU-051) ─── -->
+  @if (showSummaryModal()) {
+    <div class="rf-modal-backdrop" (click)="showSummaryModal.set(false)">
+      <div class="rf-modal-card counting-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header del Modal -->
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-icon-badge">
+              <span class="material-symbols-outlined text-2xl text-amber-500">fact_check</span>
+            </div>
+            <div>
+              <h2 class="rf-modal-title font-display font-black">Dictamen de Auditoría: {{ currentLocation().barcode }}</h2>
+              <p class="text-xs text-muted font-body font-bold">📍 {{ currentLocation().rackLabel }}</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="showSummaryModal.set(false); $event.stopPropagation()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
 
-    <div class="buffer-list" role="list" aria-label="Ítems contados">
-      @for (item of buffer(); track item.sscc) {
-        <div class="buffer-item" role="listitem">
-          <div class="buffer-item__code">{{ item.sscc }}</div>
-          <div class="buffer-item__info">
-            <span class="buffer-item__sku">{{ item.sku }} - Loc: {{ item.location }}</span>
-            <span class="buffer-item__desc">{{ item.description }}</span>
-          </div>
-          <div class="buffer-item__right">
-            <span class="status-badge status-badge--20">
-              Cant: {{ item.qty }}
-            </span>
-            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
-          </div>
+        <div class="rf-modal-body">
+          @if (evaluatedDiscrepancy(); as eval) {
+            
+            <!-- Estado de Conciliación -->
+            @if (eval.isExact) {
+              <div class="eval-banner eval-banner--success">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-4xl text-emerald-500">verified</span>
+                  <div>
+                    <h3 class="eval-title font-display text-emerald-600 dark:text-emerald-400">¡Conciliación 100% Exacta!</h3>
+                    <p class="eval-desc font-body">
+                      El conteo físico coincide exactamente con los registros del WMS. No se requieren ajustes manuales.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="eval-banner eval-banner--warning">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-4xl text-amber-500">warning</span>
+                  <div>
+                    <h3 class="eval-title font-display text-amber-600 dark:text-amber-400">Discrepancia de Stock Detectada (HU-051)</h3>
+                    <p class="eval-desc font-body">
+                      Existe una variación entre el conteo físico y el saldo teórico. Se ha turnado a la Mesa de Control para resolución.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Ficha Comparativa -->
+            <div class="eval-metrics-grid">
+              <div class="eval-metric-box">
+                <span class="metric-box-lbl font-body font-bold">Conteo Físico Real</span>
+                <span class="metric-box-val text-slate-800 dark:text-slate-100 font-mono font-black">{{ eval.physicalPiecesTotal }} pzas</span>
+                <span class="metric-box-sub font-body">{{ currentLocPalletsCount() }} tarimas registradas</span>
+              </div>
+
+              <div class="eval-metric-box">
+                <span class="metric-box-lbl font-body font-bold">Stock Teórico en WMS</span>
+                <span class="metric-box-val text-slate-500 dark:text-slate-400 font-mono font-black">{{ eval.theoreticalPiecesTotal }} pzas</span>
+                <span class="metric-box-sub font-body">Saldo en Base de Datos</span>
+              </div>
+
+              <div class="eval-metric-box">
+                <span class="metric-box-lbl font-body font-bold">Delta / Variación</span>
+                <span class="metric-box-val font-mono font-black" [ngClass]="eval.deltaPieces === 0 ? 'text-emerald-500' : (eval.deltaPieces > 0 ? 'text-sky-500' : 'text-rose-500')">
+                  {{ eval.deltaPieces > 0 ? '+' : '' }}{{ eval.deltaPieces }} pzas
+                </span>
+                <span class="metric-box-sub font-mono font-bold">Exactitud IRA: {{ eval.iraPercentage }}%</span>
+              </div>
+            </div>
+
+            <!-- Matriz de Acciones del Supervisor (HU-051) -->
+            @if (!eval.isExact) {
+              <div class="supervisor-decision-section">
+                <div class="supervisor-section-label font-display">
+                  <span class="material-symbols-outlined text-sm text-amber-500">gavel</span>
+                  <span>Dictamen del Supervisor de Operaciones:</span>
+                </div>
+                
+                <div class="supervisor-buttons-grid">
+                  <!-- Botón 1: Aprobar Conteo -->
+                  <button
+                    type="button"
+                    (click)="resolveDiscrepancy('APPROVED'); $event.stopPropagation()"
+                    class="btn-sup-action btn-sup-approve"
+                    [class.btn-sup--active]="eval.supervisorAction === 'APPROVED'">
+                    <div class="sup-icon-box">
+                      <span class="material-symbols-outlined text-xl">check_circle</span>
+                    </div>
+                    <div class="sup-action-text-col">
+                      <div class="sup-action-title-row">
+                        <span class="sup-action-title font-display">Aprobar Conteo</span>
+                        @if (eval.supervisorAction === 'APPROVED') {
+                          <span class="sup-selected-chip font-mono">✓ Seleccionado</span>
+                        }
+                      </div>
+                      <span class="sup-action-sub font-body">Ajustar Inventario WMS</span>
+                    </div>
+                  </button>
+
+                  <!-- Botón 2: Solicitar Reconteo -->
+                  <button
+                    type="button"
+                    (click)="resolveDiscrepancy('RECOUNT_REQUESTED'); $event.stopPropagation()"
+                    class="btn-sup-action btn-sup-recount"
+                    [class.btn-sup--active]="eval.supervisorAction === 'RECOUNT_REQUESTED'">
+                    <div class="sup-icon-box">
+                      <span class="material-symbols-outlined text-xl">sync</span>
+                    </div>
+                    <div class="sup-action-text-col">
+                      <div class="sup-action-title-row">
+                        <span class="sup-action-title font-display">Reconteo Físico</span>
+                        @if (eval.supervisorAction === 'RECOUNT_REQUESTED') {
+                          <span class="sup-selected-chip font-mono">✓ Seleccionado</span>
+                        }
+                      </div>
+                      <span class="sup-action-sub font-body">Mover a Cuarentena (20)</span>
+                    </div>
+                  </button>
+
+                  <!-- Botón 3: Rechazar Conteo -->
+                  <button
+                    type="button"
+                    (click)="resolveDiscrepancy('REJECTED'); $event.stopPropagation()"
+                    class="btn-sup-action btn-sup-reject"
+                    [class.btn-sup--active]="eval.supervisorAction === 'REJECTED'">
+                    <div class="sup-icon-box">
+                      <span class="material-symbols-outlined text-xl">cancel</span>
+                    </div>
+                    <div class="sup-action-text-col">
+                      <div class="sup-action-title-row">
+                        <span class="sup-action-title font-display">Rechazar Conteo</span>
+                        @if (eval.supervisorAction === 'REJECTED') {
+                          <span class="sup-selected-chip font-mono">✓ Seleccionado</span>
+                        }
+                      </div>
+                      <span class="sup-action-sub font-body">Mantener Saldo Teórico</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            }
+
+          }
         </div>
-      } @empty {
-        <div class="buffer-empty">
-          <span aria-hidden="true">📭</span>
-          <span>Ningún conteo registrado en esta sesión.</span>
+
+        <!-- Footer del Modal -->
+        <div class="rf-modal-footer">
+          <button type="button" (click)="showSummaryModal.set(false); $event.stopPropagation()" class="btn-modal-cancel font-display font-bold">
+            <span class="material-symbols-outlined text-lg mr-1">arrow_back</span>
+            <span>Volver a Revisar</span>
+          </button>
+          
+          <button
+            type="button"
+            (click)="nextLocation(); $event.stopPropagation()"
+            class="btn-continue-next-loc font-display font-black">
+            <span>AVANZAR A LA SIGUIENTE UBICACIÓN</span>
+            <span class="material-symbols-outlined text-xl ml-1">arrow_forward</span>
+          </button>
         </div>
-      }
+
+      </div>
     </div>
-  </div>
+  }
 
 </div>

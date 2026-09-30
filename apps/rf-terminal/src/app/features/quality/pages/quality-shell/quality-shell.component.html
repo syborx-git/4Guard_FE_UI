@@ -1,0 +1,121 @@
+<!-- ================================================================
+     Módulo de Calidad RF — quality-shell.component.html
+     Estándar SDD Dual Theme Homologado 1:1 con Seguridad RF
+     Conforme a ISO 9001 / Formato Oficial F01-PO-GC-8.6-03
+     ================================================================ -->
+<div class="quality-rf-page">
+
+  <!-- ── 1. Cabecera Táctica Homologada ────────────────────────── -->
+  <header class="security-rf-header">
+    <div class="security-rf-header__top">
+      <div class="security-rf-header__left">
+        <!-- Botón Volver al Menú -->
+        <a routerLink="/menu" class="btn-back-rf" title="Volver al Menú de Operaciones" aria-label="Volver">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </a>
+
+        <!-- Escudo / Icono Táctico -->
+        <div class="security-rf-header__icon-wrap">
+          <span class="material-symbols-outlined security-rf-header__icon">verified_user</span>
+        </div>
+
+        <!-- Títulos y Metadatos -->
+        <div class="security-rf-header__copy">
+          <div class="security-rf-header__eyebrow">
+            <span>Terminal RF</span>
+            <span class="eyebrow-sep">•</span>
+            <span class="eyebrow-gold">ISO 9001 / F01</span>
+            <span class="eyebrow-sep">•</span>
+            <span>Aseguramiento & Control de Calidad</span>
+          </div>
+          <h1 class="security-rf-header__title">Centro Operativo de Calidad QM</h1>
+          <p class="security-rf-header__subtitle">
+            Gestión de producto no conforme, dictamen de liberaciones, auditoría F01 de transporte e incidencias.
+          </p>
+        </div>
+      </div>
+
+      <!-- Badge Estado Operativo -->
+      <div class="security-status-badge">
+        <span class="security-status-badge__dot"></span>
+        <span>CONTROL QM ACTIVO</span>
+      </div>
+    </div>
+
+    <!-- ── 2. Barra de Navegación por Pestañas Industriales ────────── -->
+    <div class="security-rf-toolbar">
+      <nav class="security-tabs-nav" aria-label="Submódulos de Calidad">
+        @for (tab of tabs; track tab.path) {
+          <a
+            [routerLink]="tab.path"
+            routerLinkActive="tab-active"
+            class="security-tab-btn"
+            role="tab">
+            <span class="material-symbols-outlined text-lg">{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+            @if (tab.countKey && getTabCount(tab.countKey) > 0) {
+              <span class="tab-badge-pulse">{{ getTabCount(tab.countKey) }}</span>
+            }
+          </a>
+        }
+      </nav>
+    </div>
+
+    <!-- ── 3. Bento KPI Cards Grid Homologado ─────────────────────── -->
+    <div class="security-kpi-grid">
+      <!-- KPI 1: Bloqueos Activos -->
+      <div class="security-kpi-card security-kpi-card--warning">
+        <div class="security-kpi-card__icon">
+          <span class="material-symbols-outlined">warning</span>
+        </div>
+        <div class="security-kpi-card__info">
+          <span class="security-kpi-card__label">Bloqueos PNC</span>
+          <span class="security-kpi-card__value">{{ qmState.kpiTotalBlocked() }}</span>
+          <span class="security-kpi-card__sub">Retención & Cuarentena</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Liberaciones Dictaminadas -->
+      <div class="security-kpi-card security-kpi-card--success">
+        <div class="security-kpi-card__icon">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="security-kpi-card__info">
+          <span class="security-kpi-card__label">Liberaciones</span>
+          <span class="security-kpi-card__value">{{ qmState.kpiTotalReleases() }}</span>
+          <span class="security-kpi-card__sub">Dictámenes autorizados</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Verificaciones F01 -->
+      <div class="security-kpi-card security-kpi-card--primary">
+        <div class="security-kpi-card__icon">
+          <span class="material-symbols-outlined">fact_check</span>
+        </div>
+        <div class="security-kpi-card__info">
+          <span class="security-kpi-card__label">Verif. F01 Andén</span>
+          <span class="security-kpi-card__value">{{ qmState.kpiTotalVerifications() }}</span>
+          <span class="security-kpi-card__sub">Inspecciones transporte</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Reclamaciones F01 -->
+      <div class="security-kpi-card security-kpi-card--info">
+        <div class="security-kpi-card__icon">
+          <span class="material-symbols-outlined">query_stats</span>
+        </div>
+        <div class="security-kpi-card__info">
+          <span class="security-kpi-card__label">Reclamos F01</span>
+          <span class="security-kpi-card__value">{{ qmState.kpiTotalClaims() }}</span>
+          <span class="security-kpi-card__sub">No conformidades</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── 4. Contenedor Dinámico del Submódulo Activo ─────────────── -->
+  <main class="qm-submodule-body">
+    <router-outlet></router-outlet>
+  </main>
+
+</div>

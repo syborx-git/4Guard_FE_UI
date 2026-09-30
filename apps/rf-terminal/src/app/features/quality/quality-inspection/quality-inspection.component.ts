@@ -57,6 +57,7 @@ export class QualityInspectionComponent implements OnDestroy {
   protected readonly showCameraModal = signal(false);
   protected readonly isCameraActive = signal(false);
   protected readonly cameraError = signal<string | null>(null);
+  protected readonly currentFacingMode = signal<'environment' | 'user'>('environment');
   private mediaStream: MediaStream | null = null;
 
   protected readonly showDispositionConfirmModal = signal(false);
@@ -221,12 +222,29 @@ export class QualityInspectionComponent implements OnDestroy {
     this.closeCameraModal();
   }
 
-  private startCameraStream(): void {
+  protected switchCamera(): void {
+    const newMode = this.currentFacingMode() === 'environment' ? 'user' : 'environment';
+    this.currentFacingMode.set(newMode);
+    this.audioService.playSuccess();
+    if (navigator.vibrate) navigator.vibrate(25);
+    this.stopCameraStream();
+    this.startCameraStream(newMode);
+  }
+
+  private startCameraStream(facingMode?: 'environment' | 'user'): void {
+    const mode = facingMode || this.currentFacingMode();
+    this.currentFacingMode.set(mode);
+
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach((track) => track.stop());
+      this.mediaStream = null;
+    }
+
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices
         .getUserMedia({
           video: {
-            facingMode: 'environment',
+            facingMode: { ideal: mode },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -235,6 +253,7 @@ export class QualityInspectionComponent implements OnDestroy {
         .then((stream) => {
           this.mediaStream = stream;
           this.isCameraActive.set(true);
+          this.cameraError.set(null);
           setTimeout(() => {
             if (this.cameraVideoRef?.nativeElement) {
               this.cameraVideoRef.nativeElement.srcObject = stream;
