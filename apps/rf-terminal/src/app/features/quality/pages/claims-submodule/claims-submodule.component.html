@@ -31,14 +31,14 @@
     </div>
   </div>
 
-  <!-- ── 2. Lista de Reclamaciones e Incidencias ────────────────────────────── -->
-  <div class="claims-grid">
+  <!-- ── 2. Grid de Tarjetas Ejecutivas de Reclamos ────────────────────────── -->
+  <div class="executive-cards-grid">
     @for (clm of filteredClaims(); track clm.id) {
-      <div class="claim-card">
+      <div class="exec-card exec-card--claim">
         
-        <div class="card-header">
-          <div class="card-title-group">
-            <span class="folio-tag">{{ clm.folio }}</span>
+        <div class="exec-card__header">
+          <div class="exec-tags-group">
+            <span class="folio-tag folio-tag--info">{{ clm.folio }}</span>
             <span class="stage-badge">
               <span class="material-symbols-outlined text-xs">{{ stageLabels[clm.stage].icon }}</span>
               <span>{{ stageLabels[clm.stage].short }}</span>
@@ -49,38 +49,36 @@
           </span>
         </div>
 
-        <div class="card-body">
-          <h3 class="product-title">{{ clm.productDescription }}</h3>
+        <div class="exec-card__body">
+          <h3 class="exec-title">{{ clm.productDescription }}</h3>
 
-          <div class="specs-grid">
-            <div class="spec-cell">
-              <span class="spec-label">SKU:</span>
-              <strong class="spec-val font-mono">{{ clm.sku }}</strong>
+          <div class="exec-chips-row">
+            <span class="code-chip font-mono"><strong>SKU:</strong> {{ clm.sku }}</span>
+            <span class="code-chip font-mono"><strong>Lote:</strong> {{ clm.batchNumber }}</span>
+            <span class="code-chip font-mono"><strong>Rem:</strong> {{ clm.remisionNumber }}</span>
+          </div>
+
+          <div class="exec-meta-grid">
+            <div class="meta-item">
+              <span class="meta-lbl">Proveedor / Cliente:</span>
+              <strong class="meta-val truncate">{{ clm.clientName }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Lote:</span>
-              <strong class="spec-val font-mono">{{ clm.batchNumber }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Material Dañado / Merma:</span>
+              <strong class="meta-val text-rose-500 font-bold">{{ clm.damagedQty }} pzs ({{ clm.lostQty }} pérdida)</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Remisión:</span>
-              <strong class="spec-val font-mono">{{ clm.remisionNumber }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Impacto Financiero:</span>
+              <strong class="meta-val highlight-cost font-mono">${{ clm.associatedCost.toLocaleString('es-MX') }} {{ clm.currency }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Proveedor / Cliente:</span>
-              <strong class="spec-val truncate">{{ clm.clientName }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Material Dañado:</span>
-              <strong class="spec-val text-rose-500 font-bold">{{ clm.damagedQty }} pzs ({{ clm.lostQty }} merma)</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Impacto Financiero:</span>
-              <strong class="spec-val highlight-cost font-mono">${{ clm.associatedCost.toLocaleString('es-MX') }} {{ clm.currency }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Autorizado Por:</span>
+              <strong class="meta-val truncate">{{ clm.authorizedByName }}</strong>
             </div>
           </div>
 
           <div class="defect-type-row">
-            <span class="defect-label">Tipificación del Defecto:</span>
+            <span class="defect-label">Defecto:</span>
             <span class="defect-val">{{ defectLabels[clm.defectType] }}</span>
           </div>
 
@@ -92,10 +90,25 @@
           }
         </div>
 
-        <div class="card-footer">
-          <span class="auth-meta">
-            ✍️ {{ clm.authorizedByName }} ({{ clm.authorizedByPosition }})
-          </span>
+        <div class="exec-card__actions">
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--inspect"
+            title="Ver Acta F01 de No Conformidad">
+            <span class="material-symbols-outlined text-sm">description</span>
+            <span>Acta F01</span>
+          </button>
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--tag"
+            title="Ver Detalle Financiero">
+            <span class="material-symbols-outlined text-sm">payments</span>
+            <span>Valuación</span>
+          </button>
+        </div>
+
+        <div class="exec-card__footer">
+          <span class="auth-meta">✍️ {{ clm.authorizedByPosition }}</span>
           <span class="claim-time">🕒 {{ clm.date }} {{ clm.time }}</span>
         </div>
 

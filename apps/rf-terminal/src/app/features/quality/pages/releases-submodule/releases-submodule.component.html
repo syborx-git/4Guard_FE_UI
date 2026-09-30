@@ -18,7 +18,7 @@
 
     <div class="actions-row">
       <select [(ngModel)]="destinationFilter" class="filter-select">
-        <option value="ALL">Todos los Destinos</option>
+        <option value="ALL">Todos los Destinos (Distribución, Merma, Devolución)</option>
         <option value="DISTRIBUTION">1. Liberado para Distribución</option>
         <option value="DESTRUCTION">2. Destrucción / Merma</option>
         <option value="RETURN">3. Devolución a Proveedor</option>
@@ -31,15 +31,15 @@
     </div>
   </div>
 
-  <!-- ── 2. Lista de Liberaciones (Cards) ──────────────────────────────────── -->
-  <div class="releases-grid">
+  <!-- ── 2. Grid de Tarjetas Ejecutivas de Liberaciones ────────────────────── -->
+  <div class="executive-cards-grid">
     @for (rel of filteredReleases(); track rel.id) {
-      <div class="release-card">
+      <div class="exec-card exec-card--release">
         
-        <div class="card-header">
-          <div class="card-title-group">
-            <span class="folio-tag">{{ rel.folio }}</span>
-            <span class="block-ref">Orig: {{ rel.blockFolio }}</span>
+        <div class="exec-card__header">
+          <div class="exec-tags-group">
+            <span class="folio-tag folio-tag--success">{{ rel.folio }}</span>
+            <span class="block-ref font-mono">Orig: {{ rel.blockFolio }}</span>
           </div>
           <span class="destination-badge" [ngClass]="destinationLabels[rel.destination].badgeClass">
             <span class="material-symbols-outlined text-xs">{{ destinationLabels[rel.destination].icon }}</span>
@@ -47,31 +47,28 @@
           </span>
         </div>
 
-        <div class="card-body">
-          <h3 class="product-title">{{ rel.description }}</h3>
+        <div class="exec-card__body">
+          <h3 class="exec-title">{{ rel.description }}</h3>
 
-          <div class="specs-grid">
-            <div class="spec-cell">
-              <span class="spec-label">SKU:</span>
-              <strong class="spec-val font-mono">{{ rel.sku }}</strong>
+          <div class="exec-chips-row">
+            <span class="code-chip font-mono"><strong>SKU:</strong> {{ rel.sku }}</span>
+            <span class="code-chip font-mono"><strong>Lote:</strong> {{ rel.batchNumber }}</span>
+          </div>
+
+          <div class="exec-meta-grid">
+            <div class="meta-item">
+              <span class="meta-lbl">Cantidad:</span>
+              <strong class="meta-val text-emerald-500 font-bold">{{ rel.quantity }} {{ rel.unitOfMeasure }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Lote:</span>
-              <strong class="spec-val font-mono">{{ rel.batchNumber }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Cantidad:</span>
-              <strong class="spec-val">{{ rel.quantity }} {{ rel.unitOfMeasure }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Autorizado Por:</span>
-              <strong class="spec-val truncate">{{ rel.authorizedByName }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Autorizado Por:</span>
+              <strong class="meta-val truncate">{{ rel.authorizedByName }}</strong>
             </div>
           </div>
 
           <div class="support-info-box">
             <span class="support-label">Soporte Documental:</span>
-            <p class="support-subject">{{ rel.supportSubject }}</p>
+            <p class="support-subject truncate">{{ rel.supportSubject }}</p>
           </div>
 
           @if (rel.decisionNotes) {
@@ -82,10 +79,25 @@
           }
         </div>
 
-        <div class="card-footer">
-          <span class="lib-meta">
-            👤 Liberado por: <strong>{{ rel.releasedByUserName }}</strong>
-          </span>
+        <div class="exec-card__actions">
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--release"
+            title="Ver Acta o Certificado de Liberación">
+            <span class="material-symbols-outlined text-sm">description</span>
+            <span>Ver Dictamen</span>
+          </button>
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--tag"
+            title="Reubicación automática">
+            <span class="material-symbols-outlined text-sm">forklift</span>
+            <span>Reubicar</span>
+          </button>
+        </div>
+
+        <div class="exec-card__footer">
+          <span class="lib-meta">👤 {{ rel.releasedByUserName }}</span>
           <span class="lib-date">🕒 {{ rel.releasedAt }}</span>
         </div>
 

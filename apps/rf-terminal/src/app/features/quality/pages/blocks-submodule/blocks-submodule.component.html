@@ -1,6 +1,6 @@
 <div class="submodule-container">
 
-  <!-- ── 1. Barra de Control Operativo (Búsqueda + Filtro + Botón Bloqueo) ───── -->
+  <!-- ── 1. Barra de Control Operativo ─────────────────────────────────────── -->
   <div class="control-panel">
     <div class="search-input-wrap">
       <span class="material-symbols-outlined search-icon">search</span>
@@ -32,79 +32,96 @@
     </div>
   </div>
 
-  <!-- ── 2. Lista de Tarimas y Lotes Bloqueados (Cards Táctiles) ────────────── -->
-  <div class="blocks-grid">
+  <!-- ── 2. Grid de Tarjetas Ejecutivas Compactas ──────────────────────────── -->
+  <div class="executive-cards-grid">
     @for (item of filteredBlocks(); track item.id) {
-      <div class="block-card" [class.block-card--critical]="item.severity === 'CRITICAL'" [class.block-card--released]="item.status === 'RELEASED'">
+      <div 
+        class="exec-card" 
+        [class.exec-card--critical]="item.severity === 'CRITICAL'" 
+        [class.exec-card--released]="item.status === 'RELEASED'"
+        (click)="openDetail(item)">
         
-        <!-- Header de la Card -->
-        <div class="card-header">
-          <div class="card-title-group">
+        <!-- Header de la Tarjeta -->
+        <div class="exec-card__header">
+          <div class="exec-tags-group">
             <span class="folio-tag">{{ item.folio }}</span>
             <span class="stage-tag">{{ stageLabels[item.stage] }}</span>
           </div>
           <span class="severity-badge" [ngClass]="'severity--' + item.severity.toLowerCase()">
-            {{ item.severity === 'CRITICAL' ? '🛑 Crítico' : item.severity === 'WARNING' ? '⚠️ Advertencia' : 'ℹ️ Informativo' }}
+            {{ item.severity === 'CRITICAL' ? '🛑 Crítico' : item.severity === 'WARNING' ? '⚠️ Alerta' : 'ℹ️ Info' }}
           </span>
         </div>
 
-        <!-- Cuerpo con Datos Clave -->
-        <div class="card-body">
-          <h3 class="product-title">{{ item.description }}</h3>
+        <!-- Título y Datos Principales -->
+        <div class="exec-card__body">
+          <h3 class="exec-title">{{ item.description }}</h3>
           
-          <div class="specs-grid">
-            <div class="spec-cell">
-              <span class="spec-label">SKU:</span>
-              <strong class="spec-val font-mono">{{ item.sku }}</strong>
+          <div class="exec-chips-row">
+            <span class="code-chip font-mono"><strong>SKU:</strong> {{ item.sku }}</span>
+            <span class="code-chip font-mono"><strong>Lote:</strong> {{ item.batchNumber }}</span>
+          </div>
+
+          <div class="exec-meta-grid">
+            <div class="meta-item">
+              <span class="meta-lbl">SSCC:</span>
+              <strong class="meta-val font-mono">{{ item.sscc }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Lote:</span>
-              <strong class="spec-val font-mono">{{ item.batchNumber }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Ubicación Hold:</span>
+              <strong class="meta-val loc-highlight font-mono">📍 {{ item.locationId }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">SSCC:</span>
-              <strong class="spec-val font-mono">{{ item.sscc }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Cantidad:</span>
+              <strong class="meta-val">{{ item.quantity }} {{ item.unitOfMeasure }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Ubicación / Hold:</span>
-              <strong class="spec-val font-mono highlight-loc">{{ item.locationId }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Cantidad Retenida:</span>
-              <strong class="spec-val">{{ item.quantity }} {{ item.unitOfMeasure }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Cliente / Planta:</span>
-              <strong class="spec-val truncate">{{ item.clientName }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Cliente:</span>
+              <strong class="meta-val truncate">{{ item.clientName }}</strong>
             </div>
           </div>
 
-          <!-- Criterios de no conformidad -->
-          <div class="criteria-list">
-            <span class="criteria-label">Motivos de Retención:</span>
-            <div class="criteria-chips">
-              @for (crit of item.defectCriteria; track crit) {
-                <span class="crit-chip">{{ crit }}</span>
-              }
-            </div>
+          <!-- Chips de Criterios -->
+          <div class="crit-chips-wrap">
+            @for (crit of item.defectCriteria; track crit) {
+              <span class="crit-pill">{{ crit }}</span>
+            }
           </div>
-
-          @if (item.notes) {
-            <p class="card-notes">
-              <span class="material-symbols-outlined text-xs">notes</span>
-              <span>{{ item.notes }}</span>
-            </p>
-          }
         </div>
 
-        <!-- Footer de la Card -->
-        <div class="card-footer">
-          <span class="report-meta">
-            👤 {{ item.reportedBy }} • 🕒 {{ item.reportedAt }}
-          </span>
-          <span class="status-indicator" [class.status--released]="item.status === 'RELEASED'">
-            {{ item.status === 'RELEASED' ? '✅ LIBERADO' : '🔒 EN CUARENTENA' }}
-          </span>
+        <!-- Barra de Botones de Acción Rápida -->
+        <div class="exec-card__actions" (click)="$event.stopPropagation()">
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--release" 
+            title="Dictaminar Liberación para este lote"
+            (click)="goToRelease(item)">
+            <span class="material-symbols-outlined text-sm">check_circle</span>
+            <span>Liberar</span>
+          </button>
+
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--inspect" 
+            title="Ir a Inspección Técnica QM"
+            (click)="goToInspection(item)">
+            <span class="material-symbols-outlined text-sm">biotech</span>
+            <span>Inspección</span>
+          </button>
+
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--tag" 
+            title="Imprimir Marbete Hold QR"
+            (click)="printHoldTag(item, $event)">
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Marbete</span>
+          </button>
+        </div>
+
+        <!-- Footer Informativo -->
+        <div class="exec-card__footer">
+          <span class="footer-reporter">👤 {{ item.reportedBy }}</span>
+          <span class="footer-time">🕒 {{ item.reportedAt }}</span>
         </div>
 
       </div>
@@ -112,12 +129,70 @@
       <div class="empty-state">
         <span class="material-symbols-outlined empty-icon">check_circle</span>
         <h3>Sin Bloqueos Activos</h3>
-        <p>No se encontraron productos bloqueados bajo los criterios seleccionados.</p>
+        <p>No se encontraron productos retenidos bajo los filtros seleccionados.</p>
       </div>
     }
   </div>
 
-  <!-- ── 3. Modal Táctil de Registro de Bloqueo / Cuarentena ───────────────── -->
+  <!-- ── 3. Modal de Detalle Ejecutivo ─────────────────────────────────────── -->
+  @if (showDetailModal() && selectedBlockDetail()) {
+    <div class="modal-backdrop" (click)="closeDetail()">
+      <div class="modal-sheet animate-slide-up" (click)="$event.stopPropagation()" role="dialog">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="material-symbols-outlined modal-icon text-amber-500">inventory_2</span>
+            <div>
+              <h2>Detalle de Retención {{ selectedBlockDetail()?.folio }}</h2>
+              <span class="modal-subtitle">SSCC: {{ selectedBlockDetail()?.sscc }}</span>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeDetail()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="detail-summary-card">
+            <h3>{{ selectedBlockDetail()?.description }}</h3>
+            <div class="detail-grid">
+              <div><strong>SKU:</strong> {{ selectedBlockDetail()?.sku }}</div>
+              <div><strong>Lote:</strong> {{ selectedBlockDetail()?.batchNumber }}</div>
+              <div><strong>Cantidad:</strong> {{ selectedBlockDetail()?.quantity }} {{ selectedBlockDetail()?.unitOfMeasure }}</div>
+              <div><strong>Ubicación:</strong> {{ selectedBlockDetail()?.locationId }}</div>
+              <div><strong>Cliente:</strong> {{ selectedBlockDetail()?.clientName }}</div>
+              <div><strong>Etapa:</strong> {{ stageLabels[selectedBlockDetail()!.stage] }}</div>
+            </div>
+          </div>
+
+          <div class="detail-box">
+            <label class="form-label">Motivos de Bloqueo:</label>
+            <div class="crit-chips-wrap">
+              @for (c of selectedBlockDetail()?.defectCriteria; track c) {
+                <span class="crit-pill crit-pill--lg">{{ c }}</span>
+              }
+            </div>
+          </div>
+
+          @if (selectedBlockDetail()?.notes) {
+            <div class="detail-box">
+              <label class="form-label">Observaciones:</label>
+              <p class="detail-text">{{ selectedBlockDetail()?.notes }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeDetail()">Cerrar</button>
+          <button type="button" class="btn-primary-action" (click)="goToRelease(selectedBlockDetail()!); closeDetail()">
+            <span class="material-symbols-outlined">verified</span>
+            <span>Proceder a Dictamen</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 4. Modal de Registro de Bloqueo ───────────────────────────────────── -->
   @if (showCreateModal()) {
     <div class="modal-backdrop" (click)="closeCreateModal()">
       <div class="modal-sheet animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
@@ -186,7 +261,6 @@
 
           </div>
 
-          <!-- Checkboxes de Criterios de Defecto -->
           <div class="criteria-section">
             <label class="form-label">Criterios de No Conformidad Detectados:</label>
             <div class="criteria-options-grid">

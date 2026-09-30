@@ -1,13 +1,16 @@
 /**
  * @file blocks-submodule.component.ts
  * @description Submódulo de Bloqueos de Producto No Conforme (PNC) y Cuarentenas para Terminal RF.
+ * Diseñado con Tarjetas Ejecutivas Compactas y Botones de Acción Directa.
  */
 
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { UnitOfMeasure, AuthState } from '@4guard/shared-core';
+import { Router } from '@angular/router';
+import { UnitOfMeasure, AuthState, ToastService } from '@4guard/shared-core';
 import { RfQualityStateService } from '../../../../core/services/rf-quality-state.service';
+import { AudioFeedbackService } from '../../../../core/services/audio-feedback.service';
 import {
   QualityBlockItem,
   DetectionStage,
@@ -26,6 +29,9 @@ import {
 export class RfBlocksSubmoduleComponent {
   protected readonly qmState = inject(RfQualityStateService);
   private readonly authState = inject(AuthState);
+  private readonly toast = inject(ToastService);
+  private readonly audio = inject(AudioFeedbackService);
+  private readonly router = inject(Router);
 
   // ─── Estado de Filtros ──────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
@@ -33,6 +39,10 @@ export class RfBlocksSubmoduleComponent {
 
   // ─── Modal de Nuevo Bloqueo ─────────────────────────────────────────────
   protected readonly showCreateModal = signal(false);
+
+  // ─── Modal de Detalle Ejecutivo ─────────────────────────────────────────
+  protected readonly showDetailModal = signal(false);
+  protected readonly selectedBlockDetail = signal<QualityBlockItem | null>(null);
 
   // ─── Formulario de Nuevo Bloqueo ────────────────────────────────────────
   protected readonly formSku = signal('LALA-MILK-1L');
@@ -48,7 +58,6 @@ export class RfBlocksSubmoduleComponent {
   protected readonly formSeverity = signal<'CRITICAL' | 'WARNING' | 'INFO'>('CRITICAL');
   protected readonly formNotes = signal('');
 
-  // Criterios seleccionados
   protected readonly availableCriteria = [
     'Material con humedad',
     'Embalaje en malas condiciones',
@@ -80,7 +89,7 @@ export class RfBlocksSubmoduleComponent {
   protected readonly stageLabels = DETECTION_STAGE_LABELS;
   protected readonly categoryLabels = DEFECT_CATEGORY_LABELS;
 
-  // ─── Métodos del Modal ──────────────────────────────────────────────────
+  // ─── Acciones Directas desde Tarjeta ─────────────────────────────────────
 
   openCreateModal(): void {
     this.showCreateModal.set(true);
@@ -88,6 +97,33 @@ export class RfBlocksSubmoduleComponent {
 
   closeCreateModal(): void {
     this.showCreateModal.set(false);
+  }
+
+  openDetail(item: QualityBlockItem): void {
+    this.selectedBlockDetail.set(item);
+    this.showDetailModal.set(true);
+    this.audio.playSuccess();
+  }
+
+  closeDetail(): void {
+    this.showDetailModal.set(false);
+    this.selectedBlockDetail.set(null);
+  }
+
+  goToRelease(item: QualityBlockItem): void {
+    this.audio.playSuccess();
+    this.router.navigate(['/quality/releases']);
+  }
+
+  goToInspection(item: QualityBlockItem): void {
+    this.audio.playSuccess();
+    this.router.navigate(['/quality/inspection']);
+  }
+
+  printHoldTag(item: QualityBlockItem, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.audio.playSuccess();
+    this.toast.success(`Marbete Hold QR enviado a impresora Zebra: ${item.folio} (SSCC: ${item.sscc})`, 'MARBETE HOLD IMPRESO');
   }
 
   toggleCriterion(crit: string): void {

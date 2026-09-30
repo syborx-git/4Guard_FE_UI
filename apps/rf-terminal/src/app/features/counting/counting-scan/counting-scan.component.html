@@ -25,17 +25,27 @@
         type="button"
         (click)="goBackToMenu()"
         class="btn-back-menu"
-        title="Volver al Menú Principal">
+        title="Volver al Menú Principal"
+        aria-label="Volver">
         <span class="material-symbols-outlined text-xl">arrow_back</span>
-        <span class="hidden sm:inline font-display font-extrabold">Menú</span>
       </button>
+
+      <!-- Escudo / Icono Táctico -->
+      <div class="cockpit-icon-wrap">
+        <span class="material-symbols-outlined cockpit-header-icon">checklist</span>
+      </div>
 
       <div class="cockpit-title-wrap">
         <div class="cockpit-badge">
           <span class="badge-dot-live"></span>
-          <span class="font-mono font-black">AUDITORÍA CONTEO CIEGO</span>
+          <span>Terminal RF</span>
+          <span class="eyebrow-sep">•</span>
+          <span class="eyebrow-gold">Auditoría Conteo Ciego</span>
+          <span class="eyebrow-sep">•</span>
+          <span>Control de Inventario</span>
         </div>
         <h1 class="cockpit-title font-display">Panel de Auditoría de Inventario</h1>
+        <p class="cockpit-subtitle font-body">Conteo ciego de alta rotación, validación de presencia en rack y resolución de discrepancias.</p>
       </div>
     </div>
 

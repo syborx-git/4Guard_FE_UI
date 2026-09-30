@@ -1,83 +1,77 @@
 <!-- ================================================================
      Monitor de Sincronización Offline & Zone Lease — sync-monitor.component.html
-     Estándar SDD Dual Theme Homologado 1:1 con Cockpit del Montacarguista
+     Estándar SDD Dual Theme Homologado 1:1 con Seguridad Patrimonial y Calidad
      Arquitectura Offline-First con Cola FIFO Directa [HU-200 / HU-155]
      ================================================================ -->
-<div class="sync-workspace" role="main" aria-label="Monitor de Sincronización Offline">
+<div class="sync-rf-page" role="main" aria-label="Monitor de Sincronización Offline">
 
-  <!-- ── 1. BARRA SUPERIOR (TOPBAR CONTEXTUAL HOMOLOGADA) ──────────── -->
-  <header class="sync-topbar">
-    <div class="topbar-left">
-      <button
-        type="button"
-        (click)="goBack()"
-        class="btn-back-menu"
-        title="Volver al Cockpit">
-        <span class="material-symbols-outlined text-xl">arrow_back</span>
-        <span class="hidden sm:inline font-display font-extrabold">Cockpit</span>
-      </button>
-
-      <div class="sync-title-wrap">
-        <div class="sync-badge">
-          <span class="badge-dot-live" [class.badge-dot-live--offline]="!isOnline()"></span>
-          <span class="font-mono font-black">OFFLINE-FIRST ENGINE</span>
+  <!-- ── 1. Cabecera Táctica del Módulo ───────────────────────────── -->
+  <header class="sync-rf-header">
+    <div class="sync-rf-header__top">
+      <div class="sync-rf-header__left">
+        <button type="button" (click)="goBack()" class="btn-back-rf" title="Regresar al Cockpit">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+        <div class="sync-rf-header__icon-wrap">
+          <span class="material-symbols-outlined sync-rf-header__icon">cloud_sync</span>
         </div>
-        <h1 class="sync-title font-display">Sincronización de Datos & Zone Lease</h1>
-      </div>
-    </div>
-
-    <!-- Telemetría & Conexión Preflight -->
-    <div class="topbar-right">
-      <!-- Chip de Conexión / Pre-flight Ping -->
-      <div class="telemetry-chip ping-chip" [title]="isOnline() ? 'Pre-flight Ping: ' + pingLatencyMs() + 'ms' : 'Red Desconectada'">
-        <span class="material-symbols-outlined text-lg" [ngClass]="isOnline() ? 'text-emerald-500' : 'text-rose-500'">
-          {{ isOnline() ? 'wifi' : 'wifi_off' }}
-        </span>
-        <div class="telemetry-text">
-          <span class="telemetry-label font-body">{{ isOnline() ? 'Conexión' : 'Red' }}</span>
-          <span class="telemetry-val font-mono font-bold" [ngClass]="isOnline() ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-            {{ isOnline() ? 'En Línea (' + pingLatencyMs() + 'ms)' : 'Sin Conexión' }}
-          </span>
+        <div class="sync-rf-header__copy">
+          <div class="sync-rf-header__eyebrow">
+            <span>Terminal RF</span>
+            <span class="eyebrow-sep">·</span>
+            <span class="eyebrow-gold">Offline-First Engine</span>
+            <span class="eyebrow-sep">·</span>
+            <span>Telemetría de Red</span>
+          </div>
+          <h1 class="sync-rf-header__title">Sincronización de Datos &amp; Zone Lease</h1>
+          <p class="sync-rf-header__subtitle">
+            Gestión de cola local IndexedDB, resolución de conflictos y arrendamiento de pasillo (HU-155 / HU-200).
+          </p>
         </div>
       </div>
 
-      <!-- Chip de Zone Lease (HU-155) -->
-      <div class="telemetry-chip lease-chip" title="Arrendamiento de Pasillo Activo (30 min)">
-        <span class="material-symbols-outlined text-amber-500 text-lg">lock_clock</span>
-        <div class="telemetry-text">
-          <span class="telemetry-label font-body">Zone Lease</span>
-          <span class="telemetry-val font-mono text-amber-600 dark:text-amber-400 font-bold">
-            {{ leaseService.formattedTime() }}
-          </span>
+      <!-- Telemetría & Conexión Preflight -->
+      <div class="sync-header-actions">
+        <!-- Chip de Conexión / Pre-flight Ping -->
+        <div class="sync-status-badge" [ngClass]="isOnline() ? 'badge--online' : 'badge--offline'" [title]="isOnline() ? 'Pre-flight Ping: ' + pingLatencyMs() + 'ms' : 'Red Desconectada'">
+          <span class="sync-status-badge__dot" [class.sync-status-badge__dot--offline]="!isOnline()"></span>
+          <span class="material-symbols-outlined text-sm">{{ isOnline() ? 'wifi' : 'wifi_off' }}</span>
+          <span>{{ isOnline() ? 'EN LÍNEA (' + pingLatencyMs() + 'ms)' : 'SIN CONEXIÓN' }}</span>
         </div>
-      </div>
 
-      <!-- Botón Conmutar Red (Demo) -->
-      <button
-        type="button"
-        (click)="toggleNetworkSimulation()"
-        class="btn-toggle-net font-display"
-        [class.btn-toggle-net--offline]="!isOnline()"
-        title="Simular corte o reconexión de red">
-        <span class="material-symbols-outlined text-base">{{ isOnline() ? 'cloud_off' : 'cloud_done' }}</span>
-        <span class="hidden sm:inline font-bold">{{ isOnline() ? 'Simular Offline' : 'Restaurar Red' }}</span>
-      </button>
+        <!-- Chip de Zone Lease (HU-155) -->
+        <div class="sync-lease-chip" title="Arrendamiento de Pasillo Activo (30 min)">
+          <span class="material-symbols-outlined text-amber-500 text-sm">lock_clock</span>
+          <span class="font-mono font-bold">{{ leaseService.formattedTime() }}</span>
+        </div>
+
+        <!-- Botón Conmutar Red (Demo) -->
+        <button
+          type="button"
+          (click)="toggleNetworkSimulation()"
+          class="btn-toggle-net"
+          [class.btn-toggle-net--offline]="!isOnline()"
+          title="Simular corte o reconexión de red">
+          <span class="material-symbols-outlined text-sm">{{ isOnline() ? 'cloud_off' : 'cloud_done' }}</span>
+          <span class="hidden sm:inline">{{ isOnline() ? 'Simular Offline' : 'Restaurar Red' }}</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- ── 2. MATRIZ DE KPIS EJECUTIVOS (3 TARJETAS LIMPIAS) ─────────── -->
-  <section class="sync-kpis-grid" aria-label="Métricas de Sincronización">
+  <!-- ── 2. Cuadrícula de Métricas KPI Rápidas ─────────────────────── -->
+  <div class="sync-kpi-grid" aria-label="Métricas de Sincronización">
     
     <!-- KPI 1: Cola Pendiente (FIFO) -->
-    <article class="sync-kpi-card kpi--pending" [class.kpi--warning]="pendingCount() > 0">
-      <div class="kpi-icon-box">
-        <span class="material-symbols-outlined text-2xl text-amber-500">pending_actions</span>
+    <div class="sync-kpi-card sync-kpi-card--warning" [class.card--warn-active]="pendingCount() > 0">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">pending_actions</span>
       </div>
-      <div class="kpi-info-col">
-        <span class="kpi-label font-body font-bold">Transacciones Pendientes</span>
-        <div class="kpi-val-row">
-          <span class="kpi-value font-mono font-black text-amber-600 dark:text-amber-400">{{ pendingCount() }}</span>
-          <span class="kpi-sub-cap font-mono">/ {{ maxCapacity }} máx</span>
+      <div class="sync-kpi-card__info">
+        <span class="sync-kpi-card__label">TRANSACCIONES PENDIENTES</span>
+        <div class="kpi-value-row">
+          <strong class="sync-kpi-card__value font-mono text-amber-600 dark:text-amber-400">{{ pendingCount() }}</strong>
+          <span class="sync-kpi-card__cap font-mono">/ {{ maxCapacity }} máx</span>
         </div>
         <div class="kpi-mini-gauge-track">
           <div
@@ -87,16 +81,16 @@
             [style.width.%]="queueOccupancyPct() || 3"></div>
         </div>
       </div>
-    </article>
+    </div>
 
     <!-- KPI 2: Zone Lease Protocol (HU-155) -->
-    <article class="sync-kpi-card kpi--lease">
-      <div class="kpi-icon-box">
-        <span class="material-symbols-outlined text-2xl text-amber-500">lock_clock</span>
+    <div class="sync-kpi-card sync-kpi-card--primary">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">lock_clock</span>
       </div>
-      <div class="kpi-info-col">
+      <div class="sync-kpi-card__info">
         <div class="flex items-center justify-between">
-          <span class="kpi-label font-body font-bold">Zone Lease (30m)</span>
+          <span class="sync-kpi-card__label">ZONE LEASE (30 MIN)</span>
           <span class="kpi-chip-status font-mono font-bold" [ngClass]="{
             'chip--active': leaseService.leaseStatus() === 'ACTIVE',
             'chip--warn': leaseService.leaseStatus() === 'WARNING',
@@ -105,56 +99,68 @@
             {{ leaseService.leaseStatus() }}
           </span>
         </div>
-        <div class="kpi-val-row">
-          <span class="kpi-value font-mono font-black text-amber-600 dark:text-amber-400">
+        <div class="kpi-value-row">
+          <strong class="sync-kpi-card__value font-mono text-amber-600 dark:text-amber-400">
             {{ leaseService.formattedTime() }}
-          </span>
+          </strong>
           <button
             type="button"
             (click)="renewLease()"
-            class="btn-renew-lease font-display"
+            class="btn-renew-lease"
             title="Renovar concesión de 30 minutos">
             <span class="material-symbols-outlined text-xs">sync</span>
             <span>Renovar</span>
           </button>
         </div>
-        <span class="kpi-sub-text font-body">Pasillo 04 • Zona A (HU-155)</span>
+        <span class="sync-kpi-card__sub">Pasillo 04 • Zona A (HU-155)</span>
       </div>
-    </article>
+    </div>
 
     <!-- KPI 3: Sincronizadas Hoy -->
-    <article class="sync-kpi-card kpi--synced">
-      <div class="kpi-icon-box">
-        <span class="material-symbols-outlined text-2xl text-emerald-500">task_alt</span>
+    <div class="sync-kpi-card sync-kpi-card--success">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">task_alt</span>
       </div>
-      <div class="kpi-info-col">
-        <span class="kpi-label font-body font-bold">Sincronizadas Hoy</span>
-        <div class="kpi-val-row">
-          <span class="kpi-value font-mono font-black text-emerald-600 dark:text-emerald-400">
+      <div class="sync-kpi-card__info">
+        <span class="sync-kpi-card__label">SINCRONIZADAS HOY</span>
+        <div class="kpi-value-row">
+          <strong class="sync-kpi-card__value font-mono text-emerald-600 dark:text-emerald-400">
             {{ syncedHistory().length }}
-          </span>
-          <span class="kpi-sub-cap font-body">confirmadas</span>
+          </strong>
+          <span class="sync-kpi-card__cap">confirmadas</span>
         </div>
-        <span class="kpi-sub-text font-body">100% Integridad en Servidor Central</span>
+        <span class="sync-kpi-card__sub">100% Integridad en Servidor Central</span>
       </div>
-    </article>
+    </div>
 
-  </section>
+    <!-- KPI 4: Motor Local IndexedDB -->
+    <div class="sync-kpi-card sync-kpi-card--info">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">database</span>
+      </div>
+      <div class="sync-kpi-card__info">
+        <span class="sync-kpi-card__label">MOTOR LOCAL INDEXEDDB</span>
+        <strong class="sync-kpi-card__value text-base font-mono">
+          {{ isOnline() ? 'OPERATIVO' : 'OFFLINE-SAFE' }}
+        </strong>
+        <span class="sync-kpi-card__sub">L1 Local Storage • Sync Queue FIFO</span>
+      </div>
+    </div>
+
+  </div>
 
   <!-- ── 3. HERO MASTER CARD: BOTÓN PRINCIPAL DE TRANSMISIÓN ────────── -->
   <section class="hero-sync-card">
-    
     <div class="hero-sync-main-row">
-      
       <!-- Bloque de Estado -->
       <div class="hero-status-block">
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-3">
           <div class="hero-sync-pulse-dot" [class.pulse-dot--offline]="!isOnline()" [class.pulse-dot--syncing]="isSyncing()"></div>
           <div>
-            <h2 class="hero-sync-status-title font-display font-black">
+            <h2 class="hero-sync-status-title">
               {{ isSyncing() ? 'Transmitiendo datos con el Servidor Central...' : (isOnline() ? (pendingCount() > 0 ? 'Tienes ' + pendingCount() + ' operaciones listas para sincronizar' : 'Todo sincronizado • Base de datos al día') : 'Modo Fuera de Línea • Los datos se guardan en esta tableta') }}
             </h2>
-            <p class="hero-sync-sub-diag font-body">
+            <p class="hero-sync-sub-diag">
               <span>📡 Estado: <strong>{{ isOnline() ? 'Conectado al WMS Central' : 'Sin señal WiFi' }}</strong></span>
               <span class="diag-dot">•</span>
               <span>Último envío: <strong>{{ lastSyncTime() ? formatTime(lastSyncTime()!.toISOString()) : 'Al iniciar' }}</strong></span>
@@ -180,30 +186,27 @@
             type="button"
             id="btn-trigger-manual-sync"
             (click)="manualSync()"
-            class="btn-master-sync font-display"
+            class="btn-master-sync"
             [disabled]="!isOnline() || pendingCount() === 0"
             title="Sincronizar todas las operaciones pendientes ahora">
             <span class="material-symbols-outlined text-2xl">cloud_sync</span>
             <div class="btn-sync-text-col">
-              <span class="btn-sync-title font-black">SINCRONIZAR AHORA</span>
+              <span class="btn-sync-title">SINCRONIZAR AHORA</span>
               <span class="btn-sync-sub font-mono">{{ pendingCount() }} operaciones pendientes</span>
             </div>
             <span class="material-symbols-outlined ml-auto text-xl">arrow_forward</span>
           </button>
         }
       </div>
-
     </div>
-
   </section>
 
   <!-- ── 4. LISTADO DIRECTO DE TRANSACCIONES EN COLA (FIFO) ─────────── -->
   <section class="sync-queue-section" aria-label="Cola FIFO">
-    
     <div class="section-header-row">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-xl text-amber-500">pending_actions</span>
-        <h2 class="section-title font-display font-extrabold">Operaciones en Cola (Pendientes de Subir)</h2>
+        <h2 class="section-title">Operaciones en Cola (Pendientes de Subir)</h2>
       </div>
 
       <span class="section-badge-counter font-mono font-bold">
@@ -214,10 +217,8 @@
     <div class="sync-cards-list">
       @for (item of queue(); track item.id; let idx = $index) {
         <article class="sync-item-card" [class.card--has-retries]="item.retries > 0">
-          
           <!-- Encabezado de la Tarjeta -->
           <div class="item-card-top-row">
-            
             <div class="item-tags-wrap">
               <!-- Índice de orden FIFO -->
               <span class="fifo-index-badge font-mono font-black">#{{ idx + 1 }}</span>
@@ -263,27 +264,24 @@
                 <span class="material-symbols-outlined text-base">delete</span>
               </button>
             </div>
-
           </div>
 
           <!-- Cuerpo: Título y Detalle -->
           <div class="item-card-body">
-            <h3 class="item-title font-display font-extrabold">{{ item.title }}</h3>
-            <p class="item-summary font-body">{{ item.payloadSummary }}</p>
+            <h3 class="item-title">{{ item.title }}</h3>
+            <p class="item-summary">{{ item.payloadSummary }}</p>
           </div>
-
         </article>
       } @empty {
         <div class="sync-empty-box">
           <div class="empty-icon-ring">
             <span class="material-symbols-outlined text-3xl text-emerald-500">cloud_done</span>
           </div>
-          <h3 class="empty-title font-display font-extrabold">Todo Sincronizado</h3>
-          <p class="empty-sub font-body">No hay transacciones pendientes en esta tableta. Todos los datos están en el WMS central.</p>
+          <h3 class="empty-title">Todo Sincronizado</h3>
+          <p class="empty-sub">No hay transacciones pendientes en esta tableta. Todos los datos están en el WMS central.</p>
         </div>
       }
     </div>
-
   </section>
 
   <!-- ── 5. HISTORIAL DE SINCRONIZACIONES RECIENTES ──────────────────── -->
@@ -292,7 +290,7 @@
       <div class="section-header-row">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-xl text-emerald-500">history</span>
-          <h2 class="section-title font-display font-extrabold">Historial Reciente (Transmitido OK)</h2>
+          <h2 class="section-title">Historial Reciente (Transmitido OK)</h2>
         </div>
         <span class="section-badge-counter font-mono font-bold">{{ syncedHistory().length }} registradas</span>
       </div>
@@ -304,7 +302,7 @@
               <span class="material-symbols-outlined text-emerald-500 text-lg flex-shrink-0">check_circle</span>
               <div class="history-item-info-col min-w-0">
                 <div class="history-meta-row">
-                  <span class="history-title font-display font-extrabold">{{ hist.title }}</span>
+                  <span class="history-title">{{ hist.title }}</span>
                   <span class="history-time-tag font-mono">{{ formatTime(hist.timestamp) }}</span>
                 </div>
                 <p class="history-summary font-body text-xs">{{ hist.payloadSummary }}</p>

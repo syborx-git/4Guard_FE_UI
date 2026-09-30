@@ -14,9 +14,9 @@
   flex-direction: column;
   gap: 1.25rem;
   width: 100%;
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 1rem 1.25rem 0.5rem;
   box-sizing: border-box;
   font-family: var(--font-body);
   color: var(--text-primary);
@@ -94,17 +94,27 @@
 
 /* ── 1. Sección Superior: Terminal Card & Hero Banner ─────────── */
 .rf-terminal-info-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.32);
+  border-top: 3.5px solid var(--gold);
   border-radius: 18px;
   padding: 1.25rem 1.5rem;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
   transition: all 200ms ease;
+}
+
+:host-context(.theme-dark) .rf-terminal-info-card,
+:host-context(.dark) .rf-terminal-info-card,
+:host-context([data-theme='dark']) .rf-terminal-info-card {
+  background: linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.24);
+  border-top: 3.5px solid var(--gold);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 .rf-card-glow-bg {
@@ -379,9 +389,15 @@
 /* ── 2. Grid de Módulos Operativos (Tarjetas Ejecutivas con Degradado Dorado) ───── */
 .rf-modules-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.15rem;
   width: 100%;
+}
+
+@media (min-width: 1100px) {
+  .rf-modules-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -610,15 +626,25 @@
 
 /* ── 3. Barra de Utilidades y Hardware ────────────────────────── */
 .rf-hardware-toolbar {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.32);
+  border-top: 3.5px solid var(--gold);
   border-radius: 18px;
   padding: 0.95rem 1.35rem;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 0.85rem;
+}
+
+:host-context(.theme-dark) .rf-hardware-toolbar,
+:host-context(.dark) .rf-hardware-toolbar,
+:host-context([data-theme='dark']) .rf-hardware-toolbar {
+  background: linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.24);
+  border-top: 3.5px solid var(--gold);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 @media (min-width: 960px) {

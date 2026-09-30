@@ -77,13 +77,15 @@
 .qm-container {
   background-color: var(--qm-bg-page);
   color: var(--qm-text-primary);
-  padding: 1.25rem 1.5rem 2.5rem;
+  padding: 1rem 1.25rem 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 1400px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
-  min-height: 100dvh;
+  min-height: 100%;
 }
 
 /* ── 1. Header & Telemetría ───────────────────────────────────────────── */

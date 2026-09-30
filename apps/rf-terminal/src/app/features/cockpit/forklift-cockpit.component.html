@@ -15,23 +15,33 @@
         type="button"
         (click)="goToMenu()"
         class="btn-back-menu"
-        title="Volver al Menú Principal">
+        title="Volver al Menú Principal"
+        aria-label="Volver">
         <span class="material-symbols-outlined text-xl">arrow_back</span>
-        <span class="hidden sm:inline">Menú</span>
       </button>
+
+      <!-- Escudo / Icono Táctico -->
+      <div class="cockpit-icon-wrap">
+        <span class="material-symbols-outlined cockpit-header-icon">precision_manufacturing</span>
+      </div>
 
       <div class="cockpit-title-wrap">
         <div class="cockpit-badge">
           <span class="badge-dot-live"></span>
-          <span>Cockpit Táctico</span>
+          <span>Terminal RF</span>
+          <span class="eyebrow-sep">•</span>
+          <span class="eyebrow-gold">Cockpit Táctico</span>
+          <span class="eyebrow-sep">•</span>
+          <span>Movimientos Unificados</span>
         </div>
         <h1 class="cockpit-title">Panel de Movimientos Unificados</h1>
+        <p class="cockpit-subtitle">Gestión integral de descargas Inbound, reubicaciones Putaway y cargas de salida.</p>
       </div>
     </div>
 
     <!-- Telemetría de Operador & Acciones Rápidas -->
     <div class="topbar-right">
-      <div class="telemetry-chip lease-chip">
+      <div class="telemetry-chip lease-chip" title="Operador Asignado">
         <span class="material-symbols-outlined text-emerald-500 text-lg">verified_user</span>
         <div class="telemetry-text">
           <span class="telemetry-label">Operador</span>

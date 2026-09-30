@@ -31,13 +31,13 @@
     </div>
   </div>
 
-  <!-- ── 2. Lista de Inspecciones en Andén ──────────────────────────────────── -->
-  <div class="verif-grid">
+  <!-- ── 2. Grid de Tarjetas Ejecutivas de Verificaciones F01 ──────────────── -->
+  <div class="executive-cards-grid">
     @for (ver of filteredVerifications(); track ver.id) {
-      <div class="verif-card" [class.verif-card--approved]="ver.status === 'APROBADO'" [class.verif-card--rejected]="ver.status === 'RECHAZADO'">
+      <div class="exec-card exec-card--verif" [class.exec-card--approved]="ver.status === 'APROBADO'" [class.exec-card--rejected]="ver.status === 'RECHAZADO'">
         
-        <div class="card-header">
-          <div class="card-title-group">
+        <div class="exec-card__header">
+          <div class="exec-tags-group">
             <span class="folio-tag">{{ ver.folio }}</span>
             <span class="standard-code font-mono">{{ ver.controlNumber }} Rev. {{ ver.revisionNumber }}</span>
           </div>
@@ -46,29 +46,26 @@
           </span>
         </div>
 
-        <div class="card-body">
-          <h3 class="product-title">{{ ver.productDescription }}</h3>
+        <div class="exec-card__body">
+          <h3 class="exec-title">{{ ver.productDescription }}</h3>
 
-          <div class="specs-grid">
-            <div class="spec-cell">
-              <span class="spec-label">Remisión:</span>
-              <strong class="spec-val font-mono">{{ ver.remisionNumber }}</strong>
+          <div class="exec-chips-row">
+            <span class="code-chip font-mono"><strong>Remisión:</strong> {{ ver.remisionNumber }}</span>
+            <span class="code-chip font-mono highlight-ramp"><strong>Andén:</strong> {{ ver.ramp }}</span>
+          </div>
+
+          <div class="exec-meta-grid">
+            <div class="meta-item">
+              <span class="meta-lbl">Cliente / Planta:</span>
+              <strong class="meta-val truncate">{{ ver.clientName }}</strong>
             </div>
-            <div class="spec-cell">
-              <span class="spec-label">Rampa / Andén:</span>
-              <strong class="spec-val highlight-ramp font-mono">{{ ver.ramp }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Cliente / Planta:</span>
-              <strong class="spec-val truncate">{{ ver.clientName }}</strong>
-            </div>
-            <div class="spec-cell">
-              <span class="spec-label">Fecha y Hora:</span>
-              <strong class="spec-val font-mono">{{ ver.date }} {{ ver.time }}</strong>
+            <div class="meta-item">
+              <span class="meta-lbl">Fecha y Hora:</span>
+              <strong class="meta-val font-mono">{{ ver.date }} {{ ver.time }}</strong>
             </div>
           </div>
 
-          <!-- Criterios evaluados -->
+          <!-- Criterios Evaluados Resumen -->
           <div class="criteria-summary-row">
             <span class="summary-pill summary-pill--ok">
               ✔ {{ ver.transportCriteria.length }} Criterios Transporte OK
@@ -86,11 +83,26 @@
           }
         </div>
 
-        <div class="card-footer">
-          <span class="auditor-meta">
-            ✍️ Auditor: <strong>{{ ver.elaboratedBy.name }}</strong>
-          </span>
-          <span class="signed-tag">Firmado digitalmente</span>
+        <div class="exec-card__actions">
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--inspect"
+            title="Ver Formato Completo F01">
+            <span class="material-symbols-outlined text-sm">assignment</span>
+            <span>Ver Formato F01</span>
+          </button>
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--tag"
+            title="Imprimir Sello de Andén">
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Imprimir</span>
+          </button>
+        </div>
+
+        <div class="exec-card__footer">
+          <span class="auditor-meta">✍️ Auditor: <strong>{{ ver.elaboratedBy.name }}</strong></span>
+          <span class="signed-tag">Firmado</span>
         </div>
 
       </div>
@@ -113,7 +125,7 @@
             <span class="material-symbols-outlined modal-icon text-amber-500">fact_check</span>
             <div>
               <h2>Verificación de Transporte en Andén</h2>
-              <span class="modal-subtitle">Formato Oficial F01-PO-GC-8.6-03 Rev. 03</span>
+              <span class="modal-subtitle font-mono">Formato Oficial F01-PO-GC-8.6-03 Rev. 03</span>
             </div>
           </div>
           <button type="button" class="btn-close-modal" (click)="closeModal()">
@@ -123,7 +135,6 @@
 
         <div class="modal-body">
           
-          <!-- Datos de Encabezado -->
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">No. Remisión / Folio:</label>
@@ -143,7 +154,6 @@
             </div>
           </div>
 
-          <!-- Dictamen en Vivo -->
           <div class="live-verdict-bar" [ngClass]="'verdict--' + computedStatus().toLowerCase()">
             <span class="verdict-label">Dictamen Automático:</span>
             <strong class="verdict-val">

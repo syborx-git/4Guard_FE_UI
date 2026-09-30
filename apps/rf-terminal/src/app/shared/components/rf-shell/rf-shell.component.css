@@ -320,6 +320,8 @@
   flex: 1;
   overflow-y: auto;
   padding-bottom: 4.75rem; /* Espacio para barra inferior */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── 3. Bottom Navigation Bar (Homologación SDD Pill Nav) ──────── */
