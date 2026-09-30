@@ -77,6 +77,9 @@ export class AuthService {
     } else if (email.includes('op')) {
       role = UserRole.WAREHOUSE_OPERATOR;
       fullName = 'Roberto Sánchez';
+    } else if (email.includes('security') || email.includes('guard') || email.includes('vigilancia')) {
+      role = UserRole.SECURITY_GUARD;
+      fullName = 'Carlos Mendoza (Vigilancia)';
     } else if (email.includes('auditor')) {
       role = UserRole.AUDITOR;
       fullName = 'David Salazar';
@@ -196,6 +199,43 @@ export class AuthService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Cambia el rol del usuario activo para pruebas rápidas de interfaz (RBAC demo switcher).
+   */
+  switchRoleForTesting(role: UserRole, customName?: string): void {
+    const roleNames: Record<UserRole, string> = {
+      [UserRole.WAREHOUSE_OPERATOR]: 'Roberto Sánchez',
+      [UserRole.SECURITY_GUARD]:     'Carlos Mendoza',
+      [UserRole.QM_INSPECTOR]:        'Dra. Elena Ramos',
+      [UserRole.DOCK_SUPERVISOR]:    'Miguel Torres',
+      [UserRole.WAREHOUSE_MANAGER]:  'Sofía Ramírez',
+      [UserRole.AUDITOR]:            'Lic. David Morales',
+      [UserRole.ADMIN]:              'Ing. Carlos Herrera',
+      [UserRole.CLIENT]:             'Representante Nestlé',
+    };
+
+    const updatedUser: User = {
+      id: `u-${role.toLowerCase()}`,
+      fullName: customName || roleNames[role] || 'Usuario Operativo',
+      email: `${role.toLowerCase().replace('role_', '')}@4guard.mx`,
+      role,
+      branchId: 'BR-MTY-01',
+      branchName: 'CEDIS Central Monterrey',
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const dummyResponse: AuthResponse = {
+      accessToken: `mock-jwt-token-for-${role}-${Date.now()}`,
+      refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
+      expiresIn: 3600,
+      user: updatedUser,
+    };
+
+    this.saveSession(dummyResponse);
   }
 
   /**

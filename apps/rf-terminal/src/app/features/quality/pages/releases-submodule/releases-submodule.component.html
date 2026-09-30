@@ -1,0 +1,240 @@
+<div class="submodule-container">
+
+  <!-- ── 1. Panel de Control ───────────────────────────────────────────────── -->
+  <div class="control-panel">
+    <div class="search-input-wrap">
+      <span class="material-symbols-outlined search-icon">search</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscar liberaciones por Folio, SKU o Lote..."
+        class="search-input" />
+      @if (searchTerm()) {
+        <button type="button" class="btn-clear-search" (click)="searchTerm.set('')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </div>
+
+    <div class="actions-row">
+      <select [(ngModel)]="destinationFilter" class="filter-select">
+        <option value="ALL">Todos los Destinos (Distribución, Merma, Devolución)</option>
+        <option value="DISTRIBUTION">1. Liberado para Distribución</option>
+        <option value="DESTRUCTION">2. Destrucción / Merma</option>
+        <option value="RETURN">3. Devolución a Proveedor</option>
+      </select>
+
+      <button type="button" class="btn-primary-success" (click)="openReleaseModal()">
+        <span class="material-symbols-outlined">verified</span>
+        <span>+ Dictamen Liberación</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 2. Grid de Tarjetas Ejecutivas de Liberaciones ────────────────────── -->
+  <div class="executive-cards-grid">
+    @for (rel of filteredReleases(); track rel.id) {
+      <div class="exec-card exec-card--release">
+        
+        <div class="exec-card__header">
+          <div class="exec-tags-group">
+            <span class="folio-tag folio-tag--success">{{ rel.folio }}</span>
+            <span class="block-ref font-mono">Orig: {{ rel.blockFolio }}</span>
+          </div>
+          <span class="destination-badge" [ngClass]="destinationLabels[rel.destination].badgeClass">
+            <span class="material-symbols-outlined text-xs">{{ destinationLabels[rel.destination].icon }}</span>
+            <span>{{ destinationLabels[rel.destination].label }}</span>
+          </span>
+        </div>
+
+        <div class="exec-card__body">
+          <h3 class="exec-title">{{ rel.description }}</h3>
+
+          <div class="exec-chips-row">
+            <span class="code-chip font-mono"><strong>SKU:</strong> {{ rel.sku }}</span>
+            <span class="code-chip font-mono"><strong>Lote:</strong> {{ rel.batchNumber }}</span>
+          </div>
+
+          <div class="exec-meta-grid">
+            <div class="meta-item">
+              <span class="meta-lbl">Cantidad:</span>
+              <strong class="meta-val text-emerald-500 font-bold">{{ rel.quantity }} {{ rel.unitOfMeasure }}</strong>
+            </div>
+            <div class="meta-item">
+              <span class="meta-lbl">Autorizado Por:</span>
+              <strong class="meta-val truncate">{{ rel.authorizedByName }}</strong>
+            </div>
+          </div>
+
+          <div class="support-info-box">
+            <span class="support-label">Soporte Documental:</span>
+            <p class="support-subject truncate">{{ rel.supportSubject }}</p>
+          </div>
+
+          @if (rel.decisionNotes) {
+            <p class="decision-notes">
+              <span class="material-symbols-outlined text-xs">gavel</span>
+              <span>{{ rel.decisionNotes }}</span>
+            </p>
+          }
+        </div>
+
+        <div class="exec-card__actions">
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--release"
+            title="Ver Acta o Certificado de Liberación">
+            <span class="material-symbols-outlined text-sm">description</span>
+            <span>Ver Dictamen</span>
+          </button>
+          <button 
+            type="button" 
+            class="btn-exec-action btn-exec-action--tag"
+            title="Reubicación automática">
+            <span class="material-symbols-outlined text-sm">forklift</span>
+            <span>Reubicar</span>
+          </button>
+        </div>
+
+        <div class="exec-card__footer">
+          <span class="lib-meta">👤 {{ rel.releasedByUserName }}</span>
+          <span class="lib-date">🕒 {{ rel.releasedAt }}</span>
+        </div>
+
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <span class="material-symbols-outlined empty-icon">check_circle</span>
+        <h3>Sin Liberaciones Registradas</h3>
+        <p>No se encontraron registros de liberación bajo los filtros actuales.</p>
+      </div>
+    }
+  </div>
+
+  <!-- ── 3. Modal de Dictamen de Liberación ─────────────────────────────────── -->
+  @if (showReleaseModal()) {
+    <div class="modal-backdrop" (click)="closeReleaseModal()">
+      <div class="modal-sheet animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="material-symbols-outlined modal-icon text-emerald-500">verified</span>
+            <h2>Dictamen Formal de Liberación</h2>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeReleaseModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          
+          <div class="form-group">
+            <label class="form-label">Seleccionar Lote / Tarima Bloqueada:</label>
+            <select [(ngModel)]="selectedBlockId" class="form-select">
+              @for (block of eligibleBlocks(); track block.id) {
+                <option [value]="block.id">
+                  {{ block.folio }} — {{ block.sku }} (Lote: {{ block.batchNumber }}) [{{ block.quantity }} {{ block.unitOfMeasure }}]
+                </option>
+              }
+            </select>
+          </div>
+
+          <!-- Selección de Destino (3 opciones táctiles) -->
+          <div class="destination-select-section">
+            <label class="form-label">Destino Final del Dictamen:</label>
+            <div class="dest-cards-grid">
+              
+              <button
+                type="button"
+                class="dest-btn"
+                [class.dest-btn--active]="selectedDestination() === 'DISTRIBUTION'"
+                (click)="selectedDestination.set('DISTRIBUTION')">
+                <span class="material-symbols-outlined dest-icon text-emerald-500">check_circle</span>
+                <div class="dest-info">
+                  <strong>1. Distribución</strong>
+                  <span>Apto para stock y picking</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="dest-btn"
+                [class.dest-btn--active]="selectedDestination() === 'RETURN'"
+                (click)="selectedDestination.set('RETURN')">
+                <span class="material-symbols-outlined dest-icon text-amber-500">assignment_return</span>
+                <div class="dest-info">
+                  <strong>2. Devolución</strong>
+                  <span>Retorno a proveedor / planta</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="dest-btn"
+                [class.dest-btn--active]="selectedDestination() === 'DESTRUCTION'"
+                (click)="selectedDestination.set('DESTRUCTION')">
+                <span class="material-symbols-outlined dest-icon text-rose-500">delete_forever</span>
+                <div class="dest-info">
+                  <strong>3. Destrucción</strong>
+                  <span>Baja y merma física</span>
+                </div>
+              </button>
+
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Tipo de Autorizador:</label>
+              <select [(ngModel)]="authorizerType" class="form-select">
+                <option value="QUALITY_4GUARD">Calidad 4GUARD WMS</option>
+                <option value="CLIENT">Cliente Propietario</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Soporte Documental:</label>
+              <select [(ngModel)]="supportType" class="form-select">
+                <option value="FORMAL_ACT">Dictamen / Acta Formal</option>
+                <option value="EMAIL">Correo Electrónico Oficial</option>
+                <option value="ELECTRONIC_MEDIA">Medio Electrónico / Ticket</option>
+                <option value="OTHER">Otro Soporte</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nombre del Autorizador:</label>
+              <input type="text" [(ngModel)]="authorizedByName" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Puesto / Cargo:</label>
+              <input type="text" [(ngModel)]="authorizedByPosition" class="form-input" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Asunto / Referencia del Soporte:</label>
+            <input type="text" [(ngModel)]="supportSubject" class="form-input" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Notas del Dictamen y Justificación:</label>
+            <textarea [(ngModel)]="decisionNotes" class="form-textarea" placeholder="Escribe el dictamen técnico..."></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeReleaseModal()">Cancelar</button>
+          <button type="button" class="btn-submit-success" (click)="submitRelease()">
+            <span class="material-symbols-outlined">verified</span>
+            <span>Confirmar Dictamen de Liberación</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

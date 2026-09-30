@@ -1,9 +1,11 @@
 /**
  * @file forklift-cockpit.component.ts
  * @description Cockpit Unificado del Montacarguista para Terminal RF PWA.
- * Flujo táctico: Seleccionar tarjeta -> Ver información concreta ->
- * Iniciar -> Abre modal de lectura con cámara en vivo (getUserMedia),
- * retícula animada, pistola láser física o escaneo por toque en tableta.
+ * Flujo Inbound Dinámico:
+ * - El Administrador define Remisión, Producto y Lotes Habilitados.
+ * - El Montacarguista descarga el tráiler y escanea tarima por tarima,
+ *   seleccionando o intercambiando el lote en caliente conforme las retira.
+ * - Al terminar el tráiler, concluye la maniobra física (DISCHARGED) enviando el manifiesto a Mesa de Control.
  */
 
 import {
@@ -15,15 +17,16 @@ import {
   OnDestroy,
   ElementRef,
   ViewChild,
-  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthState } from '@4guard/shared-core';
+import { AuthState, ToastService } from '@4guard/shared-core';
 import {
   ForkliftMissionService,
   ForkliftMission,
+  InboundPalletItem,
+  AuthorizedLotItem,
   CockpitFilter,
   ScanFeedback,
 } from '../../core/services/forklift-mission.service';
@@ -40,10 +43,12 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly missionService = inject(ForkliftMissionService);
   protected readonly audioService   = inject(AudioFeedbackService);
   protected readonly authState      = inject(AuthState);
+  protected readonly toast          = inject(ToastService);
   private readonly router           = inject(Router);
 
   @ViewChild('modalLaserInput') modalLaserInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('cameraVideo') cameraVideoRef?: ElementRef<HTMLVideoElement>;
+  @ViewChild('laserHudBody') laserHudBodyRef?: ElementRef<HTMLDivElement>;
 
   // ─── Modal 1: Ficha de Información Concreta / Plan de Misión ───────────────
   protected readonly selectedMissionForDetail = signal<ForkliftMission | null>(null);
@@ -58,6 +63,8 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly cameraLoading = signal(false);
   protected readonly cameraError = signal<string | null>(null);
   protected readonly useCameraOverlay = signal(true);
+  protected readonly currentFacingMode = signal<'environment' | 'user'>('environment');
+  protected readonly availableCamerasCount = signal<number>(1);
   private mediaStream: MediaStream | null = null;
   private barcodeDetectorTimer: any = null;
 
@@ -71,6 +78,13 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly showCelebrationModal = signal(false);
   protected readonly justCompletedMission = signal<ForkliftMission | null>(null);
 
+  // ─── Modal 5: Intercambio / Alta de Nuevo Lote en Andén ──────────────────
+  protected readonly showLotSwapModal = signal(false);
+  protected readonly selectedPalletForEdit = signal<InboundPalletItem | null>(null);
+  protected readonly newCustomLotInput = signal('');
+  protected readonly newCustomPiecesInput = signal(48);
+  protected readonly lotSwapReasonInput = signal('Embarque Mixto / Multi-Lote de Proveedor');
+
   // ─── Datos Computados ─────────────────────────────────────────────────────
   protected readonly activeMission = this.missionService.activeMission;
   protected readonly queuedMissions = this.missionService.queuedMissions;
@@ -82,8 +96,61 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     return this.authState.userFullName() || this.authState.user()?.fullName || 'Roberto Sánchez';
   });
 
+  /** Lista dinámica de tarimas escaneadas en la descarga */
+  protected readonly inboundPalletsList = computed<InboundPalletItem[]>(() => {
+    const mission = this.activeMission();
+    if (!mission || mission.type !== 'INBOUND_UNLOAD' || !mission.pallets) {
+      return [];
+    }
+    return mission.pallets;
+  });
+
+  /** Total de tarimas físicas descargadas en andén */
+  protected readonly inboundScannedCount = computed<number>(() => {
+    return this.inboundPalletsList().length;
+  });
+
+  /** Total de piezas acumuladas en las tarimas descargadas */
+  protected readonly inboundTotalPieces = computed<number>(() => {
+    return this.inboundPalletsList().reduce((acc, p) => acc + p.pieces, 0);
+  });
+
+  /** Lotes autorizados por Mesa de Control */
+  protected readonly availableLotsList = computed<AuthorizedLotItem[]>(() => {
+    return this.activeMission()?.availableLots || [];
+  });
+
+  /** Lote activo seleccionado actualmente para la siguiente tarima a escanear */
+  protected readonly activeScanningLot = computed<string>(() => {
+    return this.activeMission()?.activeScanningLot || this.activeMission()?.lotNumber || 'LOT-2026-X99';
+  });
+
+  /** Número consecutivo de la siguiente tarima a descargar */
+  protected readonly nextPalletNumber = computed<number>(() => {
+    return this.inboundScannedCount() + 1;
+  });
+
+  /** Resumen de desglose de tarimas por lote para el reporte */
+  protected readonly lotBreakdownSummary = computed<Array<{ lotNumber: string; palletCount: number; totalPieces: number }>>(() => {
+    const mission = this.justCompletedMission() || this.activeMission();
+    const list = (mission && mission.pallets && mission.pallets.length > 0)
+      ? mission.pallets
+      : this.inboundPalletsList();
+    const map = new Map<string, { palletCount: number; totalPieces: number }>();
+    for (const p of list) {
+      const existing = map.get(p.lotNumber) || { palletCount: 0, totalPieces: 0 };
+      existing.palletCount += 1;
+      existing.totalPieces += p.pieces;
+      map.set(p.lotNumber, existing);
+    }
+    return Array.from(map.entries()).map(([lotNumber, data]) => ({
+      lotNumber,
+      palletCount: data.palletCount,
+      totalPieces: data.totalPieces,
+    }));
+  });
+
   ngOnInit(): void {
-    // Escuchar eventos globales de escaneo disparados por hardware o simulador
     window.addEventListener('rf:barcode-scanned', this.handleGlobalBarcodeScanned as EventListener);
   }
 
@@ -121,15 +188,16 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.scannedInput.set('');
     this.audioService.playSuccess();
 
-    // Enfocar input para lectura inmediata con pistola láser
+    await this.startCamera();
+
     setTimeout(() => {
       if (this.modalLaserInputRef?.nativeElement) {
-        this.modalLaserInputRef.nativeElement.focus();
+        this.modalLaserInputRef.nativeElement.focus({ preventScroll: true });
       }
-    }, 150);
-
-    // Iniciar cámara de la tableta automáticamente
-    await this.startCamera();
+      if (this.laserHudBodyRef?.nativeElement) {
+        this.laserHudBodyRef.nativeElement.scrollTop = 0;
+      }
+    }, 120);
   }
 
   closeScanningModal(): void {
@@ -139,15 +207,28 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   }
 
   // ─── Gestión de Cámara en Vivo (Tableta / Móvil) ──────────────────────────
-  async startCamera(): Promise<void> {
+  async startCamera(facingMode?: 'environment' | 'user'): Promise<void> {
+    const mode = facingMode || this.currentFacingMode();
+    this.currentFacingMode.set(mode);
     this.cameraError.set(null);
     this.cameraLoading.set(true);
 
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach((track) => track.stop());
+      this.mediaStream = null;
+    }
+
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevs = devices.filter((d) => d.kind === 'videoinput');
+          this.availableCamerasCount.set(videoDevs.length);
+        } catch {}
+
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: 'environment' }, // Cámara trasera preferida en tableta
+            facingMode: { ideal: mode },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -164,6 +245,9 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
             this.cameraVideoRef.nativeElement.play().catch(() => {});
             this.initBarcodeDetector();
           }
+          if (this.laserHudBodyRef?.nativeElement) {
+            this.laserHudBodyRef.nativeElement.scrollTop = 0;
+          }
         }, 100);
       } else {
         this.cameraActive.set(false);
@@ -175,6 +259,13 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
       this.cameraLoading.set(false);
       this.cameraError.set('Permiso de cámara no concedido o no detectada. Puedes escanear con láser o toque.');
     }
+  }
+
+  async switchCamera(): Promise<void> {
+    const newMode = this.currentFacingMode() === 'environment' ? 'user' : 'environment';
+    this.audioService.playSuccess();
+    if (navigator.vibrate) navigator.vibrate(25);
+    await this.startCamera(newMode);
   }
 
   stopCamera(): void {
@@ -201,7 +292,6 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Detector nativo de código de barras con fallback a toque */
   private initBarcodeDetector(): void {
     if (typeof (window as any).BarcodeDetector !== 'undefined') {
       try {
@@ -244,23 +334,84 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
       const feedback = this.missionService.processScan(code);
       this.isProcessingScan.set(false);
 
-      // Reenfocar input tras escaneo
       if (this.modalLaserInputRef?.nativeElement) {
-        this.modalLaserInputRef.nativeElement.focus();
+        this.modalLaserInputRef.nativeElement.focus({ preventScroll: true });
       }
 
-      if (feedback.phase === 'DROP_COMPLETED') {
+      if (feedback.success) {
+        this.toast.success(feedback.message, 'ESCANEO VÁLIDO');
+      } else {
+        this.toast.error(feedback.message, 'ERROR DE ESCANEO');
+      }
+
+      if (feedback.phase === 'DISCHARGE_FINISHED' || (feedback.phase === 'DROP_COMPLETED' && activeBefore?.type !== 'INBOUND_UNLOAD')) {
         if (activeBefore) {
           this.stopCamera();
           this.justCompletedMission.set(activeBefore);
           this.showScanningModal.set(false);
           this.showCelebrationModal.set(true);
+          this.toast.success(`Maniobra ${activeBefore.folio} completada y turnada a Mesa de Control.`, '¡MISIÓN CONCLUIDA!');
         }
       }
     }, 150);
   }
 
-  // ─── 5. Escaneo por Toque en Cámara / Botones Rápidos ─────────────────────
+  // ─── 5. Control Dinámico de Lotes en Andén (Regla ADR-017 / ADR-020) ──────
+  
+  /** Cambia el lote activo de escaneo de entre los lotes autorizados por Admin */
+  selectScanningLot(lotNumber: string): void {
+    const current = this.activeMission();
+    if (!current) return;
+    this.missionService.setActiveScanningLot(current.id, lotNumber);
+  }
+
+  /** Abre el modal para agregar un lote nuevo / no previsto o editar lote de tarima */
+  openCustomLotModal(pallet?: InboundPalletItem): void {
+    const current = this.activeMission();
+    if (!current) return;
+
+    if (pallet) {
+      this.selectedPalletForEdit.set(pallet);
+      this.newCustomLotInput.set(pallet.lotNumber);
+      this.newCustomPiecesInput.set(pallet.pieces);
+    } else {
+      this.selectedPalletForEdit.set(null);
+      this.newCustomLotInput.set('');
+      this.newCustomPiecesInput.set(current.defaultPiecesPerPallet || 48);
+    }
+
+    this.lotSwapReasonInput.set('Embarque Mixto / Multi-Lote de Proveedor');
+    this.showLotSwapModal.set(true);
+    this.audioService.playSuccess();
+  }
+
+  closeCustomLotModal(): void {
+    this.showLotSwapModal.set(false);
+    this.selectedPalletForEdit.set(null);
+  }
+
+  confirmCustomLot(): void {
+    const current = this.activeMission();
+    const lot = this.newCustomLotInput().trim().toUpperCase();
+    const pzas = Number(this.newCustomPiecesInput()) || 48;
+    const reason = this.lotSwapReasonInput();
+
+    if (!current || !lot) return;
+
+    const palletToEdit = this.selectedPalletForEdit();
+    if (palletToEdit) {
+      // Editar tarima ya escaneada
+      this.missionService.swapPalletLot(current.id, palletToEdit.id, lot, pzas, reason);
+    } else {
+      // Agregar como nuevo lote activo para las siguientes tarimas
+      this.missionService.addCustomLot(current.id, lot, reason);
+      this.missionService.setCurrentPendingPieces(current.id, pzas);
+    }
+
+    this.closeCustomLotModal();
+  }
+
+  // ─── 6. Escaneo por Toque en Cámara / Botones Rápidos ─────────────────────
   onCameraFeedTapped(): void {
     const current = this.activeMission();
     if (!current) return;
@@ -275,7 +426,9 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   simulateModalScanPick(): void {
     const current = this.activeMission();
     if (current) {
-      this.executeScan(current.ssccBarcode);
+      const nextNum = this.nextPalletNumber();
+      const code = `SSCC-1750123450000000${String(nextNum).padStart(2, '0')}`;
+      this.executeScan(code);
     }
   }
 
@@ -290,7 +443,20 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.executeScan('CODIGO-ERRONEO-999');
   }
 
-  // ─── 6. Acciones sobre Misiones ──────────────────────────────────────────
+  // ─── 7. Finalización Formal de Descarga Física (DISCHARGED) ───────────────
+  finishDischargeManually(): void {
+    const current = this.activeMission();
+    if (!current) return;
+
+    this.stopCamera();
+    this.missionService.finishInboundDischarge(current.id);
+    this.justCompletedMission.set(current);
+    this.showScanningModal.set(false);
+    this.showCelebrationModal.set(true);
+    this.audioService.playSuccess();
+  }
+
+  // ─── 8. Acciones sobre Misiones ──────────────────────────────────────────
   postponeCurrentMission(): void {
     const current = this.activeMission();
     if (current) {
@@ -300,7 +466,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ─── 7. Gestión de Anomalías ─────────────────────────────────────────────
+  // ─── 9. Gestión de Anomalías ─────────────────────────────────────────────
   openIncidentModal(): void {
     this.audioService.playWarning();
     this.incidentType.set('Pallet Inclinado / Colapsado');
@@ -334,13 +500,13 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.closeMissionDetail();
   }
 
-  // ─── 8. Modal de Celebración ─────────────────────────────────────────────
+  // ─── 10. Modal de Celebración ────────────────────────────────────────────
   closeCelebrationModal(): void {
     this.showCelebrationModal.set(false);
     this.justCompletedMission.set(null);
   }
 
-  // ─── 9. Reinicio Demo y Menú ─────────────────────────────────────────────
+  // ─── 11. Reinicio Demo y Menú ────────────────────────────────────────────
   resetDemo(): void {
     this.stopCamera();
     this.missionService.resetDemoQueue();
