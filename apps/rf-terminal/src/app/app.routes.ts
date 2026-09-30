@@ -32,6 +32,14 @@ export const rfRoutes: Routes = [
         title: '4GUARD Terminal — Menú',
       },
 
+      // Cockpit Unificado del Montacarguista (Descarga, Reubicación, Carga)
+      {
+        path: 'cockpit',
+        loadComponent: () =>
+          import('./features/cockpit/forklift-cockpit.component').then((m) => m.ForkliftCockpitComponent),
+        title: '4GUARD Terminal — Cockpit Montacarguista',
+      },
+
       // Recepción de mercancía (andén)
       {
         path: 'receiving',
@@ -82,6 +90,14 @@ export const rfRoutes: Routes = [
         loadChildren: () =>
           import('./features/sync/sync.routes').then((m) => m.syncRoutes),
         title: '4GUARD Terminal — Sincronización',
+      },
+
+      // Seguridad y Caseta de Vigilancia
+      {
+        path: 'security',
+        loadChildren: () =>
+          import('./features/security/security.routes').then((m) => m.securityRoutes),
+        title: '4GUARD Terminal — Seguridad & Caseta',
       },
 
       // Reporte de anomalía

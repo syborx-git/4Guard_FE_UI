@@ -1,0 +1,893 @@
+<!-- ================================================================
+     Cockpit Unificado del Montacarguista — Terminal RF PWA
+     Flujo Táctico: Seleccionar Tarjeta -> Ver Información Concreta ->
+     Iniciar -> Modal HUD con Cámara en Vivo (Tableta/Láser)
+     ================================================================ -->
+<div class="cockpit-workspace">
+
+  <!-- ── 1. BARRA SUPERIOR: CONTEXTO OPERATIVO Y TELEMETRÍA ──────────── -->
+  <header class="cockpit-topbar">
+    <div class="topbar-left">
+      <button
+        type="button"
+        (click)="goToMenu()"
+        class="btn-back-menu"
+        title="Volver al Menú Principal">
+        <span class="material-symbols-outlined text-xl">arrow_back</span>
+        <span class="hidden sm:inline">Menú</span>
+      </button>
+
+      <div class="cockpit-title-wrap">
+        <div class="cockpit-badge">
+          <span class="badge-dot-live"></span>
+          <span>Cockpit Táctico</span>
+        </div>
+        <h1 class="cockpit-title">Panel de Movimientos Unificados</h1>
+      </div>
+    </div>
+
+    <!-- Telemetría de Montacargas & Zone Lease -->
+    <div class="topbar-right">
+      <div class="telemetry-chip vehicle-chip">
+        <span class="material-symbols-outlined text-amber-500 text-lg">forklift</span>
+        <div class="telemetry-text">
+          <span class="telemetry-label">Vehículo</span>
+          <span class="telemetry-val">Crown #07</span>
+        </div>
+      </div>
+
+      <div class="telemetry-chip lease-chip">
+        <span class="material-symbols-outlined text-emerald-500 text-lg">verified_user</span>
+        <div class="telemetry-text">
+          <span class="telemetry-label">Zone Lease</span>
+          <span class="telemetry-val">Pasillo 04 (28m)</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="resetDemo()"
+        class="btn-reset-demo"
+        title="Reiniciar misiones de demostración">
+        <span class="material-symbols-outlined text-lg">restart_alt</span>
+        <span class="hidden md:inline">Reiniciar Demo</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 2. BARRA DE FILTRO CONTEXTUAL (PILLS CON CONTADORES EN VIVO) ─ -->
+  <nav class="filter-pills-bar" aria-label="Filtros de Misión">
+    <!-- Todas -->
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="currentFilter() === 'ALL'"
+      (click)="setFilter('ALL')">
+      <span class="material-symbols-outlined pill-icon">dashboard</span>
+      <span class="pill-label">Todas en Cola</span>
+      <span class="pill-count">{{ counts().all }}</span>
+    </button>
+
+    <!-- Descargas Inbound -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--inbound"
+      [class.active]="currentFilter() === 'INBOUND'"
+      (click)="setFilter('INBOUND')">
+      <span class="material-symbols-outlined pill-icon">download</span>
+      <span class="pill-label">Descargas Inbound</span>
+      <span class="pill-count">{{ counts().inbound }}</span>
+    </button>
+
+    <!-- Reubicaciones Putaway -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--putaway"
+      [class.active]="currentFilter() === 'INTERNAL'"
+      (click)="setFilter('INTERNAL')">
+      <span class="material-symbols-outlined pill-icon">sync_alt</span>
+      <span class="pill-label">Reubicaciones / Putaway</span>
+      <span class="pill-count">{{ counts().internal }}</span>
+    </button>
+
+    <!-- Cargas Outbound -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--outbound"
+      [class.active]="currentFilter() === 'OUTBOUND'"
+      (click)="setFilter('OUTBOUND')">
+      <span class="material-symbols-outlined pill-icon">upload</span>
+      <span class="pill-label">Cargas Salida</span>
+      <span class="pill-count">{{ counts().outbound }}</span>
+    </button>
+
+    <!-- Urgentes -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--urgent"
+      [class.active]="currentFilter() === 'URGENT'"
+      (click)="setFilter('URGENT')">
+      <span class="material-symbols-outlined pill-icon">alarm</span>
+      <span class="pill-label">Urgentes</span>
+      <span class="pill-count pill-count--urgent">{{ counts().urgent }}</span>
+    </button>
+  </nav>
+
+  <!-- ── 3. HERO: TARJETA EJECUTIVA DE MISIÓN ACTIVA (FOCO INMEDIATO) ── -->
+  @if (activeMission(); as mission) {
+    <section
+      class="hero-active-card cursor-pointer"
+      (click)="openMissionDetail(mission)"
+      [ngClass]="{
+        'hero--inbound': mission.type === 'INBOUND_UNLOAD',
+        'hero--putaway': mission.type === 'INTERNAL_PUTAWAY',
+        'hero--outbound': mission.type === 'OUTBOUND_DISPATCH'
+      }">
+
+      <!-- Cabecera de la Tarjeta Hero -->
+      <div class="hero-card-header">
+        <div class="hero-header-left">
+          <!-- Tipo de Movimiento -->
+          <div class="mission-type-badge" [ngClass]="'badge--' + mission.type.toLowerCase()">
+            <span class="material-symbols-outlined">
+              @if (mission.type === 'INBOUND_UNLOAD') { local_shipping }
+              @else if (mission.type === 'INTERNAL_PUTAWAY') { shelves }
+              @else { output }
+            </span>
+            <span>{{ mission.typeLabel }}</span>
+          </div>
+
+          <span class="hero-folio">{{ mission.folio }}</span>
+
+          <div class="hero-arrival-tag">
+            <span class="material-symbols-outlined text-sm">schedule</span>
+            <span>Llegada: {{ mission.arrivalTime }}</span>
+          </div>
+        </div>
+
+        <div class="hero-header-right">
+          <!-- Tag de Prioridad -->
+          @if (mission.priority === 'URGENT') {
+            <div class="sla-urgent-badge">
+              <span class="sla-pulse-dot"></span>
+              <span class="material-symbols-outlined text-sm">emergency</span>
+              <span>SLA: {{ mission.slaCountdownMinutes }} MIN RESTANTES</span>
+            </div>
+          } @else {
+            <div class="sla-normal-badge">
+              <span class="material-symbols-outlined text-sm">timer</span>
+              <span>SLA: {{ mission.slaCountdownMinutes }} min</span>
+            </div>
+          }
+
+          <div class="hero-status-pill" [class.status--drop]="mission.status === 'ACTIVE_DROP'">
+            <span class="status-dot"></span>
+            <span>{{ mission.status === 'ACTIVE_DROP' ? 'Paso 2: Depósito en Destino' : 'Paso 1: Pick en Origen' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BANNER DE RUTA EN ALTO CONTRASTE (ORIGEN ➔ DESTINO) -->
+      <div class="hero-route-flow">
+        <!-- Origen -->
+        <div class="route-point route-origin" [class.route-focus]="mission.status === 'ACTIVE_PICK'">
+          <div class="route-header">
+            <span class="material-symbols-outlined text-base text-amber-500">trip_origin</span>
+            <span class="route-title">1. ORIGEN (RECOGER)</span>
+          </div>
+          <div class="route-location-name">{{ mission.originLocation }}</div>
+          <div class="route-barcode-tag">
+            <span class="material-symbols-outlined text-xs">qr_code</span>
+            <code>{{ mission.originBarcode }}</code>
+          </div>
+        </div>
+
+        <!-- Indicador de Dirección -->
+        <div class="route-connector">
+          <span class="material-symbols-outlined text-2xl">arrow_forward</span>
+        </div>
+
+        <!-- Destino -->
+        <div class="route-point route-destination" [class.route-focus]="mission.status === 'ACTIVE_DROP'">
+          <div class="route-header">
+            <span class="material-symbols-outlined text-base text-emerald-500">location_on</span>
+            <span class="route-title">2. DESTINO (DEPOSITAR)</span>
+          </div>
+          <div class="route-location-name">{{ mission.destinationLocation }}</div>
+          <div class="route-barcode-tag">
+            <span class="material-symbols-outlined text-xs">qr_code</span>
+            <code>{{ mission.destBarcode }}</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- METADATOS DEL PRODUCTO Y TARIMA -->
+      <div class="hero-product-grid">
+        <!-- Producto & SKU -->
+        <div class="meta-box product-box">
+          <div class="meta-box-label">Producto & SKU</div>
+          <div class="product-title">{{ mission.productName }}</div>
+          <div class="product-sku-row">
+            <span class="sku-code">{{ mission.sku }}</span>
+            <span class="lot-code">Lote: {{ mission.lotNumber }}</span>
+          </div>
+        </div>
+
+        <!-- Cantidad & Peso -->
+        <div class="meta-box qty-box">
+          <div class="meta-box-label">Carga / Pallet</div>
+          <div class="qty-highlight">{{ mission.quantity }} {{ mission.unit }}</div>
+          <div class="weight-tag">
+            <span class="material-symbols-outlined text-xs">scale</span>
+            <span>{{ mission.weightKg }} kg</span>
+          </div>
+        </div>
+
+        <!-- SSCC Barcode & Transporte -->
+        <div class="meta-box sscc-box">
+          <div class="meta-box-label">Identificador SSCC Pallet</div>
+          <div class="sscc-barcode-val">{{ mission.ssccBarcode }}</div>
+          @if (mission.transportPlate) {
+            <div class="transport-tag">
+              <span class="material-symbols-outlined text-xs">local_shipping</span>
+              <span>{{ mission.transportPlate }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- BOTÓN PRINCIPAL DE ACCIÓN: INICIAR MOVIMIENTO Y ABRIR ESCÁNER -->
+      <div class="hero-action-section" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          (click)="openScanningModal()"
+          class="btn-giant-scan"
+          [ngClass]="mission.status === 'ACTIVE_DROP' ? 'btn-scan-drop' : 'btn-scan-pick'"
+          title="Abrir lector y cámara en vivo para capturar código">
+          <span class="material-symbols-outlined text-3xl">photo_camera</span>
+          <div class="btn-scan-texts">
+            <span class="btn-scan-main">
+              {{ mission.status === 'ACTIVE_DROP' ? 'CONTINUAR DEPÓSITO (ABRIR LECTOR)' : 'INICIAR MOVIMIENTO Y ABRIR CÁMARA' }}
+            </span>
+            <span class="btn-scan-sub">
+              {{ mission.status === 'ACTIVE_DROP' ? 'Escanear con cámara o láser la posición destino' : 'Activar cámara de tableta o pistola láser para validar pallet' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined text-2xl ml-auto">play_arrow</span>
+        </button>
+
+        <div class="hero-contingency-bar">
+          <button
+            type="button"
+            (click)="openMissionDetail(mission)"
+            class="btn-contingency btn-view-plan"
+            title="Ver información concreta paso a paso">
+            <span class="material-symbols-outlined text-lg">info</span>
+            <span>Ver Plan Detallado</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="openIncidentModal()"
+            class="btn-contingency btn-anomaly"
+            title="Reportar pallet colapsado, producto roto o bloqueo">
+            <span class="material-symbols-outlined text-lg">warning</span>
+            <span>Reportar Daño</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="postponeCurrentMission()"
+            class="btn-contingency btn-postpone"
+            title="Posponer esta misión al final de la cola">
+            <span class="material-symbols-outlined text-lg">low_priority</span>
+            <span>Posponer</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+  } @else {
+    <!-- Estado Vacío: Sin Misión Activa -->
+    <div class="empty-hero-card">
+      <div class="empty-icon-wrap">
+        <span class="material-symbols-outlined text-5xl text-emerald-500">task_alt</span>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">¡Todas las Misiones Completadas!</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+        No hay movimientos pendientes en tu cola de trabajo. Puedes solicitar nuevas asignaciones al supervisor.
+      </p>
+      <button
+        type="button"
+        (click)="resetDemo()"
+        class="mt-4 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 mx-auto shadow-lg">
+        <span class="material-symbols-outlined">restart_alt</span>
+        <span>Cargar Misiones Demo</span>
+      </button>
+    </div>
+  }
+
+  <!-- ── 4. COLA DINÁMICA DE MISIONES ASIGNADAS (FIFO LIVE STREAM) ───── -->
+  <section class="queue-section">
+    <div class="queue-section-header">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-2xl text-amber-500">dynamic_feed</span>
+        <div>
+          <h2 class="queue-title">Cola de Movimientos Asignados (Flujo FIFO)</h2>
+          <p class="queue-subtitle">Toca cualquier tarjeta para ver su información concreta e iniciar la lectura con cámara / láser.</p>
+        </div>
+      </div>
+      <div class="queue-counter-tag">
+        <span>{{ queuedMissions().length }} pendientes</span>
+      </div>
+    </div>
+
+    <!-- Lista de Tarjetas Ejecutivas en Cola -->
+    <div class="queue-cards-list">
+      @for (m of queuedMissions(); track m.id) {
+        <div
+          class="queue-card cursor-pointer"
+          (click)="openMissionDetail(m)"
+          [ngClass]="{
+            'card--inbound': m.type === 'INBOUND_UNLOAD',
+            'card--putaway': m.type === 'INTERNAL_PUTAWAY',
+            'card--outbound': m.type === 'OUTBOUND_DISPATCH',
+            'card--urgent': m.priority === 'URGENT'
+          }">
+
+          <!-- Indicador lateral de color -->
+          <div class="queue-card-strip"></div>
+
+          <div class="queue-card-main">
+            <!-- Header de la tarjeta -->
+            <div class="queue-card-top">
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Tipo Chip -->
+                <span class="queue-type-chip" [ngClass]="'chip--' + m.type.toLowerCase()">
+                  {{ m.typeLabel }}
+                </span>
+
+                <span class="queue-folio">{{ m.folio }}</span>
+
+                <span class="queue-time-chip">
+                  <span class="material-symbols-outlined text-xs">schedule</span>
+                  <span>{{ m.arrivalTime }}</span>
+                </span>
+              </div>
+
+              <!-- SLA / Prioridad -->
+              <div class="flex items-center gap-2">
+                @if (m.priority === 'URGENT') {
+                  <span class="queue-urgent-pill">
+                    <span class="sla-pulse-dot"></span>
+                    <span>🚨 URGENTE ({{ m.slaCountdownMinutes }}m)</span>
+                  </span>
+                } @else {
+                  <span class="queue-sla-pill">SLA: {{ m.slaCountdownMinutes }}m</span>
+                }
+              </div>
+            </div>
+
+            <!-- Ruta Origen ➔ Destino -->
+            <div class="queue-route-row">
+              <div class="queue-point">
+                <span class="material-symbols-outlined text-sm text-amber-500">trip_origin</span>
+                <span class="point-name">{{ m.originLocation }}</span>
+              </div>
+
+              <span class="material-symbols-outlined text-base text-slate-400">arrow_forward</span>
+
+              <div class="queue-point">
+                <span class="material-symbols-outlined text-sm text-emerald-500">location_on</span>
+                <span class="point-name font-semibold">{{ m.destinationLocation }}</span>
+              </div>
+            </div>
+
+            <!-- Resumen de Producto & Pallet -->
+            <div class="queue-details-row">
+              <span class="queue-prod-name">{{ m.productName }}</span>
+              <span class="details-divider">•</span>
+              <span class="queue-qty-badge">{{ m.quantity }} {{ m.unit }} ({{ m.weightKg }} kg)</span>
+              @if (m.transportPlate) {
+                <span class="details-divider">•</span>
+                <span class="queue-transport-tag">{{ m.transportPlate }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Botón de Acción: Ver y Comenzar -->
+          <div class="queue-card-action" (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              (click)="openMissionDetail(m)"
+              class="btn-take-mission"
+              title="Ver información concreta e iniciar">
+              <span class="material-symbols-outlined text-xl">play_circle</span>
+              <span>VER & INICIAR</span>
+            </button>
+          </div>
+
+        </div>
+      } @empty {
+        <div class="empty-queue-message">
+          <span class="material-symbols-outlined text-3xl text-slate-400">check_circle</span>
+          <span>No hay otras misiones en la cola para el filtro seleccionado.</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── 5. MODAL 1: INFORMACIÓN CONCRETA DEL MOVIMIENTO (PLAN DE ACCIÓN) ─ -->
+  @if (selectedMissionForDetail(); as detail) {
+    <div class="rf-modal-backdrop" (click)="closeMissionDetail()">
+      <div class="rf-modal-card modal-detail-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header del Modal -->
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="mission-type-badge" [ngClass]="'badge--' + detail.type.toLowerCase()">
+              {{ detail.typeLabel }}
+            </span>
+            <h2 class="rf-modal-title">{{ detail.folio }}</h2>
+            @if (detail.priority === 'URGENT') {
+              <span class="queue-urgent-pill">🚨 URGENTE ({{ detail.slaCountdownMinutes }}m)</span>
+            }
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeMissionDetail()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal: Lo que se va a hacer (Concreto y Preciso) -->
+        <div class="rf-modal-body">
+          
+          <!-- Banner Resumen de Instrucciones -->
+          <div class="detail-plan-banner">
+            <div class="plan-banner-title">
+              <span class="material-symbols-outlined text-amber-500">task_alt</span>
+              <span>Instrucciones Operativas de la Misión</span>
+            </div>
+            
+            <div class="plan-steps-list">
+              <!-- Paso 1 -->
+              <div class="plan-step-item">
+                <div class="plan-step-number">1</div>
+                <div class="plan-step-content">
+                  <div class="plan-step-label">RECOGIDA EN ORIGEN</div>
+                  <div class="plan-step-main">{{ detail.originLocation }}</div>
+                  <div class="plan-step-sub">
+                    Código de validación: <code>{{ detail.originBarcode }}</code> • Pallet: <strong>{{ detail.ssccBarcode }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Paso 2 -->
+              <div class="plan-step-item">
+                <div class="plan-step-number">2</div>
+                <div class="plan-step-content">
+                  <div class="plan-step-label">TRASLADO Y DEPÓSITO EN DESTINO</div>
+                  <div class="plan-step-main">{{ detail.destinationLocation }}</div>
+                  <div class="plan-step-sub">
+                    Ubicación asignada: <code>{{ detail.destBarcode }}</code> • Zone Lease: <strong>{{ detail.assignedZoneLease }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ficha Técnica de la Carga -->
+          <div class="detail-specs-grid">
+            <div class="meta-box">
+              <div class="meta-box-label">Producto</div>
+              <div class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ detail.productName }}</div>
+              <div class="text-xs text-sky-600 dark:text-sky-400 font-mono">{{ detail.sku }} • Lote: {{ detail.lotNumber }}</div>
+            </div>
+
+            <div class="meta-box">
+              <div class="meta-box-label">Carga & Peso</div>
+              <div class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ detail.quantity }} {{ detail.unit }}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">{{ detail.weightKg }} kg de peso total</div>
+            </div>
+
+            <div class="meta-box">
+              <div class="meta-box-label">Transporte / Chofer</div>
+              <div class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ detail.transportPlate || 'Patio Interno' }}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">{{ detail.driverName || 'Operación de Almacén' }}</div>
+            </div>
+
+            <div class="meta-box">
+              <div class="meta-box-label">Montacargas Asignado</div>
+              <div class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ detail.assignedVehicle }}</div>
+              <div class="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Llegada: {{ detail.arrivalTime }}</div>
+            </div>
+          </div>
+
+          @if (detail.notes) {
+            <div class="detail-notes-box">
+              <span class="material-symbols-outlined text-base text-amber-500">sticky_note_2</span>
+              <span class="text-xs text-slate-700 dark:text-slate-300 font-medium">{{ detail.notes }}</span>
+            </div>
+          }
+
+        </div>
+
+        <!-- Footer con Botón Gigante de Inicio -->
+        <div class="rf-modal-footer detail-modal-footer">
+          <button type="button" (click)="closeMissionDetail()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+          
+          <button
+            type="button"
+            (click)="startMissionFromDetail(detail)"
+            class="btn-start-mission-giant">
+            <span class="material-symbols-outlined text-2xl">photo_camera</span>
+            <span>INICIAR MOVIMIENTO Y ABRIR CÁMARA</span>
+            <span class="material-symbols-outlined text-xl">arrow_forward</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 6. MODAL 2: MODAL DEDICADO DE LECTURA LÁSER / CÁMARA EN VIVO ── -->
+  @if (showScanningModal() && activeMission(); as current) {
+    <div class="rf-modal-backdrop laser-hud-backdrop" (click)="closeScanningModal()">
+      <div class="rf-modal-card laser-hud-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header del Lector -->
+        <div class="laser-hud-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-2xl text-amber-500">
+              {{ cameraActive() ? 'photo_camera' : 'barcode_scanner' }}
+            </span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">
+                  {{ cameraActive() ? 'Cámara de Tableta Activa' : 'Lector Láser de Piso' }}
+                </span>
+                @if (cameraActive()) {
+                  <span class="live-dot-indicator"></span>
+                }
+              </div>
+              <h2 class="laser-hud-title">{{ current.folio }} • {{ current.typeLabel }}</h2>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="toggleCamera()"
+              class="btn-toggle-camera"
+              [title]="cameraActive() ? 'Desactivar cámara' : 'Activar cámara de tableta'">
+              <span class="material-symbols-outlined text-lg">{{ cameraActive() ? 'videocam_off' : 'videocam' }}</span>
+              <span class="hidden sm:inline">{{ cameraActive() ? 'Pausar Cámara' : 'Usar Cámara' }}</span>
+            </button>
+
+            <button type="button" class="btn-modal-close" (click)="closeScanningModal()">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicador de Paso (Pick / Drop) -->
+        <div class="laser-stepper-ribbon">
+          <div
+            class="stepper-step"
+            [class.step--active]="current.status === 'ACTIVE_PICK' || current.status === 'QUEUED'"
+            [class.step--completed]="current.status === 'ACTIVE_DROP'">
+            <span class="step-badge">1</span>
+            <span>Paso 1: Pick SSCC</span>
+          </div>
+
+          <div class="stepper-divider">
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </div>
+
+          <div
+            class="stepper-step"
+            [class.step--active]="current.status === 'ACTIVE_DROP'">
+            <span class="step-badge">2</span>
+            <span>Paso 2: Depósito Destino</span>
+          </div>
+        </div>
+
+        <!-- Cuerpo del Lector: HUD de Escaneo & Cámara en Vivo -->
+        <div class="laser-hud-body">
+          
+          <!-- 1. Cuadro de Cámara / Visor Láser Limpio y Despejado -->
+          <div
+            class="laser-reticle"
+            [class.laser-reticle--drop]="current.status === 'ACTIVE_DROP'"
+            (click)="onCameraFeedTapped()"
+            title="Tocar pantalla para reconocer código de barras automáticamente">
+
+            <!-- Video en Vivo de la Cámara (getUserMedia) -->
+            <video
+              #cameraVideo
+              class="camera-live-feed"
+              [class.camera-live-feed--visible]="cameraActive()"
+              autoplay
+              playsinline
+              muted></video>
+
+            <!-- Haz Láser Animado de Escaneo -->
+            <div
+              class="laser-beam-line"
+              [class.laser-beam-line--green]="current.status === 'ACTIVE_DROP'"></div>
+
+            <!-- Esquinas de Enfoque Táctico Viewfinder -->
+            <div class="corner-bracket corner-tl"></div>
+            <div class="corner-bracket corner-tr"></div>
+            <div class="corner-bracket corner-bl"></div>
+            <div class="corner-bracket corner-br"></div>
+
+            <!-- Badge Superior Flotante -->
+            <div class="camera-floating-badge">
+              <span class="badge-dot-cam"></span>
+              <span>Enfoca el código de barras dentro del marco</span>
+            </div>
+
+            <!-- Badge Inferior Flotante de Toque -->
+            <div class="camera-floating-touch">
+              <span class="material-symbols-outlined text-xs">touch_app</span>
+              <span>Toca la cámara para capturar / validar</span>
+            </div>
+
+          </div>
+
+          <!-- 2. Tarjeta de Información Concreta del Objetivo (Ubicada DEBAJO de la Cámara) -->
+          <div class="hud-target-info-card" [class.target-card--drop]="current.status === 'ACTIVE_DROP'">
+            
+            <div class="target-info-header">
+              <span class="target-step-tag">
+                <span class="material-symbols-outlined text-xs">
+                  {{ current.status === 'ACTIVE_DROP' ? 'location_on' : 'qr_code_scanner' }}
+                </span>
+                <span>{{ current.status === 'ACTIVE_DROP' ? 'Paso 2: Escanear Ubicación Destino' : 'Paso 1: Escanear Código SSCC' }}</span>
+              </span>
+
+              <span class="target-location-pill">
+                {{ current.status === 'ACTIVE_DROP' ? current.destinationLocation : current.originLocation }}
+              </span>
+            </div>
+
+            <!-- Código Objetivo en Grande -->
+            <div class="target-code-row">
+              <div class="target-code-label">CÓDIGO A ESCANEAR:</div>
+              <div class="target-code-highlight">
+                {{ current.status === 'ACTIVE_DROP' ? current.destBarcode : current.ssccBarcode }}
+              </div>
+            </div>
+
+            <!-- Datos de Carga -->
+            <div class="target-product-row">
+              <span class="material-symbols-outlined text-sm text-slate-400">inventory_2</span>
+              <span class="target-product-name">{{ current.productName }}</span>
+              <span class="text-xs text-slate-400">• {{ current.quantity }} {{ current.unit }} ({{ current.weightKg }} kg)</span>
+            </div>
+
+          </div>
+
+          <!-- 3. Botón de Reconocimiento / Simulación Rápida -->
+          <div class="hud-action-row">
+            @if (current.status === 'ACTIVE_PICK' || current.status === 'QUEUED') {
+              <button
+                type="button"
+                (click)="simulateModalScanPick()"
+                class="btn-simulate-modal btn-sim-pick">
+                <span class="material-symbols-outlined text-xl">qr_code_2</span>
+                <span>[LEER / SIMULAR PALLET: {{ current.ssccBarcode }}]</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                (click)="simulateModalScanDrop()"
+                class="btn-simulate-modal btn-sim-drop">
+                <span class="material-symbols-outlined text-xl">task_alt</span>
+                <span>[LEER / SIMULAR DESTINO: {{ current.destBarcode }}]</span>
+              </button>
+            }
+          </div>
+
+          <!-- 4. Input Físico para Pistola Láser de Código de Barras -->
+          <div class="hud-input-row">
+            <div class="hud-input-wrap">
+              <span class="material-symbols-outlined text-sky-600 dark:text-sky-400">barcode_reader</span>
+              <input
+                #modalLaserInput
+                type="text"
+                [(ngModel)]="scannedInput"
+                (keydown.enter)="onScanSubmit()"
+                placeholder="Pistola láser lista... Apunta y dispara el código"
+                class="hud-input-field"
+                autocomplete="off" />
+              <button
+                type="button"
+                (click)="onScanSubmit()"
+                class="btn-hud-enter"
+                title="Procesar código manual">
+                <span class="material-symbols-outlined">subdirectory_arrow_left</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              (click)="simulateModalScanError()"
+              class="btn-sim-error"
+              title="Simular código erróneo para prueba de validación">
+              <span class="material-symbols-outlined text-xs">error</span>
+              <span>Probar Error</span>
+            </button>
+          </div>
+
+          <!-- 5. Banner de Feedback de Escaneo en Vivo -->
+          @if (scanFeedback(); as fb) {
+            <div
+              class="scan-feedback-banner"
+              [class.feedback--success]="fb.success"
+              [class.feedback--error]="!fb.success">
+              <span class="material-symbols-outlined feedback-icon">
+                {{ fb.success ? 'check_circle' : 'error' }}
+              </span>
+              <div class="feedback-text">{{ fb.message }}</div>
+            </div>
+          }
+
+        </div>
+
+        <!-- Footer del Lector con Opciones de Contingencia -->
+        <div class="laser-hud-footer">
+          <button
+            type="button"
+            (click)="openIncidentModal()"
+            class="btn-hud-contingency btn-hud-incident">
+            <span class="material-symbols-outlined text-base">warning</span>
+            <span>Reportar Daño</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="postponeCurrentMission()"
+            class="btn-hud-contingency btn-hud-postpone">
+            <span class="material-symbols-outlined text-base">low_priority</span>
+            <span>Posponer</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="closeScanningModal()"
+            class="btn-hud-contingency btn-hud-close ml-auto">
+            <span>✕ Salir del Lector</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 7. MODAL 3: REPORTE DE ANOMALÍA / DAÑO DE TARIMA ──────────── -->
+  @if (showIncidentModal()) {
+    <div class="rf-modal-backdrop" (click)="closeIncidentModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-3xl text-rose-600">emergency_home</span>
+            <div>
+              <h2 class="rf-modal-title">Reporte de Siniestro / Anomalía en Pallet</h2>
+              <p class="text-xs text-muted">Apertura de expediente QM y bloqueo inmediato de la tarima</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeIncidentModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          @if (activeMission(); as m) {
+            <div class="incident-target-summary">
+              <span class="font-bold text-slate-800 dark:text-slate-100">{{ m.folio }}</span>
+              <span class="text-xs text-slate-500"> • {{ m.productName }} • SSCC: {{ m.ssccBarcode }}</span>
+            </div>
+          }
+
+          <!-- Tipo de Incidencia -->
+          <div class="modal-form-group">
+            <label class="modal-label">Tipo de Daño / Causa del Bloqueo</label>
+            <select [(ngModel)]="incidentType" class="modal-select">
+              <option value="Pallet Inclinado / Colapsado">Pallet Inclinado / Colapsado (Riesgo de Caída)</option>
+              <option value="Cajas Rotas / Fuga de Producto">Cajas Rotas / Fuga de Producto Químico</option>
+              <option value="Sello de Seguridad Violado">Sello de Seguridad Violado / Faltante</option>
+              <option value="Código SSCC Ilegible">Código SSCC Dañado o Ilegible</option>
+              <option value="Ubicación Destino Obstruida">Ubicación de Rack / Andén Obstruida</option>
+            </select>
+          </div>
+
+          <!-- Captura de Foto Evidencia (Simulada) -->
+          <div class="modal-form-group">
+            <label class="modal-label">Evidencia Fotográfica Obligatoria</label>
+            <div class="photo-capture-box" (click)="toggleSimulatePhotoCapture()">
+              @if (incidentPhotoCaptured()) {
+                <div class="photo-captured-preview">
+                  <span class="material-symbols-outlined text-3xl text-emerald-500">image</span>
+                  <div>
+                    <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Foto Capturada con Éxito</div>
+                    <div class="text-xs text-slate-400">pallet_danado_evidencia.jpg • 180 KB (Comprimida)</div>
+                  </div>
+                  <button type="button" class="btn-retake-photo" (click)="$event.stopPropagation(); toggleSimulatePhotoCapture()">
+                    <span class="material-symbols-outlined text-sm">cached</span>
+                  </button>
+                </div>
+              } @else {
+                <div class="photo-placeholder">
+                  <span class="material-symbols-outlined text-4xl text-slate-400">add_a_photo</span>
+                  <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">Tocar para Tomar Foto de Evidencia</span>
+                  <span class="text-xs text-slate-400">Resolución HD con compresión industrial</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Notas Adicionales -->
+          <div class="modal-form-group">
+            <label class="modal-label">Descripción del Operador</label>
+            <textarea
+              [(ngModel)]="incidentNote"
+              placeholder="Detalla qué ocurrió (ej: nivel 3 golpeado por montacargas previo, empaque roto al desembarcar)..."
+              rows="3"
+              class="modal-textarea"></textarea>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeIncidentModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+          <button
+            type="button"
+            (click)="submitIncidentReport()"
+            class="btn-modal-confirm-incident">
+            <span class="material-symbols-outlined">report</span>
+            <span>BLOQUEAR TARIMA Y ENVIAR A QM</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 8. MODAL 4: CELEBRACIÓN DE MISIÓN COMPLETADA ──────────────── -->
+  @if (showCelebrationModal()) {
+    <div class="rf-modal-backdrop celebration-backdrop" (click)="closeCelebrationModal()">
+      <div class="rf-modal-card celebration-card" (click)="$event.stopPropagation()">
+        <div class="celebration-icon-glow">
+          <span class="material-symbols-outlined text-6xl text-emerald-500">check_circle</span>
+        </div>
+
+        <h2 class="celebration-title">¡Movimiento Confirmado con Éxito!</h2>
+        <p class="celebration-subtitle">
+          El pallet ha sido verificado y depositado correctamente en el WMS.
+        </p>
+
+        @if (justCompletedMission(); as m) {
+          <div class="completed-summary-box">
+            <div class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ m.folio }} • {{ m.typeLabel }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ m.productName }}</div>
+            <div class="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              Ubicación final: {{ m.destinationLocation }} ({{ m.destBarcode }})
+            </div>
+          </div>
+        }
+
+        <button
+          type="button"
+          (click)="closeCelebrationModal()"
+          class="btn-celebration-continue">
+          <span>CONTINUAR CON LA SIGUIENTE MISIÓN</span>
+          <span class="material-symbols-outlined text-xl">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  }
+
+</div>

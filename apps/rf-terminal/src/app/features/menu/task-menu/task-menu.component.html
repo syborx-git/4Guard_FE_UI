@@ -1,151 +1,196 @@
 <!-- ================================================================
-     P7 — Menú de Tareas Maestro RF Terminal (Reglas de Coordinación)
+     Menú de Operaciones Maestro — Terminal RF PWA (Synexia Dual Theme)
      ================================================================ -->
-<div class="task-menu" role="main" aria-label="Menú de Tareas RF">
+<div class="rf-menu-workspace">
 
-  <!-- ── 1. Hero / Operator Greeting Banner ────────────────────── -->
-  <section class="operator-hero">
-    <div class="operator-hero__info">
-      <div class="operator-hero__avatar" aria-hidden="true">
-        {{ authState.userInitials() || 'AG' }}
-      </div>
-      <div class="operator-hero__details">
-        <div class="greeting-row">
-          <span class="greeting-subtitle">Sesión Activa</span>
-          <span class="shift-chip">Turno Matutino</span>
+  <!-- ── 1. SECCIÓN SUPERIOR: ENCABEZADO Y REANUDAR TAREA ─────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+    
+    <!-- Encabezado Operativo de la Terminal -->
+    <div class="lg:col-span-4 rf-terminal-info-card">
+      <div class="rf-card-glow-bg"></div>
+      <div>
+        <div class="terminal-badge">
+          <span class="terminal-badge__dot"></span>
+          <span>Terminal Montacargas #07</span>
         </div>
-        <h1 class="operator-hero__name">{{ authState.userFullName() || 'Alex Gabriel Pérez' }}</h1>
-        <p class="operator-hero__role">
-          <span class="material-symbols-outlined role-icon">badge</span>
-          {{ authState.roleLabel() || 'Operario de Montacargas' }} • <span class="branch-code">BR-MTY-01</span>
+        <h1 class="terminal-title">Menú de Operaciones</h1>
+        <p class="terminal-desc">
+          Selecciona un módulo de trabajo o continúa con tu asignación activa en andén.
         </p>
       </div>
-    </div>
-
-    <!-- Quick Zone Lease Alert Card -->
-    <div class="zone-lease-card" routerLink="/sync" title="Ver detalle de Zone Lease (Pasillo Asignado)">
-      <div class="zone-lease-card__header">
-        <span class="material-symbols-outlined zone-icon">lock_clock</span>
-        <span class="zone-title">Zone Lease Activo</span>
-      </div>
-      <div class="zone-lease-card__body">
-        <span class="zone-name">Pasillo 04 — Racks 01 a 12</span>
-        <span class="zone-time">28 min vigencia</span>
+      <div class="terminal-footer">
+        <span class="terminal-priority-tag">Nivel 4G: Máxima Prioridad</span>
+        <span class="priority-dot"></span>
+        <span class="terminal-lease-tag">Arrendamiento Activo</span>
       </div>
     </div>
-  </section>
 
-  <!-- ── 2. Live Assigned Reception Notification (Regla de Pablo) ─ -->
-  @if (activeTask()) {
-    <section class="assigned-task-banner" (click)="goToAssignedTask()" role="alert" tabindex="0" (keydown.enter)="goToAssignedTask()">
-      <div class="assigned-task-badge">
-        <span class="pulse-beacon"></span>
-        <span>Recepción Asignada en Vivo</span>
-      </div>
-
-      <div class="assigned-task-content">
-        <div class="assigned-task-main">
-          <div class="assigned-ramp-chip">
-            <span class="material-symbols-outlined">rv_hookup</span>
-            <span class="ramp-text">{{ activeTask()?.rampCode }}</span>
+    <!-- Banner Hero: Reanudar Tarea Activa (Target Gigante) -->
+    @if (activeTask(); as task) {
+      <div class="lg:col-span-8 rf-hero-task-banner">
+        <div class="hero-skew-accent"></div>
+        <div class="hero-task-info">
+          <div class="hero-icon-wrap">
+            <span class="material-symbols-outlined hero-icon">forklift</span>
           </div>
-          <div class="assigned-details">
-            <h2 class="assigned-folio">{{ activeTask()?.folio }}</h2>
-            <p class="assigned-dest">
-              <span class="material-symbols-outlined dest-icon">warehouse</span>
-              Destino Preasignado: <strong>{{ activeTask()?.assignedRackZone }}</strong>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="hero-badge-status">En Progreso</span>
+              <span class="hero-folio">{{ task.folio }}</span>
+            </div>
+            <h2 class="hero-task-title">{{ task.title }}</h2>
+            <p class="hero-task-meta">
+              <span class="meta-dot"></span>
+              <span>{{ task.subtitle }}</span>
             </p>
-            <p class="assigned-by">Asignado por: {{ activeTask()?.assignedBy }}</p>
           </div>
         </div>
 
-        <div class="assigned-task-action">
-          <div class="pallets-counter">
-            <span class="counter-num">{{ activeTask()?.pendingPallets }} / {{ activeTask()?.totalPallets }}</span>
-            <span class="counter-label">Tarimas por Mover</span>
+        <button
+          type="button"
+          (click)="resumeActiveTask()"
+          class="btn-resume-task"
+          title="Reanudar tarea inmediatamente con un toque">
+          <span class="material-symbols-outlined text-2xl">play_circle</span>
+          <span>REANUDAR TAREA</span>
+        </button>
+      </div>
+    }
+
+  </div>
+
+  <!-- ── 2. GRID DE MÓDULOS OPERATIVOS (CARDS TÁCTILES EXTRA GRANDES) ── -->
+  <div class="rf-modules-grid">
+    @for (mod of modules; track mod.id) {
+      <div class="rf-module-card group" (click)="navigate(mod.route)">
+        <div class="rf-module-card__top">
+          <div class="rf-module-icon-wrap" [ngClass]="'rf-module-icon-wrap--' + mod.badgeType">
+            <span class="material-symbols-outlined rf-module-icon">{{ mod.icon }}</span>
           </div>
-          <button type="button" class="btn-start-assigned">
-            <span>Iniciar Traslado</span>
-            <span class="material-symbols-outlined">arrow_forward</span>
+          <span class="rf-module-badge" [ngClass]="'rf-module-badge--' + mod.badgeType">
+            <span class="badge-dot"></span>
+            <span>{{ mod.badgeText }}</span>
+          </span>
+        </div>
+
+        <div class="rf-module-card__body">
+          <h3 class="rf-module-title">{{ mod.title }}</h3>
+          <p class="rf-module-desc">{{ mod.description }}</p>
+        </div>
+
+        <button
+          type="button"
+          (click)="$event.stopPropagation(); navigate(mod.route)"
+          class="btn-module-action"
+          [ngClass]="'btn-module-action--' + mod.badgeType">
+          <span>{{ mod.actionLabel }}</span>
+          <span class="material-symbols-outlined text-xl">arrow_forward</span>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ── 3. BARRA DE UTILIDADES TÁCTILES Y TELEMETRÍA INDUSTRIAL ──── -->
+  <div class="rf-hardware-toolbar">
+    
+    <!-- Diagnóstico de Hardware en Tiempo Real -->
+    <div class="hardware-status-group">
+      <span class="hardware-label">
+        <span class="material-symbols-outlined text-base">memory</span>
+        <span>Hardware:</span>
+      </span>
+
+      <!-- Chip Escáner Láser 2D -->
+      <div class="hardware-chip">
+        <span class="chip-status-dot"></span>
+        <span class="material-symbols-outlined chip-icon text-emerald-600 dark:text-emerald-400">barcode_scanner</span>
+        <span>Láser 2D Activo</span>
+      </div>
+
+      <!-- Chip Impresora Zebra -->
+      <div class="hardware-chip">
+        <span class="chip-status-dot"></span>
+        <span class="material-symbols-outlined chip-icon text-emerald-600 dark:text-emerald-400">print</span>
+        <span>Zebra BT Conectada</span>
+      </div>
+
+      <!-- Chip Wi-Fi Industrial -->
+      <div class="hardware-chip">
+        <span class="chip-status-dot"></span>
+        <span class="material-symbols-outlined chip-icon text-sky-600 dark:text-sky-400">wifi</span>
+        <span>WiFi 5GHz (100%)</span>
+      </div>
+    </div>
+
+    <!-- Botones de Acción Rápida: Sync & Reportar Incidencia -->
+    <div class="hardware-actions-group">
+      <!-- Botón Sincronizar -->
+      <button
+        type="button"
+        (click)="manualSync()"
+        class="btn-sync-quick"
+        title="Ver estado de red y sincronizar transacciones offline">
+        <span class="material-symbols-outlined text-xl text-sky-600 dark:text-sky-400">sync</span>
+        <div class="text-left">
+          <div class="btn-sync-title">Sincronizar</div>
+          <div class="btn-sync-sub">hace 2 min</div>
+        </div>
+      </button>
+
+      <!-- Botón Reportar Incidencia de Alto Impacto -->
+      <button
+        type="button"
+        (click)="openIncidentModal()"
+        class="btn-report-incident"
+        title="Reportar anomalía, pallet colapsado o siniestro en piso">
+        <span class="material-symbols-outlined text-2xl">warning</span>
+        <span>Reportar Incidencia</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ── 4. MODAL DE CONFIRMACIÓN DE INCIDENCIA ────────────────────── -->
+  @if (showIncidentModal()) {
+    <div class="rf-modal-backdrop" (click)="closeIncidentModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-3xl text-rose-600">emergency_home</span>
+            <div>
+              <h2 class="rf-modal-title">Reporte de Siniestro / Anomalía</h2>
+              <p class="text-xs text-muted">Apertura de expediente con foto obligatoria (HU-164 / Estado 80)</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeIncidentModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            ¿Deseas registrar un incidente en piso (pallet colapsado, merma por impacto o derrame de producto)?
+          </p>
+          <div class="incident-modal-alert">
+            <span class="material-symbols-outlined text-amber-600 text-xl">warning</span>
+            <span class="text-xs text-amber-900 dark:text-amber-200 font-bold">
+              Se iniciará el asistente fotográfico de evidencia con compresión automática.
+            </span>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeIncidentModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+          <button type="button" (click)="confirmIncidentRedirect()" class="btn-modal-confirm-incident">
+            <span class="material-symbols-outlined">add_a_photo</span>
+            <span>ABRIR REPORTE CON FOTO</span>
           </button>
         </div>
       </div>
-    </section>
+    </div>
   }
-
-  <!-- ── 3. Fases Operativas Agrupadas (3 Bloques Lógicos) ─────── -->
-  @for (section of taskSections; track section.id) {
-    <section class="phase-section" [attr.aria-label]="section.title">
-      <!-- Section Header -->
-      <div class="phase-header">
-        <div class="phase-header__title-wrap">
-          <div class="phase-icon-box">
-            <span class="material-symbols-outlined">{{ section.icon }}</span>
-          </div>
-          <div>
-            <h2 class="phase-title">{{ section.title }}</h2>
-            <p class="phase-subtitle">{{ section.subtitle }}</p>
-          </div>
-        </div>
-        <span class="phase-badge">{{ section.badge }}</span>
-      </div>
-
-      <!-- Module Cards Grid -->
-      <div class="modules-grid" role="list">
-        @for (card of section.modules; track card.id) {
-          <div
-            [id]="card.id"
-            class="module-card module-card--{{ card.color }}"
-            (click)="navigate(card.route)"
-            role="button"
-            tabindex="0"
-            (keydown.enter)="navigate(card.route)"
-            [attr.aria-label]="card.label + ': ' + card.sublabel">
-            
-            <!-- Header: Tag + Accent Icon -->
-            <div class="module-card__top">
-              <span class="module-tag">{{ card.tag }}</span>
-              <div class="module-icon-wrap">
-                <span class="material-symbols-outlined module-icon" aria-hidden="true">{{ card.icon }}</span>
-              </div>
-            </div>
-
-            <!-- Body: Label & Sublabel -->
-            <div class="module-card__body">
-              <h3 class="module-label">{{ card.label }}</h3>
-              <p class="module-sublabel">{{ card.sublabel }}</p>
-            </div>
-
-            <!-- Footer Action -->
-            <div class="module-card__footer">
-              <span class="action-text">Iniciar Tarea</span>
-              <span class="material-symbols-outlined arrow-icon">arrow_forward</span>
-            </div>
-          </div>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- ── 4. Quick Footer Status ─────────────────────────────────── -->
-  <footer class="task-menu__footer">
-    <div class="footer-item" (click)="navigate('/sync')" role="button" tabindex="0">
-      <span class="material-symbols-outlined">sync</span>
-      <span>Sincronización</span>
-      @if (syncState.hasPending()) {
-        <span class="footer-badge">{{ syncState.pendingCount() }}</span>
-      }
-    </div>
-    <div class="footer-divider" aria-hidden="true"></div>
-    <div class="footer-item">
-      <span class="material-symbols-outlined">warehouse</span>
-      <span>Bodega Principal</span>
-    </div>
-    <div class="footer-divider" aria-hidden="true"></div>
-    <div class="footer-item">
-      <span class="material-symbols-outlined">verified_user</span>
-      <span>PWA v1.2.0 • Offline-First</span>
-    </div>
-  </footer>
 
 </div>

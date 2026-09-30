@@ -1,296 +1,1732 @@
-/* apps/rf-terminal/src/app/features/quality/quality-inspection/quality-inspection.component.css */
+/* ==========================================================================
+   4GUARD RF TERMINAL — CONTROL DE CALIDAD & CUARENTENAS (QM) STYLES
+   Estándar SDD Dual Theme Homologado (Light Mode Luxury / Dark Mode Obsidian)
+   ========================================================================== */
 
-.rscan {
+:host {
+  /* ── Light Mode Design Tokens (SDD Linen & Midnight Navy) ────────── */
+  --qm-bg-page:         #f5f4f0;
+  --qm-bg-card:         #ffffff;
+  --qm-bg-card-subtle:  #f8f9fa;
+  --qm-bg-card-hover:   #f1f5f9;
+  
+  --qm-text-primary:    #1c2940;
+  --qm-text-secondary:  #5a6477;
+  --qm-text-muted:      #718096;
+  --qm-text-gold:       #9b7626;
+  --qm-text-inverse:    #ffffff;
+
+  --qm-border-subtle:   rgba(76, 86, 105, 0.12);
+  --qm-border-strong:   rgba(76, 86, 105, 0.22);
+  --qm-shadow-sm:       0 2px 6px 0 rgba(0, 0, 0, 0.03);
+  --qm-shadow-md:       0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --qm-shadow-lg:       0 16px 36px rgba(36, 44, 58, 0.09);
+
+  /* Status Colors */
+  --qm-color-primary:    #2d7dd2;
+  --qm-color-primary-bg: rgba(45, 125, 210, 0.08);
+  --qm-color-success:    #208457;
+  --qm-color-success-bg: rgba(32, 132, 87, 0.09);
+  --qm-color-warning:    #a96b13;
+  --qm-color-warning-bg: rgba(213, 145, 39, 0.10);
+  --qm-color-danger:     #c84949;
+  --qm-color-danger-bg:  rgba(200, 73, 73, 0.09);
+  --qm-color-info:       #4f46e5;
+  --qm-color-info-bg:    rgba(79, 70, 229, 0.08);
+
+  display: block;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Dark Mode Design Tokens (Midnight Obsidian) ───────────────────────── */
+:host-context(.theme-dark),
+:host-context(.dark),
+:host-context([data-theme='dark']) {
+  --qm-bg-page:         #0b1119;
+  --qm-bg-card:         rgba(17, 26, 38, 0.94);
+  --qm-bg-card-subtle:  rgba(255, 255, 255, 0.04);
+  --qm-bg-card-hover:   rgba(23, 35, 50, 0.98);
+
+  --qm-text-primary:    #edf1f5;
+  --qm-text-secondary:  #9aa6b4;
+  --qm-text-muted:      #667585;
+  --qm-text-gold:       #d0af67;
+  --qm-text-inverse:    #0f172a;
+
+  --qm-border-subtle:   rgba(255, 255, 255, 0.08);
+  --qm-border-strong:   rgba(255, 255, 255, 0.16);
+  --qm-shadow-sm:       0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --qm-shadow-md:       0 16px 36px rgba(0, 0, 0, 0.40);
+  --qm-shadow-lg:       0 20px 48px rgba(0, 0, 0, 0.60);
+
+  /* Dark Status Accents */
+  --qm-color-primary:    #77a8df;
+  --qm-color-primary-bg: rgba(96, 165, 250, 0.12);
+  --qm-color-success:    #67c78b;
+  --qm-color-success-bg: rgba(76, 175, 112, 0.12);
+  --qm-color-warning:    #e0aa4f;
+  --qm-color-warning-bg: rgba(224, 170, 79, 0.12);
+  --qm-color-danger:     #ef7773;
+  --qm-color-danger-bg:  rgba(239, 83, 80, 0.12);
+  --qm-color-info:       #818cf8;
+  --qm-color-info-bg:    rgba(129, 140, 248, 0.12);
+}
+
+/* ── Container Layout ─────────────────────────────────────────────────── */
+.qm-container {
+  background-color: var(--qm-bg-page);
+  color: var(--qm-text-primary);
+  padding: 1.25rem 1.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 1400px;
+  margin: 0 auto;
   min-height: 100dvh;
-  background: #0D1A2E;
+}
+
+/* ── 1. Header & Telemetría ───────────────────────────────────────────── */
+.qm-header {
+  background: var(--qm-bg-card);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--qm-shadow-md);
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.25rem;
-  cursor: text;
 }
 
-/* Input oculto para captura del láser */
-.scan-hidden-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-}
-
-/* ── Header ──────────────────────────────────────────────── */
-.rscan__header {
+.qm-header__main {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.rscan__title {
-  font-size: 1.375rem;
-  font-weight: 900;
-  color: #FFFFFF;
-  margin: 0;
-}
-
-.rscan__sub {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.45);
-  margin-top: 2px;
-}
-
-.rscan__progress {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.rscan__progress-val {
-  font-size: 1.75rem;
-  font-weight: 900;
-  color: #F9A825;
-  line-height: 1;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.rscan__progress-sep {
-  color: rgba(255,255,255,0.3);
-  font-size: 1.25rem;
-  margin: 0 2px;
-}
-
-.rscan__progress-lbl {
-  font-size: 0.65rem;
-  color: rgba(255,255,255,0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-/* ── Scan Zone ───────────────────────────────────────────── */
-.rscan__zone {
-  background: rgba(255,255,255,0.04);
-  border: 2px dashed rgba(249,168,37,0.35);
-  border-radius: 1.25rem;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 200ms;
-}
-
-.rscan__zone:hover {
-  background: rgba(249,168,37,0.05);
-  border-color: rgba(249,168,37,0.6);
-}
-
-.rscan__zone--processing {
-  border-color: rgba(0,137,123,0.6);
-  background: rgba(0,137,123,0.06);
-  animation: scan-pulse 1s ease-in-out infinite;
-}
-
-@keyframes scan-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.rscan__zone-icon {
-  font-size: 2.5rem;
-  line-height: 1;
-}
-
-.rscan__zone--processing .rscan__zone-icon {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-  color: #4DB6AC;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.rscan__zone-text {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #FFFFFF;
-}
-
-.rscan__zone-sub {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.35);
-}
-
-.rscan__sim-btn {
-  background: rgba(249,168,37,0.12);
-  border: 1.5px solid rgba(249,168,37,0.35);
-  border-radius: 0.75rem;
-  color: #F9A825;
-  font-size: 0.875rem;
-  font-weight: 700;
-  padding: 0.75rem;
-  cursor: pointer;
-  transition: all 150ms;
-  width: 100%;
+.qm-header__badge-row {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
-.rscan__sim-btn:active {
-  background: rgba(249,168,37,0.25);
-  transform: scale(0.98);
-}
-
-/* ── Error ───────────────────────────────────────────────── */
-.rscan__error {
-  padding: 0.75rem 1rem;
-  background: rgba(229,57,53,0.12);
-  border: 1.5px solid rgba(229,57,53,0.35);
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #FF6B6B;
-  animation: shake 0.35s ease;
-}
-
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
-}
-
-/* ── Buffer ──────────────────────────────────────────────── */
-.rscan__buffer { flex: 1; display: flex; flex-direction: column; gap: 0.625rem; }
-
-.rscan__buffer-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: rgba(255,255,255,0.6);
+.qm-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.rscan__buffer-count {
-  background: rgba(249,168,37,0.2);
-  color: #F9A825;
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 0.125rem 0.5rem;
+  padding: 0.25rem 0.65rem;
   border-radius: 99px;
 }
 
-.buffer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow-y: auto;
-  max-height: 320px;
+.qm-badge--primary {
+  background: var(--gold-bg);
+  color: var(--text-gold);
+  border: 1px solid var(--gold-border);
 }
 
-.buffer-item {
+.qm-badge--branch {
+  background: var(--qm-bg-card-subtle);
+  color: var(--qm-text-secondary);
+  border: 1px solid var(--qm-border-subtle);
+}
+
+.qm-header__title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--qm-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.qm-header__sub {
+  font-size: 0.8rem;
+  color: var(--qm-text-secondary);
+  margin: 0.25rem 0 0 0;
+}
+
+.qm-header__actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 0.875rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 0.75rem;
-  animation: slideIn 200ms ease;
 }
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+.qm-inspector-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  padding: 0.45rem 0.85rem;
+  border-radius: 12px;
 }
 
-.buffer-item__code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #F9A825;
-  letter-spacing: 0.04em;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-  max-width: 90px;
+.qm-inspector-card__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #172033 0%, #25324a 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.4);
+  color: var(--gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.8rem;
 }
 
-.buffer-item__info {
-  flex: 1;
-  min-width: 0;
+.qm-inspector-card__info {
   display: flex;
   flex-direction: column;
-  gap: 1px;
 }
 
-.buffer-item__sku {
+.qm-inspector-card__name {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+}
+
+.qm-inspector-card__role {
+  font-size: 0.68rem;
+  color: var(--qm-text-muted);
+}
+
+/* KPI Bar */
+.qm-kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  border-top: 1px solid var(--qm-border-subtle);
+  padding-top: 1rem;
+}
+
+.qm-kpi-item {
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.qm-kpi-item:hover {
+  background: var(--qm-bg-card-hover);
+  border-color: var(--gold-border);
+  transform: translateY(-1px);
+}
+
+.qm-kpi-item--active {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+
+.qm-kpi-item__num {
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-family: var(--font-display);
+  color: var(--qm-text-primary);
+  line-height: 1.1;
+}
+
+.qm-kpi-item__label {
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.45);
-  font-family: monospace;
+  font-weight: 700;
+  color: var(--qm-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.buffer-item__desc {
+.qm-kpi-item--warning .qm-kpi-item__num { color: var(--qm-color-warning); }
+.qm-kpi-item--info .qm-kpi-item__num { color: var(--qm-color-primary); }
+.qm-kpi-item--success .qm-kpi-item__num { color: var(--qm-color-success); }
+
+/* ── 2. Filtros de Navegación (Pill Nav SDD Homologado) ────────────────── */
+.qm-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.qm-filter-pill {
+  background: var(--qm-bg-card);
+  border: 1px solid var(--qm-border-subtle);
+  color: var(--qm-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0.55rem 1.1rem;
+  border-radius: 99px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: all 180ms ease;
+  box-shadow: var(--qm-shadow-sm);
+}
+
+.qm-filter-pill:hover {
+  background: var(--qm-bg-card-hover);
+  border-color: var(--gold-border);
+  color: var(--qm-text-primary);
+}
+
+/* Active Pill SDD Standard */
+.qm-filter-pill--active {
+  background: linear-gradient(145deg, #172033, #25324a) !important;
+  color: var(--gold-light) !important;
+  border-color: rgba(197, 168, 107, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.22) !important;
+}
+
+:host-context(.theme-dark) .qm-filter-pill--active,
+:host-context(.dark) .qm-filter-pill--active,
+:host-context([data-theme='dark']) .qm-filter-pill--active {
+  background: rgba(208, 175, 103, 0.15) !important;
+  color: var(--gold) !important;
+  border-color: rgba(208, 175, 103, 0.35) !important;
+  box-shadow: 0 0 12px rgba(208, 175, 103, 0.18) !important;
+}
+
+.qm-filter-pill__count {
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+}
+
+.qm-filter-pill--active .qm-filter-pill__count {
+  background: rgba(197, 168, 107, 0.25);
+  color: #ffffff;
+}
+
+/* ── 3. Layout Grid Principal ─────────────────────────────────────────── */
+.qm-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .qm-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 4. Hero Section & Active Audit Card ──────────────────────────────── */
+.qm-card {
+  background: var(--qm-bg-card);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: var(--qm-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.qm-card--active-audit {
+  border-top: 4px solid var(--gold);
+}
+
+.qm-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.qm-card__tags {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.qm-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qm-tag--folio {
+  background: var(--qm-bg-card-subtle);
+  color: var(--qm-text-primary);
+  border: 1px solid var(--qm-border-subtle);
+  font-family: var(--font-mono);
+}
+
+.qm-tag--origin {
+  background: var(--qm-color-primary-bg);
+  color: var(--qm-color-primary);
+  border: 1px solid rgba(45, 125, 210, 0.2);
+}
+
+.qm-tag--origin-incident {
+  background: var(--qm-color-warning-bg);
+  color: var(--qm-color-warning);
+  border: 1px solid var(--qm-color-warning-bdr);
+}
+
+.qm-tag--severity {
+  background: var(--qm-color-warning-bg);
+  color: var(--qm-color-warning);
+}
+
+.qm-tag--critical {
+  background: var(--qm-color-danger-bg);
+  color: var(--qm-color-danger);
+  border: 1px solid var(--qm-color-danger-bdr);
+}
+
+.qm-card__timestamp {
+  font-size: 0.75rem;
+  color: var(--qm-text-muted);
+}
+
+/* Pallet Summary Box */
+.qm-pallet-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.qm-pallet-summary__sscc-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--qm-bg-card-subtle);
+  border: 1px dashed var(--qm-border-strong);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+}
+
+.qm-pallet-summary__sscc-lbl {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--qm-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qm-pallet-summary__sscc-val {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--qm-color-warning);
+}
+
+.qm-pallet-summary__sku {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--qm-color-primary);
+}
+
+.qm-pallet-summary__name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0.15rem 0 0 0;
+  color: var(--qm-text-primary);
+  letter-spacing: -0.015em;
+}
+
+.qm-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+
+.qm-spec-tile {
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.qm-spec-tile__lbl {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--qm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qm-spec-tile__val {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+}
+
+.qm-spec-tile__val--loc {
+  color: var(--qm-color-primary);
+}
+
+/* Incident Callout Banner */
+.qm-incident-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: var(--qm-color-warning-bg);
+  border-left: 4px solid var(--qm-color-warning);
+  padding: 0.85rem 1.15rem;
+  border-radius: 10px;
+}
+
+.qm-incident-banner--critical {
+  background: var(--qm-color-danger-bg);
+  border-left-color: var(--qm-color-danger);
+}
+
+.qm-incident-banner__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.qm-incident-banner__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.qm-incident-banner__author {
+  font-size: 0.75rem;
+  color: var(--qm-text-secondary);
+}
+
+.qm-incident-banner__reason {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--qm-text-primary);
+  font-style: italic;
+}
+
+/* ── 5. Checklist Técnico de 4 Puntos ──────────────────────────────────── */
+.qm-checklist-block {
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.qm-checklist-block__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.qm-checklist-block__title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--qm-text-primary);
+}
+
+.qm-checklist-block__sub {
+  font-size: 0.75rem;
+  color: var(--qm-text-secondary);
+  margin: 0.15rem 0 0 0;
+}
+
+.qm-checklist-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.3rem 0.75rem;
+  border-radius: 99px;
+  background: var(--qm-color-warning-bg);
+  color: var(--qm-color-warning);
+  border: 1px solid var(--qm-color-warning-bdr);
+}
+
+.qm-checklist-badge--ok {
+  background: var(--qm-color-success-bg);
+  color: var(--qm-color-success);
+  border-color: var(--qm-color-success-bdr);
+}
+
+.qm-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.qm-check-item {
+  background: var(--qm-bg-card);
+  border: 1.5px solid var(--qm-border-subtle);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  cursor: pointer;
+  transition: all 180ms ease;
+  user-select: none;
+  box-shadow: var(--qm-shadow-sm);
+}
+
+.qm-check-item:hover {
+  border-color: var(--gold-border);
+  background: var(--qm-bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.qm-check-item--checked {
+  border-color: var(--qm-color-success);
+  background: var(--qm-color-success-bg);
+}
+
+.qm-check-item__checkbox {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid var(--qm-border-strong);
+  background: var(--qm-bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: var(--qm-color-success);
+  flex-shrink: 0;
+  transition: all 180ms ease;
+}
+
+.qm-check-item--checked .qm-check-item__checkbox {
+  background: var(--qm-color-success);
+  border-color: var(--qm-color-success);
+  color: #ffffff;
+}
+
+.qm-check-item__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.qm-check-item__name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+}
+
+.qm-check-item__desc {
+  font-size: 0.72rem;
+  color: var(--qm-text-secondary);
+  line-height: 1.3;
+}
+
+.qm-check-item__status {
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--qm-color-danger-bg);
+  color: var(--qm-color-danger);
+  flex-shrink: 0;
+}
+
+.qm-check-item__status--pass {
+  background: var(--qm-color-success-bg);
+  color: var(--qm-color-success);
+}
+
+/* ── 6. Evidencia Fotográfica & Observaciones ─────────────────────────── */
+.qm-evidence-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.qm-evidence-block__row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .qm-evidence-block__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qm-photo-box, .qm-notes-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.qm-photo-box__title, .qm-notes-box__title {
   font-size: 0.8rem;
-  font-weight: 600;
-  color: #FFFFFF;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+}
+
+.qm-photo-placeholder {
+  border: 2px dashed var(--qm-border-strong);
+  background: var(--qm-bg-card-subtle);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  min-height: 110px;
+  transition: all 180ms ease;
+  color: var(--qm-text-secondary);
+}
+
+.qm-photo-placeholder:hover {
+  background: var(--qm-bg-card-hover);
+  border-color: var(--gold);
+}
+
+.qm-photo-placeholder__icon {
+  font-size: 1.6rem;
+}
+
+.qm-photo-placeholder__txt {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.qm-photo-placeholder__sub {
+  font-size: 0.68rem;
+  color: var(--qm-text-muted);
+}
+
+.qm-photo-preview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--qm-border-subtle);
+  max-height: 110px;
+  cursor: pointer;
+}
+
+.qm-photo-preview img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.qm-photo-preview__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.qm-photo-preview:hover .qm-photo-preview__overlay {
+  opacity: 1;
+}
+
+.qm-notes-input {
+  width: 100%;
+  border: 1px solid var(--qm-border-strong);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: var(--qm-bg-card);
+  color: var(--qm-text-primary);
+  font-size: 0.85rem;
+  resize: vertical;
+  min-height: 85px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.qm-notes-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-bg);
+}
+
+/* ── 7. Matriz de Disposición Final (4 Acciones Homologadas) ──────────── */
+.qm-disposition-block {
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.qm-disposition-block__title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--qm-text-primary);
+}
+
+.qm-disposition-block__sub {
+  font-size: 0.75rem;
+  color: var(--qm-text-secondary);
+  margin: 0.15rem 0 0 0;
+}
+
+.qm-disposition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.85rem;
+}
+
+.qm-disp-btn {
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 180ms ease;
+  min-height: 100px;
+  position: relative;
+  box-shadow: var(--qm-shadow-sm);
+}
+
+.qm-disp-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--qm-shadow-md);
+}
+
+.qm-disp-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.qm-disp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.qm-disp-btn__header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.qm-disp-btn__icon {
+  font-size: 1.2rem;
+}
+
+.qm-disp-btn__title {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.qm-disp-btn__desc {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  opacity: 0.92;
+}
+
+.qm-disp-btn__lock {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--qm-color-danger);
+  margin-top: auto;
+}
+
+/* Variantes de Botones de Disposición (SDD Spec) */
+.qm-disp-btn--release {
+  background: var(--qm-color-success-bg);
+  border-color: var(--qm-color-success);
+  color: var(--qm-color-success);
+}
+
+.qm-disp-btn--release:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+}
+
+.qm-disp-btn--repack {
+  background: var(--qm-color-warning-bg);
+  border-color: var(--qm-color-warning);
+  color: var(--qm-color-warning);
+}
+
+.qm-disp-btn--repack:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+}
+
+.qm-disp-btn--scrap {
+  background: var(--qm-color-danger-bg);
+  border-color: var(--qm-color-danger);
+  color: var(--qm-color-danger);
+}
+
+.qm-disp-btn--scrap:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: #ffffff;
+}
+
+.qm-disp-btn--rtv {
+  background: var(--qm-color-primary-bg);
+  border-color: var(--qm-color-primary);
+  color: var(--qm-color-primary);
+}
+
+.qm-disp-btn--rtv:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+}
+
+/* ── 8. Aside: Cola de Cuarentena (FIFO Stream) ───────────────────────── */
+.qm-queue-aside {
+  background: var(--qm-bg-card);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 18px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--qm-shadow-md);
+}
+
+.qm-queue-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--qm-border-subtle);
+  padding-bottom: 0.75rem;
+}
+
+.qm-queue-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--qm-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qm-queue-badge {
+  background: var(--gold-bg);
+  color: var(--text-gold);
+  border: 1px solid var(--gold-border);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.15rem 0.55rem;
+  border-radius: 99px;
+}
+
+.qm-queue-sub {
+  font-size: 0.72rem;
+  color: var(--qm-text-muted);
+}
+
+.qm-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.qm-queue-card {
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.qm-queue-card:hover {
+  background: var(--qm-bg-card-hover);
+  border-color: var(--gold-border);
+  transform: translateX(2px);
+}
+
+.qm-queue-card--critical {
+  border-left: 3px solid var(--qm-color-danger);
+}
+
+.qm-queue-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qm-queue-card__folio {
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--qm-text-primary);
+}
+
+.qm-queue-card__time {
+  font-size: 0.68rem;
+  color: var(--qm-text-muted);
+}
+
+.qm-queue-card__sscc {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--qm-color-warning);
+}
+
+.qm-queue-card__prod {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.buffer-item__right {
+.qm-queue-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.qm-queue-card__origin {
+  font-size: 0.68rem;
+  color: var(--qm-text-secondary);
+}
+
+.qm-queue-card__action {
+  background: none;
+  border: none;
+  color: var(--text-gold);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.qm-queue-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--qm-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── 9. Historial de Actas Emitidas ───────────────────────────────────── */
+.qm-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.qm-history-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.qm-history-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--qm-text-primary);
+}
+
+.qm-history-sub {
+  font-size: 0.8rem;
+  color: var(--qm-text-secondary);
+  margin: 0;
+}
+
+.qm-history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.15rem;
+}
+
+.qm-history-card {
+  background: var(--qm-bg-card);
+  border: 1px solid var(--qm-border-subtle);
+  border-radius: 16px;
+  padding: 1.35rem;
+  box-shadow: var(--qm-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.qm-history-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.qm-history-card__acta {
+  font-size: 0.82rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-gold);
+  display: block;
+}
+
+.qm-history-card__folio {
+  font-size: 0.7rem;
+  color: var(--qm-text-muted);
+}
+
+.qm-history-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+
+.decision-badge--released {
+  background: var(--qm-color-success-bg);
+  color: var(--qm-color-success);
+  border: 1px solid var(--qm-color-success-bdr);
+}
+
+.decision-badge--repack {
+  background: var(--qm-color-warning-bg);
+  color: var(--qm-color-warning);
+  border: 1px solid var(--qm-color-warning-bdr);
+}
+
+.decision-badge--scrap {
+  background: var(--qm-color-danger-bg);
+  color: var(--qm-color-danger);
+  border: 1px solid var(--qm-color-danger-bdr);
+}
+
+.decision-badge--rtv {
+  background: var(--qm-color-primary-bg);
+  color: var(--qm-color-primary);
+  border: 1px solid rgba(45, 125, 210, 0.25);
+}
+
+.decision-badge--pending {
+  background: var(--qm-bg-card-subtle);
+  color: var(--qm-text-muted);
+}
+
+.qm-history-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.qm-history-card__sscc {
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--qm-color-warning);
+}
+
+.qm-history-card__product {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+}
+
+.qm-history-card__meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--qm-text-secondary);
+  flex-wrap: wrap;
+}
+
+.qm-history-card__notes {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--qm-text-secondary);
+  background: var(--qm-bg-card-subtle);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+}
+
+.qm-history-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--qm-border-subtle);
+  padding-top: 0.75rem;
+}
+
+.qm-history-card__inspector {
+  font-size: 0.72rem;
+  color: var(--qm-text-secondary);
+}
+
+/* ── 10. Modales & Overlays ───────────────────────────────────────────── */
+.qm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.qm-modal-card {
+  background: var(--qm-bg-card);
+  border: 1px solid var(--qm-border-strong);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 540px;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  box-shadow: var(--qm-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  animation: qmPopIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes qmPopIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.qm-modal-card__header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--qm-border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qm-modal-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.qm-modal-card__badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-gold);
+  letter-spacing: 0.08em;
+}
+
+.qm-modal-card__title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--qm-text-primary);
+}
+
+.qm-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--qm-text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.qm-modal-close:hover {
+  background: var(--qm-bg-card-hover);
+  color: var(--qm-text-primary);
+}
+
+.qm-modal-card__body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.qm-modal-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: var(--qm-bg-card-subtle);
+  border-left: 3px solid var(--gold);
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+}
+
+.qm-modal-alert__icon {
+  font-size: 1.1rem;
+}
+
+.qm-modal-alert__text {
+  font-size: 0.82rem;
+  color: var(--qm-text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.qm-modal-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.qm-modal-summary__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.qm-modal-summary__row span {
+  color: var(--qm-text-muted);
+}
+
+.qm-modal-summary__row strong {
+  color: var(--qm-text-primary);
+  text-align: right;
+}
+
+.qm-modal-card__footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--qm-border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.qm-modal-card__footer--center {
+  justify-content: center;
+}
+
+/* ── 11. Modal de Cámara ──────────────────────────────────────────────── */
+.qm-modal-card--camera {
+  max-width: 600px;
+}
+
+.qm-camera-body {
+  padding: 1rem;
+}
+
+.qm-camera-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000000;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qm-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qm-camera-reticle {
+  position: absolute;
+  inset: 15%;
+  pointer-events: none;
+}
+
+.qm-camera-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #38bdf8;
+}
+
+.qm-camera-corner.top-left { top: 0; left: 0; border-right: none; border-bottom: none; }
+.qm-camera-corner.top-right { top: 0; right: 0; border-left: none; border-bottom: none; }
+.qm-camera-corner.bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; }
+.qm-camera-corner.bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+.qm-camera-laser-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(239, 68, 68, 0.85);
+  box-shadow: 0 0 10px #ef4444;
+}
+
+.qm-camera-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 1.5rem;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.qm-camera-fallback span {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.qm-camera-fallback p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.qm-btn--capture {
+  min-width: 190px;
+  font-size: 0.95rem;
+}
+
+/* ── 12. Modal de Acta Oficial QM (Certificado) ───────────────────────── */
+.qm-modal-card--certificate {
+  max-width: 680px;
+}
+
+.qm-cert-header {
+  background: linear-gradient(145deg, #172033 0%, #25324a 100%);
+  color: #ffffff;
+  padding: 1.35rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  border-bottom: 1px solid rgba(197, 168, 107, 0.35);
+}
+
+.qm-cert-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qm-cert-logo-icon {
+  font-size: 2rem;
+}
+
+.qm-cert-logo-title {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  display: block;
+}
+
+.qm-cert-logo-sub {
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  display: block;
+}
+
+.qm-cert-header__folio {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
-  flex-shrink: 0;
 }
 
-/* Status Badges */
-.status-badge {
-  font-size: 0.65rem;
+.qm-cert-folio-lbl {
+  font-size: 0.68rem;
+  color: var(--gold-light);
   font-weight: 800;
-  padding: 0.2rem 0.5rem;
-  border-radius: 99px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
-.status-badge--approved {
-  background: rgba(46, 125, 50, 0.25);
-  color: #81C784;
+.qm-cert-folio-val {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--gold-light);
 }
 
-.status-badge--rejected {
-  background: rgba(198, 40, 40, 0.25);
-  color: #E57373;
+.qm-cert-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: var(--qm-bg-card);
 }
 
-.buffer-item__time {
-  font-size: 0.65rem;
-  color: rgba(255,255,255,0.3);
-  font-family: monospace;
-}
-
-.buffer-empty {
+.qm-cert-stamp-box {
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 2.5rem;
-  font-size: 0.875rem;
-  color: rgba(255,255,255,0.3);
+  border-bottom: 1px solid var(--qm-border-subtle);
+  padding-bottom: 1rem;
+}
+
+.qm-cert-main-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--qm-text-primary);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.qm-cert-decision-stamp {
+  font-size: 0.95rem;
+  font-weight: 900;
+  padding: 0.45rem 1.35rem;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 2px solid currentColor;
+}
+
+.qm-cert-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.qm-cert-table th, .qm-cert-table td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--qm-border-subtle);
+}
+
+.qm-cert-table th {
+  background: var(--qm-bg-card-subtle);
+  color: var(--qm-text-secondary);
+  font-weight: 800;
+  text-align: left;
+  width: 25%;
+}
+
+.qm-cert-table td {
+  color: var(--qm-text-primary);
+  font-weight: 700;
+}
+
+.qm-cert-table__mono {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  color: var(--qm-color-warning);
+}
+
+.qm-cert-signatures {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--qm-border-strong);
+  gap: 1rem;
+}
+
+.qm-cert-sig-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 240px;
+}
+
+.qm-cert-sig-line {
+  width: 100%;
+  height: 1.5px;
+  background: var(--qm-text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.qm-cert-sig-name {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+}
+
+.qm-cert-sig-role {
+  font-size: 0.68rem;
+  color: var(--qm-text-muted);
+}
+
+.qm-cert-digital-stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--qm-text-muted);
+}
+
+.qm-cert-stamp-hash {
+  color: var(--text-gold);
+  font-weight: 800;
+}
+
+/* ── 13. Botones Globales (SDD Homologados) ───────────────────────────── */
+.qm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 180ms ease;
+  white-space: nowrap;
+}
+
+.qm-btn--sm {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+}
+
+.qm-btn--primary {
+  background: linear-gradient(135deg, #c5a86b 0%, #b3924f 100%);
+  color: #172033;
+  border: 1px solid #e0c87a;
+  box-shadow: 0 4px 14px rgba(197, 168, 107, 0.35);
+  font-weight: 900;
+}
+
+:host-context(.theme-dark) .qm-btn--primary,
+:host-context(.dark) .qm-btn--primary,
+:host-context([data-theme='dark']) .qm-btn--primary {
+  background: linear-gradient(135deg, #d0af67 0%, #b89547 100%);
+  color: #0b1119;
+  border-color: #e1c47c;
+  box-shadow: 0 4px 14px rgba(208, 175, 103, 0.3);
+}
+
+.qm-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #e0c87a 0%, #c5a86b 100%);
+  box-shadow: 0 8px 20px rgba(197, 168, 107, 0.45);
+}
+
+.qm-btn--ghost {
+  background: #ffffff;
+  border: 1px solid rgba(76, 86, 105, 0.2);
+  color: var(--qm-text-primary);
+}
+
+:host-context(.theme-dark) .qm-btn--ghost,
+:host-context(.dark) .qm-btn--ghost,
+:host-context([data-theme='dark']) .qm-btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--qm-text-primary);
+}
+
+.qm-btn--ghost:hover:not(:disabled) {
+  border-color: var(--gold-border);
+  color: var(--text-gold);
+  transform: translateY(-1px);
+}
+
+.qm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Empty Hero */
+.qm-empty-hero {
+  background: var(--qm-bg-card);
+  border: 1px dashed var(--qm-border-strong);
+  border-radius: 18px;
+  padding: 3.5rem 1.5rem;
   text-align: center;
-  background: rgba(255,255,255,0.02);
-  border: 1px dashed rgba(255,255,255,0.1);
-  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.qm-empty-hero__icon {
+  font-size: 2.75rem;
+}
+
+.qm-empty-hero__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--qm-text-primary);
+  margin: 0;
+}
+
+.qm-empty-hero__desc {
+  font-size: 0.85rem;
+  color: var(--qm-text-secondary);
+  max-width: 440px;
+  margin: 0 0 0.5rem 0;
+}
+
+/* ── 14. Soporte para Impresión ───────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .qm-modal-card--certificate, .qm-modal-card--certificate * {
+    visibility: visible;
+  }
+  .qm-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .qm-modal-card--certificate {
+    box-shadow: none;
+    border: none;
+    max-width: 100%;
+  }
+  .qm-modal-card__footer {
+    display: none;
+  }
 }
