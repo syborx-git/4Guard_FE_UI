@@ -1,6 +1,7 @@
-<!-- ================================================================
-     Módulo de Seguridad & Caseta — Terminal RF PWA (Synexia Dual Theme)
-     ================================================================ -->
+<!-- ════════════════════════════════════════════════════════════════
+     CASETA DE SEGURIDAD & PATIO — TERMINAL RF PWA (4GUARD WMS)
+     HOMOLOGADO CON CONSOLA ADMINISTRATIVA Y ADR-012, 013, 015, 017, 018
+     ════════════════════════════════════════════════════════════════ -->
 <div class="security-rf-page">
 
   <!-- ── 1. Cabecera Táctica del Módulo ───────────────────────────── -->
@@ -17,37 +18,46 @@
           <div class="security-rf-header__eyebrow">
             <span>Terminal RF</span>
             <span class="eyebrow-sep">·</span>
-            <span class="eyebrow-gold">Caseta de Vigilancia &amp; Patio</span>
+            <span class="eyebrow-gold">Seguridad Patrimonial &amp; Patio</span>
           </div>
-          <h1 class="security-rf-header__title">Control de Acceso &amp; Seguridad</h1>
+          <h1 class="security-rf-header__title">Centro de Control de Vigilancia &amp; Caseta</h1>
           <p class="security-rf-header__subtitle">
-            Registro táctil de transportes, captura de sellos y autorización de salidas en patio.
+            Formato oficial F01-PO-CP-7.1.3-03, auto-registro QR, inspección de transporte y control de patio.
           </p>
         </div>
       </div>
+
+      <!-- Estado de Caseta -->
+      <div class="security-status-badge">
+        <span class="security-status-badge__dot"></span>
+        <span>CASETA EN LÍNEA</span>
+      </div>
     </div>
 
-    <!-- ── Barra de Pestañas Táctiles (Pill Navigation Industrial) ── -->
+    <!-- ── Barra de Pestañas Táctiles ── -->
     <div class="security-rf-toolbar">
       <nav class="security-tabs-nav" aria-label="Pestañas de Seguridad">
         <button
           type="button"
-          (click)="setTab('CHECKIN')"
-          [class.tab-active]="activeTab() === 'CHECKIN'"
+          (click)="setTab('REGISTRATION')"
+          [class.tab-active]="activeTab() === 'REGISTRATION'"
           class="security-tab-btn">
-          <span class="material-symbols-outlined">login</span>
-          <span>1. Check-In (Entrada)</span>
+          <span class="material-symbols-outlined">how_to_reg</span>
+          <span>1. Nuevo Registro F01</span>
+          @if (pendingPassesCount() > 0) {
+            <span class="tab-badge-pulse" title="Solicitudes móviles en espera">{{ pendingPassesCount() }}</span>
+          }
         </button>
 
         <button
           type="button"
-          (click)="setTab('YARD')"
-          [class.tab-active]="activeTab() === 'YARD'"
+          (click)="setTab('IN_YARD')"
+          [class.tab-active]="activeTab() === 'IN_YARD'"
           class="security-tab-btn">
           <span class="material-symbols-outlined">local_shipping</span>
-          <span>2. En Patio ({{ yardCount() }})</span>
+          <span>2. En Patio &amp; Andenes ({{ yardCount() }})</span>
           @if (waitingCount() > 0) {
-            <span class="tab-badge-pulse">{{ waitingCount() }}</span>
+            <span class="tab-badge-warning">{{ waitingCount() }}</span>
           }
         </button>
 
@@ -57,7 +67,7 @@
           [class.tab-active]="activeTab() === 'CHECKOUT'"
           class="security-tab-btn">
           <span class="material-symbols-outlined">logout</span>
-          <span>3. Salida / Sellos ({{ readyDepartureCount() }})</span>
+          <span>3. Salida / Check-Out ({{ readyDepartureCount() }})</span>
         </button>
       </nav>
     </div>
@@ -73,7 +83,7 @@
     </div>
   }
 
-  <!-- ── 2. Cuadrícula de Métricas KPI Rápidas (4 Cards) ───────────── -->
+  <!-- ── 2. Cuadrícula de Métricas KPI Rápidas ─────────────────────── -->
   <div class="security-kpi-grid">
     <div class="security-kpi-card security-kpi-card--primary">
       <div class="security-kpi-card__icon">
@@ -88,12 +98,12 @@
 
     <div class="security-kpi-card security-kpi-card--warning">
       <div class="security-kpi-card__icon">
-        <span class="material-symbols-outlined">hourglass_empty</span>
+        <span class="material-symbols-outlined">qr_code_scanner</span>
       </div>
       <div class="security-kpi-card__info">
-        <span class="security-kpi-card__label">ESPERA DE RAMPA</span>
-        <strong class="security-kpi-card__value">{{ waitingCount() }}</strong>
-        <span class="security-kpi-card__sub">Pendientes de andén</span>
+        <span class="security-kpi-card__label">SOLICITUDES QR</span>
+        <strong class="security-kpi-card__value">{{ pendingPassesCount() }}</strong>
+        <span class="security-kpi-card__sub">Choferes en espera</span>
       </div>
     </div>
 
@@ -104,18 +114,18 @@
       <div class="security-kpi-card__info">
         <span class="security-kpi-card__label">EN ANDÉN / RAMPA</span>
         <strong class="security-kpi-card__value">{{ atRampCount() }}</strong>
-        <span class="security-kpi-card__sub">En proceso de descarga</span>
+        <span class="security-kpi-card__sub">En carga / descarga</span>
       </div>
     </div>
 
     <div class="security-kpi-card security-kpi-card--success">
       <div class="security-kpi-card__icon">
-        <span class="material-symbols-outlined">check_circle</span>
+        <span class="material-symbols-outlined">verified</span>
       </div>
       <div class="security-kpi-card__info">
         <span class="security-kpi-card__label">LISTOS PARA SALIDA</span>
         <strong class="security-kpi-card__value">{{ readyDepartureCount() }}</strong>
-        <span class="security-kpi-card__sub">Descarga concluida</span>
+        <span class="security-kpi-card__sub">Autorizados por almacén</span>
       </div>
     </div>
   </div>
@@ -123,191 +133,584 @@
   <!-- ── 3. Contenido Principal según Pestaña ─────────────────────── -->
   <div class="security-content-area">
 
-    <!-- ── TAB 1: FORMULARIO TÁCTIL DE ENTRADA (CHECK-IN) ─────────── -->
-    @if (activeTab() === 'CHECKIN') {
+    <!-- ══════════════════════════════════════════════════════════════
+         PESTAÑA 1: NUEVO REGISTRO F01 (CHECK-IN)
+    ══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'REGISTRATION') {
       <div class="security-panel-card animate-fade-in">
-        <div class="panel-header">
-          <div class="panel-header__title-wrap">
-            <span class="material-symbols-outlined panel-header__icon">app_registration</span>
-            <div>
-              <h2 class="panel-header__title">Registro de Arribo en Caseta</h2>
-              <p class="panel-header__subtitle">Captura de tractocamión, chofer, placas y evidencia de sellos de origen.</p>
+        
+        <!-- ── BANDEJA DE SOLICITUDES ENTRANTES (ADR-017 / 1-TAP LOAD) ── -->
+        <div class="incoming-passes-section">
+          <div class="incoming-passes-header">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-500 font-bold animate-pulse">move_to_inbox</span>
+              <h3 class="incoming-passes-title">Solicitudes Entrantes de Choferes (Auto-Registro QR)</h3>
+              <span class="badge-count">{{ pendingPassesCount() }}</span>
             </div>
-          </div>
-          <span class="badge-gold">CHECK-IN ACTIVO</span>
-        </div>
-
-        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-form space-y-4">
-          
-          <!-- Fila: Tipo de Operación -->
-          <div class="form-row form-row--type">
-            <label class="form-label">Tipo de Movimiento:</label>
-            <div class="type-selector-grid">
-              <label class="type-radio-card" [class.type-radio-card--selected]="checkInForm.value.operationType === 'INBOUND'">
-                <input type="radio" formControlName="operationType" value="INBOUND" class="sr-only" />
-                <span class="material-symbols-outlined">archive</span>
-                <span class="type-title">Entrada / Recepción (Inbound)</span>
-              </label>
-
-              <label class="type-radio-card" [class.type-radio-card--selected]="checkInForm.value.operationType === 'OUTBOUND'">
-                <input type="radio" formControlName="operationType" value="OUTBOUND" class="sr-only" />
-                <span class="material-symbols-outlined">unarchive</span>
-                <span class="type-title">Salida / Embarque (Outbound)</span>
-              </label>
-            </div>
+            <span class="text-xs text-muted">Toca una tarjeta para auto-completar el formulario F01</span>
           </div>
 
-          <!-- Grid de Captura Táctil de Datos -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            <!-- Transportista -->
-            <div class="form-field">
-              <label class="form-label" for="carrierName">
-                <span>Línea Transportista *</span>
-              </label>
-              <input
-                id="carrierName"
-                type="text"
-                formControlName="carrierName"
-                placeholder="Ej. Transportes Castores, TUM..."
-                class="rf-input uppercase font-bold" />
-            </div>
-
-            <!-- Nombre Chofer -->
-            <div class="form-field">
-              <label class="form-label" for="driverName">
-                <span>Nombre del Conductor *</span>
-              </label>
-              <input
-                id="driverName"
-                type="text"
-                formControlName="driverName"
-                placeholder="Nombre completo"
-                class="rf-input font-bold" />
-            </div>
-
-            <!-- Placas Tracto -->
-            <div class="form-field">
-              <label class="form-label" for="tractorPlates">
-                <span>Placas Tracto *</span>
-              </label>
-              <input
-                id="tractorPlates"
-                type="text"
-                formControlName="tractorPlates"
-                placeholder="72-AB-9K"
-                class="rf-input font-mono uppercase font-bold text-amber-700 dark:text-amber-400" />
-            </div>
-
-            <!-- Placas Caja / Remolque -->
-            <div class="form-field">
-              <label class="form-label" for="boxPlates">
-                <span>Placas Caja / Remolque *</span>
-              </label>
-              <input
-                id="boxPlates"
-                type="text"
-                formControlName="boxPlates"
-                placeholder="45-TR-2M"
-                class="rf-input font-mono uppercase font-bold text-amber-700 dark:text-amber-400" />
-            </div>
-
-            <!-- Sello Principal -->
-            <div class="form-field">
-              <label class="form-label" for="seal1">
-                <span>Sello Fiscal 1 *</span>
-              </label>
-              <input
-                id="seal1"
-                type="text"
-                formControlName="seal1"
-                placeholder="SL-99412"
-                class="rf-input font-mono uppercase font-bold" />
-            </div>
-
-            <!-- Sello Secundario -->
-            <div class="form-field">
-              <label class="form-label" for="seal2">
-                <span>Sello Fiscal 2 (Opcional)</span>
-              </label>
-              <input
-                id="seal2"
-                type="text"
-                formControlName="seal2"
-                placeholder="SL-99413"
-                class="rf-input font-mono uppercase" />
-            </div>
-
-            <!-- Rampa Asignada Rápida -->
-            <div class="form-field">
-              <label class="form-label" for="assignedRamp">
-                <span>Rampa Asignada (Andén)</span>
-              </label>
-              <select id="assignedRamp" formControlName="assignedRamp" class="rf-input font-bold">
-                <option value="">-- Sin Rampa (A Patio) --</option>
-                <option value="1">Rampa 01</option>
-                <option value="2">Rampa 02</option>
-                <option value="3">Rampa 03</option>
-                <option value="4">Rampa 04</option>
-                <option value="5">Rampa 05</option>
-                <option value="6">Rampa 06</option>
-                <option value="7">Rampa 07</option>
-                <option value="8">Rampa 08</option>
-              </select>
-            </div>
-
-            <!-- Observaciones -->
-            <div class="form-field">
-              <label class="form-label" for="observations">
-                <span>Observaciones</span>
-              </label>
-              <input
-                id="observations"
-                type="text"
-                formControlName="observations"
-                placeholder="Estado físico, sellos intactos..."
-                class="rf-input" />
-            </div>
-
-          </div>
-
-          <!-- ── Captura de Fotografía de Sellos con Compresión Automática ── -->
-          <div class="photo-capture-card">
-            <input
-              #cameraInput
-              type="file"
-              accept="image/*"
-              capture="environment"
-              (change)="onPhotoSelected($event)"
-              class="hidden" />
-
-            <div class="photo-capture-content">
-              @if (!sealPhotoPreview()) {
-                <button
-                  type="button"
-                  (click)="triggerCamera()"
-                  [disabled]="isCompressingPhoto()"
-                  class="btn-camera-trigger"
-                  title="Tomar foto con la cámara del dispositivo">
-                  <span class="material-symbols-outlined text-3xl">photo_camera</span>
-                  <div class="text-left">
-                    <span class="font-bold text-sm block">Capturar Foto de Sellos / Placas</span>
-                    <span class="text-xs text-muted block">Compresión automática Canvas (&le;150 KB)</span>
+          @if (activePasses().length > 0) {
+            <div class="incoming-passes-carousel">
+              @for (pass of activePasses(); track pass.id) {
+                <div
+                  class="incoming-pass-card"
+                  [class.incoming-pass-card--active]="activeLoadedToken() === pass.token"
+                  (click)="loadPassIntoForm(pass)">
+                  <div class="pass-card-top">
+                    <span class="badge-op-type" [ngClass]="pass.operationType === 'INBOUND' ? 'badge-op--inbound' : 'badge-op--outbound'">
+                      {{ pass.operationType === 'INBOUND' ? '📥 DESCARGA (Inbound)' : '📤 CARGA (Outbound)' }}
+                    </span>
+                    <span class="pass-time-ago font-mono">
+                      ⏱ {{ formatStayDuration(pass.submittedAt).text }}
+                    </span>
                   </div>
-                </button>
-              } @else {
-                <div class="photo-preview-wrap">
-                  <img [src]="sealPhotoPreview()" alt="Evidencia de sellos" class="photo-preview-img" />
-                  <div class="photo-preview-info">
-                    <span class="badge-success">📷 Foto Comprimida OK</span>
-                    <span class="text-xs text-muted font-mono">Formato JPEG 75% (&approx;120 KB)</span>
-                    <button type="button" (click)="removePhoto()" class="btn-remove-photo">
-                      <span class="material-symbols-outlined">delete</span>
-                      <span>Eliminar</span>
-                    </button>
+
+                  <div class="pass-carrier-name">{{ pass.carrierName }}</div>
+                  
+                  <div class="pass-driver-row">
+                    <span class="material-symbols-outlined text-xs">person</span>
+                    <span>{{ pass.driverName }}</span>
+                    @if (pass.driverPhone) {
+                      <span class="text-muted font-mono text-[10px]">· Tel: {{ pass.driverPhone }}</span>
+                    }
+                  </div>
+
+                  <div class="pass-plates-row">
+                    <span class="plate-pill">Tracto: {{ pass.tractorPlates }}</span>
+                    <span class="plate-pill">Caja: {{ pass.boxPlates }}</span>
+                  </div>
+
+                  <div class="pass-footer-action">
+                    @if (activeLoadedToken() === pass.token) {
+                      <span class="badge-loaded">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        <span>Cargado en Formulario F01</span>
+                      </span>
+                    } @else {
+                      <button type="button" class="btn-1tap-load">
+                        <span class="material-symbols-outlined text-sm">touch_app</span>
+                        <span>1-Tap: Cargar en Formulario</span>
+                      </button>
+                    }
                   </div>
                 </div>
               }
+            </div>
+          } @else {
+            <div class="incoming-passes-empty">
+              <span class="material-symbols-outlined text-2xl text-muted">inbox</span>
+              <span class="text-xs text-muted">No hay solicitudes móviles en espera. Puedes capturar directamente en el formulario F01.</span>
+            </div>
+          }
+        </div>
+
+        <!-- ── BANNER DE PASE VINCULADO ── -->
+        @if (activeLoadedToken(); as tok) {
+          <div class="loaded-token-banner animate-fade-in">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-500 font-bold">bolt</span>
+              <div>
+                <strong class="text-sm text-slate-900 dark:text-amber-300">Pase Chofer Vinculado: {{ tok }}</strong>
+                <span class="text-xs text-muted block">Datos precargados del Formato F01 móvil. Verifica sellos, inspección y asigna rampa.</span>
+              </div>
+            </div>
+            <button type="button" (click)="clearLoadedPass()" class="btn-clear-token" title="Limpiar y capturar manualmente">
+              <span class="material-symbols-outlined text-sm">close</span>
+              <span>Desvincular</span>
+            </button>
+          </div>
+        }
+
+        <!-- ══════════════════════════════════════════════════════════════
+             FORMULARIO OFICIAL F01-PO-CP-7.1.3-03 (REPLICACIÓN ADMIN CONSOLE)
+        ══════════════════════════════════════════════════════════════ -->
+        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-form mt-4 space-y-6">
+          
+          <!-- Encabezado del Formato Oficial -->
+          <div class="f01-form-header">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2.5">
+                <span class="badge-gold">FORMATO OFICIAL</span>
+                <h2 class="font-black text-base uppercase tracking-wide text-slate-900 dark:text-slate-100">
+                  Check List de Transporte
+                </h2>
+              </div>
+              <div class="text-right text-[11px] text-slate-500 font-mono">
+                <span>No. Control: <strong>F01-PO-CP-7.1.3-03</strong></span>
+                <span class="mx-1.5">·</span>
+                <span>Rev. 01 (19/08/2025)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 1: DATOS GENERALES ── -->
+          <div class="form-section-block">
+            <div class="form-section-title">
+              <span class="material-symbols-outlined">description</span>
+              <span>1. Datos Generales de la Operación</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              <!-- Fecha -->
+              <div class="form-field">
+                <label class="form-label" for="fecha">Fecha *</label>
+                <input id="fecha" type="date" formControlName="fecha" class="rf-input font-mono" />
+              </div>
+
+              <!-- Tipo de Operación Bimodal -->
+              <div class="form-field">
+                <label class="form-label">Operación *</label>
+                <div class="operation-toggle-group">
+                  <button
+                    type="button"
+                    (click)="onOperationChange('DESCARGA')"
+                    [class.active-descarga]="checkInForm.get('operacion')?.value === 'DESCARGA'"
+                    class="operation-toggle-btn">
+                    <span class="material-symbols-outlined text-sm">download</span>
+                    <span>Descarga</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="onOperationChange('CARGA')"
+                    [class.active-carga]="checkInForm.get('operacion')?.value === 'CARGA'"
+                    class="operation-toggle-btn">
+                    <span class="material-symbols-outlined text-sm">upload</span>
+                    <span>Carga</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- No. Carta Porte (Obligatorio en Carga) -->
+              <div class="form-field">
+                <label class="form-label" for="noCartaPorte">
+                  No. Carta Porte {{ checkInForm.get('operacion')?.value === 'CARGA' ? '*' : '' }}
+                </label>
+                <input
+                  id="noCartaPorte"
+                  type="text"
+                  formControlName="noCartaPorte"
+                  placeholder="CP-88492-MX"
+                  class="rf-input font-mono uppercase font-bold" />
+              </div>
+
+              <!-- No. Remisión / Factura (Obligatorio en Descarga) -->
+              <div class="form-field">
+                <label class="form-label" for="remision">
+                  No. Remisión / Factura {{ checkInForm.get('operacion')?.value === 'DESCARGA' ? '*' : '' }}
+                </label>
+                <input
+                  id="remision"
+                  type="text"
+                  formControlName="remision"
+                  placeholder="REM-99482-4G"
+                  class="rf-input font-mono uppercase font-bold" />
+              </div>
+
+              <!-- Cliente -->
+              <div class="form-field sm:col-span-2">
+                <label class="form-label" for="client">Cliente / Cuenta *</label>
+                <select id="client" formControlName="client" class="rf-input font-bold">
+                  <option value="">-- Seleccionar Cliente --</option>
+                  @for (cli of clientsList(); track cli) {
+                    <option [value]="cli">{{ cli }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Hora Entrada -->
+              <div class="form-field">
+                <label class="form-label" for="horaEntrada">Hora Entrada *</label>
+                <input id="horaEntrada" type="time" formControlName="horaEntrada" class="rf-input font-mono" />
+              </div>
+
+              <!-- Rampa / Andén -->
+              <div class="form-field">
+                <label class="form-label" for="rampNumber">Andén / Rampa *</label>
+                <select id="rampNumber" formControlName="rampNumber" class="rf-input font-bold text-amber-600 dark:text-amber-400">
+                  <option value="">-- Seleccionar Rampa --</option>
+                  @for (rm of rampOptions; track rm.num) {
+                    <option [value]="rm.num" [disabled]="!rm.available">
+                      {{ rm.label }} {{ rm.available ? '(Disponible)' : '(Ocupada: ' + rm.occupiedBy + ')' }}
+                    </option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 2: DATOS DEL TRANSPORTE & UNIDAD ── -->
+          <div class="form-section-block">
+            <div class="form-section-title">
+              <span class="material-symbols-outlined">rv_hookup</span>
+              <span>2. Datos del Transporte &amp; Unidad</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              <!-- Línea Transportista -->
+              <div class="form-field sm:col-span-2">
+                <label class="form-label" for="carrierLine">Línea Transportista *</label>
+                <select id="carrierLine" formControlName="carrierLine" class="rf-input font-bold">
+                  <option value="">-- Seleccionar Línea --</option>
+                  @for (c of carrierLinesList(); track c) {
+                    <option [value]="c">{{ c }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Nombre del Conductor -->
+              <div class="form-field">
+                <label class="form-label" for="nombreOperador">Nombre del Operador *</label>
+                <input
+                  id="nombreOperador"
+                  type="text"
+                  formControlName="nombreOperador"
+                  placeholder="Nombre completo"
+                  class="rf-input font-bold" />
+              </div>
+
+              <!-- Teléfono Chofer -->
+              <div class="form-field">
+                <label class="form-label" for="driverPhone">Teléfono del Operador</label>
+                <input
+                  id="driverPhone"
+                  type="tel"
+                  formControlName="driverPhone"
+                  placeholder="55-1234-5678"
+                  class="rf-input font-mono" />
+              </div>
+
+              <!-- Tipo de Transporte -->
+              <div class="form-field">
+                <label class="form-label" for="tipoTransporte">Tipo de Unidad *</label>
+                <select id="tipoTransporte" formControlName="tipoTransporte" class="rf-input">
+                  @for (t of transportTypesList(); track t) {
+                    <option [value]="t">{{ t }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Placas Tracto -->
+              <div class="form-field">
+                <label class="form-label" for="placasTracto">Placas Tracto *</label>
+                <input
+                  id="placasTracto"
+                  type="text"
+                  formControlName="placasTracto"
+                  placeholder="72-AB-9K"
+                  class="rf-input font-mono uppercase font-black text-amber-700 dark:text-amber-400" />
+              </div>
+
+              <!-- No. Eco Tracto -->
+              <div class="form-field">
+                <label class="form-label" for="noEcoTractor">No. Eco Tracto *</label>
+                <input
+                  id="noEcoTractor"
+                  type="text"
+                  formControlName="noEcoTractor"
+                  placeholder="ECO-7742"
+                  class="rf-input font-mono uppercase" />
+              </div>
+
+              <!-- Placas Caja -->
+              <div class="form-field">
+                <label class="form-label" for="placasCaja">Placas Caja *</label>
+                <input
+                  id="placasCaja"
+                  type="text"
+                  formControlName="placasCaja"
+                  placeholder="45-TR-2M"
+                  class="rf-input font-mono uppercase font-black text-amber-700 dark:text-amber-400" />
+              </div>
+
+              <!-- Medidas Caja -->
+              <div class="form-field">
+                <label class="form-label" for="medidasCaja">Medidas Caja / Capacidad *</label>
+                <select id="medidasCaja" formControlName="medidasCaja" class="rf-input">
+                  @for (d of boxDimensionsList(); track d) {
+                    <option [value]="d">{{ d }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Sellos de Seguridad Fiscales -->
+              <div class="form-field sm:col-span-3">
+                <label class="form-label">
+                  Sellos / Cinchos de Seguridad
+                  <span class="text-rose-500 font-bold">*</span>
+                </label>
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    [ngModel]="tempSealInput()"
+                    (ngModelChange)="tempSealInput.set($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    (keyup.enter)="addSeal()"
+                    placeholder="Escribir número de sello y presionar Enter..."
+                    class="rf-input font-mono uppercase flex-1" />
+                  <button type="button" (click)="addSeal()" class="btn-add-seal">
+                    <span class="material-symbols-outlined text-sm">add</span>
+                    <span>Agregar</span>
+                  </button>
+                </div>
+
+                @if (sealList().length > 0) {
+                  <div class="flex flex-wrap gap-1.5 mt-2">
+                    @for (seal of sealList(); track seal; let i = $index) {
+                      <span class="seal-chip">
+                        <span>{{ seal }}</span>
+                        <button type="button" (click)="removeSeal(i)" class="seal-chip-del">✕</button>
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- Captura Fotográfica de Sellos -->
+              <div class="form-field sm:col-span-1">
+                <label class="form-label">Evidencia Fotográfica</label>
+                <input
+                  #cameraInput
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  (change)="onPhotoSelected($event)"
+                  class="hidden" />
+
+                @if (!sealPhotoPreview()) {
+                  <button
+                    type="button"
+                    (click)="triggerCamera()"
+                    [disabled]="isCompressingPhoto()"
+                    class="btn-camera-box"
+                    title="Tomar foto con la cámara">
+                    <span class="material-symbols-outlined text-xl text-amber-500">photo_camera</span>
+                    <span class="text-xs font-bold">Tomar Foto</span>
+                  </button>
+                } @else {
+                  <div class="photo-preview-small">
+                    <img [src]="sealPhotoPreview()" alt="Foto Sellos" class="photo-img-thumb" />
+                    <button type="button" (click)="removePhoto()" class="btn-del-thumb" title="Eliminar foto">✕</button>
+                  </div>
+                }
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 3: REVISIÓN DEL TRANSPORTE (CHECKLIST COMPLETO CON OBSERVACIONES) ── -->
+          <div class="form-section-block">
+            <div class="form-section-title">
+              <span class="material-symbols-outlined">fact_check</span>
+              <span>3. Revisión del Transporte (Check List de Seguridad F01)</span>
+            </div>
+
+            <!-- Tabla de Inspección Homologada con Observaciones -->
+            <div class="f01-table-wrapper mt-3">
+              <table class="f01-checklist-table">
+                <thead>
+                  <tr>
+                    <th class="th-criterion">Criterio de Inspección</th>
+                    <th class="th-toggle">Cumple (SÍ / NO)</th>
+                    <th class="th-obs">Observaciones (Manual)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  
+                  <!-- Grupo EPP -->
+                  <tr class="tr-group-header">
+                    <td colspan="3">EPP (Equipo de Protección Personal)</td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Zapatos de seguridad</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('eppZapatos', 'SI')" [class.btn-active-si]="checkInForm.get('eppZapatos')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppZapatos', 'NO')" [class.btn-active-no]="checkInForm.get('eppZapatos')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="eppZapatosObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Cofia</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('eppCofia', 'SI')" [class.btn-active-si]="checkInForm.get('eppCofia')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppCofia', 'NO')" [class.btn-active-no]="checkInForm.get('eppCofia')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="eppCofiaObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Cubrebocas</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('eppCubrebocas', 'SI')" [class.btn-active-si]="checkInForm.get('eppCubrebocas')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppCubrebocas', 'NO')" [class.btn-active-no]="checkInForm.get('eppCubrebocas')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="eppCubrebocasObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Chaleco con reflejante</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('eppChaleco', 'SI')" [class.btn-active-si]="checkInForm.get('eppChaleco')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppChaleco', 'NO')" [class.btn-active-no]="checkInForm.get('eppChaleco')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="eppChalecoObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+
+                  <!-- Grupo Documentos -->
+                  <tr class="tr-group-header">
+                    <td colspan="3">Documentos Obligatorios</td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">
+                      <span>Carta porte</span>
+                      <span class="badge-sub-req">{{ checkInForm.get('operacion')?.value === 'CARGA' ? 'Obligatorio en Carga' : 'N/A en Descarga' }}</span>
+                    </td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('docCartaPorte', 'SI')" [class.btn-active-si]="checkInForm.get('docCartaPorte')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('docCartaPorte', 'NO')" [class.btn-active-no]="checkInForm.get('docCartaPorte')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="docCartaPorteObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">
+                      <span>Remisión</span>
+                      <span class="badge-sub-req">{{ checkInForm.get('operacion')?.value === 'DESCARGA' ? 'Obligatorio en Descarga' : 'N/A en Carga' }}</span>
+                    </td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('docRemision', 'SI')" [class.btn-active-si]="checkInForm.get('docRemision')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('docRemision', 'NO')" [class.btn-active-no]="checkInForm.get('docRemision')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="docRemisionObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+
+                  <!-- Grupo Revisión Física de Unidad -->
+                  <tr class="tr-group-header">
+                    <td colspan="3">Revisión Física de la Unidad</td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Interior de Caja Limpio y Seco</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('revInteriorCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revInteriorCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revInteriorCaja', 'NO')" [class.btn-active-no]="checkInForm.get('revInteriorCaja')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="revInteriorCajaObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Daños a la caja</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('revDanosCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revDanosCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revDanosCaja', 'NO')" [class.btn-active-no]="checkInForm.get('revDanosCaja')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="revDanosCajaObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Daños en puertas</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('revDanosPuertas', 'SI')" [class.btn-active-si]="checkInForm.get('revDanosPuertas')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revDanosPuertas', 'NO')" [class.btn-active-no]="checkInForm.get('revDanosPuertas')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="revDanosPuertasObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Olores extraños</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('revOloresExtranos', 'SI')" [class.btn-active-si]="checkInForm.get('revOloresExtranos')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revOloresExtranos', 'NO')" [class.btn-active-no]="checkInForm.get('revOloresExtranos')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="revOloresExtranosObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-criterion">Indicios de plagas</td>
+                    <td class="td-toggle">
+                      <div class="btn-group-sino">
+                        <button type="button" (click)="setCriterion('revIndiciosPlagas', 'SI')" [class.btn-active-si]="checkInForm.get('revIndiciosPlagas')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revIndiciosPlagas', 'NO')" [class.btn-active-no]="checkInForm.get('revIndiciosPlagas')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="td-obs">
+                      <input type="text" formControlName="revIndiciosPlagasObs" placeholder="Observaciones..." class="rf-input-table" />
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 4: RESPONSABLES & FIRMAS ── -->
+          <div class="form-section-block">
+            <div class="form-section-title">
+              <span class="material-symbols-outlined">draw</span>
+              <span>4. Responsables &amp; Firmas de Conformidad</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+              <!-- Responsable Vigilancia -->
+              <div class="signature-card">
+                <label class="form-label" for="respVigilancia">Responsable Vigilancia *</label>
+                <input
+                  id="respVigilancia"
+                  type="text"
+                  formControlName="responsableVigilanciaNombre"
+                  class="rf-input mb-2" />
+                <div class="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <span class="material-symbols-outlined text-base">verified_user</span>
+                  <span>Firma Autorizada de Caseta</span>
+                </div>
+              </div>
+
+              <!-- Transportista -->
+              <div class="signature-card">
+                <label class="form-label" for="respTransp">Transportista (Chofer) *</label>
+                <input
+                  id="respTransp"
+                  type="text"
+                  formControlName="transportistaNombre"
+                  placeholder="Nombre del operador"
+                  class="rf-input mb-2" />
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
+                  <span class="material-symbols-outlined text-base">signature</span>
+                  <span>Conformidad de Entrega / Recepción</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -318,7 +721,7 @@
               class="btn-primary-rf-large"
               [disabled]="checkInForm.invalid">
               <span class="material-symbols-outlined text-2xl">how_to_reg</span>
-              <span>REGISTRAR ENTRADA Y AUTORIZAR ACCESO</span>
+              <span>AUTORIZAR ENTRADA Y ABRIR PLUMA</span>
             </button>
           </div>
 
@@ -326,37 +729,75 @@
       </div>
     }
 
-    <!-- ── TAB 2: VEHÍCULOS EN PATIO (IN-YARD) ─────────────────────── -->
-    @if (activeTab() === 'YARD') {
+    <!-- ══════════════════════════════════════════════════════════════
+         PESTAÑA 2: CONTROL DE PATIO (IN-YARD)
+    ══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'IN_YARD') {
       <div class="security-panel-card animate-fade-in">
         <div class="panel-header">
           <div class="panel-header__title-wrap">
             <span class="material-symbols-outlined panel-header__icon">rv_hookup</span>
             <div>
               <h2 class="panel-header__title">Control de Vehículos en Patio y Andenes</h2>
-              <p class="panel-header__subtitle">Monitoreo de tiempo de estancia, estatus de descarga y asignación de rampas.</p>
+              <p class="panel-header__subtitle">Monitoreo de tiempo de estancia, estatus de descarga, formato F01 y reasignación de rampas.</p>
             </div>
           </div>
           
-          <!-- Buscador Reactivo -->
+          <!-- Filtros Rápidos de Patio -->
+          <div class="yard-filter-pills">
+            <button
+              type="button"
+              class="filter-pill"
+              [class.filter-pill--active]="yardFilter() === 'ALL'"
+              (click)="yardFilter.set('ALL')">
+              Todos ({{ yardCount() }})
+            </button>
+            <button
+              type="button"
+              class="filter-pill"
+              [class.filter-pill--active]="yardFilter() === 'WAITING'"
+              (click)="yardFilter.set('WAITING')">
+              En Espera ({{ waitingCount() }})
+            </button>
+            <button
+              type="button"
+              class="filter-pill"
+              [class.filter-pill--active]="yardFilter() === 'AT_RAMP'"
+              (click)="yardFilter.set('AT_RAMP')">
+              En Rampa ({{ atRampCount() }})
+            </button>
+            <button
+              type="button"
+              class="filter-pill"
+              [class.filter-pill--active]="yardFilter() === 'READY'"
+              (click)="yardFilter.set('READY')">
+              Listos Salida ({{ readyDepartureCount() }})
+            </button>
+          </div>
+        </div>
+
+        <!-- Buscador Reactivo -->
+        <div class="search-bar-row mt-3">
           <div class="search-input-wrap">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
               type="search"
               [ngModel]="searchQuery()"
               (ngModelChange)="searchQuery.set($event)"
-              placeholder="Buscar por placa, chofer, folio..."
+              placeholder="Buscar por placa, chofer, folio, remisión..."
               class="rf-search-input" />
           </div>
         </div>
 
         <!-- Lista de Tarjetas de Vehículos -->
-        <div class="yard-vehicles-grid">
+        <div class="yard-vehicles-grid mt-3">
           @for (vehicle of filteredVehicles(); track vehicle.id) {
             <div class="yard-vehicle-card" [class.yard-vehicle-card--waiting]="vehicle.status === 'WAITING_RAMP'">
               <div class="yard-vehicle-card__header">
                 <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">local_shipping</span>
+                  <span class="badge-op-type" [ngClass]="vehicle.operationType === 'INBOUND' ? 'badge-op--inbound' : 'badge-op--outbound'">
+                    {{ vehicle.operationType === 'INBOUND' ? 'DESCARGA' : 'CARGA' }}
+                  </span>
                   <span class="font-mono font-black text-sm text-slate-950 dark:text-white">{{ vehicle.tractorPlates }}</span>
                   <span class="text-xs text-muted font-mono">/ Caja: {{ vehicle.boxPlates }}</span>
                 </div>
@@ -367,12 +808,20 @@
 
               <div class="yard-vehicle-card__body">
                 <div class="vehicle-info-line">
+                  <span class="info-label">Folio WMS:</span>
+                  <strong class="info-val font-mono text-amber-700 dark:text-amber-400">{{ vehicle.entryFolio }}</strong>
+                </div>
+                <div class="vehicle-info-line">
                   <span class="info-label">Chofer:</span>
                   <strong class="info-val">{{ vehicle.driverName }}</strong>
                 </div>
                 <div class="vehicle-info-line">
                   <span class="info-label">Línea:</span>
                   <span class="info-val truncate">{{ vehicle.carrierName }}</span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Doc:</span>
+                  <span class="info-val font-mono text-xs font-bold">{{ vehicle.documentNumber }}</span>
                 </div>
                 <div class="vehicle-info-line">
                   <span class="info-label">Sellos:</span>
@@ -382,8 +831,8 @@
                 </div>
                 <div class="vehicle-info-line">
                   <span class="info-label">Estancia:</span>
-                  <span class="info-val font-mono font-bold text-emerald-700 dark:text-emerald-400">
-                    ⏱ {{ formatMinutesAgo(vehicle.entryTime) }}
+                  <span class="info-val font-mono font-bold" [ngClass]="formatStayDuration(vehicle.entryTime).slaClass">
+                    ⏱ {{ formatStayDuration(vehicle.entryTime).text }}
                   </span>
                 </div>
                 @if (vehicle.rampNumber) {
@@ -394,14 +843,24 @@
                 }
               </div>
 
-              <div class="yard-vehicle-card__actions">
+              <div class="yard-vehicle-card__actions grid grid-cols-2 gap-2">
+                <!-- Botón de Descarga / Ver Formato F01 Oficial -->
+                <button
+                  type="button"
+                  (click)="openPrintModalForVehicle(vehicle)"
+                  class="btn-action-sm btn-action-sm--outline"
+                  title="Ver y descargar formato F01 oficial">
+                  <span class="material-symbols-outlined text-sm">description</span>
+                  <span>Formato F01</span>
+                </button>
+
                 @if (vehicle.status === 'WAITING_RAMP') {
                   <button
                     type="button"
-                    (click)="assignRampQuick(vehicle, 3)"
+                    (click)="openRampModal(vehicle)"
                     class="btn-action-sm btn-action-sm--gold"
                     title="Asignar Rampa rápida">
-                    <span class="material-symbols-outlined">dock</span>
+                    <span class="material-symbols-outlined text-sm">dock</span>
                     <span>Asignar Rampa</span>
                   </button>
                 } @else if (vehicle.status === 'DISCHARGE_FINISHED') {
@@ -410,11 +869,18 @@
                     (click)="openCheckoutModal(vehicle)"
                     class="btn-action-sm btn-action-sm--green"
                     title="Proceder a Salida">
-                    <span class="material-symbols-outlined">exit_to_app</span>
+                    <span class="material-symbols-outlined text-sm">exit_to_app</span>
                     <span>Validar Salida</span>
                   </button>
                 } @else {
-                  <span class="text-[11px] font-bold text-slate-500 font-mono">En Operación en Andén</span>
+                  <button
+                    type="button"
+                    (click)="openRampModal(vehicle)"
+                    class="btn-action-sm btn-action-sm--outline"
+                    title="Reasignar rampa">
+                    <span class="material-symbols-outlined text-sm">sync_alt</span>
+                    <span>Cambiar Rampa</span>
+                  </button>
                 }
               </div>
             </div>
@@ -428,7 +894,9 @@
       </div>
     }
 
-    <!-- ── TAB 3: SALIDA / COTEJO DE SELLOS (CHECK-OUT) ─────────────── -->
+    <!-- ══════════════════════════════════════════════════════════════
+         PESTAÑA 3: SALIDA / COTEJO DE SELLOS (CHECK-OUT)
+    ══════════════════════════════════════════════════════════════ -->
     @if (activeTab() === 'CHECKOUT') {
       <div class="security-panel-card animate-fade-in">
         <div class="panel-header">
@@ -462,6 +930,10 @@
 
               <div class="yard-vehicle-card__body">
                 <div class="vehicle-info-line">
+                  <span class="info-label">Folio:</span>
+                  <strong class="info-val font-mono text-amber-700 dark:text-amber-400">{{ vehicle.entryFolio }}</strong>
+                </div>
+                <div class="vehicle-info-line">
                   <span class="info-label">Chofer:</span>
                   <strong class="info-val">{{ vehicle.driverName }}</strong>
                 </div>
@@ -477,14 +949,20 @@
                 </div>
               </div>
 
-              <div class="yard-vehicle-card__actions">
+              <div class="yard-vehicle-card__actions grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  (click)="openPrintModalForVehicle(vehicle)"
+                  class="btn-action-sm btn-action-sm--outline">
+                  <span class="material-symbols-outlined text-sm">description</span>
+                  <span>Formato F01</span>
+                </button>
                 <button
                   type="button"
                   (click)="openCheckoutModal(vehicle)"
-                  class="btn-primary-rf-large"
-                  style="min-height: 48px;">
-                  <span class="material-symbols-outlined">how_to_reg</span>
-                  <span>COTEJAR SELLOS Y ABRIR PLUMA</span>
+                  class="btn-action-sm btn-action-sm--green">
+                  <span class="material-symbols-outlined text-sm">how_to_reg</span>
+                  <span>Cotejar y Salir</span>
                 </button>
               </div>
             </div>
@@ -500,7 +978,62 @@
 
   </div>
 
-  <!-- ── 4. Modal Táctil de Liberación y Cotejo de Salida ─────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       4. MODAL TÁCTIL DE PREVISUALIZACIÓN E IMPRESIÓN / PDF F01
+  ══════════════════════════════════════════════════════════════ -->
+  @if (showF01PrintModal() && currentPrintData(); as printDoc) {
+    <div class="rf-modal-backdrop" (click)="closePrintModal()">
+      <div class="rf-modal-card rf-modal-card--wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Previsualización F01">
+        <div class="rf-modal-header">
+          <div class="modal-title-wrap">
+            <span class="material-symbols-outlined text-2xl text-amber-500">description</span>
+            <div>
+              <h3 class="rf-modal-title">Formato Oficial F01-PO-CP-7.1.3-03</h3>
+              <span class="rf-modal-subtitle">Folio: <strong class="font-mono">{{ printDoc.folio }}</strong> · {{ printDoc.cliente }}</span>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closePrintModal()" aria-label="Cerrar vista previa">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Contenedor con fondo oscuro que resalta la hoja blanca membretada -->
+        <div class="rf-modal-body f01-preview-viewport">
+          <div id="f01-rf-print-target" class="f01-paper-container">
+            <fg-print-transport-checklist-layout [data]="printDoc"></fg-print-transport-checklist-layout>
+          </div>
+        </div>
+
+        <div class="f01-modal-footer">
+          <button type="button" (click)="closePrintModal()" class="f01-btn-cancel">
+            <span class="material-symbols-outlined text-sm">close</span>
+            <span>Cerrar</span>
+          </button>
+
+          <div class="f01-actions-group">
+            <button
+              type="button"
+              (click)="printDirect()"
+              class="f01-btn-secondary">
+              <span class="material-symbols-outlined text-base">print</span>
+              <span>Imprimir Boleta</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="downloadPdfDirect()"
+              [disabled]="isGeneratingPdf()"
+              class="f01-btn-primary">
+              <span class="material-symbols-outlined text-base">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF Oficial' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 5. Modal Táctil de Liberación y Cotejo de Salida ─────────── -->
   @if (selectedVehicleForCheckout(); as selectedVeh) {
     <div class="rf-modal-backdrop" (click)="closeCheckoutModal()">
       <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
@@ -516,6 +1049,7 @@
 
         <div class="rf-modal-body space-y-3">
           <div class="modal-info-box">
+            <div><strong>Folio:</strong> {{ selectedVeh.entryFolio }}</div>
             <div><strong>Chofer:</strong> {{ selectedVeh.driverName }}</div>
             <div><strong>Transportista:</strong> {{ selectedVeh.carrierName }}</div>
             <div><strong>Placas Caja:</strong> {{ selectedVeh.boxPlates }}</div>
@@ -547,6 +1081,48 @@
             class="btn-modal-confirm">
             <span class="material-symbols-outlined">door_open</span>
             <span>AUTORIZAR SALIDA &amp; REGISTRAR</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 6. Modal de Asignación Rápida de Rampa ───────────────────── -->
+  @if (selectedVehicleForRamp(); as vehicleToRamp) {
+    <div class="rf-modal-backdrop" (click)="closeRampModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-2xl text-amber-600">dock</span>
+            <h3 class="rf-modal-title">Asignar Rampa a {{ vehicleToRamp.tractorPlates }}</h3>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeRampModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body space-y-3">
+          <p class="text-xs text-muted">Selecciona un andén disponible para iniciar maniobra:</p>
+
+          <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            @for (ramp of rampOptions; track ramp.num) {
+              <button
+                type="button"
+                [disabled]="!ramp.available"
+                (click)="selectRampQuick(ramp.num)"
+                class="ramp-selector-btn"
+                [class.ramp-selector-btn--occupied]="!ramp.available">
+                <span class="material-symbols-outlined text-lg">{{ ramp.available ? 'dock' : 'block' }}</span>
+                <span class="font-bold text-xs">{{ ramp.label }}</span>
+                <span class="text-[10px] opacity-75">{{ ramp.available ? 'Libre' : 'Ocupada' }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeRampModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
           </button>
         </div>
       </div>

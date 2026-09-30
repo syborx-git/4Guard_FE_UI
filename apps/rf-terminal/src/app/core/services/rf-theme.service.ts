@@ -24,9 +24,11 @@ export class RfThemeService {
       if (theme === 'dark') {
         root.classList.add('theme-dark', 'dark');
         root.classList.remove('theme-light', 'light');
+        root.setAttribute('data-theme', 'dark');
       } else {
         root.classList.add('theme-light', 'light');
         root.classList.remove('theme-dark', 'dark');
+        root.setAttribute('data-theme', 'light');
       }
 
       try {

@@ -1,64 +1,22 @@
 /* ================================================================
    Menú Maestro RF — task-menu.component.css
-   Estándar SDD Dual Theme (Light Mode Industrial / Dark Mode Obsidian)
+   Estándar SDD Dual Theme Homologado (Light Mode Luxury / Dark Mode Obsidian)
    ================================================================ */
 
 :host {
   display: block;
   width: 100%;
   min-height: 100%;
-
-  /* ── Design Tokens Light Mode ── */
-  --bg-page:        #f4f6f9;
-  --bg-card:        #ffffff;
-  --border-card:    rgba(76, 86, 105, 0.14);
-  --shadow-card:    0 4px 16px rgba(0, 0, 0, 0.04);
-  --shadow-hover:   0 12px 28px rgba(0, 0, 0, 0.08);
-
-  --text-primary:   #0f172a;
-  --text-secondary: #334155;
-  --text-muted:     #64748b;
-  --text-gold:      #9b7626;
-
-  --navy:           #172033;
-  --navy-mid:       #25324a;
-  --gold:           #c5a86b;
-  --gold-light:     #e0c87a;
-  --gold-bg:        rgba(197, 168, 107, 0.12);
-  --gold-border:    rgba(197, 168, 107, 0.35);
-
-  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
-  --font-body:      'Inter', system-ui, sans-serif;
-  --font-mono:      'JetBrains Mono', monospace;
-}
-
-:host-context(.theme-dark),
-:host-context(.dark) {
-  /* ── Design Tokens Dark Mode ── */
-  --bg-page:        #0b1119;
-  --bg-card:        rgba(17, 26, 38, 0.94);
-  --border-card:    rgba(255, 255, 255, 0.08);
-  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40);
-  --shadow-hover:   0 20px 48px rgba(0, 0, 0, 0.60);
-
-  --text-primary:   #edf1f5;
-  --text-secondary: #9aa6b4;
-  --text-muted:     #667585;
-  --text-gold:      #d0af67;
-
-  --gold:           #d0af67;
-  --gold-light:     #e1c47c;
-  --gold-bg:        rgba(208, 175, 103, 0.14);
-  --gold-border:    rgba(208, 175, 103, 0.28);
 }
 
 .rf-menu-workspace {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.25rem;
   width: 100%;
-  max-width: 100%;
-  padding: 1rem 1.5rem 6.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 1.5rem;
   box-sizing: border-box;
   font-family: var(--font-body);
   color: var(--text-primary);
@@ -67,26 +25,27 @@
 /* ── 1. Sección Superior: Terminal Card & Hero Banner ─────────── */
 .rf-terminal-info-card {
   background: var(--bg-card);
-  border: 1.5px solid var(--border-card);
-  border-radius: 16px;
-  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
+  transition: all 200ms ease;
 }
 
 .rf-card-glow-bg {
   position: absolute;
   right: -24px;
   bottom: -24px;
-  width: 110px;
-  height: 110px;
+  width: 120px;
+  height: 120px;
   background: var(--gold-bg);
   border-radius: 50%;
-  filter: blur(28px);
+  filter: blur(32px);
   pointer-events: none;
 }
 
@@ -95,7 +54,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0.65rem;
-  border-radius: 8px;
+  border-radius: 99px;
   background: var(--gold-bg);
   border: 1px solid var(--gold-border);
   color: var(--text-gold);
@@ -103,8 +62,8 @@
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.4rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.45rem;
 }
 
 .terminal-badge__dot {
@@ -118,16 +77,16 @@
 
 .terminal-title {
   font-family: var(--font-display);
-  font-size: 1.45rem;
-  font-weight: 900;
+  font-size: 1.55rem;
+  font-weight: 800;
   color: var(--text-primary);
   line-height: 1.15;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 .terminal-desc {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   line-height: 1.35;
   margin: 0.35rem 0 0;
@@ -138,10 +97,10 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding-top: 0.75rem;
-  margin-top: 0.75rem;
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
   border-top: 1px solid var(--border-card);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-family: var(--font-mono);
   font-weight: 700;
 }
@@ -160,17 +119,17 @@
 }
 
 .terminal-lease-tag {
-  color: #059669;
+  color: var(--c-success);
   font-weight: 800;
 }
 
-/* ── Hero Banner Reanudar Tarea ────────────────────────────────── */
+/* ── Hero Banner Reanudar Tarea (Enterprise Midnight Navy) ─────── */
 .rf-hero-task-banner {
-  background: linear-gradient(135deg, #111a26 0%, #1e293b 50%, #111a26 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.14);
-  border-radius: 16px;
-  padding: 1.15rem 1.35rem;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(145deg, #172033 0%, #25324a 100%);
+  border: 1px solid rgba(197, 168, 107, 0.35);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 12px 32px rgba(23, 32, 51, 0.22);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -178,6 +137,14 @@
   gap: 1rem;
   position: relative;
   overflow: hidden;
+}
+
+:host-context(.theme-dark) .rf-hero-task-banner,
+:host-context(.dark) .rf-hero-task-banner,
+:host-context([data-theme='dark']) .rf-hero-task-banner {
+  background: linear-gradient(145deg, rgba(17, 26, 38, 0.96) 0%, rgba(23, 35, 50, 0.98) 100%);
+  border-color: rgba(208, 175, 103, 0.25);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 @media (min-width: 640px) {
@@ -192,7 +159,7 @@
   left: -20px;
   top: 0;
   bottom: 0;
-  width: 100px;
+  width: 120px;
   background: rgba(197, 168, 107, 0.12);
   transform: skewX(-15deg);
   pointer-events: none;
@@ -208,11 +175,12 @@
 }
 
 .hero-icon-wrap {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: rgba(197, 168, 107, 0.2);
-  border: 1.5px solid rgba(197, 168, 107, 0.4);
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #172033, #25324a);
+  border: 1px solid rgba(197, 168, 107, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,43 +189,45 @@
 
 .hero-icon {
   font-size: 28px;
-  color: #e0c87a;
+  color: var(--gold-light);
 }
 
 .hero-badge-status {
-  background: #c5a86b;
-  color: #0b1119;
-  font-size: 0.65rem;
-  font-weight: 900;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  color: var(--gold-light);
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  padding: 2px 7px;
-  border-radius: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-right: 0.5rem;
 }
 
 .hero-folio {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  color: #f3e5ab;
+  color: var(--gold-light);
 }
 
 .hero-task-title {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  color: #ffffff;
-  margin: 2px 0 0;
-  letter-spacing: -0.01em;
+  color: #ffffff !important;
+  margin: 4px 0 0;
+  letter-spacing: -0.015em;
 }
 
 .hero-task-meta {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.72rem;
-  color: #cbd5e1;
-  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 3px 0 0;
 }
 
 .meta-dot {
@@ -268,17 +238,17 @@
 }
 
 .btn-resume-task {
-  min-height: 56px;
+  min-height: 54px;
   padding: 0 1.5rem;
-  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
-  color: #0b1119;
+  background: linear-gradient(135deg, #c5a86b 0%, #b3924f 100%);
+  color: #172033;
   font-family: var(--font-display);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 900;
-  letter-spacing: 0.04em;
-  border: 2px solid #dfbe55;
+  letter-spacing: 0.05em;
+  border: 1px solid #e0c87a;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 6px 18px rgba(197, 168, 107, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -291,37 +261,34 @@
   white-space: nowrap;
 }
 
+:host-context(.theme-dark) .btn-resume-task,
+:host-context(.dark) .btn-resume-task,
+:host-context([data-theme='dark']) .btn-resume-task {
+  background: linear-gradient(135deg, #d0af67 0%, #b89547 100%);
+  color: #0b1119;
+  border-color: #e1c47c;
+  box-shadow: 0 6px 20px rgba(208, 175, 103, 0.3);
+}
+
 .btn-resume-task:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5);
-  background: linear-gradient(135deg, #dfbe55 0%, #c59b27 100%);
+  box-shadow: 0 10px 24px rgba(197, 168, 107, 0.45);
+  background: linear-gradient(135deg, #e0c87a 0%, #c5a86b 100%);
 }
 
 .btn-resume-task:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
-/* ── 2. Grid de Módulos Operativos (7 Tarjetas Fluidas) ───────── */
+/* ── 2. Grid de Módulos Operativos (7 Tarjetas Homologadas) ───── */
 .rf-modules-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(max(280px, calc(100% / 4 - 1rem)), 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
   width: 100%;
 }
 
-@media (max-width: 1280px) {
-  .rf-modules-grid {
-    grid-template-columns: repeat(auto-fill, minmax(max(280px, calc(100% / 3 - 1rem)), 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .rf-modules-grid {
-    grid-template-columns: repeat(auto-fill, minmax(max(260px, calc(100% / 2 - 1rem)), 1fr));
-  }
-}
-
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .rf-modules-grid {
     grid-template-columns: 1fr;
   }
@@ -329,10 +296,10 @@
 
 .rf-module-card {
   background: var(--bg-card);
-  border: 1.5px solid var(--border-card);
-  border-radius: 16px;
-  padding: 1.15rem;
-  min-height: 165px;
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  padding: 1.35rem;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -345,7 +312,7 @@
 
 .rf-module-card:hover {
   transform: translateY(-3px);
-  border-color: var(--gold);
+  border-color: var(--gold-border);
   box-shadow: var(--shadow-hover);
 }
 
@@ -367,17 +334,17 @@
 }
 
 .rf-module-icon {
-  font-size: 28px;
+  font-size: 26px;
 }
 
-/* Colores Semánticos de Iconos y Badges */
-.rf-module-icon-wrap--amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-.rf-module-icon-wrap--sky { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
-.rf-module-icon-wrap--purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-.rf-module-icon-wrap--emerald { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
-.rf-module-icon-wrap--orange { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
-.rf-module-icon-wrap--rose { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
-.rf-module-icon-wrap--gold { background: rgba(197, 168, 107, 0.2); color: #854d0e; border: 1px solid rgba(197, 168, 107, 0.4); }
+/* Colores Semánticos de Iconos y Badges (SDD Spec) */
+.rf-module-icon-wrap--amber { background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning-bdr); }
+.rf-module-icon-wrap--sky { background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-bdr); }
+.rf-module-icon-wrap--purple { background: rgba(147, 51, 234, 0.10); color: #9333ea; border: 1px solid rgba(147, 51, 234, 0.25); }
+.rf-module-icon-wrap--emerald { background: var(--c-success-bg); color: var(--c-success); border: 1px solid var(--c-success-bdr); }
+.rf-module-icon-wrap--orange { background: rgba(234, 88, 12, 0.10); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.25); }
+.rf-module-icon-wrap--rose { background: var(--c-danger-bg); color: var(--c-danger); border: 1px solid var(--c-danger-bdr); }
+.rf-module-icon-wrap--gold { background: var(--gold-bg); color: var(--text-gold); border: 1px solid var(--gold-border); }
 
 .rf-module-badge {
   display: inline-flex;
@@ -385,7 +352,7 @@
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -397,31 +364,31 @@
   background: currentColor;
 }
 
-.rf-module-badge--amber { background: #fef3c7; color: #78350f; border: 1px solid #fde68a; }
-.rf-module-badge--sky { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
-.rf-module-badge--purple { background: #f3e8ff; color: #581c87; border: 1px solid #e9d5ff; }
-.rf-module-badge--emerald { background: #d1fae5; color: #064e3b; border: 1px solid #a7f3d0; }
-.rf-module-badge--orange { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; }
-.rf-module-badge--rose { background: #ffe4e6; color: #881337; border: 1px solid #fecdd3; }
+.rf-module-badge--amber { background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning-bdr); }
+.rf-module-badge--sky { background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-bdr); }
+.rf-module-badge--purple { background: rgba(147, 51, 234, 0.10); color: #9333ea; border: 1px solid rgba(147, 51, 234, 0.25); }
+.rf-module-badge--emerald { background: var(--c-success-bg); color: var(--c-success); border: 1px solid var(--c-success-bdr); }
+.rf-module-badge--orange { background: rgba(234, 88, 12, 0.10); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.25); }
+.rf-module-badge--rose { background: var(--c-danger-bg); color: var(--c-danger); border: 1px solid var(--c-danger-bdr); }
 .rf-module-badge--gold { background: var(--gold-bg); color: var(--text-gold); border: 1px solid var(--gold-border); }
 
 .rf-module-card__body {
-  margin: 0.75rem 0 0.85rem;
+  margin: 0.85rem 0 1rem;
 }
 
 .rf-module-title {
   font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 900;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: var(--text-primary);
-  margin: 0 0 0.25rem;
-  line-height: 1.2;
+  margin: 0 0 0.3rem;
+  line-height: 1.25;
 }
 
 .rf-module-desc {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
-  line-height: 1.35;
+  line-height: 1.4;
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -429,13 +396,14 @@
   overflow: hidden;
 }
 
+/* Homologación de Botones de Módulo (SDD Standard) */
 .btn-module-action {
   width: 100%;
-  min-height: 52px;
+  min-height: 48px;
   border-radius: 10px;
-  background: #f1f5f9;
-  color: #0f172a;
-  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--text-primary);
+  border: 1px solid rgba(76, 86, 105, 0.2);
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 800;
@@ -444,23 +412,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1rem;
+  padding: 0 1.15rem;
   cursor: pointer;
   transition: all 180ms ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+:host-context(.theme-dark) .btn-module-action,
+:host-context(.dark) .btn-module-action,
+:host-context([data-theme='dark']) .btn-module-action {
+  background: rgba(255, 255, 255, 0.04);
+  color: #edf1f5;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .rf-module-card:hover .btn-module-action {
+  background: linear-gradient(145deg, #172033, #25324a);
+  color: #ffffff;
+  border-color: rgba(197, 168, 107, 0.45);
+  box-shadow: 0 4px 14px rgba(23, 32, 51, 0.18);
+  transform: translateY(-1px);
+}
+
+:host-context(.theme-dark) .rf-module-card:hover .btn-module-action,
+:host-context(.dark) .rf-module-card:hover .btn-module-action,
+:host-context([data-theme='dark']) .rf-module-card:hover .btn-module-action {
   background: var(--gold);
   color: #0b1119;
   border-color: var(--gold);
+  box-shadow: 0 4px 14px rgba(208, 175, 103, 0.3);
 }
 
 /* ── 3. Barra de Utilidades y Hardware ────────────────────────── */
 .rf-hardware-toolbar {
   background: var(--bg-card);
-  border: 1.5px solid var(--border-card);
-  border-radius: 16px;
-  padding: 0.85rem 1.15rem;
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  padding: 0.95rem 1.35rem;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -500,17 +488,12 @@
   gap: 0.45rem;
   min-height: 44px;
   padding: 0 0.85rem;
-  background: #f8fafc;
+  background: var(--bg-card-subtle);
   border: 1px solid var(--border-card);
   border-radius: 10px;
   font-size: 0.75rem;
   font-weight: 800;
   color: var(--text-primary);
-}
-
-:host-context(.theme-dark) .hardware-chip,
-:host-context(.dark) .hardware-chip {
-  background: rgba(255, 255, 255, 0.04);
 }
 
 .chip-status-dot {
@@ -530,10 +513,10 @@
 
 .btn-sync-quick {
   flex: 1;
-  min-height: 54px;
-  padding: 0 1rem;
-  background: #f8fafc;
-  border: 1.5px solid var(--border-card);
+  min-height: 52px;
+  padding: 0 1.15rem;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -542,19 +525,15 @@
   transition: all 180ms ease;
 }
 
-:host-context(.theme-dark) .btn-sync-quick,
-:host-context(.dark) .btn-sync-quick {
-  background: rgba(255, 255, 255, 0.05);
-}
-
 .btn-sync-quick:hover {
-  border-color: #38bdf8;
-  background: rgba(56, 189, 248, 0.08);
+  border-color: var(--gold-border);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
 }
 
 .btn-sync-title {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 800;
   color: var(--text-primary);
   line-height: 1.1;
   text-transform: uppercase;
@@ -568,8 +547,8 @@
 
 .btn-report-incident {
   flex: 1;
-  min-height: 54px;
-  padding: 0 1.25rem;
+  min-height: 52px;
+  padding: 0 1.35rem;
   background: linear-gradient(135deg, #dc2626 0%, #b45309 100%);
   color: #ffffff;
   font-size: 0.8rem;
@@ -594,7 +573,7 @@
 }
 
 .btn-report-incident:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
 /* ── 4. Modal de Incidencia ───────────────────────────────────── */
@@ -614,10 +593,10 @@
   width: 100%;
   max-width: 480px;
   background: var(--bg-card);
-  border: 1.5px solid var(--border-card);
-  border-radius: 16px;
-  padding: 1.35rem;
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-hover);
   color: var(--text-primary);
 }
 
@@ -632,8 +611,9 @@
 .rf-modal-title {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  font-weight: 900;
+  font-weight: 800;
   margin: 0;
+  color: var(--text-primary);
 }
 
 .btn-modal-close {
@@ -649,8 +629,8 @@
   gap: 0.5rem;
   padding: 0.75rem;
   border-radius: 10px;
-  background: rgba(234, 179, 8, 0.12);
-  border: 1px solid rgba(234, 179, 8, 0.35);
+  background: var(--c-warning-bg);
+  border: 1px solid var(--c-warning-bdr);
   margin-top: 0.85rem;
 }
 
@@ -665,7 +645,7 @@
 
 .btn-modal-cancel {
   flex: 1;
-  min-height: 50px;
+  min-height: 48px;
   background: transparent;
   border: 1px solid var(--border-card);
   color: var(--text-secondary);
@@ -676,7 +656,7 @@
 
 .btn-modal-confirm-incident {
   flex: 2;
-  min-height: 50px;
+  min-height: 48px;
   background: linear-gradient(135deg, #dc2626 0%, #b45309 100%);
   color: #ffffff;
   border: none;

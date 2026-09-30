@@ -32,6 +32,14 @@ export const rfRoutes: Routes = [
         title: '4GUARD Terminal — Menú',
       },
 
+      // Cockpit Unificado del Montacarguista (Descarga, Reubicación, Carga)
+      {
+        path: 'cockpit',
+        loadComponent: () =>
+          import('./features/cockpit/forklift-cockpit.component').then((m) => m.ForkliftCockpitComponent),
+        title: '4GUARD Terminal — Cockpit Montacarguista',
+      },
+
       // Recepción de mercancía (andén)
       {
         path: 'receiving',

@@ -1,94 +1,661 @@
 <!-- apps/rf-terminal/src/app/features/quality/quality-inspection/quality-inspection.component.html -->
-<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de inspección de calidad QM">
+<div class="qm-container" role="main" aria-label="Módulo de Control de Calidad y Cuarentenas QM">
 
-  <!-- Input OCULTO — captura el láser industrial -->
-  <input
-    #scanInput
-    type="text"
-    class="scan-hidden-input"
-    [ngModel]="currentInput()"
-    (ngModelChange)="currentInput.set($event)"
-    (input)="onScanInput($event)"
-    (keydown)="onKeydown($event)"
-    autocomplete="off"
-    spellcheck="false"
-    aria-label="Escáner láser de calidad QM">
+  <!-- ── 1. HEADER DE AUDITORÍA & TELEMETRÍA ────────────────────────────── -->
+  <header class="qm-header">
+    <div class="qm-header__main">
+      <div class="qm-header__title-group">
+        <div class="qm-header__badge-row">
+          <span class="qm-badge qm-badge--primary">AUDITORÍA TÉCNICA QM</span>
+          <span class="qm-badge qm-badge--branch">CEDIS Monterrey Norte</span>
+        </div>
+        <h1 class="qm-header__title">🔬 Control de Calidad & Cuarentenas</h1>
+        <p class="qm-header__sub">Inspección de Lotes · Cuarentena por Siniestros · Trazabilidad de Disposición</p>
+      </div>
 
-  <!-- ── Header ──────────────────────────────────────────── -->
-  <div class="rscan__header">
-    <div>
-      <h1 class="rscan__title">🔍 Inspección de Calidad (QM)</h1>
-      <p class="rscan__sub">Auditoría Lote · Muestreo RF</p>
+      <div class="qm-header__actions">
+        <div class="qm-inspector-card">
+          <div class="qm-inspector-card__avatar">QM</div>
+          <div class="qm-inspector-card__info">
+            <span class="qm-inspector-card__name">{{ inspectorName() }}</span>
+            <span class="qm-inspector-card__role">Auditor Líder Certificado</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="qm-btn qm-btn--ghost qm-btn--sm"
+          (click)="resetDemo()"
+          title="Reiniciar casos demo de cuarentena">
+          <span class="qm-btn__icon">↺</span>
+          <span>Reiniciar Demo</span>
+        </button>
+      </div>
     </div>
-    <div class="rscan__progress" role="status"
-      [attr.aria-label]="inspectedCount() + ' de ' + expectedTotal() + ' inspeccionados'">
-      <span class="rscan__progress-val">{{ inspectedCount() }}<span class="rscan__progress-sep">/</span>{{ expectedTotal() }}</span>
-      <span class="rscan__progress-lbl">Inspeccionados</span>
+
+    <!-- Telemetría / Contadores rápidos -->
+    <div class="qm-kpi-bar" role="region" aria-label="Resumen de cuarentenas">
+      <div class="qm-kpi-item" [class.qm-kpi-item--active]="currentFilter() === 'ALL'" (click)="setFilter('ALL')">
+        <span class="qm-kpi-item__num">{{ counts().all }}</span>
+        <span class="qm-kpi-item__label">Retenidas Activas</span>
+      </div>
+      <div class="qm-kpi-item qm-kpi-item--warning" [class.qm-kpi-item--active]="currentFilter() === 'INCIDENTS'" (click)="setFilter('INCIDENTS')">
+        <span class="qm-kpi-item__num">{{ counts().incidents }}</span>
+        <span class="qm-kpi-item__label">🚨 Siniestros de Piso</span>
+      </div>
+      <div class="qm-kpi-item qm-kpi-item--info" [class.qm-kpi-item--active]="currentFilter() === 'INBOUND'" (click)="setFilter('INBOUND')">
+        <span class="qm-kpi-item__num">{{ counts().inbound }}</span>
+        <span class="qm-kpi-item__label">📦 Muestreo Inbound</span>
+      </div>
+      <div class="qm-kpi-item qm-kpi-item--success" [class.qm-kpi-item--active]="currentFilter() === 'COMPLETED'" (click)="setFilter('COMPLETED')">
+        <span class="qm-kpi-item__num">{{ counts().completed }}</span>
+        <span class="qm-kpi-item__label">📜 Actas Emitidas</span>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <!-- ── Scan zone ──────────────────────────────────────── -->
-  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
-    [class.rscan__zone--processing]="isProcessing()"
-    aria-label="Zona de escaneo — apunta el lector al código del lote o pallet">
-    <span class="rscan__zone-icon" aria-hidden="true">
-      {{ isProcessing() ? '⟳' : '⬛' }}
-    </span>
-    <span class="rscan__zone-text">
-      {{ isProcessing() ? 'Procesando…' : 'Escanea Pallet para Control QM' }}
-    </span>
-    <span class="rscan__zone-sub">o haz clic para enfocar</span>
-  </div>
+  <!-- ── 2. BARRA DE FILTROS ────────────────────────────────────────────── -->
+  <nav class="qm-filters" aria-label="Filtros de tarimas en cuarentena">
+    <button
+      type="button"
+      class="qm-filter-pill"
+      [class.qm-filter-pill--active]="currentFilter() === 'ALL'"
+      (click)="setFilter('ALL')">
+      <span>📑 Todas</span>
+      <span class="qm-filter-pill__count">{{ counts().all }}</span>
+    </button>
+    <button
+      type="button"
+      class="qm-filter-pill"
+      [class.qm-filter-pill--active]="currentFilter() === 'INCIDENTS'"
+      (click)="setFilter('INCIDENTS')">
+      <span>🚨 Siniestros Piso</span>
+      <span class="qm-filter-pill__count">{{ counts().incidents }}</span>
+    </button>
+    <button
+      type="button"
+      class="qm-filter-pill"
+      [class.qm-filter-pill--active]="currentFilter() === 'INBOUND'"
+      (click)="setFilter('INBOUND')">
+      <span>📦 Muestreo Inbound / Caseta</span>
+      <span class="qm-filter-pill__count">{{ counts().inbound }}</span>
+    </button>
+    <button
+      type="button"
+      class="qm-filter-pill"
+      [class.qm-filter-pill--active]="currentFilter() === 'COMPLETED'"
+      (click)="setFilter('COMPLETED')">
+      <span>📜 Historial de Actas</span>
+      <span class="qm-filter-pill__count">{{ counts().completed }}</span>
+    </button>
+  </nav>
 
-  <!-- Botón de simulación de scan -->
-  <button
-    id="rf-sim-quality-btn"
-    class="rscan__sim-btn"
-    (click)="simulateScan(); $event.stopPropagation()">
-    📷 Simular Escaneo
-  </button>
+  <!-- ── 3. CONTENIDO PRINCIPAL: VISTA DE AUDITORÍA O HISTORIAL ─────────── -->
+  @if (currentFilter() !== 'COMPLETED') {
 
-  <!-- Error message -->
-  @if (lastError()) {
-    <div class="rscan__error" role="alert" aria-live="assertive">
-      {{ lastError() }}
+    <div class="qm-layout-grid">
+
+      <!-- COLUMNA PRINCIPAL: TARJETA HERO DE AUDITORÍA EN CURSO -->
+      <section class="qm-hero-section" aria-label="Inspección de la tarima activa">
+        @if (activeItem(); as item) {
+          <article class="qm-card qm-card--active-audit">
+            
+            <!-- Cabecera de Tarjeta Hero -->
+            <div class="qm-card__header">
+              <div class="qm-card__tags">
+                <span class="qm-tag qm-tag--folio">{{ item.ticketFolio }}</span>
+                <span class="qm-tag qm-tag--origin" [class.qm-tag--origin-incident]="item.originType === 'COCKPIT_INCIDENT'">
+                  {{ item.originLabel }}
+                </span>
+                <span class="qm-tag qm-tag--severity" [class.qm-tag--critical]="item.severity === 'CRITICAL'">
+                  {{ item.severityLabel }}
+                </span>
+              </div>
+              <div class="qm-card__timestamp">
+                <span>Reportado: <strong>{{ item.reportedAt }}</strong></span>
+              </div>
+            </div>
+
+            <!-- Ficha Técnica del Pallet y Producto -->
+            <div class="qm-pallet-summary">
+              <div class="qm-pallet-summary__sscc-box">
+                <span class="qm-pallet-summary__sscc-lbl">Identificador SSCC GS1:</span>
+                <span class="qm-pallet-summary__sscc-val">{{ item.sscc }}</span>
+              </div>
+
+              <div class="qm-pallet-summary__product">
+                <div class="qm-pallet-summary__sku">{{ item.sku }}</div>
+                <h2 class="qm-pallet-summary__name">{{ item.productName }}</h2>
+              </div>
+
+              <div class="qm-specs-grid">
+                <div class="qm-spec-tile">
+                  <span class="qm-spec-tile__lbl">Lote de Fábrica</span>
+                  <span class="qm-spec-tile__val">{{ item.lotNumber }}</span>
+                </div>
+                <div class="qm-spec-tile">
+                  <span class="qm-spec-tile__lbl">Fecha Caducidad</span>
+                  <span class="qm-spec-tile__val">{{ item.expirationDate }}</span>
+                </div>
+                <div class="qm-spec-tile">
+                  <span class="qm-spec-tile__lbl">Cantidad Retenida</span>
+                  <span class="qm-spec-tile__val">{{ item.quantityTotal }} {{ item.unit }}</span>
+                </div>
+                <div class="qm-spec-tile">
+                  <span class="qm-spec-tile__lbl">Ubicación Física</span>
+                  <span class="qm-spec-tile__val qm-spec-tile__val--loc">{{ item.currentLocation }}</span>
+                </div>
+              </div>
+
+              <!-- Banner de Causa de Retención / Siniestro -->
+              <div class="qm-incident-banner" [class.qm-incident-banner--critical]="item.severity === 'CRITICAL'">
+                <div class="qm-incident-banner__icon">⚠️</div>
+                <div class="qm-incident-banner__content">
+                  <div class="qm-incident-banner__author">Reportado por: <strong>{{ item.reportedBy }}</strong></div>
+                  <div class="qm-incident-banner__reason">"{{ item.retentionReason }}"</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── CHECKLIST TÉCNICO DE 4 PUNTOS ──────────────────────── -->
+            <div class="qm-checklist-block">
+              <div class="qm-checklist-block__header">
+                <div>
+                  <h3 class="qm-checklist-block__title">📋 Checklist Técnico de Inocuidad & Empaque</h3>
+                  <p class="qm-checklist-block__sub">Valida los 4 puntos normativos antes de emitir la resolución final.</p>
+                </div>
+                <div class="qm-checklist-badge" [class.qm-checklist-badge--ok]="isAllChecklistPassed()">
+                  {{ isAllChecklistPassed() ? '✅ 4 / 4 Conformes' : '⚠️ Pendiente de Aprobación' }}
+                </div>
+              </div>
+
+              <div class="qm-checklist-grid">
+                
+                <!-- Punto 1: Integridad de Empaque -->
+                <div
+                  class="qm-check-item"
+                  [class.qm-check-item--checked]="item.checklist.packagingIntegrity"
+                  (click)="toggleChecklist('packagingIntegrity')">
+                  <div class="qm-check-item__checkbox">
+                    <span>{{ item.checklist.packagingIntegrity ? '✓' : '' }}</span>
+                  </div>
+                  <div class="qm-check-item__info">
+                    <span class="qm-check-item__name">1. Integridad de Empaque y Tarima</span>
+                    <span class="qm-check-item__desc">Sin cajas deformadas, rotas ni tarima de madera astillada.</span>
+                  </div>
+                  <span class="qm-check-item__status" [class.qm-check-item__status--pass]="item.checklist.packagingIntegrity">
+                    {{ item.checklist.packagingIntegrity ? 'CONFORME' : 'NO CONFORME' }}
+                  </span>
+                </div>
+
+                <!-- Punto 2: Sellos y Hermeticidad -->
+                <div
+                  class="qm-check-item"
+                  [class.qm-check-item--checked]="item.checklist.hermeticSeals"
+                  (click)="toggleChecklist('hermeticSeals')">
+                  <div class="qm-check-item__checkbox">
+                    <span>{{ item.checklist.hermeticSeals ? '✓' : '' }}</span>
+                  </div>
+                  <div class="qm-check-item__info">
+                    <span class="qm-check-item__name">2. Sellos y Hermeticidad</span>
+                    <span class="qm-check-item__desc">Sin derrames de líquido, humedad, manchas ni olores anómalos.</span>
+                  </div>
+                  <span class="qm-check-item__status" [class.qm-check-item__status--pass]="item.checklist.hermeticSeals">
+                    {{ item.checklist.hermeticSeals ? 'CONFORME' : 'NO CONFORME' }}
+                  </span>
+                </div>
+
+                <!-- Punto 3: Coincidencia Lote y Caducidad -->
+                <div
+                  class="qm-check-item"
+                  [class.qm-check-item--checked]="item.checklist.lotAndExpiryMatch"
+                  (click)="toggleChecklist('lotAndExpiryMatch')">
+                  <div class="qm-check-item__checkbox">
+                    <span>{{ item.checklist.lotAndExpiryMatch ? '✓' : '' }}</span>
+                  </div>
+                  <div class="qm-check-item__info">
+                    <span class="qm-check-item__name">3. Coincidencia Lote & Caducidad</span>
+                    <span class="qm-check-item__desc">Lote físico y caducidad impresos coinciden 100% con WMS.</span>
+                  </div>
+                  <span class="qm-check-item__status" [class.qm-check-item__status--pass]="item.checklist.lotAndExpiryMatch">
+                    {{ item.checklist.lotAndExpiryMatch ? 'CONFORME' : 'NO CONFORME' }}
+                  </span>
+                </div>
+
+                <!-- Punto 4: Legibilidad Código GS1 / SSCC -->
+                <div
+                  class="qm-check-item"
+                  [class.qm-check-item--checked]="item.checklist.gs1BarcodeLegible"
+                  (click)="toggleChecklist('gs1BarcodeLegible')">
+                  <div class="qm-check-item__checkbox">
+                    <span>{{ item.checklist.gs1BarcodeLegible ? '✓' : '' }}</span>
+                  </div>
+                  <div class="qm-check-item__info">
+                    <span class="qm-check-item__name">4. Legibilidad Código GS1 / SSCC</span>
+                    <span class="qm-check-item__desc">Etiqueta legible por el escáner láser al primer intento.</span>
+                  </div>
+                  <span class="qm-check-item__status" [class.qm-check-item__status--pass]="item.checklist.gs1BarcodeLegible">
+                    {{ item.checklist.gs1BarcodeLegible ? 'CONFORME' : 'NO CONFORME' }}
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── EVIDENCIA FOTOGRÁFICA & OBSERVACIONES ──────────────── -->
+            <div class="qm-evidence-block">
+              <div class="qm-evidence-block__row">
+                
+                <!-- Captura de foto -->
+                <div class="qm-photo-box">
+                  <span class="qm-photo-box__title">📸 Evidencia Fotográfica</span>
+                  @if (capturedPhoto() || item.photoUrl) {
+                    <div class="qm-photo-preview" (click)="openCameraModal()">
+                      <img [src]="capturedPhoto() || item.photoUrl" alt="Evidencia fotográfica de daño o muestreo" />
+                      <div class="qm-photo-preview__overlay">
+                        <span>📷 Cambiar Foto</span>
+                      </div>
+                    </div>
+                  } @else {
+                    <button type="button" class="qm-photo-placeholder" (click)="openCameraModal()">
+                      <span class="qm-photo-placeholder__icon">📷</span>
+                      <span class="qm-photo-placeholder__txt">Tomar Foto con Cámara</span>
+                      <span class="qm-photo-placeholder__sub">Evidencia de cajas o sellos</span>
+                    </button>
+                  }
+                </div>
+
+                <!-- Notas técnicas del auditor -->
+                <div class="qm-notes-box">
+                  <label for="qm-notes-input" class="qm-notes-box__title">
+                    📝 Dictamen Técnico y Justificación de Calidad:
+                  </label>
+                  <textarea
+                    id="qm-notes-input"
+                    class="qm-notes-input"
+                    rows="3"
+                    [(ngModel)]="inspectorNotes"
+                    placeholder="Escribe observaciones técnicas sobre el estado del empaque, estiba o lote (opcional)...">
+                  </textarea>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── MATRIZ DE DISPOSICIÓN FINAL (4 ACCIONES CLAVE) ────── -->
+            <div class="qm-disposition-block">
+              <h3 class="qm-disposition-block__title">⚖️ Matriz de Disposición y Dictamen Final</h3>
+              <p class="qm-disposition-block__sub">Selecciona la acción correctiva o de liberación para este pallet.</p>
+
+              <div class="qm-disposition-grid">
+                
+                <!-- Botón 1: LIBERAR AL ALMACÉN -->
+                <button
+                  type="button"
+                  id="qm-btn-release"
+                  class="qm-disp-btn qm-disp-btn--release"
+                  [disabled]="!isAllChecklistPassed()"
+                  (click)="requestDisposition('RELEASED_TO_WAREHOUSE')">
+                  <div class="qm-disp-btn__header">
+                    <span class="qm-disp-btn__icon">✅</span>
+                    <span class="qm-disp-btn__title">LIBERAR AL ALMACÉN</span>
+                  </div>
+                  <span class="qm-disp-btn__desc">Apto para guardado. Genera misión de Putaway en Cockpit.</span>
+                  @if (!isAllChecklistPassed()) {
+                    <span class="qm-disp-btn__lock">🔒 Requiere checklist 4/4 conforme</span>
+                  }
+                </button>
+
+                <!-- Botón 2: REEMPAQUE / RETRABAJO -->
+                <button
+                  type="button"
+                  id="qm-btn-repack"
+                  class="qm-disp-btn qm-disp-btn--repack"
+                  (click)="requestDisposition('CONDITIONAL_REPACK')">
+                  <div class="qm-disp-btn__header">
+                    <span class="qm-disp-btn__icon">🔄</span>
+                    <span class="qm-disp-btn__title">REEMPAQUE / RETRABAJO</span>
+                  </div>
+                  <span class="qm-disp-btn__desc">Requiere cambio de tarima, re-emplaye o re-etiquetado en acondicionamiento.</span>
+                </button>
+
+                <!-- Botón 3: MERMA / DESTRUCCIÓN (ESTADO 80) -->
+                <button
+                  type="button"
+                  id="qm-btn-scrap"
+                  class="qm-disp-btn qm-disp-btn--scrap"
+                  (click)="requestDisposition('SCRAP_DESTRUCTION')">
+                  <div class="qm-disp-btn__header">
+                    <span class="qm-disp-btn__icon">🔥</span>
+                    <span class="qm-disp-btn__title">MERMA / DESTRUCCIÓN (80)</span>
+                  </div>
+                  <span class="qm-disp-btn__desc">Baja definitiva de inventario por daño irreparable o contaminación química.</span>
+                </button>
+
+                <!-- Botón 4: DEVOLUCIÓN A PROVEEDOR (RTV) -->
+                <button
+                  type="button"
+                  id="qm-btn-rtv"
+                  class="qm-disp-btn qm-disp-btn--rtv"
+                  (click)="requestDisposition('RETURN_TO_VENDOR')">
+                  <div class="qm-disp-btn__header">
+                    <span class="qm-disp-btn__icon">🚚</span>
+                    <span class="qm-disp-btn__title">DEVOLUCIÓN PROVEEDOR</span>
+                  </div>
+                  <span class="qm-disp-btn__desc">Rechazo en recepción. Se genera acta de devolución y nota de crédito.</span>
+                </button>
+
+              </div>
+            </div>
+
+          </article>
+        } @else {
+          <div class="qm-empty-hero">
+            <div class="qm-empty-hero__icon">🎉</div>
+            <h2 class="qm-empty-hero__title">No hay tarimas retenidas en esta categoría</h2>
+            <p class="qm-empty-hero__desc">Todas las tarimas han sido inspeccionadas y dictaminadas con éxito.</p>
+            <button type="button" class="qm-btn qm-btn--primary" (click)="resetDemo()">
+              ↺ Cargar Casos Demo
+            </button>
+          </div>
+        }
+      </section>
+
+      <!-- COLUMNA LATERAL: COLA DE CUARENTENA (FIFO STREAM) -->
+      <aside class="qm-queue-aside" aria-label="Cola de tarimas en cuarentena">
+        <div class="qm-queue-header">
+          <h2 class="qm-queue-title">
+            <span>Cola de Cuarentena</span>
+            <span class="qm-queue-badge">{{ queuedItems().length }}</span>
+          </h2>
+          <span class="qm-queue-sub">Ordenadas por prioridad</span>
+        </div>
+
+        <div class="qm-queue-list">
+          @for (item of queuedItems(); track item.id) {
+            <div
+              class="qm-queue-card"
+              [class.qm-queue-card--critical]="item.severity === 'CRITICAL'"
+              (click)="selectItem(item.id)">
+              <div class="qm-queue-card__header">
+                <span class="qm-queue-card__folio">{{ item.ticketFolio }}</span>
+                <span class="qm-queue-card__time">{{ item.reportedAt }}</span>
+              </div>
+              <div class="qm-queue-card__sscc">{{ item.sscc }}</div>
+              <div class="qm-queue-card__prod">{{ item.productName }}</div>
+              <div class="qm-queue-card__footer">
+                <span class="qm-queue-card__origin">{{ item.originLabel }}</span>
+                <button type="button" class="qm-queue-card__action">Auditar ➔</button>
+              </div>
+            </div>
+          } @empty {
+            <div class="qm-queue-empty">
+              <span>📭 Cola vacía</span>
+              <p>No hay más tarimas en espera en este filtro.</p>
+            </div>
+          }
+        </div>
+      </aside>
+
+    </div>
+
+  } @else {
+
+    <!-- ── 4. HISTORIAL DE ACTAS Y DICTÁMENES EMITIDOS ──────────────────── -->
+    <section class="qm-history-section" aria-label="Historial de actas de calidad">
+      <div class="qm-history-header">
+        <h2 class="qm-history-title">📜 Registro de Dictámenes y Actas Oficiales Emitidas</h2>
+        <p class="qm-history-sub">Auditorías completadas durante el turno actual.</p>
+      </div>
+
+      <div class="qm-history-grid">
+        @for (item of historyItems(); track item.id) {
+          <article class="qm-history-card">
+            <div class="qm-history-card__header">
+              <div>
+                <span class="qm-history-card__acta">{{ item.actaFolio || 'ACTA-QM-2026' }}</span>
+                <span class="qm-history-card__folio">{{ item.ticketFolio }}</span>
+              </div>
+              <span class="qm-history-badge" [ngClass]="getDecisionBadgeClass(item.decision)">
+                {{ item.decisionLabel }}
+              </span>
+            </div>
+
+            <div class="qm-history-card__body">
+              <div class="qm-history-card__sscc">{{ item.sscc }}</div>
+              <div class="qm-history-card__product">{{ item.productName }}</div>
+              <div class="qm-history-card__meta">
+                <span>Lote: <strong>{{ item.lotNumber }}</strong></span>
+                <span>Cantidad: <strong>{{ item.quantityTotal }} {{ item.unit }}</strong></span>
+                <span>Hora: <strong>{{ item.inspectedAt }}</strong></span>
+              </div>
+              @if (item.dispositionNotes) {
+                <div class="qm-history-card__notes">
+                  "{{ item.dispositionNotes }}"
+                </div>
+              }
+            </div>
+
+            <div class="qm-history-card__footer">
+              <span class="qm-history-card__inspector">✍️ {{ item.inspectorName }}</span>
+              <button
+                type="button"
+                class="qm-btn qm-btn--ghost qm-btn--sm"
+                (click)="generatedActa.set(item); showCertificateModal.set(true)">
+                📄 Ver Certificado
+              </button>
+            </div>
+          </article>
+        } @empty {
+          <div class="qm-empty-hero">
+            <div class="qm-empty-hero__icon">📭</div>
+            <h2 class="qm-empty-hero__title">Aún no se han emitido dictámenes en este turno</h2>
+            <p class="qm-empty-hero__desc">Selecciona una tarima de la cola para evaluarla y generar su acta oficial.</p>
+            <button type="button" class="qm-btn qm-btn--primary" (click)="setFilter('ALL')">
+              Ir a Cola de Inspección
+            </button>
+          </div>
+        }
+      </div>
+    </section>
+
+  }
+
+  <!-- ── 5. MODAL DE CONFIRMACIÓN DE DICTAMEN ───────────────────────────── -->
+  @if (showDispositionConfirmModal()) {
+    <div class="qm-modal-overlay" role="dialog" aria-modal="true">
+      <div class="qm-modal-card">
+        <div class="qm-modal-card__header">
+          <div class="qm-modal-card__title-group">
+            <span class="qm-modal-card__badge">DICTAMEN TÉCNICO OFICIAL</span>
+            <h2 class="qm-modal-card__title">{{ getDecisionTitle(pendingDecision()) }}</h2>
+          </div>
+          <button type="button" class="qm-modal-close" (click)="closeDispositionModal()">✕</button>
+        </div>
+
+        <div class="qm-modal-card__body">
+          <div class="qm-modal-alert">
+            <span class="qm-modal-alert__icon">ℹ️</span>
+            <p class="qm-modal-alert__text">{{ getDecisionDescription(pendingDecision()) }}</p>
+          </div>
+
+          <div class="qm-modal-summary">
+            <div class="qm-modal-summary__row">
+              <span>Pallet / SSCC:</span>
+              <strong>{{ activeItem()?.sscc }}</strong>
+            </div>
+            <div class="qm-modal-summary__row">
+              <span>Producto:</span>
+              <strong>{{ activeItem()?.productName }}</strong>
+            </div>
+            <div class="qm-modal-summary__row">
+              <span>Lote:</span>
+              <strong>{{ activeItem()?.lotNumber }}</strong>
+            </div>
+            <div class="qm-modal-summary__row">
+              <span>Auditor QM:</span>
+              <strong>{{ inspectorName() }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="qm-modal-card__footer">
+          <button type="button" class="qm-btn qm-btn--ghost" (click)="closeDispositionModal()" [disabled]="isSubmitting()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="qm-btn qm-btn--primary"
+            (click)="confirmDisposition()"
+            [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Firmando y Transmitiendo...' : 'Firmar y Emitir Dictamen' }}
+          </button>
+        </div>
+      </div>
     </div>
   }
 
-  <!-- ── Buffer de Inspección ────────────────────────────── -->
-  <div class="rscan__buffer">
-    <h2 class="rscan__buffer-title">
-      Pallets Evaluados
-      @if (inspectedCount() > 0) {
-        <span class="rscan__buffer-count" aria-hidden="true">{{ inspectedCount() }}</span>
-      }
-    </h2>
+  <!-- ── 6. MODAL DE CÁMARA & EVIDENCIA FOTOGRÁFICA ─────────────────────── -->
+  @if (showCameraModal()) {
+    <div class="qm-modal-overlay" role="dialog" aria-modal="true">
+      <div class="qm-modal-card qm-modal-card--camera">
+        <div class="qm-modal-card__header">
+          <h2 class="qm-modal-card__title">📷 Captura de Evidencia Fotográfica QM</h2>
+          <button type="button" class="qm-modal-close" (click)="closeCameraModal()">✕</button>
+        </div>
 
-    <div class="buffer-list" role="list" aria-label="Pallets inspeccionados">
-      @for (item of buffer(); track item.sscc) {
-        <div class="buffer-item" role="listitem">
-          <div class="buffer-item__code">{{ item.sscc }}</div>
-          <div class="buffer-item__info">
-            <span class="buffer-item__sku">{{ item.sku }}</span>
-            <span class="buffer-item__desc">{{ item.description }}</span>
-          </div>
-          <div class="buffer-item__right">
-            <span
-              class="status-badge"
-              [class.status-badge--approved]="item.decision === 'APPROVED'"
-              [class.status-badge--rejected]="item.decision === 'REJECTED'">
-              {{ getDecisionLabel(item.decision) }}
-            </span>
-            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
+        <div class="qm-modal-card__body qm-camera-body">
+          <div class="qm-camera-viewport">
+            <video #cameraVideo class="qm-camera-video" autoplay playsinline muted></video>
+
+            <!-- Mirilla y Guías de Encuadre -->
+            <div class="qm-camera-reticle">
+              <div class="qm-camera-corner top-left"></div>
+              <div class="qm-camera-corner top-right"></div>
+              <div class="qm-camera-corner bottom-left"></div>
+              <div class="qm-camera-corner bottom-right"></div>
+              <div class="qm-camera-laser-line"></div>
+            </div>
+
+            @if (cameraError()) {
+              <div class="qm-camera-fallback">
+                <span>📷 Modo Simulador de Cámara Activo</span>
+                <p>Presiona capturar para generar el snapshot digital con metadata.</p>
+              </div>
+            }
           </div>
         </div>
-      } @empty {
-        <div class="buffer-empty">
-          <span aria-hidden="true">📭</span>
-          <span>Sin pallets evaluados en esta sesión.</span>
+
+        <div class="qm-modal-card__footer qm-modal-card__footer--center">
+          <button type="button" class="qm-btn qm-btn--ghost" (click)="closeCameraModal()">
+            Cancelar
+          </button>
+          <button type="button" class="qm-btn qm-btn--primary qm-btn--capture" (click)="takePhoto()">
+            📸 Capturar Evidencia
+          </button>
         </div>
-      }
+      </div>
     </div>
-  </div>
+  }
+
+  <!-- ── 7. MODAL DE ACTA OFICIAL QM / CERTIFICADO DE DISPOSICIÓN ───────── -->
+  @if (showCertificateModal()) {
+    <div class="qm-modal-overlay" role="dialog" aria-modal="true">
+      <div class="qm-modal-card qm-modal-card--certificate">
+        
+        <!-- Cabecera del Certificado Oficial -->
+        <div class="qm-cert-header">
+          <div class="qm-cert-header__logo">
+            <span class="qm-cert-logo-icon">🛡️</span>
+            <div>
+              <span class="qm-cert-logo-title">4GUARD LOGISTICS WMS</span>
+              <span class="qm-cert-logo-sub">Sistema de Aseguramiento de Calidad & Trazabilidad</span>
+            </div>
+          </div>
+          <div class="qm-cert-header__folio">
+            <span class="qm-cert-folio-lbl">FOLIO OFICIAL:</span>
+            <span class="qm-cert-folio-val">{{ generatedActa()?.actaFolio }}</span>
+          </div>
+        </div>
+
+        <!-- Cuerpo del Certificado -->
+        <div class="qm-cert-body">
+          <div class="qm-cert-stamp-box">
+            <h2 class="qm-cert-main-title">ACTA DE DICTAMEN Y DISPOSICIÓN TÉCNICA QM</h2>
+            <div class="qm-cert-decision-stamp" [ngClass]="getDecisionBadgeClass(generatedActa()?.decision || 'PENDING_INSPECTION')">
+              {{ generatedActa()?.decisionLabel }}
+            </div>
+          </div>
+
+          <table class="qm-cert-table">
+            <tbody>
+              <tr>
+                <th>Ticket Origen:</th>
+                <td>{{ generatedActa()?.ticketFolio }}</td>
+                <th>Fecha y Hora:</th>
+                <td>{{ generatedActa()?.inspectedAt }} hrs</td>
+              </tr>
+              <tr>
+                <th>Código SSCC:</th>
+                <td colspan="3" class="qm-cert-table__mono">{{ generatedActa()?.sscc }}</td>
+              </tr>
+              <tr>
+                <th>Producto & SKU:</th>
+                <td colspan="3">{{ generatedActa()?.productName }} ({{ generatedActa()?.sku }})</td>
+              </tr>
+              <tr>
+                <th>Lote de Fabricación:</th>
+                <td>{{ generatedActa()?.lotNumber }}</td>
+                <th>Fecha Caducidad:</th>
+                <td>{{ generatedActa()?.expirationDate }}</td>
+              </tr>
+              <tr>
+                <th>Cantidad Total:</th>
+                <td>{{ generatedActa()?.quantityTotal }} {{ generatedActa()?.unit }}</td>
+                <th>Muestreo Evaluado:</th>
+                <td>{{ generatedActa()?.quantitySampled }} unidades</td>
+              </tr>
+              <tr>
+                <th>Justificación Técnica:</th>
+                <td colspan="3">"{{ generatedActa()?.dispositionNotes }}"</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Sello y Firma Digital -->
+          <div class="qm-cert-signatures">
+            <div class="qm-cert-sig-block">
+              <div class="qm-cert-sig-line"></div>
+              <span class="qm-cert-sig-name">{{ generatedActa()?.inspectorName }}</span>
+              <span class="qm-cert-sig-role">Auditor Líder QM & Inocuidad 4Guard</span>
+            </div>
+            <div class="qm-cert-digital-stamp">
+              <span class="qm-cert-stamp-hash">HASH: 4G-SHA256-{{ generatedActa()?.id }}-VERIFIED</span>
+              <span class="qm-cert-stamp-date">Transmisión WMS Exitosa</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones del Modal Certificado -->
+        <div class="qm-modal-card__footer">
+          <button type="button" class="qm-btn qm-btn--ghost" (click)="copyActaFolio()">
+            📋 {{ copiedToast() ? '¡Copiado!' : 'Copiar Folio' }}
+          </button>
+          <button type="button" class="qm-btn qm-btn--ghost" (click)="printActa()">
+            🖨️ Imprimir Acta
+          </button>
+          @if (generatedActa()?.decision === 'RELEASED_TO_WAREHOUSE') {
+            <button type="button" class="qm-btn qm-btn--primary" (click)="navigateToCockpit()">
+              🚜 Ir al Cockpit (Ver Putaway)
+            </button>
+          }
+          <button type="button" class="qm-btn qm-btn--primary" (click)="closeCertificateModal()">
+            Siguiente Tarima ➔
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
 
 </div>
