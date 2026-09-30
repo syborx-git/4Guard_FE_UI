@@ -88,14 +88,24 @@
 
 /* ── 1. Header & Telemetría ───────────────────────────────────────────── */
 .qm-header {
-  background: var(--qm-bg-card);
-  border: 1px solid var(--qm-border-subtle);
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.32);
+  border-top: 3.5px solid var(--gold);
   border-radius: 18px;
   padding: 1.25rem 1.5rem;
-  box-shadow: var(--qm-shadow-md);
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+:host-context(.theme-dark) .qm-header,
+:host-context(.dark) .qm-header,
+:host-context([data-theme='dark']) .qm-header {
+  background: linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.24);
+  border-top: 3.5px solid var(--gold);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 .qm-header__main {
@@ -330,18 +340,24 @@
 
 /* ── 4. Hero Section & Active Audit Card ──────────────────────────────── */
 .qm-card {
-  background: var(--qm-bg-card);
-  border: 1px solid var(--qm-border-subtle);
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 35%, #f7efe0 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.32);
+  border-top: 4px solid var(--gold);
   border-radius: 18px;
   padding: 1.5rem;
-  box-shadow: var(--qm-shadow-md);
+  box-shadow: 0 12px 32px rgba(197, 168, 107, 0.12), 0 4px 12px rgba(23, 32, 51, 0.05);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.qm-card--active-audit {
-  border-top: 4px solid var(--gold);
+:host-context(.theme-dark) .qm-card,
+:host-context(.dark) .qm-card,
+:host-context([data-theme='dark']) .qm-card {
+  background: linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 45%, rgba(40, 34, 22, 0.98) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.3);
+  border-top: 4px solid #d0af67;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 20px rgba(208, 175, 103, 0.15);
 }
 
 .qm-card__header {
@@ -917,14 +933,24 @@
 
 /* ── 8. Aside: Cola de Cuarentena (FIFO Stream) ───────────────────────── */
 .qm-queue-aside {
-  background: var(--qm-bg-card);
-  border: 1px solid var(--qm-border-subtle);
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 45%, #f8f3e7 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.28);
+  border-top: 3.5px solid var(--gold);
   border-radius: 18px;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: var(--qm-shadow-md);
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05);
+}
+
+:host-context(.theme-dark) .qm-queue-aside,
+:host-context(.dark) .qm-queue-aside,
+:host-context([data-theme='dark']) .qm-queue-aside {
+  background: linear-gradient(145deg, rgba(20, 29, 43, 0.95) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(30, 26, 18, 0.95) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.20);
+  border-top: 3.5px solid var(--gold);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 .qm-queue-header {
@@ -1088,14 +1114,24 @@
 }
 
 .qm-history-card {
-  background: var(--qm-bg-card);
-  border: 1px solid var(--qm-border-subtle);
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 45%, #f8f3e7 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.28);
+  border-top: 3px solid var(--gold);
   border-radius: 16px;
   padding: 1.35rem;
-  box-shadow: var(--qm-shadow-md);
+  box-shadow: 0 6px 20px rgba(36, 44, 58, 0.04);
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+}
+
+:host-context(.theme-dark) .qm-history-card,
+:host-context(.dark) .qm-history-card,
+:host-context([data-theme='dark']) .qm-history-card {
+  background: linear-gradient(145deg, rgba(20, 29, 43, 0.95) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(30, 26, 18, 0.95) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.20);
+  border-top: 3px solid var(--gold);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
 .qm-history-card__header {
@@ -1204,36 +1240,43 @@
   color: var(--qm-text-secondary);
 }
 
-/* ── 10. Modales & Overlays ───────────────────────────────────────────── */
+/* ── 10. Modales & Overlays (Executive Standard) ────────────────────────── */
 .qm-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  animation: modalFadeIn 180ms ease-out;
 }
 
 .qm-modal-card {
-  background: var(--qm-bg-card);
-  border: 1px solid var(--qm-border-strong);
-  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%) !important;
+  border: 1.5px solid rgba(197, 168, 107, 0.35);
+  border-top: 4px solid var(--gold);
+  border-radius: 20px;
   width: 100%;
-  max-width: 540px;
+  max-width: 560px;
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
-  box-shadow: var(--qm-shadow-lg);
+  box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(197, 168, 107, 0.12);
   display: flex;
   flex-direction: column;
-  animation: qmPopIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalPopIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes qmPopIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+:host-context(.theme-dark) .qm-modal-card,
+:host-context(.dark) .qm-modal-card,
+:host-context([data-theme='dark']) .qm-modal-card {
+  background: linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.98) 100%) !important;
+  border: 1.5px solid rgba(208, 175, 103, 0.28);
+  border-top: 4px solid var(--gold);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.85), 0 0 24px rgba(208, 175, 103, 0.15);
 }
 
 .qm-modal-card__header {
@@ -1247,7 +1290,7 @@
 .qm-modal-card__title-group {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .qm-modal-card__badge {
@@ -1259,82 +1302,95 @@
 
 .qm-modal-card__title {
   font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 900;
   margin: 0;
   color: var(--qm-text-primary);
+  letter-spacing: -0.015em;
 }
 
 .qm-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--qm-bg-card-subtle);
+  border: 1px solid var(--qm-border-subtle);
   color: var(--qm-text-muted);
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
+  transition: all 180ms ease;
+  font-size: 1rem;
 }
 
 .qm-modal-close:hover {
-  background: var(--qm-bg-card-hover);
-  color: var(--qm-text-primary);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: #ef4444;
 }
 
 .qm-modal-card__body {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.15rem;
 }
 
 .qm-modal-alert {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  background: var(--qm-bg-card-subtle);
-  border-left: 3px solid var(--gold);
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
+  gap: 0.75rem;
+  background: rgba(197, 168, 107, 0.08);
+  border: 1.5px solid rgba(197, 168, 107, 0.3);
+  border-left: 4px solid var(--gold);
+  padding: 0.95rem 1.15rem;
+  border-radius: 12px;
 }
 
 .qm-modal-alert__icon {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
 .qm-modal-alert__text {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--qm-text-secondary);
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.45;
+  font-weight: 600;
 }
 
 .qm-modal-summary {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  background: var(--qm-bg-card-subtle);
-  border: 1px solid var(--qm-border-subtle);
-  padding: 1rem;
-  border-radius: 12px;
+  gap: 0.65rem;
+  background: var(--qm-bg-card);
+  border: 1.5px solid var(--qm-border-subtle);
+  padding: 1.15rem;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .qm-modal-summary__row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  align-items: center;
+  font-size: 0.82rem;
 }
 
 .qm-modal-summary__row span {
   color: var(--qm-text-muted);
+  font-weight: 600;
 }
 
 .qm-modal-summary__row strong {
   color: var(--qm-text-primary);
   text-align: right;
+  font-weight: 800;
 }
 
 .qm-modal-card__footer {
-  padding: 1rem 1.5rem;
+  padding: 1.15rem 1.5rem;
   border-top: 1px solid var(--qm-border-subtle);
   display: flex;
   justify-content: flex-end;
@@ -1348,11 +1404,11 @@
 
 /* ── 11. Modal de Cámara ──────────────────────────────────────────────── */
 .qm-modal-card--camera {
-  max-width: 600px;
+  max-width: 620px;
 }
 
 .qm-camera-body {
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
 .qm-camera-viewport {
@@ -1360,11 +1416,13 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   background: #000000;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2px solid var(--gold-border);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
 }
 
 .qm-camera-video {

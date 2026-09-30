@@ -520,8 +520,24 @@
     <div class="qm-modal-overlay" role="dialog" aria-modal="true">
       <div class="qm-modal-card qm-modal-card--camera">
         <div class="qm-modal-card__header">
-          <h2 class="qm-modal-card__title">📷 Captura de Evidencia Fotográfica QM</h2>
-          <button type="button" class="qm-modal-close" (click)="closeCameraModal()">✕</button>
+          <div class="flex items-center gap-2">
+            <h2 class="qm-modal-card__title">📷 Captura de Evidencia Fotográfica QM</h2>
+            <span class="text-xs font-bold text-amber-600 dark:text-amber-400">
+              ({{ currentFacingMode() === 'environment' ? 'Trasera' : 'Frontal' }})
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            @if (isCameraActive()) {
+              <button
+                type="button"
+                (click)="switchCamera()"
+                class="qm-btn qm-btn--ghost qm-btn--sm"
+                [title]="currentFacingMode() === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'">
+                🔄 {{ currentFacingMode() === 'environment' ? 'Frontal' : 'Trasera' }}
+              </button>
+            }
+            <button type="button" class="qm-modal-close" (click)="closeCameraModal()">✕</button>
+          </div>
         </div>
 
         <div class="qm-modal-card__body qm-camera-body">

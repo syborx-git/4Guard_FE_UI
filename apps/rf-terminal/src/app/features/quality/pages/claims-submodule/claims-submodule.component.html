@@ -1,0 +1,209 @@
+<div class="submodule-container">
+
+  <!-- ── 1. Panel de Control ───────────────────────────────────────────────── -->
+  <div class="control-panel">
+    <div class="search-input-wrap">
+      <span class="material-symbols-outlined search-icon">search</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscar por Folio, SKU, Proveedor o Remisión..."
+        class="search-input" />
+      @if (searchTerm()) {
+        <button type="button" class="btn-clear-search" (click)="searchTerm.set('')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </div>
+
+    <div class="actions-row">
+      <select [(ngModel)]="stageFilter" class="filter-select">
+        <option value="ALL">Todas las Etapas (Descarga, Racks, Carga)</option>
+        <option value="INBOUND_UNLOAD">1. Descarga (Inbound)</option>
+        <option value="STORAGE">2. Almacenamiento (Racks)</option>
+        <option value="OUTBOUND_LOAD">3. Carga (Outbound)</option>
+      </select>
+
+      <button type="button" class="btn-primary-info" (click)="openModal()">
+        <span class="material-symbols-outlined">report_problem</span>
+        <span>+ Levantar Reclamo</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 2. Lista de Reclamaciones e Incidencias ────────────────────────────── -->
+  <div class="claims-grid">
+    @for (clm of filteredClaims(); track clm.id) {
+      <div class="claim-card">
+        
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="folio-tag">{{ clm.folio }}</span>
+            <span class="stage-badge">
+              <span class="material-symbols-outlined text-xs">{{ stageLabels[clm.stage].icon }}</span>
+              <span>{{ stageLabels[clm.stage].short }}</span>
+            </span>
+          </div>
+          <span class="status-badge" [class.status--open]="clm.status === 'OPEN'">
+            {{ clm.status === 'OPEN' ? '⚡ ABIERTO' : '✔ CERRADO' }}
+          </span>
+        </div>
+
+        <div class="card-body">
+          <h3 class="product-title">{{ clm.productDescription }}</h3>
+
+          <div class="specs-grid">
+            <div class="spec-cell">
+              <span class="spec-label">SKU:</span>
+              <strong class="spec-val font-mono">{{ clm.sku }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Lote:</span>
+              <strong class="spec-val font-mono">{{ clm.batchNumber }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Remisión:</span>
+              <strong class="spec-val font-mono">{{ clm.remisionNumber }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Proveedor / Cliente:</span>
+              <strong class="spec-val truncate">{{ clm.clientName }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Material Dañado:</span>
+              <strong class="spec-val text-rose-500 font-bold">{{ clm.damagedQty }} pzs ({{ clm.lostQty }} merma)</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Impacto Financiero:</span>
+              <strong class="spec-val highlight-cost font-mono">${{ clm.associatedCost.toLocaleString('es-MX') }} {{ clm.currency }}</strong>
+            </div>
+          </div>
+
+          <div class="defect-type-row">
+            <span class="defect-label">Tipificación del Defecto:</span>
+            <span class="defect-val">{{ defectLabels[clm.defectType] }}</span>
+          </div>
+
+          @if (clm.observations) {
+            <p class="card-notes">
+              <span class="material-symbols-outlined text-xs">notes</span>
+              <span>{{ clm.observations }}</span>
+            </p>
+          }
+        </div>
+
+        <div class="card-footer">
+          <span class="auth-meta">
+            ✍️ {{ clm.authorizedByName }} ({{ clm.authorizedByPosition }})
+          </span>
+          <span class="claim-time">🕒 {{ clm.date }} {{ clm.time }}</span>
+        </div>
+
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <span class="material-symbols-outlined empty-icon">check_circle</span>
+        <h3>Sin Reclamaciones</h3>
+        <p>No se registran incidencias o reclamos activos bajo estos filtros.</p>
+      </div>
+    }
+  </div>
+
+  <!-- ── 3. Modal de Levantamiento de Reclamo ───────────────────────────────── -->
+  @if (showModal()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-sheet animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="material-symbols-outlined modal-icon text-sky-500">query_stats</span>
+            <h2>Levantar Reclamo a Proveedor (F01)</h2>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            
+            <div class="form-group">
+              <label class="form-label">No. Remisión:</label>
+              <input type="text" [(ngModel)]="formRemision" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">SKU:</label>
+              <input type="text" [(ngModel)]="formSku" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Descripción del Producto:</label>
+              <input type="text" [(ngModel)]="formProduct" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Proveedor / Cliente:</label>
+              <input type="text" [(ngModel)]="formClient" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Número de Lote:</label>
+              <input type="text" [(ngModel)]="formBatch" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Etapa de Detección:</label>
+              <select [(ngModel)]="formStage" class="form-select">
+                <option value="INBOUND_UNLOAD">1. Descarga (Inbound)</option>
+                <option value="STORAGE">2. Almacenamiento (Racks)</option>
+                <option value="OUTBOUND_LOAD">3. Carga (Outbound)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tipo de Defecto:</label>
+              <select [(ngModel)]="formDefectType" class="form-select">
+                <option value="BAD_CONDITIONS">Malas condiciones (Empaque / Tarima)</option>
+                <option value="NON_COMPLIANT_SPEC">No cumple con especificación</option>
+                <option value="QUANTITY_DISCREPANCY">Discrepancia en cantidad</option>
+                <option value="OTHER">Otro (Especificar)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Piezas Dañadas:</label>
+              <input type="number" [(ngModel)]="formDamagedQty" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Piezas Merma (Pérdida Total):</label>
+              <input type="number" [(ngModel)]="formLostQty" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Costo Estimado Asociado (MXN):</label>
+              <input type="number" [(ngModel)]="formCost" class="form-input font-mono font-bold" />
+            </div>
+
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Detalles del Reclamo y Evidencia:</label>
+            <textarea [(ngModel)]="formObservations" class="form-textarea" placeholder="Describe los hallazgos y causa raíz..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeModal()">Cancelar</button>
+          <button type="button" class="btn-submit-info" (click)="submitClaim()">
+            <span class="material-symbols-outlined">save</span>
+            <span>Registrar Acta de Reclamo</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

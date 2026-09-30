@@ -1,0 +1,226 @@
+<div class="submodule-container">
+
+  <!-- ── 1. Barra de Control Operativo (Búsqueda + Filtro + Botón Bloqueo) ───── -->
+  <div class="control-panel">
+    <div class="search-input-wrap">
+      <span class="material-symbols-outlined search-icon">search</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscar por Folio, SSCC, Lote o SKU..."
+        class="search-input" />
+      @if (searchTerm()) {
+        <button type="button" class="btn-clear-search" (click)="searchTerm.set('')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </div>
+
+    <div class="actions-row">
+      <select [(ngModel)]="selectedStageFilter" class="filter-select">
+        <option value="ALL">Todas las Etapas (Descarga, Racks, Carga)</option>
+        <option value="INBOUND_UNLOAD">Descarga Inbound</option>
+        <option value="STORAGE">Almacenamiento (Racks)</option>
+        <option value="OUTBOUND_LOAD">Carga Outbound</option>
+        <option value="TEST_MATERIAL">Material de Prueba</option>
+      </select>
+
+      <button type="button" class="btn-primary-action" (click)="openCreateModal()">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>+ Bloquear Tarima</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 2. Lista de Tarimas y Lotes Bloqueados (Cards Táctiles) ────────────── -->
+  <div class="blocks-grid">
+    @for (item of filteredBlocks(); track item.id) {
+      <div class="block-card" [class.block-card--critical]="item.severity === 'CRITICAL'" [class.block-card--released]="item.status === 'RELEASED'">
+        
+        <!-- Header de la Card -->
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="folio-tag">{{ item.folio }}</span>
+            <span class="stage-tag">{{ stageLabels[item.stage] }}</span>
+          </div>
+          <span class="severity-badge" [ngClass]="'severity--' + item.severity.toLowerCase()">
+            {{ item.severity === 'CRITICAL' ? '🛑 Crítico' : item.severity === 'WARNING' ? '⚠️ Advertencia' : 'ℹ️ Informativo' }}
+          </span>
+        </div>
+
+        <!-- Cuerpo con Datos Clave -->
+        <div class="card-body">
+          <h3 class="product-title">{{ item.description }}</h3>
+          
+          <div class="specs-grid">
+            <div class="spec-cell">
+              <span class="spec-label">SKU:</span>
+              <strong class="spec-val font-mono">{{ item.sku }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Lote:</span>
+              <strong class="spec-val font-mono">{{ item.batchNumber }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">SSCC:</span>
+              <strong class="spec-val font-mono">{{ item.sscc }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Ubicación / Hold:</span>
+              <strong class="spec-val font-mono highlight-loc">{{ item.locationId }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Cantidad Retenida:</span>
+              <strong class="spec-val">{{ item.quantity }} {{ item.unitOfMeasure }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Cliente / Planta:</span>
+              <strong class="spec-val truncate">{{ item.clientName }}</strong>
+            </div>
+          </div>
+
+          <!-- Criterios de no conformidad -->
+          <div class="criteria-list">
+            <span class="criteria-label">Motivos de Retención:</span>
+            <div class="criteria-chips">
+              @for (crit of item.defectCriteria; track crit) {
+                <span class="crit-chip">{{ crit }}</span>
+              }
+            </div>
+          </div>
+
+          @if (item.notes) {
+            <p class="card-notes">
+              <span class="material-symbols-outlined text-xs">notes</span>
+              <span>{{ item.notes }}</span>
+            </p>
+          }
+        </div>
+
+        <!-- Footer de la Card -->
+        <div class="card-footer">
+          <span class="report-meta">
+            👤 {{ item.reportedBy }} • 🕒 {{ item.reportedAt }}
+          </span>
+          <span class="status-indicator" [class.status--released]="item.status === 'RELEASED'">
+            {{ item.status === 'RELEASED' ? '✅ LIBERADO' : '🔒 EN CUARENTENA' }}
+          </span>
+        </div>
+
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <span class="material-symbols-outlined empty-icon">check_circle</span>
+        <h3>Sin Bloqueos Activos</h3>
+        <p>No se encontraron productos bloqueados bajo los criterios seleccionados.</p>
+      </div>
+    }
+  </div>
+
+  <!-- ── 3. Modal Táctil de Registro de Bloqueo / Cuarentena ───────────────── -->
+  @if (showCreateModal()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()">
+      <div class="modal-sheet animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="material-symbols-outlined modal-icon text-rose-500">warning</span>
+            <h2>Bloquear Tarima / Lote (PNC)</h2>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeCreateModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            
+            <div class="form-group">
+              <label class="form-label">Código SSCC / Tarima:</label>
+              <input type="text" [(ngModel)]="formSscc" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">SKU del Producto:</label>
+              <input type="text" [(ngModel)]="formSku" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Descripción del Producto:</label>
+              <input type="text" [(ngModel)]="formDescription" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Número de Lote:</label>
+              <input type="text" [(ngModel)]="formBatchNumber" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Cantidad Afectada:</label>
+              <input type="number" [(ngModel)]="formQuantity" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Ubicación de Cuarentena (Hold):</label>
+              <input type="text" [(ngModel)]="formLocation" class="form-input font-mono" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Etapa de Detección:</label>
+              <select [(ngModel)]="formStage" class="form-select">
+                <option value="INBOUND_UNLOAD">Detección en Descarga (Inbound)</option>
+                <option value="STORAGE">Detección en Almacenamiento (Rack)</option>
+                <option value="OUTBOUND_LOAD">Detección en Carga (Outbound)</option>
+                <option value="TEST_MATERIAL">Material de Prueba / QA</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Severidad del Bloqueo:</label>
+              <select [(ngModel)]="formSeverity" class="form-select">
+                <option value="CRITICAL">🛑 Crítica (Riesgo de Inocuidad / Contaminación)</option>
+                <option value="WARNING">⚠️ Advertencia (Discrepancia / Empaque)</option>
+                <option value="INFO">ℹ️ Informativa (Muestreo de Calidad)</option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- Checkboxes de Criterios de Defecto -->
+          <div class="criteria-section">
+            <label class="form-label">Criterios de No Conformidad Detectados:</label>
+            <div class="criteria-options-grid">
+              @for (crit of availableCriteria; track crit) {
+                <button
+                  type="button"
+                  class="criterion-check-btn"
+                  [class.criterion-check-btn--active]="selectedCriteria().includes(crit)"
+                  (click)="toggleCriterion(crit)">
+                  <span class="material-symbols-outlined check-icon">
+                    {{ selectedCriteria().includes(crit) ? 'check_box' : 'check_box_outline_blank' }}
+                  </span>
+                  <span>{{ crit }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observaciones y Hallazgos:</label>
+            <textarea [(ngModel)]="formNotes" class="form-textarea" placeholder="Describe los detalles del bloqueo..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeCreateModal()">Cancelar</button>
+          <button type="button" class="btn-submit-danger" (click)="submitBlock()">
+            <span class="material-symbols-outlined">lock</span>
+            <span>Confirmar Bloqueo y Retención</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

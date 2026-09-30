@@ -1,0 +1,374 @@
+/**
+ * @file offline-banner.component.css
+ * @description Estilos industriales Dual Theme (Light & Dark) para el Banner Global de Sincronización y Zone Lease.
+ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* ── MODO LIGHT (SDD Ivory / Amber Industrial) ── */
+.rf-sync-banner {
+  width: 100%;
+  background: #fffbeb;
+  border-bottom: 1.5px solid #d97706;
+  color: #78350f;
+  padding: 0.4rem 1rem;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  position: relative;
+  z-index: 100;
+  animation: slideDownBanner 0.25s ease-out;
+  transition: all 0.2s ease;
+}
+
+@keyframes slideDownBanner {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.rf-sync-banner.banner--warning {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #78350f;
+}
+
+.rf-sync-banner.banner--danger {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.15);
+}
+
+.rf-sync-banner.banner--syncing {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  color: #075985;
+}
+
+.banner-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.banner-left-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.banner-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: pulseAmber 1.2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.banner--danger .banner-pulse-dot {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.banner--syncing .banner-pulse-dot {
+  background-color: #0284c7;
+  box-shadow: 0 0 8px #0284c7;
+}
+
+@keyframes pulseAmber {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.5; }
+}
+
+.banner-icon {
+  font-size: 1.15rem;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.banner--danger .banner-icon {
+  color: #ef4444;
+}
+
+.banner--syncing .banner-icon {
+  color: #0284c7;
+}
+
+.banner-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.banner-primary-msg {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+.banner-sub-msg {
+  font-size: 0.68rem;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  font-weight: 600;
+}
+
+.banner--danger .banner-sub-msg {
+  color: #b91c1c;
+}
+
+.banner--syncing .banner-sub-msg {
+  color: #0369a1;
+}
+
+.dot-sep {
+  opacity: 0.5;
+}
+
+.banner-queue-gauge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 90px;
+}
+
+.gauge-bar-track {
+  width: 60px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #fde68a;
+  overflow: hidden;
+}
+
+.banner--danger .gauge-bar-track {
+  background: #fecaca;
+}
+
+.banner--syncing .gauge-bar-track {
+  background: #bae6fd;
+}
+
+.gauge-bar-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.gauge-bar-fill.gauge--warning {
+  background: #f59e0b;
+}
+
+.gauge-bar-fill.gauge--danger {
+  background: #ef4444;
+}
+
+.gauge-label {
+  font-size: 0.68rem;
+  color: #78350f;
+  font-weight: 800;
+}
+
+.banner--danger .gauge-label {
+  color: #991b1b;
+}
+
+.banner--syncing .gauge-label {
+  color: #075985;
+}
+
+.banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-banner-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 5px;
+  border: 1px solid #fde68a;
+  background: #ffffff;
+  color: #92400e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.btn-banner-action:hover {
+  background: #fef3c7;
+  transform: translateY(-1px);
+}
+
+.btn-banner--urgent {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border-color: #f87171;
+  color: #ffffff;
+}
+
+.btn-banner--urgent:hover {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+.btn-banner-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  cursor: pointer;
+}
+
+.spin-anim {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.banner-details-drawer {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border-top: 1px solid #fde68a;
+  background: #fef3c7;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #78350f;
+}
+
+.details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.queue-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #fde68a;
+}
+
+.queue-item-num { color: #92400e; font-size: 0.62rem; font-weight: bold; }
+.queue-item-method { color: #0284c7; font-size: 0.65rem; }
+.queue-item-desc { color: #1e293b; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.queue-item-time { color: #64748b; }
+.queue-badge-fail { color: #b91c1c; background: #fee2e2; padding: 0.05rem 0.3rem; border-radius: 3px; font-size: 0.58rem; font-weight: bold; }
+.queue-empty-text { font-size: 0.68rem; color: #92400e; font-style: italic; }
+
+/* ── MODO DARK (SDD Midnight Obsidian & Gold) ── */
+:host-context(.theme-dark),
+:host-context(.dark),
+:host-context([data-theme='dark']) {
+
+  .rf-sync-banner {
+    background: #1e1b18;
+    border-bottom: 1.5px solid #d97706;
+    color: #fef3c7;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  }
+
+  .rf-sync-banner.banner--warning {
+    background: linear-gradient(90deg, #2a1f11, #1e1810);
+    border-color: #f59e0b;
+    color: #fef3c7;
+  }
+
+  .rf-sync-banner.banner--danger {
+    background: linear-gradient(90deg, #381216, #240c0e);
+    border-color: #ef4444;
+    color: #fee2e2;
+  }
+
+  .rf-sync-banner.banner--syncing {
+    background: linear-gradient(90deg, #0c2333, #081722);
+    border-color: #0284c7;
+    color: #e0f2fe;
+  }
+
+  .banner-icon { color: #f59e0b; }
+  .banner--danger .banner-icon { color: #ef4444; }
+  .banner--syncing .banner-icon { color: #38bdf8; }
+
+  .banner-sub-msg { color: #cbd5e1; }
+  .banner--danger .banner-sub-msg { color: #fca5a5; }
+  .banner--syncing .banner-sub-msg { color: #bae6fd; }
+
+  .gauge-bar-track { background: rgba(255, 255, 255, 0.15); }
+  .gauge-label { color: #e2e8f0; }
+
+  .btn-banner-action {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    box-shadow: none;
+  }
+
+  .btn-banner-action:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .btn-banner-toggle {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+  }
+
+  .banner-details-drawer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .details-header { color: #f1f5f9; }
+
+  .queue-item-row {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .queue-item-num { color: #94a3b8; }
+  .queue-item-method { color: #38bdf8; }
+  .queue-item-desc { color: #f8fafc; }
+  .queue-item-time { color: #64748b; }
+  .queue-badge-fail { color: #f87171; background: rgba(239, 68, 68, 0.2); }
+  .queue-empty-text { color: #94a3b8; }
+}

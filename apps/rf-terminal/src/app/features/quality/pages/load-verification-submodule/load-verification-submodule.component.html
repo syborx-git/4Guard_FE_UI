@@ -1,0 +1,253 @@
+<div class="submodule-container">
+
+  <!-- ── 1. Panel de Control ───────────────────────────────────────────────── -->
+  <div class="control-panel">
+    <div class="search-input-wrap">
+      <span class="material-symbols-outlined search-icon">search</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscar por Remisión, Andén, Producto o Folio..."
+        class="search-input" />
+      @if (searchTerm()) {
+        <button type="button" class="btn-clear-search" (click)="searchTerm.set('')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </div>
+
+    <div class="actions-row">
+      <select [(ngModel)]="statusFilter" class="filter-select">
+        <option value="ALL">Todos los Estados (Aprobado, Rechazado, Pendiente)</option>
+        <option value="APROBADO">✅ Aprobado</option>
+        <option value="RECHAZADO">🛑 Rechazado</option>
+        <option value="ACONDICIONAMIENTO_PENDIENTE">⚠️ Acondicionamiento Pendiente</option>
+      </select>
+
+      <button type="button" class="btn-primary-action" (click)="openModal()">
+        <span class="material-symbols-outlined">fact_check</span>
+        <span>+ Nueva Verif. F01</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 2. Lista de Inspecciones en Andén ──────────────────────────────────── -->
+  <div class="verif-grid">
+    @for (ver of filteredVerifications(); track ver.id) {
+      <div class="verif-card" [class.verif-card--approved]="ver.status === 'APROBADO'" [class.verif-card--rejected]="ver.status === 'RECHAZADO'">
+        
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="folio-tag">{{ ver.folio }}</span>
+            <span class="standard-code font-mono">{{ ver.controlNumber }} Rev. {{ ver.revisionNumber }}</span>
+          </div>
+          <span class="status-badge" [ngClass]="'status--' + ver.status.toLowerCase()">
+            {{ ver.status === 'APROBADO' ? '✅ Aprobado' : ver.status === 'RECHAZADO' ? '🛑 Rechazado' : '⚠️ Acondicionamiento' }}
+          </span>
+        </div>
+
+        <div class="card-body">
+          <h3 class="product-title">{{ ver.productDescription }}</h3>
+
+          <div class="specs-grid">
+            <div class="spec-cell">
+              <span class="spec-label">Remisión:</span>
+              <strong class="spec-val font-mono">{{ ver.remisionNumber }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Rampa / Andén:</span>
+              <strong class="spec-val highlight-ramp font-mono">{{ ver.ramp }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Cliente / Planta:</span>
+              <strong class="spec-val truncate">{{ ver.clientName }}</strong>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Fecha y Hora:</span>
+              <strong class="spec-val font-mono">{{ ver.date }} {{ ver.time }}</strong>
+            </div>
+          </div>
+
+          <!-- Criterios evaluados -->
+          <div class="criteria-summary-row">
+            <span class="summary-pill summary-pill--ok">
+              ✔ {{ ver.transportCriteria.length }} Criterios Transporte OK
+            </span>
+            <span class="summary-pill summary-pill--ok">
+              ✔ {{ ver.productCriteria.length }} Criterios Producto OK
+            </span>
+          </div>
+
+          @if (ver.generalObservations) {
+            <p class="card-notes">
+              <span class="material-symbols-outlined text-xs">visibility</span>
+              <span>{{ ver.generalObservations }}</span>
+            </p>
+          }
+        </div>
+
+        <div class="card-footer">
+          <span class="auditor-meta">
+            ✍️ Auditor: <strong>{{ ver.elaboratedBy.name }}</strong>
+          </span>
+          <span class="signed-tag">Firmado digitalmente</span>
+        </div>
+
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <span class="material-symbols-outlined empty-icon">fact_check</span>
+        <h3>Sin Verificaciones F01</h3>
+        <p>No se han registrado inspecciones de andén bajo estos filtros.</p>
+      </div>
+    }
+  </div>
+
+  <!-- ── 3. Modal Oficial F01-PO-GC-8.6-03 ─────────────────────────────────── -->
+  @if (showModal()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-sheet modal-sheet--large animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="material-symbols-outlined modal-icon text-amber-500">fact_check</span>
+            <div>
+              <h2>Verificación de Transporte en Andén</h2>
+              <span class="modal-subtitle">Formato Oficial F01-PO-GC-8.6-03 Rev. 03</span>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          
+          <!-- Datos de Encabezado -->
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">No. Remisión / Folio:</label>
+              <input type="text" [(ngModel)]="formRemision" class="form-input font-mono" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Andén / Rampa:</label>
+              <input type="text" [(ngModel)]="formRamp" class="form-input font-mono" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Producto Transportado:</label>
+              <input type="text" [(ngModel)]="formProduct" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cliente / Proveedor:</label>
+              <input type="text" [(ngModel)]="formClient" class="form-input" />
+            </div>
+          </div>
+
+          <!-- Dictamen en Vivo -->
+          <div class="live-verdict-bar" [ngClass]="'verdict--' + computedStatus().toLowerCase()">
+            <span class="verdict-label">Dictamen Automático:</span>
+            <strong class="verdict-val">
+              {{ computedStatus() === 'APROBADO' ? '✅ TRANSPORTE APROBADO' : computedStatus() === 'RECHAZADO' ? '🛑 TRANSPORTE RECHAZADO' : '⚠️ ACONDICIONAMIENTO REQUERIDO' }}
+            </strong>
+          </div>
+
+          <!-- Sección 1: Criterios de Transporte -->
+          <div class="checklist-section">
+            <h3 class="section-title">1. Criterios de Transporte & Caja</h3>
+            <div class="criteria-table">
+              @for (crit of currentTransportCriteria(); track crit.id) {
+                <div class="crit-row">
+                  <div class="crit-info">
+                    <strong class="crit-name">{{ crit.label }}</strong>
+                    @if (crit.isCritical) {
+                      <span class="crit-tag-critical">Crítico</span>
+                    }
+                  </div>
+                  <div class="crit-buttons">
+                    <button
+                      type="button"
+                      class="btn-val btn-val--si"
+                      [class.btn-val--active]="crit.value === 'SI'"
+                      (click)="setCriterionValue('transport', crit.id, 'SI')">
+                      SI
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-val btn-val--no"
+                      [class.btn-val--active]="crit.value === 'NO'"
+                      (click)="setCriterionValue('transport', crit.id, 'NO')">
+                      NO
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-val btn-val--na"
+                      [class.btn-val--active]="crit.value === 'NA'"
+                      (click)="setCriterionValue('transport', crit.id, 'NA')">
+                      N/A
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Sección 2: Criterios de Producto -->
+          <div class="checklist-section">
+            <h3 class="section-title">2. Criterios de Producto & Embalaje</h3>
+            <div class="criteria-table">
+              @for (crit of currentProductCriteria(); track crit.id) {
+                <div class="crit-row">
+                  <div class="crit-info">
+                    <strong class="crit-name">{{ crit.label }}</strong>
+                    @if (crit.isCritical) {
+                      <span class="crit-tag-critical">Crítico</span>
+                    }
+                  </div>
+                  <div class="crit-buttons">
+                    <button
+                      type="button"
+                      class="btn-val btn-val--si"
+                      [class.btn-val--active]="crit.value === 'SI'"
+                      (click)="setCriterionValue('product', crit.id, 'SI')">
+                      SI
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-val btn-val--no"
+                      [class.btn-val--active]="crit.value === 'NO'"
+                      (click)="setCriterionValue('product', crit.id, 'NO')">
+                      NO
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-val btn-val--na"
+                      [class.btn-val--active]="crit.value === 'NA'"
+                      (click)="setCriterionValue('product', crit.id, 'NA')">
+                      N/A
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observaciones Generales de la Inspección:</label>
+            <textarea [(ngModel)]="formObservations" class="form-textarea" placeholder="Describe condiciones del transporte o hallazgos..."></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeModal()">Cancelar</button>
+          <button type="button" class="btn-submit-action" (click)="submitVerification()">
+            <span class="material-symbols-outlined">save</span>
+            <span>Firmar y Guardar Inspección F01</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

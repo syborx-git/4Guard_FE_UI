@@ -4,7 +4,7 @@
 <div class="rf-shell">
 
   <!-- ── 1. Top Industrial Header ──────────────────────────────── -->
-  <header class="rf-header" role="banner">
+  <header class="rf-header" [class.rf-header--scrolled]="isScrolled()" role="banner">
     <!-- Brand / Title -->
     <div class="rf-header__brand">
       <a routerLink="/menu" class="rf-header__logo" aria-label="Ir al Menú Principal">
@@ -90,9 +90,15 @@
       </button>
     </div>
   </header>
+ 
+  <!-- ── Banner Global de Conectividad, Cola IndexedDB & Zone Lease ── -->
+  <fg-rf-offline-banner></fg-rf-offline-banner>
+
+  <!-- ── Contenedor Global de Toasts y Notificaciones de Transacciones ── -->
+  <fg-rf-toast-container></fg-rf-toast-container>
 
   <!-- ── 2. Main Content Area (Router Outlet) ──────────────────── -->
-  <main class="rf-shell__main" role="main">
+  <main class="rf-shell__main" role="main" (scroll)="onMainScroll($event)">
     <router-outlet />
   </main>
 
@@ -183,16 +189,26 @@
   <!-- ── 5. Menú Desplegable de Perfil de Usuario & Sesión ──────── -->
   @if (showProfileMenu()) {
     <div class="profile-menu-backdrop" (click)="closeProfileMenu()">
-      <div class="profile-popover animate-scale-in" (click)="$event.stopPropagation()" role="dialog" aria-label="Perfil del Operador">
+      <div class="profile-popover" (click)="$event.stopPropagation()" role="dialog" aria-label="Perfil del Operador">
         
-        <!-- Header con Avatar, Nombre, Usuario y Rol -->
+        <!-- Header con Avatar, Nombre, Usuario, Rol y Botón de Cerrar -->
         <div class="profile-popover__header">
           <div class="profile-avatar-large">
             <span>{{ displayUserInitials() }}</span>
             <span class="avatar-status-dot" title="Usuario en Línea"></span>
           </div>
           <div class="profile-user-info">
-            <h3 class="profile-name">{{ displayUserName() }}</h3>
+            <div class="profile-title-row">
+              <h3 class="profile-name">{{ displayUserName() }}</h3>
+              <button 
+                type="button" 
+                class="profile-close-btn" 
+                (click)="closeProfileMenu()" 
+                aria-label="Cerrar ventana de perfil"
+                title="Cerrar ventana">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
             <span class="profile-username">&#64;{{ displayUsername() }}</span>
             <div class="profile-role-badge">
               <span class="material-symbols-outlined text-xs">verified_user</span>
@@ -213,14 +229,13 @@
           </div>
           <div class="profile-meta-item">
             <span class="meta-label">Zona Asignada:</span>
-            <strong class="meta-value font-mono text-emerald-600 dark:text-emerald-400">🔒 {{ activeZoneName() }} ({{ leaseMinutesLeft() }}m)</strong>
+            <strong class="meta-value font-mono meta-value--highlight">🔒 {{ activeZoneName() }} ({{ leaseMinutesLeft() }}m)</strong>
           </div>
           <div class="profile-meta-item">
             <span class="meta-label">Estado de Red:</span>
-            <strong class="meta-value text-emerald-600 dark:text-emerald-400">📶 En Línea / Sincronizado</strong>
+            <strong class="meta-value meta-value--highlight">📶 En Línea / Sincronizado</strong>
           </div>
         </div>
-
 
         <!-- Botón de Cierre de Sesión -->
         <div class="profile-popover__footer">
@@ -252,11 +267,11 @@
           Se cerrará la sesión activa para <strong>{{ displayUserName() }}</strong> (&#64;{{ displayUsername() }}). Los datos sincronizados quedarán seguros en el servidor.
         </p>
 
-        <div class="flex gap-2.5 mt-4">
-          <button type="button" class="btn-modal-cancel flex-1" (click)="closeLogoutConfirmModal()">
+        <div class="modal-actions-row">
+          <button type="button" class="btn-modal-cancel" (click)="closeLogoutConfirmModal()">
             Cancelar
           </button>
-          <button type="button" class="btn-modal-danger flex-1" (click)="confirmLogout()">
+          <button type="button" class="btn-modal-danger" (click)="confirmLogout()">
             <span class="material-symbols-outlined text-sm">exit_to_app</span>
             <span>Cerrar Sesión</span>
           </button>

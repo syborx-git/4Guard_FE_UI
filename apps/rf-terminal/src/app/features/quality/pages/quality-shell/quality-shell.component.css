@@ -1,0 +1,205 @@
+/**
+ * @file quality-shell.component.css
+ * @description Estilos industriales SDD Liquid Glass Dual Theme para el Shell de Calidad de la Terminal RF.
+ */
+
+:host {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rf-quality-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  padding-bottom: 2rem;
+}
+
+/* ── 1. Hero Header ────────────────────────────────────────────── */
+.qm-hero-header {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-card-strong);
+  border-top: 4px solid var(--gold);
+  border-radius: 18px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.qm-hero-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.qm-hero-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(208, 175, 103, 0.2) 0%, rgba(208, 175, 103, 0.05) 100%);
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(208, 175, 103, 0.2);
+}
+
+.qm-hero-icon {
+  font-size: 1.75rem;
+}
+
+.qm-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.qm-hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.qm-eyebrow-tag {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+.qm-eyebrow-dot {
+  opacity: 0.5;
+}
+
+.qm-hero-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.qm-hero-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ── 2. Navegación por Pills Táctiles ───────────────────────────── */
+.qm-tabs-nav {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-top: 1px solid var(--border-card);
+  padding-top: 0.85rem;
+}
+
+.qm-tabs-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.qm-tabs-track {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: max-content;
+}
+
+.qm-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: var(--bg-card-subtle);
+  border: 1.5px solid var(--border-card);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.qm-tab-pill:hover {
+  background: var(--gold-bg);
+  border-color: var(--gold-border);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.qm-tab-pill--active {
+  background: linear-gradient(135deg, rgba(208, 175, 103, 0.2) 0%, rgba(208, 175, 103, 0.1) 100%) !important;
+  border-color: var(--gold) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 4px 14px rgba(208, 175, 103, 0.25);
+}
+
+.qm-tab-icon {
+  font-size: 1.2rem;
+  color: var(--gold);
+}
+
+.qm-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.4rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.badge--danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.badge--success {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge--warning {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.badge--info {
+  background: rgba(59, 130, 246, 0.18);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.badge--gold {
+  background: rgba(208, 175, 103, 0.25);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+/* ── 3. Submodule Body ─────────────────────────────────────────── */
+.qm-submodule-body {
+  width: 100%;
+}

@@ -1,42 +1,65 @@
 <!-- ================================================================
      Menú de Operaciones Maestro — Terminal RF PWA (Synexia Dual Theme)
+     Arquitectura RBAC Adaptativa: Banner y Módulos según Perfil de Usuario
      ================================================================ -->
 <div class="rf-menu-workspace">
+
+  <!-- ── 0. BARRA DE SIMULACIÓN Y CONMUTACIÓN DE ROLES (DEMO RBAC) ──── -->
+  <div class="rf-role-switcher-bar">
+    <div class="role-switcher-label">
+      <span class="material-symbols-outlined text-base text-amber-500">theater_comedy</span>
+      <span class="font-bold text-xs uppercase tracking-wider">Simulador de Rol:</span>
+    </div>
+    
+    <div class="role-pills-wrap">
+      @for (r of demoRoles; track r.role) {
+        <button
+          type="button"
+          (click)="switchDemoRole(r.role)"
+          class="role-pill-btn"
+          [class.role-pill-btn--active]="currentRole() === r.role"
+          [title]="'Cambiar a vista de ' + r.label">
+          <span class="material-symbols-outlined text-sm">{{ r.icon }}</span>
+          <span>{{ r.label }}</span>
+        </button>
+      }
+    </div>
+  </div>
 
   <!-- ── 1. SECCIÓN SUPERIOR: ENCABEZADO Y REANUDAR TAREA ─────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
     
-    <!-- Encabezado Operativo de la Terminal -->
+    <!-- Encabezado Operativo Dinámico según Rol -->
     <div class="lg:col-span-4 rf-terminal-info-card">
       <div class="rf-card-glow-bg"></div>
       <div>
         <div class="terminal-badge">
           <span class="terminal-badge__dot"></span>
-          <span>Terminal Montacargas #07</span>
+          <span>{{ currentProfile().terminalBadge }}</span>
         </div>
-        <h1 class="terminal-title">Menú de Operaciones</h1>
+        <h1 class="terminal-title">{{ currentProfile().terminalTitle }}</h1>
         <p class="terminal-desc">
-          Selecciona un módulo de trabajo o continúa con tu asignación activa en andén.
+          {{ currentProfile().terminalDesc }}
         </p>
       </div>
       <div class="terminal-footer">
-        <span class="terminal-priority-tag">Nivel 4G: Máxima Prioridad</span>
+        <span class="terminal-priority-tag">{{ currentProfile().priorityTag }}</span>
         <span class="priority-dot"></span>
-        <span class="terminal-lease-tag">Arrendamiento Activo</span>
+        <span class="terminal-lease-tag">{{ currentProfile().leaseTag }}</span>
       </div>
     </div>
 
-    <!-- Banner Hero: Reanudar Tarea Activa (Target Gigante) -->
+    <!-- Banner Hero: Reanudar Tarea Activa (Personalizado Dinámicamente por Rol) -->
     @if (activeTask(); as task) {
-      <div class="lg:col-span-8 rf-hero-task-banner">
+      <div class="lg:col-span-8 rf-hero-task-banner" [ngClass]="'rf-hero-task-banner--' + task.bannerTheme">
         <div class="hero-skew-accent"></div>
         <div class="hero-task-info">
           <div class="hero-icon-wrap">
-            <span class="material-symbols-outlined hero-icon">forklift</span>
+            <span class="material-symbols-outlined hero-icon">{{ task.icon }}</span>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="hero-badge-status">En Progreso</span>
+              <span class="hero-badge-status">{{ task.statusBadge }}</span>
               <span class="hero-folio">{{ task.folio }}</span>
             </div>
             <h2 class="hero-task-title">{{ task.title }}</h2>
@@ -51,19 +74,20 @@
           type="button"
           (click)="resumeActiveTask()"
           class="btn-resume-task"
-          title="Reanudar tarea inmediatamente con un toque">
+          title="Acceder inmediatamente al módulo con un toque">
           <span class="material-symbols-outlined text-2xl">play_circle</span>
-          <span>REANUDAR TAREA</span>
+          <span>{{ task.actionLabel }}</span>
         </button>
       </div>
     }
 
   </div>
 
-  <!-- ── 2. GRID DE MÓDULOS OPERATIVOS (CARDS TÁCTILES EXTRA GRANDES) ── -->
+  <!-- ── 2. GRID DE MÓDULOS OPERATIVOS (FILTRADOS Y PRIORIZADOS POR ROL) ── -->
   <div class="rf-modules-grid">
-    @for (mod of modules; track mod.id) {
+    @for (mod of visibleModules(); track mod.id) {
       <div class="rf-module-card group" (click)="navigate(mod.route)">
+        <div class="rf-card-gold-glow"></div>
         <div class="rf-module-card__top">
           <div class="rf-module-icon-wrap" [ngClass]="'rf-module-icon-wrap--' + mod.badgeType">
             <span class="material-symbols-outlined rf-module-icon">{{ mod.icon }}</span>

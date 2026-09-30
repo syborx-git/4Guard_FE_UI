@@ -1,0 +1,48 @@
+<div class="rf-quality-hub">
+  
+  <!-- ── 1. Hero Header Industrial QM ──────────────────────────────────────── -->
+  <header class="qm-hero-header">
+    <div class="qm-hero-content">
+      <div class="qm-hero-icon-box">
+        <span class="material-symbols-outlined qm-hero-icon">verified_user</span>
+      </div>
+      <div class="qm-hero-text">
+        <div class="qm-hero-eyebrow">
+          <span class="qm-eyebrow-tag">ASEGURAMIENTO & CONTROL</span>
+          <span class="qm-eyebrow-dot">•</span>
+          <span>NORMA ISO 9001 / F01</span>
+        </div>
+        <h1 class="qm-hero-title">Control de Calidad (QM)</h1>
+        <p class="qm-hero-desc">
+          Bloqueos de producto no conforme, dictamen de liberación, verificación F01 de andén y reclamaciones.
+        </p>
+      </div>
+    </div>
+
+    <!-- ── 2. Navegación por Pills Táctiles Deslizables (5 Submódulos) ────────── -->
+    <nav class="qm-tabs-nav" aria-label="Submódulos de Calidad">
+      <div class="qm-tabs-track">
+        @for (tab of tabs; track tab.path) {
+          <a
+            [routerLink]="tab.path"
+            routerLinkActive="qm-tab-pill--active"
+            class="qm-tab-pill">
+            <span class="material-symbols-outlined qm-tab-icon">{{ tab.icon }}</span>
+            <span class="qm-tab-label">{{ tab.label }}</span>
+            @if (tab.countKey) {
+              <span class="qm-tab-badge" [ngClass]="tab.badgeClass">
+                {{ getTabCount(tab.countKey) }}
+              </span>
+            }
+          </a>
+        }
+      </div>
+    </nav>
+  </header>
+
+  <!-- ── 3. Router Outlet del Submódulo Activo ─────────────────────────────── -->
+  <main class="qm-submodule-body">
+    <router-outlet></router-outlet>
+  </main>
+
+</div>
