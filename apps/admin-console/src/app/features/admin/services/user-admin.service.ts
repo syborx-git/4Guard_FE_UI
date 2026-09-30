@@ -68,16 +68,25 @@ export class UserAdminService {
 
   create(user: Omit<UserAdminItem, 'id' | 'lastLoginAt'> & { password?: string }): Observable<ApiResponse<UserProfileDto>> {
     // 1. Resolver roleId buscando en roles cargados de la BD o en usuarios existentes
-    const roleName = user.role.replace('ROLE_', '');
-    const foundDbRole = this.roleService.roles().find(r => r.name === roleName || r.name === user.role);
+    const rawRole = (user.role || '').toString();
+    const roleClean = rawRole.replace('ROLE_', '').toUpperCase();
+    const foundDbRole = this.roleService.roles().find(r => 
+      r.name?.toUpperCase() === roleClean || 
+      r.name?.toUpperCase() === rawRole.toUpperCase() ||
+      r.name?.toUpperCase() === `ROLE_${roleClean}`
+    );
     let roleId = foundDbRole ? foundDbRole.id : '';
 
     if (!roleId) {
-      const matchingRoleUser = Array.from(this.originalDtos.values()).find(dto => dto.roleName === roleName || dto.roleName === user.role);
-      if (matchingRoleUser) {
+      const matchingRoleUser = Array.from(this.originalDtos.values()).find(dto => 
+        dto.roleName?.toUpperCase() === roleClean || 
+        dto.roleName?.toUpperCase() === rawRole.toUpperCase()
+      );
+      if (matchingRoleUser && matchingRoleUser.roleId) {
         roleId = matchingRoleUser.roleId;
       } else {
-        roleId = '88888888-8888-8888-8888-888888888888'; // fallback
+        const firstRole = this.roleService.roles()[0];
+        roleId = firstRole ? firstRole.id : '88888888-8888-8888-8888-888888888888';
       }
     }
 
@@ -89,10 +98,11 @@ export class UserAdminService {
     let branchId = user.branchId;
     if (!branchId || branchId.startsWith('br-') || branchId === '1') {
       const matchingBranchUser = Array.from(this.originalDtos.values()).find(dto => dto.branchName === user.branchName);
-      if (matchingBranchUser) {
+      if (matchingBranchUser && matchingBranchUser.branchId) {
         branchId = matchingBranchUser.branchId;
       } else {
-        branchId = 'b73f0907-9fa5-4bdf-87db-2eb5e7683936'; // fallback del curl
+        const firstBranch = this.branchService.branches()[0];
+        branchId = firstBranch ? firstBranch.id : 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
       }
     }
 

@@ -105,7 +105,7 @@ export class ReceptionCreateComponent implements OnInit {
 
     this.isValidated.set(true);
     this.validationMessage.set(
-      'La información frontend fue validada. La autorización de sucursal, tenant y RLS aún requiere validación del servidor.'
+      'La información fue validada localmente. La autorización de sucursal y permisos requiere confirmación del servidor.'
     );
   }
 

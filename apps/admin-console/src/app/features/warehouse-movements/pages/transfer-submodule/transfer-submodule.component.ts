@@ -14,9 +14,13 @@ import {
   TransferReasonItem,
   TRANSFER_REASONS,
   MovementAuditEntry,
+  parseAuditTimestamp,
   ReceptionPalletItem,
 } from '../../models/warehouse-movements.models';
 import { PrintTransferLayoutComponent } from '../../components/print-layouts/print-transfer-layout.component';
+import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
 
 export interface ForkliftOperatorOption {
   id: string;
@@ -30,7 +34,16 @@ export interface ForkliftOperatorOption {
 @Component({
   selector: 'fg-transfer-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, PrintTransferLayoutComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RouterLinkActive,
+    PrintTransferLayoutComponent,
+    BayOccupancySelectorComponent,
+    StarBorderDirective,
+    SpecularGlowDirective,
+  ],
   templateUrl: './transfer-submodule.component.html',
   styleUrl: './transfer-submodule.component.css',
 })
@@ -223,11 +236,55 @@ export class TransferSubmoduleComponent implements OnInit {
   isOriginDropdownOpen = signal<boolean>(false);
   selectedOriginCode = signal('');
   selectedPalletIds = signal<string[]>([]);
-  quantityToMoveInput = signal<number>(1);
+  quantityToMoveInput = signal<number>(0);
+  palletSearchQuery = signal<string>('');
 
-  // Bahias Ocupadas y Disponibles
+  // Bahías Ocupadas y Disponibles
   occupiedLocations = this.movementsService.occupiedLocations;
   availableLocations = this.movementsService.availableLocations;
+
+  // Filtrado reactivo de tarimas en la bahía de origen seleccionada
+  filteredOriginPallets = computed(() => {
+    const list = this.originStock().pallets || [];
+    const q = this.palletSearchQuery().toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((p, idx) => {
+      const matchIndex = `tarima #${idx + 1}`.includes(q) || (p.palletNumber ? `tarima #${p.palletNumber}`.includes(q) : false);
+      const matchCode = p.palletCode ? p.palletCode.toLowerCase().includes(q) : false;
+      const matchSku = p.productId ? p.productId.toLowerCase().includes(q) : false;
+      const matchDesc = p.description ? p.description.toLowerCase().includes(q) : false;
+      const matchLot = p.lotNumber ? p.lotNumber.toLowerCase().includes(q) : false;
+      const matchExp = p.expirationDate ? p.expirationDate.toLowerCase().includes(q) : false;
+      const matchDoc = p.docNumber ? p.docNumber.toLowerCase().includes(q) : false;
+      const matchSup = p.supplierName ? p.supplierName.toLowerCase().includes(q) : false;
+      return matchIndex || matchCode || matchSku || matchDesc || matchLot || matchExp || matchDoc || matchSup;
+    });
+  });
+
+  isAllVisiblePalletsSelected = computed(() => {
+    const visible = this.filteredOriginPallets();
+    const selected = this.selectedPalletIds();
+    return visible.length > 0 && visible.every((p) => selected.includes(p.id));
+  });
+
+  isSomeVisiblePalletsSelected = computed(() => {
+    const visible = this.filteredOriginPallets();
+    const selected = this.selectedPalletIds();
+    const selectedCount = visible.filter((p) => selected.includes(p.id)).length;
+    return selectedCount > 0 && selectedCount < visible.length;
+  });
+
+  // Formato legible para zona de almacén (ej. ZA -> Zona A, ZB -> Zona B)
+  formatZone(zone?: string): string {
+    if (!zone) return 'Zona General';
+    const clean = zone.trim().toUpperCase();
+    if (clean === 'ZA') return 'Zona A';
+    if (clean === 'ZB') return 'Zona B';
+    if (clean === 'ZC') return 'Zona C';
+    if (clean === 'ZD') return 'Zona D';
+    if (clean.startsWith('Z') && clean.length === 2) return `Zona ${clean.substring(1)}`;
+    return zone;
+  }
 
   // Formato legible para código de bahía (elimina "N/A" mostrando nombre de bahía/rack real)
   getLocationDisplayCode(locOrCode: LocationStockInfo | string | undefined | null): string {
@@ -374,16 +431,18 @@ export class TransferSubmoduleComponent implements OnInit {
     const loc = this.movementsService.getLocationInfo(code);
     this.originSearchQuery.set(this.getLocationDisplayCode(loc || code));
     this.isOriginDropdownOpen.set(false);
-    const stock = this.movementsService.getLocationInfo(code);
-    this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
-    this.quantityToMoveInput.set(stock.pallets.length > 0 ? stock.pallets.length : 1);
+    this.palletSearchQuery.set('');
+    // ❌ No seleccionar todas por defecto: Inicia deseleccionado para que el usuario elija libremente
+    this.selectedPalletIds.set([]);
+    this.quantityToMoveInput.set(0);
   }
 
   clearOriginSelection(): void {
     this.selectedOriginCode.set('');
     this.originSearchQuery.set('');
     this.selectedPalletIds.set([]);
-    this.quantityToMoveInput.set(1);
+    this.quantityToMoveInput.set(0);
+    this.palletSearchQuery.set('');
     this.isOriginDropdownOpen.set(false);
   }
 
@@ -391,7 +450,7 @@ export class TransferSubmoduleComponent implements OnInit {
   setQuantityToMove(count: number): void {
     const stock = this.originStock();
     const max = stock.pallets.length;
-    const safeCount = Math.max(1, Math.min(count, max));
+    const safeCount = Math.max(0, Math.min(count, max));
     this.quantityToMoveInput.set(safeCount);
     const selected = stock.pallets.slice(0, safeCount).map((p) => p.id);
     this.selectedPalletIds.set(selected);
@@ -399,15 +458,41 @@ export class TransferSubmoduleComponent implements OnInit {
 
   onQuantityInputChange(val: any): void {
     const num = parseInt(val, 10);
-    if (!isNaN(num) && num > 0) {
+    if (!isNaN(num) && num >= 0) {
       this.setQuantityToMove(num);
     }
+  }
+
+  selectAllPallets(): void {
+    const stock = this.originStock();
+    this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
+    this.quantityToMoveInput.set(stock.pallets.length);
+  }
+
+  deselectAllPallets(): void {
+    this.selectedPalletIds.set([]);
+    this.quantityToMoveInput.set(0);
   }
 
   // ── 3. BUSCADOR & AUTOCOMPLETE DE BAHÍA DESTINO (MÁQUINA DE ESTADOS) ──
   destSearchQuery = signal<string>('');
   isDestDropdownOpen = signal<boolean>(false);
   selectedDestinationCode = signal('');
+  showDestBaySelectorModal = signal<boolean>(false);
+
+  openDestBaySelector(): void {
+    this.showDestBaySelectorModal.set(true);
+  }
+
+  onDestBaySelected(res: BaySelectionResult): void {
+    this.selectDestinationLocation(res.locationCode);
+    this.showDestBaySelectorModal.set(false);
+    if (res.isOverride) {
+      this.toast.info(`Bahía destino ${res.locationCode} seleccionada con Anulación de Administrador.`);
+    } else {
+      this.toast.success(`Bahía destino ${res.locationCode} seleccionada correctamente.`);
+    }
+  }
 
   selectDestinationLocation(code: string): void {
     this.selectedDestinationCode.set(code);
@@ -641,6 +726,14 @@ export class TransferSubmoduleComponent implements OnInit {
     localStorage.removeItem('4g_active_transfer_folio');
   }
 
+  toggleStatusFilter(status: string): void {
+    this.statusFilter.set(status);
+  }
+
+  isStatusFilterActive(status: string): boolean {
+    return this.statusFilter() === status;
+  }
+
   // Seleccionar un Traspaso del Directorio (Modo Detalle/Solo Lectura)
   selectTransferItem(transfer: WarehouseTransfer): void {
     this.formMode.set('detail');
@@ -654,7 +747,7 @@ export class TransferSubmoduleComponent implements OnInit {
           if (fullTransfer) {
             const mappedPallets: ReceptionPalletItem[] = (fullTransfer.items || []).map((it: any, idx: number) => ({
               id: it.itemId || it.id || `plt-${idx}`,
-              palletNumber: idx + 1,
+              palletNumber: it.palletNumber != null ? it.palletNumber : (idx + 1),
               palletCode: it.palletCode || `UA-${idx + 1}`,
               description: it.skuDescription || 'ALIMENTO BALANCEADO PURINA',
               productId: it.skuCode || '12572733',
@@ -708,22 +801,26 @@ export class TransferSubmoduleComponent implements OnInit {
       next: (logs: any[]) => {
         this.isLoadingAudit.set(false);
         if (logs && logs.length > 0) {
-          const mapped: MovementAuditEntry[] = logs.map((log: any) => ({
-            id: log.id || log.auditId || `aud-${Date.now()}-${Math.random()}`,
-            action: log.action || log.eventType || 'TRASPASO_REGISTRADO',
-            actionLabel: log.actionLabel || log.description || this.getAuditSummary(log.action),
-            username: log.username || log.performedBy || log.createdBy || 'Sistema',
-            timestamp: log.timestamp
-              ? new Date(log.timestamp).toLocaleString('es-MX')
-              : (log.createdAt ? new Date(log.createdAt).toLocaleString('es-MX') : ''),
-            details: (log.details || log.changes || []).map((d: any) => ({
-              fieldName: this.formatFieldLabel(d.fieldName),
-              oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
-              newValue: this.formatFieldValue(d.fieldName, d.newValue),
-            })),
-            reason: log.reason || log.cancellationReason,
-            authorizedBy: log.authorizedBy,
-          }));
+          const mapped: MovementAuditEntry[] = logs.map((log: any) => {
+            const rawTs = log.timestamp || log.createdAt || log.date;
+            return {
+              id: log.id || log.auditId || `aud-${Date.now()}-${Math.random()}`,
+              action: log.action || log.eventType || 'TRASPASO_REGISTRADO',
+              actionLabel: log.actionLabel || log.description || this.getAuditSummary(log.action),
+              username: log.username || log.performedBy || log.createdBy || 'Sistema',
+              timestamp: rawTs
+                ? (isNaN(new Date(rawTs).getTime()) ? String(rawTs) : new Date(rawTs).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }))
+                : (log.timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleString('es-MX') : '')),
+              rawTimestamp: rawTs ? new Date(rawTs).getTime() : Date.now(),
+              details: (log.details || log.changes || []).map((d: any) => ({
+                fieldName: this.formatFieldLabel(d.fieldName),
+                oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                newValue: this.formatFieldValue(d.fieldName, d.newValue),
+              })),
+              reason: log.reason || log.cancellationReason,
+              authorizedBy: log.authorizedBy,
+            };
+          });
           const sorted = this.sortAuditEntries(mapped);
           this.auditEntries.set(sorted);
           this.movementsService.setTransferAuditLogs(transfer.folio, sorted);
@@ -740,26 +837,13 @@ export class TransferSubmoduleComponent implements OnInit {
     });
   }
 
+  // Ordenamiento cronológico inverso: el evento más reciente arriba (top), el más antiguo abajo
   sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
     if (!entries || entries.length === 0) return [];
     return [...entries].sort((a, b) => {
-      const parseDate = (ts?: string) => {
-        if (!ts) return 0;
-        const direct = new Date(ts).getTime();
-        if (!isNaN(direct) && direct > 0) return direct;
-        const match = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-        if (match) {
-          const day = parseInt(match[1], 10);
-          const month = parseInt(match[2], 10) - 1;
-          const year = parseInt(match[3], 10);
-          const hour = match[4] ? parseInt(match[4], 10) : 0;
-          const min = match[5] ? parseInt(match[5], 10) : 0;
-          const sec = match[6] ? parseInt(match[6], 10) : 0;
-          return new Date(year, month, day, hour, min, sec).getTime();
-        }
-        return 0;
-      };
-      return parseDate(b.timestamp) - parseDate(a.timestamp);
+      const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
+      const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
+      return timeB - timeA;
     });
   }
 
@@ -798,24 +882,37 @@ export class TransferSubmoduleComponent implements OnInit {
     }
   }
 
-  // Toggle de seleccion de tarima individual
+  // Toggle de selección de tarima individual
   togglePalletSelection(palletId: string): void {
     this.selectedPalletIds.update((ids) => {
+      let updated: string[];
       if (ids.includes(palletId)) {
-        return ids.filter((id) => id !== palletId);
+        updated = ids.filter((id) => id !== palletId);
       } else {
-        return [...ids, palletId];
+        updated = [...ids, palletId];
       }
+      this.quantityToMoveInput.set(updated.length);
+      return updated;
     });
   }
 
-  // Seleccionar todas o deseleccionar todas
+  // Seleccionar todas o deseleccionar todas (sensible al filtro de búsqueda)
   toggleSelectAllPallets(): void {
-    const stock = this.originStock();
-    if (this.selectedPalletIds().length === stock.pallets.length) {
-      this.selectedPalletIds.set([]);
+    const visible = this.filteredOriginPallets();
+    const current = this.selectedPalletIds();
+    
+    // Si todas las visibles están seleccionadas, deseleccionarlas
+    const allVisibleSelected = visible.length > 0 && visible.every((p) => current.includes(p.id));
+    if (allVisibleSelected) {
+      const visibleIds = new Set(visible.map((p) => p.id));
+      const remaining = current.filter((id) => !visibleIds.has(id));
+      this.selectedPalletIds.set(remaining);
+      this.quantityToMoveInput.set(remaining.length);
     } else {
-      this.selectedPalletIds.set(stock.pallets.map((p) => p.id));
+      // Seleccionar todas las visibles
+      const newSelected = Array.from(new Set([...current, ...visible.map((p) => p.id)]));
+      this.selectedPalletIds.set(newSelected);
+      this.quantityToMoveInput.set(newSelected.length);
     }
   }
 

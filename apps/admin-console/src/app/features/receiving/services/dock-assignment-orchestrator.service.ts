@@ -9,7 +9,7 @@ import { AuthState } from '../../../core/auth/auth.state';
 import { LocationService } from '../../admin/services/location.service';
 import { ReceptionAppointmentService } from './reception-appointment.service';
 import { ReceptionAppointment } from '../models/reception-appointment.models';
-import { DockItem } from '../../inventory/models/warehouse-location.models';
+import { DockItem } from '../../catalogs/models/warehouse-location.models';
 import {
   DockAssignmentStatus,
   DockCapability,

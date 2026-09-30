@@ -1,125 +1,317 @@
-<!-- sync-monitor.component.html — P11 -->
-<div class="sync" role="main" aria-label="Monitor de Sincronización">
+<!-- ================================================================
+     Monitor de Sincronización Offline & Zone Lease — sync-monitor.component.html
+     Estándar SDD Dual Theme Homologado 1:1 con Seguridad Patrimonial y Calidad
+     Arquitectura Offline-First con Cola FIFO Directa [HU-200 / HU-155]
+     ================================================================ -->
+<div class="sync-rf-page" role="main" aria-label="Monitor de Sincronización Offline">
 
-  <!-- ── Header ──────────────────────────────────────────── -->
-  <div class="sync__header">
-    <h1 class="sync__title">🔄 Monitor de Sync</h1>
-    <!-- Indicador de conectividad -->
-    <div class="conn-indicator" role="status"
-      [class.conn-indicator--online]="isOnline()"
-      [class.conn-indicator--offline]="!isOnline()"
-      [attr.aria-label]="isOnline() ? 'En línea' : 'Sin conexión'">
-      <span class="conn-dot" aria-hidden="true"></span>
-      <span class="conn-label">{{ isOnline() ? 'En línea' : 'Sin conexión' }}</span>
-    </div>
-  </div>
-
-  <!-- ── Stats ─────────────────────────────────────────────── -->
-  <div class="sync__stats">
-    <div class="sync-stat" [class.sync-stat--warn]="pendingCount() > 0">
-      <span class="sync-stat__val">{{ pendingCount() }}</span>
-      <span class="sync-stat__lbl">Pendientes</span>
-    </div>
-    <div class="sync-stat" [class.sync-stat--error]="errorCount() > 0">
-      <span class="sync-stat__val">{{ errorCount() }}</span>
-      <span class="sync-stat__lbl">Con reintentos</span>
-    </div>
-    <div class="sync-stat sync-stat--ok">
-      <span class="sync-stat__val">{{ syncedHistory().length }}</span>
-      <span class="sync-stat__lbl">Sincronizados</span>
-    </div>
-  </div>
-
-  <!-- ── Botón Sync Manual ─────────────────────────────────── -->
-  <div class="sync__manual">
-    @if (isSyncing()) {
-      <div class="sync-progress" role="progressbar"
-        [attr.aria-valuenow]="manualSyncProgress()"
-        aria-valuemin="0" aria-valuemax="100">
-        <div class="sync-progress__bar" [style.width.%]="manualSyncProgress()"></div>
-        <span class="sync-progress__pct" aria-hidden="true">{{ manualSyncProgress() }}%</span>
+  <!-- ── 1. Cabecera Táctica del Módulo ───────────────────────────── -->
+  <header class="sync-rf-header">
+    <div class="sync-rf-header__top">
+      <div class="sync-rf-header__left">
+        <button type="button" (click)="goBack()" class="btn-back-rf" title="Regresar al Cockpit">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+        <div class="sync-rf-header__icon-wrap">
+          <span class="material-symbols-outlined sync-rf-header__icon">cloud_sync</span>
+        </div>
+        <div class="sync-rf-header__copy">
+          <div class="sync-rf-header__eyebrow">
+            <span>Terminal RF</span>
+            <span class="eyebrow-sep">·</span>
+            <span class="eyebrow-gold">Offline-First Engine</span>
+            <span class="eyebrow-sep">·</span>
+            <span>Telemetría de Red</span>
+          </div>
+          <h1 class="sync-rf-header__title">Sincronización de Datos &amp; Zone Lease</h1>
+          <p class="sync-rf-header__subtitle">
+            Gestión de cola local IndexedDB, resolución de conflictos y arrendamiento de pasillo (HU-155 / HU-200).
+          </p>
+        </div>
       </div>
-    } @else {
-      <button
-        id="sync-manual-btn"
-        class="sync-btn"
-        [disabled]="!isOnline() || pendingCount() === 0"
-        (click)="manualSync()"
-        [attr.aria-label]="'Sincronizar ' + pendingCount() + ' operaciones pendientes'">
-        <span class="sync-btn__icon" aria-hidden="true">☁</span>
-        <span>Sincronizar ahora ({{ pendingCount() }})</span>
-      </button>
-    }
 
-    @if (lastSync()) {
-      <p class="sync__last" role="status">
-        Última sync: {{ formatTime(lastSync()!.toISOString()) }}
-      </p>
-    }
+      <!-- Telemetría & Conexión Preflight -->
+      <div class="sync-header-actions">
+        <!-- Chip de Conexión / Pre-flight Ping -->
+        <div class="sync-status-badge" [ngClass]="isOnline() ? 'badge--online' : 'badge--offline'" [title]="isOnline() ? 'Pre-flight Ping: ' + pingLatencyMs() + 'ms' : 'Red Desconectada'">
+          <span class="sync-status-badge__dot" [class.sync-status-badge__dot--offline]="!isOnline()"></span>
+          <span class="material-symbols-outlined text-sm">{{ isOnline() ? 'wifi' : 'wifi_off' }}</span>
+          <span>{{ isOnline() ? 'EN LÍNEA (' + pingLatencyMs() + 'ms)' : 'SIN CONEXIÓN' }}</span>
+        </div>
 
-    @if (!isOnline()) {
-      <div class="offline-warning" role="alert">
-        <span aria-hidden="true">📵</span>
-        <span>Sin conexión. Las operaciones se sincronizarán automáticamente al reconectarse.</span>
+        <!-- Chip de Zone Lease (HU-155) -->
+        <div class="sync-lease-chip" title="Arrendamiento de Pasillo Activo (30 min)">
+          <span class="material-symbols-outlined text-amber-500 text-sm">lock_clock</span>
+          <span class="font-mono font-bold">{{ leaseService.formattedTime() }}</span>
+        </div>
+
+        <!-- Botón Conmutar Red (Demo) -->
+        <button
+          type="button"
+          (click)="toggleNetworkSimulation()"
+          class="btn-toggle-net"
+          [class.btn-toggle-net--offline]="!isOnline()"
+          title="Simular corte o reconexión de red">
+          <span class="material-symbols-outlined text-sm">{{ isOnline() ? 'cloud_off' : 'cloud_done' }}</span>
+          <span class="hidden sm:inline">{{ isOnline() ? 'Simular Offline' : 'Restaurar Red' }}</span>
+        </button>
       </div>
-    }
+    </div>
+  </header>
+
+  <!-- ── 2. Cuadrícula de Métricas KPI Rápidas ─────────────────────── -->
+  <div class="sync-kpi-grid" aria-label="Métricas de Sincronización">
+    
+    <!-- KPI 1: Cola Pendiente (FIFO) -->
+    <div class="sync-kpi-card sync-kpi-card--warning" [class.card--warn-active]="pendingCount() > 0">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">pending_actions</span>
+      </div>
+      <div class="sync-kpi-card__info">
+        <span class="sync-kpi-card__label">TRANSACCIONES PENDIENTES</span>
+        <div class="kpi-value-row">
+          <strong class="sync-kpi-card__value font-mono text-amber-600 dark:text-amber-400">{{ pendingCount() }}</strong>
+          <span class="sync-kpi-card__cap font-mono">/ {{ maxCapacity }} máx</span>
+        </div>
+        <div class="kpi-mini-gauge-track">
+          <div
+            class="kpi-mini-gauge-fill"
+            [class.gauge--warn]="queueOccupancyPct() > 50"
+            [class.gauge--danger]="queueOccupancyPct() > 85"
+            [style.width.%]="queueOccupancyPct() || 3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI 2: Zone Lease Protocol (HU-155) -->
+    <div class="sync-kpi-card sync-kpi-card--primary">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">lock_clock</span>
+      </div>
+      <div class="sync-kpi-card__info">
+        <div class="flex items-center justify-between">
+          <span class="sync-kpi-card__label">ZONE LEASE (30 MIN)</span>
+          <span class="kpi-chip-status font-mono font-bold" [ngClass]="{
+            'chip--active': leaseService.leaseStatus() === 'ACTIVE',
+            'chip--warn': leaseService.leaseStatus() === 'WARNING',
+            'chip--expired': leaseService.leaseStatus() === 'EXPIRED'
+          }">
+            {{ leaseService.leaseStatus() }}
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <strong class="sync-kpi-card__value font-mono text-amber-600 dark:text-amber-400">
+            {{ leaseService.formattedTime() }}
+          </strong>
+          <button
+            type="button"
+            (click)="renewLease()"
+            class="btn-renew-lease"
+            title="Renovar concesión de 30 minutos">
+            <span class="material-symbols-outlined text-xs">sync</span>
+            <span>Renovar</span>
+          </button>
+        </div>
+        <span class="sync-kpi-card__sub">Pasillo 04 • Zona A (HU-155)</span>
+      </div>
+    </div>
+
+    <!-- KPI 3: Sincronizadas Hoy -->
+    <div class="sync-kpi-card sync-kpi-card--success">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">task_alt</span>
+      </div>
+      <div class="sync-kpi-card__info">
+        <span class="sync-kpi-card__label">SINCRONIZADAS HOY</span>
+        <div class="kpi-value-row">
+          <strong class="sync-kpi-card__value font-mono text-emerald-600 dark:text-emerald-400">
+            {{ syncedHistory().length }}
+          </strong>
+          <span class="sync-kpi-card__cap">confirmadas</span>
+        </div>
+        <span class="sync-kpi-card__sub">100% Integridad en Servidor Central</span>
+      </div>
+    </div>
+
+    <!-- KPI 4: Motor Local IndexedDB -->
+    <div class="sync-kpi-card sync-kpi-card--info">
+      <div class="sync-kpi-card__icon">
+        <span class="material-symbols-outlined">database</span>
+      </div>
+      <div class="sync-kpi-card__info">
+        <span class="sync-kpi-card__label">MOTOR LOCAL INDEXEDDB</span>
+        <strong class="sync-kpi-card__value text-base font-mono">
+          {{ isOnline() ? 'OPERATIVO' : 'OFFLINE-SAFE' }}
+        </strong>
+        <span class="sync-kpi-card__sub">L1 Local Storage • Sync Queue FIFO</span>
+      </div>
+    </div>
+
   </div>
 
-  <!-- ── Cola Pendiente ────────────────────────────────────── -->
-  @if (pendingCount() > 0) {
-    <div class="sync__section">
-      <h2 class="sync__section-title">
-        Cola pendiente
-        <span class="section-badge section-badge--warn">{{ pendingCount() }}</span>
-      </h2>
-      <div class="sync-list" role="list" aria-label="Operaciones pendientes de sincronización">
-        @for (entry of queue(); track entry.id) {
-          <div class="sync-entry sync-entry--pending" role="listitem">
-            <div class="sync-entry__type" [class]="'type-' + entry.type.toLowerCase()">
-              {{ getTypeLabel(entry.type) }}
+  <!-- ── 3. HERO MASTER CARD: BOTÓN PRINCIPAL DE TRANSMISIÓN ────────── -->
+  <section class="hero-sync-card">
+    <div class="hero-sync-main-row">
+      <!-- Bloque de Estado -->
+      <div class="hero-status-block">
+        <div class="flex items-center gap-3">
+          <div class="hero-sync-pulse-dot" [class.pulse-dot--offline]="!isOnline()" [class.pulse-dot--syncing]="isSyncing()"></div>
+          <div>
+            <h2 class="hero-sync-status-title">
+              {{ isSyncing() ? 'Transmitiendo datos con el Servidor Central...' : (isOnline() ? (pendingCount() > 0 ? 'Tienes ' + pendingCount() + ' operaciones listas para sincronizar' : 'Todo sincronizado • Base de datos al día') : 'Modo Fuera de Línea • Los datos se guardan en esta tableta') }}
+            </h2>
+            <p class="hero-sync-sub-diag">
+              <span>📡 Estado: <strong>{{ isOnline() ? 'Conectado al WMS Central' : 'Sin señal WiFi' }}</strong></span>
+              <span class="diag-dot">•</span>
+              <span>Último envío: <strong>{{ lastSyncTime() ? formatTime(lastSyncTime()!.toISOString()) : 'Al iniciar' }}</strong></span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón Principal Touch de Sincronización Manual -->
+      <div class="hero-cta-action-wrap">
+        @if (isSyncing()) {
+          <div class="hero-sync-progress-box">
+            <div class="hero-progress-track">
+              <div class="hero-progress-bar" [style.width.%]="manualSyncProgress()"></div>
             </div>
-            <div class="sync-entry__body">
-              <span class="sync-entry__desc">{{ entry.description }}</span>
-              <span class="sync-entry__time">{{ formatTime(entry.timestamp) }}</span>
+            <div class="hero-progress-label font-mono font-black">
+              <span class="material-symbols-outlined text-sm spin-anim">sync</span>
+              <span>Transmitiendo... {{ manualSyncProgress() }}%</span>
             </div>
-            @if (entry.retries > 0) {
-              <span class="sync-entry__retries" role="img" [attr.aria-label]="entry.retries + ' reintentos'">
-                ↻ {{ entry.retries }}
+          </div>
+        } @else {
+          <button
+            type="button"
+            id="btn-trigger-manual-sync"
+            (click)="manualSync()"
+            class="btn-master-sync"
+            [disabled]="!isOnline() || pendingCount() === 0"
+            title="Sincronizar todas las operaciones pendientes ahora">
+            <span class="material-symbols-outlined text-2xl">cloud_sync</span>
+            <div class="btn-sync-text-col">
+              <span class="btn-sync-title">SINCRONIZAR AHORA</span>
+              <span class="btn-sync-sub font-mono">{{ pendingCount() }} operaciones pendientes</span>
+            </div>
+            <span class="material-symbols-outlined ml-auto text-xl">arrow_forward</span>
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. LISTADO DIRECTO DE TRANSACCIONES EN COLA (FIFO) ─────────── -->
+  <section class="sync-queue-section" aria-label="Cola FIFO">
+    <div class="section-header-row">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-amber-500">pending_actions</span>
+        <h2 class="section-title">Operaciones en Cola (Pendientes de Subir)</h2>
+      </div>
+
+      <span class="section-badge-counter font-mono font-bold">
+        {{ queue().length }} {{ queue().length === 1 ? 'operación' : 'operaciones' }}
+      </span>
+    </div>
+
+    <div class="sync-cards-list">
+      @for (item of queue(); track item.id; let idx = $index) {
+        <article class="sync-item-card" [class.card--has-retries]="item.retries > 0">
+          <!-- Encabezado de la Tarjeta -->
+          <div class="item-card-top-row">
+            <div class="item-tags-wrap">
+              <!-- Índice de orden FIFO -->
+              <span class="fifo-index-badge font-mono font-black">#{{ idx + 1 }}</span>
+
+              <!-- Badge de Módulo -->
+              <span class="item-type-badge font-mono font-bold" [ngClass]="{
+                'badge--receipt': item.opType === 'SCAN_RECEIPT',
+                'badge--picking': item.opType === 'PICK_CONFIRM',
+                'badge--counting': item.opType === 'BLIND_COUNT',
+                'badge--anomaly': item.opType === 'ANOMALY_REPORT',
+                'badge--lease': item.opType === 'ZONE_LEASE'
+              }">
+                <span class="material-symbols-outlined text-xs">{{ getTypeIcon(item.opType) }}</span>
+                <span>{{ getTypeLabel(item.opType) }}</span>
               </span>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  }
 
-  <!-- ── Historial Sincronizado ────────────────────────────── -->
+              <!-- Código de Referencia / SSCC -->
+              <span class="item-ref-pill font-mono font-bold">
+                <span class="material-symbols-outlined text-xs">qr_code_2</span>
+                <span>{{ item.referenceCode }}</span>
+              </span>
+
+              <!-- Tiempo transcurrido -->
+              <span class="item-time-pill font-mono">
+                <span class="material-symbols-outlined text-xs">schedule</span>
+                <span>{{ formatTime(item.timestamp) }}</span>
+              </span>
+            </div>
+
+            <!-- Acciones -->
+            <div class="item-actions-wrap">
+              @if (item.retries > 0) {
+                <span class="badge-retry-warn font-mono font-black" title="Reintentos automáticos">
+                  ↻ {{ item.retries }} reintento
+                </span>
+              }
+
+              <button
+                type="button"
+                (click)="discardOperation(item.id)"
+                class="btn-icon-item btn-icon-item--danger"
+                title="Descartar operación">
+                <span class="material-symbols-outlined text-base">delete</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cuerpo: Título y Detalle -->
+          <div class="item-card-body">
+            <h3 class="item-title">{{ item.title }}</h3>
+            <p class="item-summary">{{ item.payloadSummary }}</p>
+          </div>
+        </article>
+      } @empty {
+        <div class="sync-empty-box">
+          <div class="empty-icon-ring">
+            <span class="material-symbols-outlined text-3xl text-emerald-500">cloud_done</span>
+          </div>
+          <h3 class="empty-title">Todo Sincronizado</h3>
+          <p class="empty-sub">No hay transacciones pendientes en esta tableta. Todos los datos están en el WMS central.</p>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── 5. HISTORIAL DE SINCRONIZACIONES RECIENTES ──────────────────── -->
   @if (syncedHistory().length > 0) {
-    <div class="sync__section">
-      <h2 class="sync__section-title">
-        Historial
-        <span class="section-badge section-badge--ok">{{ syncedHistory().length }}</span>
-      </h2>
-      <div class="sync-list" role="list" aria-label="Operaciones sincronizadas">
-        @for (entry of syncedHistory(); track entry.id) {
-          <div class="sync-entry sync-entry--synced" role="listitem">
-            <span class="sync-entry__ok" aria-hidden="true">✓</span>
-            <div class="sync-entry__body">
-              <span class="sync-entry__desc">{{ entry.description }}</span>
-              <span class="sync-entry__time">{{ formatTime(entry.timestamp) }}</span>
+    <section class="sync-history-section" aria-label="Historial de transacciones">
+      <div class="section-header-row">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-xl text-emerald-500">history</span>
+          <h2 class="section-title">Historial Reciente (Transmitido OK)</h2>
+        </div>
+        <span class="section-badge-counter font-mono font-bold">{{ syncedHistory().length }} registradas</span>
+      </div>
+
+      <div class="history-cards-list">
+        @for (hist of syncedHistory(); track hist.id) {
+          <div class="history-item-card">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="material-symbols-outlined text-emerald-500 text-lg flex-shrink-0">check_circle</span>
+              <div class="history-item-info-col min-w-0">
+                <div class="history-meta-row">
+                  <span class="history-title">{{ hist.title }}</span>
+                  <span class="history-time-tag font-mono">{{ formatTime(hist.timestamp) }}</span>
+                </div>
+                <p class="history-summary font-body text-xs">{{ hist.payloadSummary }}</p>
+              </div>
             </div>
           </div>
         }
       </div>
-    </div>
-  }
-
-  <!-- ── Sin pendientes ────────────────────────────────────── -->
-  @if (pendingCount() === 0 && !isSyncing()) {
-    <div class="sync__empty" role="status">
-      <span aria-hidden="true">☁✓</span>
-      <span>Todo sincronizado. No hay operaciones pendientes.</span>
-    </div>
+    </section>
   }
 
 </div>

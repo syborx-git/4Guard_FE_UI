@@ -120,15 +120,15 @@
                   </div>
                   <div class="po-doc-info-item">
                     <span class="po-doc-info-lbl">Cliente 3PL</span>
-                    <strong class="po-doc-info-val">{{ po.clientName }} ({{ po.clientId }})</strong>
+                    <strong class="po-doc-info-val">{{ po.clientName || po.clientId }}</strong>
                   </div>
                   <div class="po-doc-info-item">
                     <span class="po-doc-info-lbl">Proveedor</span>
-                    <strong class="po-doc-info-val">{{ po.supplierName }} ({{ po.supplierId }})</strong>
+                    <strong class="po-doc-info-val">{{ po.supplierName || po.supplierId }}</strong>
                   </div>
                   <div class="po-doc-info-item">
                     <span class="po-doc-info-lbl">Sucursal Destino</span>
-                    <strong class="po-doc-info-val">{{ po.branchName }} ({{ po.branchId }})</strong>
+                    <strong class="po-doc-info-val">{{ po.branchName || po.branchId }}</strong>
                   </div>
                   <div class="po-doc-info-item">
                     <span class="po-doc-info-lbl">ASN Referenciado</span>

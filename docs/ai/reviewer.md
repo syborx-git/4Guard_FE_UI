@@ -24,6 +24,7 @@ Cuando el usuario pida: `"Audita mi código"`, `"Revisa este módulo para PR"` o
 | 8 | **Tipado DTO & ISO UTC** | [`ADR-008`](../adr/ADR-008-api-contracts-uuid-utc.md) | PASS / FAIL | Cero uso de `any`, UUIDs e ISO-8601 UTC. |
 | 9 | **Matriz SDD Tracking** | [`module-status.md`](../architecture/module-status.md) | PASS / FAIL | Estado marcado como `✅ Completo` en la matriz. |
 | 10 | **Golden Hero Header** | [`component-specs.md`](../design/component-specs.md) | PASS / FAIL | Header Hero con ícono navy 52x52, badge `← ADMINISTRACIÓN WMS` en monospace dorado, categoría y `routerLink="/admin"`. |
+| 11 | **Alto Contraste Light Mode (Cero Letras Blancas o Grises)** | [`ui-design-system-light.sdd.md`](../sdd/ui-design-system-light.sdd.md) | PASS / FAIL | Cero letras blancas (`#fff`, `text-white`) o grises deslavadas sobre superficies claras en Light Mode. Tipografía base `#0f172a`, `#172033`, `#1e293b` y `#334155` (WCAG AAA). |
 
 ---
 

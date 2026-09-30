@@ -1147,3 +1147,162 @@ textarea.form-input {
   background: linear-gradient(135deg, #047857 0%, #065f46 100%);
 }
 
+/* ── ESTILOS DEL MÓDULO DE ADJUNCIÓN DE EVIDENCIA EN LIBERACIÓN ── */
+.release-evidence-upload-box {
+  background: rgba(23, 32, 51, 0.025);
+  border: 1px solid var(--border-subtle, rgba(76, 86, 105, 0.15));
+  border-radius: 12px;
+  padding: 0.85rem;
+}
+
+:host-context(.dark) .release-evidence-upload-box,
+:host-context(.theme-dark) .release-evidence-upload-box {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.release-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border: 1.5px dashed var(--gold-border, rgba(197, 168, 107, 0.35));
+  border-radius: 10px;
+  background: rgba(197, 168, 107, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.release-dropzone:hover {
+  background: rgba(197, 168, 107, 0.1);
+  border-color: var(--gold, #c5a86b);
+}
+
+.release-dropzone__icon {
+  font-size: 28px !important;
+  color: var(--text-gold, #9b7626);
+  flex-shrink: 0;
+}
+
+:host-context(.dark) .release-dropzone__icon,
+:host-context(.theme-dark) .release-dropzone__icon {
+  color: var(--gold-light, #e0c87a);
+}
+
+.release-dropzone__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.release-dropzone__text strong {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.release-dropzone__text span {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.btn-browse-evidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--navy, #172033), var(--navy-mid, #25324a));
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid rgba(197, 168, 107, 0.3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-browse-evidence:hover {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, #25324a, #344463);
+}
+
+.release-evidence-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.release-evidence-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.15));
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+:host-context(.dark) .release-evidence-pill,
+:host-context(.theme-dark) .release-evidence-pill {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.evidence-pill-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.evidence-pill-icon {
+  font-size: 24px !important;
+  flex-shrink: 0;
+}
+
+.evidence-pill-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.evidence-pill-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.evidence-pill-size {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.evidence-pill-del {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.evidence-pill-del:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+

@@ -4,8 +4,8 @@
   "description": "4GUARD WMS 3PL — Angular 17+ Monorepo Frontend",
   "private": true,
   "scripts": {
-    "start:admin": "ng serve admin-console --configuration development",
-    "start:admin:dev": "ng serve admin-console --configuration develop",
+    "start:admin": "ng serve admin-console --configuration development --host 0.0.0.0 --disable-host-check --allowed-hosts all",
+    "start:admin:dev": "ng serve admin-console --configuration develop --host 0.0.0.0 --disable-host-check --allowed-hosts all",
     "start:rf": "ng serve rf-terminal --configuration development",
     "start:rf:dev": "ng serve rf-terminal --configuration develop",
     "build:admin": "ng build admin-console --configuration production",

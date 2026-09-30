@@ -89,6 +89,19 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 }
 ```
 
+### 2.1 Regla Obligatoria de Estricto Alto Contraste Tipográfico (PROHIBIDO EL USO DE LETRAS BLANCAS O GRISES EN MODO CLARO)
+
+> [!CAUTION]
+> **PROHIBICIÓN ESTRICTA DE LETRAS BLANCAS Y GRISES CLAROS EN TODO MODO CLARO (WCAG AAA):**
+> 1. **Cero Letras Blancas en Modo Claro (`#ffffff`, `#fff`, `text-white`, `text-slate-50`, `text-slate-100`):**
+>    - Queda estrictamente prohibido utilizar tipografía blanca o casi blanca sobre fondos claros, lino, marfil, tarjetas (`.card`, `.panel-card`), modales (`.modal-card`), popups de alta/creación o tablas operativas.
+>    - El texto blanco está **ÚNICAMENTE** permitido sobre componentes que tengan un fondo oscuro sólido (por ejemplo, botones principales Midnight Navy o botones verdes de confirmación sólida). En todo el resto de la interfaz en Light Mode, la letra DEBE ser oscura.
+> 2. **Cero Texto en Gris Claro / Deslavado:** Queda terminantemente prohibido utilizar tonos grises claros o medios (`#8b94a3`, `#94a3b8`, `#cbd5e1`, `#e2e8f0`, `text-slate-400`, `text-slate-500`, `text-gray-400`, `text-gray-500`, `#64748b`, etc.) en celdas de tablas, folios, transportistas, choferes, placas, horarios, estatus o información operativa.
+> 3. **Color de Texto Base en Tablas y Formularios:** Todo texto de datos en modo claro debe usar estrictamente `#0f172a` (Negro Profundo / Slate 950) o `#172033` (Midnight Navy), con un peso tipográfico mínimo de `font-semibold` (600) u `font-bold` (700-800).
+> 4. **Subtítulos y Metadatos Secundarios:** Deben usar obligatoriamente `#1e293b` (Slate 800) o `#334155` (Slate 700), garantizando un ratio de contraste superior a 7:1 (WCAG AAA).
+> 5. **Modales, Pop-ups y Formularios de Alta / Creación / Edición:** En todos los diálogos y popups emergentes (`.modal-card`, `.pallet-picker-card`, formularios de alta/creación), las etiquetas (`<label>`), subtítulos de cabecera, leyendas de sección y textos explicativos deben aplicar tonos oscuros de alta legibilidad (`#0f172a`, `#172033`, `#1e293b` o `#334155`). Prohibido usar grises tenues o blancos que vuelvan el texto ilegible o invisible.
+> 6. **Prohibición de clases `dark:text-slate-50` / `dark:text-slate-100` / `dark:text-white` sin selector de contexto oscuro:** No se deben aplicar utilidades `text-white` directas sobre contenedores claros; deben estar siempre condicionadas a `dark:text-white` o a contenedores con fondo oscuro explícito.
+
 ---
 
 ## 3. Estructura de Pantalla Estándar (Plantilla de Módulo)
@@ -310,16 +323,17 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
-  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  background: linear-gradient(145deg, #172033, #25324a);
+  border: 1px solid rgba(197, 168, 107, 0.35);
   box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22);
   flex-shrink: 0;
 }
 
 .module-header__icon {
-  color: #ffffff;
+  color: var(--gold-light);
   font-size: 26px;
 }
 
@@ -365,8 +379,8 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 
 .module-header__title {
   font-family: var(--font-display);
-  font-size: 1.7rem;
-  font-weight: 500;
+  font-size: 1.65rem;
+  font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--text-primary);
   margin: 0;
@@ -374,9 +388,10 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
 }
 
 .module-header__subtitle {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   margin: 0;
+  line-height: 1.35;
 }
 
 /* ── BARRA DE CONTROL (SLIDE DE PESTAÑAS + BOTÓN ACCIÓN) ── */
@@ -388,41 +403,44 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
   flex-wrap: wrap;
 }
 
-/* ── SLIDE DE PESTAÑAS (PILL NAV) ── */
+/* ── SLIDE DE PESTAÑAS (PILL NAV HOMOLOGADO) ── */
 .module-tabs-nav {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-card);
-  padding: 0.35rem;
+  padding: 0.3rem;
   border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
 }
 
 .module-tab-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.45rem 0.95rem;
+  padding: 0.5rem 1rem;
   border-radius: 10px;
   font-family: var(--font-body);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: all 0.18s ease;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
 .module-tab-btn:hover {
   color: var(--text-primary);
-  background: rgba(23, 32, 51, 0.05);
+  background: rgba(197, 168, 107, 0.08);
 }
 
 .module-tab-btn.tab-active {
-  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  background: linear-gradient(145deg, #172033, #25324a);
   color: #ffffff;
+  border-color: rgba(197, 168, 107, 0.35);
   box-shadow: 0 4px 14px rgba(23, 32, 51, 0.22);
 }
 
@@ -430,22 +448,135 @@ Todos los módulos deben definir o consumir las siguientes variables CSS:
   color: var(--gold-light);
 }
 
-/* ── BOTÓN DE ACCIÓN PRINCIPAL (PRESTIGE GOLD) ── */
-.btn-primary-gold {
-  display: inline-flex;
+/* ── CUADRÍCULA DE MÉTRICAS KPI (4 O 5 COLUMNAS) ── */
+.module-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.module-kpi-grid--5cols {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 1280px) {
+  .module-kpi-grid,
+  .module-kpi-grid--5cols {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .module-kpi-grid,
+  .module-kpi-grid--5cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .module-kpi-grid,
+  .module-kpi-grid--5cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.module-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.15rem;
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 1.25rem;
-  border-radius: var(--radius-btn);
-  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
-  color: #0f172a;
-  font-family: var(--font-body);
+  gap: 1rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 82px;
+  box-sizing: border-box;
+}
+
+.module-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.module-kpi-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.module-kpi-card__icon .material-symbols-outlined {
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+/* Matriz de Colores Pastel Semánticos */
+.module-kpi-card--primary .module-kpi-card__icon {
+  background: rgba(37, 99, 235, 0.10);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.module-kpi-card--warning .module-kpi-card__icon {
+  background: var(--c-warning-bg);
+  color: var(--c-warning);
+  border: 1px solid var(--c-warning-bdr);
+}
+
+.module-kpi-card--info .module-kpi-card__icon {
+  background: rgba(147, 51, 234, 0.10);
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.25);
+}
+
+.module-kpi-card--success .module-kpi-card__icon {
+  background: var(--c-success-bg);
+  color: var(--c-success);
+  border: 1px solid var(--c-success-bdr);
+}
+
+.module-kpi-card--danger .module-kpi-card__icon {
+  background: var(--c-danger-bg);
+  color: var(--c-danger);
+  border: 1px solid var(--c-danger-bdr);
+}
+
+.module-kpi-card__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.module-kpi-card__label {
+  font-size: 0.65rem;
   font-weight: 700;
-  font-size: 0.82rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(184, 134, 11, 0.25);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.module-kpi-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 2px 0;
+}
+
+.module-kpi-card__sub {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .btn-primary-gold:hover {
@@ -568,7 +699,7 @@ Para evitar que textos o botones aparezcan en blanco o con contraste deficiente 
    - En Modo Claro DEBEN renderizarse SIEMPRE en color **Midnight Navy Oscuro (`#172033` / `#1c2940`)** con opacidad al 100%.  
    - Queda estrictamente prohibido el uso de colores blancos (`#ffffff`), grises deslavados o gradientes claros sobre tarjetas o modales en modo claro.
 2. **Subtítulos y Textos Secundarios (`p`, `.modal-card p`, `.text-secondary`):**  
-   - Deben usar color **Slate Steel (`#5a6477` / `#475569`)** garantizando un ratio de contraste WCAG AAA superior a 7:1.
+   - Deben usar obligatoriamente **Slate Oscuro (`#1e293b` / `#334155`)**, garantizando un ratio de contraste WCAG AAA superior a 7:1. Prohibido usar texto blanco o gris deslavado.
 3. **Encapsulamiento de Modales (`.modal-card`, `.modal-overlay`, `.dialog`):**  
    - Todo modal debe definir explícitamente `color: var(--text-primary);` y sobrescribir cualquier selector de encabezado interno:
    ```css

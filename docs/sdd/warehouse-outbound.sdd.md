@@ -249,6 +249,26 @@ export const CLIENT_DESTINATIONS: ClientDestination[] = [
 | **CA-016** | Persistencia en LocalStorage — workbench sobrevive recarga | ✅ |
 | **CA-017** | Tipografía: `Outfit`, `Inter`, `JetBrains Mono`. Colores: Midnight Navy & Prestige Gold y Dark Mode | ✅ |
 | **CA-018** | Botón `+ Nuevo` solo existe en el directorio (no duplicado en breadcrumb) | ✅ |
+| **CA-019** | Prohibición estricta de letras blancas y grises en modales, popups de alta/creación y tablas en Light Mode (WCAG AAA: `#0f172a`, `#172033`, `#1e293b`, `#334155`) | ✅ |
+
+---
+
+## 7.1 Regla Obligatoria SDD: Prohibición de Letras Blancas y Grises en Modo Claro (WCAG AAA)
+
+> [!CAUTION]
+> **RESTRICCIÓN CRÍTICA DE DISEÑO (PROHIBIDO EL USO DE LETRAS BLANCAS Y GRISES EN LIGHT MODE):**
+> 1. **Cero Letras Blancas en Modo Claro:**
+>    - Queda estrictamente prohibido el uso de texto blanco (`#ffffff`, `#fff`, `text-white`, `text-slate-50`) sobre tarjetas, formularios, tablas y modales en Light Mode.
+>    - La tipografía blanca queda restringida exclusivamente a botones con fondo oscuro sólido (Midnight Navy o botones verdes sólidos de confirmación).
+> 2. **Popups de Alta, Formularios y Modales de Creación/Asignación (`.modal-card`, `.pallet-picker-card`):**
+>    - Queda estrictamente prohibido el uso de tipografía gris clara o deslavada (`text-slate-400`, `text-slate-500`, `text-gray-400`, `text-gray-500`, `#8b94a3`, `#94a3b8`, `#64748b`) en etiquetas (`<label>`), subtítulos, botones de cierre, chips de filtro, placeholders desvaídos y textos descriptivos.
+>    - Todos los textos de encabezado y etiquetas deben utilizar `#0f172a` (Negro Profundo / Slate 950) o `#172033` (Midnight Navy) con peso tipográfico `font-bold` (700-800).
+>    - Subtítulos explicativos, metadatos y notas operativas deben utilizar `#1e293b` (Slate 800) o `#334155` (Slate 700), garantizando un ratio de contraste mínimo de 7:1 (WCAG AAA) en entornos industriales y de oficina.
+> 3. **Tablas de Tarimas / Inventario y Selectores:**
+>    - Los folios, UAs, lotes, descripciones de producto, piezas y ubicaciones deben ser 100% nítidos y legibles en fondos lino/marfil o blanco puro.
+> 4. **Centrado y Responsividad de Popups:**
+>    - Todos los modales deben poseer centrado perfecto (`margin: auto !important`), contención de scroll interno (`overflow-y: auto`) y adaptabilidad móvil/tablet fluida.
+
 
 ---
 

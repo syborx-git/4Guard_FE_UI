@@ -1,0 +1,238 @@
+<div class="perf-circuito-view">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MACRO KPIS DEL CIRCUITO DELICADO (10 Choferes & 7 Unidades)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="perf-circuito-kpis">
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--primary">
+        <span class="material-symbols-outlined">local_shipping</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Viajes Completados (Mes)</span>
+        <strong class="perf-kpi-pill-value">{{ perfService.circuitoDelicado()?.totalTripsMonth || 146 }}</strong>
+        <small>Flota propia en circuito</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--gold">
+        <span class="material-symbols-outlined">schedule</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Tiempo Promedio de Vuelta</span>
+        <strong class="perf-kpi-pill-value">{{ perfService.circuitoDelicado()?.avgTurnaroundHours || 3.4 }} <small class="unit">hrs</small></strong>
+        <small>Ciclo total puerta a puerta</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--success">
+        <span class="material-symbols-outlined">person_pin</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Choferes Dedicados</span>
+        <strong class="perf-kpi-pill-value">{{ perfService.circuitoDelicado()?.activeDriversCount || 10 }}</strong>
+        <small>10 choferes registrados</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--info">
+        <span class="material-symbols-outlined">rv_hookup</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Unidades de Flota</span>
+        <strong class="perf-kpi-pill-value">{{ perfService.circuitoDelicado()?.activeUnitsCount || 7 }}</strong>
+        <small>7 unidades en operación</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       TABLERO DE RENDIMIENTO DE TRANSPORTE (PABLO REQUIREMENTS)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">route</span>
+        <div>
+          <h2>Control Logístico & Rotación de Transporte — Circuito Delicado</h2>
+          <p>Métricas de viajes mensuales, rotación de cajas y tiempos promedio por chofer y unidad propia</p>
+        </div>
+      </div>
+
+      <div class="perf-toolbar">
+        <div class="perf-search-box">
+          <span class="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            placeholder="Buscar chofer, placas, económico..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            class="perf-search-input" />
+        </div>
+
+        <div class="perf-view-toggle">
+          <button
+            type="button"
+            class="perf-toggle-btn"
+            [class.perf-toggle-btn--active]="activeTab() === 'drivers'"
+            (click)="setTab('drivers')">
+            <span class="material-symbols-outlined">person</span>
+            <span>Choferes (10)</span>
+          </button>
+          <button
+            type="button"
+            class="perf-toggle-btn"
+            [class.perf-toggle-btn--active]="activeTab() === 'vehicles'"
+            (click)="setTab('vehicles')">
+            <span class="material-symbols-outlined">local_shipping</span>
+            <span>Unidades (7)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestañas de estado -->
+    <div class="perf-filter-pills">
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="filterStatus() === 'ALL'"
+        (click)="setStatus('ALL')">
+        <span>Todos los Registros</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="filterStatus() === 'EN_RUTA'"
+        (click)="setStatus('EN_RUTA')">
+        <span class="perf-dot perf-dot--route"></span>
+        <span>En Ruta</span>
+      </button>
+      @if (activeTab() === 'drivers') {
+        <button
+          type="button"
+          class="perf-filter-pill"
+          [class.perf-filter-pill--active]="filterStatus() === 'DISPONIBLE'"
+          (click)="setStatus('DISPONIBLE')">
+          <span class="perf-dot perf-dot--available"></span>
+          <span>Disponible</span>
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="perf-filter-pill"
+          [class.perf-filter-pill--active]="filterStatus() === 'EN_PATIO'"
+          (click)="setStatus('EN_PATIO')">
+          <span class="perf-dot perf-dot--available"></span>
+          <span>En Patio / Taller</span>
+        </button>
+      }
+    </div>
+
+    <!-- ── VISTA DE 10 CHOFERES ── -->
+    @if (activeTab() === 'drivers') {
+      <div class="perf-table-wrap">
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Chofer / Licencia</th>
+              <th>Placas Asignadas</th>
+              <th class="text-center">Viajes Mes</th>
+              <th class="text-center">Tarimas Movidas</th>
+              <th class="text-center">Piezas Movidas</th>
+              <th class="text-center">Rotación de Cajas</th>
+              <th class="text-center">Tiempo Vuelta (Hrs)</th>
+              <th class="text-right">Estatus</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (driver of filteredDrivers(); track driver.driverId) {
+              <tr>
+                <td>
+                  <div class="perf-driver-cell">
+                    <div class="perf-driver-avatar">
+                      <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <div>
+                      <strong>{{ driver.driverName }}</strong>
+                      <small class="font-mono text-muted">{{ driver.driverLicense }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="perf-plate-pill">{{ driver.assignedVehiclePlates }}</span>
+                </td>
+                <td class="text-center font-mono font-bold">{{ driver.totalTripsMonth }}</td>
+                <td class="text-center font-mono">{{ driver.totalPalletsMoved }}</td>
+                <td class="text-center font-mono">{{ driver.totalPiecesMoved | number }}</td>
+                <td class="text-center font-mono text-gold font-bold">{{ driver.boxRotationCount }}</td>
+                <td class="text-center font-mono">{{ driver.avgTurnaroundHours }} hrs</td>
+                <td class="text-right">
+                  <span class="perf-status-badge" [ngClass]="driver.status === 'EN_RUTA' ? 'perf-status-badge--warning' : 'perf-status-badge--optimal'">
+                    {{ driver.status === 'EN_RUTA' ? 'En Ruta' : 'Disponible' }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ── VISTA DE 7 UNIDADES ── -->
+    @if (activeTab() === 'vehicles') {
+      <div class="perf-table-wrap">
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Unidad / Económico</th>
+              <th>Tipo de Unidad</th>
+              <th>Chofer Habitual</th>
+              <th class="text-center">Viajes Asignados</th>
+              <th class="text-center">Cajas Remolcadas</th>
+              <th class="text-center">Piezas Transportadas</th>
+              <th class="text-center">Horas en Ruta</th>
+              <th class="text-right">Estatus</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (veh of filteredVehicles(); track veh.vehicleId) {
+              <tr>
+                <td>
+                  <div class="perf-driver-cell">
+                    <div class="perf-unit-avatar">
+                      <span class="material-symbols-outlined">local_shipping</span>
+                    </div>
+                    <div>
+                      <strong>{{ veh.economicNumber }}</strong>
+                      <small class="font-mono text-muted">{{ veh.tractorPlates }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="perf-vehicle-type">{{ veh.transportType }}</span>
+                </td>
+                <td>
+                  <span>{{ veh.assignedDriverName }}</span>
+                </td>
+                <td class="text-center font-mono font-bold">{{ veh.tripsCount }}</td>
+                <td class="text-center font-mono text-gold font-bold">{{ veh.boxesTowedCount }}</td>
+                <td class="text-center font-mono">{{ veh.totalPieces | number }}</td>
+                <td class="text-center font-mono">{{ veh.operatingHours }} hrs</td>
+                <td class="text-right">
+                  <span class="perf-status-badge" [ngClass]="veh.status === 'EN_RUTA' ? 'perf-status-badge--warning' : 'perf-status-badge--optimal'">
+                    {{ veh.status === 'EN_RUTA' ? 'En Ruta' : 'En Patio' }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+</div>

@@ -119,6 +119,19 @@ export interface MovementAuditEntry {
   * Prestige Gold: `--gold: #c5a86b`, `--gold-light: #e0c87a`, `--gold-bg: rgba(197, 168, 107, 0.10)`.
   * Soporte Dark Mode nativo con `:host-context(.theme-dark)` y `.dark`.
 
+### 5.1 Regla Obligatoria SDD: Prohibición de Letras Blancas y Grises en Modo Claro (WCAG AAA)
+
+> [!CAUTION]
+> **RESTRICCIÓN CRÍTICA DE DISEÑO (PROHIBIDO EL USO DE LETRAS BLANCAS Y GRISES EN LIGHT MODE):**
+> 1. **Cero Letras Blancas en Modo Claro:**
+>    - Queda estrictamente prohibido el uso de texto blanco (`#ffffff`, `#fff`, `text-white`, `text-slate-50`) sobre tarjetas, formularios, tablas y modales en Light Mode.
+>    - La tipografía blanca queda restringida exclusivamente a botones con fondo oscuro sólido (Midnight Navy o botones verdes sólidos de confirmación).
+> 2. **Popups de Alta, Diálogos y Modales (`.modal-card`, modales de lote, verificación de UAs, plano de andenes):**
+>    - Queda estrictamente prohibido el uso de tonos grises claros o deslavados (`text-slate-400`, `text-slate-500`, `text-gray-400`, `text-gray-500`, `#8b94a3`, `#94a3b8`, `#64748b`) en etiquetas (`<label>`), subtítulos, botones de cierre y textos descriptivos.
+>    - Todos los títulos, etiquetas y datos deben usar `#0f172a` (Negro Profundo) o `#172033` (Midnight Navy) con peso tipográfico `font-bold`.
+>    - Subtítulos y textos secundarios deben usar obligatoriamente `#1e293b` (Slate 800) o `#334155` (Slate 700), asegurando legibilidad total (WCAG AAA).
+> 3. **Centrado y Adaptabilidad:** Todos los modales deben contar con `margin: auto !important` y ser 100% responsivos en tablets y smartphones de almacén.
+
 ---
 
 ## 6. Contratos Backend REST (Spring Boot — `/api/v1/warehouse-receptions`)

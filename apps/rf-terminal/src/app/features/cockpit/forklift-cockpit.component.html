@@ -1,0 +1,1299 @@
+<!-- ================================================================
+     Cockpit Unificado del Montacarguista — Terminal RF PWA
+     Flujo Inbound:
+     - Mesa de Control asigna Remisión, Producto y Catálogo de Lotes
+     - Montacarguista escanea las tarimas físicas conforme las retira del tráiler
+     - Selección e Intercambio de Lotes en caliente por tarima
+     - Conclusión física de descarga en estatus DISCHARGED
+     ================================================================ -->
+<div class="cockpit-workspace">
+
+  <!-- ── 1. BARRA SUPERIOR: CONTEXTO OPERATIVO Y TELEMETRÍA ──────────── -->
+  <header class="cockpit-topbar">
+    <div class="topbar-left">
+      <button
+        type="button"
+        (click)="goToMenu()"
+        class="btn-back-menu"
+        title="Volver al Menú Principal"
+        aria-label="Volver">
+        <span class="material-symbols-outlined text-xl">arrow_back</span>
+      </button>
+
+      <!-- Escudo / Icono Táctico -->
+      <div class="cockpit-icon-wrap">
+        <span class="material-symbols-outlined cockpit-header-icon">precision_manufacturing</span>
+      </div>
+
+      <div class="cockpit-title-wrap">
+        <div class="cockpit-badge">
+          <span class="badge-dot-live"></span>
+          <span>Terminal RF</span>
+          <span class="eyebrow-sep">•</span>
+          <span class="eyebrow-gold">Cockpit Táctico</span>
+          <span class="eyebrow-sep">•</span>
+          <span>Movimientos Unificados</span>
+        </div>
+        <h1 class="cockpit-title">Panel de Movimientos Unificados</h1>
+        <p class="cockpit-subtitle">Gestión integral de descargas Inbound, reubicaciones Putaway y cargas de salida.</p>
+      </div>
+    </div>
+
+    <!-- Telemetría de Operador & Acciones Rápidas -->
+    <div class="topbar-right">
+      <div class="telemetry-chip lease-chip" title="Operador Asignado">
+        <span class="material-symbols-outlined text-emerald-500 text-lg">verified_user</span>
+        <div class="telemetry-text">
+          <span class="telemetry-label">Operador</span>
+          <span class="telemetry-val">{{ operatorName() }}</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="resetDemo()"
+        class="btn-reset-demo"
+        title="Reiniciar misiones de demostración">
+        <span class="material-symbols-outlined text-lg">restart_alt</span>
+        <span class="hidden md:inline">Reiniciar Demo</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 2. BARRA DE FILTRO CONTEXTUAL (PILLS CON CONTADORES EN VIVO) ─ -->
+  <nav class="filter-pills-bar" aria-label="Filtros de Misión">
+    <!-- Todas -->
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="currentFilter() === 'ALL'"
+      (click)="setFilter('ALL')">
+      <span class="material-symbols-outlined pill-icon">dashboard</span>
+      <span class="pill-label">Todas en Cola</span>
+      <span class="pill-count">{{ counts().all }}</span>
+    </button>
+
+    <!-- Descargas Inbound -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--inbound"
+      [class.active]="currentFilter() === 'INBOUND'"
+      (click)="setFilter('INBOUND')">
+      <span class="material-symbols-outlined pill-icon">download</span>
+      <span class="pill-label">Descargas Inbound</span>
+      <span class="pill-count">{{ counts().inbound }}</span>
+    </button>
+
+    <!-- Reubicaciones Putaway -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--putaway"
+      [class.active]="currentFilter() === 'INTERNAL'"
+      (click)="setFilter('INTERNAL')">
+      <span class="material-symbols-outlined pill-icon">sync_alt</span>
+      <span class="pill-label">Reubicaciones / Putaway</span>
+      <span class="pill-count">{{ counts().internal }}</span>
+    </button>
+
+    <!-- Cargas Outbound -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--outbound"
+      [class.active]="currentFilter() === 'OUTBOUND'"
+      (click)="setFilter('OUTBOUND')">
+      <span class="material-symbols-outlined pill-icon">upload</span>
+      <span class="pill-label">Cargas Salida</span>
+      <span class="pill-count">{{ counts().outbound }}</span>
+    </button>
+
+    <!-- Urgentes -->
+    <button
+      type="button"
+      class="filter-pill filter-pill--urgent"
+      [class.active]="currentFilter() === 'URGENT'"
+      (click)="setFilter('URGENT')">
+      <span class="material-symbols-outlined pill-icon">alarm</span>
+      <span class="pill-label">Urgentes</span>
+      <span class="pill-count pill-count--urgent">{{ counts().urgent }}</span>
+    </button>
+  </nav>
+
+  <!-- ── 3. HERO: TARJETA EJECUTIVA DE MISIÓN ACTIVA (FOCO INMEDIATO Y COMPACTO) ── -->
+  @if (activeMission(); as mission) {
+    <section
+      class="hero-active-card cursor-pointer"
+      (click)="openMissionDetail(mission)"
+      [ngClass]="{
+        'hero--inbound': mission.type === 'INBOUND_UNLOAD',
+        'hero--putaway': mission.type === 'INTERNAL_PUTAWAY',
+        'hero--outbound': mission.type === 'OUTBOUND_DISPATCH'
+      }">
+
+      <!-- 1. Cabecera Compacta en 1 Sola Línea -->
+      <div class="hero-card-header">
+        <div class="hero-header-left">
+          <div class="mission-type-badge" [ngClass]="'badge--' + mission.type.toLowerCase()">
+            <span class="material-symbols-outlined text-sm">
+              @if (mission.type === 'INBOUND_UNLOAD') { local_shipping }
+              @else if (mission.type === 'INTERNAL_PUTAWAY') { shelves }
+              @else { output }
+            </span>
+            <span>{{ mission.typeLabel }}</span>
+          </div>
+
+          <span class="hero-folio">{{ mission.folio }}</span>
+
+          @if (mission.docNumber) {
+            <span class="hero-doc-pill">
+              <span class="material-symbols-outlined text-xs">receipt_long</span>
+              <span>Remisión: {{ mission.docNumber }}</span>
+            </span>
+          }
+
+          <div class="hero-arrival-tag">
+            <span class="material-symbols-outlined text-xs">schedule</span>
+            <span>Llegada: {{ mission.arrivalTime }}</span>
+          </div>
+        </div>
+
+        <div class="hero-header-right">
+          @if (mission.priority === 'URGENT') {
+            <div class="sla-urgent-badge">
+              <span class="sla-pulse-dot"></span>
+              <span>SLA: {{ mission.slaCountdownMinutes }} MIN RESTANTES</span>
+            </div>
+          } @else {
+            <div class="sla-normal-badge">
+              <span class="material-symbols-outlined text-xs">timer</span>
+              <span>SLA: {{ mission.slaCountdownMinutes }}m</span>
+            </div>
+          }
+
+          <div class="hero-status-pill" [class.status--drop]="mission.status === 'ACTIVE_DROP'">
+            <span class="status-dot"></span>
+            <span>{{ mission.status === 'ACTIVE_DROP' ? 'Paso 2: Depósito en Destino' : 'Paso 1: Pick en Origen' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Ruta Origen ➔ Destino (Corredor Táctico Horizontal Delgado) -->
+      <div class="hero-route-corridor">
+        <div class="route-station station--origin" [class.station--focus]="mission.status === 'ACTIVE_PICK'">
+          <div class="station-icon-tag">
+            <span class="material-symbols-outlined text-sm text-amber-500">trip_origin</span>
+            <span class="station-step-lbl">1. ORIGEN:</span>
+          </div>
+          <div class="station-name-text">{{ mission.originLocation }}</div>
+          <span class="station-code-chip">{{ mission.originBarcode }}</span>
+        </div>
+
+        <div class="route-corridor-arrow">
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </div>
+
+        <div class="route-station station--dest" [class.station--focus]="mission.status === 'ACTIVE_DROP'">
+          <div class="station-icon-tag">
+            <span class="material-symbols-outlined text-sm text-emerald-500">location_on</span>
+            <span class="station-step-lbl">2. DESTINO:</span>
+          </div>
+          <div class="station-name-text">{{ mission.destinationLocation }}</div>
+          <span class="station-code-chip">{{ mission.destBarcode }}</span>
+        </div>
+      </div>
+
+      <!-- 3. Panel de Datos: Producto + Lotes Dinámicos Inbound -->
+      <div class="hero-compact-details-row" (click)="$event.stopPropagation()">
+        <!-- Columna Izquierda: Producto & Transporte -->
+        <div class="hero-meta-col">
+          <div class="meta-product-line">
+            <span class="material-symbols-outlined text-base text-amber-500">inventory_2</span>
+            <span class="meta-product-name">{{ mission.productName }}</span>
+            <span class="meta-sku-tag">{{ mission.sku }}</span>
+          </div>
+          <div class="meta-sub-specs">
+            <span>📦 {{ mission.defaultPiecesPerPallet || mission.quantity }} {{ mission.unit }} ({{ mission.weightKg }} kg)</span>
+            <span class="specs-dot">•</span>
+            <span>🚛 {{ mission.transportPlate || 'Patio Interno' }} {{ mission.driverName ? '(' + mission.driverName + ')' : '' }}</span>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Lotes Autorizados y Conteo Inbound -->
+        @if (mission.type === 'INBOUND_UNLOAD') {
+          <div class="hero-lots-col">
+            <div class="lots-top-bar">
+              <span class="lots-bar-label">
+                <span class="material-symbols-outlined text-xs text-amber-500">fact_check</span>
+                <span>Lotes Habilitados:</span>
+              </span>
+              <span class="lots-counter-badge">
+                <strong>{{ inboundScannedCount() }}</strong> Tarimas / {{ inboundTotalPieces() }} pzs
+              </span>
+            </div>
+
+            <div class="lots-chips-compact-row">
+              @for (lot of availableLotsList(); track lot.lotNumber) {
+                <button
+                  type="button"
+                  (click)="selectScanningLot(lot.lotNumber)"
+                  class="lot-chip-compact"
+                  [class.lot-chip-compact--active]="activeScanningLot() === lot.lotNumber">
+                  <span class="chip-dot"></span>
+                  <span>{{ lot.lotNumber }}</span>
+                  @if (lot.isPrimary) {
+                    <span class="chip-primary-flag">Principal</span>
+                  }
+                </button>
+              }
+              <button
+                type="button"
+                (click)="openCustomLotModal()"
+                class="lot-chip-compact lot-chip-add"
+                title="Registrar otro lote físico">
+                <span class="material-symbols-outlined text-xs">add</span>
+                <span>+ Lote</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- 4. Barra de Acción Táctil y Herramientas (Ergonómica) -->
+      <div class="hero-action-dock" (click)="$event.stopPropagation()">
+        <!-- Botón Principal Touch CTA -->
+        <button
+          type="button"
+          (click)="openScanningModal()"
+          class="btn-hero-cta"
+          [ngClass]="mission.status === 'ACTIVE_DROP' ? 'btn-cta-drop' : 'btn-cta-pick'"
+          title="Abrir lector y cámara en vivo">
+          <span class="material-symbols-outlined text-2xl">photo_camera</span>
+          <span class="cta-text">
+            @if (mission.status === 'ACTIVE_DROP') {
+              DEPOSITAR EN DESTINO (BUFFER: {{ mission.destBarcode }})
+            } @else if (mission.type === 'INBOUND_UNLOAD') {
+              {{ inboundScannedCount() > 0 ? 'ESCANEAR TARIMA #' + nextPalletNumber() + ' (LOTE: ' + activeScanningLot() + ')' : 'INICIAR DESCARGA DEL TRÁILER (TARIMA #1 • LOTE: ' + activeScanningLot() + ')' }}
+            } @else {
+              ESCANEAR CÓDIGO Y CONFIRMAR MOVIMIENTO
+            }
+          </span>
+          <span class="material-symbols-outlined text-xl ml-auto">arrow_forward</span>
+        </button>
+
+        <!-- Barra Secundaria de Botones de Contingencia y Opciones -->
+        <div class="hero-secondary-toolbar">
+          @if (mission.type === 'INBOUND_UNLOAD') {
+            <button
+              type="button"
+              (click)="openCustomLotModal()"
+              class="btn-hero-tool btn-tool-lot"
+              title="Cambiar o registrar un lote físico diferente">
+              <span class="material-symbols-outlined text-sm text-amber-500">sync_saved_locally</span>
+              <span>Intercambio de Lote</span>
+            </button>
+
+            @if (inboundScannedCount() > 0) {
+              <button
+                type="button"
+                (click)="finishDischargeManually()"
+                class="btn-hero-tool btn-tool-finish"
+                title="Notificar fin de maniobra física a mesa de control">
+                <span class="material-symbols-outlined text-sm text-emerald-500">done_all</span>
+                <span>Concluir Descarga ({{ inboundScannedCount() }} T)</span>
+              </button>
+            }
+          }
+
+          <button
+            type="button"
+            (click)="openMissionDetail(mission)"
+            class="btn-hero-tool btn-tool-plan"
+            title="Ver información concreta paso a paso">
+            <span class="material-symbols-outlined text-sm">info</span>
+            <span>Ver Plan Detallado</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="openIncidentModal()"
+            class="btn-hero-tool btn-tool-damage"
+            title="Reportar pallet colapsado, producto roto o bloqueo">
+            <span class="material-symbols-outlined text-sm">warning</span>
+            <span>Reportar Daño</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="postponeCurrentMission()"
+            class="btn-hero-tool btn-tool-postpone"
+            title="Posponer esta misión al final de la cola">
+            <span class="material-symbols-outlined text-sm">low_priority</span>
+            <span>Posponer</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+  } @else {
+    <!-- Estado Vacío: Sin Misión Activa -->
+    <div class="empty-hero-card">
+      <div class="empty-icon-wrap">
+        <span class="material-symbols-outlined text-5xl text-emerald-500">task_alt</span>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">¡Todas las Misiones Completadas!</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+        No hay movimientos pendientes en tu cola de trabajo. Puedes solicitar nuevas asignaciones al supervisor.
+      </p>
+      <button
+        type="button"
+        (click)="resetDemo()"
+        class="mt-4 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 mx-auto shadow-lg">
+        <span class="material-symbols-outlined">restart_alt</span>
+        <span>Cargar Misiones Demo</span>
+      </button>
+    </div>
+  }
+
+  <!-- ── 4. COLA DINÁMICA DE MISIONES ASIGNADAS (FIFO LIVE STREAM) ───── -->
+  <section class="queue-section">
+    <div class="queue-section-header">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-2xl text-amber-500">dynamic_feed</span>
+        <div>
+          <h2 class="queue-title">Cola de Movimientos Asignados (Flujo FIFO)</h2>
+          <p class="queue-subtitle">Toca cualquier tarjeta para ver su información concreta e iniciar la lectura con cámara / láser.</p>
+        </div>
+      </div>
+      <div class="queue-counter-tag">
+        <span>{{ queuedMissions().length }} pendientes</span>
+      </div>
+    </div>
+
+    <!-- Lista de Tarjetas Ejecutivas en Cola -->
+    <div class="queue-cards-list">
+      @for (m of queuedMissions(); track m.id) {
+        <div
+          class="queue-card cursor-pointer"
+          (click)="openMissionDetail(m)"
+          [ngClass]="{
+            'card--inbound': m.type === 'INBOUND_UNLOAD',
+            'card--putaway': m.type === 'INTERNAL_PUTAWAY',
+            'card--outbound': m.type === 'OUTBOUND_DISPATCH',
+            'card--urgent': m.priority === 'URGENT'
+          }">
+
+          <!-- Indicador lateral de color -->
+          <div class="queue-card-strip"></div>
+
+          <div class="queue-card-main">
+            <!-- Header de la tarjeta -->
+            <div class="queue-card-top">
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Tipo Chip -->
+                <span class="queue-type-chip" [ngClass]="'chip--' + m.type.toLowerCase()">
+                  {{ m.typeLabel }}
+                </span>
+
+                <span class="queue-folio">{{ m.folio }}</span>
+
+                @if (m.docNumber) {
+                  <span class="queue-doc-tag">Remisión: {{ m.docNumber }}</span>
+                }
+
+                <span class="queue-time-chip">
+                  <span class="material-symbols-outlined text-xs">schedule</span>
+                  <span>{{ m.arrivalTime }}</span>
+                </span>
+              </div>
+
+              <!-- SLA / Prioridad -->
+              <div class="flex items-center gap-2">
+                @if (m.priority === 'URGENT') {
+                  <span class="queue-urgent-pill">
+                    <span class="sla-pulse-dot"></span>
+                    <span>🚨 URGENTE ({{ m.slaCountdownMinutes }}m)</span>
+                  </span>
+                } @else {
+                  <span class="queue-sla-pill">SLA: {{ m.slaCountdownMinutes }}m</span>
+                }
+              </div>
+            </div>
+
+            <!-- Ruta Origen ➔ Destino -->
+            <div class="queue-route-row">
+              <div class="queue-point">
+                <span class="material-symbols-outlined text-sm text-amber-500">trip_origin</span>
+                <span class="point-name">{{ m.originLocation }}</span>
+              </div>
+
+              <span class="material-symbols-outlined text-base text-slate-400">arrow_forward</span>
+
+              <div class="queue-point">
+                <span class="material-symbols-outlined text-sm text-emerald-500">location_on</span>
+                <span class="point-name font-semibold">{{ m.destinationLocation }}</span>
+              </div>
+            </div>
+
+            <!-- Resumen de Producto & Pallet -->
+            <div class="queue-details-row">
+              <span class="queue-prod-name">{{ m.productName }}</span>
+              <span class="details-divider">•</span>
+              <span class="queue-qty-badge">
+                {{ m.type === 'INBOUND_UNLOAD' ? (m.pallets?.length || 0) + ' Tarimas Descargadas' : m.quantity + ' ' + m.unit }}
+              </span>
+              @if (m.transportPlate) {
+                <span class="details-divider">•</span>
+                <span class="queue-transport-tag">{{ m.transportPlate }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Botón de Acción: Ver y Comenzar -->
+          <div class="queue-card-action" (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              (click)="openMissionDetail(m)"
+              class="btn-take-mission"
+              title="Ver información concreta e iniciar">
+              <span class="material-symbols-outlined text-xl">play_circle</span>
+              <span>VER & INICIAR</span>
+            </button>
+          </div>
+
+        </div>
+      } @empty {
+        <div class="empty-queue-message">
+          <span class="material-symbols-outlined text-3xl text-slate-400">check_circle</span>
+          <span>No hay otras misiones en la cola para el filtro seleccionado.</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── 5. MODAL 1: INFORMACIÓN CONCRETA DEL MOVIMIENTO (PLAN DE ACCIÓN) ─ -->
+  @if (selectedMissionForDetail(); as detail) {
+    <div class="rf-modal-backdrop" (click)="closeMissionDetail()">
+      <div class="rf-modal-card modal-detail-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header del Modal -->
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="mission-type-badge" [ngClass]="'badge--' + detail.type.toLowerCase()">
+              {{ detail.typeLabel }}
+            </span>
+            <h2 class="rf-modal-title">{{ detail.folio }}</h2>
+            @if (detail.priority === 'URGENT') {
+              <span class="queue-urgent-pill">🚨 URGENTE ({{ detail.slaCountdownMinutes }}m)</span>
+            }
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeMissionDetail()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal -->
+        <div class="rf-modal-body">
+          
+          <!-- Banner Resumen de Instrucciones -->
+          <div class="detail-plan-banner">
+            <div class="plan-banner-title">
+              <span class="material-symbols-outlined text-amber-500">task_alt</span>
+              <span>Instrucciones Operativas de la Misión</span>
+            </div>
+            
+            <div class="plan-steps-list">
+              <!-- Paso 1 -->
+              <div class="plan-step-item">
+                <div class="plan-step-number">1</div>
+                <div class="plan-step-content">
+                  <div class="plan-step-label">RECOGIDA / DESCARGA EN ORIGEN</div>
+                  <div class="plan-step-main">{{ detail.originLocation }}</div>
+                  <div class="plan-step-sub">
+                    Código de validación: <code>{{ detail.originBarcode }}</code> • Remisión: <strong>{{ detail.docNumber || 'N/A' }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Paso 2 -->
+              <div class="plan-step-item">
+                <div class="plan-step-number">2</div>
+                <div class="plan-step-content">
+                  <div class="plan-step-label">TRASLADO Y DEPÓSITO EN DESTINO</div>
+                  <div class="plan-step-main">{{ detail.destinationLocation }}</div>
+                  <div class="plan-step-sub">
+                    Ubicación asignada: <code>{{ detail.destBarcode }}</code> • Zone Lease: <strong>{{ detail.assignedZoneLease }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Si es Inbound, mostrar los lotes autorizados y el avance de escaneo -->
+          @if (detail.type === 'INBOUND_UNLOAD') {
+            <div class="detail-pallets-section">
+              <div class="section-subtitle-row">
+                <span class="material-symbols-outlined text-base text-amber-500">fact_check</span>
+                <h3 class="section-subtitle">Lotes Autorizados por Mesa de Control</h3>
+              </div>
+
+              <div class="flex items-center gap-2 flex-wrap mt-1 mb-3">
+                @for (l of detail.availableLots || []; track l.lotNumber) {
+                  <span class="lot-pill-badge">
+                    <span class="lot-pill-dot"></span>
+                    <span>{{ l.lotNumber }}</span>
+                    @if (l.isPrimary) { <small>(Principal)</small> }
+                  </span>
+                }
+              </div>
+
+              @if (detail.pallets && detail.pallets.length > 0) {
+                <div class="section-subtitle-row mt-2">
+                  <span class="material-symbols-outlined text-base text-emerald-500">pallet</span>
+                  <h3 class="section-subtitle">Tarimas Físicas Escaneadas ({{ detail.pallets.length }} UAs en Buffer)</h3>
+                </div>
+
+                <div class="detail-pallets-table-wrap">
+                  <table class="detail-pallets-table">
+                    <thead>
+                      <tr>
+                        <th>Tarima #</th>
+                        <th>Código SSCC</th>
+                        <th>Lote Físico</th>
+                        <th>Piezas</th>
+                        <th>Hora</th>
+                        <th>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of detail.pallets; track p.id) {
+                        <tr>
+                          <td class="font-bold">#{{ p.palletNumber }}</td>
+                          <td><code>{{ p.ssccBarcode }}</code></td>
+                          <td>
+                            <span [class.badge-lot-swapped]="p.isLotSwapped">
+                              {{ p.isLotSwapped ? '🔄 ' + p.lotNumber : p.lotNumber }}
+                            </span>
+                          </td>
+                          <td>{{ p.pieces }} {{ p.unit }}</td>
+                          <td>{{ p.stagedAt }}</td>
+                          <td>
+                            <button
+                              type="button"
+                              (click)="openCustomLotModal(p)"
+                              class="btn-table-swap-lot"
+                              title="Ajustar lote o piezas de esta tarima">
+                              <span class="material-symbols-outlined text-xs">sync_saved_locally</span>
+                              <span>Editar Lote</span>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Ficha Técnica Ejecutiva de la Carga (2x2 Grid) -->
+          <div class="detail-specs-grid">
+            <div class="detail-spec-card">
+              <div class="spec-card-header">
+                <span class="material-symbols-outlined text-sm text-sky-500">inventory_2</span>
+                <span class="spec-card-lbl">Producto Asignado</span>
+              </div>
+              <div class="spec-card-val">{{ detail.productName }}</div>
+              <div class="spec-card-sub font-mono text-sky-600 dark:text-sky-400 font-bold">{{ detail.sku }}</div>
+            </div>
+
+            <div class="detail-spec-card">
+              <div class="spec-card-header">
+                <span class="material-symbols-outlined text-sm text-amber-500">scale</span>
+                <span class="spec-card-lbl">Carga & Peso</span>
+              </div>
+              <div class="spec-card-val">{{ detail.defaultPiecesPerPallet || detail.quantity }} {{ detail.unit }}</div>
+              <div class="spec-card-sub text-slate-500 dark:text-slate-400">{{ detail.weightKg }} kg aprox</div>
+            </div>
+
+            <div class="detail-spec-card">
+              <div class="spec-card-header">
+                <span class="material-symbols-outlined text-sm text-purple-500">local_shipping</span>
+                <span class="spec-card-lbl">Transporte / Chofer</span>
+              </div>
+              <div class="spec-card-val">{{ detail.transportPlate || 'Patio Interno' }}</div>
+              <div class="spec-card-sub text-slate-500 dark:text-slate-400">{{ detail.driverName || 'Operación de Almacén' }}</div>
+            </div>
+
+            <div class="detail-spec-card">
+              <div class="spec-card-header">
+                <span class="material-symbols-outlined text-sm text-emerald-500">schedule</span>
+                <span class="spec-card-lbl">Horario & Ventana SLA</span>
+              </div>
+              <div class="spec-card-val">Llegada: {{ detail.arrivalTime }}</div>
+              <div class="spec-card-sub text-emerald-600 dark:text-emerald-400 font-bold">SLA: {{ detail.slaCountdownMinutes }} min restantes</div>
+            </div>
+          </div>
+
+          @if (detail.notes) {
+            <div class="detail-notes-box">
+              <span class="material-symbols-outlined text-base text-amber-500">sticky_note_2</span>
+              <span class="text-xs text-slate-700 dark:text-slate-300 font-medium">{{ detail.notes }}</span>
+            </div>
+          }
+
+        </div>
+
+        <!-- Footer con Botón Dinámico de Inicio -->
+        <div class="rf-modal-footer detail-modal-footer">
+          <button type="button" (click)="closeMissionDetail()" class="btn-modal-cancel">
+            <span>Cerrar</span>
+          </button>
+          
+          <button
+            type="button"
+            (click)="startMissionFromDetail(detail)"
+            class="btn-start-mission-giant">
+            <span class="material-symbols-outlined text-xl">photo_camera</span>
+            <span>
+              @if (detail.type === 'INBOUND_UNLOAD') {
+                INICIAR DESCARGA Y ABRIR LECTOR
+              } @else if (detail.type === 'OUTBOUND_DISPATCH') {
+                INICIAR DESPACHO Y ABRIR LECTOR
+              } @else if (detail.type === 'INTERNAL_PUTAWAY') {
+                INICIAR REUBICACIÓN Y ABRIR LECTOR
+              } @else {
+                INICIAR MOVIMIENTO Y ABRIR LECTOR
+              }
+            </span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 6. MODAL 2: MODAL DEDICADO DE LECTURA LÁSER / CÁMARA EN VIVO ── -->
+  @if (showScanningModal() && activeMission(); as current) {
+    <div class="rf-modal-backdrop laser-hud-backdrop" (click)="closeScanningModal()">
+      <div class="rf-modal-card laser-hud-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header del Lector (Ultra Compacto en 1 Sola Línea) -->
+        <div class="laser-hud-header">
+          <div class="hud-header-left">
+            <div class="hud-header-icon-box">
+              <span class="material-symbols-outlined text-lg text-amber-500">
+                {{ cameraActive() ? 'photo_camera' : 'barcode_scanner' }}
+              </span>
+            </div>
+            <div class="hud-header-text">
+              <div class="hud-camera-status-row">
+                <span class="hud-camera-status-lbl">
+                  {{ cameraActive() ? (currentFacingMode() === 'environment' ? 'Cámara Trasera Activa' : 'Cámara Frontal Activa') : 'Lector Láser de Piso' }}
+                </span>
+                @if (cameraActive()) {
+                  <span class="live-dot-indicator"></span>
+                }
+              </div>
+              <h2 class="laser-hud-title">
+                {{ current.docNumber ? 'Remisión ' + current.docNumber : current.folio }} <span class="text-xs text-muted font-normal">• {{ current.typeLabel }}</span>
+              </h2>
+            </div>
+          </div>
+
+          <!-- Toolbar de Acciones de Cámara y Cierre (Compacto, Nunca se Envuelve) -->
+          <div class="hud-header-actions">
+            @if (cameraActive()) {
+              <button
+                type="button"
+                (click)="switchCamera()"
+                class="btn-hud-action btn-hud-flip"
+                [title]="currentFacingMode() === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'">
+                <span class="material-symbols-outlined text-sm">flip_camera_ios</span>
+                <span class="btn-action-text">{{ currentFacingMode() === 'environment' ? 'Frontal' : 'Trasera' }}</span>
+              </button>
+            }
+
+            <button
+              type="button"
+              (click)="toggleCamera()"
+              class="btn-hud-action btn-hud-pause"
+              [title]="cameraActive() ? 'Pausar cámara' : 'Reanudar cámara'">
+              <span class="material-symbols-outlined text-sm">{{ cameraActive() ? 'videocam_off' : 'videocam' }}</span>
+              <span class="btn-action-text">{{ cameraActive() ? 'Pausar' : 'Activar' }}</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-hud-action btn-hud-close-square"
+              (click)="closeScanningModal()"
+              title="Cerrar lector">
+              <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra Integrada de Pasos y Selector de Lote en 1 Sola Franja -->
+        <div class="laser-stepper-ribbon">
+          <div class="stepper-track">
+            <div
+              class="stepper-step"
+              [class.step--active]="current.status === 'ACTIVE_PICK' || current.status === 'QUEUED'"
+              [class.step--completed]="current.status === 'ACTIVE_DROP'">
+              <span class="step-badge">1</span>
+              <span>{{ current.type === 'INBOUND_UNLOAD' ? 'Pick T#' + nextPalletNumber() : 'Pick SSCC' }}</span>
+            </div>
+
+            <span class="material-symbols-outlined stepper-arr">arrow_forward</span>
+
+            <div
+              class="stepper-step"
+              [class.step--active]="current.status === 'ACTIVE_DROP'">
+              <span class="step-badge">2</span>
+              <span>Depósito Destino</span>
+            </div>
+          </div>
+
+          @if (current.type === 'INBOUND_UNLOAD') {
+            <div class="hud-lots-quick-pills">
+              <span class="hud-lots-lbl">Lote:</span>
+              @for (lot of availableLotsList(); track lot.lotNumber) {
+                <button
+                  type="button"
+                  (click)="selectScanningLot(lot.lotNumber)"
+                  class="hud-quick-lot-btn"
+                  [class.hud-quick-lot-btn--active]="activeScanningLot() === lot.lotNumber">
+                  {{ lot.lotNumber }}
+                </button>
+              }
+              <button
+                type="button"
+                (click)="openCustomLotModal()"
+                class="hud-quick-lot-btn hud-quick-lot-add"
+                title="Intercambiar por otro lote">
+                <span class="material-symbols-outlined text-xs">sync_saved_locally</span>
+                <span>+ Lote</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Cuerpo del Lector: HUD de Escaneo & Cámara en Vivo -->
+        <div #laserHudBody class="laser-hud-body">
+          
+          <!-- 1. Cuadro de Cámara / Visor Láser Limpio y Despejado -->
+          <div
+            class="laser-reticle"
+            [class.laser-reticle--drop]="current.status === 'ACTIVE_DROP'"
+            (click)="onCameraFeedTapped()"
+            title="Tocar pantalla para reconocer código de barras automáticamente">
+
+            <!-- Video en Vivo de la Cámara (getUserMedia) -->
+            <video
+              #cameraVideo
+              class="camera-live-feed"
+              [class.camera-live-feed--visible]="cameraActive()"
+              autoplay
+              playsinline
+              muted></video>
+
+            <!-- Haz Láser Animado de Escaneo -->
+            <div
+              class="laser-beam-line"
+              [class.laser-beam-line--green]="current.status === 'ACTIVE_DROP'"></div>
+
+            <!-- Esquinas de Enfoque Táctico Viewfinder -->
+            <div class="corner-bracket corner-tl"></div>
+            <div class="corner-bracket corner-tr"></div>
+            <div class="corner-bracket corner-bl"></div>
+            <div class="corner-bracket corner-br"></div>
+
+            <!-- Badge Superior Flotante -->
+            <div class="camera-floating-badge">
+              <span class="badge-dot-cam"></span>
+              <span>
+                {{ current.status === 'ACTIVE_DROP' ? 'Enfoca código de ubicación destino' : (current.type === 'INBOUND_UNLOAD' ? 'Enfoca la etiqueta de la tarima física' : 'Enfoca código SSCC objetivo') }}
+              </span>
+            </div>
+
+            <!-- Badge Inferior Flotante de Toque -->
+            <div class="camera-floating-touch">
+              <span class="material-symbols-outlined text-xs">touch_app</span>
+              <span>Toca para capturar</span>
+            </div>
+
+          </div>
+
+          <!-- 2. Tarjeta de Información Concreta del Objetivo (Ubicada DEBAJO de la Cámara) -->
+          <div class="hud-target-info-card" [class.target-card--drop]="current.status === 'ACTIVE_DROP'">
+            
+            <div class="target-info-header">
+              <span class="target-step-tag">
+                <span class="material-symbols-outlined text-xs">
+                  {{ current.status === 'ACTIVE_DROP' ? 'location_on' : 'qr_code_scanner' }}
+                </span>
+                <span>
+                  @if (current.status === 'ACTIVE_DROP') {
+                    PASO 2: CONFIRMAR DESTINO
+                  } @else if (current.type === 'INBOUND_UNLOAD') {
+                    PASO 1: REGISTRAR TARIMA FÍSICA #{{ nextPalletNumber() }}
+                  } @else {
+                    PASO 1: ESCANEAR TARIMA ORIGEN
+                  }
+                </span>
+              </span>
+
+              <span class="target-location-pill">
+                {{ current.status === 'ACTIVE_DROP' ? current.destinationLocation : current.originLocation }}
+              </span>
+            </div>
+
+            <!-- FASE INBOUND PASO 1: REGISTRO DINÁMICO DE TARIMA FÍSICA -->
+            @if (current.type === 'INBOUND_UNLOAD' && current.status !== 'ACTIVE_DROP') {
+              <div class="inbound-dynamic-prompt-row">
+                <div class="inbound-prompt-left">
+                  <span class="material-symbols-outlined text-amber-500 text-lg">barcode_scanner</span>
+                  <div class="inbound-prompt-text-group">
+                    <div class="inbound-prompt-title">Dispara al código / SSCC de la tarima física</div>
+                    <div class="inbound-prompt-sub">El sistema detectará el código físico y lo registrará en el manifiesto</div>
+                  </div>
+                </div>
+                <div class="inbound-prompt-lot-badge">
+                  <span class="prompt-lot-lbl">Lote a Asignar:</span>
+                  <span class="prompt-lot-val">{{ activeScanningLot() }}</span>
+                </div>
+              </div>
+            } @else {
+              <!-- FASE PASO 2 (DEPÓSITO) O PASO 1 CON CÓDIGO OBJETIVO FIJO -->
+              <div class="target-code-row">
+                <div class="target-code-label">
+                  {{ current.status === 'ACTIVE_DROP' ? 'UBICACIÓN DESTINO A ESCANEAR:' : 'CÓDIGO A ESCANEAR:' }}
+                </div>
+                <div class="target-code-highlight">
+                  {{ current.status === 'ACTIVE_DROP' ? current.destBarcode : (current.currentPendingSscc || current.originBarcode) }}
+                </div>
+              </div>
+            }
+
+            <!-- Datos de Carga y Lote Asignado -->
+            <div class="target-product-row">
+              <span class="material-symbols-outlined text-sm text-slate-400">inventory_2</span>
+              <span class="target-product-name">{{ current.productName }}</span>
+              <span class="text-xs text-slate-400">
+                • {{ current.currentPendingPieces || current.defaultPiecesPerPallet || current.quantity }} {{ current.unit }}
+              </span>
+              @if (current.status === 'ACTIVE_DROP' && current.currentPendingSscc) {
+                <span class="target-active-sscc-tag font-mono">
+                  📦 {{ current.currentPendingSscc }}
+                </span>
+              }
+              <span class="target-active-lot-tag">
+                <span class="material-symbols-outlined text-xs">sell</span>
+                <span>Lote: {{ activeScanningLot() }}</span>
+              </span>
+            </div>
+
+          </div>
+
+          <!-- 3. Botón de Reconocimiento / Simulación Rápida -->
+          <div class="hud-action-row">
+            @if (current.status === 'ACTIVE_PICK' || current.status === 'QUEUED') {
+              <button
+                type="button"
+                (click)="simulateModalScanPick()"
+                class="btn-simulate-modal btn-sim-pick">
+                <span class="material-symbols-outlined text-base">qr_code_scanner</span>
+                <span>
+                  {{ current.type === 'INBOUND_UNLOAD' ? 'REGISTRAR TARIMA #' + nextPalletNumber() + ' CON LOTE: ' + activeScanningLot() : 'CONFIRMAR PICK SSCC: ' + (current.currentPendingSscc || current.originBarcode) }}
+                </span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                (click)="simulateModalScanDrop()"
+                class="btn-simulate-modal btn-sim-drop">
+                <span class="material-symbols-outlined text-base">task_alt</span>
+                <span>DEPOSITAR EN DESTINO: {{ current.destBarcode }}</span>
+              </button>
+            }
+          </div>
+
+          <!-- 4. Input Físico para Pistola Láser de Código de Barras -->
+          <div class="hud-input-row">
+            <div class="hud-input-wrap">
+              <span class="material-symbols-outlined text-sky-600 dark:text-sky-400 text-base">barcode_reader</span>
+              <input
+                #modalLaserInput
+                type="text"
+                [(ngModel)]="scannedInput"
+                (keydown.enter)="onScanSubmit()"
+                placeholder="Pistola láser lista... Apunta y dispara el código"
+                class="hud-input-field"
+                autocomplete="off" />
+              <button
+                type="button"
+                (click)="onScanSubmit()"
+                class="btn-hud-enter"
+                title="Procesar código manual">
+                <span class="material-symbols-outlined text-sm">subdirectory_arrow_left</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              (click)="simulateModalScanError()"
+              class="btn-sim-error"
+              title="Simular código erróneo para prueba de validación">
+              <span class="material-symbols-outlined text-xs">error</span>
+              <span>Probar Error</span>
+            </button>
+          </div>
+
+          <!-- 5. Banner de Feedback de Escaneo en Vivo -->
+          @if (scanFeedback(); as fb) {
+            <div
+              class="scan-feedback-banner"
+              [class.feedback--success]="fb.success"
+              [class.feedback--error]="!fb.success">
+              <span class="material-symbols-outlined feedback-icon">
+                {{ fb.success ? 'check_circle' : 'error' }}
+              </span>
+              <div class="feedback-text">{{ fb.message }}</div>
+            </div>
+          }
+
+        </div>
+
+        <!-- Footer del Lector con Opciones de Contingencia -->
+        <div class="laser-hud-footer">
+          <button
+            type="button"
+            (click)="openIncidentModal()"
+            class="btn-hud-contingency btn-hud-incident">
+            <span class="material-symbols-outlined text-base">warning</span>
+            <span>Reportar Daño</span>
+          </button>
+
+          @if (current.type === 'INBOUND_UNLOAD' && inboundScannedCount() > 0) {
+            <button
+              type="button"
+              (click)="finishDischargeManually()"
+              class="btn-hud-contingency btn-hud-finish-discharge"
+              title="Finalizar descarga física y notificar a Mesa de Control">
+              <span class="material-symbols-outlined text-base text-emerald-500">done_all</span>
+              <span>Concluir ({{ inboundScannedCount() }} Tarimas)</span>
+            </button>
+          }
+
+          <button
+            type="button"
+            (click)="postponeCurrentMission()"
+            class="btn-hud-contingency btn-hud-postpone">
+            <span class="material-symbols-outlined text-base">low_priority</span>
+            <span>Posponer</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="closeScanningModal()"
+            class="btn-hud-contingency btn-hud-close ml-auto">
+            <span>✕ Salir del Lector</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 7. MODAL 3: REPORTE DE ANOMALÍA / DAÑO DE TARIMA ──────────── -->
+  @if (showIncidentModal()) {
+    <div class="rf-modal-backdrop" (click)="closeIncidentModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-3xl text-rose-600">emergency_home</span>
+            <div>
+              <h2 class="rf-modal-title">Reporte de Siniestro / Anomalía en Pallet</h2>
+              <p class="text-xs text-muted">Apertura de expediente QM y bloqueo inmediato de la tarima</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeIncidentModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          @if (activeMission(); as m) {
+            <div class="incident-target-summary">
+              <span class="font-bold text-slate-800 dark:text-slate-100">{{ m.docNumber ? 'Remisión ' + m.docNumber : m.folio }}</span>
+              <span class="text-xs text-slate-500"> • {{ m.productName }} • Rampa: {{ m.originLocation }}</span>
+            </div>
+          }
+
+          <!-- Tipo de Incidencia -->
+          <div class="modal-form-group">
+            <label class="modal-label">Tipo de Daño / Causa del Bloqueo</label>
+            <select [(ngModel)]="incidentType" class="modal-select">
+              <option value="Pallet Inclinado / Colapsado">Pallet Inclinado / Colapsado (Riesgo de Caída)</option>
+              <option value="Cajas Rotas / Fuga de Producto">Cajas Rotas / Fuga de Producto Químico</option>
+              <option value="Sello de Seguridad Violado">Sello de Seguridad Violado / Faltante</option>
+              <option value="Código SSCC Ilegible">Código SSCC Dañado o Ilegible</option>
+              <option value="Ubicación Destino Obstruida">Ubicación de Rack / Andén Obstruida</option>
+            </select>
+          </div>
+
+          <!-- Captura de Foto Evidencia (Simulada) -->
+          <div class="modal-form-group">
+            <label class="modal-label">Evidencia Fotográfica Obligatoria</label>
+            <div class="photo-capture-box" (click)="toggleSimulatePhotoCapture()">
+              @if (incidentPhotoCaptured()) {
+                <div class="photo-captured-preview">
+                  <span class="material-symbols-outlined text-3xl text-emerald-500">image</span>
+                  <div>
+                    <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Foto Capturada con Éxito</div>
+                    <div class="text-xs text-slate-400">pallet_danado_evidencia.jpg • 180 KB (Comprimida)</div>
+                  </div>
+                  <button type="button" class="btn-retake-photo" (click)="$event.stopPropagation(); toggleSimulatePhotoCapture()">
+                    <span class="material-symbols-outlined text-sm">cached</span>
+                  </button>
+                </div>
+              } @else {
+                <div class="photo-placeholder">
+                  <span class="material-symbols-outlined text-4xl text-slate-400">add_a_photo</span>
+                  <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">Tocar para Tomar Foto de Evidencia</span>
+                  <span class="text-xs text-slate-400">Resolución HD con compresión industrial</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Notas Adicionales -->
+          <div class="modal-form-group">
+            <label class="modal-label">Descripción del Operador</label>
+            <textarea
+              [(ngModel)]="incidentNote"
+              placeholder="Detalla qué ocurrió (ej: nivel 3 golpeado por montacargas previo, empaque roto al desembarcar)..."
+              rows="3"
+              class="modal-textarea"></textarea>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeIncidentModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+          <button
+            type="button"
+            (click)="submitIncidentReport()"
+            class="btn-modal-confirm-incident">
+            <span class="material-symbols-outlined">report</span>
+            <span>BLOQUEAR TARIMA Y ENVIAR A QM</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 8. MODAL 4: CELEBRACIÓN / HANDOFF A MESA DE CONTROL (DISCHARGED) ── -->
+  <!-- ── 8. MODAL 4: CELEBRACIÓN / HANDOFF A MESA DE CONTROL (DISCHARGED) ── -->
+  @if (showCelebrationModal()) {
+    <div class="rf-modal-backdrop celebration-backdrop" (click)="closeCelebrationModal()">
+      <div class="rf-modal-card celebration-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Sello de Éxito / Glow Indicator -->
+        <div class="celebration-seal-wrap">
+          <div class="celebration-seal-pulse"></div>
+          <div class="celebration-seal-badge">
+            <span class="material-symbols-outlined text-3xl">verified</span>
+          </div>
+        </div>
+
+        @if (justCompletedMission(); as m) {
+          @if (m.type === 'INBOUND_UNLOAD') {
+            <!-- Header de Misión Concluida -->
+            <div class="celebration-header">
+              <div class="celebration-status-pill">
+                <span class="status-dot-emerald"></span>
+                <span>DESCARGA EN ANDÉN CONCLUIDA</span>
+                <span class="status-handoff-tag">➔ MESA DE CONTROL</span>
+              </div>
+              <h2 class="celebration-title">¡Descarga Física Registrada!</h2>
+              <p class="celebration-subtitle">
+                Se concluyó la descarga de <strong class="text-emerald-600 dark:text-emerald-400 font-bold">{{ m.pallets?.length || 0 }} tarimas</strong>. El manifiesto de escaneo pasó a estatus <code class="status-code-pill">DISCHARGED</code> y fue turnado a Mesa de Control para auditoría y emisión de Pauta F01.
+              </p>
+            </div>
+
+            <!-- Ficha Ejecutiva del Manifiesto Concluido -->
+            <div class="celebration-manifest-card">
+              <!-- Encabezado de la Ficha -->
+              <div class="manifest-card-header">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="manifest-doc-tag">
+                    <span class="material-symbols-outlined text-xs">description</span>
+                    <span>{{ m.docNumber ? 'Remisión: ' + m.docNumber : m.folio }}</span>
+                  </span>
+                  <span class="manifest-prod-name">{{ m.productName }}</span>
+                </div>
+                <div class="manifest-tarimas-pill">
+                  <span class="material-symbols-outlined text-xs text-emerald-500">inventory_2</span>
+                  <span>{{ m.pallets?.length || 0 }} Tarimas</span>
+                </div>
+              </div>
+
+              <!-- Grid de Logística y Depósito -->
+              <div class="manifest-grid-2col">
+                <div class="manifest-mini-box">
+                  <span class="mini-box-lbl">Tráiler / Andén Origen</span>
+                  <span class="mini-box-val">{{ m.transportPlate }} • {{ m.originLocation }}</span>
+                </div>
+
+                <div class="manifest-mini-box">
+                  <span class="mini-box-lbl">Depósito Asignado</span>
+                  <span class="mini-box-val text-emerald-600 dark:text-emerald-400 font-bold">{{ m.destinationLocation }}</span>
+                  <span class="mini-box-code font-mono text-xs text-slate-400">({{ m.destBarcode }})</span>
+                </div>
+              </div>
+
+              <!-- Desglose de Lotes Escaneados -->
+              @if (lotBreakdownSummary() && lotBreakdownSummary().length > 0) {
+                <div class="manifest-lots-section">
+                  <div class="manifest-lots-title">
+                    <span class="material-symbols-outlined text-xs text-amber-500">sell</span>
+                    <span>Desglose de Lotes Descargados:</span>
+                  </div>
+                  <div class="manifest-lots-pills-wrap">
+                    @for (b of lotBreakdownSummary(); track b.lotNumber) {
+                      <div class="manifest-lot-pill">
+                        <span class="lot-pill-name font-mono font-bold">{{ b.lotNumber }}</span>
+                        <span class="lot-pill-count">{{ b.palletCount }} {{ b.palletCount === 1 ? 'Tarima' : 'Tarimas' }}</span>
+                        <span class="lot-pill-pcs font-bold">({{ b.totalPieces }} pzas)</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <!-- Flujo para Salidas / Putaway -->
+            <div class="celebration-header">
+              <div class="celebration-status-pill">
+                <span class="status-dot-emerald"></span>
+                <span>MOVIMIENTO CONFIRMADO</span>
+              </div>
+              <h2 class="celebration-title">¡Movimiento Concluido con Éxito!</h2>
+              <p class="celebration-subtitle">
+                El pallet ha sido verificado y depositado correctamente en el sistema WMS.
+              </p>
+            </div>
+
+            <div class="celebration-manifest-card">
+              <div class="manifest-card-header">
+                <span class="manifest-doc-tag">{{ m.folio }} • {{ m.typeLabel }}</span>
+                <span class="manifest-prod-name">{{ m.productName }}</span>
+              </div>
+              <div class="manifest-mini-box mt-2">
+                <span class="mini-box-lbl">Ubicación Final de Depósito</span>
+                <span class="mini-box-val text-emerald-600 dark:text-emerald-400 font-bold">{{ m.destinationLocation }}</span>
+                <span class="mini-box-code font-mono text-xs text-slate-400">({{ m.destBarcode }})</span>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- Footer / CTA -->
+        <button
+          type="button"
+          (click)="closeCelebrationModal()"
+          class="btn-celebration-continue">
+          <span>CONTINUAR CON LA SIGUIENTE MISIÓN</span>
+          <span class="material-symbols-outlined text-xl">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ── 9. MODAL 5: INTERCAMBIO / ALTA DE NUEVO LOTE EN ANDÉN ────────── -->
+  @if (showLotSwapModal()) {
+    <div class="rf-modal-backdrop" (click)="closeCustomLotModal()">
+      <div class="rf-modal-card lot-swap-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header del Modal -->
+        <div class="rf-modal-header lot-swap-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-3xl text-amber-500">sync_saved_locally</span>
+            <div>
+              <h2 class="rf-modal-title">
+                {{ selectedPalletForEdit() ? 'Modificar Lote de Tarima #' + selectedPalletForEdit()?.palletNumber : 'Intercambio / Nuevo Lote en Andén' }}
+              </h2>
+              <p class="text-xs text-muted">Ajuste de lote físico cuando difiere del pre-cargado por Mesa de Control</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeCustomLotModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          
+          <!-- Banner Informativo -->
+          <div class="lot-swap-info-banner">
+            <span class="material-symbols-outlined text-amber-500 text-lg">info</span>
+            <span class="text-xs text-slate-700 dark:text-slate-300">
+              Registra el número de lote impreso físicamente en la etiqueta de las tarimas que estás desembarcando.
+            </span>
+          </div>
+
+          <!-- Campo: Nuevo Lote Físico -->
+          <div class="modal-form-group">
+            <label class="modal-label">Lote Físico en Tarima (Obligatorio)</label>
+            <div class="lot-input-wrapper">
+              <span class="material-symbols-outlined text-amber-500">label</span>
+              <input
+                type="text"
+                [(ngModel)]="newCustomLotInput"
+                placeholder="ej: LOT-2026-Y02"
+                class="modal-input uppercase font-mono font-bold" />
+            </div>
+          </div>
+
+          <!-- Campo: Piezas por Tarima -->
+          <div class="modal-form-group">
+            <label class="modal-label">Piezas en esta Tarima</label>
+            <input
+              type="number"
+              [(ngModel)]="newCustomPiecesInput"
+              min="1"
+              class="modal-input font-bold" />
+          </div>
+
+          <!-- Campo: Motivo del Intercambio -->
+          <div class="modal-form-group">
+            <label class="modal-label">Motivo del Intercambio de Lote</label>
+            <select [(ngModel)]="lotSwapReasonInput" class="modal-select">
+              <option value="Embarque Mixto / Multi-Lote de Proveedor">Embarque Mixto / Multi-Lote de Proveedor</option>
+              <option value="Lote Sustituto por Fábrica">Lote Sustituto por Fábrica</option>
+              <option value="Discrepancia en Etiqueta de Origen">Discrepancia en Etiqueta de Origen</option>
+              <option value="Caducidad / Batch Diferente">Caducidad / Batch Diferente</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeCustomLotModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+          
+          <button
+            type="button"
+            (click)="confirmCustomLot()"
+            class="btn-modal-confirm-swap">
+            <span class="material-symbols-outlined">sync_saved_locally</span>
+            <span>CONFIRMAR Y APLICAR LOTE</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

@@ -590,14 +590,12 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
     { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
     { id: 'forklift-operators', title: 'Montacarguistas', icon: 'engineering', description: 'Alta, licenciamiento DC-3, asignación de turnos y disponibilidad en andén.', category: 'MERCHANDISE' },
-    { id: 'currency-exchange', title: 'Divisas y Tipos de Cambio', icon: 'currency_exchange', description: 'Gestión multi-divisa, paridades cambiarias y valuación financiera.', category: 'MERCHANDISE' },
     
     // Seguridad
     { id: 'users', title: 'USUARIOS', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
     { id: 'shifts', title: 'Turnos y Horarios', icon: 'schedule', description: 'Configuración de jornadas operativas, horarios y disponibilidad de almacén.', category: 'SECURITY' },
     { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
-    { id: 'licenses', title: 'Gestión de Licencias', icon: 'workspace_premium', description: 'Administración de licencias WMS, vigencia de módulos y perfiles corporativos.', category: 'SECURITY' },
     
     // Soporte y Auditoría
     { id: 'inventory', title: 'Monitor de Inventario', icon: 'shelves', description: 'Saldos activos por SSCC, cuarentenas preventivas y lotes.', category: 'SUPPORT' },
@@ -777,14 +775,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     }
     if (moduleId === 'business-rules') {
       this.router.navigate(['/business-rules']);
-      return;
-    }
-    if (moduleId === 'currency-exchange') {
-      this.router.navigate(['/currency-exchange']);
-      return;
-    }
-    if (moduleId === 'licenses' || moduleId === 'license-management') {
-      this.router.navigate(['/licenses']);
       return;
     }
     this.selectedModule.set(moduleId);

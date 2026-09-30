@@ -48,11 +48,47 @@
 
   --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
   --font-body:      'Inter', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 
   --radius-card:    18px;
   --radius-input:   10px;
   --radius-badge:   99px;
   --radius-btn:     10px;
+}
+
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --bg-page:        #0b1119;
+  --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-hover:  rgba(23, 35, 50, 0.98);
+  --bg-input:       rgba(23, 35, 50, 0.85);
+  --border-card:    rgba(255, 255, 255, 0.08);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #edf1f5;
+  --text-secondary: #9aa6b4;
+  --text-muted:     #667585;
+  --text-gold:      #d0af67;
+
+  --navy:           #dfe7ef;
+  --navy-mid:       #16212f;
+  --navy-light:     #1f2d3e;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --c-success:      #67c78b;
+  --c-success-bg:   rgba(76, 175, 112, 0.12);
+  --c-success-bdr:  rgba(76, 175, 112, 0.24);
+  --c-warning:      #e0aa4f;
+  --c-warning-bg:   rgba(224, 170, 79, 0.12);
+  --c-warning-bdr:  rgba(224, 170, 79, 0.24);
+  --c-danger:       #ef7773;
+  --c-danger-bg:    rgba(239, 83, 80, 0.12);
+  --c-danger-bdr:   rgba(239, 83, 80, 0.24);
+  --c-info:         #77a8df;
+  --c-info-bg:      rgba(96, 165, 250, 0.12);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -99,73 +135,67 @@
 }
 
 .supplier-header__icon-wrap {
-  width: 52px;
-  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gold-bg);
-  border: 1px solid var(--gold-border);
+  width: 54px;
+  height: 54px;
   border-radius: 14px;
+  background: linear-gradient(145deg, var(--navy), var(--navy-mid));
+  box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22);
   flex-shrink: 0;
 }
 
 .supplier-header__icon {
-  font-size: 28px;
-  color: var(--gold);
+  font-size: 26px;
+  color: #fff;
 }
 
 .supplier-header__copy {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.25rem;
 }
 
 .supplier-header__eyebrow {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-gold);
 }
 
 .supplier-header__eyebrow-tag {
+  font-family: var(--font-mono, monospace);
   background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
   color: var(--text-gold);
+  border-radius: 5px;
   padding: 1px 7px;
-  border-radius: var(--radius-badge);
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.supplier-header__eyebrow-tag:hover {
+  background: rgba(197, 168, 107, 0.2);
+  color: #172033;
 }
 
 .supplier-header__eyebrow-sep {
-  color: var(--gold);
-  font-weight: 400;
-}
-
-.supplier-header__rls-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba(37, 50, 74, 0.08);
-  color: var(--navy-mid);
-  padding: 1px 7px;
-  border-radius: 6px;
-  font-size: 0.65rem;
-  font-weight: 600;
-}
-
-.supplier-header__rls-badge .material-symbols-outlined {
-  font-size: 12px;
+  opacity: 0.4;
 }
 
 .supplier-header__title {
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: 1.7rem;
   font-weight: 700;
+  letter-spacing: -0.025em;
   color: var(--text-primary);
   margin: 0;
   line-height: 1.2;
@@ -216,7 +246,7 @@
   flex-shrink: 0;
 }
 
-.supplier-kpi-card--total .supplier-kpi-card__icon-wrap       { background: var(--gold-bg); color: var(--gold); }
+.supplier-kpi-card--total .supplier-kpi-card__icon-wrap       { background: rgba(23, 32, 51, 0.08); color: var(--navy); }
 .supplier-kpi-card--active .supplier-kpi-card__icon-wrap      { background: var(--c-success-bg); color: var(--c-success); }
 .supplier-kpi-card--unavailable .supplier-kpi-card__icon-wrap { background: var(--c-warning-bg); color: var(--c-warning); }
 .supplier-kpi-card--preferred .supplier-kpi-card__icon-wrap   { background: var(--gold-bg); color: var(--gold); }

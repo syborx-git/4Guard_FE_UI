@@ -53,21 +53,34 @@ export class AuthState {
       .toUpperCase();
   });
 
-  /** Etiqueta legible del rol actual */
+  /** Etiqueta legible del rol actual en español limpio */
   readonly roleLabel = computed(() => {
-    const role = this.authService.currentRole();
-    if (!role) return '';
-    const labels: Record<UserRole, string> = {
-      [UserRole.ADMIN]: 'Administrador',
-      [UserRole.WAREHOUSE_MANAGER]: 'Gerente de Almacén',
-      [UserRole.DOCK_SUPERVISOR]: 'Supervisor de Andén',
-      [UserRole.WAREHOUSE_OPERATOR]: 'Operario de Almacén',
-      [UserRole.QM_INSPECTOR]: 'Inspector de Calidad',
-      [UserRole.AUDITOR]: 'Auditor',
-      [UserRole.CLIENT]: 'Cliente 3PL',
-      [UserRole.SECURITY_GUARD]: 'Guardia de Seguridad',
+    const rawRole = this.authService.currentRole() || this.authService.currentUser()?.role || '';
+    if (!rawRole) return 'Operario de Almacén';
+
+    const normalized = String(rawRole).trim().toUpperCase();
+    const labels: Record<string, string> = {
+      'ROLE_ADMIN': 'Administrador',
+      'ADMIN': 'Administrador',
+      'ROLE_WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'ROLE_DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'ROLE_WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'ROLE_QM_INSPECTOR': 'Inspector de Calidad',
+      'QM_INSPECTOR': 'Inspector de Calidad',
+      'ROLE_AUDITOR': 'Auditor de Inventarios',
+      'AUDITOR': 'Auditor de Inventarios',
+      'ROLE_CLIENT': 'Cliente 3PL',
+      'CLIENT': 'Cliente 3PL',
+      'ROLE_SECURITY_GUARD': 'Guardia de Seguridad',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'ROLE_FORKLIFT_OPERATOR': 'Montacarguista',
+      'FORKLIFT_OPERATOR': 'Montacarguista',
     };
-    return labels[role] ?? role;
+
+    return labels[normalized] ?? 'Operario de Almacén';
   });
 
   // ─── Acciones ─────────────────────────────────────────────────────────────
@@ -117,6 +130,13 @@ export class AuthState {
    */
   hasRole(...roles: UserRole[]): boolean {
     return this.authService.hasRole(...roles);
+  }
+
+  /**
+   * Cambia el rol del usuario activo para pruebas rápidas de interfaz (RBAC demo switcher).
+   */
+  switchRoleForTesting(role: UserRole, customName?: string): void {
+    this.authService.switchRoleForTesting(role, customName);
   }
 
   // ─── Helpers privados ─────────────────────────────────────────────────────

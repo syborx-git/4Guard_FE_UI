@@ -5,30 +5,49 @@
  * Almacén/Topología y Montacarguistas.
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { CatalogUser, CreateUserDto, USER_ROLES } from '../models/users-catalog.models';
 import { CatalogClient, CreateClientDto } from '../models/clients-catalog.models';
 import { CatalogProduct, CreateProductDto, OFFICIAL_4GUARD_SUPPLIERS } from '../models/products-catalog.models';
-import { WarehouseBay, WarehouseZoneCode, WAREHOUSE_ZONES } from '../models/warehouse-catalog.models';
+import { WarehouseBay } from '../models/warehouse-catalog.models';
 import { ForkliftOperator, CreateForkliftOperatorDto, calculateLicenseStatus } from '../models/forklift-catalog.models';
+import { WarehouseLayoutService } from './warehouse-layout.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CatalogsService {
+  private readonly warehouseLayoutService = inject(WarehouseLayoutService);
+
   // ── Signals de Catálogos ──────────────────────────────────
   private readonly usersSignal = signal<CatalogUser[]>(this.getInitialUsers());
   private readonly clientsSignal = signal<CatalogClient[]>(this.getInitialClients());
   private readonly productsSignal = signal<CatalogProduct[]>(this.getInitialProducts());
-  private readonly baysSignal = signal<WarehouseBay[]>(this.generateInitialBays());
   private readonly forkliftOperatorsSignal = signal<ForkliftOperator[]>(this.getInitialForkliftOperators());
 
   // ── Lecturas Públicas (Readonly Signals & Computeds) ─────
   public readonly users = this.usersSignal.asReadonly();
   public readonly clients = this.clientsSignal.asReadonly();
   public readonly products = this.productsSignal.asReadonly();
-  public readonly bays = this.baysSignal.asReadonly();
   public readonly forkliftOperators = this.forkliftOperatorsSignal.asReadonly();
+
+  public readonly bays = computed<WarehouseBay[]>(() => {
+    return this.warehouseLayoutService.allPositions().map((p) => ({
+      id: p.id,
+      bayCode: p.code,
+      warehouseZone: p.sectionName || 'A',
+      warehouseZoneName: p.sectionName,
+      description: `${p.sectionName} - Posición ${p.code}`,
+      capacityPallets: p.capacityTarimas,
+      occupiedPallets: p.currentTarimas,
+      occupancyPercentage: p.capacityTarimas > 0 ? Math.round((p.currentTarimas / p.capacityTarimas) * 100) : 0,
+      status: p.status === 'BLOCKED' ? 'BLOQUEADA' : (p.currentTarimas === 0 ? 'DESOCUPADA' : (p.currentTarimas >= p.capacityTarimas ? 'SATURADA' : 'PARCIAL')),
+      skuStored: p.skuCode ? `${p.skuCode} ${p.skuDescription}` : undefined,
+      lotStored: p.batchNumber !== 'N/A' ? p.batchNumber : undefined,
+      lastMovement: p.lastMovement || 'Sin movimientos',
+      rawPosition: p,
+    }));
+  });
 
   // Computeds útiles
   public readonly activeUsersCount = computed(() =>
@@ -44,7 +63,7 @@ export class CatalogsService {
   );
 
   public readonly emptyBaysCount = computed(() =>
-    this.baysSignal().filter((b) => b.occupiedPallets === 0).length
+    this.bays().filter((b) => b.occupiedPallets === 0).length
   );
 
   public readonly activeForkliftOperatorsCount = computed(() =>
@@ -398,117 +417,7 @@ export class CatalogsService {
     ];
   }
 
-  private generateInitialBays(): WarehouseBay[] {
-    const bays: WarehouseBay[] = [];
 
-    // 1. Bodega A: Posiciones A-1 a A-175
-    for (let i = 1; i <= 175; i++) {
-      const isOccupied = i % 3 !== 0; // 2 de cada 3 ocupadas
-      const occPallets = isOccupied ? (i % 2 === 0 ? 2 : 1) : 0;
-      const status = occPallets === 2 ? 'SATURADA' : occPallets === 1 ? 'PARCIAL' : 'DESOCUPADA';
-      bays.push({
-        id: `BAY-A-${i}`,
-        bayCode: `A-${i}`,
-        warehouseZone: 'A',
-        description: `Bodega A - Posición de Almacenamiento A-${i}`,
-        capacityPallets: 2,
-        occupiedPallets: occPallets,
-        occupancyPercentage: occPallets === 2 ? 100 : occPallets === 1 ? 50 : 0,
-        status,
-        skuStored: isOccupied ? (i % 2 === 0 ? 'SK-10023' : 'SK-99411') : undefined,
-        lotStored: isOccupied ? `LOT-A-${100 + i}` : undefined,
-        lastMovement: '2026-08-12 14:20',
-      });
-    }
-
-    // 2. Bodega APC (Pre-Carga / Staging): APC-1 a APC-6
-    for (let i = 1; i <= 6; i++) {
-      const occPallets = i <= 4 ? 4 : 0;
-      bays.push({
-        id: `BAY-APC-${i}`,
-        bayCode: `APC-${i}`,
-        warehouseZone: 'APC',
-        description: `Bodega APC - Bahía de Pre-Carga / Staging Outbound APC-${i}`,
-        capacityPallets: 4,
-        occupiedPallets: occPallets,
-        occupancyPercentage: Math.round((occPallets / 4) * 100),
-        status: occPallets === 4 ? 'SATURADA' : 'DESOCUPADA',
-        skuStored: occPallets > 0 ? 'SK-10023' : undefined,
-        lotStored: occPallets > 0 ? 'LOT-STAGING-01' : undefined,
-        lastMovement: '2026-08-12 18:45',
-      });
-    }
-
-    // 3. Bodega AT (Saturación Temporal Nestlé): AT-1 a AT-46
-    for (let i = 1; i <= 46; i++) {
-      const isOcc = i <= 30;
-      const occPallets = isOcc ? 2 : 0;
-      bays.push({
-        id: `BAY-AT-${i}`,
-        bayCode: `AT-${i}`,
-        warehouseZone: 'AT',
-        description: `Bodega AT - Saturación Temporal Nestlé AT-${i}`,
-        capacityPallets: 2,
-        occupiedPallets: occPallets,
-        occupancyPercentage: isOcc ? 100 : 0,
-        status: isOcc ? 'SATURADA' : 'DESOCUPADA',
-        skuStored: isOcc ? 'SK-77302' : undefined,
-        lotStored: isOcc ? `LOT-NESTLE-AT-${i}` : undefined,
-        lastMovement: '2026-08-11 11:30',
-      });
-    }
-
-    // 4. Bodega B: B-1 a B-37
-    for (let i = 1; i <= 37; i++) {
-      const isOcc = i % 2 === 0;
-      bays.push({
-        id: `BAY-B-${i}`,
-        bayCode: `B-${i}`,
-        warehouseZone: 'B',
-        description: `Bodega B - Posición B-${i}`,
-        capacityPallets: 2,
-        occupiedPallets: isOcc ? 1 : 0,
-        occupancyPercentage: isOcc ? 50 : 0,
-        status: isOcc ? 'PARCIAL' : 'DESOCUPADA',
-        skuStored: isOcc ? 'SK-99411' : undefined,
-        lastMovement: '2026-08-10 09:15',
-      });
-    }
-
-    // 5. Bodega BPC: BPC-1 a BPC-6
-    for (let i = 1; i <= 6; i++) {
-      bays.push({
-        id: `BAY-BPC-${i}`,
-        bayCode: `BPC-${i}`,
-        warehouseZone: 'BPC',
-        description: `Bodega BPC - Pre-Carga Secundarias BPC-${i}`,
-        capacityPallets: 4,
-        occupiedPallets: 0,
-        occupancyPercentage: 0,
-        status: 'DESOCUPADA',
-        lastMovement: '2026-08-09 17:00',
-      });
-    }
-
-    // 6. Bodega BT: BT-1 a BT-12
-    for (let i = 1; i <= 12; i++) {
-      const isOcc = i <= 6;
-      bays.push({
-        id: `BAY-BT-${i}`,
-        bayCode: `BT-${i}`,
-        warehouseZone: 'BT',
-        description: `Bodega BT - Saturación Temporal BT-${i}`,
-        capacityPallets: 2,
-        occupiedPallets: isOcc ? 2 : 0,
-        occupancyPercentage: isOcc ? 100 : 0,
-        status: isOcc ? 'SATURADA' : 'DESOCUPADA',
-        skuStored: isOcc ? 'SK-10023' : undefined,
-        lastMovement: '2026-08-12 08:00',
-      });
-    }
-
-    return bays;
-  }
 
   private getInitialForkliftOperators(): ForkliftOperator[] {
     return [

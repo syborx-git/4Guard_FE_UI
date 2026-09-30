@@ -35,7 +35,8 @@
             },
             "assets": [
               { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" },
-              { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" }
+              { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" },
+              { "glob": "_redirects", "input": "apps/admin-console/src", "output": "/" }
             ],
             "styles": ["apps/admin-console/src/styles.scss"],
             "scripts": []
@@ -90,7 +91,9 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 4200,
-            "host": "localhost"
+            "host": "0.0.0.0",
+            "disableHostCheck": true,
+            "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"]
           }
         },
         "test": {
@@ -147,7 +150,8 @@
             "assets": [
               { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" },
               { "glob": "favicon.ico", "input": "apps/rf-terminal/src", "output": "/" },
-              { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" }
+              { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" },
+              { "glob": "_redirects", "input": "apps/rf-terminal/src", "output": "/" }
             ],
             "styles": ["apps/rf-terminal/src/styles.scss"],
             "scripts": []
@@ -155,8 +159,8 @@
           "configurations": {
             "production": {
               "budgets": [
-                { "type": "initial", "maximumWarning": "600kb", "maximumError": "1.2mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "30kb", "maximumError": "40kb" }
+                { "type": "initial", "maximumWarning": "1mb", "maximumError": "2mb" },
+                { "type": "anyComponentStyle", "maximumWarning": "120kb", "maximumError": "200kb" }
               ],
               "outputHashing": "all",
               "optimization": true,

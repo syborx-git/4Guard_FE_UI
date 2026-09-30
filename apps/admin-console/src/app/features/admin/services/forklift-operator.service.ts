@@ -63,8 +63,11 @@ export class ForkliftOperatorAdminService {
 
   readonly dropdownOperators = computed(() =>
     this.activeOperators().map((op) => ({
-      code: op.id || op.code,
-      name: op.fullName,
+      id: op.id,
+      code: (op.code && !op.code.includes('-') && op.code.length <= 10) ? op.code : (op.licenseNumberDc3 || 'MC'),
+      name: op.fullName || `${op.firstName || ''} ${op.lastNamePaternal || ''} ${op.lastNameMaternal || ''}`.trim() || op.code || 'Montacarguista',
+      jobTitle: op.jobTitle || 'Montacarguista',
+      shift: op.shift || 'Turno General',
     }))
   );
 
@@ -229,8 +232,10 @@ export class ForkliftOperatorAdminService {
    * from `shiftName` for template compatibility.
    */
   private normalize(op: ForkliftOperator): ForkliftOperator {
+    const computedFullName = `${op.firstName || ''} ${op.lastNamePaternal || ''} ${op.lastNameMaternal || ''}`.trim();
     return {
       ...op,
+      fullName: op.fullName || computedFullName || op.code || 'Montacarguista',
       shift: op.shift || (op as any).shiftName || '',
       // Recompute on the client as a safety net (authoritative value comes from BE)
       licenseStatus: op.licenseStatus || calculateLicenseStatus(op.licenseExpirationDate),

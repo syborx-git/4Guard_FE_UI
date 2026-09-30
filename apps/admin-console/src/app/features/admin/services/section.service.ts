@@ -12,9 +12,24 @@ export interface WarehouseSection {
   code: string; // short code (max 10 chars)
   name: string; // name (max 100 chars)
   status: 'ACTIVE' | 'INACTIVE';
+  category?: string;
+  posFijas?: number;
+  capacidadTarimas?: number;
+  factorEstiba?: string;
+  notes?: string;
   version?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface InitializeSectionRequest {
+  category: string;
+  posFijas: number;
+  capacidadTarimas: number;
+  factorEstiba: string;
+  notes?: string;
+  generateLocations?: boolean;
+  authorizedSkuIds?: string[];
 }
 
 export interface CreateWarehouseSectionRequest {
@@ -206,6 +221,24 @@ export class SectionService {
     const payload: SectionStatusPatchRequest = { status };
     return this.http.patch<ApiResponse<WarehouseSection>>(
       `${environment.apiBaseUrl}/api/v1/warehouse-sections/${id}/status`,
+      payload
+    ).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.items.update(list => list.map(item => item.id === id ? response.data : item));
+        }
+      }),
+      catchError((error: HttpErrorResponse) => this.handleError(error))
+    );
+  }
+
+  /**
+   * Inicializa operativamente una sección en el Backend generando sus posiciones y capacidades.
+   * POST /api/v1/warehouse-sections/{id}/initialize
+   */
+  initialize(id: string, payload: InitializeSectionRequest): Observable<ApiResponse<WarehouseSection>> {
+    return this.http.post<ApiResponse<WarehouseSection>>(
+      `${environment.apiBaseUrl}/api/v1/warehouse-sections/${id}/initialize`,
       payload
     ).pipe(
       tap(response => {

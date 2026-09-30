@@ -279,22 +279,27 @@
           </div>
         </div>
 
-        <!-- ── BLOQUE 3: TABLA 1: CRITERIOS DE PRODUCTO (8 CRITERIOS) ── -->
+        <!-- ── BLOQUE 3: TABLA 1: CRITERIOS DE PRODUCTO (CONDICIONES GENERALES VISUALES) ── -->
         <div class="form-block-section">
-          <div class="form-block-header">
-            <span class="material-symbols-outlined icon-small text-emerald-600">checklist</span>
-            <h4>1. Criterios de Producto (Condiciones Generales Visuales)</h4>
+          <div class="form-block-header flex justify-between items-center">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined icon-small text-emerald-600">checklist</span>
+              <h4>1. Condiciones Generales Visuales — Criterios de Producto</h4>
+            </div>
+            <span class="text-xs font-semibold text-slate-500">Instrucciones: Marcar con una ✓ según corresponda o n/a.</span>
           </div>
 
           <div class="table-responsive">
             <table class="criteria-interactive-table">
               <thead>
                 <tr>
-                  <th style="width: 35%;">Criterio a Evaluar</th>
-                  <th style="width: 15%; text-align: center;">Evaluación</th>
-                  <th style="width: 25%;">Acción Normativa</th>
+                  <th style="width: 36%;">Criterios de Producto</th>
+                  <th style="width: 6%; text-align: center;">SI</th>
+                  <th style="width: 6%; text-align: center;">NO</th>
+                  <th style="width: 6%; text-align: center;">N/A</th>
+                  <th style="width: 26%;">Acción</th>
                   <th style="width: 10%;">Responsable</th>
-                  <th style="width: 15%;">Observaciones</th>
+                  <th style="width: 10%;">Observaciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,40 +315,47 @@
                       </div>
                     </td>
 
-                    <!-- Evaluación SI / NO / N/A -->
+                    <!-- SI -->
                     <td class="text-center">
-                      <div class="val-btn-group">
-                        <button
-                          type="button"
-                          class="val-btn val-btn--si"
-                          [class.is-active]="crit.value === 'SI'"
-                          (click)="setProductCriterionValue(crit.id, 'SI')"
-                        >SI</button>
+                      <button
+                        type="button"
+                        class="val-btn val-btn--si"
+                        [class.is-active]="crit.value === 'SI'"
+                        (click)="setProductCriterionValue(crit.id, 'SI')"
+                        title="Cumple (SI)"
+                      >✓</button>
+                    </td>
 
-                        <button
-                          type="button"
-                          class="val-btn val-btn--no"
-                          [class.is-active]="crit.value === 'NO'"
-                          (click)="setProductCriterionValue(crit.id, 'NO')"
-                        >NO</button>
+                    <!-- NO -->
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        class="val-btn val-btn--no"
+                        [class.is-active]="crit.value === 'NO'"
+                        (click)="setProductCriterionValue(crit.id, 'NO')"
+                        title="No cumple (NO)"
+                      >✕</button>
+                    </td>
 
-                        <button
-                          type="button"
-                          class="val-btn val-btn--na"
-                          [class.is-active]="crit.value === 'NA'"
-                          (click)="setProductCriterionValue(crit.id, 'NA')"
-                        >N/A</button>
-                      </div>
+                    <!-- N/A -->
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        class="val-btn val-btn--na"
+                        [class.is-active]="crit.value === 'NA'"
+                        (click)="setProductCriterionValue(crit.id, 'NA')"
+                        title="No aplica (N/A)"
+                      >–</button>
                     </td>
 
                     <!-- Acción -->
                     <td>
-                      <span class="action-text">{{ crit.actionIfNo }}</span>
+                      <span class="action-text">{{ crit.actionIfNo || '–' }}</span>
                     </td>
 
                     <!-- Responsable -->
                     <td>
-                      <span class="resp-text">{{ crit.responsible }}</span>
+                      <span class="resp-text">{{ crit.responsible || '–' }}</span>
                     </td>
 
                     <!-- Observaciones -->
@@ -363,22 +375,27 @@
           </div>
         </div>
 
-        <!-- ── BLOQUE 4: TABLA 2: CRITERIOS DE TRANSPORTE (9 CRITERIOS) ── -->
+        <!-- ── BLOQUE 4: TABLA 2: CRITERIOS DE TRANSPORTE ── -->
         <div class="form-block-section">
-          <div class="form-block-header">
-            <span class="material-symbols-outlined icon-small text-info">local_shipping</span>
-            <h4>2. Criterios de Transporte (Unidad / Caja / Tracto)</h4>
+          <div class="form-block-header flex justify-between items-center">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined icon-small text-info">local_shipping</span>
+              <h4>2. Criterios de Transporte (Unidad / Caja / Tracto)</h4>
+            </div>
+            <span class="text-xs font-semibold text-slate-500">Inspección física y plagas</span>
           </div>
 
           <div class="table-responsive">
             <table class="criteria-interactive-table">
               <thead>
                 <tr>
-                  <th style="width: 35%;">Criterio de Transporte</th>
-                  <th style="width: 15%; text-align: center;">Evaluación</th>
-                  <th style="width: 25%;">Acción Normativa</th>
+                  <th style="width: 36%;">Criterios de Transporte</th>
+                  <th style="width: 6%; text-align: center;">SI</th>
+                  <th style="width: 6%; text-align: center;">NO</th>
+                  <th style="width: 6%; text-align: center;">N/A</th>
+                  <th style="width: 26%;">Acción</th>
                   <th style="width: 10%;">Responsable</th>
-                  <th style="width: 15%;">Observaciones</th>
+                  <th style="width: 10%;">Observaciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -389,40 +406,47 @@
                       <strong class="criterion-main-label">{{ crit.label }}</strong>
                     </td>
 
-                    <!-- Evaluación SI / NO / N/A -->
+                    <!-- SI -->
                     <td class="text-center">
-                      <div class="val-btn-group">
-                        <button
-                          type="button"
-                          class="val-btn val-btn--si"
-                          [class.is-active]="crit.value === 'SI'"
-                          (click)="setTransportCriterionValue(crit.id, 'SI')"
-                        >SI</button>
+                      <button
+                        type="button"
+                        class="val-btn val-btn--si"
+                        [class.is-active]="crit.value === 'SI'"
+                        (click)="setTransportCriterionValue(crit.id, 'SI')"
+                        title="Cumple (SI)"
+                      >✓</button>
+                    </td>
 
-                        <button
-                          type="button"
-                          class="val-btn val-btn--no"
-                          [class.is-active]="crit.value === 'NO'"
-                          (click)="setTransportCriterionValue(crit.id, 'NO')"
-                        >NO</button>
+                    <!-- NO -->
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        class="val-btn val-btn--no"
+                        [class.is-active]="crit.value === 'NO'"
+                        (click)="setTransportCriterionValue(crit.id, 'NO')"
+                        title="No cumple (NO)"
+                      >✕</button>
+                    </td>
 
-                        <button
-                          type="button"
-                          class="val-btn val-btn--na"
-                          [class.is-active]="crit.value === 'NA'"
-                          (click)="setTransportCriterionValue(crit.id, 'NA')"
-                        >N/A</button>
-                      </div>
+                    <!-- N/A -->
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        class="val-btn val-btn--na"
+                        [class.is-active]="crit.value === 'NA'"
+                        (click)="setTransportCriterionValue(crit.id, 'NA')"
+                        title="No aplica (N/A)"
+                      >–</button>
                     </td>
 
                     <!-- Acción -->
                     <td>
-                      <span class="action-text">{{ crit.actionIfNo }}</span>
+                      <span class="action-text">{{ crit.actionIfNo || '–' }}</span>
                     </td>
 
                     <!-- Responsable -->
                     <td>
-                      <span class="resp-text">{{ crit.responsible }}</span>
+                      <span class="resp-text">{{ crit.responsible || '–' }}</span>
                     </td>
 
                     <!-- Observaciones -->

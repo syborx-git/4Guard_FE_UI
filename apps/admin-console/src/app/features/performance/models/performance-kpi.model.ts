@@ -252,3 +252,188 @@ export const FREQUENCY_UNIT_LABELS: Record<FrequencyUnit, string> = {
   HOURS:   'Horas',
   DAYS:    'Días',
 };
+
+// ─── Modelos de Analítica y Rendimiento (HU-9 / HU-141 / HU-159) ─────────────
+
+export interface ExecutiveKpiData {
+  branchId?: string;
+  branchName: string;
+  warehouseOccupancyPercentage: number;
+  inventoryAccuracyPercentage: number;
+  onTimeDeliveryPercentage: number;
+  avgDockToStockHours: number;
+  avgOrderCycleHours: number;
+  totalReceptionsToday: number;
+  totalOutboundsToday: number;
+  totalMovementsToday: number;
+  activeIncidencesCount: number;
+  lastCalculatedAt: string;
+}
+
+export interface RampUsageMetric {
+  rampId: string;
+  rampCode: string;
+  operationsCount: number;
+  avgStayMinutes: number;
+  status: string;
+}
+
+export interface InboundProcessTimesData {
+  branchId?: string;
+  totalReceptions: number;
+  totalPiecesReceived: number;
+  avgUnloadMinutes: number;
+  minUnloadMinutes: number;
+  maxUnloadMinutes: number;
+  rampMetrics: RampUsageMetric[];
+}
+
+export interface OperatorProductivityData {
+  operatorId: string;
+  operatorCode: string;
+  fullName: string;
+  jobTitle: string;
+  licenseNumberDc3: string;
+  licenseStatus: string;
+  shiftId?: string;
+  shiftName: string;
+  receptionsHandled: number;
+  transfersCompleted: number;
+  outboundsDispatched: number;
+  totalMovements: number;
+  shiftEffectiveHours: number;
+  movementsPerHour: number;
+  targetMovements?: number;
+  shiftCompliancePercentage?: number;
+  performanceBadge: 'OPTIMAL' | 'WARNING' | 'CRITICAL';
+}
+
+export interface ShiftProductivityData {
+  shiftId: string;
+  shiftName: string;
+  timeRange: string;
+  activeOperatorsCount: number;
+  totalMovements: number;
+  avgMovementsPerHour: number;
+  targetPph: number;
+  compliancePercentage: number;
+  status: 'OPTIMAL' | 'WARNING' | 'CRITICAL';
+}
+
+export interface ProcessFlowTimesData {
+  processName: string;
+  initialMilestone: string;
+  finalMilestone: string;
+  averageDurationMinutes: number;
+  targetStandardMinutes: number;
+  compliancePercentage: number;
+  status: 'OPTIMAL' | 'WARNING' | 'CRITICAL';
+}
+
+// ─── Requerimientos de Pablo (Circuito Delicado, Trazabilidad & Candados) ─────
+
+export interface DriverPerformanceDetail {
+  driverId: string;
+  driverName: string;
+  driverLicense: string;
+  assignedVehiclePlates: string;
+  totalTripsMonth: number;
+  totalPalletsMoved: number;
+  totalPiecesMoved: number;
+  avgTurnaroundHours: number;
+  boxRotationCount: number;
+  status: 'ACTIVO' | 'EN_RUTA' | 'DISPONIBLE' | 'INACTIVO';
+}
+
+export interface VehiclePerformanceDetail {
+  vehicleId: string;
+  economicNumber: string;
+  tractorPlates: string;
+  transportType: string;
+  assignedDriverName: string;
+  tripsCount: number;
+  boxesTowedCount: number;
+  totalPieces: number;
+  operatingHours: number;
+  status: 'EN_RUTA' | 'EN_PATIO' | 'EN_MANTENIMIENTO';
+}
+
+export interface CircuitoDelicadoSummary {
+  totalTripsMonth: number;
+  activeUnitsCount: number;
+  activeDriversCount: number;
+  avgTurnaroundHours: number;
+  totalPalletsMoved: number;
+  totalPiecesMoved: number;
+  drivers: DriverPerformanceDetail[];
+  vehicles: VehiclePerformanceDetail[];
+}
+
+export interface QualityLocksStatus {
+  f01ChecklistApprovedCount: number;
+  f01PendingCount: number;
+  weightValidationPassedCount: number;
+  weightValidationFailedCount: number;
+  allLocksEnforced: boolean;
+}
+
+export interface GateToGateCycleData {
+  gateQrPreCheckinAvgMinutes: number;
+  gateToDockAvgMinutes: number;
+  dockOperationAvgMinutes: number;
+  dockToExitAvgMinutes: number;
+  totalGateToGateAvgMinutes: number;
+  targetGateToGateMinutes: number;
+  compliancePercentage: number;
+  qualityLocks: QualityLocksStatus;
+}
+
+export interface MovementAuditTimelineItem {
+  eventId: string;
+  timestamp: string;
+  operatorId?: string;
+  operatorName: string;
+  operatorCode: string;
+  operationType: string;
+  folio: string;
+  sscc: string;
+  sourceLocation: string;
+  targetLocation: string;
+  durationSeconds: number;
+  qualityLockStatus: string;
+  status: string;
+  details: string;
+}
+
+export interface ExportJobResponse {
+  jobId: string;
+  reportType: string;
+  status: string;
+  downloadUrl: string;
+  createdAt: string;
+  message: string;
+}
+
+export interface OperationalUserTargets {
+  targetOccupancyPercentage: number;   // default 85%
+  targetIraPercentage: number;         // default 99.5%
+  targetOtifPercentage: number;        // default 98.0%
+  targetDockToStockHours: number;      // default 2.0 hrs
+  targetOrderCycleHours: number;       // default 4.0 hrs
+  targetForkliftPph: number;           // default 6.0 PPH
+  targetInboundUnloadMinutes: number;  // default 45 min
+  targetGateToGateMinutes: number;     // default 120 min
+}
+
+export const DEFAULT_OPERATIONAL_TARGETS: OperationalUserTargets = {
+  targetOccupancyPercentage: 85.0,
+  targetIraPercentage: 99.5,
+  targetOtifPercentage: 98.0,
+  targetDockToStockHours: 2.0,
+  targetOrderCycleHours: 4.0,
+  targetForkliftPph: 6.0,
+  targetInboundUnloadMinutes: 45.0,
+  targetGateToGateMinutes: 120.0,
+};
+
+

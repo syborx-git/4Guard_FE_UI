@@ -54,6 +54,40 @@
   --radius-btn:     10px;
 }
 
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --bg-page:        #0b1119;
+  --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-hover:  rgba(23, 35, 50, 0.98);
+  --border-card:    rgba(255, 255, 255, 0.08);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #edf1f5;
+  --text-secondary: #9aa6b4;
+  --text-muted:     #667585;
+  --text-gold:      #d0af67;
+
+  --navy:           #dfe7ef;
+  --navy-mid:       #16212f;
+  --navy-light:     #1f2d3e;
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+
+  --c-success:      #67c78b;
+  --c-success-bg:   rgba(76, 175, 112, 0.12);
+  --c-success-bdr:  rgba(76, 175, 112, 0.24);
+  --c-warning:      #e0aa4f;
+  --c-warning-bg:   rgba(224, 170, 79, 0.12);
+  --c-warning-bdr:  rgba(224, 170, 79, 0.24);
+  --c-danger:       #ef7773;
+  --c-danger-bg:    rgba(239, 83, 80, 0.12);
+  --c-danger-bdr:   rgba(239, 83, 80, 0.24);
+  --c-info:         #77a8df;
+  --c-info-bg:      rgba(96, 165, 250, 0.12);
+}
+
 /* ─────────────────────────────────────────────────────────────
    PÁGINA
    ───────────────────────────────────────────────────────────── */
@@ -1459,3 +1493,66 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Topología & Estiba Setup Card ────────────────────────── */
+.sections-setup-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+}
+
+.sections-setup-card__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sections-setup-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #94A3B8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  width: fit-content;
+}
+
+.sections-setup-card__badge--loaded {
+  background: rgba(0, 137, 123, 0.15);
+  color: #00897B;
+  border-color: rgba(0, 137, 123, 0.35);
+}
+
+.sections-setup-card__badge .material-symbols-outlined {
+  font-size: 15px;
+}
+
+.sections-setup-card__details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.sections-setup-card__stat strong {
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.sections-setup-card__sep {
+  color: #94A3B8;
+}
+

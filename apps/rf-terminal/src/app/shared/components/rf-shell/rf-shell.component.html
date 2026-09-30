@@ -4,7 +4,7 @@
 <div class="rf-shell">
 
   <!-- ── 1. Top Industrial Header ──────────────────────────────── -->
-  <header class="rf-header" role="banner">
+  <header class="rf-header" [class.rf-header--scrolled]="isScrolled()" role="banner">
     <!-- Brand / Title -->
     <div class="rf-header__brand">
       <a routerLink="/menu" class="rf-header__logo" aria-label="Ir al Menú Principal">
@@ -16,8 +16,17 @@
       </a>
     </div>
 
-    <!-- Central Status / Zone Lease Status (HU-155) -->
+    <!-- Central Status / Clock / Zone Lease Status -->
     <div class="rf-header__status-bar">
+      <!-- Live Global Clock Widget (Fecha y Hora Oficial en Vivo) -->
+      <div class="header-clock-widget" title="Fecha y Hora Oficial del Sistema en Vivo">
+        <span class="material-symbols-outlined clock-icon">schedule</span>
+        <div class="clock-text-wrap">
+          <span class="clock-time font-mono">{{ formattedTime() }}</span>
+          <span class="clock-date">{{ formattedDate() }}</span>
+        </div>
+      </div>
+
       <!-- Zone Lease Badge -->
       <div 
         class="lease-badge" 
@@ -42,7 +51,7 @@
       }
     </div>
 
-    <!-- Right Controls: Theme Switcher + Scan Simulator + User Avatar -->
+    <!-- Right Controls: Theme Switcher + Scan Simulator + User Avatar Menu -->
     <div class="rf-header__actions">
       <!-- Fast Scan Simulator Trigger -->
       <button 
@@ -66,17 +75,30 @@
         </span>
       </button>
 
-      <!-- User Operator Avatar / Badge -->
-      <div class="operator-chip" routerLink="/menu" title="Operador en Turno">
+      <!-- User Operator Avatar / Profile Menu Trigger -->
+      <button
+        type="button"
+        class="operator-chip"
+        [class.operator-chip--active]="showProfileMenu()"
+        (click)="toggleProfileMenu()"
+        title="Ver Perfil de Usuario y Opciones de Sesión"
+        aria-haspopup="true"
+        [attr.aria-expanded]="showProfileMenu()">
         <div class="operator-avatar">
-          {{ authState.userInitials() || 'AG' }}
+          {{ displayUserInitials() }}
         </div>
-      </div>
+      </button>
     </div>
   </header>
+ 
+  <!-- ── Banner Global de Conectividad, Cola IndexedDB & Zone Lease ── -->
+  <fg-rf-offline-banner></fg-rf-offline-banner>
+
+  <!-- ── Contenedor Global de Toasts y Notificaciones de Transacciones ── -->
+  <fg-rf-toast-container></fg-rf-toast-container>
 
   <!-- ── 2. Main Content Area (Router Outlet) ──────────────────── -->
-  <main class="rf-shell__main" role="main">
+  <main class="rf-shell__main" role="main" (scroll)="onMainScroll($event)">
     <router-outlet />
   </main>
 
@@ -148,13 +170,111 @@
               id="custom-barcode" 
               type="text" 
               [(ngModel)]="simulatedBarcode" 
-              placeholder="Ingresa código o SSCC..." 
-              class="custom-input" />
-            <button type="button" class="custom-fire-btn" (click)="triggerSimulatedScan(simulatedBarcode())">
-              <span class="material-symbols-outlined">bolt</span>
-              Disparar
+              placeholder="Escribe un código o folio..."
+              class="custom-barcode-input"
+              (keyup.enter)="triggerSimulatedScan(simulatedBarcode())" />
+            <button 
+              type="button" 
+              class="btn-trigger-custom" 
+              (click)="triggerSimulatedScan(simulatedBarcode())">
+              <span class="material-symbols-outlined">send</span>
+              <span>Disparar</span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 5. Menú Desplegable de Perfil de Usuario & Sesión ──────── -->
+  @if (showProfileMenu()) {
+    <div class="profile-menu-backdrop" (click)="closeProfileMenu()">
+      <div class="profile-popover" (click)="$event.stopPropagation()" role="dialog" aria-label="Perfil del Operador">
+        
+        <!-- Header con Avatar, Nombre, Usuario, Rol y Botón de Cerrar -->
+        <div class="profile-popover__header">
+          <div class="profile-avatar-large">
+            <span>{{ displayUserInitials() }}</span>
+            <span class="avatar-status-dot" title="Usuario en Línea"></span>
+          </div>
+          <div class="profile-user-info">
+            <div class="profile-title-row">
+              <h3 class="profile-name">{{ displayUserName() }}</h3>
+              <button 
+                type="button" 
+                class="profile-close-btn" 
+                (click)="closeProfileMenu()" 
+                aria-label="Cerrar ventana de perfil"
+                title="Cerrar ventana">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <span class="profile-username">&#64;{{ displayUsername() }}</span>
+            <div class="profile-role-badge">
+              <span class="material-symbols-outlined text-xs">verified_user</span>
+              <span>{{ displayRole() }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metadatos de Sesión y Dispositivo -->
+        <div class="profile-meta-grid">
+          <div class="profile-meta-item">
+            <span class="meta-label">CEDIS / Planta:</span>
+            <strong class="meta-value truncate">{{ displayBranch() }}</strong>
+          </div>
+          <div class="profile-meta-item">
+            <span class="meta-label">Dispositivo:</span>
+            <strong class="meta-value font-mono">📱 Zebra TC52 (T-04)</strong>
+          </div>
+          <div class="profile-meta-item">
+            <span class="meta-label">Zona Asignada:</span>
+            <strong class="meta-value font-mono meta-value--highlight">🔒 {{ activeZoneName() }} ({{ leaseMinutesLeft() }}m)</strong>
+          </div>
+          <div class="profile-meta-item">
+            <span class="meta-label">Estado de Red:</span>
+            <strong class="meta-value meta-value--highlight">📶 En Línea / Sincronizado</strong>
+          </div>
+        </div>
+
+        <!-- Botón de Cierre de Sesión -->
+        <div class="profile-popover__footer">
+          <button type="button" class="btn-logout-trigger" (click)="openLogoutConfirm()">
+            <span class="material-symbols-outlined">logout</span>
+            <span>Cerrar Sesión del Terminal</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 6. Modal de Confirmación de Cierre de Sesión ─────────── -->
+  @if (showLogoutConfirmModal()) {
+    <div class="scan-modal-backdrop" (click)="closeLogoutConfirmModal()">
+      <div class="scan-modal scan-modal--sm animate-scale-in" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="scan-modal__header">
+          <div class="modal-title-wrap">
+            <span class="material-symbols-outlined modal-icon text-rose-500">logout</span>
+            <h2 class="scan-modal__title">¿Cerrar Sesión del Turno?</h2>
+          </div>
+          <button type="button" class="modal-close-btn" (click)="closeLogoutConfirmModal()" aria-label="Cerrar modal">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <p class="scan-modal__desc">
+          Se cerrará la sesión activa para <strong>{{ displayUserName() }}</strong> (&#64;{{ displayUsername() }}). Los datos sincronizados quedarán seguros en el servidor.
+        </p>
+
+        <div class="modal-actions-row">
+          <button type="button" class="btn-modal-cancel" (click)="closeLogoutConfirmModal()">
+            Cancelar
+          </button>
+          <button type="button" class="btn-modal-danger" (click)="confirmLogout()">
+            <span class="material-symbols-outlined text-sm">exit_to_app</span>
+            <span>Cerrar Sesión</span>
+          </button>
         </div>
       </div>
     </div>

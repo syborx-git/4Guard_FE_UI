@@ -93,6 +93,9 @@ export class WarehouseMovementsService {
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
 
+  // Consecutivo Global de Tarimas (Continuidad estricta entre remisiones y recepciones)
+  private readonly globalMaxPalletNumberSignal = signal<number>(0);
+
   // Readonly Computed Public Exposures
   readonly receptions = this.receptionsSignal.asReadonly();
   readonly pendingReceptions = computed(() =>
@@ -104,6 +107,7 @@ export class WarehouseMovementsService {
   readonly outbounds = this.outboundsSignal.asReadonly();
   readonly locations = this.locationsSignal.asReadonly();
   readonly inventoryBatches = this.inventoryBatchesSignal.asReadonly();
+  readonly globalMaxPalletNumber = this.globalMaxPalletNumberSignal.asReadonly();
 
   // KPIs de Salidas de Almacén (Outbound)
   readonly kpiTotalOutbounds = computed(() => this.outboundsSignal().length);
@@ -269,10 +273,44 @@ export class WarehouseMovementsService {
   readonly transferReasons = TRANSFER_REASONS;
 
   constructor() {
+    try {
+      const cachedMax = localStorage.getItem('4g_global_max_pallet_number');
+      if (cachedMax) {
+        const num = parseInt(cachedMax, 10);
+        if (!isNaN(num) && num > 0) {
+          this.globalMaxPalletNumberSignal.set(num);
+        }
+      }
+    } catch (_) {}
     this.loadInitialBackendData();
   }
 
+  public syncGlobalMaxPalletNumber(): void {
+    this.movementsApi.getNextPalletNumber().subscribe({
+      next: (res: any) => {
+        if (res && res.lastPalletNumber != null) {
+          const lastNum = Number(res.lastPalletNumber);
+          this.updateGlobalMaxPalletNumber(lastNum);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  public updateGlobalMaxPalletNumber(num: number): void {
+    if (num && Number(num) > this.globalMaxPalletNumberSignal()) {
+      const val = Number(num);
+      this.globalMaxPalletNumberSignal.set(val);
+      try {
+        localStorage.setItem('4g_global_max_pallet_number', String(val));
+      } catch (_) {}
+    }
+  }
+
   public loadInitialBackendData(): void {
+    // 0. Sincronizar consecutivo global de tarimas
+    this.syncGlobalMaxPalletNumber();
+
     // 1. Clientes
     this.movementsApi.getClients().subscribe({
       next: (clients: any) => {
@@ -304,13 +342,21 @@ export class WarehouseMovementsService {
     this.reloadSuppliers();
 
     // 3. Montacarguistas
+    this.forkliftAdminService.loadOperators().subscribe({
+      next: () => {},
+      error: () => {},
+    });
+
     this.movementsApi.getForkliftOperators().subscribe({
       next: (ops: any) => {
         if (ops && ops.length > 0) {
           this.forkliftOperatorsSignal.set(
             ops.map((o: any) => ({
-              code: o.id || o.code,
+              id: o.id,
+              code: (o.code && !o.code.includes('-') && o.code.length <= 10) ? o.code : (o.licenseNumberDc3 || 'MC'),
               name: o.fullName || `${o.firstName || ''} ${o.lastNamePaternal || o.lastName || ''} ${o.lastNameMaternal || ''}`.trim() || o.name || 'Montacarguista',
+              jobTitle: o.jobTitle || 'Montacarguista',
+              shift: o.shift || (o as any).shiftName || 'Turno General',
             }))
           );
         }
@@ -399,6 +445,7 @@ export class WarehouseMovementsService {
               palletTypeId: 'ESTANDAR',
               palletTypeLabel: 'Estándar',
               locationCode: it.locationCode || 'N/A',
+              inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
             })),
             totalPallets: o.totalPallets || 0,
             totalPieces: o.totalPieces || 0,
@@ -437,8 +484,9 @@ export class WarehouseMovementsService {
         if (sups && sups.length > 0) {
           this.suppliersSignal.set(
             sups.map((s: any) => ({
-              code: s.id || s.code,
-              name: s.legalName || s.commercialName || s.tradeName || s.name,
+              id: s.id,
+              code: (s.code && !s.code.includes('-') && s.code.length <= 15) ? s.code : (s.supplierCode || 'PROV'),
+              name: s.commercialName || s.legalName || s.tradeName || s.name || s.businessName || 'Proveedor',
             }))
           );
         }
@@ -484,6 +532,7 @@ export class WarehouseMovementsService {
             isFifoSuggested: !!b.isFifoSuggested,
             pallets: (b.pallets || []).map((p: any) => ({
               id: p.itemId || p.id,
+              palletNumber: p.palletNumber,
               palletCode: p.palletCode || p.sscc || '',
               description: p.description || b.productName || '',
               productId: p.skuCode || b.skuCode || b.productId || '',
@@ -493,6 +542,7 @@ export class WarehouseMovementsService {
               locationCode: p.locationCode || b.locationCode || 'N/A',
               lotNumber: p.lotNumber || b.lotNumber || '',
               expirationDate: p.expirationDate || b.expirationDate || '',
+              docNumber: rem || b.remisionNo || p.docNumber || p.sapFolio || '',
             })),
           };
         });
@@ -521,6 +571,7 @@ export class WarehouseMovementsService {
   }
 
   public reloadReceptions(): void {
+    this.syncGlobalMaxPalletNumber();
     this.movementsApi.getReceptions().subscribe({
       next: (receptions: any) => {
         const mapped = (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r));
@@ -539,6 +590,9 @@ export class WarehouseMovementsService {
           }
         }
         this.receptionsSignal.set(unique);
+        if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
+          this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
+        }
       },
       error: () => {},
     });
@@ -624,7 +678,27 @@ export class WarehouseMovementsService {
             outboundDate: o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-MX') : '',
             outboundTime: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '',
             authorizedBy: o.createdBy || '',
-            items: [],
+            items: (o.items || []).map((it: any) => ({
+              id: it.id || it.itemId,
+              palletCode: it.palletCode,
+              productId: it.skuCode || it.productId || '',
+              description: it.skuDescription || it.description || '',
+              lotNumber: it.lotNumber || '',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : '',
+              pieces: it.pieces || 0,
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              locationCode: it.locationCode || 'N/A',
+              inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
+            })),
+            totalPallets: o.totalPallets || (o.items ? o.items.length : 0),
+            totalPieces: o.totalPieces || (o.items ? o.items.reduce((acc: number, it: any) => acc + (it.pieces || 0), 0) : 0),
+            distinctSkus: o.distinctSkus || 0,
+            completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
+            leaderAuthorizedBy: o.leaderAuthorizedBy || '',
+            dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+            dispatchedBy: o.createdBy || 'Admin',
+            timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
           }))
         );
       },
@@ -687,15 +761,19 @@ export class WarehouseMovementsService {
 
           const palletItem: ReceptionPalletItem = {
             id: p.itemId || p.id, // UUID real del item en wms.inventory_items
+            palletNumber: p.palletNumber || p.positionNumber || undefined,
             palletCode: p.palletCode || p.sscc || `UA-${p.itemId?.substring(0, 8) || '001'}`,
-            productId: p.skuCode || b.skuCode || '',
+            productId: p.productId || p.skuCode || b.productId || b.skuCode || '',
             description: p.description || b.productName || '',
-            supplierName: b.clientName || 'Cliente WMS',
+            supplierName: p.supplierName || b.clientName || b.client || 'Cliente WMS',
             pieces: Number(p.pieces || b.totalPieces || 0),
             palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
             palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
             observations: p.observations || '',
             status: 'SCANNED',
+            lotNumber: p.lotNumber || b.lotNumber || '',
+            expirationDate: p.expirationDate || b.expirationDate || '',
+            docNumber: p.docNumber || b.remisionNo || '',
           };
 
           locMap[locCode].pallets.push(palletItem);
@@ -703,7 +781,77 @@ export class WarehouseMovementsService {
       });
     }
 
-    // 3. Recalcular totalizadores para cada ubicación
+    // 3. Enriquecer con datos exactos desde recepciones activas (palletNumber, lote, docNumber, etc.)
+    const activeReceptions = this.receptionsSignal();
+    const receptionPalletByCode = new Map<string, any>();
+    const receptionPalletById = new Map<string, any>();
+
+    activeReceptions.forEach((r: any) => {
+      if (r.status !== 'CANCELLED' && r.pallets && r.pallets.length > 0) {
+        r.pallets.forEach((rp: any) => {
+          const checkInDoc = r.checkIn?.docNumber || r.remisionNo || '';
+          if (rp.palletCode) {
+            receptionPalletByCode.set(rp.palletCode.toUpperCase().trim(), { ...rp, checkInDoc, rec: r });
+          }
+          if (rp.supplierUaCode) {
+            receptionPalletByCode.set(rp.supplierUaCode.toUpperCase().trim(), { ...rp, checkInDoc, rec: r });
+          }
+          if (rp.internalUaCode) {
+            receptionPalletByCode.set(rp.internalUaCode.toUpperCase().trim(), { ...rp, checkInDoc, rec: r });
+          }
+          if (rp.id) {
+            receptionPalletById.set(rp.id, { ...rp, checkInDoc, rec: r });
+          }
+        });
+      }
+    });
+
+    Object.values(locMap).forEach((loc) => {
+      loc.pallets.forEach((pallet) => {
+        const codeKey = (pallet.palletCode || '').toUpperCase().trim();
+        const match = (codeKey ? receptionPalletByCode.get(codeKey) : undefined) ||
+                      (pallet.id ? receptionPalletById.get(pallet.id) : undefined);
+
+        if (match) {
+          if (match.palletNumber != null) {
+            pallet.palletNumber = match.palletNumber;
+          }
+          if (!pallet.lotNumber || pallet.lotNumber === 'N/A' || pallet.lotNumber === 'S/L') {
+            if (match.lotNumber) pallet.lotNumber = match.lotNumber;
+            else if (match.rec?.lotNumber) pallet.lotNumber = match.rec.lotNumber;
+          }
+          if (!pallet.expirationDate || pallet.expirationDate === 'N/A') {
+            if (match.expirationDate) pallet.expirationDate = match.expirationDate;
+            else if (match.rec?.expirationDate) pallet.expirationDate = match.rec.expirationDate;
+          }
+          if (!pallet.docNumber || pallet.docNumber === '-' || pallet.docNumber === 'REM-0000') {
+            if (match.docNumber) pallet.docNumber = match.docNumber;
+            else if (match.checkInDoc) pallet.docNumber = match.checkInDoc;
+          }
+          if ((!pallet.supplierName || pallet.supplierName === 'Cliente WMS') && (match.supplierName || match.rec?.supplier || match.rec?.clientName)) {
+            pallet.supplierName = match.supplierName || match.rec?.clientName || match.rec?.supplier;
+          }
+          if ((!pallet.description || pallet.description === 'Producto') && (match.description || match.rec?.productName)) {
+            pallet.description = match.description || match.rec?.productName;
+          }
+          if (!pallet.productId && (match.productId || match.rec?.skuCode)) {
+            pallet.productId = match.productId || match.rec?.skuCode;
+          }
+        }
+      });
+
+      // Ordenar las tarimas en la bahía de manera consistente y determinista por palletNumber ascendente, NUNCA por código de UA
+      loc.pallets.sort((a, b) => {
+        if (a.palletNumber != null && b.palletNumber != null) {
+          return a.palletNumber - b.palletNumber;
+        }
+        if (a.palletNumber != null) return -1;
+        if (b.palletNumber != null) return 1;
+        return 0;
+      });
+    });
+
+    // 4. Recalcular totalizadores para cada ubicación
     Object.values(locMap).forEach((loc) => {
       loc.totalPallets = loc.pallets.length;
       loc.totalPieces = loc.pallets.reduce((acc, p) => acc + (p.pieces || 0), 0);
@@ -876,7 +1024,16 @@ export class WarehouseMovementsService {
       origin: 'Ubicación Origen',
       targetLocation: 'Ubicación Destino',
       target_location: 'Ubicación Destino',
-      destination: 'Ubicación Destino',
+      destination: 'Planta / Destino',
+      destinationName: 'Planta / Destino',
+      destinationId: 'Planta / Destino',
+      plant: 'Planta / Destino',
+      ramp: 'Rampa Asignada',
+      rampId: 'Rampa Asignada',
+      rampCode: 'Rampa Asignada',
+      rampNumber: 'Rampa Asignada',
+      economicNumber: 'No. Económico Tractor',
+      boxEconomicNumber: 'No. Económico Caja',
       palletCode: 'Código de Tarima (UA)',
       pallet_code: 'Código de Tarima (UA)',
       lotNumber: 'Número de Lote',
@@ -956,9 +1113,9 @@ export class WarehouseMovementsService {
       ? carrierItem.code
       : (isUuid(data.carrierLineCode) ? data.carrierLineCode : null);
 
-    const opItem = this.forkliftOperatorsSignal().find((o) => o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
-    const forkliftOperatorId = (opItem && isUuid(opItem.code))
-      ? opItem.code
+    const opItem = this.forkliftOperators().find((o) => o.id === data.forkliftOperatorCode || o.code === data.forkliftOperatorCode || o.name === data.forkliftOperator);
+    const forkliftOperatorId = (opItem && opItem.id && isUuid(opItem.id))
+      ? opItem.id
       : (isUuid(data.forkliftOperatorCode) ? data.forkliftOperatorCode : null);
 
     const rampItem = this.rampsSignal().find(
@@ -1078,6 +1235,9 @@ export class WarehouseMovementsService {
             palletTypeId: p.palletType,
             status: p.status,
             observations: p.observations,
+            lotNumber: p.lotNumber || res.lotNumber || '',
+            expirationDate: p.expirationDate || res.expirationDate || '',
+            docNumber: p.docNumber || p.remisionNo || res.docNumber || data.docNumber || '',
           })),
           createdAt: res.createdAt ? String(res.createdAt).substring(11, 16) : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
           capturedBy: res.createdBy || 'Caseta de Seguridad',
@@ -1228,9 +1388,19 @@ export class WarehouseMovementsService {
     );
   }
 
-  // Obtiene el número consecutivo máximo de tarimas registrado entre todas las recepciones cargadas
+  // Obtiene el número consecutivo máximo de tarimas registrado entre todas las recepciones cargadas, inventario y backend
   getGlobalMaxPalletNumber(): number {
-    let maxNum = 0;
+    let maxNum = this.globalMaxPalletNumberSignal();
+    try {
+      const stored = localStorage.getItem('4g_global_max_pallet_number');
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed > maxNum) {
+          maxNum = parsed;
+        }
+      }
+    } catch (_) {}
+
     const list = this.receptionsSignal();
     for (const r of list) {
       if (r.pallets && Array.isArray(r.pallets)) {
@@ -1241,27 +1411,27 @@ export class WarehouseMovementsService {
         }
       }
     }
+
+    const batches = this.inventoryBatchesSignal();
+    for (const b of batches) {
+      if (b.pallets && Array.isArray(b.pallets)) {
+        for (const p of b.pallets) {
+          if ((p as any).palletNumber && Number((p as any).palletNumber) > maxNum) {
+            maxNum = Number((p as any).palletNumber);
+          }
+        }
+      }
+    }
+
+    if (maxNum > this.globalMaxPalletNumberSignal()) {
+      this.updateGlobalMaxPalletNumber(maxNum);
+    }
     return maxNum;
   }
 
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
     if (!r) return {} as ReceptionHeader;
-    const hasSkuOrPallets = !!(r.skuId || r.skuCode || r.productSku || r.productId || (r.pallets && r.pallets.length > 0));
-    const pType = hasSkuOrPallets ? ((r.palletType as PalletType) || (r.selectedPalletType as PalletType) || ('' as any)) : ('' as any);
-    const pallets = (r.pallets || []).map((p: any) => ({
-      id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
-      palletNumber: p.palletNumber,
-      palletCode: p.palletCode || p.sscc || '',
-      productId: p.skuCode || r.skuCode || r.productId || '',
-      description: p.description || p.productDescription || r.productName || '',
-      supplierName: p.supplierName || r.supplierName || '',
-      pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
-      palletTypeId: p.palletTypeId || p.palletType || pType || 'MADERA_ESTANDAR',
-      palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
-      observations: p.observations || '',
-      status: p.status || 'SCANNED',
-    }));
 
     const resolvedDoc =
       r.docNumber ||
@@ -1272,6 +1442,43 @@ export class WarehouseMovementsService {
       r.remision_no ||
       r.documentNumber ||
       '';
+
+    const hasSkuOrPallets = !!(r.skuId || r.skuCode || r.productSku || r.productId || (r.pallets && r.pallets.length > 0));
+    const pType = hasSkuOrPallets ? ((r.palletType as PalletType) || (r.selectedPalletType as PalletType) || ('' as any)) : ('' as any);
+    const pallets = (r.pallets || []).map((p: any) => {
+      const pNum = p.palletNumber != null ? Number(p.palletNumber) : undefined;
+      if (pNum && pNum > 0) {
+        this.updateGlobalMaxPalletNumber(pNum);
+      }
+      return {
+        id: p.id || p.itemId || `pal-${Date.now()}-${Math.random()}`,
+        palletNumber: pNum,
+        palletCode: p.palletCode || p.sscc || '',
+        productId: p.skuCode || r.skuCode || r.productId || '',
+        description: p.description || p.productDescription || r.productName || '',
+        supplierName: p.supplierName || r.supplierName || '',
+        pieces: p.pieces != null ? Number(p.pieces) : (r.piecesPerPallet || 0),
+        palletTypeId: p.palletTypeId || p.palletType || pType || 'MADERA_ESTANDAR',
+        palletTypeLabel: p.palletTypeLabel || (pType ? (PALLET_TYPE_LABELS as Record<string, string>)[pType] : '') || 'Madera Estándar',
+        observations: p.observations || '',
+        status: p.status || 'SCANNED',
+        lotNumber: p.lotNumber || (p.receptionLot && p.receptionLot.lotNumber) || r.lotNumber || '',
+        expirationDate: p.expirationDate || (p.receptionLot && p.receptionLot.expirationDate) || r.expirationDate || '',
+        docNumber: p.docNumber || p.remisionNo || p.documentNumber || resolvedDoc || '',
+      };
+    });
+
+    let opName = r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '';
+    if (opName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opName)) {
+      const match = (this.forkliftOperatorsSignal() || []).find((o: any) => o.id === opName || o.code === opName);
+      if (match) opName = match.name;
+    }
+
+    let supName = r.supplierName || '';
+    if (supName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(supName)) {
+      const match = (this.suppliersSignal() || []).find((s: any) => s.id === supName || s.code === supName);
+      if (match) supName = match.name || supName;
+    }
 
     return {
       id: r.id,
@@ -1287,7 +1494,7 @@ export class WarehouseMovementsService {
         clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
         rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 1) : (r.rampNumber || r.checkIn?.rampNumber || 1),
         rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
-        forkliftOperator: r.forkliftOperatorName || r.forkliftOperator || r.checkIn?.forkliftOperator || '',
+        forkliftOperator: opName,
         forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
         driverName: r.driverName || r.checkIn?.driverName || '',
         tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
@@ -1301,7 +1508,7 @@ export class WarehouseMovementsService {
       productId: r.skuCode || r.skuId || r.productId || '',
       skuCode: r.skuCode || '',
       productName: r.productName || '',
-      supplierName: r.supplierName || '',
+      supplierName: supName,
       piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
       storageLocation: r.storageLocationCode || r.storageLocationName || r.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',
@@ -1309,13 +1516,14 @@ export class WarehouseMovementsService {
       storageLocationCode: r.storageLocationCode || '',
       observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
       pallets: pallets,
+      lots: r.lots || [],
       createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : (r.checkIn?.receptionTime || ''),
       completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
       cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
       capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
       leaderAuthorizedBy: r.leaderAuthorizedBy || '',
       cancellationReason: r.cancellationReason || '',
-    };
+    } as ReceptionHeader;
   }
 
   // Persiste avances de descarga (parámetros y tarimas) en el Backend (wms.warehouse_reception_pallets)
@@ -1351,7 +1559,10 @@ export class WarehouseMovementsService {
 
     const paramPayload = {
       skuId: skuId,
+      skuCode: formVals.productId || null,
+      productName: formVals.productName || null,
       supplierId: supplierId,
+      supplierName: formVals.supplierName || null,
       lotNumber: formVals.lotNumber,
       elaborationDate: formVals.elaborationDate || null,
       expirationDate: formVals.expirationDate || null,
@@ -1376,9 +1587,14 @@ export class WarehouseMovementsService {
             pieces: p.pieces,
             palletType: p.palletTypeId,
             observations: p.observations || '',
+            lotNumber: p.lotNumber || formVals.lotNumber || null,
+            expirationDate: p.expirationDate || formVals.expirationDate || null,
           }));
           return this.movementsApi.addReceptionPallets(receptionId, palletPayload).pipe(
-            catchError((_: any) => of([]))
+            catchError((err: any) => {
+              console.warn('Sync addReceptionPallets warn:', err);
+              return of([]);
+            })
           );
         } else {
           return of([]);
@@ -2194,7 +2410,7 @@ export class WarehouseMovementsService {
   }
 
   // Transición 4 -> 5: Cierre Administrativo y Despacho Formal F03 (LOADED -> COMPLETED)
-  completeOutboundDispatch(folioOrId: string, authorizedBy: string): WarehouseOutbound | null {
+  completeOutboundDispatch(folioOrId: string, authorizedBy: string, items?: OutboundItem[]): WarehouseOutbound | null {
     const list = this.outboundsSignal();
     const cleanKey = (folioOrId || '').trim();
     const target = list.find(
@@ -2202,9 +2418,14 @@ export class WarehouseMovementsService {
     );
     if (!target) return null;
 
+    const resolvedItems = (items && items.length > 0) ? items : (target.items || []);
     const completedTime = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
     const updated: WarehouseOutbound = {
       ...target,
+      items: resolvedItems,
+      totalPallets: resolvedItems.length > 0 ? resolvedItems.length : target.totalPallets,
+      totalPieces: resolvedItems.length > 0 ? resolvedItems.reduce((acc, p) => acc + (p.pieces || 0), 0) : target.totalPieces,
+      distinctSkus: resolvedItems.length > 0 ? new Set(resolvedItems.map((p) => p.productId)).size : target.distinctSkus,
       status: 'COMPLETED',
       completedAt: completedTime,
       leaderAuthorizedBy: authorizedBy,
@@ -2213,12 +2434,12 @@ export class WarehouseMovementsService {
     };
 
     // Descontar UAs de inventario si no se habían descontado
-    if (target.items && target.items.length > 0) {
-      const selectedIds = new Set(target.items.map((p) => p.id));
+    if (resolvedItems && resolvedItems.length > 0) {
+      const selectedIds = new Set(resolvedItems.map((p) => p.id));
       this.inventoryBatchesSignal.update((batches) =>
         batches.map((batch) => {
-          const remaining = batch.pallets.filter((p) => !selectedIds.has(p.id));
-          if (remaining.length === batch.pallets.length) return batch;
+          const remaining = (batch.pallets || []).filter((p) => !selectedIds.has(p.id));
+          if (remaining.length === (batch.pallets || []).length) return batch;
           return {
             ...batch,
             availablePallets: remaining.length,
@@ -2424,17 +2645,57 @@ export class WarehouseMovementsService {
       pallets: remainingOriginPallets,
     };
 
+    const movedPalletsWithNewLoc = palletsToMove.map((p) => ({
+      ...p,
+      location: destination,
+      locationCode: destination,
+    }));
+
     locs[destination] = {
       ...destInfo,
       totalPallets: palletsToMove.length,
       totalPieces: totalPiecesMoved,
       occupancy: palletsToMove.length,
       availableCapacity: Math.max(0, destCap - palletsToMove.length),
-      pallets: palletsToMove,
+      pallets: movedPalletsWithNewLoc,
     };
 
     this.locationsSignal.set(locs);
     this.transfersSignal.update((list) => [newTransfer, ...list]);
+
+    // Actualizar lotes de inventario (inventoryBatchesSignal) reactivamente
+    const movedIds = new Set(dto.selectedPalletIds);
+    const movedCodes = new Set(palletsToMove.map((p) => (p.palletCode || '').toUpperCase().trim()));
+
+    this.inventoryBatchesSignal.update((batches) =>
+      batches.map((batch) => {
+        let hasMovedPallet = false;
+        const updatedPallets = (batch.pallets || []).map((p) => {
+          const isMoved =
+            movedIds.has(p.id) ||
+            (p.palletCode && (movedCodes.has(p.palletCode.toUpperCase().trim()) || movedIds.has(p.palletCode)));
+          if (isMoved) {
+            hasMovedPallet = true;
+            return { ...p, locationCode: destination };
+          }
+          return p;
+        });
+
+        if (hasMovedPallet) {
+          const allInDest = updatedPallets.every((p) => p.locationCode === destination);
+          return {
+            ...batch,
+            locationCode: allInDest ? destination : batch.locationCode,
+            pallets: updatedPallets,
+          };
+        }
+        return batch;
+      })
+    );
+
+    if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
+      this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
+    }
 
     this.addTransferAudit(folio, {
       id: `aud-tr-reg-${Date.now()}`,
@@ -2614,6 +2875,33 @@ export class WarehouseMovementsService {
     );
 
     return fullDispatch;
+  }
+
+  // ── LIBERACIÓN DE CALIDAD QM A INVENTARIO DISPONIBLE ──
+  addReleasedInventoryStock(blockData: {
+    sku: string;
+    description: string;
+    clientName: string;
+    batchNumber: string;
+    quantity: number;
+    locationId?: string;
+    destination: string;
+  }): void {
+    const newBatch: InventoryBatch = {
+      remisionNo: `REM-LIB-${Date.now().toString().slice(-4)}`,
+      client: blockData.clientName,
+      productId: blockData.sku,
+      productName: blockData.description,
+      lotNumber: blockData.batchNumber,
+      elaborationDate: new Date().toISOString().slice(0, 10),
+      expirationDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      availablePallets: Math.ceil(blockData.quantity / 45) || 1,
+      totalPieces: blockData.quantity,
+      locationCode: blockData.locationId || 'LOC-QM-RELEASED',
+      pallets: []
+    };
+
+    this.inventoryBatchesSignal.update((list) => [newBatch, ...list]);
   }
 }
 

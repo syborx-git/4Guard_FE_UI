@@ -39,6 +39,7 @@ import {
 } from '../../services/section.service';
 import { BranchService } from '../../services/branch.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { WarehouseSectionSetupModalComponent } from '../../../catalogs/components/warehouse-section-setup-modal/warehouse-section-setup-modal.component';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ function codeFormatValidator(control: AbstractControl): ValidationErrors | null 
 @Component({
   selector: 'fg-section-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, WarehouseSectionSetupModalComponent],
   templateUrl: './section-management.component.html',
   styleUrl: './section-management.component.css',
 })
@@ -76,10 +77,38 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la vista ──────────────────────────────────────────────────────
 
   protected readonly selectedSection = signal<WarehouseSection | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
+
+  // ─── Modal de Configuración / Activación de Nave ──────────────────────────
+  protected readonly isSetupModalOpen = signal<boolean>(false);
+  protected readonly setupModalSection = signal<any>(null);
+
+  protected openSetupModal(section?: WarehouseSection | null): void {
+    const target = section || this.selectedSection();
+    if (!target) return;
+    this.setupModalSection.set({
+      id: target.id,
+      code: target.code,
+      name: target.name,
+      category: target.category,
+      posFijas: target.posFijas,
+      capacidadTarimas: target.capacidadTarimas,
+      factorEstiba: target.factorEstiba,
+      notes: target.notes
+    });
+    this.isSetupModalOpen.set(true);
+  }
+
+  protected onSectionSetupSaved(updatedSection: any): void {
+    this.isSetupModalOpen.set(false);
+    this.sectionService.loadSections();
+    if (this.selectedSection()?.id === updatedSection?.id) {
+      this.selectedSection.update(s => s ? { ...s, ...updatedSection } : null);
+    }
+  }
 
   // ─── Historial de Auditoría ──────────────────────────────────────────────────
 
@@ -171,6 +200,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadData();
+    this.startNewSection();
   }
 
   ngOnDestroy(): void {
@@ -206,6 +236,12 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.isLoading.set(false);
+          if (this.formMode() === 'new' && !this.form.get('branchId')?.value) {
+            const firstBranch = this.branchService.branches()[0];
+            if (firstBranch) {
+              this.form.patchValue({ branchId: firstBranch.id });
+            }
+          }
         },
         error: (err: HttpErrorResponse) => {
           this.isLoading.set(false);
@@ -257,8 +293,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
       this.populateForm(section);
       this.loadAuditLogs(section.id);
     } else {
-      this.formMode.set('idle');
-      this.auditEntries.set([]);
+      this.startNewSection();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);
@@ -365,7 +400,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
         branchId: raw.branchId,
         code: raw.code.trim().toUpperCase(),
         name: raw.name.trim(),
-        status: raw.status as 'ACTIVE' | 'INACTIVE',
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
       };
       this.sectionService
         .create(createPayload)
@@ -395,7 +430,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
           branchId: raw.branchId,
           code: raw.code.trim().toUpperCase(),
           name: raw.name.trim(),
-          status: raw.status as 'ACTIVE' | 'INACTIVE',
+          status: (this.selectedSection()?.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
         })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
@@ -496,5 +531,55 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   protected get selectedBranchName(): string {
     const branchId = this.form.get('branchId')?.value;
     return this.branchService.branches().find((b) => b.id === branchId)?.name || '';
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      name: 'Nombre de Nave / Sección',
+      code: 'Código de Sección',
+      status: 'Estado Operativo',
+      branchId: 'ID Sucursal',
+      branchName: 'Sucursal',
+      capacityTarimas: 'Capacidad de Tarimas',
+      posFijas: 'Bahías / Posiciones Fijas',
+      factorEstiba: 'Factor de Estiba',
+      category: 'Categoría Operativa'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activa';
+      if (s === 'INACTIVE') return 'Inactiva';
+      if (s === 'SUSPENDED') return 'Suspendida';
+    }
+    return String(value);
   }
 }

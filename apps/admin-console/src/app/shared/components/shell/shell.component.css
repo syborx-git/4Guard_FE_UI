@@ -3258,3 +3258,110 @@
     font-size: 0.62rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RESUMED PROCESS BANNER — HIGH CONTRAST & PREMIUM GLASS
+   ═══════════════════════════════════════════════════════════ */
+.shell__resumed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.96) 0%, rgba(4, 47, 46, 0.96) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 0 15px rgba(16, 185, 129, 0.2);
+  color: #ffffff;
+  animation: shellFadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  position: relative;
+  z-index: 20;
+}
+
+.shell__resumed-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.shell__resumed-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #34d399;
+}
+
+.shell__resumed-banner-icon .material-symbols-outlined {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.shell__resumed-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shell__resumed-banner-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #34d399;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.shell__resumed-banner-desc {
+  font-size: 0.82rem;
+  color: #f1f5f9;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.shell__resumed-banner-highlight {
+  color: #ffffff;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border-bottom: 1.5px solid #34d399;
+}
+
+.shell__resumed-banner-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #a7f3d0;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.shell__resumed-banner-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+@keyframes shellFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

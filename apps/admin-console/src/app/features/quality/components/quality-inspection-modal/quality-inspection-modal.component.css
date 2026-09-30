@@ -674,6 +674,112 @@
   color: #b8860b;
 }
 
+/* UPLOADER HEADER (label + limpiar todo) */
+.qm-uploader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.qm-link-btn--danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #dc2626 !important;
+  font-size: 0.72rem;
+}
+.qm-link-btn--danger:hover {
+  text-decoration: underline;
+}
+
+/* EVIDENCE THUMBNAIL GRID */
+.qm-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.qm-evidence-card {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.qm-evidence-card:hover {
+  border-color: #c5a059;
+  box-shadow: 0 4px 12px rgba(197, 168, 107, 0.15);
+}
+.qm-evidence-card--pdf {
+  background: #fff5f5;
+  border-color: #fecaca;
+}
+.qm-evidence-thumb {
+  width: 100%;
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+.qm-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.qm-evidence-thumb--placeholder {
+  background: rgba(197, 168, 107, 0.1);
+}
+.qm-evidence-thumb--placeholder .material-symbols-outlined {
+  font-size: 2rem !important;
+  color: #b8860b;
+}
+.qm-evidence-thumb--pdf {
+  background: rgba(220, 38, 38, 0.08);
+}
+.qm-evidence-thumb--pdf .material-symbols-outlined {
+  font-size: 2.2rem !important;
+  color: #dc2626;
+}
+.qm-evidence-meta {
+  padding: 0.3rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+}
+.qm-evidence-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(15, 23, 42, 0.65);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.qm-evidence-card:hover .qm-evidence-remove {
+  opacity: 1;
+}
+.qm-evidence-remove .material-symbols-outlined {
+  font-size: 13px !important;
+}
+.qm-evidence-remove:hover {
+  background: rgba(220, 38, 38, 0.85);
+}
+
 .qm-file-list {
   display: flex;
   flex-wrap: wrap;
@@ -701,10 +807,14 @@
 .qm-file-name {
   font-weight: 700;
   color: #172033;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .qm-file-size {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   color: #64748b;
 }
 .qm-file-remove {
@@ -1031,4 +1141,32 @@
 :host-context(.dark) .qm-btn--ghost {
   color: #94a3b8;
   border-color: #334155;
+}
+
+/* DARK MODE — nuevas clases de evidence grid */
+:host-context(.theme-dark) .qm-evidence-card,
+:host-context(.dark) .qm-evidence-card {
+  background: #090d16;
+  border-color: #1e293b;
+}
+:host-context(.theme-dark) .qm-evidence-card:hover,
+:host-context(.dark) .qm-evidence-card:hover {
+  border-color: #c5a059;
+}
+:host-context(.theme-dark) .qm-evidence-card--pdf,
+:host-context(.dark) .qm-evidence-card--pdf {
+  background: rgba(220, 38, 38, 0.07);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+:host-context(.theme-dark) .qm-evidence-thumb,
+:host-context(.dark) .qm-evidence-thumb {
+  background: #111827;
+}
+:host-context(.theme-dark) .qm-file-name,
+:host-context(.dark) .qm-file-name {
+  color: #f1f5f9;
+}
+:host-context(.theme-dark) .qm-evidence-remove,
+:host-context(.dark) .qm-evidence-remove {
+  background: rgba(240, 248, 255, 0.18);
 }

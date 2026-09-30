@@ -9,18 +9,20 @@
  * - Campos de observaciones vacíos por defecto para llenado manual.
  */
 
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
-import { CheckInCasetaData, RampItem } from '../../warehouse-movements/models/warehouse-movements.models';
+import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
 } from '../../warehouse-movements/components/print-layouts/print-transport-checklist-layout.component';
+import { environment } from '../../../../environments/environment';
 
 export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
 
@@ -42,8 +44,19 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly printService = inject(PrintService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private refreshIntervalId: any = null;
+
+  constructor() {
+    effect(() => {
+      const recs = this.movementsService.receptions();
+      const outs = this.movementsService.outbounds();
+      if (recs.length > 0 || outs.length > 0) {
+        this.mergeInYardPasses(this.inYardPasses());
+      }
+    });
+  }
 
   // ── Navegación por Pestañas ───────────────────────────────────────────────
   protected readonly activeTab = signal<SecurityGateTab>('REGISTRATION');
@@ -148,6 +161,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     remision: ['', Validators.required], // Requerido dinámicamente si es DESCARGA
     clientCode: ['', Validators.required],
     client: ['', Validators.required],
+    clientNameCustom: [''],
     procedimiento: ['Recepción', Validators.required],
     operacion: ['DESCARGA', Validators.required], // CARGA | DESCARGA
     horaEntrada: [this.getCurrentTimeString(), Validators.required],
@@ -156,7 +170,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // 2. DATOS DEL TRANSPORTE
     carrierLineCode: ['', Validators.required],
     carrierLine: ['', Validators.required],
+    carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
+    driverPhone: [''],
     rampCode: ['', Validators.required],
     rampNumber: [0, Validators.required],
     placasTracto: ['', Validators.required],
@@ -177,8 +193,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     eppChalecoObs: [''],
 
     // 3. REVISIÓN DEL TRANSPORTE — Documentos
-    docCartaPorte: ['SI', Validators.required],
-    docCartaPorteObs: [''],
+    docCartaPorte: ['NO', Validators.required],
+    docCartaPorteObs: ['N/A - Operación de Descarga/Recepción'],
     docRemision: ['SI', Validators.required],
     docRemisionObs: [''],
 
@@ -244,6 +260,61 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return `${hrs}h ${mins}m`;
   }
 
+  protected formatRampDisplay(item: any): string {
+    if (!item) return 'R-01';
+
+    // 1. Si viene rampNumber numérico explícito y válido (1 a 50)
+    if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
+      const num = Number(item.rampNumber);
+      return `R-${String(num).padStart(2, '0')}`;
+    }
+
+    // 2. Extraer cualquier código o ID disponible
+    const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
+    if (code) {
+      // Si es un código con prefijo conocido o formato legible (LOC-RAMP-06, RAMPA-02, R-03)
+      if (code.toUpperCase().includes('RAMP') || code.toUpperCase().startsWith('R-') || code.toUpperCase().startsWith('LOC-RAMP-') || code.toLowerCase().startsWith('rampa')) {
+        const digitMatch = code.match(/(\d+)/);
+        if (digitMatch) {
+          const num = parseInt(digitMatch[1], 10);
+          if (!isNaN(num) && num > 0 && num <= 50) {
+            return `R-${String(num).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // Si es un UUID (36 caracteres con guiones)
+      if (/^[0-9a-fA-F-]{36}$/.test(code)) {
+        // Buscar coincidencia en catálogo activo de rampas
+        const found = this.ramps().find(r => r.id === code || r.code === code);
+        if (found) {
+          return found.name || `R-${String(found.rampNumber).padStart(2, '0')}`;
+        }
+        // Buscar en catálogo estándar de rampas
+        const std = STANDARD_WAREHOUSE_RAMPS.find(r => r.id === code || r.code === code);
+        if (std) {
+          return `R-${String(std.rampNumber).padStart(2, '0')}`;
+        }
+
+        // Mapeo determinístico hash a R-01 .. R-12
+        try {
+          const hex = code.replace(/-/g, '').slice(-4);
+          const val = (parseInt(hex, 16) % 12) + 1;
+          return `R-${String(val).padStart(2, '0')}`;
+        } catch {
+          return 'R-01';
+        }
+      }
+
+      // Si es un texto corto libre legible
+      if (code.length <= 15 && !code.includes('-')) {
+        return code;
+      }
+    }
+
+    return item.rampNumber ? `R-${String(item.rampNumber).padStart(2, '0')}` : 'R-01';
+  }
+
   protected readonly filteredInYardPasses = computed(() => {
     let list = this.inYardPasses();
     const filter = this.inYardFilter();
@@ -269,6 +340,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     return list;
   });
+
+  protected getPublicBaseUrl(): string {
+    const envUrl = (environment as any).publicAppUrl;
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+      return envUrl.trim().replace(/\/+$/, '');
+    }
+    return window.location.origin;
+  }
 
   ngOnInit(): void {
     this.movementsService.loadInitialBackendData();
@@ -309,6 +388,39 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ── Scroll Automático al Inicio de la Página ──────────────────────────────
+  protected scrollToTop(): void {
+    const doScroll = () => {
+      // 1. Contenedor principal con scroll de la Shell (#main-content / .shell__content)
+      const mainContent = document.getElementById('main-content') || document.querySelector('.shell__content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        mainContent.scrollTop = 0;
+      }
+
+      // 2. Anclaje de la cabecera del módulo de caseta
+      const pageTop = document.getElementById('security-page-top') || document.querySelector('.security-header') || document.querySelector('.security-page');
+      if (pageTop && typeof pageTop.scrollIntoView === 'function') {
+        pageTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // 3. Fallbacks del navegador para window, documentElement y body
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      if (document.documentElement) {
+        document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.documentElement.scrollTop = 0;
+      }
+      if (document.body) {
+        document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.body.scrollTop = 0;
+      }
+    };
+
+    doScroll();
+    setTimeout(doScroll, 80);
+    setTimeout(doScroll, 220);
+  }
+
   // ── Cambio de Pestaña ─────────────────────────────────────────────────────
   protected setTab(tab: SecurityGateTab): void {
     this.activeTab.set(tab);
@@ -319,9 +431,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     } else {
       this.reloadActivePasses();
     }
+    this.scrollToTop();
   }
 
   protected reloadAllData(): void {
+    this.movementsService.reloadReceptions();
     this.reloadActivePasses();
     this.reloadInYardPasses();
     this.reloadHistoryPasses();
@@ -337,15 +451,37 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (val === 'CARGA') {
       cartaControl?.setValidators([Validators.required]);
       remisionControl?.clearValidators();
-      this.checkInForm.patchValue({ procedimiento: 'Embarque' });
+      this.checkInForm.patchValue({
+        procedimiento: 'Embarque',
+        docCartaPorte: 'SI',
+        docCartaPorteObs: '',
+        docRemision: 'NO',
+        docRemisionObs: 'N/A - Operación de Carga/Embarque'
+      });
     } else {
       remisionControl?.setValidators([Validators.required]);
       cartaControl?.clearValidators();
-      this.checkInForm.patchValue({ procedimiento: 'Recepción' });
+      this.checkInForm.patchValue({
+        procedimiento: 'Recepción',
+        docRemision: 'SI',
+        docRemisionObs: '',
+        docCartaPorte: 'NO',
+        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción'
+      });
     }
 
     cartaControl?.updateValueAndValidity();
     remisionControl?.updateValueAndValidity();
+  }
+
+  protected getQrBaseUrl(): string {
+    const origin = window.location.origin;
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      // En desarrollo local (localhost), Safari en el celular no puede resolver 'localhost'.
+      // Apuntamos automáticamente al dominio desplegado de Netlify/Cloudify para pruebas con el smartphone.
+      return 'https://guard.netlify.app';
+    }
+    return origin;
   }
 
   // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
@@ -358,31 +494,33 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       organizationId: session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
       branchId: session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
       operationType: formVal.operacion || 'DESCARGA',
-      clientCode: formVal.clientCode,
-      clientName: formVal.client,
-      carrierLineCode: formVal.carrierLineCode,
-      carrierLine: formVal.carrierLine,
-      driverName: formVal.nombreOperador,
-      tractorPlates: formVal.placasTracto,
+      clientCode: formVal.clientCode || '',
+      clientName: formVal.client || '',
+      carrierLineCode: formVal.carrierLineCode || '',
+      carrierLine: formVal.carrierLine || '',
+      driverName: formVal.nombreOperador || '',
+      tractorPlates: formVal.placasTracto || '',
       docNumber: formVal.operacion === 'CARGA' ? formVal.noCartaPorte : formVal.remision,
     };
 
     this.movementsService.movementsApi.generatePass(payload).subscribe({
       next: (res: any) => {
         this.isGeneratingPass.set(false);
-        const token = res.token || ('PASS-' + Date.now());
+        const token = res.token || res.generatedFolio || ('PASS-4G-' + Date.now());
         this.qrModalToken.set(token);
-        const origin = window.location.origin;
-        this.qrModalUrl.set(`${origin}/carrier-checkin?token=${token}`);
+        const baseUrl = this.getPublicBaseUrl();
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
         this.showQrModal.set(true);
         this.reloadActivePasses();
       },
       error: () => {
         this.isGeneratingPass.set(false);
-        const fallbackToken = 'PASS-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const fallbackToken = 'PASS-4G-' + Date.now();
         this.qrModalToken.set(fallbackToken);
-        this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${fallbackToken}`);
+        const baseUrl = this.getPublicBaseUrl();
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}`);
         this.showQrModal.set(true);
+        this.reloadActivePasses();
       }
     });
   }
@@ -406,10 +544,85 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const session = this.movementsService.movementsApi.getSessionOrg();
     this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
-        this.activePasses.set(passes || []);
+        this.mergeLocalActivePasses(passes || []);
       },
-      error: () => {}
+      error: () => {
+        this.mergeLocalActivePasses([]);
+      }
     });
+  }
+
+  private mergeLocalActivePasses(backendPasses: any[]): void {
+    try {
+      const localStr = localStorage.getItem('4g_local_passes');
+      const localPasses: any[] = localStr ? JSON.parse(localStr) : [];
+      const pendingLocal = localPasses.filter(p => p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER');
+
+      const mergedMap = new Map<string, any>();
+      for (const p of backendPasses) {
+        if (p && p.token) mergedMap.set(p.token, p);
+      }
+      for (const p of pendingLocal) {
+        if (p && p.token) {
+          // Si ya hay pases en el backend, no duplicar con tokens temporales PASS-4G-
+          if (p.token.startsWith('PASS-4G-') && backendPasses.length > 0) {
+            continue;
+          }
+          const existing = mergedMap.get(p.token);
+          if (!existing) {
+            mergedMap.set(p.token, p);
+          } else {
+            const isSubmitted = existing.status === 'SUBMITTED' || p.status === 'SUBMITTED';
+            const primary = (existing.status === 'SUBMITTED') ? existing : ((p.status === 'SUBMITTED') ? p : existing);
+            const secondary = (primary === existing) ? p : existing;
+
+            mergedMap.set(p.token, {
+              ...secondary,
+              ...primary,
+              status: isSubmitted ? 'SUBMITTED' : (primary.status || secondary.status || 'PENDING_DRIVER'),
+              operationType: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
+              operacion: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
+              driverName: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
+              nombreOperador: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
+              tractorPlates: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || '',
+              placasTracto: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || ''
+            });
+          }
+        }
+      }
+      this.activePasses.set(Array.from(mergedMap.values()));
+    } catch {
+      this.activePasses.set(backendPasses || []);
+    }
+  }
+
+  private savePassToLocalStorage(tokenStr: string, payload: any): void {
+    try {
+      const existingStr = localStorage.getItem('4g_local_passes');
+      let passes: any[] = existingStr ? JSON.parse(existingStr) : [];
+      const passObj = {
+        id: 'pass-loc-' + Date.now(),
+        token: tokenStr,
+        status: payload.status || 'PENDING_DRIVER',
+        operationType: payload.operationType,
+        docNumber: payload.docNumber,
+        noCartaPorte: payload.operationType === 'CARGA' ? payload.docNumber : '',
+        remision: payload.operationType === 'DESCARGA' ? payload.docNumber : '',
+        clientCode: payload.clientCode,
+        clientName: payload.clientName,
+        carrierLineCode: payload.carrierLineCode,
+        carrierLine: payload.carrierLine,
+        driverName: payload.driverName,
+        tractorPlates: payload.tractorPlates,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      passes = passes.filter(p => p.token !== tokenStr);
+      passes.unshift(passObj);
+      localStorage.setItem('4g_local_passes', JSON.stringify(passes));
+    } catch {
+      // Storage error fallback
+    }
   }
 
   protected reloadInYardPasses(): void {
@@ -418,12 +631,131 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
-        this.inYardPasses.set(passes || []);
+        this.mergeInYardPasses(passes || []);
       },
       error: () => {
         this.isLoadingInYard.set(false);
+        this.mergeInYardPasses([]);
       }
     });
+  }
+
+  private mergeInYardPasses(backendPasses: any[]): void {
+    const mergedMap = new Map<string, any>();
+    const exitTokensOrFolios = new Set<string>();
+
+    // 1. Folios que ya salieron de la planta
+    for (const h of this.historyPasses()) {
+      if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
+      if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
+    }
+
+    // 2. Pases devueltos por el backend
+    for (const p of backendPasses || []) {
+      const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
+      mergedMap.set(key, {
+        ...p,
+        receptionTime: timeVal,
+        horaEntrada: timeVal
+      });
+    }
+
+    // 3. Recepciones registradas en el WMS (Inbound)
+    const activeReceptions = this.movementsService.receptions();
+    for (const r of activeReceptions) {
+      if (r.status === 'CANCELLED') continue;
+      const key = (r.folio || r.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (!mergedMap.has(key)) {
+        const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
+          ? r.checkIn.sealNumbers
+          : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
+
+        const isReady = r.status === 'COMPLETED';
+        const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
+
+        mergedMap.set(key, {
+          id: r.id || ('rec-' + r.folio),
+          token: r.folio,
+          generatedFolio: r.folio,
+          status: 'COMPLETED',
+          operationType: 'DESCARGA',
+          operacion: 'DESCARGA',
+          clientCode: r.checkIn?.clientCode || '',
+          clientName: r.checkIn?.client || 'Cliente General',
+          carrierLineCode: r.checkIn?.carrierLineCode || '',
+          carrierLine: r.checkIn?.carrierLine || 'Transportista',
+          driverName: r.checkIn?.driverName || 'Operador Transportista',
+          tractorPlates: r.checkIn?.tractorPlates || '-',
+          boxPlates: r.checkIn?.boxPlates || '-',
+          economicNumber: r.checkIn?.economicNumber || '',
+          boxDimensions: r.checkIn?.medidasCaja || '53 Pies',
+          transportType: r.checkIn?.transportType || 'Caja Seca',
+          sealNumbers: seals,
+          docNumber: r.checkIn?.docNumber || ('REM-' + r.folio),
+          docDate: r.checkIn?.docDate || r.createdAt,
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
+          rampNumber: r.checkIn?.rampNumber || 1,
+          rampCode: r.checkIn?.rampCode || (r.checkIn?.rampNumber ? `R-${r.checkIn.rampNumber}` : 'R-01'),
+          observations: r.observations || r.checkIn?.observations || '',
+          warehouseStatus: r.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: r.createdAt
+        });
+      }
+    }
+
+    // 4. Salidas registradas en el WMS (Outbound)
+    const activeOutbounds = this.movementsService.outbounds();
+    for (const o of activeOutbounds) {
+      if (o.status === 'CANCELLED') continue;
+      const key = (o.folio || o.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (!mergedMap.has(key)) {
+        const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
+        const isReady = o.status === 'COMPLETED' || o.status === 'LOADED';
+        const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
+
+        mergedMap.set(key, {
+          id: o.id || ('out-' + o.folio),
+          token: o.folio,
+          generatedFolio: o.folio,
+          status: 'COMPLETED',
+          operationType: 'CARGA',
+          operacion: 'CARGA',
+          clientCode: o.clientCode || '',
+          clientName: o.clientName || 'Cliente General',
+          carrierCode: o.carrierCode || '',
+          carrierLineCode: o.carrierCode || '',
+          carrierLine: o.carrierName || 'Transportista',
+          driverName: o.driverName || 'Operador Transportista',
+          tractorPlates: o.tractorPlates || '-',
+          boxPlates: o.boxPlates || '-',
+          economicNumber: o.economicNumber || '',
+          boxDimensions: '53 Pies',
+          transportType: o.transportType || 'TRAILER',
+          sealNumbers: seals,
+          docNumber: o.remisionNo || ('SAL-' + o.folio),
+          docDate: o.dispatchedAt || this.getCurrentDateString(),
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
+          rampNumber: o.rampNumber || 1,
+          rampCode: o.rampCode || (o.rampNumber ? `R-${o.rampNumber}` : 'R-01'),
+          observations: o.observations || '',
+          warehouseStatus: o.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: o.dispatchedAt || new Date().toISOString()
+        });
+      }
+    }
+
+    this.inYardPasses.set(Array.from(mergedMap.values()));
   }
 
   protected reloadHistoryPasses(): void {
@@ -447,75 +779,99 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected loadDriverSubmission(pass: any): void {
     if (!pass) return;
+
+    // 1. Limpiar estado previo del formulario para evitar datos residuales
+    this.resetFormFieldsOnly();
     this.activeToken.set(pass.token);
 
-    if (pass.operationType) {
-      this.onOperationChange(pass.operationType as 'CARGA' | 'DESCARGA');
-    }
+    // 2. Tipo de Operación
+    const opVal = pass.operationType || pass.operacion || 'DESCARGA';
+    this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
 
-    // Resolver Cliente en el catálogo
+    // 3. Extraer solo valores reales del pase (sin strings por defecto inventados)
+    const driverNameVal = pass.driverName || pass.nombreOperador || pass.operatorName || pass.driver_name || '';
+    const tractorPlatesVal = pass.tractorPlates || pass.placasTracto || pass.truckPlates || pass.plates || '';
+    const boxPlatesVal = pass.boxPlates || pass.placasCaja || pass.trailerPlates || '';
+    const boxDimensionsVal = pass.boxDimensions || pass.medidasCaja || pass.boxSize || '';
+    const transportTypeVal = pass.transportType || pass.tipoTransporte || pass.vehicleType || '';
+    const ecoNumberVal = pass.economicNumber || pass.noEcoTractor || pass.ecoTractor || '';
+    const docNumberVal = pass.docNumber || pass.remision || pass.noCartaPorte || '';
+    const isSubmitted = pass.status === 'SUBMITTED';
+
+    // Resolver Cliente en el catálogo si viene en el pase
     let matchedClientCode = pass.clientCode || '';
-    let matchedClientName = pass.clientName || '';
-    const foundClient = this.clients().find(c => 
-      (pass.clientCode && (c.code === pass.clientCode || c.code.toLowerCase() === pass.clientCode.toLowerCase())) ||
-      (pass.clientName && c.name.toLowerCase() === pass.clientName.toLowerCase())
-    );
-    if (foundClient) {
-      matchedClientCode = foundClient.code;
-      matchedClientName = foundClient.name;
-    } else if (!matchedClientCode && this.clients().length > 0) {
-      matchedClientCode = this.clients()[0].code;
-      matchedClientName = this.clients()[0].name;
+    let matchedClientName = pass.clientName || pass.client || '';
+    let matchedClientCustom = '';
+    if (matchedClientCode || matchedClientName) {
+      const foundClient = this.clients().find(c => 
+        (matchedClientCode && (c.code === matchedClientCode || c.code.toLowerCase() === matchedClientCode.toLowerCase())) ||
+        (matchedClientName && (c.name.toLowerCase() === matchedClientName.toLowerCase() || c.name.toLowerCase().includes(matchedClientName.toLowerCase())))
+      );
+      if (foundClient) {
+        matchedClientCode = foundClient.code;
+        matchedClientName = foundClient.name;
+      } else if (matchedClientName) {
+        matchedClientCode = 'OTRO';
+        matchedClientCustom = matchedClientName;
+      }
     }
 
-    // Resolver Línea Transportista en el catálogo
+    // Resolver Línea Transportista en el catálogo si viene en el pase
     let matchedCarrierCode = pass.carrierLineCode || '';
-    let matchedCarrierName = pass.carrierLine || '';
-    const foundCarrier = this.carrierLines().find(c =>
-      (pass.carrierLineCode && (c.code === pass.carrierLineCode || c.code.toLowerCase() === pass.carrierLineCode.toLowerCase())) ||
-      (pass.carrierLine && c.name.toLowerCase() === pass.carrierLine.toLowerCase())
-    );
-    if (foundCarrier) {
-      matchedCarrierCode = foundCarrier.code;
-      matchedCarrierName = foundCarrier.name;
-    } else if (!matchedCarrierCode && this.carrierLines().length > 0) {
-      matchedCarrierCode = this.carrierLines()[0].code;
-      matchedCarrierName = this.carrierLines()[0].name;
+    let matchedCarrierName = pass.carrierLine || pass.carrier || '';
+    let matchedCarrierCustom = '';
+    if (matchedCarrierCode || matchedCarrierName) {
+      const foundCarrier = this.carrierLines().find(c =>
+        (matchedCarrierCode && (c.code === matchedCarrierCode || c.code.toLowerCase() === matchedCarrierCode.toLowerCase())) ||
+        (matchedCarrierName && (c.name.toLowerCase() === matchedCarrierName.toLowerCase() || c.name.toLowerCase().includes(matchedCarrierName.toLowerCase())))
+      );
+      if (foundCarrier) {
+        matchedCarrierCode = foundCarrier.code;
+        matchedCarrierName = foundCarrier.name;
+      } else if (matchedCarrierName) {
+        matchedCarrierCode = 'OTRO';
+        matchedCarrierCustom = matchedCarrierName;
+      }
     }
 
-    // Resolver Tipo de Transporte y Medidas
-    if (pass.transportType && !this.transportTypesList().includes(pass.transportType)) {
-      this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), pass.transportType, 'Otro (Especificar)']);
+    // Resolver Tipo de Transporte y Medidas si vienen personalizados
+    if (transportTypeVal && !this.transportTypesList().includes(transportTypeVal)) {
+      this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), transportTypeVal, 'Otro (Especificar)']);
     }
-    if (pass.boxDimensions && !this.boxDimensionsList().includes(pass.boxDimensions)) {
-      this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), pass.boxDimensions, 'Otra Medida']);
+    if (boxDimensionsVal && !this.boxDimensionsList().includes(boxDimensionsVal)) {
+      this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), boxDimensionsVal, 'Otra Medida']);
     }
 
     this.checkInForm.patchValue({
       clientCode: matchedClientCode,
       client: matchedClientName,
+      clientNameCustom: matchedClientCustom,
       carrierLineCode: matchedCarrierCode,
       carrierLine: matchedCarrierName,
-      nombreOperador: pass.driverName || '',
-      placasTracto: pass.tractorPlates || '',
-      noEcoTractor: pass.economicNumber || pass.noEcoTractor || 'ECO-01',
-      placasCaja: pass.boxPlates || '',
-      medidasCaja: pass.boxDimensions || '53 Pies',
-      tipoTransporte: pass.transportType || 'Caja Seca',
-      transportistaNombre: pass.driverName || '',
-      transportistaFirma: true,
+      carrierLineCustom: matchedCarrierCustom,
+      nombreOperador: driverNameVal,
+      driverPhone: pass.driverPhone || pass.telefonoChofer || pass.telefonoOperador || pass.phone || '',
+      placasTracto: tractorPlatesVal,
+      noEcoTractor: ecoNumberVal,
+      placasCaja: boxPlatesVal,
+      medidasCaja: boxDimensionsVal,
+      tipoTransporte: transportTypeVal,
+      transportistaNombre: driverNameVal,
+      transportistaFirma: isSubmitted || !!pass.driverSignature,
     });
 
-    if (pass.docNumber) {
-      if (pass.operationType === 'CARGA') {
-        this.checkInForm.patchValue({ noCartaPorte: pass.docNumber });
+    if (docNumberVal) {
+      if (opVal === 'CARGA') {
+        this.checkInForm.patchValue({ noCartaPorte: docNumberVal });
       } else {
-        this.checkInForm.patchValue({ remision: pass.docNumber });
+        this.checkInForm.patchValue({ remision: docNumberVal });
       }
     }
 
     if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
       this.sealList.set(pass.sealNumbers);
+    } else {
+      this.sealList.set([]);
     }
 
     if (pass.checklistData) {
@@ -538,8 +894,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
 
     this.showPassListModal.set(false);
-    this.scanSuccessMessage.set(`¡Datos del Pase #${pass.token} cargados! Chofer: ${pass.driverName || 'S/N'}, Placas: ${pass.tractorPlates || 'S/P'}.`);
-    setTimeout(() => this.scanSuccessMessage.set(null), 6000);
+    if (isSubmitted) {
+      this.toast.success(`¡Datos del Pase #${pass.token} completados por el transportista cargados en caseta!`);
+    } else {
+      this.toast.info(`Pase #${pass.token} vinculado. El transportista aún no completa el formulario móvil, puedes llenarlo manualmente.`);
+    }
   }
 
   // ── MÉTODOS DEL MODAL DE QR DE PRUEBA ─────────────────────────────────────
@@ -549,7 +908,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     if (!pass || !pass.token) return;
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${pass.token}`);
+    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}`);
     this.showQrModal.set(true);
   }
 
@@ -558,7 +917,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const existingPending = this.activePasses().find(p => p.status === 'PENDING_DRIVER');
     if (existingPending) {
       this.qrModalToken.set(existingPending.token);
-      this.qrModalUrl.set(`${window.location.origin}/carrier-checkin?token=${existingPending.token}`);
+      this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${existingPending.token}`);
       this.showQrModal.set(true);
     } else if (!this.qrModalUrl()) {
       this.generateDriverPass();
@@ -580,6 +939,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const found = this.activePasses().find(p => p.token === currentToken);
     if (found) {
       this.deleteDriverPass(found);
+    } else if (currentToken) {
+      this.movementsService.movementsApi.deletePass(currentToken, currentToken).subscribe();
+      if (this.activeToken() === currentToken) {
+        this.resetForm();
+      }
     }
     this.qrModalUrl.set('');
     this.qrModalToken.set('');
@@ -592,44 +956,45 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     if (!pass) return;
 
-    const passId = pass.id;
-    const passToken = pass.token;
+    const passId = pass.id || pass.token;
+    const passToken = pass.token || pass.id;
 
-    if (passId) {
-      this.movementsService.movementsApi.deletePass(passId).subscribe({
-        next: () => {
-          this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
-          if (this.qrModalToken() === passToken) {
-            this.qrModalUrl.set('');
-            this.qrModalToken.set('');
-          }
-          this.passActionNotice.set(`Pase #${passToken} descartado correctamente.`);
-          setTimeout(() => this.passActionNotice.set(null), 4000);
-        },
-        error: (err) => {
-          console.error('Error al descartar pase:', err);
-          // Actualizar en memoria por fallback
-          this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
-          this.passActionNotice.set(`Pase #${passToken} removido.`);
-          setTimeout(() => this.passActionNotice.set(null), 4000);
-        }
-      });
-    } else {
-      this.activePasses.update(list => list.filter(p => p.token !== passToken));
+    // Si el pase que se está eliminando es el que actualmente está cargado en caseta, limpiar el formulario
+    if (this.activeToken() === passToken || this.activeToken() === passId) {
+      this.resetForm();
     }
+
+    this.movementsService.movementsApi.deletePass(passId, passToken).subscribe({
+      next: () => {
+        this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
+        if (this.qrModalToken() === passToken) {
+          this.qrModalUrl.set('');
+          this.qrModalToken.set('');
+        }
+        this.toast.info(`Pase #${passToken} descartado.`);
+      },
+      error: () => {
+        this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
+        if (this.qrModalToken() === passToken) {
+          this.qrModalUrl.set('');
+          this.qrModalToken.set('');
+        }
+        this.toast.info(`Pase #${passToken} descartado.`);
+      }
+    });
   }
 
   // ── CHECK-OUT / SALIDA DE CASETA ──────────────────────────────────────────
   protected openCheckOutModal(pass: any): void {
     if (!pass) return;
     if (!pass.isReadyForExit) {
-      alert('Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que el Líder de Almacén autorice y finalice la recepción (F01) antes de proceder con el Check-Out.');
+      this.toast.warning('Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que Almacén autorice y finalice la recepción antes del Check-Out.');
       return;
     }
     this.selectedCheckOutPass.set(pass);
     this.checkOutForm.reset({
       departureTime: this.getCurrentTimeString(),
-      exitSealNumbers: pass.sealNumbers?.join(', ') || '',
+      exitSealNumbers: '',
       exitObservations: '',
       guardNotes: ''
     });
@@ -665,15 +1030,15 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.isCheckingOut.set(false);
         this.closeCheckOutModal();
         this.reloadAllData();
-        this.checkOutSuccessNotice.set(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada con éxito a las ${payload.departureTime}!`);
-        setTimeout(() => this.checkOutSuccessNotice.set(null), 6000);
+        this.toast.success(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada con éxito a las ${payload.departureTime}!`);
+        this.scrollToTop();
 
         // Abrir inmediatamente la vista de impresión del Formato F01
         this.openF01Print(res || pass);
       },
       error: (err) => {
         this.isCheckingOut.set(false);
-        alert(err?.error?.message || 'Error al procesar la salida en el servidor.');
+        this.toast.error(err?.error?.message || 'Error al procesar la salida en el servidor.');
       }
     });
   }
@@ -804,23 +1169,65 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── MANEJO DE SELECTS ──────────────────────────────────────────────────────
   protected onCarrierLineSelect(code: string): void {
-    const found = this.carrierLines().find((c) => c.code === code);
-    if (found) {
+    if (code === 'OTRO') {
+      const customVal = this.checkInForm.get('carrierLineCustom')?.value;
       this.checkInForm.patchValue({
-        carrierLineCode: found.code,
-        carrierLine: found.name,
+        carrierLineCode: 'OTRO',
+        carrierLine: customVal || ''
       });
+    } else {
+      const found = this.carrierLines().find((c) => c.code === code);
+      if (found) {
+        this.checkInForm.patchValue({
+          carrierLineCode: found.code,
+          carrierLine: found.name,
+          carrierLineCustom: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          carrierLineCode: '',
+          carrierLine: '',
+          carrierLineCustom: ''
+        });
+      }
     }
   }
 
+  protected onCustomCarrierLineInput(val: string): void {
+    this.checkInForm.patchValue({
+      carrierLine: val
+    });
+  }
+
   protected onClientSelect(code: string): void {
-    const found = this.clients().find((c) => c.code === code);
-    if (found) {
+    if (code === 'OTRO') {
+      const customVal = this.checkInForm.get('clientNameCustom')?.value;
       this.checkInForm.patchValue({
-        clientCode: found.code,
-        client: found.name,
+        clientCode: 'OTRO',
+        client: customVal || ''
       });
+    } else {
+      const found = this.clients().find((c) => c.code === code);
+      if (found) {
+        this.checkInForm.patchValue({
+          clientCode: found.code,
+          client: found.name,
+          clientNameCustom: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          clientCode: '',
+          client: '',
+          clientNameCustom: ''
+        });
+      }
     }
+  }
+
+  protected onCustomClientInput(val: string): void {
+    this.checkInForm.patchValue({
+      client: val
+    });
   }
 
   protected onTransportTypeSelect(val: string): void {
@@ -859,6 +1266,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.checkInForm.patchValue({
         rampCode: found.code,
         rampNumber: found.rampNumber,
+      });
+    } else {
+      this.checkInForm.patchValue({
+        rampCode: '',
+        rampNumber: 0,
       });
     }
   }
@@ -903,6 +1315,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
 
     const formVal = this.checkInForm.value;
+
+    // Si seleccionó OTRO cliente, asegurar que tome el valor especificado
+    if (formVal.clientCode === 'OTRO') {
+      const customName = (formVal.clientNameCustom || formVal.client || '').trim();
+      formVal.client = customName;
+      this.checkInForm.patchValue({ client: customName });
+    }
+
+    // Si seleccionó OTRA línea transportista, asegurar que tome el valor especificado
+    if (formVal.carrierLineCode === 'OTRO') {
+      const customCarrier = (formVal.carrierLineCustom || formVal.carrierLine || '').trim();
+      formVal.carrierLine = customCarrier;
+      this.checkInForm.patchValue({ carrierLine: customCarrier });
+    }
+
     const missing: string[] = [];
 
     if (!formVal.fecha) missing.push('Fecha');
@@ -912,24 +1339,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (formVal.operacion === 'DESCARGA' && (!formVal.remision || !formVal.remision.trim())) {
       missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
     }
-    if (!formVal.clientCode || !formVal.client) missing.push('Cliente Destinatario');
+    if (!formVal.clientCode || !formVal.client || !formVal.client.trim()) missing.push('Cliente Destinatario');
     if (!formVal.rampCode || !formVal.rampNumber) missing.push('Andén / Rampa Asignada');
     if (!formVal.carrierLineCode || !formVal.carrierLine) missing.push('Línea Transportista');
     if (!formVal.nombreOperador || !formVal.nombreOperador.trim()) missing.push('Nombre del Operador / Chofer');
     if (!formVal.placasTracto || !formVal.placasTracto.trim()) missing.push('Placas del Tracto');
     if (!formVal.noEcoTractor || !formVal.noEcoTractor.trim()) missing.push('No. Económico Tracto');
     if (!formVal.placasCaja || !formVal.placasCaja.trim()) missing.push('Placas de la Caja');
-    if (!formVal.tipoTransporte || !formVal.tipoTransporte.trim()) missing.push('Tipo de Transporte');
-    if (!formVal.medidasCaja || !formVal.medidasCaja.trim()) missing.push('Medidas de Caja');
-
-    if (this.sealList().length === 0 && (!formVal.noSello || !formVal.noSello.trim())) {
-      missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio)');
+    if (formVal.operacion === 'DESCARGA' && this.sealList().length === 0 && (!formVal.noSello || !formVal.noSello.trim())) {
+      missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio en Descarga)');
     }
 
     if (missing.length > 0 || this.checkInForm.invalid) {
       this.checkInForm.markAllAsTouched();
       this.errorMessage.set(`⚠️ No se puede registrar. Faltan los siguientes campos obligatorios: ${missing.join(', ')}`);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.scrollToTop();
       return;
     }
 
@@ -938,7 +1362,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     const seals: string[] = this.sealList().length > 0 
       ? [...this.sealList()] 
-      : [formVal.noSello.trim().toUpperCase()];
+      : (formVal.noSello && formVal.noSello.trim() 
+          ? [formVal.noSello.trim().toUpperCase()] 
+          : (formVal.operacion === 'CARGA' ? ['PENDIENTE_ANDEN'] : []));
 
     const inspectionObservations = [
       `[FORMATO F01-PO-CP-7.1.3-03] Arribo en Caseta de Seguridad`,
@@ -946,7 +1372,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
       `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
       `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtranos}, Plagas=${formVal.revIndiciosPlagas}`,
-      `Firmas: Vigilancia=${formVal.responsableVigilanciaNombre || 'Guardia'} | Chofer=${formVal.transportistaNombre || formVal.nombreOperador}`
+      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
     ].join(' | ');
 
     const checkInData: CheckInCasetaData = {
@@ -960,6 +1386,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       rampCode: formVal.rampCode,
       rampNumber: Number(formVal.rampNumber) || 1,
       driverName: formVal.nombreOperador,
+      driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
       boxPlates: (formVal.placasCaja || '').toUpperCase(),
       sealNumbers: seals,
@@ -979,6 +1406,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         rampNumber: Number(formVal.rampNumber) || 1,
         rampCode: formVal.rampCode,
         driverName: formVal.nombreOperador,
+        driverPhone: formVal.driverPhone || '',
         tractorPlates: (formVal.placasTracto || '').toUpperCase().trim(),
         boxPlates: (formVal.placasCaja || '').toUpperCase().trim(),
         noEcoTractor: formVal.noEcoTractor,
@@ -998,7 +1426,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           const folio = passRes?.generatedFolio || passRes?.folio || this.activeToken() || 'OK';
           this.createdFolio.set(folio);
           this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
-          this.saveSuccess.set(true);
 
           const printSnapshot = {
             ...formVal,
@@ -1009,7 +1436,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
           };
           this.lastCompletedPrintItem.set(printSnapshot);
-          this.resetFormFieldsOnly();
+          this.resetForm();
+
+          // Notificación flotante del sistema y scroll al menú superior
+          const opLabel = op === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga';
+          this.toast.success(`¡${opLabel} registrada con éxito! Folio #${folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+          this.scrollToTop();
 
           this.reloadAllData();
           this.movementsService.reloadReceptions();
@@ -1019,6 +1451,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.isSaving.set(false);
           const msg = err?.error?.message || err?.message || 'Error al completar el pase en el servidor';
           this.errorMessage.set(msg);
+          this.toast.error(msg, 4500);
+          this.scrollToTop();
         }
       });
     } else {
@@ -1029,7 +1463,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             this.createdFolio.set(outbound.folio);
             this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
-            this.saveSuccess.set(true);
 
             const printSnapshot = {
               ...formVal,
@@ -1040,7 +1473,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
               rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
             };
             this.lastCompletedPrintItem.set(printSnapshot);
-            this.resetFormFieldsOnly();
+            this.resetForm();
+
+            // Notificación flotante del sistema y scroll al menú superior
+            this.toast.success(`¡Carga / Salida registrada con éxito! Folio #${outbound.folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+            this.scrollToTop();
 
             this.reloadAllData();
             this.movementsService.reloadOutbounds();
@@ -1049,6 +1486,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             const msg = err?.error?.message || err?.message || 'Error al registrar la salida / carga en el servidor';
             this.errorMessage.set(msg);
+            this.toast.error(msg, 4500);
+            this.scrollToTop();
           }
         });
       } else {
@@ -1057,7 +1496,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             this.createdFolio.set(header.folio);
             this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
-            this.saveSuccess.set(true);
 
             const printSnapshot = {
               ...formVal,
@@ -1068,7 +1506,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
               rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
             };
             this.lastCompletedPrintItem.set(printSnapshot);
-            this.resetFormFieldsOnly();
+            this.resetForm();
+
+            // Notificación flotante del sistema y scroll al menú superior
+            this.toast.success(`¡Recepción / Descarga registrada con éxito! Folio #${header.folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+            this.scrollToTop();
 
             this.reloadAllData();
             this.movementsService.reloadReceptions();
@@ -1077,6 +1519,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             this.isSaving.set(false);
             const msg = err?.error?.message || err?.message || 'Error al registrar el check-in en el servidor';
             this.errorMessage.set(msg);
+            this.toast.error(msg, 4500);
+            this.scrollToTop();
           }
         });
       }
@@ -1084,10 +1528,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected resetFormFieldsOnly(): void {
-    const firstClient = this.clients()[0];
-    const firstCarrier = this.carrierLines()[0];
-    const firstRamp = this.ramps()[0];
-
     this.checkInForm.reset({
       controlNumber: 'F01-PO-CP-7.1.3-03',
       revisionNumber: '01',
@@ -1096,17 +1536,20 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       fecha: this.getCurrentDateString(),
       noCartaPorte: '',
       remision: '',
-      clientCode: firstClient ? firstClient.code : '',
-      client: firstClient ? firstClient.name : '',
+      clientCode: '',
+      client: '',
+      clientNameCustom: '',
       procedimiento: 'Recepción',
       operacion: 'DESCARGA',
       horaEntrada: this.getCurrentTimeString(),
       horaSalida: '',
-      carrierLineCode: firstCarrier ? firstCarrier.code : '',
-      carrierLine: firstCarrier ? firstCarrier.name : '',
+      carrierLineCode: '',
+      carrierLine: '',
+      carrierLineCustom: '',
       nombreOperador: '',
-      rampCode: firstRamp ? firstRamp.code : 'R-01',
-      rampNumber: firstRamp ? firstRamp.rampNumber : 1,
+      driverPhone: '',
+      rampCode: '',
+      rampNumber: 0,
       placasTracto: '',
       noEcoTractor: '',
       placasCaja: '',
@@ -1121,8 +1564,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       eppCubrebocasObs: '',
       eppChaleco: 'SI',
       eppChalecoObs: '',
-      docCartaPorte: 'SI',
-      docCartaPorteObs: '',
+      docCartaPorte: 'NO',
+      docCartaPorteObs: 'N/A - Operación de Descarga/Recepción',
       docRemision: 'SI',
       docRemisionObs: '',
       revInteriorCaja: 'SI',
@@ -1143,6 +1586,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.sealList.set([]);
     this.tempSealInput.set('');
     this.activeToken.set(null);
+    this.isCustomTransportType.set(false);
+    this.isCustomBoxDimension.set(false);
+    this.customTransportInput.set('');
+    this.customBoxDimensionInput.set('');
   }
 
   protected resetForm(): void {
@@ -1158,11 +1605,36 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected formatTimeString(val: any): string {
     if (!val) return '--:--';
     const str = String(val).trim();
-    if (!str || str === '--:--' || str === 'null' || str === 'undefined') return '--:--';
-    const withoutMillis = str.split('.')[0];
-    if (withoutMillis.includes('T')) {
-      return withoutMillis.split('T')[1];
+    if (!str || str === '--:--' || str === 'null' || str === 'undefined' || str === '-- : --' || str === '-') return '--:--';
+
+    // Si viene en formato ISO (ej. 2026-09-28T04:20:00Z o 2026-09-28T04:20:00.123456)
+    if (str.includes('T')) {
+      const timePart = str.split('T')[1].split('.')[0].replace(/Z|[+-].*$/g, '');
+      const parts = timePart.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+      }
     }
+
+    // Si viene con fecha locale (ej. "27/09/2026, 14:30:00" o "27/09/2026 14:30")
+    if (str.includes(',') || (str.includes('/') && str.includes(':'))) {
+      const segs = str.split(/,|\s+/);
+      for (const seg of segs) {
+        if (seg.includes(':')) {
+          const parts = seg.split(':');
+          if (parts.length >= 2) {
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+          }
+        }
+      }
+    }
+
+    const withoutMillis = str.split('.')[0];
+    const parts = withoutMillis.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+
     return withoutMillis;
   }
 

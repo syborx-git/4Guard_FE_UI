@@ -3,7 +3,7 @@
      HOMOLOGADO CON SYNEXIA THEME ENGINE (LIGHT & DARK DUAL MODE)
      CONFORME A: ui-design-system-light.sdd.md & ui-design-system-dark.sdd.md
      ════════════════════════════════════════════════════════════════ -->
-<div class="security-page">
+<div class="security-page" id="security-page-top">
 
   <!-- ── 1. CABECERA PRINCIPAL HERO (GOLDEN STANDARD) ── -->
   <header class="security-header">
@@ -190,45 +190,7 @@
     </div>
   }
 
-  @if (saveSuccess()) {
-    <div class="security-alert security-alert--registered animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-transparent border border-amber-500/30">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-3xl text-emerald-600 dark:text-emerald-400">task_alt</span>
-        <div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <h4 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-              ¡{{ checkInForm.get('operacion')?.value === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga' }} Registrada con Éxito!
-            </h4>
-            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono font-extrabold text-xs">
-              FOLIO: #{{ createdFolio() }}
-            </span>
-          </div>
-          <p class="text-xs text-slate-700 dark:text-slate-300 mt-0.5">
-            Rampa asignada: <strong class="font-mono text-amber-600 dark:text-amber-400">{{ assignedRampLabel() }}</strong>. La unidad puede ingresar al andén correspondiente.
-          </p>
-        </div>
-      </div>
 
-      <div class="flex items-center gap-2.5">
-        <button
-          type="button"
-          (click)="openF01Print(lastCompletedPrintItem() || checkInForm.value)"
-          class="btn-primary-gold"
-        >
-          <span class="material-symbols-outlined text-sm">print</span>
-          <span>Imprimir Formato F01</span>
-        </button>
-        <button
-          type="button"
-          (click)="resetForm()"
-          class="btn-secondary-outline"
-          title="Cerrar aviso y nuevo registro"
-        >
-          <span>✕ Cerrar Aviso</span>
-        </button>
-      </div>
-    </div>
-  }
 
   @if (errorMessage()) {
     <div class="security-alert security-alert--error animate-fade-in">
@@ -255,7 +217,9 @@
         <div class="security-card p-5">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-amber-500">qr_code_2</span>
+              <div class="w-7 h-7 rounded-full bg-white flex items-center justify-center border border-amber-400/80 shrink-0 p-0.5 shadow-sm">
+                <img src="assets/forbot-avatar.png" alt="4GUARD ForBot" class="w-full h-full object-contain" />
+              </div>
               <span>Pase Digital para Chofer</span>
             </h3>
             <span class="badge-gold">
@@ -264,7 +228,7 @@
           </div>
 
           <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-            Genera un código QR o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su smartphone.
+            Genera un código QR institucional o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su smartphone.
           </p>
 
           <button
@@ -280,94 +244,160 @@
         <!-- Tarjeta de Choferes en Espera / Solicitudes Móviles -->
         <div class="security-card p-5">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">pending_actions</span>
+            <h3 class="font-black text-sm flex items-center gap-2" style="color: var(--text-primary);">
+              <span class="material-symbols-outlined" style="color: var(--c-info);">pending_actions</span>
               <span>Choferes en Espera</span>
             </h3>
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/15 text-blue-700 dark:text-blue-300">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black" style="background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-bdr);">
               {{ activePasses().length }}
             </span>
           </div>
 
           @if (passActionNotice()) {
-            <div class="mb-3 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 animate-fade-in">
+            <div class="pass-notice-banner animate-fade-in">
               <span class="material-symbols-outlined text-sm">check_circle</span>
               <span>{{ passActionNotice() }}</span>
             </div>
           }
 
           @if (activePasses().length === 0) {
-            <div class="text-center py-6 border border-dashed border-slate-300 dark:border-slate-700/80 rounded-xl">
-              <span class="material-symbols-outlined text-3xl text-slate-400 mb-1">hourglass_empty</span>
-              <p class="text-xs font-semibold text-slate-600 dark:text-slate-400">No hay choferes en espera</p>
-              <p class="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5">Los pases QR generados y auto-registros aparecerán aquí.</p>
+            <div class="pass-empty-state">
+              <span class="material-symbols-outlined text-3xl mb-1" style="color: var(--text-muted);">hourglass_empty</span>
+              <p class="text-xs font-bold" style="color: var(--text-primary);">No hay choferes en espera</p>
+              <p class="text-[11px] mt-0.5" style="color: var(--text-secondary);">Los pases QR generados y auto-registros aparecerán aquí en tiempo real.</p>
             </div>
           } @else {
-            <div class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+            <div class="space-y-3 max-h-[460px] overflow-y-auto pr-1">
               @for (pass of activePasses(); track pass.id || pass.token) {
-                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/40 shadow-sm hover:border-amber-500/60 transition-all flex flex-col gap-2">
-                  <div class="flex items-start justify-between">
-                    <div>
-                      <div class="flex items-center gap-1.5">
-                        <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase"
-                              [ngClass]="pass.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300' : 'bg-blue-500/20 text-blue-800 dark:text-blue-300'">
-                          {{ pass.operationType || 'DESCARGA' }}
-                        </span>
-                        <span class="font-mono text-[10px] font-bold text-slate-600 dark:text-slate-400">#{{ pass.token }}</span>
-                      </div>
-                      <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 mt-1">
-                        {{ pass.driverName || (pass.status === 'SUBMITTED' ? 'Chofer sin nombre' : 'QR esperando captura') }}
-                      </h4>
-                    </div>
+                <div class="driver-pass-card group">
+                  
+                  <!-- Barra indicadora superior según operación/estatus -->
+                  <div class="driver-pass-card__top-bar"
+                       [ngClass]="pass.status === 'SUBMITTED' 
+                         ? 'driver-pass-card__top-bar--submitted' 
+                         : ((pass.operationType === 'CARGA' || pass.operacion === 'CARGA') 
+                           ? 'driver-pass-card__top-bar--carga' 
+                           : 'driver-pass-card__top-bar--descarga')">
+                  </div>
 
-                    <div class="flex items-center gap-1.5">
-                      <span class="px-2 py-0.5 rounded text-[9.5px] font-bold uppercase"
-                            [ngClass]="pass.status === 'SUBMITTED' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'">
-                        {{ pass.status === 'SUBMITTED' ? '✓ Enviado' : '⏳ QR Activo' }}
+                  <!-- Fila 1: Badges de Operación, Token y Estado -->
+                  <div class="flex items-center justify-between gap-2 pt-0.5">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="pass-op-badge"
+                            [ngClass]="(pass.operationType === 'CARGA' || pass.operacion === 'CARGA')
+                              ? 'pass-op-badge--carga'
+                              : 'pass-op-badge--descarga'">
+                        {{ pass.operationType || pass.operacion || 'DESCARGA' }}
                       </span>
-                      <button
-                        type="button"
-                        (click)="deleteDriverPass(pass, $event)"
-                        title="Descartar pase"
-                        class="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-                      >
-                        <span class="material-symbols-outlined text-sm">delete_outline</span>
-                      </button>
+                      <span class="pass-token-pill">
+                        #{{ pass.token }}
+                      </span>
+                    </div>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                      <span class="pass-status-pill"
+                            [ngClass]="pass.status === 'SUBMITTED' ? 'pass-status-pill--submitted' : 'pass-status-pill--active'">
+                        @if (pass.status === 'SUBMITTED') {
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                          <span>✓ Enviado</span>
+                        } @else {
+                          <span class="material-symbols-outlined text-[12px] animate-spin" style="animation-duration: 3.5s;">hourglass_top</span>
+                          <span>QR Activo</span>
+                        }
+                      </span>
                     </div>
                   </div>
 
-                  <div class="text-[10px] text-slate-600 dark:text-slate-300 grid grid-cols-2 gap-1 border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5 font-medium">
-                    <div>Placas: <strong class="font-mono text-slate-800 dark:text-slate-100">{{ pass.tractorPlates || 'S/P' }}</strong></div>
-                    <div>Transporte: <strong class="text-slate-800 dark:text-slate-100">{{ pass.carrierLine || 'General' }}</strong></div>
+                  <!-- Fila 2: Título e Identidad del Chofer -->
+                  <div class="px-0.5">
+                    @if (pass.status === 'SUBMITTED' || pass.driverName || pass.nombreOperador) {
+                      <div class="flex items-center justify-between gap-1">
+                        <h4 class="pass-driver-title truncate">
+                          <span class="material-symbols-outlined text-base" style="color: var(--c-success);">person_check</span>
+                          <span class="truncate">{{ pass.driverName || pass.nombreOperador || pass.operatorName || 'Chofer Registrado' }}</span>
+                        </h4>
+                        @if (pass.driverPhone || pass.telefonoChofer) {
+                          <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
+                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0" 
+                             title="Llamar al chofer"
+                             (click)="$event.stopPropagation()">
+                            <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">call</span>
+                            <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
+                          </a>
+                        }
+                      </div>
+                      <p class="pass-driver-desc pass-driver-desc--submitted">
+                        ✓ Formulario F01 completado por el transportista
+                      </p>
+                    } @else {
+                      <div class="flex items-center justify-between gap-1">
+                        <h4 class="pass-driver-title">
+                          <span class="material-symbols-outlined text-base animate-pulse" style="color: #f59e0b;">phonelink_ring</span>
+                          <span>QR esperando captura</span>
+                        </h4>
+                        @if (pass.driverPhone || pass.telefonoChofer) {
+                          <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
+                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0" 
+                             title="Llamar al chofer"
+                             (click)="$event.stopPropagation()">
+                            <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">call</span>
+                            <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
+                          </a>
+                        }
+                      </div>
+                      <p class="pass-driver-desc">
+                        El transportista está completando el formulario desde su smartphone.
+                      </p>
+                    }
                   </div>
 
-                  <div class="flex items-center gap-1.5 pt-1">
+                  <!-- Fila 3: Micro-Grid de Placas y Transporte -->
+                  <div class="pass-meta-grid">
+                    <div class="pass-meta-item">
+                      <span class="pass-meta-label">Placas Unidad</span>
+                      <span class="pass-meta-val pass-meta-val--mono">
+                        {{ pass.tractorPlates || pass.placasTracto || pass.truckPlates || 'S/P' }}
+                      </span>
+                    </div>
+                    <div class="pass-meta-item">
+                      <span class="pass-meta-label">Línea Transporte</span>
+                      <span class="pass-meta-val" [title]="pass.carrierLine || pass.carrier || pass.carrierName || 'General'">
+                        {{ pass.carrierLine || pass.carrier || pass.carrierName || 'General' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Fila 4: Botones de Acción -->
+                  <div class="pass-actions-row">
                     <button
                       type="button"
                       (click)="openPassQr(pass, $event)"
-                      class="px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      class="pass-btn-qr"
                       title="Ver Código QR de este pase"
                     >
-                      <span class="material-symbols-outlined text-xs">qr_code</span>
+                      <span class="material-symbols-outlined text-sm">qr_code</span>
                       <span>QR</span>
                     </button>
+                    
                     <button
                       type="button"
                       (click)="loadDriverSubmission(pass)"
-                      class="flex-1 btn-primary-gold text-[11px] py-1.5 justify-center"
+                      class="pass-btn-load"
                     >
-                      <span class="material-symbols-outlined text-sm">download_done</span>
+                      <span class="material-symbols-outlined text-base font-bold">{{ pass.status === 'SUBMITTED' ? 'download_done' : 'check_circle' }}</span>
                       <span>{{ pass.status === 'SUBMITTED' ? 'Cargar en Caseta' : 'Cargar / Usar' }}</span>
                     </button>
+                    
                     <button
                       type="button"
                       (click)="deleteDriverPass(pass, $event)"
-                      class="px-2 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      class="pass-btn-del"
                       title="Descartar pase"
                     >
-                      <span class="material-symbols-outlined text-xs">delete</span>
+                      <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
                   </div>
+
                 </div>
               }
             </div>
@@ -415,24 +445,24 @@
               <!-- Tipo de Operación (Bimodal) -->
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Operación *</label>
-                <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700">
+                <div class="operation-toggle-group">
                   <button
                     type="button"
                     (click)="onOperationChange('DESCARGA')"
-                    [class.bg-blue-600]="checkInForm.get('operacion')?.value === 'DESCARGA'"
-                    [class.text-white]="checkInForm.get('operacion')?.value === 'DESCARGA'"
-                    class="py-1 text-center font-extrabold text-[11px] rounded-lg transition-colors"
+                    [class.active-descarga]="checkInForm.get('operacion')?.value === 'DESCARGA'"
+                    class="operation-toggle-btn"
                   >
-                    Descarga
+                    <span class="material-symbols-outlined text-sm">download</span>
+                    <span>Descarga</span>
                   </button>
                   <button
                     type="button"
                     (click)="onOperationChange('CARGA')"
-                    [class.bg-amber-600]="checkInForm.get('operacion')?.value === 'CARGA'"
-                    [class.text-white]="checkInForm.get('operacion')?.value === 'CARGA'"
-                    class="py-1 text-center font-extrabold text-[11px] rounded-lg transition-colors"
+                    [class.active-carga]="checkInForm.get('operacion')?.value === 'CARGA'"
+                    class="operation-toggle-btn"
                   >
-                    Carga
+                    <span class="material-symbols-outlined text-sm">upload</span>
+                    <span>Carga</span>
                   </button>
                 </div>
               </div>
@@ -475,8 +505,25 @@
                   @for (cli of clients(); track cli.code) {
                     <option [value]="cli.code">{{ cli.name }}</option>
                   }
+                  <option value="OTRO">Otro (Especificar)</option>
                 </select>
               </div>
+
+              <!-- Campo condicional cuando se selecciona 'Otro' cliente -->
+              @if (checkInForm.get('clientCode')?.value === 'OTRO') {
+                <div class="sm:col-span-2 animate-fade-in">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span class="text-amber-500 font-bold">*</span> Especificar Nombre del Cliente
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="clientNameCustom"
+                    (input)="onCustomClientInput($any($event.target).value)"
+                    placeholder="Ingrese el nombre o razón social del cliente..."
+                    class="form-input text-xs font-bold text-amber-700 dark:text-amber-300"
+                  />
+                </div>
+              }
 
               <!-- Hora Entrada -->
               <div>
@@ -508,7 +555,7 @@
               <span>2. Datos del Transporte &amp; Unidad</span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <!-- Línea Transportista -->
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Línea Transportista *</label>
@@ -521,8 +568,25 @@
                   @for (c of carrierLines(); track c.code) {
                     <option [value]="c.code">{{ c.name }}</option>
                   }
+                  <option value="OTRO">Otro (Especificar)</option>
                 </select>
               </div>
+
+              <!-- Campo condicional cuando se selecciona 'Otro' transportista -->
+              @if (checkInForm.get('carrierLineCode')?.value === 'OTRO') {
+                <div class="animate-fade-in">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span class="text-amber-500 font-bold">*</span> Especificar Transportista
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="carrierLineCustom"
+                    (input)="onCustomCarrierLineInput($any($event.target).value)"
+                    placeholder="Nombre de la línea..."
+                    class="form-input text-xs font-bold text-amber-700 dark:text-amber-300"
+                  />
+                </div>
+              }
 
               <!-- Nombre del Operador / Chofer -->
               <div>
@@ -533,6 +597,27 @@
                   placeholder="Nombre completo del chofer"
                   class="form-input text-xs"
                 />
+              </div>
+
+              <!-- Teléfono / Celular del Chofer (Uso Exclusivo Vigilancia) -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px] text-amber-500">phone_android</span>
+                    <span>Teléfono Chofer</span>
+                  </span>
+                  <span class="text-[9.5px] text-amber-600 dark:text-amber-400 font-semibold font-mono">(Uso Caseta)</span>
+                </label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">call</span>
+                  <input
+                    type="tel"
+                    formControlName="driverPhone"
+                    maxlength="10"
+                    placeholder="10 dígitos (ej. 5512345678)"
+                    class="form-input text-xs pl-8 font-mono"
+                  />
+                </div>
               </div>
 
               <!-- Tipo de Transporte -->
@@ -620,7 +705,14 @@
 
               <!-- Sellos de Seguridad (Cinchos) -->
               <div class="sm:col-span-2">
-                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Sellos / Cinchos de Seguridad</label>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Sellos / Cinchos de Seguridad
+                  @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                    <span class="text-amber-600 dark:text-amber-400 font-medium font-sans ml-1">(Opcional / Se asignan en andén)</span>
+                  } @else {
+                    <span class="text-rose-500 font-bold ml-0.5">*</span>
+                  }
+                </label>
                 <div class="flex gap-2">
                   <input
                     type="text"
@@ -727,7 +819,16 @@
                     </td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-medium">Carta porte</td>
+                    <td class="py-2 px-3 font-medium">
+                      <div class="flex items-center gap-2">
+                        <span>Carta porte</span>
+                        @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
+                        } @else {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">N/A en Descarga</span>
+                        }
+                      </div>
+                    </td>
                     <td class="py-2 px-2 text-center">
                       <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('docCartaPorte', 'SI')" [class.btn-active-si]="checkInForm.get('docCartaPorte')?.value === 'SI'" class="crit-btn">SÍ</button>
@@ -737,7 +838,16 @@
                     <td class="py-2 px-3"><input type="text" formControlName="docCartaPorteObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-medium">Remisión</td>
+                    <td class="py-2 px-3 font-medium">
+                      <div class="flex items-center gap-2">
+                        <span>Remisión</span>
+                        @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
+                        } @else {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">N/A en Carga</span>
+                        }
+                      </div>
+                    </td>
                     <td class="py-2 px-2 text-center">
                       <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('docRemision', 'SI')" [class.btn-active-si]="checkInForm.get('docRemision')?.value === 'SI'" class="crit-btn">SÍ</button>
@@ -987,43 +1097,52 @@
             </thead>
             <tbody>
               @for (item of filteredInYardPasses(); track item.id || item.token) {
-                <tr [ngClass]="{ 'bg-emerald-500/5': item.isReadyForExit }">
-                  <td class="td-mono">
-                    <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
+                <tr [ngClass]="{ 'tr-ready-exit': item.isReadyForExit }">
+                  <td>
+                    <div class="cell-folio-title">
                       {{ item.generatedFolio || item.token }}
                     </div>
-                    <div class="text-[10px] text-slate-400 font-mono">Token: {{ item.token }}</div>
+                    <div class="cell-token-sub">
+                      Token: <strong class="cell-token-strong">{{ item.token }}</strong>
+                    </div>
                   </td>
                   <td>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                          [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'">
                       {{ item.operationType || 'DESCARGA' }}
                     </span>
                   </td>
                   <td>
-                    <span class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 font-mono font-bold text-xs text-amber-600 dark:text-amber-400">
-                      {{ item.rampCode || (item.rampNumber ? 'R-' + item.rampNumber : 'R-01') }}
+                    <span class="cell-ramp-badge">
+                      {{ formatRampDisplay(item) }}
                     </span>
                   </td>
                   <td>
-                    <div class="font-semibold text-slate-900 dark:text-slate-100">{{ item.carrierLine || 'Transportista' }}</div>
-                    <div class="font-mono text-[10px] text-slate-500">Tracto: {{ item.tractorPlates || '-' }} | Caja: {{ item.boxPlates || '-' }}</div>
+                    <div class="cell-carrier-title">
+                      {{ item.carrierLine || 'Transportista General' }}
+                    </div>
+                    <div class="cell-plates-sub">
+                      <span class="cell-plates-label">Tracto:</span> {{ item.tractorPlates || '-' }} &nbsp;|&nbsp; <span class="cell-plates-label">Caja:</span> {{ item.boxPlates || '-' }}
+                    </div>
                   </td>
                   <td>
-                    <div class="font-semibold">{{ item.driverName || 'S/N' }}</div>
+                    <div class="cell-driver-name">
+                      {{ item.driverName || 'S/N' }}
+                    </div>
                   </td>
-                  <td class="td-mono">
-                    {{ formatTimeString(item.receptionTime) }}
+                  <td>
+                    <span class="cell-time-val">
+                      {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}
+                    </span>
                   </td>
                   <td>
                     @if (item.isReadyForExit) {
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10.5px] border border-emerald-500/30 animate-pulse">
-                        <span class="material-symbols-outlined text-sm">verified</span>
+                      <span class="cell-status-ready animate-pulse">
+                        <span class="material-symbols-outlined text-sm text-emerald-800">verified</span>
                         <span>Autorizado / Listo Salida</span>
                       </span>
                     } @else {
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[10.5px] border border-amber-500/20">
-                        <span class="material-symbols-outlined text-sm animate-spin">sync</span>
+                      <span class="cell-status-maneuver">
+                        <span class="material-symbols-outlined text-sm text-amber-800 animate-spin">sync</span>
                         <span>{{ item.warehouseStatus === 'ASSIGNED' ? 'Asignado a Rampa' : (item.warehouseStatus || 'En Maniobra') }}</span>
                       </span>
                     }
@@ -1033,7 +1152,7 @@
                       <button
                         type="button"
                         (click)="openF01Print(item)"
-                        class="btn-secondary-outline text-[11px] px-2.5 py-1.5 rounded-lg"
+                        class="btn-secondary-outline text-xs font-bold px-2.5 py-1.5 rounded-lg"
                         title="Ver / Imprimir boleta F01"
                       >
                         <span class="material-symbols-outlined text-sm">print</span>
@@ -1044,7 +1163,7 @@
                         <button
                           type="button"
                           (click)="openCheckOutModal(item)"
-                          class="btn-primary-gold text-[11px] px-3.5 py-1.5 rounded-lg"
+                          class="btn-primary-gold text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm"
                           title="Registrar salida de unidad"
                         >
                           <span class="material-symbols-outlined text-sm">logout</span>
@@ -1052,7 +1171,7 @@
                         </button>
                       } @else {
                         <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-subtle cursor-not-allowed select-none"
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-slate-800 border border-slate-400 cursor-not-allowed select-none"
                           title="Maniobra en proceso en almacén. Requiere autorización del Líder antes de dar salida."
                         >
                           <span class="material-symbols-outlined text-xs">lock</span>
@@ -1141,45 +1260,46 @@
               @for (item of historyPasses(); track item.id || item.token) {
                 <tr>
                   <td class="td-mono">
-                    <div class="font-bold font-mono text-slate-900 dark:text-slate-100">
+                    <div class="cell-folio-title">
                       {{ item.generatedFolio || item.token }}
                     </div>
-                    <div class="text-[10px] text-slate-400 font-mono">{{ item.docDate || (item.createdAt | slice:0:10) }}</div>
+                    <div class="cell-token-sub">{{ item.docDate || (item.createdAt | slice:0:10) }}</div>
                   </td>
                   <td>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                          [ngClass]="item.operationType === 'CARGA' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'">
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'">
                       {{ item.operationType || 'DESCARGA' }}
                     </span>
                   </td>
                   <td>
-                    <div class="font-semibold text-slate-900 dark:text-slate-100">{{ item.clientName || 'General' }}</div>
+                    <div class="cell-carrier-title">{{ item.clientName || 'General' }}</div>
                   </td>
                   <td>
-                    <div>{{ item.carrierLine || 'Transporte' }}</div>
-                    <div class="font-mono text-[10px] text-slate-500">{{ item.tractorPlates || '-' }} / {{ item.boxPlates || '-' }}</div>
+                    <div class="cell-carrier-title">{{ item.carrierLine || 'Transporte' }}</div>
+                    <div class="cell-plates-sub"><span class="cell-plates-label">T:</span> {{ item.tractorPlates || '-' }} | <span class="cell-plates-label">C:</span> {{ item.boxPlates || '-' }}</div>
                   </td>
                   <td>
-                    <div>{{ item.driverName || 'S/N' }}</div>
+                    <div class="cell-driver-name">{{ item.driverName || 'S/N' }}</div>
                   </td>
                   <td class="td-mono">
-                    <div>In: <strong>{{ formatTimeString(item.receptionTime) }}</strong></div>
-                    <div>Out: <strong>{{ formatTimeString(item.departureTime) }}</strong></div>
+                    <div class="cell-time-val"><span class="cell-plates-label">In:</span> {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}</div>
+                    <div class="cell-time-val"><span class="cell-plates-label">Out:</span> {{ formatTimeString(item.departureTime || item.horaSalida || item.exitedAt) }}</div>
                   </td>
-                  <td class="td-mono font-bold text-amber-600 dark:text-amber-400">
-                    {{ calculateDuration(item.receptionTime, item.departureTime) }}
+                  <td class="td-mono">
+                    <div class="cell-time-val cell-time-val--duration">
+                      {{ calculateDuration(item.receptionTime, item.departureTime) }}
+                    </div>
                   </td>
                   <td>
                     @if (item.status === 'COMPLETED_EXIT') {
-                      <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10px] uppercase border border-emerald-500/30">
+                      <span class="cell-status-ready">
                         ✓ Salida Concluida
                       </span>
                     } @else if (item.status === 'COMPLETED') {
-                      <span class="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase">
+                      <span class="cell-op-badge-inbound">
                         En Planta
                       </span>
                     } @else {
-                      <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] uppercase">
+                      <span class="cell-status-maneuver">
                         {{ item.status }}
                       </span>
                     }
@@ -1206,68 +1326,88 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════════
-     MODAL A: PASE QR DINÁMICO PARA SMARTPHONE DEL CHOFER
+     MODAL A: PASE QR DINÁMICO PARA SMARTPHONE DEL CHOFER (ALTA LEGIBILIDAD)
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showQrModal()) {
-  <div class="modal-overlay animate-fade-in">
-    <div class="modal-card max-w-md w-full text-center relative">
-      <button
-        type="button"
-        (click)="closeQrModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold cursor-pointer"
-        aria-label="Cerrar modal QR"
-      >
-        ✕
-      </button>
+  <div class="modal-overlay animate-fade-in" (click)="closeQrModal()">
+    <div class="modal-card modal-card--qr-compact text-center relative shadow-2xl" (click)="$event.stopPropagation()">
+      
+      <!-- Encabezado Compacto con Avatar ForBot -->
+      <div class="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-amber-400/80 shrink-0 p-0.5 shadow-sm">
+            <img src="assets/forbot-avatar.png" alt="ForBot AI" class="w-full h-full object-contain" />
+          </div>
+          <div class="text-left">
+            <h3 class="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+              <span>Pase Digital QR</span>
+              <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">4GUARD</span>
+            </h3>
+            <p class="text-[10px] text-slate-500">Auto-registro Chofer F01</p>
+          </div>
+        </div>
 
-      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-3 border border-amber-500/25">
-        <span class="material-symbols-outlined text-2xl">qr_code_2</span>
+        <button
+          type="button"
+          (click)="closeQrModal()"
+          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-base font-bold cursor-pointer p-1 leading-none rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="Cerrar modal QR"
+        >
+          ✕
+        </button>
       </div>
 
-      <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-        Pase Digital QR de Acceso
-      </h3>
-      <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-4">
-        Muestra este código al transportista para que escanee con su smartphone y realice su auto-registro F01.
-      </p>
+      <!-- Render Visual Ampliado del QR (Alta Legibilidad & Error Correction Level H: 30%) -->
+      <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-md inline-block mx-auto mb-2">
+        <div class="relative inline-flex items-center justify-center">
+          <img
+            [src]="'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&ecc=H&data=' + (qrModalUrl() || 'https://4guard.com')"
+            alt="QR Pase Acceso Chofer"
+            class="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded bg-white"
+          />
+          <!-- Avatar Central ForBot con Zona de Aislamiento Blanco (Quiet Buffer) -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-10 h-10 rounded-full bg-white p-0.5 shadow-md border-2 border-white ring-1 ring-amber-400/80 flex items-center justify-center overflow-hidden">
+              <img src="assets/forbot-avatar.png" alt="4GUARD ForBot" class="w-full h-full object-contain" />
+            </div>
+          </div>
+        </div>
 
-      <!-- Render Visual del QR -->
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-md inline-block mb-4">
-        <img
-          [src]="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=' + (qrModalUrl() || 'https://4guard.com')"
-          alt="QR Pase Acceso Chofer"
-          class="w-48 h-48 object-contain mx-auto rounded-lg bg-white"
-        />
-        <div class="mt-2 font-mono font-extrabold text-xs text-slate-900 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-          Token: {{ qrModalToken() }}
+        <div class="mt-1.5 font-mono font-extrabold text-[11px] text-slate-900 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 flex items-center justify-center gap-1.5">
+          <span class="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Folio:</span>
+          <span>{{ qrModalToken() }}</span>
         </div>
       </div>
 
-      <!-- Acciones de Enlace -->
-      <div class="space-y-2">
-        <button
-          type="button"
-          (click)="openDriverPortalInNewTab()"
-          class="w-full btn-primary-gold justify-center py-2.5 text-xs shadow"
-        >
-          <span class="material-symbols-outlined text-base">open_in_new</span>
-          <span>Abrir Portal Móvil del Chofer</span>
-        </button>
+      <!-- Acciones de Enlace Compactas -->
+      <div class="space-y-1.5">
+        <div class="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            (click)="openDriverPortalInNewTab()"
+            class="btn-primary-gold justify-center py-1.5 px-2 text-[11px] shadow w-full"
+            title="Abrir en pestaña nueva"
+          >
+            <span class="material-symbols-outlined text-sm">open_in_new</span>
+            <span>Abrir Portal</span>
+          </button>
 
-        <button
-          type="button"
-          (click)="copyQrUrl()"
-          class="w-full btn-secondary-outline justify-center py-2 text-xs"
-        >
-          <span class="material-symbols-outlined text-sm">content_copy</span>
-          <span>Copiar Enlace al Portapapeles</span>
-        </button>
+          <button
+            type="button"
+            (click)="copyQrUrl()"
+            class="btn-secondary-outline justify-center py-1.5 px-2 text-[11px] w-full"
+            title="Copiar enlace al portapapeles"
+          >
+            <span class="material-symbols-outlined text-sm">content_copy</span>
+            <span>Copiar Enlace</span>
+          </button>
+        </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+        <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-800">
           <button
             type="button"
             (click)="generateNewDriverPass()"
-            class="btn-modal-secondary"
+            class="btn-modal-secondary py-1 px-2 text-[11px]"
           >
             <span class="material-symbols-outlined text-sm">restart_alt</span>
             <span>Nuevo QR</span>
@@ -1276,15 +1416,15 @@
           <button
             type="button"
             (click)="discardCurrentQrPass()"
-            class="btn-modal-danger"
+            class="btn-modal-danger py-1 px-2 text-[11px]"
           >
             <span class="material-symbols-outlined text-sm">delete_outline</span>
-            <span>Descartar Pase</span>
+            <span>Descartar</span>
           </button>
         </div>
 
         @if (copyNotice()) {
-          <p class="text-xs text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
+          <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
         }
       </div>
     </div>
@@ -1295,12 +1435,12 @@
      MODAL B: CHECK-OUT Y REGISTRO DE SALIDA DE CASETA
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showCheckOutModal() && selectedCheckOutPass()) {
-  <div class="modal-overlay animate-fade-in">
-    <div class="modal-card max-w-lg w-full space-y-5 relative">
+  <div class="modal-overlay animate-fade-in" (click)="closeCheckOutModal()">
+    <div class="modal-card max-w-lg w-full space-y-5 relative" (click)="$event.stopPropagation()">
       <button
         type="button"
         (click)="closeCheckOutModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold cursor-pointer"
+        class="modal-close-btn"
         aria-label="Cerrar modal check-out"
       >
         ✕
@@ -1314,24 +1454,36 @@
           <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
             Registrar Salida de Planta (Check-Out)
           </h3>
-          <p class="text-xs text-slate-500">
-            Unidad: <strong class="font-mono text-slate-800 dark:text-slate-200">{{ selectedCheckOutPass().tractorPlates || 'S/P' }}</strong> — Folio #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
+          <p class="text-xs text-slate-600 dark:text-slate-300 font-medium">
+            Unidad: <strong class="font-mono text-slate-900 dark:text-slate-100 font-bold">{{ selectedCheckOutPass().tractorPlates || 'S/P' }}</strong> — Folio #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
           </p>
         </div>
       </div>
 
-      <!-- Resumen de Unidad -->
-      <div class="grid grid-cols-2 gap-2 text-xs p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-        <div>Chofer: <strong>{{ selectedCheckOutPass().driverName || 'S/N' }}</strong></div>
-        <div>Transporte: <strong>{{ selectedCheckOutPass().carrierLine || 'General' }}</strong></div>
-        <div>Hora Entrada: <strong class="font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime) }}</strong></div>
-        <div>Rampa: <strong class="font-mono text-amber-600">{{ selectedCheckOutPass().rampCode || 'R-01' }}</strong></div>
+      <!-- Resumen de Unidad (High-Contrast Clean Box) -->
+      <div class="checkout-summary-card">
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Chofer:</span>
+          <strong class="checkout-summary-val">{{ selectedCheckOutPass().driverName || 'S/N' }}</strong>
+        </div>
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Transporte:</span>
+          <strong class="checkout-summary-val">{{ selectedCheckOutPass().carrierLine || 'General' }}</strong>
+        </div>
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Hora Entrada:</span>
+          <strong class="checkout-summary-val font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime || selectedCheckOutPass().horaEntrada || selectedCheckOutPass().createdAt) }}</strong>
+        </div>
+        <div class="checkout-summary-item">
+          <span class="checkout-summary-label">Rampa:</span>
+          <strong class="checkout-summary-val font-mono text-amber-700 dark:text-amber-400 font-bold">{{ formatRampDisplay(selectedCheckOutPass()) }}</strong>
+        </div>
       </div>
 
       <!-- Formulario de Check-Out -->
       <form [formGroup]="checkOutForm" (ngSubmit)="confirmCheckOut()" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          <label class="checkout-form-label">
             Hora Exacta de Salida *
           </label>
           <input
@@ -1342,19 +1494,19 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          <label class="checkout-form-label">
             Sellos / Cinchos de Salida (Opcional)
           </label>
           <input
             type="text"
             formControlName="exitSealNumbers"
-            placeholder="Ej. SEAL-OUT-001, SEAL-OUT-002"
+            placeholder="Dejar en blanco si la unidad salió vacía tras descarga (Opcional)"
             class="form-input text-xs font-mono uppercase"
           />
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          <label class="checkout-form-label">
             Observaciones de Salida
           </label>
           <textarea
@@ -1391,17 +1543,17 @@
      MODAL C: VISOR E IMPRESIÓN OFICIAL DEL FORMATO F01-PO-CP-7.1.3-03
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showF01PrintModal() && currentPrintData()) {
-  <div class="modal-overlay animate-fade-in">
-    <div class="modal-card max-w-3xl w-full max-h-[88vh] flex flex-col p-0 overflow-hidden">
+  <div class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in" (click)="closeF01Print()">
+    <div class="bg-white text-slate-900 max-h-[85vh] overflow-y-auto w-full max-w-4xl rounded-xl shadow-2xl flex flex-col p-0 border border-slate-200" (click)="$event.stopPropagation()">
       
       <!-- Top Action Bar (Compact) -->
-      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 bg-slate-50 dark:bg-slate-950">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2 bg-slate-50 rounded-t-xl sticky top-0 z-10">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/25">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 flex items-center justify-center border border-amber-500/25">
             <span class="material-symbols-outlined text-base">print</span>
           </div>
           <div>
-            <h3 class="font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-none">
+            <h3 class="font-black text-xs sm:text-sm text-slate-900 leading-none">
               Formato F01-PO-CP-7.1.3-03 (Check List de Transporte)
             </h3>
             <p class="text-[10px] text-slate-500 mt-0.5">Documento Oficial para Auditoría Patrimonial</p>
@@ -1430,7 +1582,7 @@
           <button
             type="button"
             (click)="closeF01Print()"
-            class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-base font-bold px-1.5 cursor-pointer"
+            class="text-slate-400 hover:text-slate-700 text-base font-bold px-1.5 cursor-pointer"
             aria-label="Cerrar visor F01"
           >
             ✕
@@ -1439,7 +1591,7 @@
       </div>
 
       <!-- Contenedor con Scroll de la Hoja Oficial Imprimible -->
-      <div class="p-3 sm:p-5 overflow-y-auto bg-slate-200/60 dark:bg-slate-950/80 flex-1">
+      <div class="p-3 sm:p-5 overflow-y-auto bg-slate-100 flex-1">
         <div id="f01-print-target">
           <fg-print-transport-checklist-layout [data]="currentPrintData()!"></fg-print-transport-checklist-layout>
         </div>

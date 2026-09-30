@@ -37,7 +37,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         </div>
 
         <!-- Grid Metadata de Cancelación (2 Columnas Estructuradas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 bg-rose-50/90 p-2.5 border border-rose-200 rounded-md">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 bg-rose-50/90 p-2.5 border border-rose-200 rounded-md" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
           
           <!-- Columna Izquierda -->
           <div class="space-y-1">
@@ -109,6 +109,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
               <tr class="border-b border-black font-bold uppercase bg-slate-100 text-slate-900">
                 <th class="py-1 px-2 border-r border-black text-center w-10">N. TARIMA</th>
                 <th class="py-1 px-2 border-r border-black font-mono">CÓDIGO TARIMA</th>
+                <th class="py-1 px-2 border-r border-black font-mono">LOTE</th>
                 <th class="py-1 px-2 border-r border-black font-mono">SKU</th>
                 <th class="py-1 px-2 border-r border-black">DESCRIPCIÓN DE PRODUCTO</th>
                 <th class="py-1 px-2 border-r border-black text-right">PIEZAS</th>
@@ -120,6 +121,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 <tr *ngFor="let item of transfer.pallets; let idx = index" class="border-b border-slate-200 hover:bg-slate-50">
                   <td class="py-1 px-2 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
                   <td class="py-1 px-2 border-r border-black font-bold font-mono text-slate-900">{{ item.palletCode }}</td>
+                  <td class="py-1 px-2 border-r border-black font-mono font-bold text-amber-900">{{ item.lotNumber || 'N/D' }}</td>
                   <td class="py-1 px-2 border-r border-black font-mono font-bold">{{ item.productId || '12572733' }}</td>
                   <td class="py-1 px-2 border-r border-black font-semibold">{{ item.description || 'ALIMENTO BALANCEADO PURINA' }}</td>
                   <td class="py-1 px-2 border-r border-black text-right font-black font-mono">{{ item.pieces | number:'1.0-0' }} PZAS</td>
@@ -132,6 +134,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 <tr *ngFor="let i of [1,2,3,4,5].slice(0, transfer.totalPallets || 5); let idx = index" class="border-b border-slate-200 hover:bg-slate-50">
                   <td class="py-1 px-2 border-r border-black text-center font-bold font-mono">{{ idx + 1 }}</td>
                   <td class="py-1 px-2 border-r border-black font-bold font-mono text-slate-900">UA-{{ 104000 + idx + 1 }}</td>
+                  <td class="py-1 px-2 border-r border-black font-mono font-bold text-amber-900">LOT-2026-A</td>
                   <td class="py-1 px-2 border-r border-black font-mono font-bold">12572733</td>
                   <td class="py-1 px-2 border-r border-black font-semibold">ALIMENTO BALANCEADO PURINA</td>
                   <td class="py-1 px-2 border-r border-black text-right font-black font-mono">45 PZAS</td>
@@ -202,7 +205,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         </div>
 
         <!-- Header Grid Metadata: 2 Columnas Estructuradas Homologadas -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 border border-black p-3 rounded-sm bg-slate-50/50">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] sm:text-[11px] mb-3 border border-black p-3 rounded-sm bg-slate-50/50" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
           
           <!-- Columna Izquierda: Logística del Movimiento -->
           <div class="space-y-1">
@@ -271,6 +274,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
               <tr class="border-b border-black font-bold uppercase bg-slate-100 text-slate-900">
                 <th class="py-1 px-2 border-r border-black text-center w-10">N. TARIMA</th>
                 <th class="py-1 px-2 border-r border-black font-mono">CÓDIGO TARIMA</th>
+                <th class="py-1 px-2 border-r border-black font-mono">LOTE</th>
                 <th class="py-1 px-2 border-r border-black font-mono">SKU</th>
                 <th class="py-1 px-2 border-r border-black">DESCRIPCIÓN DE PRODUCTO</th>
                 <th class="py-1 px-2 border-r border-black">TIPO TARIMA</th>
@@ -282,6 +286,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 <tr *ngFor="let item of transfer.pallets; let idx = index" class="border-b border-slate-200 hover:bg-slate-50">
                   <td class="py-1 px-2 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
                   <td class="py-1 px-2 border-r border-black font-bold font-mono text-slate-900">{{ item.palletCode }}</td>
+                  <td class="py-1 px-2 border-r border-black font-mono font-bold text-amber-900">{{ item.lotNumber || 'N/D' }}</td>
                   <td class="py-1 px-2 border-r border-black font-mono font-bold">{{ item.productId || '12572733' }}</td>
                   <td class="py-1 px-2 border-r border-black font-semibold">{{ item.description || 'ALIMENTO BALANCEADO PURINA' }}</td>
                   <td class="py-1 px-2 border-r border-black uppercase text-[9px]">{{ item.palletTypeLabel || 'Estándar' }}</td>
@@ -292,6 +297,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 <tr *ngFor="let i of [1,2,3,4,5].slice(0, transfer.totalPallets || 5); let idx = index" class="border-b border-slate-200 hover:bg-slate-50">
                   <td class="py-1 px-2 border-r border-black text-center font-bold font-mono">{{ idx + 1 }}</td>
                   <td class="py-1 px-2 border-r border-black font-bold font-mono text-slate-900">UA-{{ 104000 + idx + 1 }}</td>
+                  <td class="py-1 px-2 border-r border-black font-mono font-bold text-amber-900">LOT-2026-A</td>
                   <td class="py-1 px-2 border-r border-black font-mono font-bold">12572733</td>
                   <td class="py-1 px-2 border-r border-black font-semibold">ALIMENTO BALANCEADO PURINA</td>
                   <td class="py-1 px-2 border-r border-black uppercase text-[9px]">Estándar</td>
