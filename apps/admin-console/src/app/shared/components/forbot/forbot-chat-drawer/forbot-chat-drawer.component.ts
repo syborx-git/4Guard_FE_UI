@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file forbot-chat-drawer.component.ts
  * @description Drawer Conversacional Flotante con alta legibilidad tipográfica y estética Glassmorphism para ForBot (4GUARD AI),
  * con selector de modo Operativo/Tutor, tour interactivo y control de scroll inteligente.
@@ -39,6 +39,15 @@ export class ForbotChatDrawerComponent {
     { label: '🔬 NOM-251 Calidad', query: '¿Hay lotes bloqueados por NOM-251?' }
   ];
 
+  /** Píldoras especializadas para Roles de Calidad (QM) o ruta /quality */
+  private readonly qualityPills = [
+    { label: '🔬 Regla Diurex en PT', query: '¿Se permite usar cinta Diurex para sellar producto terminado?' },
+    { label: '📐 Inclinación Tarima (5°)', query: '¿Cuál es la tolerancia máxima de inclinación de un pallet?' },
+    { label: '☕ Muestreo Café Verde', query: '¿Cómo es el procedimiento de muestreo para café verde?' },
+    { label: '💧 Límite Humedad (65% HR)', query: '¿Cuál es el límite máximo de humedad relativa en almacén?' },
+    { label: '🪵 Reparación vs Traspaleo', query: '¿Cuántas tablas rotas en una tarima obligan a traspaleo?' }
+  ];
+
   /** Píldoras de Sugerencia Rápida para Modo Tutor (Limpio y enfocado a aprendizaje) */
   private readonly tutorPills = [
     { label: '🚀 Iniciar Tour', query: 'Iniciar tour guiado de la interfaz' },
@@ -47,11 +56,18 @@ export class ForbotChatDrawerComponent {
     { label: '🚚 Protocolo de Andén', query: '¿Cuál es el protocolo de recepción en andén F01?' }
   ];
 
-  /** Píldoras reactivas según el modo actual */
+  /** Píldoras reactivas según el modo actual y contexto de ruta / rol */
   protected readonly activePills = computed(() => {
-    return this.forbotEngine.currentMode() === 'operativo'
-      ? this.operativePills
-      : this.tutorPills;
+    if (this.forbotEngine.currentMode() === 'tutor') {
+      return this.tutorPills;
+    }
+
+    const currentUrl = this.router.url;
+    const role = this.authState.role() || '';
+    const isQualityContext = currentUrl.includes('/quality') ||
+      ['QM_INSPECTOR', 'ROLE_QM_INSPECTOR', 'AUDITOR', 'ROLE_AUDITOR'].includes(role);
+
+    return isQualityContext ? this.qualityPills : this.operativePills;
   });
 
   constructor() {

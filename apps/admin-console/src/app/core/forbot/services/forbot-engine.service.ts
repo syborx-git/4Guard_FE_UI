@@ -16,6 +16,7 @@ import {
 import { InventoryQueryService } from '../../../features/inventory-query/services/inventory-query.service';
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 import { CatalogsService } from '../../../features/catalogs/services/catalogs.service';
+import { QualityStateService } from '../../../features/quality/services/quality-state.service';
 import { AuthState } from '../../../core/auth/auth.state';
 import { ForbotTourService } from './forbot-tour.service';
 
@@ -27,6 +28,7 @@ export class ForbotEngineService {
   private readonly inventoryService = inject(InventoryQueryService);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly catalogsService = inject(CatalogsService);
+  private readonly qualityState = inject(QualityStateService);
   private readonly authState = inject(AuthState);
   private readonly tourService = inject(ForbotTourService);
 
@@ -236,6 +238,49 @@ export class ForbotEngineService {
       return 'PRODUCTIVIDAD_MONTACARGAS';
     }
 
+    // Detección de SSCC (18 dígitos numéricos o prefijo 37...) o Folios BLQ/VER/LIB/REC
+    if (
+      /\b37\d{16}\b/.test(query) ||
+      /\bBLQ-\d{4}-\d+\b/i.test(query) ||
+      /\bVER-\d{4}-\d+\b/i.test(query) ||
+      /\bLIB-\d{4}-\d+\b/i.test(query) ||
+      /\bREC-\d{4}-\d+\b/i.test(query) ||
+      q.includes('sscc') ||
+      q.includes('tarima sscc') ||
+      q.includes('consultar sscc') ||
+      q.includes('pallet sscc')
+    ) {
+      return 'CONSULTA_TARIMA_SSCC_CALIDAD';
+    }
+
+    if (q.includes('diurex') || q.includes('cinta') || q.includes('pegar caja') || q.includes('sellar con diurex')) {
+      return 'REGLA_DIUREX_PT';
+    }
+
+    if (q.includes('inclinac') || q.includes('ladead') || q.includes('grados') || q.includes('5 grados') || q.includes('5°')) {
+      return 'TOLERANCIA_INCLINACION_5';
+    }
+
+    if (q.includes('humedad') || q.includes('termohigr') || q.includes('65%') || q.includes('temperatura almacen') || q.includes('clima almacen')) {
+      return 'LIMITE_HUMEDAD_65';
+    }
+
+    if (q.includes('muestreo') || q.includes('cafe verde') || q.includes('café verde') || q.includes('calador') || q.includes('tapas') || q.includes('garrafas')) {
+      return 'MUESTREO_MATERIALES_IT01';
+    }
+
+    if (q.includes('tabla rota') || q.includes('tacon') || q.includes('tacón') || q.includes('reparar tarima') || q.includes('traspaleo') || q.includes('vueltas de playo')) {
+      return 'REPARACION_TARIMAS_IT02';
+    }
+
+    if (q.includes('liberar tarima') || q.includes('quitar bloqueo') || q.includes('desbloquear') || q.includes('autorizar salida tarima')) {
+      return 'RESTRICCION_LIBERACION_RBAC';
+    }
+
+    if (q.includes('rasgadura') || q.includes('lona') || q.includes('pared sucia') || q.includes('caja trailer') || q.includes('f01 transporte')) {
+      return 'CRITERIOS_TRANSPORTE_F01';
+    }
+
     if (
       q.includes('calidad') ||
       q.includes('nom-251') ||
@@ -437,6 +482,329 @@ export class ForbotEngineService {
             actionLabel: 'Ver Catálogo de Productos/SKUs'
           }
         };
+      }
+
+      case 'REGLA_DIUREX_PT': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `⚠️ **Prohibición Normativa (IT02-PO-GC-8.6-02 punto 2.4):**
+Está estrictamente **PROHIBIDO** usar cinta Diurex en **Producto Terminado (PT)**, ya que daña el empaque secundario y las etiquetas comerciales.
+
+• **Acción permitida:** Aplica re-emplayado con film plástico (**3 vueltas en base, 70% de altura y 3 en corona**).
+• **Excepción única:** El Diurex solo se permite en pallets de **frascos de vidrio vacíos** con aberturas mayores a 5 cm.`,
+          widgetData: {
+            type: 'warning-card',
+            title: 'Regla de Sellado con Diurex',
+            items: [
+              { label: 'Producto Terminado (PT)', value: '❌ PROHIBIDO DIUREX', badgeColor: 'rose' },
+              { label: 'Frascos de Vidrio (>5cm)', value: '✅ AUTORIZADO DIUREX', badgeColor: 'emerald' },
+              { label: 'Norma Aplicable', value: 'IT02-PO-GC-8.6-02', badgeColor: 'blue' }
+            ],
+            actionRoute: '/quality',
+            actionLabel: 'Ir al Módulo de Calidad QM'
+          }
+        };
+      }
+
+      case 'TOLERANCIA_INCLINACION_5': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📐 **Tolerancia de Inclinación de Tarima (IT01-PO-GC-8.6-01):**
+• **Tolerancia máxima permitida:** **5.0° de inclinación**.
+• **Si supera los 5°:** La estiba se considera **inestable y en riesgo de colapso**.
+• **Procedimiento obligatorio:** Bloquear para acondicionamiento bajo **IT02-PO-GC-8.6-02**. Alinear cajas empujando hacia adentro y re-emplayar con mínimo 3 vueltas en base, 70% de altura y 3 en corona antes de autorizar su almacenamiento o carga.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Tolerancia de Estiba e Inclinación',
+            items: [
+              { label: 'Inclinación ≤ 5.0°', value: '🟢 Conforme (Aceptado)', badgeColor: 'emerald' },
+              { label: 'Inclinación > 5.0°', value: '🔴 Acondicionamiento (IT02)', badgeColor: 'rose' }
+            ],
+            actionRoute: '/quality',
+            actionLabel: 'Ver Bloqueos de Calidad'
+          }
+        };
+      }
+
+      case 'LIMITE_HUMEDAD_65': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `💧 **Límite Crítico de Humedad y Temperatura (IT01-PO-GC-8.6-02):**
+• **Límite máximo permitido:** **65% HR (Humedad Relativa)**.
+• **Horarios obligatorios de lectura:**
+  1. Turno 1: **08:00 a 09:00 hrs**.
+  2. Turno Intermedio: **14:00 hrs**.
+  3. Turno 2: **20:00 a 21:00 hrs**.
+• **Acción ante Desviación (> 65% HR):** Reportar de inmediato al Gerente de Calidad en el canal *"Incidencias de calidad"* para activar deshumidificadores y registrar en la bitácora **DE-01-PO-8.6-02**.`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'Monitoreo Ambiental en Almacén',
+            items: [
+              { label: 'Límite Máximo HR', value: '65.0% HR', badgeColor: 'amber' },
+              { label: 'Cortes Diarios', value: '3 Lecturas Obligatorias', badgeColor: 'blue' },
+              { label: 'Formato Oficial', value: 'DE-01-PO-8.6-02', badgeColor: 'emerald' }
+            ]
+          }
+        };
+      }
+
+      case 'MUESTREO_MATERIALES_IT01': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `☕ **Protocolo Oficial de Muestreo (IT01-PO-GC-8.6-04 Rev. 02):**
+• **Café Verde:** Insertar calador en diagonal en 1 a 2 sacos por tarima (~150g por saco) hasta completar **3.0 kg**. Cerrar bolsa con aire y **agitar 30 segundos** continuos para homogeneizar. Entregar a Seguridad Patrimonial (*Transportes Aguillón / Calmo*).
+• **Tapas Culinarios/Cafés:** **20 unidades** por lote.
+• **Etiquetas en Posteta:** **50 unidades** por lote.
+• **Etiquetas con Adherible:** **6 metros** lineales en bobina.
+• **Garrafas:** **4 unidades** por pallet.
+• **Exhibidores / Estuches:** **30 unidades** por lote.
+• **Cajas de Cartón:** **10 cajas** por lote.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Cantidades Oficiales de Muestreo',
+            items: [
+              { label: 'Café Verde (Costales)', value: '3.0 kg (Calador + 30s)', badgeColor: 'amber' },
+              { label: 'Tapas Culinarias/Café', value: '20 pzas por lote', badgeColor: 'blue' },
+              { label: 'Etiquetas Posteta', value: '50 pzas por lote', badgeColor: 'emerald' }
+            ],
+            actionRoute: '/quality',
+            actionLabel: 'Ver Procedimientos de Calidad'
+          }
+        };
+      }
+
+      case 'REPARACION_TARIMAS_IT02': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🪵 **Criterio de Reparación vs Traspaleo de Tarimas (IT02-PO-GC-8.6-02 punto 2.5):**
+• **1 tabla rota o 1 tacón faltante:** Se permite reparación in situ con apoyo del montacarguista colocando 1 repuesto con martillo y clavos.
+• **2 o más tablas/tacones dañados:** **PROHIBIDO REPARAR**. Se debe ejecutar **traspaleo completo** a una tarima nueva.
+• **Vueltas de playo en traspaleo:** **3 vueltas** para Producto Terminado (PT) y **5 vueltas** para frascos de vidrio vacíos.`,
+          widgetData: {
+            type: 'warning-card',
+            title: 'Reparación de Tarimas & Traspaleo',
+            items: [
+              { label: '1 Tabla/Tacón Roto', value: '🔨 Reparación in situ', badgeColor: 'amber' },
+              { label: '≥ 2 Tablas/Tacones Rotos', value: '📦 Traspaleo Obligatorio', badgeColor: 'rose' },
+              { label: 'Vueltas Playo PT / Frascos', value: '3 vueltas / 5 vueltas', badgeColor: 'blue' }
+            ]
+          }
+        };
+      }
+
+      case 'RESTRICCION_LIBERACION_RBAC': {
+        const currentRole = this.authState.role() || 'OPERARIO';
+        const isAuthorized = ['ADMIN', 'ROLE_ADMIN', 'SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'OPERATIONS_MANAGER', 'ROLE_OPERATIONS_MANAGER', 'QM_INSPECTOR', 'ROLE_QM_INSPECTOR', 'AUDITOR', 'ROLE_AUDITOR'].includes(currentRole);
+
+        if (!isAuthorized) {
+          return {
+            id,
+            sender: 'bot',
+            intent,
+            timestamp: time,
+            text: `⛔ **Restricción de Seguridad Operativa (RN-QM-02 & RN-QM-03):**
+Tu rol actual (**${this.authState.roleLabel()}**) no cuenta con el permiso \`QUALITY_AUTHORIZE\`.
+Las tarimas en estado **IN_QUALITY (20)** están blindadas contra surtido o embarque. Solo un **Superintendente QM o Gerente de Calidad** puede dictaminar una liberación formal indicando autorizador (*CLIENT / QUALITY_4GUARD*), soporte documental y destino (*DISTRIBUTION / DESTRUCTION / RETURN*).`,
+            widgetData: {
+              type: 'warning-card',
+              title: 'Permisos de Liberación Requeridos',
+              items: [
+                { label: 'Tu Rol Actual', value: this.authState.roleLabel(), badgeColor: 'rose' },
+                { label: 'Permiso Requerido', value: 'QUALITY_AUTHORIZE', badgeColor: 'amber' },
+                { label: 'Regla del WMS', value: 'RN-QM-03 Inmutable', badgeColor: 'blue' }
+              ]
+            }
+          };
+        } else {
+          return {
+            id,
+            sender: 'bot',
+            intent,
+            timestamp: time,
+            text: `📋 **Protocolo para Dictaminar Liberación de Tarima (RN-QM-03):**
+Como usuario autorizado (**${this.authState.roleLabel()}**), para liberar un lote bloqueado debes registrar:
+1. **Autorizador:** Cliente (*CLIENT*) o Calidad 4GUARD (*QUALITY_4GUARD*).
+2. **Tipo de Soporte:** Correo (*EMAIL*), Ticket digital (*ELECTRONIC_MEDIA*) o Acta (*FORMAL_ACT*).
+3. **Destino Final:**
+   • **DISTRIBUTION:** Retorna a *Disponible (30)* con movimiento Kardex \`RELEASE\`.
+   • **DESTRUCTION:** Pasa a *Dañado (60)* con movimiento Kardex \`ADJUSTMENT\` (merma/baja).
+   • **RETURN:** Pasa a *Devolución (80)* con movimiento Kardex \`RETURN\`.`,
+            widgetData: {
+              type: 'status-list',
+              title: 'Destinos de Liberación QM',
+              items: [
+                { label: 'DISTRIBUTION', value: '➔ Disponible (30)', badgeColor: 'emerald' },
+                { label: 'DESTRUCTION', value: '➔ Dañado / Merma (60)', badgeColor: 'rose' },
+                { label: 'RETURN', value: '➔ Devolución Proveedor (80)', badgeColor: 'amber' }
+              ],
+              actionRoute: '/quality',
+              actionLabel: 'Ir a Liberaciones de Calidad'
+            }
+          };
+        }
+      }
+
+      case 'CRITERIOS_TRANSPORTE_F01': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🚛 **Criterios de Inspección de Transporte (F01-PO-GC-8.6-03 Rev. 03 & IT01):**
+• **Lona / Caja:** Máx. 1 rasgadura $\\le 5\\text{ cm}$ sellada sin paso de luz.
+• **Paredes:** Limpias, sin manchas de grasa/hollín $> 10\\text{ cm}$.
+• **Piso:** Limpio, sin charcos, sin clavos ni astillas expuestas.
+• **Plagas y Olores:** **TOLERANCIA CERO** a indicios de plagas o aroma a diésel/químico.
+• **Carga Foránea:** Bloqueo de seguridad obligatorio (bolsas de aire, cartón o eslingas).
+• **Tiempo de Espera del Cliente ante Desviación:** **Máximo 30 minutos** para autorizar; si no responde, la unidad sale a estacionamiento.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Checklist de Transporte F01',
+            items: [
+              { label: 'Rasgadura en lona', value: 'Máx. ≤ 5.0 cm sellada', badgeColor: 'amber' },
+              { label: 'Plagas / Olores', value: '0 Tolerancia (Rechazo)', badgeColor: 'rose' },
+              { label: 'Tiempo Espera Cliente', value: '30 Minutos Máximo', badgeColor: 'blue' }
+            ],
+            actionRoute: '/quality',
+            actionLabel: 'Ver Verificaciones de Carga'
+          }
+        };
+      }
+
+      case 'CONSULTA_TARIMA_SSCC_CALIDAD': {
+        const blocks = this.qualityState.blocks();
+        const releases = this.qualityState.releases();
+        const rawInv = this.inventoryService.rawInventory();
+
+        // Buscar por SSCC o por Folio en el texto del usuario
+        const matchedBlock = blocks.find(b =>
+          (b.sscc && userText.includes(b.sscc)) ||
+          (b.folio && userText.toUpperCase().includes(b.folio.toUpperCase())) ||
+          (b.sku && userText.toUpperCase().includes(b.sku.toUpperCase()))
+        );
+
+        const matchedRelease = !matchedBlock ? releases.find(r =>
+          (r.folio && userText.toUpperCase().includes(r.folio.toUpperCase())) ||
+          (r.blockFolio && userText.toUpperCase().includes(r.blockFolio.toUpperCase()))
+        ) : null;
+
+        const matchedInv = (!matchedBlock && !matchedRelease) ? rawInv.find(i =>
+          (i.ssccBarcode && userText.includes(i.ssccBarcode)) ||
+          (i.sku && userText.toUpperCase().includes(i.sku.toUpperCase()))
+        ) : null;
+
+        if (matchedBlock) {
+          const isCritical = matchedBlock.severity === 'CRITICAL';
+          return {
+            id,
+            sender: 'bot',
+            intent,
+            timestamp: time,
+            text: `🚨 **Tarima Retenida por Calidad (Folio ${matchedBlock.folio}):**
+• **SSCC:** \`${matchedBlock.sscc || 'N/A'}\`
+• **SKU:** **${matchedBlock.sku}** (${matchedBlock.description})
+• **Cliente / Lote:** ${matchedBlock.clientName} | Lote: \`${matchedBlock.batchNumber}\`
+• **Ubicación QM:** \`${matchedBlock.locationId}\`
+• **Estatus Actual:** **${matchedBlock.status}** (Severidad: **${matchedBlock.severity}**)
+• **Motivo / Defectos:** ${matchedBlock.defectCriteria?.join(', ') || matchedBlock.notes}
+• **Restricción:** Blindada para despacho (RN-QM-02). Requiere dictamen formal en el módulo de Calidad.`,
+            widgetData: {
+              type: 'warning-card',
+              title: `Expediente QM: ${matchedBlock.folio}`,
+              items: [
+                { label: 'Estatus', value: matchedBlock.status, badgeColor: isCritical ? 'rose' : 'amber' },
+                { label: 'Severidad', value: matchedBlock.severity, badgeColor: isCritical ? 'rose' : 'amber' },
+                { label: 'Cantidad', value: `${matchedBlock.quantity} ${matchedBlock.unitOfMeasure}`, badgeColor: 'blue' }
+              ],
+              actionRoute: '/quality',
+              actionLabel: 'Ver Detalle del Bloqueo en Calidad'
+            }
+          };
+        } else if (matchedRelease) {
+          return {
+            id,
+            sender: 'bot',
+            intent,
+            timestamp: time,
+            text: `✅ **Tarima Liberada Formalmente (Folio ${matchedRelease.folio}):**
+• **Bloqueo Origen:** \`${matchedRelease.blockFolio}\`
+• **SKU:** **${matchedRelease.sku}** (${matchedRelease.description})
+• **Destino Dictaminado:** **${matchedRelease.destination}**
+• **Autorizado por:** ${matchedRelease.authorizedByName} (${matchedRelease.authorizedByPosition})
+• **Soporte:** ${matchedRelease.supportType} - *"${matchedRelease.supportSubject}"*
+• **Fecha de Liberación:** ${matchedRelease.releasedAt.slice(0, 10)}`,
+            widgetData: {
+              type: 'status-list',
+              title: `Liberación QM: ${matchedRelease.folio}`,
+              items: [
+                { label: 'Destino', value: matchedRelease.destination, badgeColor: 'emerald' },
+                { label: 'Autorizador', value: matchedRelease.authorizerType, badgeColor: 'blue' },
+                { label: 'Cantidad', value: `${matchedRelease.quantity} ${matchedRelease.unitOfMeasure}`, badgeColor: 'emerald' }
+              ],
+              actionRoute: '/quality',
+              actionLabel: 'Ver Historial de Liberaciones'
+            }
+          };
+        } else if (matchedInv) {
+          return {
+            id,
+            sender: 'bot',
+            intent,
+            timestamp: time,
+            text: `📦 **Tarima Conforme en Inventario:**
+• **SSCC / Etiqueta:** \`${matchedInv.ssccBarcode || 'N/A'}\`
+• **SKU:** **${matchedInv.sku}** (${matchedInv.productDescription || 'Material'})
+• **Ubicación:** \`${matchedInv.location}\` (${matchedInv.warehouse})
+• **Estado WMS:** **Disponible (30)**
+• **Cantidad:** ${matchedInv.measuredQuantity} Pzas (${matchedInv.palletsCount} Pallet)
+• **Caducidad:** ${matchedInv.expirationDate || 'Vigente'} (${matchedInv.expirationStatus})`,
+            widgetData: {
+              type: 'kpi-summary',
+              title: `Tarima Conforme: ${matchedInv.ssccBarcode || matchedInv.sku}`,
+              items: [
+                { label: 'Estado', value: 'Disponible (30)', badgeColor: 'emerald' },
+                { label: 'Ubicación', value: matchedInv.location, badgeColor: 'blue' },
+                { label: 'Stock', value: `${matchedInv.measuredQuantity} Pzas`, badgeColor: 'emerald' }
+              ],
+              actionRoute: '/inventory-query',
+              actionLabel: 'Ver en Consulta de Inventario'
+            }
+          };
+        } else {
+          return {
+            id,
+            sender: 'bot',
+            intent,
+            timestamp: time,
+            text: `🔍 Consulté la base de datos de inventario y calidad. No encontré una tarima activa con el identificador o SSCC ingresado en **"${userText}"**.
+Por favor verifica que el SSCC contenga los 18 dígitos correctos o consulta en el módulo de Inventario / Calidad.`,
+            widgetData: {
+              type: 'warning-card',
+              title: 'Tarima No Encontrada',
+              items: [
+                { label: 'Búsqueda SSCC', value: 'Sin coincidencias', badgeColor: 'amber' },
+                { label: 'Acción Sugerida', value: 'Verificar Escaneo / Folio', badgeColor: 'blue' }
+              ],
+              actionRoute: '/inventory-query',
+              actionLabel: 'Ir a Búsqueda de Inventario'
+            }
+          };
+        }
       }
 
       case 'GENERAL_HELP': {

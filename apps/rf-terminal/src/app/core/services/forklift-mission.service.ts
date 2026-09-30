@@ -6,7 +6,9 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { ToastService, UnitOfMeasure } from '@4guard/shared-core';
 import { AudioFeedbackService } from './audio-feedback.service';
+import { RfQualityStateService } from './rf-quality-state.service';
 
 export type MovementType = 'INBOUND_UNLOAD' | 'INTERNAL_PUTAWAY' | 'OUTBOUND_DISPATCH';
 export type MissionPriority = 'URGENT' | 'HIGH' | 'NORMAL';
@@ -195,6 +197,11 @@ const INITIAL_MISSIONS: ForkliftMission[] = [
 })
 export class ForkliftMissionService {
   private readonly audioService = inject(AudioFeedbackService);
+  private readonly qualityState = inject(RfQualityStateService);
+  private readonly toast = inject(ToastService);
+
+  private eventSource: EventSource | null = null;
+  private sseReconnectTimer: any = null;
 
   // ─── Estado Reactivo Principal ─────────────────────────────────────────────
   private readonly rawMissions = signal<ForkliftMission[]>(INITIAL_MISSIONS);
@@ -202,6 +209,149 @@ export class ForkliftMissionService {
   private readonly completedMissions = signal<ForkliftMission[]>([]);
   private readonly activeFilter = signal<CockpitFilter>('ALL');
   private readonly lastScanFeedback = signal<ScanFeedback | null>(null);
+
+  constructor() {
+    this.initRealtimeQualityAlertStream();
+  }
+
+  /**
+   * Conexión en tiempo real SSE con el broadcaster de Calidad de 4GUARD Backend
+   */
+  private initRealtimeQualityAlertStream(): void {
+    if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
+
+    try {
+      const clientId = 'RF-FORKLIFT-' + (Math.floor(Math.random() * 9000) + 1000);
+      const sseUrl = `/api/v1/notifications/rf-stream?clientIdentifier=${clientId}`;
+      this.eventSource = new EventSource(sseUrl);
+
+      this.eventSource.addEventListener('QM_BLOCK_ALERT', (e: MessageEvent) => {
+        try {
+          const alert = JSON.parse(e.data);
+          this.handleQualityBlockAlert(alert);
+        } catch {}
+      });
+
+      this.eventSource.addEventListener('QM_RELEASE_AUTHORIZED', (e: MessageEvent) => {
+        try {
+          const alert = JSON.parse(e.data);
+          this.handleQualityReleaseAlert(alert);
+        } catch {}
+      });
+
+      this.eventSource.addEventListener('QM_CONDITIONING_REQUIRED', (e: MessageEvent) => {
+        try {
+          const alert = JSON.parse(e.data);
+          this.handleQualityConditioningAlert(alert);
+        } catch {}
+      });
+
+      this.eventSource.onerror = () => {
+        if (this.eventSource) {
+          this.eventSource.close();
+          this.eventSource = null;
+        }
+        if (!this.sseReconnectTimer) {
+          this.sseReconnectTimer = setTimeout(() => {
+            this.sseReconnectTimer = null;
+            this.initRealtimeQualityAlertStream();
+          }, 10000);
+        }
+      };
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  private handleQualityBlockAlert(alert: any): void {
+    const sscc = alert.sscc;
+    const reason = alert.reason || 'Retención preventiva por Calidad';
+    const folio = alert.palletFolio || 'QM-ALERT';
+
+    // 1. Sonar alarma grave de alta prioridad y vibrar fuertemente
+    this.audioService.playError();
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200, 100, 300]);
+    }
+
+    // 2. Notificación Toast en pantalla RF
+    this.toast.error(`Tarima ${sscc || folio} BLOQUEADA por Calidad: ${reason}`, '🚨 RETENCIÓN QM EN PISO');
+
+    // 3. Registrar en el catálogo de bloques de Calidad de la Terminal RF
+    if (sscc) {
+      this.qualityState.blocks.update((prev) => {
+        const exists = prev.some((b) => b.sscc === sscc || b.folio === folio);
+        if (exists) return prev;
+        return [
+          {
+            id: 'blk-' + Date.now(),
+            folio: folio,
+            sku: alert.sku || 'SKU-QM',
+            description: alert.productName || 'Producto Retenido en Maniobra',
+            clientId: 'cli-qm-alert',
+            clientName: 'Control de Calidad',
+            batchNumber: 'LOTE-QM',
+            sscc: sscc,
+            quantity: 1,
+            unitOfMeasure: UnitOfMeasure.PALLET,
+            locationId: alert.locationCode || 'BAHIA-QM',
+            stage: 'STORAGE' as any,
+            defectCategory: 'MATERIAL' as any,
+            defectCriteria: [reason],
+            severity: (alert.severity as any) || 'CRITICAL',
+            status: 'BLOCKED' as any,
+            reportedBy: 'Auditoría de Calidad (Sistema)',
+            reportedAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            notes: `${reason} [Norma / Instructivo: ${alert.requiredInstruction || 'IT01-PO-GC-8.6-01'}]`,
+            evidenceFiles: [],
+          },
+          ...prev,
+        ];
+      });
+    }
+
+    // 4. Si la misión activa coincide con la tarima bloqueada, congelarla inmediatamente en INCIDENT_HOLD
+    const current = this.activeMission();
+    if (current && (current.ssccBarcode === sscc || current.folio === folio || (current.pallets && current.pallets.some((p) => p.ssccBarcode === sscc)))) {
+      this.rawMissions.update((list) =>
+        list.map((m) =>
+          m.id === current.id
+            ? {
+                ...m,
+                status: 'INCIDENT_HOLD',
+                statusLabel: '⚠️ DETENIDA POR CALIDAD (QM)',
+                incidentReason: `Retención QM: ${reason} (Folio: ${folio}). Mover únicamente a Bahía de Cuarentena.`,
+              }
+            : m
+        )
+      );
+
+      this.lastScanFeedback.set({
+        success: false,
+        message: `🚨 RETENCIÓN DE CALIDAD ACTIVA [${folio}]: ${reason}. Maniobra congelada. No traslade a rack estándar.`,
+        phase: 'ANOMALY_HOLD',
+      });
+    }
+  }
+
+  private handleQualityReleaseAlert(alert: any): void {
+    const sscc = alert.sscc;
+    const folio = alert.palletFolio;
+
+    this.audioService.playSuccess();
+    this.toast.success(`Tarima ${sscc || folio} Liberada por Calidad (${alert.reason || 'Dictamen Aprobado'})`, '✅ LIBERACIÓN QM');
+
+    if (sscc) {
+      this.qualityState.blocks.update((prev) =>
+        prev.map((b) => (b.sscc === sscc || b.folio === folio ? { ...b, status: 'RELEASED' as any } : b))
+      );
+    }
+  }
+
+  private handleQualityConditioningAlert(alert: any): void {
+    this.audioService.playWarning();
+    this.toast.warning(`Atención en Rampa ${alert.locationCode || 'Andén'}: ${alert.reason}`, '⚠️ ACONDICIONAMIENTO QM');
+  }
 
   // ─── Signals Computados ───────────────────────────────────────────────────
 
@@ -319,7 +469,152 @@ export class ForkliftMissionService {
       return feedback;
     }
 
+<<<<<<< Updated upstream
     // FASE 1: Validar Escaneo de PICK (SSCC del Pallet o Código de Origen)
+=======
+    // ─────────────────────────────────────────────────────────────────────────
+    // GUARDA DE CALIDAD: RECHAZAR ESCANEO SI LA TARIMA ESTÁ RETENIDA (QM)
+    // ─────────────────────────────────────────────────────────────────────────
+    const blockedPallets = this.qualityState.blocks().filter(
+      (b) => b.status === 'BLOCKED' || b.status === 'UNDER_INSPECTION'
+    );
+    const matchedBlock = blockedPallets.find(
+      (b) =>
+        b.sscc === cleanCode ||
+        cleanCode.includes(b.sscc) ||
+        (b.folio && cleanCode === b.folio.toUpperCase())
+    );
+
+    const isMovingToQmBay =
+      current.destinationLocation.toUpperCase().includes('QM') ||
+      current.destinationLocation.toUpperCase().includes('CUARENTENA') ||
+      current.destBarcode.toUpperCase().includes('QM') ||
+      current.destBarcode.toUpperCase().includes('BUFFER-03');
+
+    if (matchedBlock && !isMovingToQmBay) {
+      const feedback: ScanFeedback = {
+        success: false,
+        message: `🚨 TARIMA BLOQUEADA POR CALIDAD [${matchedBlock.folio || matchedBlock.sscc}]. Motivo: ${
+          matchedBlock.notes || matchedBlock.defectCriteria?.join(', ') || 'Retención preventiva PNC'
+        }. Solo permitido traslado a Bahía de Cuarentena (QM).`,
+        phase: 'ERROR',
+      };
+      this.lastScanFeedback.set(feedback);
+      this.audioService.playError();
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([150, 50, 150, 50, 200]);
+      }
+      return feedback;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FLUJO INBOUND: ESCANEO LIBRE TARIMA POR TARIMA CON SELECCIÓN DE LOTE
+    // ─────────────────────────────────────────────────────────────────────────
+    if (current.type === 'INBOUND_UNLOAD') {
+      const pallets = current.pallets || [];
+      const nextPalletNum = pallets.length + 1;
+      const activeLot = current.activeScanningLot || current.lotNumber || 'LOT-2026-X99';
+      const pieces = current.currentPendingPieces || current.defaultPiecesPerPallet || 48;
+
+      // FASE 1: VALIDAR / CAPTURAR PICK DE TARIMA (CÓDIGO SSCC)
+      if (current.status === 'ACTIVE_PICK' || current.status === 'QUEUED') {
+        // Asignar el SSCC escaneado o generado
+        const finalSscc = cleanCode.startsWith('SSCC-') ? cleanCode : (cleanCode === current.originBarcode ? `SSCC-1750123450000000${String(nextPalletNum).padStart(2, '0')}` : cleanCode);
+
+        this.rawMissions.update((list) =>
+          list.map((m) =>
+            m.id === current.id
+              ? {
+                  ...m,
+                  currentPendingSscc: finalSscc,
+                  status: 'ACTIVE_DROP',
+                  statusLabel: `En Tránsito (Tarima #${nextPalletNum} en curso)`,
+                }
+              : m
+          )
+        );
+
+        const feedback: ScanFeedback = {
+          success: true,
+          message: `¡Tarima #${nextPalletNum} capturada! [${finalSscc}] • Lote: [${activeLot}]. Traslada la carga a: ${current.destinationLocation}`,
+          phase: 'PICK_VALIDATED',
+        };
+        this.lastScanFeedback.set(feedback);
+        this.audioService.playSuccess();
+        if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+        return feedback;
+      }
+
+      // FASE 2: VALIDAR DEPÓSITO EN BUFFER / DESTINO (LOC-BUFFER-01)
+      if (current.status === 'ACTIVE_DROP') {
+        const isDestMatch = cleanCode === current.destBarcode.toUpperCase() ||
+          cleanCode.includes(current.destBarcode.replace('LOC-', '')) ||
+          cleanCode.includes('BUFFER');
+
+        if (isDestMatch) {
+          const nowStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+          const sscc = current.currentPendingSscc || `SSCC-1750123450000000${String(nextPalletNum).padStart(2, '0')}`;
+
+          const newPallet: InboundPalletItem = {
+            id: `pal-inb-${Date.now()}-${nextPalletNum}`,
+            palletNumber: nextPalletNum,
+            ssccBarcode: sscc,
+            productId: current.sku,
+            productName: current.productName,
+            supplierName: current.supplierName,
+            lotNumber: activeLot,
+            pieces: pieces,
+            unit: 'Cajas',
+            weightKg: pieces * 17.5,
+            palletTypeLabel: 'Tarima CHEP Estándar',
+            status: 'STAGED',
+            stagedAt: nowStr,
+          };
+
+          const updatedPallets = [...pallets, newPallet];
+          const nextNextSscc = `SSCC-1750123450000000${String(nextPalletNum + 1).padStart(2, '0')}`;
+
+          this.rawMissions.update((list) =>
+            list.map((m) =>
+              m.id === current.id
+                ? {
+                    ...m,
+                    pallets: updatedPallets,
+                    ssccBarcode: nextNextSscc,
+                    currentPendingSscc: undefined,
+                    status: 'ACTIVE_PICK',
+                    statusLabel: `En Descarga Activa (${updatedPallets.length} Tarimas en Buffer)`,
+                  }
+                : m
+            )
+          );
+
+          const feedback: ScanFeedback = {
+            success: true,
+            message: `¡Tarima #${nextPalletNum} depositada con éxito en ${current.destinationLocation}! (${pieces} pzas, Lote: ${activeLot}). Listo para escanear la Tarima #${nextPalletNum + 1}.`,
+            phase: 'DROP_COMPLETED',
+          };
+          this.lastScanFeedback.set(feedback);
+          this.audioService.playSuccess();
+          if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
+          return feedback;
+        } else {
+          const feedback: ScanFeedback = {
+            success: false,
+            message: `Ubicación errónea. Destino asignado: [${current.destBarcode}] (${current.destinationLocation}). Escaneado: [${cleanCode}]`,
+            phase: 'ERROR',
+          };
+          this.lastScanFeedback.set(feedback);
+          this.audioService.playError();
+          return feedback;
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FLUJO GENÉRICO (PUTAWAY Y CARGAS OUTBOUND 1-SCAN)
+    // ─────────────────────────────────────────────────────────────────────────
+>>>>>>> Stashed changes
     if (current.status === 'ACTIVE_PICK' || current.status === 'QUEUED') {
       const isSsccMatch = cleanCode === current.ssccBarcode.toUpperCase() || cleanCode.includes(current.ssccBarcode.replace('SSCC-', ''));
       const isOriginMatch = cleanCode === current.originBarcode.toUpperCase();

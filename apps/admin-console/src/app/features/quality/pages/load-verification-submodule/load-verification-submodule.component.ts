@@ -153,11 +153,18 @@ export class LoadVerificationSubmoduleComponent {
   private recalculateStatus(): void {
     let newStatus: LoadVerification['status'] = 'APROBADO';
 
+    const transportDamage = this.activeForm().transportCriteria.some(c =>
+      ['crit-trans-1', 'crit-trans-7', 'crit-trans-8', 'crit-trans-9'].includes(c.id) && c.value === 'NO'
+    );
+    const transportDirty = this.activeForm().transportCriteria.some(c =>
+      ['crit-trans-2', 'crit-trans-3', 'crit-trans-6'].includes(c.id) && c.value === 'NO'
+    );
+
     if (this.isPestDetected()) {
       newStatus = 'RECHAZADO';
-    } else if (this.isConditioningRequired()) {
+    } else if (this.isConditioningRequired() || transportDamage) {
       newStatus = 'ACONDICIONAMIENTO_PENDIENTE';
-    } else if (this.isDirtyPallet() && !this.activeForm().cleaningResponsible.isSigned) {
+    } else if ((this.isDirtyPallet() || transportDirty) && !this.activeForm().cleaningResponsible.isSigned) {
       newStatus = 'LIMPIEZA_PENDIENTE';
     }
 
