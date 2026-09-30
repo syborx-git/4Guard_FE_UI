@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file forbot.models.ts
  * @description Modelos de datos para el asistente conversacional inteligente ForBot (4GUARD AI).
  */
@@ -11,6 +11,14 @@ export type ForbotIntentType =
   | 'SATURACION_BODEGAS'
   | 'PRODUCTIVIDAD_MONTACARGAS'
   | 'BLOQUEOS_CALIDAD_NOM251'
+  | 'REGLA_DIUREX_PT'
+  | 'TOLERANCIA_INCLINACION_5'
+  | 'LIMITE_HUMEDAD_65'
+  | 'MUESTREO_MATERIALES_IT01'
+  | 'REPARACION_TARIMAS_IT02'
+  | 'RESTRICCION_LIBERACION_RBAC'
+  | 'CRITERIOS_TRANSPORTE_F01'
+  | 'CONSULTA_TARIMA_SSCC_CALIDAD'
   | 'GENERAL_HELP'
   | 'TOUR_DRIVER_JS'
   | 'FSM_8_ESTADOS'
