@@ -126,16 +126,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   ]);
 
   protected readonly transportTypesList = signal<string[]>([
-    'Caja Seca',
-    'Caja Refrigerada',
-    'Plataforma',
+    'Camioneta',
     'Tortón',
-    'Rabón',
-    'Camioneta 3.5',
     'Tráiler',
-    'Contenedor',
-    'Tolva',
-    'Pipa',
     'Otro (Especificar)'
   ]);
 

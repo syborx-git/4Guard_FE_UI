@@ -273,11 +273,62 @@
 
 /* ── 3. TABLA HISTÓRICA ── */
 .claims-table-card {
+  position: relative;
   background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1.5px solid rgba(197, 168, 107, 0.35) !important;
   border-radius: var(--radius-card, 16px);
   box-shadow: var(--shadow-card);
   overflow: hidden;
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.claims-table-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: -2px !important;
+  border-radius: inherit !important;
+  padding: 2px !important;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 120deg,
+    rgba(197, 168, 107, 0.45) 155deg,
+    rgba(224, 200, 122, 0.85) 185deg,
+    rgba(212, 175, 55, 0.95) 215deg,
+    rgba(184, 134, 11, 0.85) 245deg,
+    rgba(197, 168, 107, 0.50) 275deg,
+    transparent 305deg,
+    transparent 360deg
+  ) !important;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask-composite: exclude !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  opacity: 0.65 !important;
+  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.45)) !important;
+  transition: opacity 300ms ease, filter 300ms ease !important;
+  animation: star-border-spin 6.5s linear infinite !important;
+}
+
+.claims-table-card:hover::before {
+  opacity: 1.0 !important;
+  animation-duration: 3s !important;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.75)) drop-shadow(0 0 5px rgba(224, 200, 122, 0.65)) !important;
+}
+
+.claims-table-card:hover {
+  border-color: rgba(212, 175, 55, 0.75) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.35) !important;
+}
+
+@keyframes star-border-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .claims-table-header {
