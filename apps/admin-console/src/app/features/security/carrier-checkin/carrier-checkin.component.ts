@@ -150,7 +150,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
             ? data.carrierLines 
             : ((data as any).carriers || []);
           this.carrierLinesList.set(carriers);
-          this.transportTypesList.set(data.transportTypes || []);
+          const allowed = ['Camioneta', 'Tortón', 'Tráiler', 'Otro (Especificar)'];
+          const rawTypes = data.transportTypes || [];
+          const filtered = rawTypes.filter((t: string) => allowed.includes(t));
+          this.transportTypesList.set(filtered.length > 0 ? filtered : allowed);
           this.boxDimensionsList.set(data.boxDimensions || []);
         }
       },
@@ -168,17 +171,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
           { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
         ]);
         this.transportTypesList.set([
-          'Caja Seca',
-          'Caja Refrigerada',
-          'Plataforma',
+          'Camioneta',
           'Tortón',
-          'Rabón',
-          'Camioneta 3.5',
           'Tráiler',
-          'Contenedor',
-          'Tolva',
-          'Pipa',
-          'Camioneta / Van',
           'Otro (Especificar)'
         ]);
         this.boxDimensionsList.set([

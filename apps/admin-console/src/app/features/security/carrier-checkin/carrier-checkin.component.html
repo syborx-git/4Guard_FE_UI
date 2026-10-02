@@ -390,7 +390,6 @@
                     @for (t of transportTypesList(); track t) {
                       <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
                     }
-                    <option value="Otro (Especificar)">➕ Otro (Especificar)</option>
                   </select>
                 </div>
                 @if (isCustomTransport()) {
@@ -663,7 +662,7 @@
                   <div class="check-card-info">
                     <span class="check-emoji">🧹</span>
                     <div class="check-details">
-                      <span class="check-name">Interior limpio y seco</span>
+                      <span class="check-name">Interior de caja</span>
                       <span class="check-sub">Sin basura, clavos ni astillas</span>
                     </div>
                   </div>

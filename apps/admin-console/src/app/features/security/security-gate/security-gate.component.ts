@@ -83,17 +83,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Catálogos Flexibles de Tipos de Transporte y Medidas ──
   protected readonly transportTypesList = signal<string[]>([
-    'Caja Seca',
-    'Caja Refrigerada',
-    'Plataforma',
+    'Camioneta',
     'Tortón',
-    'Rabón',
-    'Camioneta 3.5',
     'Tráiler',
-    'Contenedor',
-    'Tolva',
-    'Pipa',
-    'Camioneta / Van',
     'Otro (Especificar)'
   ]);
 
@@ -134,6 +126,27 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly selectedCheckOutPass    = signal<any | null>(null);
   protected readonly isCheckingOut           = signal<boolean>(false);
   protected readonly checkOutSuccessNotice   = signal<string | null>(null);
+
+  // ── Modos de Visualización UX/UI (Colapsable y Navegación Rápida) ──────────
+  protected readonly isQueueCollapsed   = signal<boolean>(false);
+  protected readonly isKpiCollapsed     = signal<boolean>(false);
+  protected readonly activeFormStep     = signal<'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'>('STEP1');
+
+  protected toggleQueueCollapse(): void {
+    this.isQueueCollapsed.update(v => !v);
+  }
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update(v => !v);
+  }
+
+  protected scrollToFormSection(sectionId: string, stepName: 'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'): void {
+    this.activeFormStep.set(stepName);
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 
   // ── Formato F01 Impresión y Descarga ──
   protected readonly showF01PrintModal       = signal<boolean>(false);
@@ -377,7 +390,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       next: (data) => {
         if (data) {
           if (data.transportTypes && data.transportTypes.length > 0) {
-            this.transportTypesList.set(data.transportTypes);
+            const allowed = ['Camioneta', 'Tortón', 'Tráiler', 'Otro (Especificar)'];
+            const filtered = data.transportTypes.filter((t: string) => allowed.includes(t));
+            if (filtered.length > 0) {
+              if (!filtered.includes('Otro (Especificar)')) filtered.push('Otro (Especificar)');
+              this.transportTypesList.set(filtered);
+            }
           }
           if (data.boxDimensions && data.boxDimensions.length > 0) {
             this.boxDimensionsList.set(data.boxDimensions);
