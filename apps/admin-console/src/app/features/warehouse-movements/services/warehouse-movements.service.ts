@@ -314,25 +314,57 @@ export class WarehouseMovementsService {
     // 1. Clientes
     this.movementsApi.getClients().subscribe({
       next: (clients: any) => {
-        this.clientsSignal.set(
-          (clients || []).map((c: any) => ({
-            code: c.id || c.code || 'CLI',
-            name: c.name || c.tradeName || 'Cliente',
-            destinations: (c.destinations || []).map((d: any) => ({
-              id: d.id || `DEST-${d.destinationCode || Math.random()}`,
-              clientCode: c.id || c.code,
-              name: d.plantName || d.name || 'Planta / Destino',
-              address: d.fullAddress || d.address || '',
-              city: d.city || '',
-              state: d.state || '',
-              contactName: d.contactPerson || d.contactName || '',
-              contactPhone: d.phone || d.contactPhone || '',
-              status: (d.status === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
-            })),
-          }))
-        );
+        if (clients && clients.length > 0) {
+          this.clientsSignal.set(
+            clients.map((c: any) => ({
+              code: c.id || c.code || 'CLI',
+              name: c.name || c.tradeName || 'Cliente',
+              destinations: (c.destinations || []).map((d: any) => ({
+                id: d.id || `DEST-${d.destinationCode || Math.random()}`,
+                clientCode: c.id || c.code,
+                name: d.plantName || d.name || 'Planta / Destino',
+                address: d.fullAddress || d.address || '',
+                city: d.city || '',
+                state: d.state || '',
+                contactName: d.contactPerson || d.contactName || '',
+                contactPhone: d.phone || d.contactPhone || '',
+                status: (d.status === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+              })),
+            }))
+          );
+        } else {
+          // Fallback resiliente a catálogos públicos si la búsqueda por organización vino vacía
+          this.movementsApi.getPublicCatalogs().subscribe({
+            next: (data) => {
+              if (data?.clients && data.clients.length > 0) {
+                this.clientsSignal.set(
+                  data.clients.map((c: any) => ({
+                    code: c.id || c.code || 'CLI',
+                    name: c.name || c.tradeName || 'Cliente',
+                    destinations: [],
+                  }))
+                );
+              }
+            }
+          });
+        }
       },
-      error: () => {},
+      error: () => {
+        // Fallback si la sesión no tiene rol CLIENTS_READ o hubo error de red
+        this.movementsApi.getPublicCatalogs().subscribe({
+          next: (data) => {
+            if (data?.clients && data.clients.length > 0) {
+              this.clientsSignal.set(
+                data.clients.map((c: any) => ({
+                  code: c.id || c.code || 'CLI',
+                  name: c.name || c.tradeName || 'Cliente',
+                  destinations: [],
+                }))
+              );
+            }
+          }
+        });
+      },
     });
 
     // 2. Transportistas
