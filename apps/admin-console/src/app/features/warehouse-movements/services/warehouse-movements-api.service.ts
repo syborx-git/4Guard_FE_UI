@@ -28,9 +28,6 @@ export class WarehouseMovementsApiService {
   private readonly http = inject(HttpClient);
 
   private get baseUrl(): string {
-    if (typeof window !== 'undefined' && (window.location.hostname.includes('ngrok') || window.location.hostname !== 'localhost')) {
-      return '';
-    }
     return environment.apiBaseUrl;
   }
 
