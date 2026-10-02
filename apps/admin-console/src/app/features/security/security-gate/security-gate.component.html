@@ -20,48 +20,51 @@
             </a>
             <span class="security-header__eyebrow-sep">·</span>
             <span>Seguridad Patrimonial</span>
+            <span class="security-header__eyebrow-sep">·</span>
+            <span class="badge-gold">Formato F01</span>
           </div>
           <h1 class="security-header__title">Centro de Control de Vigilancia &amp; Caseta</h1>
           <p class="security-header__subtitle">
-            Control integral de accesos vehiculares, auto-registro QR de choferes, inspección F01, monitoreo en patio y check-out de salida.
+            Control integral de accesos vehiculares, auto-registro QR para Check List de Transporte (F01) desde smartphone, monitoreo en patio y check-out de salida.
           </p>
-        </div>
-      </div>
-
-      <!-- Acciones de Cabecera y Badges de Control -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <!-- Generador de Pase QR para Chofer -->
-        <button
-          type="button"
-          (click)="generateDriverPass()"
-          [disabled]="isGeneratingPass()"
-          class="btn-primary-gold"
-          aria-label="Generar Pase QR Chofer"
-        >
-          <span class="material-symbols-outlined text-base">qr_code_scanner</span>
-          <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Generar Pase QR' }}</span>
-        </button>
-
-        <!-- Refrescar Datos -->
-        <button
-          type="button"
-          (click)="reloadAllData()"
-          class="btn-secondary-outline"
-          title="Actualizar datos de patio y caseta"
-        >
-          <span class="material-symbols-outlined text-base">refresh</span>
-          <span>Actualizar</span>
-        </button>
-
-        <div class="security-status-badge">
-          <span class="security-status-badge__dot"></span>
-          <span>CASETA EN SERVICIO</span>
         </div>
       </div>
     </div>
 
+    <!-- Acciones de Cabecera y Badges de Control (Acomodados al borde izquierdo) -->
+    <div class="flex items-center gap-2.5 flex-wrap">
+      <!-- Generador de Pase QR para Chofer -->
+      <button
+        type="button"
+        (click)="openQrModal()"
+        [disabled]="isGeneratingPass()"
+        class="btn-primary-gold"
+        aria-label="Ver o Generar Pase QR Chofer"
+        title="Genera un código QR institucional o enlace móvil para que el transportista complete el Check List de Transporte desde su smartphone"
+      >
+        <span class="material-symbols-outlined text-base">qr_code_scanner</span>
+        <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Ver / Generar Código QR' }}</span>
+      </button>
+
+      <!-- Refrescar Datos -->
+      <button
+        type="button"
+        (click)="reloadAllData()"
+        class="btn-secondary-outline"
+        title="Actualizar datos de patio y caseta"
+      >
+        <span class="material-symbols-outlined text-base">refresh</span>
+        <span>Actualizar</span>
+      </button>
+
+      <div class="security-status-badge">
+        <span class="security-status-badge__dot"></span>
+        <span>CASETA EN SERVICIO</span>
+      </div>
+    </div>
+
     <!-- ── 2. BARRA DE PESTAÑAS DE NAVEGACIÓN (3 PESTAÑAS ENFOCADAS) ── -->
-    <div class="security-tabs-bar">
+    <div class="security-tabs-bar flex items-center justify-between gap-2 flex-wrap">
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Tab 1: Registro & Pases QR -->
         <button
@@ -73,7 +76,7 @@
           <span class="material-symbols-outlined text-base">how_to_reg</span>
           <span>1. Nuevo Registro &amp; Pases QR</span>
           @if (pendingDriverCount() > 0) {
-            <span class="security-tab-badge bg-amber-500 text-white animate-pulse">
+            <span class="security-tab-badge bg-[#b8860b] text-white animate-pulse">
               {{ pendingDriverCount() }}
             </span>
           }
@@ -89,7 +92,7 @@
           <span class="material-symbols-outlined text-base">local_shipping</span>
           <span>2. Unidades en Planta &amp; Salidas</span>
           @if (inYardCount() > 0) {
-            <span class="security-tab-badge bg-blue-500 text-white">
+            <span class="security-tab-badge bg-[#b8860b] text-white">
               {{ inYardCount() }}
             </span>
           }
@@ -111,58 +114,122 @@
           <span>3. Historial del Turno</span>
         </button>
       </div>
+
+      <!-- Control Visual de Alternancia del Panel Lateral ("Choferes en Espera") -->
+      @if (activeTab() === 'REGISTRATION') {
+        <button
+          type="button"
+          (click)="toggleQueueCollapse()"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 shadow-sm border"
+          [ngClass]="isQueueCollapsed()
+            ? 'bg-gradient-to-r from-[#c5a86b] to-[#b8860b] hover:from-[#e0c87a] hover:to-[#c5a86b] text-slate-950 border-[#b8860b] shadow-md font-extrabold'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          [title]="isQueueCollapsed() ? 'Mostrar el panel lateral de Choferes en Espera' : 'Ocultar el panel lateral para expandir el formulario al 100%'"
+        >
+          <span class="material-symbols-outlined text-sm font-bold">{{ isQueueCollapsed() ? 'dock_to_right' : 'dock_to_left' }}</span>
+          <span>{{ isQueueCollapsed() ? 'Mostrar Choferes (' + activePasses().length + ')' : 'Ocultar Panel Lateral' }}</span>
+        </button>
+      }
     </div>
   </header>
 
-  <!-- ── 3. TARJETAS DE MÉTRICAS KPI (4 COLUMNAS HOMOLOGADAS) ── -->
-  <section class="module-kpi-grid" aria-label="Métricas de Caseta">
-    <!-- KPI 1: Unidades en Planta -->
-    <div class="module-kpi-card module-kpi-card--primary">
-      <div class="module-kpi-card__icon">
-        <span class="material-symbols-outlined">local_shipping</span>
-      </div>
-      <div class="module-kpi-card__info">
-        <span class="module-kpi-card__label">Unidades en Planta</span>
-        <span class="module-kpi-card__value">{{ inYardCount() }}</span>
-        <span class="module-kpi-card__sub">En patios y andenes</span>
-      </div>
+  <!-- ── 3. TARJETAS DE MÉTRICAS KPI (CON VISTA COMPACTA COLAPSABLE) ── -->
+  <section aria-label="Métricas de Caseta">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-[#c5a86b]">analytics</span>
+        <span>Métricas Operativas del Turno</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="inline-flex items-center gap-1 text-[11px] font-bold text-[#9b7626] dark:text-[#e0c87a] hover:text-[#845d17] dark:hover:text-white transition-colors py-0.5 px-2 rounded-md hover:bg-[#c5a86b]/10"
+        title="Colapsar/Expandir panel de métricas"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
     </div>
 
-    <!-- KPI 2: QR Pendientes / Espera -->
-    <div class="module-kpi-card module-kpi-card--warning">
-      <div class="module-kpi-card__icon">
-        <span class="material-symbols-outlined">qr_code_scanner</span>
-      </div>
-      <div class="module-kpi-card__info">
-        <span class="module-kpi-card__label">QR Pendientes / Espera</span>
-        <span class="module-kpi-card__value">{{ pendingDriverCount() }}</span>
-        <span class="module-kpi-card__sub">Choferes por autorizar</span>
-      </div>
-    </div>
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida -->
+      <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 shadow-sm flex-wrap text-xs animate-fade-in">
+        <div class="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+          <span class="text-slate-600 dark:text-slate-400 font-semibold">En Planta:</span>
+          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ inYardCount() }}</span>
+        </div>
 
-    <!-- KPI 3: Listos para Check-Out -->
-    <div class="module-kpi-card module-kpi-card--success">
-      <div class="module-kpi-card__icon">
-        <span class="material-symbols-outlined">verified</span>
-      </div>
-      <div class="module-kpi-card__info">
-        <span class="module-kpi-card__label">Listos para Salida</span>
-        <span class="module-kpi-card__value">{{ readyForExitCount() }}</span>
-        <span class="module-kpi-card__sub">Descarga/Carga autorizada</span>
-      </div>
-    </div>
+        <div class="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#c5a86b]"></span>
+          <span class="text-slate-600 dark:text-slate-400 font-semibold">QR Pendientes:</span>
+          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ pendingDriverCount() }}</span>
+        </div>
 
-    <!-- KPI 4: Salidas Concluidas del Turno -->
-    <div class="module-kpi-card module-kpi-card--info">
-      <div class="module-kpi-card__icon">
-        <span class="material-symbols-outlined">task_alt</span>
+        <div class="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-slate-600 dark:text-slate-400 font-semibold">Listos Salida:</span>
+          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ readyForExitCount() }}</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+          <span class="text-slate-600 dark:text-slate-400 font-semibold">Salidas Turno:</span>
+          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ completedShiftExitsCount() }}</span>
+        </div>
       </div>
-      <div class="module-kpi-card__info">
-        <span class="module-kpi-card__label">Salidas del Turno</span>
-        <span class="module-kpi-card__value">{{ completedShiftExitsCount() }}</span>
-        <span class="module-kpi-card__sub">Inspecciones concluidas</span>
+    } @else {
+      <!-- Grid Completo de KPIs (4 Tarjetas) -->
+      <div class="module-kpi-grid animate-fade-in">
+        <!-- KPI 1: Unidades en Planta -->
+        <div class="module-kpi-card module-kpi-card--primary">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Unidades en Planta</span>
+            <span class="module-kpi-card__value">{{ inYardCount() }}</span>
+            <span class="module-kpi-card__sub">En patios y andenes</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: QR Pendientes / Espera -->
+        <div class="module-kpi-card module-kpi-card--warning">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">qr_code_scanner</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">QR Pendientes / Espera</span>
+            <span class="module-kpi-card__value">{{ pendingDriverCount() }}</span>
+            <span class="module-kpi-card__sub">Choferes por autorizar</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Listos para Check-Out -->
+        <div class="module-kpi-card module-kpi-card--success">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">verified</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Listos para Salida</span>
+            <span class="module-kpi-card__value">{{ readyForExitCount() }}</span>
+            <span class="module-kpi-card__sub">Descarga/Carga autorizada</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Salidas Concluidas del Turno -->
+        <div class="module-kpi-card module-kpi-card--info">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">task_alt</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Salidas del Turno</span>
+            <span class="module-kpi-card__value">{{ completedShiftExitsCount() }}</span>
+            <span class="module-kpi-card__sub">Inspecciones concluidas</span>
+          </div>
+        </div>
       </div>
-    </div>
+    }
   </section>
 
   <!-- ── 4. NOTIFICACIONES Y ALERTAS ── -->
@@ -208,205 +275,293 @@
        PESTAÑA 1: NUEVO REGISTRO & PASES QR
   ══════════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'REGISTRATION') {
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+    <div [class]="isQueueCollapsed() ? 'flex gap-4 animate-fade-in w-full items-stretch' : 'grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in w-full'">
       
-      <!-- Columna Lateral: Tarjeta QR Chofer & Choferes en Espera (4 Cols) -->
-      <aside class="lg:col-span-4 space-y-5">
-        
-        <!-- Tarjeta de Generador de Pase QR -->
-        <div class="security-card p-5">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <div class="w-7 h-7 rounded-full bg-white flex items-center justify-center border border-amber-400/80 shrink-0 p-0.5 shadow-sm">
-                <img src="assets/forbot-avatar.png" alt="4GUARD ForBot" class="w-full h-full object-contain" />
-              </div>
-              <span>Pase Digital para Chofer</span>
-            </h3>
-            <span class="badge-gold">
-              Formato F01
-            </span>
+      <!-- Columna Lateral: Choferes en Espera & Solicitudes Móviles -->
+      @if (isQueueCollapsed()) {
+        <!-- Tira / Pestaña Flotante Vertical en el Borde Izquierdo -->
+        <aside
+          (click)="toggleQueueCollapse()"
+          class="hidden lg:flex flex-col items-center justify-start py-5 px-1.5 rounded-2xl border-2 border-dashed border-[#c5a86b]/40 bg-[#c5a86b]/10 hover:bg-[#c5a86b]/20 text-[#9b7626] dark:text-[#e0c87a] transition-all duration-300 cursor-pointer shrink-0 shadow-sm self-stretch group z-20 min-h-[500px] sidebar-collapsed-handle gap-4"
+          title="Haga clic aquí para desplegar Choferes en Espera"
+        >
+          <!-- Elemento Superior: Icono de Despliegue & Botón ABRIR -->
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="p-2 rounded-xl bg-gradient-to-br from-[#c5a86b] to-[#b8860b] text-slate-950 font-black shadow-md group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined text-lg">dock_to_right</span>
+            </div>
+            <span class="text-[9px] font-black uppercase tracking-widest text-[#9b7626] dark:text-[#e0c87a] opacity-90">Abrir</span>
           </div>
 
-          <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-            Genera un código QR institucional o enlace móvil para que el transportista complete el <strong>Check List de Transporte</strong> desde su smartphone.
-          </p>
-
-          <button
-            type="button"
-            (click)="openQrModal()"
-            class="w-full btn-primary-gold justify-center py-2.5"
-          >
-            <span class="material-symbols-outlined text-base">qr_code</span>
-            <span>Ver / Generar Código QR</span>
-          </button>
-        </div>
-
-        <!-- Tarjeta de Choferes en Espera / Solicitudes Móviles -->
-        <div class="security-card p-5">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-black text-sm flex items-center gap-2" style="color: var(--text-primary);">
-              <span class="material-symbols-outlined" style="color: var(--c-info);">pending_actions</span>
-              <span>Choferes en Espera</span>
-            </h3>
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black" style="background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-bdr);">
+          <!-- Elemento Posicionado Justo Debajo del Botón ABRIR -->
+          <div class="flex flex-col items-center justify-start gap-3 pt-1 pb-4">
+            <!-- Badge circular dorado con cantidad -->
+            <span class="w-6 h-6 rounded-full bg-[#b8860b] text-white text-[11px] font-mono font-black shadow-sm shrink-0 flex items-center justify-center">
               {{ activePasses().length }}
             </span>
+
+            <!-- Texto Vertical CHOFERES EN ESPERA -->
+            <div class="sidebar-collapsed-text-vertical">
+              CHOFERES EN ESPERA
+            </div>
+          </div>
+        </aside>
+      } @else {
+        <!-- Panel Completo Desplegado -->
+        <aside class="lg:col-span-4 space-y-5 transition-all duration-300 ease-in-out">
+          <!-- Tarjeta de Choferes en Espera / Solicitudes Móviles -->
+          <div class="security-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-black text-sm flex items-center gap-2" style="color: var(--text-primary);">
+                <span class="material-symbols-outlined" style="color: var(--c-info);">pending_actions</span>
+                <span>Choferes en Espera</span>
+              </h3>
+
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black" style="background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-bdr);">
+                  {{ activePasses().length }}
+                </span>
+                <button
+                  type="button"
+                  (click)="toggleQueueCollapse()"
+                  class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#c5a86b]/20 text-slate-600 dark:text-slate-300 hover:text-[#9b7626] dark:hover:text-[#e0c87a] transition-all border border-slate-200 dark:border-slate-700 flex items-center gap-1 text-xs font-extrabold"
+                  title="Ocultar panel lateral para maximizar el formulario al 100%"
+                >
+                  <span class="material-symbols-outlined text-base">dock_to_left</span>
+                  <span class="hidden xl:inline">Ocultar</span>
+                </button>
+              </div>
+            </div>
+
+            @if (passActionNotice()) {
+              <div class="pass-notice-banner animate-fade-in">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                <span>{{ passActionNotice() }}</span>
+              </div>
+            }
+
+            @if (activePasses().length === 0) {
+              <div class="pass-empty-state">
+                <span class="material-symbols-outlined text-3xl mb-1" style="color: var(--text-muted);">hourglass_empty</span>
+                <p class="text-xs font-bold" style="color: var(--text-primary);">No hay choferes en espera</p>
+                <p class="text-[11px] mt-0.5" style="color: var(--text-secondary);">Los pases QR generados y auto-registros aparecerán aquí en tiempo real.</p>
+              </div>
+            } @else {
+              <div class="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                @for (pass of activePasses(); track pass.id || pass.token) {
+                  <div class="driver-pass-card group">
+                    
+                    <!-- Barra indicadora superior según operación/estatus -->
+                    <div class="driver-pass-card__top-bar"
+                         [ngClass]="pass.status === 'SUBMITTED' 
+                           ? 'driver-pass-card__top-bar--submitted' 
+                           : ((pass.operationType === 'CARGA' || pass.operacion === 'CARGA') 
+                             ? 'driver-pass-card__top-bar--carga' 
+                             : 'driver-pass-card__top-bar--descarga')">
+                    </div>
+
+                    <!-- Fila 1: Badges de Operación, Token y Estado -->
+                    <div class="flex items-center justify-between gap-2 pt-0.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="pass-op-badge"
+                              [ngClass]="(pass.operationType === 'CARGA' || pass.operacion === 'CARGA')
+                                ? 'pass-op-badge--carga'
+                                : 'pass-op-badge--descarga'">
+                          {{ pass.operationType || pass.operacion || 'DESCARGA' }}
+                        </span>
+                        <span class="pass-token-pill">
+                          #{{ pass.token }}
+                        </span>
+                      </div>
+
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span class="pass-status-pill"
+                              [ngClass]="pass.status === 'SUBMITTED' ? 'pass-status-pill--submitted' : 'pass-status-pill--active'">
+                          @if (pass.status === 'SUBMITTED') {
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span>✓ Enviado</span>
+                          } @else {
+                            <span class="material-symbols-outlined text-[12px] animate-spin" style="animation-duration: 3.5s;">hourglass_top</span>
+                            <span>QR Activo</span>
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Fila 2: Título e Identidad del Chofer -->
+                    <div class="px-0.5">
+                      @if (pass.status === 'SUBMITTED' || pass.driverName || pass.nombreOperador) {
+                        <div class="flex items-center justify-between gap-1">
+                          <h4 class="pass-driver-title truncate">
+                            <span class="material-symbols-outlined text-base" style="color: var(--c-success);">person_check</span>
+                            <span class="truncate">{{ pass.driverName || pass.nombreOperador || pass.operatorName || 'Chofer Registrado' }}</span>
+                          </h4>
+                          @if (pass.driverPhone || pass.telefonoChofer) {
+                            <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
+                               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-[#845d17] dark:text-[#e0c87a] bg-[#c5a86b]/15 hover:bg-[#c5a86b]/25 border border-[#c5a86b]/35 transition-all shrink-0" 
+                               title="Llamar al chofer"
+                               (click)="$event.stopPropagation()">
+                              <span class="material-symbols-outlined text-xs text-[#9b7626] dark:text-[#e0c87a]">call</span>
+                              <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
+                            </a>
+                          }
+                        </div>
+                        <p class="pass-driver-desc pass-driver-desc--submitted">
+                          ✓ Formulario F01 completado por el transportista
+                        </p>
+                      } @else {
+                        <div class="flex items-center justify-between gap-1">
+                          <h4 class="pass-driver-title">
+                            <span class="material-symbols-outlined text-base animate-pulse" style="color: #c5a86b;">phonelink_ring</span>
+                            <span>QR esperando captura</span>
+                          </h4>
+                          @if (pass.driverPhone || pass.telefonoChofer) {
+                            <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
+                               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-[#845d17] dark:text-[#e0c87a] bg-[#c5a86b]/15 hover:bg-[#c5a86b]/25 border border-[#c5a86b]/35 transition-all shrink-0" 
+                               title="Llamar al chofer"
+                               (click)="$event.stopPropagation()">
+                              <span class="material-symbols-outlined text-xs text-[#9b7626] dark:text-[#e0c87a]">call</span>
+                              <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
+                            </a>
+                          }
+                        </div>
+                        <p class="pass-driver-desc">
+                          El transportista está completando el formulario desde su smartphone.
+                        </p>
+                      }
+                    </div>
+
+                    <!-- Fila 3: Micro-Grid de Placas y Transporte -->
+                    <div class="pass-meta-grid">
+                      <div class="pass-meta-item">
+                        <span class="pass-meta-label">Placas Unidad</span>
+                        <span class="pass-meta-val pass-meta-val--mono">
+                          {{ pass.tractorPlates || pass.placasTracto || pass.truckPlates || 'S/P' }}
+                        </span>
+                      </div>
+                      <div class="pass-meta-item">
+                        <span class="pass-meta-label">Línea Transporte</span>
+                        <span class="pass-meta-val" [title]="pass.carrierLine || pass.carrier || pass.carrierName || 'General'">
+                          {{ pass.carrierLine || pass.carrier || pass.carrierName || 'General' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Fila 4: Botones de Acción -->
+                    <div class="pass-actions-row">
+                      <button
+                        type="button"
+                        (click)="openPassQr(pass, $event)"
+                        class="pass-btn-qr"
+                        title="Ver Código QR de este pase"
+                      >
+                        <span class="material-symbols-outlined text-sm">qr_code</span>
+                        <span>QR</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        (click)="loadDriverSubmission(pass)"
+                        class="pass-btn-load"
+                      >
+                        <span class="material-symbols-outlined text-base font-bold">{{ pass.status === 'SUBMITTED' ? 'download_done' : 'check_circle' }}</span>
+                        <span>{{ pass.status === 'SUBMITTED' ? 'Cargar en Caseta' : 'Cargar / Usar' }}</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        (click)="deleteDriverPass(pass, $event)"
+                        class="pass-btn-del"
+                        title="Descartar pase"
+                      >
+                        <span class="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </aside>
+      }
+
+      <!-- Columna Principal: Formulario Oficial F01 -->
+      <main [class]="isQueueCollapsed() ? 'flex-1 min-w-0 space-y-5 transition-all duration-300 ease-in-out' : 'lg:col-span-8 w-full space-y-5 transition-all duration-300 ease-in-out'">
+        
+        <!-- Stepper / Navegación Rápida por Secciones del Formulario -->
+        <div class="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 mb-4 shadow-sm flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            @if (isQueueCollapsed()) {
+              <!-- Botón para Re-expandir la Cola de Espera cuando el panel está oculto -->
+              <button
+                type="button"
+                (click)="toggleQueueCollapse()"
+                class="px-3 py-1.5 rounded-lg text-xs font-black bg-[#c5a86b]/15 text-[#9b7626] dark:text-[#e0c87a] border border-[#c5a86b]/35 hover:bg-[#c5a86b]/25 transition-all flex items-center gap-1.5 shadow-sm mr-1.5"
+                title="Expandir panel de choferes en espera"
+              >
+                <span class="material-symbols-outlined text-sm">dock_to_right</span>
+                <span>Choferes en Espera ({{ activePasses().length }})</span>
+              </button>
+            }
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-1', 'STEP1')"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP1'"
+              [class.bg-slate-100]="activeFormStep() !== 'STEP1'"
+              [class.dark:bg-slate-800]="activeFormStep() !== 'STEP1'"
+              class="px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm hover:bg-[#c5a86b]/20 hover:text-[#9b7626] dark:hover:text-[#e0c87a]"
+            >
+              <span class="material-symbols-outlined text-sm">description</span>
+              <span>1. Operación</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-2', 'STEP2')"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP2'"
+              [class.bg-slate-100]="activeFormStep() !== 'STEP2'"
+              [class.dark:bg-slate-800]="activeFormStep() !== 'STEP2'"
+              class="px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm hover:bg-[#c5a86b]/20 hover:text-[#9b7626] dark:hover:text-[#e0c87a]"
+            >
+              <span class="material-symbols-outlined text-sm">local_shipping</span>
+              <span>2. Transporte &amp; Unidad</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-3', 'STEP3')"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP3'"
+              [class.bg-slate-100]="activeFormStep() !== 'STEP3'"
+              [class.dark:bg-slate-800]="activeFormStep() !== 'STEP3'"
+              class="px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm hover:bg-[#c5a86b]/20 hover:text-[#9b7626] dark:hover:text-[#e0c87a]"
+            >
+              <span class="material-symbols-outlined text-sm">fact_check</span>
+              <span>3. Check List (F01)</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-4', 'STEP4')"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP4'"
+              [class.bg-slate-100]="activeFormStep() !== 'STEP4'"
+              [class.dark:bg-slate-800]="activeFormStep() !== 'STEP4'"
+              class="px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm hover:bg-[#c5a86b]/20 hover:text-[#9b7626] dark:hover:text-[#e0c87a]"
+            >
+              <span class="material-symbols-outlined text-sm">draw</span>
+              <span>4. Firmas &amp; Rampa</span>
+            </button>
           </div>
 
-          @if (passActionNotice()) {
-            <div class="pass-notice-banner animate-fade-in">
-              <span class="material-symbols-outlined text-sm">check_circle</span>
-              <span>{{ passActionNotice() }}</span>
-            </div>
-          }
-
-          @if (activePasses().length === 0) {
-            <div class="pass-empty-state">
-              <span class="material-symbols-outlined text-3xl mb-1" style="color: var(--text-muted);">hourglass_empty</span>
-              <p class="text-xs font-bold" style="color: var(--text-primary);">No hay choferes en espera</p>
-              <p class="text-[11px] mt-0.5" style="color: var(--text-secondary);">Los pases QR generados y auto-registros aparecerán aquí en tiempo real.</p>
-            </div>
-          } @else {
-            <div class="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-              @for (pass of activePasses(); track pass.id || pass.token) {
-                <div class="driver-pass-card group">
-                  
-                  <!-- Barra indicadora superior según operación/estatus -->
-                  <div class="driver-pass-card__top-bar"
-                       [ngClass]="pass.status === 'SUBMITTED' 
-                         ? 'driver-pass-card__top-bar--submitted' 
-                         : ((pass.operationType === 'CARGA' || pass.operacion === 'CARGA') 
-                           ? 'driver-pass-card__top-bar--carga' 
-                           : 'driver-pass-card__top-bar--descarga')">
-                  </div>
-
-                  <!-- Fila 1: Badges de Operación, Token y Estado -->
-                  <div class="flex items-center justify-between gap-2 pt-0.5">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <span class="pass-op-badge"
-                            [ngClass]="(pass.operationType === 'CARGA' || pass.operacion === 'CARGA')
-                              ? 'pass-op-badge--carga'
-                              : 'pass-op-badge--descarga'">
-                        {{ pass.operationType || pass.operacion || 'DESCARGA' }}
-                      </span>
-                      <span class="pass-token-pill">
-                        #{{ pass.token }}
-                      </span>
-                    </div>
-
-                    <div class="flex items-center gap-1 shrink-0">
-                      <span class="pass-status-pill"
-                            [ngClass]="pass.status === 'SUBMITTED' ? 'pass-status-pill--submitted' : 'pass-status-pill--active'">
-                        @if (pass.status === 'SUBMITTED') {
-                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                          <span>✓ Enviado</span>
-                        } @else {
-                          <span class="material-symbols-outlined text-[12px] animate-spin" style="animation-duration: 3.5s;">hourglass_top</span>
-                          <span>QR Activo</span>
-                        }
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Fila 2: Título e Identidad del Chofer -->
-                  <div class="px-0.5">
-                    @if (pass.status === 'SUBMITTED' || pass.driverName || pass.nombreOperador) {
-                      <div class="flex items-center justify-between gap-1">
-                        <h4 class="pass-driver-title truncate">
-                          <span class="material-symbols-outlined text-base" style="color: var(--c-success);">person_check</span>
-                          <span class="truncate">{{ pass.driverName || pass.nombreOperador || pass.operatorName || 'Chofer Registrado' }}</span>
-                        </h4>
-                        @if (pass.driverPhone || pass.telefonoChofer) {
-                          <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
-                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0" 
-                             title="Llamar al chofer"
-                             (click)="$event.stopPropagation()">
-                            <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">call</span>
-                            <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
-                          </a>
-                        }
-                      </div>
-                      <p class="pass-driver-desc pass-driver-desc--submitted">
-                        ✓ Formulario F01 completado por el transportista
-                      </p>
-                    } @else {
-                      <div class="flex items-center justify-between gap-1">
-                        <h4 class="pass-driver-title">
-                          <span class="material-symbols-outlined text-base animate-pulse" style="color: #f59e0b;">phonelink_ring</span>
-                          <span>QR esperando captura</span>
-                        </h4>
-                        @if (pass.driverPhone || pass.telefonoChofer) {
-                          <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
-                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0" 
-                             title="Llamar al chofer"
-                             (click)="$event.stopPropagation()">
-                            <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">call</span>
-                            <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
-                          </a>
-                        }
-                      </div>
-                      <p class="pass-driver-desc">
-                        El transportista está completando el formulario desde su smartphone.
-                      </p>
-                    }
-                  </div>
-
-                  <!-- Fila 3: Micro-Grid de Placas y Transporte -->
-                  <div class="pass-meta-grid">
-                    <div class="pass-meta-item">
-                      <span class="pass-meta-label">Placas Unidad</span>
-                      <span class="pass-meta-val pass-meta-val--mono">
-                        {{ pass.tractorPlates || pass.placasTracto || pass.truckPlates || 'S/P' }}
-                      </span>
-                    </div>
-                    <div class="pass-meta-item">
-                      <span class="pass-meta-label">Línea Transporte</span>
-                      <span class="pass-meta-val" [title]="pass.carrierLine || pass.carrier || pass.carrierName || 'General'">
-                        {{ pass.carrierLine || pass.carrier || pass.carrierName || 'General' }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Fila 4: Botones de Acción -->
-                  <div class="pass-actions-row">
-                    <button
-                      type="button"
-                      (click)="openPassQr(pass, $event)"
-                      class="pass-btn-qr"
-                      title="Ver Código QR de este pase"
-                    >
-                      <span class="material-symbols-outlined text-sm">qr_code</span>
-                      <span>QR</span>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      (click)="loadDriverSubmission(pass)"
-                      class="pass-btn-load"
-                    >
-                      <span class="material-symbols-outlined text-base font-bold">{{ pass.status === 'SUBMITTED' ? 'download_done' : 'check_circle' }}</span>
-                      <span>{{ pass.status === 'SUBMITTED' ? 'Cargar en Caseta' : 'Cargar / Usar' }}</span>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      (click)="deleteDriverPass(pass, $event)"
-                      class="pass-btn-del"
-                      title="Descartar pase"
-                    >
-                      <span class="material-symbols-outlined text-sm">delete</span>
-                    </button>
-                  </div>
-
-                </div>
-              }
+          @if (activeToken()) {
+            <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold bg-[#c5a86b]/15 text-[#9b7626] dark:text-[#e0c87a] border border-[#c5a86b]/35">
+              <span class="material-symbols-outlined text-xs">qr_code</span>
+              <span>#{{ activeToken() }}</span>
             </div>
           }
         </div>
-      </aside>
 
-      <!-- Columna Principal: Formulario Oficial F01-PO-CP-7.1.3-03 (8 Cols) -->
-      <main class="lg:col-span-8">
         <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-card p-5 sm:p-6 space-y-6">
           
           <!-- Encabezado del Formato Oficial -->
@@ -429,7 +584,7 @@
           </div>
 
           <!-- ── SECCIÓN 1: DATOS GENERALES ── -->
-          <div class="form-section">
+          <div id="form-step-1" class="form-section">
             <div class="form-section__legend">
               <span class="material-symbols-outlined text-base">description</span>
               <span>1. Datos Generales de la Operación</span>
@@ -549,7 +704,7 @@
           </div>
 
           <!-- ── SECCIÓN 2: DATOS DEL TRANSPORTE ── -->
-          <div class="form-section">
+          <div id="form-step-2" class="form-section">
             <div class="form-section__legend">
               <span class="material-symbols-outlined text-base">rv_hookup</span>
               <span>2. Datos del Transporte &amp; Unidad</span>
@@ -631,7 +786,6 @@
                   @for (t of transportTypesList(); track t) {
                     <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
                   }
-                  <option value="Otro (Especificar)">➕ Otro (Especificar)</option>
                 </select>
                 @if (isCustomTransportType()) {
                   <input
@@ -747,7 +901,7 @@
           </div>
 
           <!-- ── SECCIÓN 3: REVISIÓN DEL TRANSPORTE (CHECKLIST) ── -->
-          <div class="form-section">
+          <div id="form-step-3" class="form-section">
             <div class="form-section__legend">
               <span class="material-symbols-outlined text-base">fact_check</span>
               <span>3. Revisión del Transporte (Check List de Seguridad)</span>
@@ -864,7 +1018,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-medium">Interior de Caja Limpio y Seco</td>
+                    <td class="py-2 px-3 font-medium">Interior de Caja</td>
                     <td class="py-2 px-2 text-center">
                       <div class="inline-flex gap-1 justify-center">
                         <button type="button" (click)="setCriterion('revInteriorCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revInteriorCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
@@ -919,7 +1073,7 @@
           </div>
 
           <!-- ── SECCIÓN 4: RESPONSABLES Y FIRMAS ── -->
-          <div class="form-section">
+          <div id="form-step-4" class="form-section">
             <div class="form-section__legend">
               <span class="material-symbols-outlined text-base">draw</span>
               <span>4. Responsables &amp; Firmas de Conformidad</span>
@@ -957,23 +1111,35 @@
             </div>
           </div>
 
-          <!-- Botón de Acción Principal -->
-          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700/80">
-            <button
-              type="button"
-              (click)="resetForm()"
-              class="btn-secondary-outline"
-            >
-              Cancelar / Limpiar
-            </button>
-            <button
-              type="submit"
-              [disabled]="isSaving()"
-              class="btn-primary-gold px-6 py-2.5 text-sm"
-            >
-              <span class="material-symbols-outlined text-base">login</span>
-              <span>{{ isSaving() ? 'Registrando en WMS...' : 'Autorizar Ingreso y Asignar Rampa' }}</span>
-            </button>
+          <!-- Botonera de Acción Principal Flotante (Sticky Footer Bar) -->
+          <div class="sticky bottom-4 z-20 mt-4 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-amber-500 text-xl">verified_user</span>
+              <div class="flex flex-col">
+                <span class="text-xs font-black text-slate-900 dark:text-slate-100">Autorización de Acceso F01</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                  {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Listo para registrar en WMS y asignar rampa' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 ms-auto">
+              <button
+                type="button"
+                (click)="resetForm()"
+                class="btn-secondary-outline"
+              >
+                Cancelar / Limpiar
+              </button>
+              <button
+                type="submit"
+                [disabled]="isSaving()"
+                class="btn-primary-gold px-6 py-2.5 text-sm shadow-md hover:shadow-lg transition-all"
+              >
+                <span class="material-symbols-outlined text-base">login</span>
+                <span>{{ isSaving() ? 'Registrando en WMS...' : 'Autorizar Ingreso y Asignar Rampa' }}</span>
+              </button>
+            </div>
           </div>
 
         </form>
@@ -991,7 +1157,7 @@
       <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
         <div>
           <h2 class="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span class="material-symbols-outlined text-blue-500">local_shipping</span>
+            <span class="material-symbols-outlined text-[#c5a86b]">local_shipping</span>
             <span>Unidades en Planta &amp; Control de Salidas</span>
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
@@ -1030,11 +1196,11 @@
         <button
           type="button"
           (click)="inYardFilter.set('ALL')"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
-          [ngClass]="inYardFilter() === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+          [ngClass]="inYardFilter() === 'ALL' ? 'bg-gradient-to-r from-[#c5a86b] to-[#b8860b] text-slate-950 font-black shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
         >
           <span>Todas en Planta</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'ALL' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
             {{ inYardCount() }}
           </span>
         </button>
