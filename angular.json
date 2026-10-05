@@ -93,7 +93,8 @@
             "port": 4200,
             "host": "0.0.0.0",
             "disableHostCheck": true,
-            "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"]
+            "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"],
+            "proxyConfig": "proxy.conf.js"
           }
         },
         "test": {

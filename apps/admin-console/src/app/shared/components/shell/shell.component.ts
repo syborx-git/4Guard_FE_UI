@@ -458,6 +458,7 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
+    { label: 'Seguridad', route: '/security', icon: 'security', module: 'security' },
     {
       label: 'Recepción',
       route: '/warehouse-movements/receiving',
@@ -469,7 +470,6 @@ export class ShellComponent implements OnInit, OnDestroy {
         { label: 'Salidas de Almacén', route: '/warehouse-movements/outbound', icon: 'local_shipping' },
       ],
     },
-    { label: 'Seguridad', route: '/security', icon: 'security', module: 'security' },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },

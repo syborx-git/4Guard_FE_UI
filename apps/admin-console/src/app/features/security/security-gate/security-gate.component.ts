@@ -121,6 +121,16 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly copyNotice         = signal<string | null>(null);
   protected readonly passActionNotice   = signal<string | null>(null);
 
+  // ── Configuración Dinámica de Túnel (ngrok / móvil) ──
+  protected readonly tunnelUrl          = signal<string>('');
+  protected readonly tunnelInputUrl     = signal<string>('');
+  protected readonly isLocalhost        = computed(() => {
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      return window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1');
+    }
+    return false;
+  });
+
   // ── Check-Out (Salida de Planta) ──
   protected readonly showCheckOutModal       = signal<boolean>(false);
   protected readonly selectedCheckOutPass    = signal<any | null>(null);
@@ -229,6 +239,36 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     transportistaNombre: ['', Validators.required],
     transportistaFirma: [false, Validators.requiredTrue]
   });
+
+  // ── Notificaciones de Caseta / Comanda en Vivo ───────────────────────────
+  private readonly notifiedSubmittedTokens = new Set<string>();
+
+  private playCheckinChime(): void {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      
+      const playTone = (freq: number, start: number, dur: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+
+      // Tono de campana de caseta: D5 (587.33Hz) -> A5 (880Hz)
+      playTone(587.33, 0, 0.25);
+      playTone(880, 0.18, 0.4);
+    } catch {
+      // AudioContext fallback silencioso
+    }
+  }
 
   // ── Conteo Computado de Pestañas & Filtros de Patio ───────────────────────
   protected readonly inYardFilter = signal<'ALL' | 'IN_MANEUVER' | 'READY_EXIT'>('ALL');
@@ -354,15 +394,79 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  protected cleanTunnelUrl(rawUrl: string): string {
+    if (!rawUrl || typeof rawUrl !== 'string') return '';
+    let cleaned = rawUrl.trim();
+    cleaned = cleaned.replace(/[\[\]'"`]/g, '');
+    cleaned = cleaned.replace(/^(https?:\/\/)+/gi, '');
+    cleaned = cleaned.split('/carrier-checkin')[0];
+    cleaned = cleaned.replace(/\/+$/, '');
+    // Auto-corregir extensión desactualizada .ngrok-free.app a la extensión activa .ngrok-free.dev
+    cleaned = cleaned.replace(/\.ngrok-free\.app$/i, '.ngrok-free.dev');
+    if (!cleaned) return '';
+    return `https://${cleaned}`;
+  }
+
+  protected autoDetectNgrok(): void {
+    if (typeof window === 'undefined') return;
+    fetch('http://127.0.0.1:4040/api/tunnels')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.tunnels && data.tunnels.length > 0) {
+          const publicUrl = data.tunnels[0].public_url;
+          if (publicUrl) {
+            const cleaned = this.cleanTunnelUrl(publicUrl);
+            this.tunnelUrl.set(cleaned);
+            this.tunnelInputUrl.set(cleaned);
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('4g_security_tunnel_url', cleaned);
+            }
+            this.updateQrModalUrl();
+          }
+        }
+      })
+      .catch(() => {
+        // ngrok API no alcanzable (normal si no hay ngrok en ejecución local)
+      });
+  }
+
   protected getPublicBaseUrl(): string {
+    // 1. Prioridad: URL del túnel activa (ngrok u override local/storage)
+    const localTunnel = this.tunnelUrl();
+    if (localTunnel && localTunnel.trim()) {
+      return this.cleanTunnelUrl(localTunnel);
+    }
+
+    // 2. Prioridad: URL pública configurada en environment
     const envUrl = (environment as any).publicAppUrl;
     if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
-      return envUrl.trim().replace(/\/+$/, '');
+      return this.cleanTunnelUrl(envUrl);
     }
-    return window.location.origin;
+
+    // 3. Fallback: window.location.origin (Netlify / producción o túnel directo)
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      return window.location.origin;
+    }
+    return '';
+  }
+
+  protected getEncodedQrDataUrl(): string {
+    const targetUrl = this.qrModalUrl() || `${this.getPublicBaseUrl()}/carrier-checkin`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&ecc=H&data=${encodeURIComponent(targetUrl)}`;
   }
 
   ngOnInit(): void {
+    if (typeof localStorage !== 'undefined') {
+      const savedTunnel = localStorage.getItem('4g_security_tunnel_url');
+      if (savedTunnel && savedTunnel.trim()) {
+        const cleaned = this.cleanTunnelUrl(savedTunnel);
+        this.tunnelUrl.set(cleaned);
+        this.tunnelInputUrl.set(cleaned);
+      }
+    }
+
+    this.autoDetectNgrok();
+
     this.movementsService.loadInitialBackendData();
     this.movementsService.reloadCarriers();
     this.loadPublicCatalogs();
@@ -493,17 +597,44 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected getQrBaseUrl(): string {
-    const origin = window.location.origin;
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      // En desarrollo local (localhost), Safari en el celular no puede resolver 'localhost'.
-      // Apuntamos automáticamente al dominio desplegado de Netlify/Cloudify para pruebas con el smartphone.
-      return 'https://guard.netlify.app';
+    return this.getPublicBaseUrl();
+  }
+
+  protected updateQrModalUrl(): void {
+    const token = this.qrModalToken();
+    if (token) {
+      const baseUrl = this.getPublicBaseUrl();
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
     }
-    return origin;
+  }
+
+  protected saveTunnelUrl(): void {
+    const raw = (this.tunnelInputUrl() || '').trim();
+    if (raw) {
+      const cleaned = this.cleanTunnelUrl(raw);
+      this.tunnelUrl.set(cleaned);
+      this.tunnelInputUrl.set(cleaned);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('4g_security_tunnel_url', cleaned);
+      }
+      this.toast.success('URL de túnel ngrok configurada correctamente');
+      this.updateQrModalUrl();
+    }
+  }
+
+  protected clearTunnelUrl(): void {
+    this.tunnelUrl.set('');
+    this.tunnelInputUrl.set('');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('4g_security_tunnel_url');
+    }
+    this.toast.info('Se restableció la URL base por defecto');
+    this.updateQrModalUrl();
   }
 
   // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
   protected generateDriverPass(): void {
+    this.autoDetectNgrok();
     this.isGeneratingPass.set(true);
     const session = this.movementsService.movementsApi.getSessionOrg();
     const formVal = this.checkInForm.value;
@@ -583,7 +714,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       for (const p of pendingLocal) {
         if (p && p.token) {
           // Si ya hay pases en el backend, no duplicar con tokens temporales PASS-4G-
-          if (p.token.startsWith('PASS-4G-') && backendPasses.length > 0) {
+          // EXCEPCIÓN: si el pase local es SUBMITTED, siempre conservarlo (tiene datos del chofer)
+          if (p.token.startsWith('PASS-4G-') && backendPasses.length > 0 && p.status !== 'SUBMITTED') {
             continue;
           }
           const existing = mergedMap.get(p.token);
@@ -591,24 +723,62 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             mergedMap.set(p.token, p);
           } else {
             const isSubmitted = existing.status === 'SUBMITTED' || p.status === 'SUBMITTED';
-            const primary = (existing.status === 'SUBMITTED') ? existing : ((p.status === 'SUBMITTED') ? p : existing);
+            // El pase local SUBMITTED tiene todos los campos del chofer; el backend puede tener solo metadata básica.
+            // Si el local tiene SUBMITTED y el backend no, el local gana en todos los campos de datos del chofer.
+            const localIsRicher = p.status === 'SUBMITTED' && existing.status !== 'SUBMITTED';
+            const primary = localIsRicher ? p : ((existing.status === 'SUBMITTED') ? existing : ((p.status === 'SUBMITTED') ? p : existing));
             const secondary = (primary === existing) ? p : existing;
 
             mergedMap.set(p.token, {
               ...secondary,
               ...primary,
+              // Identificadores del backend (siempre conservar)
+              id: existing.id || p.id,
+              token: p.token,
               status: isSubmitted ? 'SUBMITTED' : (primary.status || secondary.status || 'PENDING_DRIVER'),
+              // Campos de datos del chofer: el pase SUBMITTED (local) tiene precedencia
               operationType: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
               operacion: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
               driverName: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
               nombreOperador: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
+              driverPhone: primary.driverPhone || primary.telefonoChofer || secondary.driverPhone || secondary.telefonoChofer || '',
               tractorPlates: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || '',
-              placasTracto: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || ''
+              placasTracto: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || '',
+              boxPlates: primary.boxPlates || primary.placasCaja || secondary.boxPlates || secondary.placasCaja || '',
+              placasCaja: primary.boxPlates || primary.placasCaja || secondary.boxPlates || secondary.placasCaja || '',
+              boxDimensions: primary.boxDimensions || primary.medidasCaja || secondary.boxDimensions || secondary.medidasCaja || '',
+              medidasCaja: primary.boxDimensions || primary.medidasCaja || secondary.boxDimensions || secondary.medidasCaja || '',
+              transportType: primary.transportType || primary.tipoTransporte || secondary.transportType || secondary.tipoTransporte || '',
+              tipoTransporte: primary.transportType || primary.tipoTransporte || secondary.transportType || secondary.tipoTransporte || '',
+              noEcoTractor: primary.noEcoTractor || secondary.noEcoTractor || '',
+              clientCode: primary.clientCode || secondary.clientCode || '',
+              clientName: primary.clientName || secondary.clientName || '',
+              carrierLineCode: primary.carrierLineCode || secondary.carrierLineCode || '',
+              carrierLine: primary.carrierLine || secondary.carrierLine || '',
+              docNumber: primary.docNumber || secondary.docNumber || '',
+              noCartaPorte: primary.noCartaPorte || secondary.noCartaPorte || '',
+              remision: primary.remision || secondary.remision || '',
+              sealNumbers: (primary.sealNumbers?.length > 0) ? primary.sealNumbers : (secondary.sealNumbers || []),
+              checklistData: primary.checklistData || secondary.checklistData || null,
+              driverSignature: primary.driverSignature || secondary.driverSignature || '',
+              observations: primary.observations || secondary.observations || '',
             });
           }
         }
       }
-      this.activePasses.set(Array.from(mergedMap.values()));
+      const mergedList = Array.from(mergedMap.values());
+      this.activePasses.set(mergedList);
+
+      // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
+      for (const p of mergedList) {
+        if (p && p.status === 'SUBMITTED' && p.token && !this.notifiedSubmittedTokens.has(p.token)) {
+          this.notifiedSubmittedTokens.add(p.token);
+          this.playCheckinChime();
+          const chofer = p.driverName || p.nombreOperador || 'Transportista';
+          const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
+          this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
+        }
+      }
     } catch {
       this.activePasses.set(backendPasses || []);
     }
@@ -795,64 +965,135 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     });
   }
 
+  private normalizeSearchStr(str: string): string {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(s\.?a\.?|d\.?e\.?|c\.?v\.?|s\.?r\.?l\.?|de|del|los|las|la|el)\b/gi, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+  }
+
   protected loadDriverSubmission(pass: any): void {
     if (!pass) return;
 
-    // 1. Limpiar estado previo del formulario para evitar datos residuales
-    this.resetFormFieldsOnly();
-    this.activeToken.set(pass.token);
+    // 1. Enriquecer el objeto pass con la versión más completa guardada en localStorage.
+    //    El móvil siempre guarda todos los campos del chofer en localStorage con status SUBMITTED.
+    //    El objeto que llega desde activePasses() puede ser el del backend (PENDING_DRIVER, sin datos del chofer).
+    let enrichedPass = { ...pass };
+    try {
+      const localStr = localStorage.getItem('4g_local_passes');
+      if (localStr) {
+        const localPasses: any[] = JSON.parse(localStr);
+        const localVersion = localPasses.find(p =>
+          p.token === pass.token || p.id === pass.token || p.token === pass.id
+        );
+        if (localVersion) {
+          // Fusionar: el pase local (con datos del chofer) prevalece sobre el del backend en campos de datos
+          enrichedPass = {
+            ...enrichedPass,
+            ...localVersion,
+            // Conservar identificadores del backend
+            id: pass.id || localVersion.id,
+            token: pass.token || localVersion.token,
+            // El status más avanzado gana: SUBMITTED > PENDING_DRIVER
+            status: (localVersion.status === 'SUBMITTED' || pass.status === 'SUBMITTED') ? 'SUBMITTED' : (pass.status || localVersion.status || 'PENDING_DRIVER'),
+          };
+        }
+      }
+    } catch {
+      // Si localStorage falla, usar el objeto original
+    }
 
-    // 2. Tipo de Operación
-    const opVal = pass.operationType || pass.operacion || 'DESCARGA';
+    // Usar el pase enriquecido desde aquí en adelante
+    const passData = enrichedPass;
+
+    // 2. Limpiar estado previo del formulario para evitar datos residuales
+    this.resetFormFieldsOnly();
+    this.activeToken.set(passData.token || pass.token);
+
+    // 3. Tipo de Operación (usar passData enriquecido)
+    const opVal = passData.operationType || passData.operacion || 'DESCARGA';
     this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
 
-    // 3. Extraer solo valores reales del pase (sin strings por defecto inventados)
-    const driverNameVal = pass.driverName || pass.nombreOperador || pass.operatorName || pass.driver_name || '';
-    const tractorPlatesVal = pass.tractorPlates || pass.placasTracto || pass.truckPlates || pass.plates || '';
-    const boxPlatesVal = pass.boxPlates || pass.placasCaja || pass.trailerPlates || '';
-    const boxDimensionsVal = pass.boxDimensions || pass.medidasCaja || pass.boxSize || '';
-    const transportTypeVal = pass.transportType || pass.tipoTransporte || pass.vehicleType || '';
-    const ecoNumberVal = pass.economicNumber || pass.noEcoTractor || pass.ecoTractor || '';
-    const docNumberVal = pass.docNumber || pass.remision || pass.noCartaPorte || '';
-    const isSubmitted = pass.status === 'SUBMITTED';
+    // 4. Extraer valores del pase enriquecido
+    const driverNameVal     = passData.driverName     || passData.nombreOperador  || passData.operatorName   || passData.driver_name  || '';
+    const tractorPlatesVal  = passData.tractorPlates  || passData.placasTracto    || passData.truckPlates    || passData.plates        || '';
+    const boxPlatesVal      = passData.boxPlates      || passData.placasCaja      || passData.trailerPlates  || '';
+    const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '';
+    const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || '';
+    const ecoNumberVal      = passData.economicNumber || passData.noEcoTractor    || passData.ecoTractor     || '';
+    const docNumberVal      = passData.docNumber      || passData.remision        || passData.noCartaPorte   || '';
+    const isSubmitted       = passData.status === 'SUBMITTED';
 
-    // Resolver Cliente en el catálogo si viene en el pase
-    let matchedClientCode = pass.clientCode || '';
-    let matchedClientName = pass.clientName || pass.client || '';
+    // 5. Resolver Cliente en el catálogo (Búsqueda tolerante por código, nombre o coincidencia difusa)
+    const rawClientCode = (passData.clientCode || '').trim();
+    const rawClientName = (passData.clientName || passData.client || '').trim();
+    let matchedClientCode = '';
+    let matchedClientName = '';
     let matchedClientCustom = '';
-    if (matchedClientCode || matchedClientName) {
-      const foundClient = this.clients().find(c => 
-        (matchedClientCode && (c.code === matchedClientCode || c.code.toLowerCase() === matchedClientCode.toLowerCase())) ||
-        (matchedClientName && (c.name.toLowerCase() === matchedClientName.toLowerCase() || c.name.toLowerCase().includes(matchedClientName.toLowerCase())))
-      );
+
+    if (rawClientCode || rawClientName) {
+      const normInputCode = this.normalizeSearchStr(rawClientCode);
+      const normInputName = this.normalizeSearchStr(rawClientName);
+
+      const foundClient = this.clients().find(c => {
+        const normCCode = this.normalizeSearchStr(c.code);
+        const normCName = this.normalizeSearchStr(c.name);
+
+        if (c.code === rawClientCode) return true;
+        if (normInputCode && normCCode && normInputCode === normCCode) return true;
+        if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
+        if (normInputCode && normCName && (normCName.includes(normInputCode) || normInputCode.includes(normCName))) return true;
+        return false;
+      });
+
       if (foundClient) {
         matchedClientCode = foundClient.code;
         matchedClientName = foundClient.name;
-      } else if (matchedClientName) {
+        matchedClientCustom = '';
+      } else {
         matchedClientCode = 'OTRO';
-        matchedClientCustom = matchedClientName;
+        matchedClientName = rawClientName || rawClientCode;
+        matchedClientCustom = rawClientName || rawClientCode;
       }
     }
 
-    // Resolver Línea Transportista en el catálogo si viene en el pase
-    let matchedCarrierCode = pass.carrierLineCode || '';
-    let matchedCarrierName = pass.carrierLine || pass.carrier || '';
+    // 6. Resolver Línea Transportista en el catálogo
+    const rawCarrierCode = (passData.carrierLineCode || '').trim();
+    const rawCarrierName = (passData.carrierLine || passData.carrier || passData.carrierName || '').trim();
+    let matchedCarrierCode = '';
+    let matchedCarrierName = '';
     let matchedCarrierCustom = '';
-    if (matchedCarrierCode || matchedCarrierName) {
-      const foundCarrier = this.carrierLines().find(c =>
-        (matchedCarrierCode && (c.code === matchedCarrierCode || c.code.toLowerCase() === matchedCarrierCode.toLowerCase())) ||
-        (matchedCarrierName && (c.name.toLowerCase() === matchedCarrierName.toLowerCase() || c.name.toLowerCase().includes(matchedCarrierName.toLowerCase())))
-      );
+
+    if (rawCarrierCode || rawCarrierName) {
+      const normInputCode = this.normalizeSearchStr(rawCarrierCode);
+      const normInputName = this.normalizeSearchStr(rawCarrierName);
+
+      const foundCarrier = this.carrierLines().find(c => {
+        const normCCode = this.normalizeSearchStr(c.code);
+        const normCName = this.normalizeSearchStr(c.name);
+
+        if (c.code === rawCarrierCode) return true;
+        if (normInputCode && normCCode && normInputCode === normCCode) return true;
+        if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
+        if (normInputCode && normCName && (normCName.includes(normInputCode) || normInputCode.includes(normCName))) return true;
+        return false;
+      });
+
       if (foundCarrier) {
         matchedCarrierCode = foundCarrier.code;
         matchedCarrierName = foundCarrier.name;
-      } else if (matchedCarrierName) {
+        matchedCarrierCustom = '';
+      } else {
         matchedCarrierCode = 'OTRO';
-        matchedCarrierCustom = matchedCarrierName;
+        matchedCarrierName = rawCarrierName || rawCarrierCode;
+        matchedCarrierCustom = rawCarrierName || rawCarrierCode;
       }
     }
 
-    // Resolver Tipo de Transporte y Medidas si vienen personalizados
+    // 7. Resolver Tipo de Transporte y Medidas si vienen personalizados
     if (transportTypeVal && !this.transportTypesList().includes(transportTypeVal)) {
       this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), transportTypeVal, 'Otro (Especificar)']);
     }
@@ -860,63 +1101,83 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), boxDimensionsVal, 'Otra Medida']);
     }
 
+    // 8. Poblar formulario del guardia con datos del chofer
     this.checkInForm.patchValue({
-      clientCode: matchedClientCode,
-      client: matchedClientName,
-      clientNameCustom: matchedClientCustom,
-      carrierLineCode: matchedCarrierCode,
-      carrierLine: matchedCarrierName,
-      carrierLineCustom: matchedCarrierCustom,
-      nombreOperador: driverNameVal,
-      driverPhone: pass.driverPhone || pass.telefonoChofer || pass.telefonoOperador || pass.phone || '',
-      placasTracto: tractorPlatesVal,
-      noEcoTractor: ecoNumberVal,
-      placasCaja: boxPlatesVal,
-      medidasCaja: boxDimensionsVal,
-      tipoTransporte: transportTypeVal,
+      clientCode:          matchedClientCode,
+      client:              matchedClientName,
+      clientNameCustom:    matchedClientCustom,
+      carrierLineCode:     matchedCarrierCode,
+      carrierLine:         matchedCarrierName,
+      carrierLineCustom:   matchedCarrierCustom,
+      nombreOperador:      driverNameVal,
+      driverPhone:         passData.driverPhone || passData.telefonoChofer || passData.telefonoOperador || passData.phone || '',
+      placasTracto:        tractorPlatesVal,
+      noEcoTractor:        ecoNumberVal,
+      placasCaja:          boxPlatesVal,
+      medidasCaja:         boxDimensionsVal,
+      tipoTransporte:      transportTypeVal,
       transportistaNombre: driverNameVal,
-      transportistaFirma: isSubmitted || !!pass.driverSignature,
+      transportistaFirma:  isSubmitted || !!passData.driverSignature,
     });
 
     if (docNumberVal) {
       if (opVal === 'CARGA') {
-        this.checkInForm.patchValue({ noCartaPorte: docNumberVal });
+        this.checkInForm.patchValue({
+          noCartaPorte: docNumberVal,
+          docCartaPorte: 'SI',
+          docCartaPorteObs: ''
+        });
       } else {
-        this.checkInForm.patchValue({ remision: docNumberVal });
+        this.checkInForm.patchValue({
+          remision: docNumberVal,
+          docRemision: 'SI',
+          docRemisionObs: ''
+        });
       }
     }
 
-    if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
-      this.sealList.set(pass.sealNumbers);
+    // 9. Sellos de seguridad
+    if (passData.sealNumbers && Array.isArray(passData.sealNumbers) && passData.sealNumbers.length > 0) {
+      this.sealList.set(passData.sealNumbers);
+      this.checkInForm.patchValue({ noSello: passData.sealNumbers[0] });
+    } else if (passData.sealNumber || passData.noSello) {
+      const s = passData.sealNumber || passData.noSello;
+      this.sealList.set([s]);
+      this.checkInForm.patchValue({ noSello: s });
     } else {
       this.sealList.set([]);
     }
 
-    if (pass.checklistData) {
+    // 10. Datos del checklist (EPP e inspección de caja)
+    if (passData.checklistData) {
       try {
-        const parsed = typeof pass.checklistData === 'string' ? JSON.parse(pass.checklistData) : pass.checklistData;
+        const parsed = typeof passData.checklistData === 'string' ? JSON.parse(passData.checklistData) : passData.checklistData;
         if (parsed?.epp) {
-          if (parsed.epp.zapatos) this.checkInForm.patchValue({ eppZapatos: parsed.epp.zapatos });
-          if (parsed.epp.cofia) this.checkInForm.patchValue({ eppCofia: parsed.epp.cofia });
-          if (parsed.epp.cubrebocas) this.checkInForm.patchValue({ eppCubrebocas: parsed.epp.cubrebocas });
-          if (parsed.epp.chaleco) this.checkInForm.patchValue({ eppChaleco: parsed.epp.chaleco });
+          if (parsed.epp.zapatos)    this.checkInForm.patchValue({ eppZapatos:    parsed.epp.zapatos, eppZapatosObs: '' });
+          if (parsed.epp.cofia)      this.checkInForm.patchValue({ eppCofia:      parsed.epp.cofia, eppCofiaObs: '' });
+          if (parsed.epp.cubrebocas) this.checkInForm.patchValue({ eppCubrebocas: parsed.epp.cubrebocas, eppCubrebocasObs: '' });
+          if (parsed.epp.chaleco)    this.checkInForm.patchValue({ eppChaleco:    parsed.epp.chaleco, eppChalecoObs: '' });
         }
         if (parsed?.caja) {
-          if (parsed.caja.interior) this.checkInForm.patchValue({ revInteriorCaja: parsed.caja.interior });
-          if (parsed.caja.danos) this.checkInForm.patchValue({ revDanosCaja: parsed.caja.danos });
-          if (parsed.caja.puertas) this.checkInForm.patchValue({ revDanosPuertas: parsed.caja.puertas });
-          if (parsed.caja.olores) this.checkInForm.patchValue({ revOloresExtranos: parsed.caja.olores });
-          if (parsed.caja.plagas) this.checkInForm.patchValue({ revIndiciosPlagas: parsed.caja.plagas });
+          if (parsed.caja.interior) this.checkInForm.patchValue({ revInteriorCaja:    parsed.caja.interior, revInteriorCajaObs: '' });
+          if (parsed.caja.danos)    this.checkInForm.patchValue({ revDanosCaja:       parsed.caja.danos, revDanosCajaObs: '' });
+          if (parsed.caja.puertas)  this.checkInForm.patchValue({ revDanosPuertas:    parsed.caja.puertas, revDanosPuertasObs: '' });
+          if (parsed.caja.olores)   this.checkInForm.patchValue({ revOloresExtranos:  parsed.caja.olores, revOloresExtranosObs: '' });
+          if (parsed.caja.plagas)   this.checkInForm.patchValue({ revIndiciosPlagas:  parsed.caja.plagas, revIndiciosPlagasObs: '' });
         }
       } catch {}
     }
 
+    // 11. Toast de confirmación y cerrar panel
     this.showPassListModal.set(false);
     if (isSubmitted) {
-      this.toast.success(`¡Datos del Pase #${pass.token} completados por el transportista cargados en caseta!`);
+      this.toast.success(`¡Todos los datos del Chofer (${driverNameVal || 'Transportista'}) fueron cargados en Caseta!`);
     } else {
-      this.toast.info(`Pase #${pass.token} vinculado. El transportista aún no completa el formulario móvil, puedes llenarlo manualmente.`);
+      this.toast.info(`Pase #${passData.token} vinculado. Puedes completar los campos pendientes manualmente.`);
     }
+
+    // 12. Desplazar suavemente a la Sección 1 del formulario para que el guardia visualice todo
+    this.scrollToFormSection('form-step-1', 'STEP1');
   }
 
   // ── MÉTODOS DEL MODAL DE QR DE PRUEBA ─────────────────────────────────────

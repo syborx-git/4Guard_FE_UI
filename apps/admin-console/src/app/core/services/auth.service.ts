@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file auth.service.ts
  * @description Servicio principal de Autenticación JWT que interactúa con la API del Backend.
  *
@@ -145,7 +145,7 @@ export class AuthService {
     
     this.sessionStorageService.clearSession();
     
-    if (!this.router.url.includes('/login')) {
+    if (!this.router.url.includes('/login') && !this.router.url.includes('/carrier-checkin') && !this.router.url.includes('/driver-checkin')) {
       const queryParams = reason ? { reason } : {};
       this.router.navigate(['/login'], { queryParams });
     }

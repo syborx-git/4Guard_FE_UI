@@ -28,6 +28,12 @@ export class WarehouseMovementsApiService {
   private readonly http = inject(HttpClient);
 
   private get baseUrl(): string {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host.includes('ngrok') || host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.')) {
+        return '';
+      }
+    }
     return environment.apiBaseUrl;
   }
 

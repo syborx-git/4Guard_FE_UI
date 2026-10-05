@@ -58,8 +58,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             return next(retriedReq);
           }),
           catchError((refreshError) => {
-            // Si el refresh falla, forzar cierre de sesión sin duplicar navegaciones si ya estamos en /login
-            if (!router.url.includes('/login')) {
+            // Si el refresh falla, forzar cierre de sesión sin duplicar navegaciones si ya estamos en /login o en portal público
+            if (
+              !router.url.includes('/login') &&
+              !router.url.includes('/carrier-checkin') &&
+              !router.url.includes('/driver-checkin')
+            ) {
               authService.clearSessionAndRedirect('session_expired');
             }
             return throwError(() => refreshError);
@@ -68,7 +72,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       // Si recibe 403 Forbidden por revocación de sesión en un endpoint protegido
-      if (error.status === 403 && !isAuthOrPublic && !router.url.includes('/login')) {
+      if (
+        error.status === 403 &&
+        !isAuthOrPublic &&
+        !router.url.includes('/login') &&
+        !router.url.includes('/carrier-checkin') &&
+        !router.url.includes('/driver-checkin')
+      ) {
         authService.clearSessionAndRedirect('session_expired');
       }
 

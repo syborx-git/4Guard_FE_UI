@@ -20,7 +20,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 /** Rutas que el guard NO debe guardar como returnUrl (evitar loops de redireccion). */
-const EXCLUDED_RETURN_PATHS = ['/login', '/forgot-password', '/change-password', '/'];
+const EXCLUDED_RETURN_PATHS = ['/login', '/forgot-password', '/change-password', '/carrier-checkin', '/driver-checkin', '/security/check-in', '/'];
 
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);

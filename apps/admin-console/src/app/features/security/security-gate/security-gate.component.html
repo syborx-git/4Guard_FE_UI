@@ -1527,7 +1527,7 @@
       <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-md inline-block mx-auto mb-2">
         <div class="relative inline-flex items-center justify-center">
           <img
-            [src]="'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&ecc=H&data=' + (qrModalUrl() || 'https://4guard.com')"
+            [src]="getEncodedQrDataUrl()"
             alt="QR Pase Acceso Chofer"
             class="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded bg-white"
           />
@@ -1592,6 +1592,64 @@
         @if (copyNotice()) {
           <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
         }
+      </div>
+
+      <!-- Configuración de Túnel Ngrok para Escaneo Móvil -->
+      <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 text-left bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl">
+        <div class="flex items-center justify-between gap-1 mb-1">
+          <label class="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs text-amber-500">cell_tower</span>
+            <span>URL Pública para Móviles (ngrok)</span>
+          </label>
+          @if (tunnelUrl()) {
+            <span class="text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-500/20">
+              Túnel Activo
+            </span>
+          } @else if (isLocalhost()) {
+            <span class="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded border border-amber-500/20">
+              Localhost
+            </span>
+          }
+        </div>
+
+        <div class="flex items-center gap-1">
+          <input
+            type="text"
+            [ngModel]="tunnelInputUrl()"
+            (ngModelChange)="tunnelInputUrl.set($event)"
+            (keyup.enter)="saveTunnelUrl()"
+            (blur)="saveTunnelUrl()"
+            placeholder="https://xyz.ngrok-free.app"
+            class="flex-1 text-[10px] py-1 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono focus:ring-1 focus:ring-amber-500 focus:outline-none"
+          />
+          <button
+            type="button"
+            (click)="saveTunnelUrl()"
+            class="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded transition-colors"
+            title="Guardar URL del túnel"
+          >
+            Guardar
+          </button>
+          @if (tunnelUrl()) {
+            <button
+              type="button"
+              (click)="clearTunnelUrl()"
+              class="px-1.5 py-1 text-[10px] text-slate-500 hover:text-red-500 rounded transition-colors"
+              title="Restablecer a URL por defecto"
+            >
+              <span class="material-symbols-outlined text-xs">close</span>
+            </button>
+          }
+        </div>
+
+        @if (isLocalhost() && !tunnelUrl()) {
+          <p class="text-[9px] text-amber-700 dark:text-amber-400 mt-1 leading-tight">
+            💡 <strong>Sugerencia:</strong> Si escaneas desde un celular en desarrollo local, pega la URL de tu túnel ngrok para resolver la conexión.
+          </p>
+        }
+        <div class="text-[9px] text-slate-400 mt-1 truncate font-mono">
+          Base URL: {{ getPublicBaseUrl() }}
+        </div>
       </div>
     </div>
   </div>

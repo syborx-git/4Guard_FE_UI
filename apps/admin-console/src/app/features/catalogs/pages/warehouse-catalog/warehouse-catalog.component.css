@@ -724,65 +724,68 @@
 /* ─── Polígonos SVG (Naves del Almacén) ─────────────────── */
 
 .wmap__poly {
-  fill: rgba(15, 23, 42, 0.45);
-  stroke: rgba(148, 163, 184, 0.2);
-  stroke-width: 1.2;
+  fill: rgba(15, 23, 42, 0.55);
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1.5;
   transition: fill 200ms ease, stroke 200ms ease, stroke-width 200ms ease, filter 200ms ease;
   cursor: pointer;
 }
 
 .wmap__poly--active {
-  fill: rgba(16, 185, 129, 0.08);
-  stroke: rgba(16, 185, 129, 0.4);
-  stroke-width: 1.5;
+  fill: rgba(16, 185, 129, 0.18);
+  stroke: rgba(16, 185, 129, 0.75);
+  stroke-width: 2.2;
 }
 
 .wmap__poly--active:hover {
-  fill: rgba(16, 185, 129, 0.22);
-  stroke: rgba(16, 185, 129, 0.75);
-  stroke-width: 2.5;
-  filter: url(#glow-active-cat);
+  fill: rgba(16, 185, 129, 0.35);
+  stroke: #10b981;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6));
 }
 
 .wmap__poly--pending {
-  fill: rgba(245, 158, 11, 0.04);
-  stroke: rgba(245, 158, 11, 0.28);
+  fill: rgba(245, 158, 11, 0.08);
+  stroke: rgba(245, 158, 11, 0.5);
   stroke-dasharray: 6, 4;
 }
 
 .wmap__poly--pending:hover {
-  fill: rgba(245, 158, 11, 0.15);
-  stroke: rgba(245, 158, 11, 0.6);
-  stroke-width: 2;
+  fill: rgba(245, 158, 11, 0.22);
+  stroke: #f59e0b;
+  stroke-width: 2.5;
 }
 
 .wmap__poly--selected {
-  fill: rgba(197, 168, 107, 0.22) !important;
-  stroke: var(--gold) !important;
-  stroke-width: 2.5 !important;
-  filter: url(#glow-selected-cat);
+  fill: rgba(197, 168, 107, 0.35) !important;
+  stroke: #ffd700 !important;
+  stroke-width: 3.5px !important;
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.8));
 }
 
 .wmap__poly-label {
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  fill: #e2e8f0;
+  font-size: 15px;
+  font-weight: 800;
+  fill: #ffffff;
   pointer-events: none;
   text-anchor: middle;
   letter-spacing: 0.5px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
 }
 
 .wmap__poly-label--pending {
-  fill: rgba(251, 191, 36, 0.75);
+  fill: #fbbf24;
 }
 
 .wmap__poly-sub {
   font-family: var(--font-mono);
-  font-size: 8.5px;
-  fill: rgba(148, 163, 184, 0.65);
+  font-size: 10px;
+  font-weight: 700;
+  fill: rgba(226, 232, 240, 0.95);
   pointer-events: none;
   text-anchor: middle;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
 }
 
 /* Barra de Zoom Flotante */
