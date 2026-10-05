@@ -57,6 +57,11 @@ export const adminRoutes: Routes = [
     redirectTo: 'carrier-checkin',
     pathMatch: 'full',
   },
+  {
+    path: 'security/check-in',
+    redirectTo: 'carrier-checkin',
+    pathMatch: 'full',
+  },
 
   // Rutas protegidas bajo el shell principal
   {

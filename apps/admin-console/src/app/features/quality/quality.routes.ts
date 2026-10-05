@@ -36,6 +36,12 @@ export const qualityRoutes: Routes = [
           import('./pages/claims-submodule/claims-submodule.component').then((m) => m.ClaimsSubmoduleComponent),
         title: '4GUARD WMS — KPIs y Reclamos (F01)',
       },
+      {
+        path: 'kpi-dashboard',
+        loadComponent: () =>
+          import('./pages/kpi-dashboard-submodule/kpi-dashboard-submodule.component').then((m) => m.KpiDashboardSubmoduleComponent),
+        title: '4GUARD WMS — Tablero de 10 KPIs & Desviaciones',
+      },
     ],
   },
   {

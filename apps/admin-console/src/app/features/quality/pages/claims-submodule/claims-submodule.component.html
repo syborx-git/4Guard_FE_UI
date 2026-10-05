@@ -238,10 +238,16 @@
 
               <!-- 9. Acción -->
               <td class="text-right">
-                <button type="button" class="btn-table-action" (click)="openClaimDetail(claim)" title="Ver detalle del reclamo">
-                  <span class="material-symbols-outlined text-sm">visibility</span>
-                  <span>Ver Detalle</span>
-                </button>
+                <div class="flex items-center justify-end gap-1.5">
+                  <button type="button" class="btn-table-action" (click)="openPrintPreview(claim)" title="Imprimir dictamen oficial PDF">
+                    <span class="material-symbols-outlined text-sm">print</span>
+                    <span>Imprimir</span>
+                  </button>
+                  <button type="button" class="btn-table-action" (click)="openClaimDetail(claim)" title="Ver detalle del reclamo">
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    <span>Ver</span>
+                  </button>
+                </div>
               </td>
 
             </tr>
@@ -656,7 +662,69 @@
 
         <footer class="modal-footer">
           <button type="button" class="btn-cancel" (click)="closeClaimDetail()">Cerrar</button>
+          <button type="button" class="btn-confirm-gold" (click)="openPrintPreview(selectedClaim()!)">
+            <span class="material-symbols-outlined">print</span>
+            <span>Imprimir Dictamen Oficial</span>
+          </button>
         </footer>
+
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       6. MODAL OFICIAL DE VISTA PREVIA E IMPRESIÓN (ADR-015 / SDD)
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (showPrintModal() && claimToPrint(); as claim) {
+    <div class="modal-backdrop" (click)="closePrintModal()">
+      <div class="modal-card max-w-3xl w-full p-3 sm:p-4 space-y-2.5 max-h-[96vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" (click)="$event.stopPropagation()">
+        
+        <!-- Barra Superior en UNA SOLA FILA -->
+        <div class="flex items-center justify-between gap-3 no-print border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-amber-500 text-base shrink-0">print</span>
+            <span class="font-black text-xs text-slate-800 dark:text-slate-100 uppercase tracking-wider truncate">
+              Comprobante Oficial — {{ claim.folio }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <!-- Botón 1-Clic Descarga Directa -->
+            <button
+              type="button"
+              (click)="downloadDirectPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="btn-confirm-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined text-sm">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + claim.folio + '.pdf)' }}</span>
+            </button>
+            
+            <!-- Botón Impresión Física -->
+            <button
+              type="button"
+              (click)="triggerBrowserPrint()"
+              class="btn-cancel px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir</span>
+            </button>
+            
+            <!-- Botón Cerrar -->
+            <button
+              type="button"
+              (click)="closePrintModal()"
+              class="btn-cancel px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenedor del Documento -->
+        <div class="flex-1 overflow-y-auto pr-0.5">
+          <fg-print-claim-layout [claim]="claim"></fg-print-claim-layout>
+        </div>
 
       </div>
     </div>

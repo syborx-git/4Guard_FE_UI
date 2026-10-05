@@ -63,7 +63,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly isDetailPanelOpen   = computed(() => this.selectedSection() !== null);
 
   // ─── Zoom & Pan (Blueprint SVG) ──────────────────────────────────────────
-  protected readonly zoomScale = signal<number>(1.0);
+  protected readonly zoomScale = signal<number>(1.25);
   private panX = 0;
   private panY = 0;
   protected readonly panOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });

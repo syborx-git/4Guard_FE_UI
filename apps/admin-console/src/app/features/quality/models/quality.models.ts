@@ -274,3 +274,162 @@ export interface QualityDashboardKpis {
   totalClaimsCost: number;
 }
 
+// ─── 5. DESVIACIONES NATIVAS Y TABLERO MENSUAL DE 10 KPIS ─────────
+
+export type QualityMaterialType = 
+  | 'PRODUCTO_TERMINADO'
+  | 'EMBALAJES'
+  | 'CAFE_VERDE'
+  | 'OTRO';
+
+export const QUALITY_MATERIAL_TYPE_LABELS: Record<QualityMaterialType, string> = {
+  PRODUCTO_TERMINADO: 'Producto Terminado (PT)',
+  EMBALAJES: 'Embalajes / Empaque',
+  CAFE_VERDE: 'Café Verde',
+  OTRO: 'Otro Material'
+};
+
+export type QualityConditionDeviation = 
+  | 'PALLET_DANADO'
+  | 'INESTABLE'
+  | 'PLAGA'
+  | 'FRASCO_ROTO'
+  | 'HUMEDAD'
+  | 'TARIMA_MAL_ESTADO'
+  | 'OTRO';
+
+export const QUALITY_CONDITION_LABELS: Record<QualityConditionDeviation, string> = {
+  PALLET_DANADO: 'Pallet con daños (producto expuesto / escurrimiento)',
+  INESTABLE: 'Pallet visualmente inestable',
+  PLAGA: 'Producto con plaga evidente',
+  FRASCO_ROTO: 'Frasco roto (culinarios / envases)',
+  HUMEDAD: 'Humedad / Producto mojado',
+  TARIMA_MAL_ESTADO: 'Tarima en mal estado',
+  OTRO: 'Otra desviación de condición'
+};
+
+export type QualityRootCause = 
+  | 'MANEJO_INADECUADO'
+  | 'INFRAESTRUCTURA'
+  | 'PLAGAS'
+  | 'LIMPIEZA'
+  | 'TRANSPORTE_INTERNO'
+  | 'EMPAQUE_ORIGINAL'
+  | 'OTRO';
+
+export const QUALITY_ROOT_CAUSE_LABELS: Record<QualityRootCause, string> = {
+  MANEJO_INADECUADO: 'Manejo inadecuado (Mala maniobra montacargas/patín)',
+  INFRAESTRUCTURA: 'Condiciones de infraestructura (Desnivel / Gotera)',
+  PLAGAS: 'Plagas o fauna nociva',
+  LIMPIEZA: 'Limpieza y mantenimiento insuficientes',
+  TRANSPORTE_INTERNO: 'Transporte interno defectuoso (Patín/Montacargas)',
+  EMPAQUE_ORIGINAL: 'Problemas en el empaque original del proveedor',
+  OTRO: 'Otro motivo de causa raíz'
+};
+
+export type QualityActionTaken = 
+  | 'RECHAZO_PRODUCTO'
+  | 'BLOQUEO_CALIDAD'
+  | 'ACONDICIONAMIENTO'
+  | 'DEVOLUCION_PROVEEDOR'
+  | 'DESTRUCCION'
+  | 'OTRO';
+
+export const QUALITY_ACTION_LABELS: Record<QualityActionTaken, string> = {
+  RECHAZO_PRODUCTO: 'Rechazo de producto (No ingreso)',
+  BLOQUEO_CALIDAD: 'Bloqueo preventivo (Cuarentena QM)',
+  ACONDICIONAMIENTO: 'Acondicionamiento / Reempacado',
+  DEVOLUCION_PROVEEDOR: 'Devolución formal al proveedor',
+  DESTRUCCION: 'Destrucción / Merma final',
+  OTRO: 'Otra acción correctiva'
+};
+
+export interface QualityDeviation {
+  id: string;
+  folio: string;
+  remisionNumber: string;
+  skuId: string;
+  skuDescription?: string;
+  uaCode: string;
+  materialType: QualityMaterialType;
+  deviationDate: string; // YYYY-MM-DD
+  deviationTime: string; // HH:mm
+  detectedById?: string;
+  detectedByName?: string;
+  responsibleCollaborator?: string;
+  bayLocationCode?: string;
+  damagedUnits: number;
+  materialCost: number;
+  currency: string;
+  conditionDeviation: QualityConditionDeviation;
+  rootCauseMotive: QualityRootCause;
+  originArea: string;
+  evidencePhotoUrls: string[];
+  actionTaken: QualityActionTaken;
+  observations?: string;
+  isResolved: boolean;
+  createdAt: string;
+}
+
+export interface CreateQualityDeviationPayload {
+  remisionNumber: string;
+  skuId: string;
+  skuDescription?: string;
+  uaCode: string;
+  materialType: QualityMaterialType;
+  deviationDate: string;
+  deviationTime?: string;
+  responsibleCollaborator?: string;
+  bayLocationCode?: string;
+  damagedUnits: number;
+  materialCost: number;
+  currency?: string;
+  conditionDeviation: QualityConditionDeviation;
+  rootCauseMotive: QualityRootCause;
+  originArea: string;
+  actionTaken: QualityActionTaken;
+  observations?: string;
+  evidencePhotoUrls?: string[];
+}
+
+export interface MonthlyKpiCard {
+  kpiNumber: number;
+  id: string;
+  title: string;
+  category: string;
+  value: string;
+  numericValue: number;
+  unit: string;
+  target: string;
+  targetValue?: number;
+  compliancePercentage?: number;
+  status: 'SUCCESS' | 'WARNING' | 'DANGER' | 'INFO';
+  previousMonthDiff?: number;
+  trend?: 'UP' | 'DOWN' | 'STABLE';
+  sublabel: string;
+  sparklineData?: number[];
+}
+
+export interface QualityMonthlyBoard {
+  year: number;
+  month: number;
+  monthName: string;
+  branchName: string;
+  kpiCards: MonthlyKpiCard[];
+  releasesByCollaborator: Record<string, number>;
+  rootCauseDistribution: Record<string, number>;
+  storageDeviationsByType: Record<string, number>;
+  inboundDeviationsByType: Record<string, number>;
+  clientClaimsByOrigin: Record<string, number>;
+  actionsTakenDistribution: Record<string, number>;
+  totalInspectedLots: number;
+  totalDeviations: number;
+  totalDamagedPieces: number;
+  ptDamagedPieces: number;
+  packagingDamagedPieces: number;
+  greenCoffeeDamagedPieces: number;
+  totalNonQualityCost: number;
+  deviations: QualityDeviation[];
+}
+
+

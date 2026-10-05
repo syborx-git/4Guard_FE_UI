@@ -97,7 +97,24 @@
       <div class="quality-kpi-card__info">
         <span class="quality-kpi-card__label">RECLAMOS E INCIDENCIAS</span>
         <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalClaims() }}</strong>
-        <span class="quality-kpi-card__sub">4. KPIs y Reclamos (F01)</span>
+        <span class="quality-kpi-card__sub">4. Reclamos (F01)</span>
+      </div>
+    </div>
+
+    <!-- 5. Tablero de 10 KPIs & Desviaciones (NUEVO) -->
+    <div
+      routerLink="/quality/kpi-dashboard"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--gold"
+      title="Ir a 5. Tablero de 10 KPIs & Desviaciones"
+    >
+      <div class="quality-kpi-card__icon">
+        <span class="material-symbols-outlined">analytics</span>
+      </div>
+      <div class="quality-kpi-card__info">
+        <span class="quality-kpi-card__label">TABLERO DE 10 KPIS</span>
+        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalDeviations() }} <span style="font-size: 14px; font-weight: normal;">Dev.</span></strong>
+        <span class="quality-kpi-card__sub">5. KPIs & Desviaciones</span>
       </div>
     </div>
   </div>

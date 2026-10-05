@@ -17,16 +17,24 @@ import {
   AttachedEvidence
 } from '../../models/quality.models';
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+import { PrintService } from '../../../../core/services/print.service';
+import { PrintClaimLayoutComponent } from '../../components/print-layouts/print-claim-layout.component';
 
 @Component({
   selector: 'fg-claims-submodule',
   standalone: true,
-  imports: [CommonModule, FormsModule, SpecularGlowDirective],
+  imports: [CommonModule, FormsModule, SpecularGlowDirective, PrintClaimLayoutComponent],
   templateUrl: './claims-submodule.component.html',
   styleUrl: './claims-submodule.component.css'
 })
 export class ClaimsSubmoduleComponent {
   protected readonly qualityState = inject(QualityStateService);
+  private readonly printService = inject(PrintService);
+
+  // Modal de Impresión y Generación PDF
+  protected readonly showPrintModal = signal<boolean>(false);
+  protected readonly isGeneratingPdf = signal<boolean>(false);
+  protected readonly claimToPrint = signal<QualityClaim | null>(null);
 
   // Filtros de tabla
   protected readonly searchQuery = signal('');
@@ -246,6 +254,35 @@ export class ClaimsSubmoduleComponent {
   protected closeClaimDetail(): void {
     this.isDetailModalOpen.set(false);
     this.selectedClaim.set(null);
+  }
+
+  // ── CONTROL DEL MODAL OFICIAL DE IMPRESIÓN Y DESCARGA (ADR-015) ──
+  protected openPrintPreview(claim: QualityClaim): void {
+    this.claimToPrint.set(claim);
+    this.showPrintModal.set(true);
+  }
+
+  protected closePrintModal(): void {
+    this.showPrintModal.set(false);
+    this.claimToPrint.set(null);
+  }
+
+  protected async downloadDirectPdf(): Promise<void> {
+    const claim = this.claimToPrint();
+    if (!claim) return;
+    const folio = claim.folio || 'RECLAMO';
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf('#official-claim-print-sheet', `${folio}_F02-PO-GC-8.6-04.pdf`);
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
+  }
+
+  protected triggerBrowserPrint(): void {
+    const claim = this.claimToPrint();
+    const folio = claim?.folio || 'RECLAMO';
+    this.printService.printElement('#official-claim-print-sheet', `${folio} - Dictamen de Reclamo`);
   }
 
   protected formatCurrency(amount: number): string {

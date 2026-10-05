@@ -187,7 +187,13 @@ export class InactivityService implements OnDestroy {
     this.writeAuditLog('SESSION_TIMEOUT_LOGOUT');
 
     const currentUrl = this.router.url;
-    if (currentUrl && !currentUrl.includes('/login') && !currentUrl.includes('/change-password')) {
+    if (
+      currentUrl &&
+      !currentUrl.includes('/login') &&
+      !currentUrl.includes('/change-password') &&
+      !currentUrl.includes('/carrier-checkin') &&
+      !currentUrl.includes('/driver-checkin')
+    ) {
       const processName = this.getProcessNameFromUrl(currentUrl);
       localStorage.setItem('4g_return_url', currentUrl);
       localStorage.setItem('4g_pending_process_name', processName);
@@ -202,7 +208,9 @@ export class InactivityService implements OnDestroy {
     localStorage.removeItem('4guard_auth_lockout');
     localStorage.removeItem('4guard_failed_attempts');
 
-    this.router.navigate(['/login'], { queryParams: { reason: 'inactivity' } });
+    if (!currentUrl?.includes('/carrier-checkin') && !currentUrl?.includes('/driver-checkin')) {
+      this.router.navigate(['/login'], { queryParams: { reason: 'inactivity' } });
+    }
   }
 
   private getProcessNameFromUrl(url: string): string {
