@@ -38,11 +38,44 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   // Tipo de Documento para Descarga: REMISION | FACTURA
   protected readonly dischargeDocType = signal<'REMISION' | 'FACTURA'>('REMISION');
 
-  // Catálogos dinámicos desde Base de Datos
-  protected readonly clientsList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>([]);
-  protected readonly carrierLinesList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>([]);
-  protected readonly transportTypesList = signal<string[]>([]);
-  protected readonly boxDimensionsList = signal<string[]>([]);
+  private readonly defaultClients = [
+    { id: '87c07cb2-61c3-4006-a88c-265bd1eee2df', code: '87c07cb2-61c3-4006-a88c-265bd1eee2df', name: 'MARCAS NESTLE S.A. DE C.V.' },
+    { id: 'c083251b-e210-494e-80f3-38814eaba992', code: 'c083251b-e210-494e-80f3-38814eaba992', name: 'NESTLE MEXICO S.A. DE C.V.' },
+    { id: 'edc885c6-0216-405a-84cc-841f47f30f48', code: 'edc885c6-0216-405a-84cc-841f47f30f48', name: 'QUALAMEX S.A. DE C.V.' }
+  ];
+
+  private readonly defaultCarriers = [
+    { id: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA', tradeName: 'TRANSPORTE GOLA' },
+    { id: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ', tradeName: 'TRANSPORTE DIAZ' },
+    { id: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM', tradeName: 'TRANSPORTE TUM' },
+    { id: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER', tradeName: 'TRANSPORTE EBEN EZER' },
+    { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
+  ];
+
+  private readonly defaultTransports = [
+    'Camioneta',
+    'Tortón',
+    'Tráiler',
+    'Otro (Especificar)'
+  ];
+
+  private readonly defaultBoxDimensions = [
+    '53 Pies',
+    '48 Pies',
+    '40 Pies',
+    '20 Pies',
+    'Tortón',
+    'Rabón',
+    '3.5 Toneladas',
+    'N/A - Plataforma',
+    'Otra Medida'
+  ];
+
+  // Catálogos dinámicos desde Base de Datos (con valores por defecto inmediatos)
+  protected readonly clientsList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>(this.defaultClients);
+  protected readonly carrierLinesList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>(this.defaultCarriers);
+  protected readonly transportTypesList = signal<string[]>(this.defaultTransports);
+  protected readonly boxDimensionsList = signal<string[]>(this.defaultBoxDimensions);
 
   // Flags para captura manual / libre
   protected readonly isCustomClient = signal<boolean>(false);
@@ -145,48 +178,25 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.api.getPublicCatalogs().subscribe({
       next: (data) => {
         if (data) {
-          this.clientsList.set(data.clients || []);
+          if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
+            this.clientsList.set(data.clients);
+          }
           const carriers = (data.carrierLines && data.carrierLines.length > 0) 
             ? data.carrierLines 
             : ((data as any).carriers || []);
-          this.carrierLinesList.set(carriers);
-          const allowed = ['Camioneta', 'Tortón', 'Tráiler', 'Otro (Especificar)'];
-          const rawTypes = data.transportTypes || [];
-          const filtered = rawTypes.filter((t: string) => allowed.includes(t));
-          this.transportTypesList.set(filtered.length > 0 ? filtered : allowed);
-          this.boxDimensionsList.set(data.boxDimensions || []);
+          if (carriers && Array.isArray(carriers) && carriers.length > 0) {
+            this.carrierLinesList.set(carriers);
+          }
+          if (data.transportTypes && Array.isArray(data.transportTypes) && data.transportTypes.length > 0) {
+            this.transportTypesList.set(data.transportTypes);
+          }
+          if (data.boxDimensions && Array.isArray(data.boxDimensions) && data.boxDimensions.length > 0) {
+            this.boxDimensionsList.set(data.boxDimensions);
+          }
         }
       },
       error: () => {
-        this.clientsList.set([
-          { id: '87c07cb2-61c3-4006-a88c-265bd1eee2df', code: '87c07cb2-61c3-4006-a88c-265bd1eee2df', name: 'MARCAS NESTLE S.A. DE C.V.' },
-          { id: 'c083251b-e210-494e-80f3-38814eaba992', code: 'c083251b-e210-494e-80f3-38814eaba992', name: 'NESTLE MEXICO S.A. DE C.V.' },
-          { id: 'edc885c6-0216-405a-84cc-841f47f30f48', code: 'edc885c6-0216-405a-84cc-841f47f30f48', name: 'QUALAMEX S.A. DE C.V.' }
-        ]);
-        this.carrierLinesList.set([
-          { id: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA', tradeName: 'TRANSPORTE GOLA' },
-          { id: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ', tradeName: 'TRANSPORTE DIAZ' },
-          { id: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM', tradeName: 'TRANSPORTE TUM' },
-          { id: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER', tradeName: 'TRANSPORTE EBEN EZER' },
-          { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
-        ]);
-        this.transportTypesList.set([
-          'Camioneta',
-          'Tortón',
-          'Tráiler',
-          'Otro (Especificar)'
-        ]);
-        this.boxDimensionsList.set([
-          '53 Pies',
-          '48 Pies',
-          '40 Pies',
-          '20 Pies',
-          'Tortón',
-          'Rabón',
-          '3.5 Toneladas',
-          'N/A - Plataforma',
-          'Otra Medida'
-        ]);
+        // Mantiene catalogos cargados por defecto en signals
       }
     });
   }
@@ -196,14 +206,19 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     const val = target.value;
     if (val === '__OTHER__') {
       this.isCustomClient.set(true);
-      this.checkInForm.patchValue({ clientCode: '', clientName: '' });
+      this.checkInForm.patchValue({ clientCode: 'OTRO', clientName: '' });
     } else {
       this.isCustomClient.set(false);
-      const found = this.clientsList().find((c) => c.code === val || c.id === val);
+      const found = this.clientsList().find((c) => c.code === val || c.id === val || c.name === val);
       if (found) {
         this.checkInForm.patchValue({
-          clientCode: found.code,
+          clientCode: found.code || found.id,
           clientName: found.name
+        });
+      } else if (val) {
+        this.checkInForm.patchValue({
+          clientCode: val,
+          clientName: val
         });
       }
     }
@@ -221,14 +236,21 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     const val = target.value;
     if (val === '__OTHER__') {
       this.isCustomCarrier.set(true);
-      this.checkInForm.patchValue({ carrierLineCode: '', carrierLine: '' });
+      this.checkInForm.patchValue({ carrierLineCode: 'OTRO', carrierLine: '' });
     } else {
       this.isCustomCarrier.set(false);
-      const found = this.carrierLinesList().find((c) => c.code === val || c.id === val);
+      const found = this.carrierLinesList().find((c) => 
+        c.code === val || c.id === val || c.name === val || c.tradeName === val
+      );
       if (found) {
         this.checkInForm.patchValue({
-          carrierLineCode: found.code,
+          carrierLineCode: found.code || found.id,
           carrierLine: found.tradeName || found.name
+        });
+      } else if (val) {
+        this.checkInForm.patchValue({
+          carrierLineCode: val,
+          carrierLine: val
         });
       }
     }
@@ -241,16 +263,37 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     }
   }
 
-  protected onTransportTypeSelectChange(event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    const val = target.value;
-    if (val === 'Otro (Especificar)' || val === '__OTHER__') {
+  protected selectTransportType(val: string): void {
+    if (val === 'Otro (Especificar)' || val === 'Otro' || val === '__OTHER__') {
       this.isCustomTransport.set(true);
       this.checkInForm.patchValue({ tipoTransporte: this.customTransportInput() || 'Otro' });
     } else {
       this.isCustomTransport.set(false);
       this.checkInForm.patchValue({ tipoTransporte: val });
     }
+  }
+
+  protected selectBoxDimension(val: string): void {
+    if (val === 'Otra Medida' || val === '__OTHER__') {
+      this.isCustomDimension.set(true);
+      this.checkInForm.patchValue({ medidasCaja: this.customDimensionInput() || 'Personalizada' });
+    } else {
+      this.isCustomDimension.set(false);
+      this.checkInForm.patchValue({ medidasCaja: val });
+    }
+  }
+
+  protected getTransportIcon(t: string): string {
+    if (t.includes('Camioneta')) return '🛻';
+    if (t.includes('Tortón') || t.includes('Torton')) return '🚚';
+    if (t.includes('Tráiler') || t.includes('Trailer')) return '🚛';
+    return '🚚';
+  }
+
+  protected onTransportTypeSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    this.selectTransportType(val);
   }
 
   protected onCustomTransportChange(val: string): void {
@@ -261,13 +304,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   protected onBoxDimensionSelectChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const val = target.value;
-    if (val === 'Otra Medida' || val === '__OTHER__') {
-      this.isCustomDimension.set(true);
-      this.checkInForm.patchValue({ medidasCaja: this.customDimensionInput() || 'Personalizada' });
-    } else {
-      this.isCustomDimension.set(false);
-      this.checkInForm.patchValue({ medidasCaja: val });
-    }
+    this.selectBoxDimension(val);
   }
 
   protected onCustomDimensionChange(val: string): void {
@@ -285,6 +322,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
 
     // Decodificar Token Inteligente incrustado en el QR si está disponible
     this.tryDecodeSmartToken(tokenStr);
+    this.tryLoadLocalPass(tokenStr);
 
     this.api.getPublicPass(tokenStr).subscribe({
       next: (pass: any) => {
@@ -295,8 +333,24 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       },
       error: () => {
         this.isLoadingPass.set(false);
+        this.tryLoadLocalPass(tokenStr);
       }
     });
+  }
+
+  private tryLoadLocalPass(tokenStr: string): void {
+    try {
+      const localStr = localStorage.getItem('4g_local_passes');
+      if (localStr) {
+        const passes: any[] = JSON.parse(localStr);
+        const found = passes.find(p => p.token === tokenStr || p.id === tokenStr);
+        if (found) {
+          this.applyPassDataToForm(found);
+        }
+      }
+    } catch {
+      // Ignorar fallback
+    }
   }
 
   private tryDecodeSmartToken(tokenStr: string): void {
@@ -392,6 +446,22 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     }
   }
 
+  protected selectCarrierLine(carrierName: string): void {
+    if (carrierName === '__OTHER__' || carrierName === '➕ Otra Línea') {
+      this.isCustomCarrier.set(true);
+      this.checkInForm.patchValue({ carrierLineCode: 'OTRO', carrierLine: '' });
+    } else {
+      this.isCustomCarrier.set(false);
+      const found = this.carrierLinesList().find((c) => 
+        c.name === carrierName || c.tradeName === carrierName || c.code === carrierName
+      );
+      this.checkInForm.patchValue({
+        carrierLineCode: found ? (found.code || found.id) : carrierName,
+        carrierLine: carrierName
+      });
+    }
+  }
+
   protected validateStep(step: number): boolean {
     const missing: string[] = [];
     const f = this.checkInForm.value;
@@ -410,6 +480,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       if (this.tempSealInput().trim()) {
         this.addSeal();
       }
+      if (this.sealList().length === 0) {
+        this.sealList.set(['S/N']);
+      }
       if (!f.carrierLine || !f.carrierLine.trim()) missing.push('Línea Transportista / Fletera');
       if (!f.nombreOperador || f.nombreOperador.trim().length < 3) missing.push('Nombre Completo del Operador / Chofer (mínimo 3 letras)');
       if (!f.driverPhone || !/^[0-9]{10}$/.test(f.driverPhone.trim())) {
@@ -419,9 +492,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       if (!f.medidasCaja || !f.medidasCaja.trim()) missing.push('Medidas de Caja');
       if (!f.placasTracto || f.placasTracto.trim().length < 3) missing.push('Placas de Tracto');
       if (!f.placasCaja || f.placasCaja.trim().length < 3) missing.push('Placas de Caja');
-      if (f.operacion === 'DESCARGA' && this.sealList().length === 0) {
-        missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio en Descarga)');
-      }
     } else if (step === 3) {
       if (!f.eppZapatos || !f.eppCofia || !f.eppCubrebocas || !f.eppChaleco) {
         missing.push('Verificación de criterios de Equipo de Protección Personal (EPP)');

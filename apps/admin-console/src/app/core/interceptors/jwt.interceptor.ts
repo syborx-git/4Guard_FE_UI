@@ -36,8 +36,14 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // 401 Unauthorized o 403 Forbidden por token revocado/inválido redirige automáticamente al login y limpia sesión
-      if ((error.status === 401 || error.status === 403) && !isExcluded && !router.url.includes('/login')) {
+      // 401 Unauthorized o 403 Forbidden por token revocado/inválido redirige automáticamente al login y limpia sesión (salvo rutas públicas como carrier-checkin)
+      if (
+        (error.status === 401 || error.status === 403) &&
+        !isExcluded &&
+        !router.url.includes('/login') &&
+        !router.url.includes('/carrier-checkin') &&
+        !router.url.includes('/driver-checkin')
+      ) {
         sessionStorageService.clearSession();
         router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
       }

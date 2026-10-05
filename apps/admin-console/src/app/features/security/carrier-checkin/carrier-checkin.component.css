@@ -561,13 +561,13 @@
 }
 
 .form-select option {
-  background-color: #111a26;
-  color: #ffffff;
+  background-color: #ffffff;
+  color: #000000;
 }
 
 .theme-light .form-select option {
   background-color: #ffffff;
-  color: #0f172a;
+  color: #000000;
 }
 
 .input-icon-wrap {
@@ -1517,5 +1517,137 @@
 
   .pill-btn {
     flex: 1;
+  }
+}
+
+/* ── BOTONES TÁCTILES CHIPS (SELECCIÓN DE TRANSPORTE Y MEDIDAS) ── */
+.chip-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.chip-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+@media (min-width: 640px) {
+  .chip-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.chip-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+/* ── Chip button: base ──
+   Color: blanco duro (#ffffff) forzado en modo oscuro.
+   Especificidad máxima para superar cualquier reset del navegador o Angular encapsulation.
+*/
+.driver-portal .chip-btn,
+.driver-portal.theme-dark .chip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.65rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  background: #111a26;
+  color: #ffffff;
+  fill: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow: visible;
+  -webkit-text-fill-color: #ffffff;
+}
+
+/* Todos los hijos de chip-btn también blancos */
+.driver-portal .chip-btn *,
+.driver-portal.theme-dark .chip-btn * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 700;
+}
+
+.driver-portal .chip-btn:hover,
+.driver-portal.theme-dark .chip-btn:hover {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Chip activo: dorado resaltado ── */
+.driver-portal .chip-btn--active,
+.driver-portal.theme-dark .chip-btn--active {
+  background: rgba(197, 168, 107, 0.25) !important;
+  color: #fef08a !important;
+  -webkit-text-fill-color: #fef08a !important;
+  border-color: #c5a86b !important;
+  box-shadow: 0 0 12px rgba(197, 168, 107, 0.4);
+}
+
+.driver-portal .chip-btn--active *,
+.driver-portal.theme-dark .chip-btn--active * {
+  color: #fef08a !important;
+  -webkit-text-fill-color: #fef08a !important;
+}
+
+/* ── Modo claro: fondo blanco, texto oscuro ── */
+.driver-portal.theme-light .chip-btn {
+  background: #ffffff;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  border-color: #94a3b8;
+}
+
+.driver-portal.theme-light .chip-btn * {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+.driver-portal.theme-light .chip-btn:hover {
+  background: #f1f5f9;
+  border-color: #475569;
+}
+
+.driver-portal.theme-light .chip-btn--active {
+  background: rgba(197, 168, 107, 0.2) !important;
+  color: #854d0e !important;
+  -webkit-text-fill-color: #854d0e !important;
+  border-color: #c5a86b !important;
+}
+
+.driver-portal.theme-light .chip-btn--active * {
+  color: #854d0e !important;
+  -webkit-text-fill-color: #854d0e !important;
+}
+
+/* ── Responsive: en pantallas muy chicas, pasar chip-grid-3 a 2 columnas ── */
+@media (max-width: 360px) {
+  .chip-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .chip-btn {
+    font-size: 0.74rem;
+    padding: 0.55rem 0.35rem;
   }
 }
