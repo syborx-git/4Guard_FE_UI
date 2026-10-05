@@ -228,4 +228,166 @@ test.describe('Oráculo de Pruebas E2E — Control de Calidad (QM) 4GUARD WMS', 
     expect(reasonsData.success).toBe(true);
     expect(Array.isArray(reasonsData.data)).toBe(true);
   });
+
+  test('[ORACLE-QM-06] Submódulo de 10 KPIs de Calidad y Registro de Desviaciones (/quality/kpi-dashboard)', async ({ page }) => {
+    await performLogin(page);
+    await page.goto('/quality/kpi-dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // 1. Validar contenedor principal y barra superior
+    const dashboardPage = page.locator('.kpi-dashboard-page');
+    await expect(dashboardPage).toBeVisible();
+
+    const periodSelect = page.locator('.period-select');
+    await expect(periodSelect).toBeVisible();
+
+    const exportBtn = page.locator('.btn-export-excel');
+    await expect(exportBtn).toBeVisible();
+
+    const createDevBtn = page.locator('.btn-create-deviation');
+    await expect(createDevBtn).toBeVisible();
+
+    // 2. Validar las 10 tarjetas Bento Grid de KPIs
+    const bentoCards = page.locator('.bento-card');
+    await expect(bentoCards).toHaveCount(10);
+
+    // Validar etiquetas de KPIs 1 al 10 en las tarjetas
+    await expect(page.getByText('KPI 1 · CÁLCULO AUTOMÁTICO')).toBeVisible();
+    await expect(page.getByText('KPI 2 · TRANSPORTE')).toBeVisible();
+    await expect(page.getByText('KPI 3 · PRODUCTIVIDAD')).toBeVisible();
+    await expect(page.getByText('KPI 4 · ALMACÉN')).toBeVisible();
+    await expect(page.getByText('KPI 5 · CAUSA RAÍZ')).toBeVisible();
+    await expect(page.getByText('KPI 6 · INBOUND')).toBeVisible();
+    await expect(page.getByText('KPI 7 · CLIENTE')).toBeVisible();
+    await expect(page.getByText('KPI 8 · FINANZAS QM')).toBeVisible();
+    await expect(page.getByText('KPI 9 · MERMA FÍSICA')).toBeVisible();
+    await expect(page.getByText('KPI 10 · RESOLUCIÓN')).toBeVisible();
+
+    // 3. Probar apertura y cierre del Modal de Registro de Desviación
+    await createDevBtn.click();
+    const modalBackdrop = page.locator('.modal-backdrop');
+    await expect(modalBackdrop).toBeVisible();
+
+    const modalTitle = page.locator('.modal-title');
+    await expect(modalTitle).toContainText('Registrar Desviación de Calidad');
+
+    // Verificar las 3 secciones del modal
+    await expect(page.getByText('1Identificación de Material, Lote y Ubicación')).toBeVisible();
+    await expect(page.getByText('2Condición Detectada y Análisis de Causa Raíz')).toBeVisible();
+    await expect(page.getByText('3Impacto en Piezas, Costo Monetario y Acción FSM')).toBeVisible();
+
+    // Cerrar modal
+    const cancelModalBtn = modalBackdrop.locator('.btn-cancel');
+    await cancelModalBtn.click();
+    await expect(modalBackdrop).not.toBeVisible();
+
+    // 4. Validar Tabla Concentradora de Desviaciones
+    const deviationsTable = page.locator('.deviations-table');
+    await expect(deviationsTable).toBeVisible();
+
+    // Validar buscador y filtros
+    const searchInput = page.locator('.search-input');
+    await expect(searchInput).toBeVisible();
+
+    const filterSelects = page.locator('.filter-select');
+    await expect(filterSelects).toHaveCount(2);
+
+    // 5. Comparación visual (Visual Regression)
+    await expect(page).toHaveScreenshot('05-quality-kpi-dashboard.png', {
+      maxDiffPixelRatio: 0.01,
+    });
+
+    expect(consoleErrors).toHaveLength(0);
+    expect(pageErrors).toHaveLength(0);
+  });
+
+  test('[ORACLE-QM-07] Validación de Endpoints REST de Desviaciones y Tablero Mensual de 10 KPIs', async ({ request }) => {
+    // 1. Login para obtener JWT
+    const loginRes = await request.post('http://localhost:8080/api/v1/auth/login', {
+      data: {
+        identifier: TEST_USER.email,
+        password: TEST_USER.password,
+      },
+    });
+
+    expect(loginRes.ok()).toBeTruthy();
+    const loginData = await loginRes.json();
+    const token = loginData.data.accessToken;
+
+    const authHeaders = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+
+    // 2. Probar GET /api/v1/quality/kpis/monthly-board
+    const monthlyBoardRes = await request.get('http://localhost:8080/api/v1/quality/kpis/monthly-board?yearMonth=2026-03', {
+      headers: authHeaders,
+    });
+    expect(monthlyBoardRes.ok()).toBeTruthy();
+    const monthlyBoardData = await monthlyBoardRes.json();
+    expect(monthlyBoardData.success).toBe(true);
+    expect(monthlyBoardData.data).toHaveProperty('yearMonth', '2026-03');
+    expect(monthlyBoardData.data).toHaveProperty('kpiCards');
+    expect(Array.isArray(monthlyBoardData.data.kpiCards)).toBe(true);
+    expect(monthlyBoardData.data.kpiCards).toHaveLength(10);
+
+    // 3. Probar GET /api/v1/quality/deviations
+    const deviationsRes = await request.get('http://localhost:8080/api/v1/quality/deviations', {
+      headers: authHeaders,
+    });
+    expect(deviationsRes.ok()).toBeTruthy();
+    const deviationsData = await deviationsRes.json();
+    expect(deviationsData.success).toBe(true);
+    expect(Array.isArray(deviationsData.data)).toBe(true);
+
+    // 4. Probar POST /api/v1/quality/deviations (Creación de Desviación)
+    const newDevPayload = {
+      remisionNumber: 'TEST-REM-2026',
+      skuId: '12402123',
+      skuDescription: 'NESCAFE DOLCE GUSTO AMERICANO 16 CAPS (TEST ORACLE)',
+      materialType: 'PRODUCTO_TERMINADO',
+      uaCode: '376130419079599999',
+      deviationDate: '2026-03-15',
+      deviationTime: '10:30:00',
+      bayLocationCode: 'F18',
+      conditionDeviation: 'EMPAQUE_DANADO',
+      rootCauseMotive: 'MANEJO_INADECUADO',
+      originArea: 'OPERACIONES',
+      responsibleCollaborator: 'Playwright Test Runner',
+      damagedUnits: 12,
+      materialCost: 1560.00,
+      actionTaken: 'MERMA_DIRECTA',
+      observations: 'Desviación generada automáticamente por Oráculo Playwright SDOP',
+      evidencePhotoUrls: [],
+    };
+
+    const createDevRes = await request.post('http://localhost:8080/api/v1/quality/deviations', {
+      headers: authHeaders,
+      data: newDevPayload,
+    });
+    expect(createDevRes.ok()).toBeTruthy();
+    const createDevData = await createDevRes.json();
+    expect(createDevData.success).toBe(true);
+    expect(createDevData.data).toHaveProperty('id');
+    expect(createDevData.data).toHaveProperty('folio');
+    expect(createDevData.data.skuId).toBe('12402123');
+
+    const createdDevId = createDevData.data.id;
+
+    // 5. Probar GET /api/v1/quality/deviations/{id}
+    const singleDevRes = await request.get(`http://localhost:8080/api/v1/quality/deviations/${createdDevId}`, {
+      headers: authHeaders,
+    });
+    expect(singleDevRes.ok()).toBeTruthy();
+    const singleDevData = await singleDevRes.json();
+    expect(singleDevData.success).toBe(true);
+    expect(singleDevData.data.folio).toBe(createDevData.data.folio);
+
+    // 6. Probar GET /api/v1/quality/deviations/export-excel
+    const exportRes = await request.get('http://localhost:8080/api/v1/quality/deviations/export-excel?yearMonth=2026-03', {
+      headers: authHeaders,
+    });
+    expect(exportRes.ok()).toBeTruthy();
+  });
 });
+

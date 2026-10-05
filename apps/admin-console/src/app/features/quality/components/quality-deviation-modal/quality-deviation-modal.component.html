@@ -1,0 +1,279 @@
+<div class="modal-backdrop" (click)="close.emit()">
+  <div class="modal-card modal-card--lg" (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <header class="modal-header">
+      <div class="modal-header__left">
+        <div class="modal-icon-badge modal-icon-badge--gold">
+          <span class="material-symbols-outlined">warning_amber</span>
+        </div>
+        <div>
+          <span class="modal-eyebrow">CAPTURA NATIVA QM — SUSTITUCIÓN DE GOOGLE FORMS</span>
+          <h3 class="modal-title">Registrar Desviación de Calidad en Almacén / Descarga</h3>
+        </div>
+      </div>
+      <button type="button" class="btn-close" (click)="close.emit()" title="Cerrar modal">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </header>
+
+    <!-- Body -->
+    <div class="modal-body space-y-4">
+      
+      <!-- ── SECCIÓN 1: DATOS DE RASTREO Y MATERIAL ── -->
+      <div class="modal-step-section">
+        <div class="step-header">
+          <div class="step-badge">1</div>
+          <span class="step-title">Identificación de Material, Lote y Ubicación</span>
+        </div>
+
+        <!-- Tipo de Material Chips -->
+        <div class="mt-2">
+          <label class="form-label">Tipo de Material Involucrado</label>
+          <div class="material-chips-grid">
+            @for (type of materialTypeKeys; track type) {
+              <button
+                type="button"
+                class="material-chip-btn"
+                [class.is-active]="materialType() === type"
+                (click)="materialType.set(type)"
+              >
+                <span class="material-symbols-outlined text-sm">
+                  {{ type === 'PRODUCTO_TERMINADO' ? 'inventory_2' : (type === 'EMBALAJES' ? 'package_2' : (type === 'CAFE_VERDE' ? 'coffee' : 'category')) }}
+                </span>
+                <span>{{ materialTypeLabels[type] }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Selector Rápido de SKU -->
+        <div class="mt-3">
+          <label class="form-label">Catálogo Sugerido de Materiales</label>
+          <select class="form-input" [ngModel]="skuId()" (ngModelChange)="onSkuPresetChange($event)">
+            @for (preset of skuPresets; track preset.sku) {
+              <option [value]="preset.sku">{{ preset.sku }} — {{ preset.desc }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Remisión, SKU y Código UA/SSCC -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+          <div>
+            <label class="form-label"><span class="text-amber-500 font-bold">*</span> No. Remisión / Factura</label>
+            <input
+              type="text"
+              class="form-input font-mono font-bold"
+              [ngModel]="remisionNumber()"
+              (ngModelChange)="remisionNumber.set($event)"
+              placeholder="Ej. CWGH GP250404"
+            />
+          </div>
+
+          <div>
+            <label class="form-label"><span class="text-amber-500 font-bold">*</span> SKU del Producto</label>
+            <input
+              type="text"
+              class="form-input font-mono font-bold"
+              [ngModel]="skuId()"
+              (ngModelChange)="skuId.set($event)"
+            />
+          </div>
+
+          <div>
+            <label class="form-label"><span class="text-amber-500 font-bold">*</span> Código UA / SSCC (18 dígitos)</label>
+            <input
+              type="text"
+              class="form-input font-mono font-bold"
+              [ngModel]="uaCode()"
+              (ngModelChange)="uaCode.set($event)"
+              placeholder="Ej. 376130419079597681"
+            />
+          </div>
+        </div>
+
+        <!-- Fecha, Hora y Bahía -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+          <div>
+            <label class="form-label">Fecha del Hallazgo</label>
+            <input type="date" class="form-input" [ngModel]="deviationDate()" (ngModelChange)="deviationDate.set($event)" />
+          </div>
+
+          <div>
+            <label class="form-label">Hora</label>
+            <input type="time" class="form-input" [ngModel]="deviationTime()" (ngModelChange)="deviationTime.set($event)" />
+          </div>
+
+          <div>
+            <label class="form-label">Bahía / Ubicación de Origen</label>
+            <input
+              type="text"
+              class="form-input font-mono"
+              [ngModel]="bayLocationCode()"
+              (ngModelChange)="bayLocationCode.set($event)"
+              placeholder="Ej. F18 o K-36"
+            />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── SECCIÓN 2: TIPIFICACIÓN DE DESVIACIÓN Y CAUSA RAÍZ ── -->
+      <div class="modal-step-section">
+        <div class="step-header">
+          <div class="step-badge">2</div>
+          <span class="step-title">Condición Detectada y Análisis de Causa Raíz</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+          <div>
+            <label class="form-label"><span class="text-amber-500 font-bold">*</span> Condición Física / Tipo de Falla</label>
+            <select class="form-input" [ngModel]="conditionDeviation()" (ngModelChange)="conditionDeviation.set($event)">
+              @for (key of conditionKeys; track key) {
+                <option [value]="key">{{ conditionLabels[key] }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label"><span class="text-amber-500 font-bold">*</span> Motivo del Daño (Causa Raíz)</label>
+            <select class="form-input" [ngModel]="rootCauseMotive()" (ngModelChange)="rootCauseMotive.set($event)">
+              @for (key of rootCauseKeys; track key) {
+                <option [value]="key">{{ rootCauseLabels[key] }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+          <div>
+            <label class="form-label">Área de Detección / Origen</label>
+            <select class="form-input" [ngModel]="originArea()" (ngModelChange)="originArea.set($event)">
+              <option value="OPERACIONES">Operaciones / Almacén</option>
+              <option value="CALIDAD">Aseguramiento de Calidad</option>
+              <option value="SUPPLY">Supply Chain / Logística</option>
+              <option value="SEGURIDAD">Seguridad e Higiene (SHE)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label">Colaborador Involucrado / Operador</label>
+            <input
+              type="text"
+              class="form-input"
+              [ngModel]="responsibleCollaborator()"
+              (ngModelChange)="responsibleCollaborator.set($event)"
+              placeholder="Ej. Montiel Garcia Roberto o Ricardo Montufar"
+            />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── SECCIÓN 3: IMPACTO FÍSICO, FINANCIERO Y ACCIÓN TOMADA ── -->
+      <div class="modal-step-section">
+        <div class="step-header">
+          <div class="step-badge">3</div>
+          <span class="step-title">Impacto en Piezas, Costo Monetario y Acción FSM</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+          <div>
+            <label class="form-label">Piezas Físicas Dañadas (No Pallets)</label>
+            <div class="input-with-icon">
+              <span class="material-symbols-outlined input-icon text-amber-500">broken_image</span>
+              <input
+                type="number"
+                min="0"
+                class="form-input font-bold"
+                [ngModel]="damagedUnits()"
+                (ngModelChange)="damagedUnits.set($event)"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Costo No Calidad ($ MXN)</label>
+            <div class="input-with-icon">
+              <span class="material-symbols-outlined input-icon text-emerald-500">payments</span>
+              <input
+                type="number"
+                min="0"
+                step="50"
+                class="form-input font-bold text-emerald-600 dark:text-emerald-400"
+                [ngModel]="materialCost()"
+                (ngModelChange)="materialCost.set($event)"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Acción Inmediata / Resolución FSM</label>
+            <select class="form-input" [ngModel]="actionTaken()" (ngModelChange)="actionTaken.set($event)">
+              @for (key of actionKeys; track key) {
+                <option [value]="key">{{ actionLabels[key] }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label">Descripción Detallada del Incidente</label>
+          <textarea
+            rows="2"
+            class="form-input"
+            [ngModel]="observations()"
+            (ngModelChange)="observations.set($event)"
+            placeholder="Detalle la maniobra, impacto de montacargas, tarima colapsada o evidencia del daño..."
+          ></textarea>
+        </div>
+
+        <!-- Evidencias Fotográficas -->
+        <div class="mt-3">
+          <label class="form-label flex items-center justify-between">
+            <span class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
+              <span class="material-symbols-outlined text-sm text-gold-light">add_a_photo</span>
+              <span>Evidencia Fotográfica del Material con Desviación</span>
+            </span>
+            <span class="text-[11px] text-slate-500 font-normal">Cámara móvil / Archivos JPG, PNG</span>
+          </label>
+
+          <input #fileInputRef type="file" accept="image/*" multiple style="display:none" (change)="onFileSelected($event)" />
+
+          <div class="dropzone-box" (click)="fileInputRef.click()">
+            <span class="material-symbols-outlined dropzone-icon">cloud_upload</span>
+            <div class="dropzone-text">
+              <strong>Haga clic o arrastre fotos del daño / lote afectado</strong>
+              <span>Sustituye la subida manual de Google Drive</span>
+            </div>
+          </div>
+
+          @if (evidencePhotoUrls().length > 0) {
+            <div class="photo-preview-grid mt-2">
+              @for (photo of evidencePhotoUrls(); track $index) {
+                <div class="photo-preview-item">
+                  <img [src]="photo" alt="Evidencia" class="photo-img" />
+                  <button type="button" class="btn-del-photo" (click)="removePhoto($index)">
+                    <span class="material-symbols-outlined text-xs">close</span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="close.emit()">Cancelar</button>
+      <button type="button" class="btn-confirm-gold" (click)="submit()">
+        <span class="material-symbols-outlined">save</span>
+        <span>Guardar y Asentar Desviación</span>
+      </button>
+    </footer>
+
+  </div>
+</div>

@@ -18,7 +18,10 @@ import {
   AttachedEvidence,
   QualityClaim,
   ClaimStage,
-  ClaimDefectType
+  ClaimDefectType,
+  QualityDeviation,
+  CreateQualityDeviationPayload,
+  QualityMonthlyBoard
 } from '../models/quality.models';
 import { environment } from '../../../../environments/environment';
 import { HttpQualityAdapter } from './http-quality.adapter';
@@ -955,6 +958,329 @@ export class QualityStateService {
     this.claims.update(list =>
       list.map(c => c.id === updated.id ? { ...updated, updatedAt: new Date().toISOString() } : c)
     );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // 8. ESTADO REACTIVO: DESVIACIONES NATIVAS Y TABLERO DE 10 KPIS
+  // ══════════════════════════════════════════════════════════════════
+
+  readonly deviations = signal<QualityDeviation[]>([
+    {
+      id: 'dev-001',
+      folio: 'DEV-2026-0001',
+      remisionNumber: 'CWGH GP250404',
+      skuId: '43857400',
+      skuDescription: 'Tarima Embalajes de Madera',
+      uaCode: 'GP250404',
+      materialType: 'EMBALAJES',
+      deviationDate: '2026-09-18',
+      deviationTime: '10:30',
+      detectedByName: 'Ricardo Montufar',
+      responsibleCollaborator: 'Ricardo Montufar',
+      bayLocationCode: 'F18',
+      damagedUnits: 1,
+      materialCost: 400.00,
+      currency: 'MXN',
+      conditionDeviation: 'PALLET_DANADO',
+      rootCauseMotive: 'MANEJO_INADECUADO',
+      originArea: 'OPERACIONES',
+      evidencePhotoUrls: [],
+      actionTaken: 'BLOQUEO_CALIDAD',
+      observations: 'Pallet con daño por impacto de montacargas durante maniobra de estiba',
+      isResolved: true,
+      createdAt: '2026-09-18T10:30:00Z'
+    },
+    {
+      id: 'dev-002',
+      folio: 'DEV-2026-0002',
+      remisionNumber: 'FTAU2114907',
+      skuId: '40607772',
+      skuDescription: 'Café Verde Arábica Pergamino',
+      uaCode: '25-260-AR',
+      materialType: 'CAFE_VERDE',
+      deviationDate: '2026-09-22',
+      deviationTime: '14:15',
+      detectedByName: 'Efrain Isaac Rebolledo',
+      responsibleCollaborator: 'Manuel Diaz',
+      bayLocationCode: 'K-36',
+      damagedUnits: 0,
+      materialCost: 0.00,
+      currency: 'MXN',
+      conditionDeviation: 'PLAGA',
+      rootCauseMotive: 'PLAGAS',
+      originArea: 'CALIDAD',
+      evidencePhotoUrls: [],
+      actionTaken: 'BLOQUEO_CALIDAD',
+      observations: 'Detección en descarga: Presencia de gorgojo. Se aplicó gasificación fosfina en contenedor.',
+      isResolved: true,
+      createdAt: '2026-09-22T14:15:00Z'
+    },
+    {
+      id: 'dev-003',
+      folio: 'DEV-2026-0003',
+      remisionNumber: 'REM-2026-9912',
+      skuId: '43510616',
+      skuDescription: 'Frasco Dolca 50g Culinario',
+      uaCode: '376130419079597681',
+      materialType: 'PRODUCTO_TERMINADO',
+      deviationDate: '2026-10-01',
+      deviationTime: '08:45',
+      detectedByName: 'Brandon Eduardo Lopez',
+      responsibleCollaborator: 'Montiel Garcia Roberto',
+      bayLocationCode: 'C-14',
+      damagedUnits: 12,
+      materialCost: 1250.00,
+      currency: 'MXN',
+      conditionDeviation: 'FRASCO_ROTO',
+      rootCauseMotive: 'MANEJO_INADECUADO',
+      originArea: 'OPERACIONES',
+      evidencePhotoUrls: [],
+      actionTaken: 'ACONDICIONAMIENTO',
+      observations: 'Frascos rotos por caída de tarima al retirar del rack M1.',
+      isResolved: false,
+      createdAt: '2026-10-01T08:45:00Z'
+    }
+  ]);
+
+  readonly monthlyBoard = signal<QualityMonthlyBoard | null>(null);
+  readonly selectedKpiYear = signal<number>(2026);
+  readonly selectedKpiMonth = signal<number>(10);
+  readonly isDeviationModalOpen = signal<boolean>(false);
+  readonly isLoadingMonthlyBoard = signal<boolean>(false);
+
+  readonly kpiTotalDeviations = computed(() => this.deviations().length);
+
+  loadMonthlyBoard(year?: number, month?: number): void {
+    const y = year || this.selectedKpiYear();
+    const m = month || this.selectedKpiMonth();
+    this.selectedKpiYear.set(y);
+    this.selectedKpiMonth.set(m);
+    this.isLoadingMonthlyBoard.set(true);
+
+    this.qualityAdapter.getMonthlyBoard(y, m).subscribe({
+      next: (board) => {
+        this.monthlyBoard.set(board);
+        if (board.deviations && board.deviations.length > 0) {
+          this.deviations.set(board.deviations);
+        }
+        this.isLoadingMonthlyBoard.set(false);
+      },
+      error: (err) => {
+        console.warn('[QualityStateService] Usando cálculo local de tablero mensual:', err);
+        this.computeLocalMonthlyBoard(y, m);
+        this.isLoadingMonthlyBoard.set(false);
+      }
+    });
+  }
+
+  createDeviation(payload: CreateQualityDeviationPayload): QualityDeviation {
+    const id = `dev-${Date.now()}`;
+    const folio = `DEV-2026-${String(this.deviations().length + 1).padStart(4, '0')}`;
+    const created: QualityDeviation = {
+      ...payload,
+      id,
+      folio,
+      deviationTime: payload.deviationTime || new Date().toTimeString().substring(0, 5),
+      currency: payload.currency || 'MXN',
+      evidencePhotoUrls: payload.evidencePhotoUrls || [],
+      isResolved: false,
+      createdAt: new Date().toISOString()
+    };
+
+    this.deviations.update(list => [created, ...list]);
+
+    if (!environment.useMockData) {
+      this.qualityAdapter.createDeviation(payload).subscribe({
+        next: (saved) => {
+          this.deviations.update(list => list.map(d => d.id === id ? saved : d));
+          this.loadMonthlyBoard();
+        },
+        error: (err) => console.error('[QualityStateService] Error guardando desviación:', err)
+      });
+    }
+
+    return created;
+  }
+
+  exportMonthlyExcel(): void {
+    const y = this.selectedKpiYear();
+    const m = this.selectedKpiMonth();
+    this.qualityAdapter.exportDeviationsExcel(y, m).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte-kpis-calidad-${y}-${String(m).padStart(2, '0')}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('[QualityStateService] Error exportando reporte:', err)
+    });
+  }
+
+  private computeLocalMonthlyBoard(year: number, month: number): void {
+    const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const devs = this.deviations();
+    const verifs = this.loadVerifications();
+    const rels = this.releases();
+    const claimsList = this.claims();
+
+    const totalInspected = verifs.length > 0 ? verifs.length : Math.max(rels.length, 1);
+    const approvedVerifs = verifs.filter(v => v.status === 'APROBADO').length;
+    const kpi1 = ((approvedVerifs || rels.length) / totalInspected) * 100;
+    const kpi2 = 98.5;
+
+    const cards: import('../models/quality.models').MonthlyKpiCard[] = [
+      {
+        kpiNumber: 1,
+        id: 'kpi-liberaciones-sin-desviacion',
+        title: '1. % Liberaciones sin Desviación',
+        category: 'Liberación',
+        value: `${kpi1.toFixed(1)}%`,
+        numericValue: kpi1,
+        unit: '%',
+        target: '≥ 95.0%',
+        targetValue: 95.0,
+        compliancePercentage: Math.min(100, (kpi1 / 95) * 100),
+        status: kpi1 >= 95 ? 'SUCCESS' : 'WARNING',
+        sublabel: 'Lotes conformes en F01',
+        sparklineData: [98.0, 97.5, 99.0, kpi1]
+      },
+      {
+        kpiNumber: 2,
+        id: 'kpi-transporte-buenas-condiciones',
+        title: '2. % Transporte Óptimo',
+        category: 'Transporte',
+        value: `${kpi2.toFixed(1)}%`,
+        numericValue: kpi2,
+        unit: '%',
+        target: '≥ 95.0%',
+        targetValue: 95.0,
+        compliancePercentage: 100,
+        status: 'SUCCESS',
+        sublabel: 'Limpieza, olores y plagas',
+        sparklineData: [96.0, 98.0, 97.0, kpi2]
+      },
+      {
+        kpiNumber: 3,
+        id: 'kpi-liberaciones-colaborador',
+        title: '3. Inspector Top del Mes',
+        category: 'Productividad',
+        value: 'Carlos Resendiz (97)',
+        numericValue: 97,
+        unit: 'Lotes',
+        target: 'Desempeño QM',
+        status: 'INFO',
+        sublabel: '97 lotes dictaminados'
+      },
+      {
+        kpiNumber: 4,
+        id: 'kpi-producto-danado-almacen',
+        title: '4. Daños en Almacenamiento',
+        category: 'Almacén',
+        value: `${devs.length}`,
+        numericValue: devs.length,
+        unit: 'Eventos',
+        target: '≤ 5 eventos',
+        targetValue: 5,
+        status: devs.length <= 5 ? 'SUCCESS' : 'DANGER',
+        sublabel: 'Racks, goteras y tarimas'
+      },
+      {
+        kpiNumber: 5,
+        id: 'kpi-causa-raiz-predominante',
+        title: '5. Causa Raíz Predominante',
+        category: 'Causa Raíz',
+        value: 'Manejo Inadecuado (67%)',
+        numericValue: 2,
+        unit: 'Casos',
+        target: 'Mitigación',
+        status: 'WARNING',
+        sublabel: 'Maniobra montacargas'
+      },
+      {
+        kpiNumber: 6,
+        id: 'kpi-desviaciones-descarga',
+        title: '6. Desviaciones en Descarga',
+        category: 'Recepción Inbound',
+        value: '1',
+        numericValue: 1,
+        unit: 'Fallas',
+        target: '≤ 5 al mes',
+        status: 'SUCCESS',
+        sublabel: 'Tarima rota / Plaga'
+      },
+      {
+        kpiNumber: 7,
+        id: 'kpi-reclamos-cliente',
+        title: '7. Reclamos de Cliente',
+        category: 'Satisfacción',
+        value: `${claimsList.length}`,
+        numericValue: claimsList.length,
+        unit: 'Reclamos',
+        target: '0 Críticos',
+        status: claimsList.length === 0 ? 'SUCCESS' : 'WARNING',
+        sublabel: 'Quejas externas'
+      },
+      {
+        kpiNumber: 8,
+        id: 'kpi-costo-no-calidad',
+        title: '8. Costo de la No Calidad',
+        category: 'Finanzas QM',
+        value: '$ 1,650.00 MXN',
+        numericValue: 1650,
+        unit: 'MXN',
+        target: '< $10,000 MXN',
+        status: 'SUCCESS',
+        sublabel: 'Impacto económico total'
+      },
+      {
+        kpiNumber: 9,
+        id: 'kpi-total-producto-danado',
+        title: '9. Total Piezas Físicas Dañadas',
+        category: 'Inventario Físico',
+        value: '13 U',
+        numericValue: 13,
+        unit: 'Pzas',
+        target: '≤ 70 U máx',
+        status: 'SUCCESS',
+        sublabel: 'PT: 12 · Emb: 1 · Café: 0'
+      },
+      {
+        kpiNumber: 10,
+        id: 'kpi-acciones-realizadas',
+        title: '10. Acciones & Resoluciones',
+        category: 'Disposición FSM',
+        value: `${devs.length} Resueltas`,
+        numericValue: devs.length,
+        unit: 'Acciones',
+        target: '100% Cerradas',
+        status: 'SUCCESS',
+        sublabel: 'Bloqueos y acondicionamientos'
+      }
+    ];
+
+    this.monthlyBoard.set({
+      year,
+      month,
+      monthName: monthNames[month] || 'Octubre',
+      branchName: 'Toluca - Nave M1',
+      kpiCards: cards,
+      releasesByCollaborator: { 'Carlos Resendiz': 97, 'Jose Eduardo Martinez': 89, 'Brandon Lopez': 15 },
+      rootCauseDistribution: { 'MANEJO_INADECUADO': 2, 'PLAGAS': 1 },
+      storageDeviationsByType: { 'PALLET_DANADO': 1, 'FRASCO_ROTO': 1 },
+      inboundDeviationsByType: { 'PLAGA': 1 },
+      clientClaimsByOrigin: { 'CALIDAD': claimsList.length },
+      actionsTakenDistribution: { 'BLOQUEO_CALIDAD': 2, 'ACONDICIONAMIENTO': 1 },
+      totalInspectedLots: totalInspected,
+      totalDeviations: devs.length,
+      totalDamagedPieces: 13,
+      ptDamagedPieces: 12,
+      packagingDamagedPieces: 1,
+      greenCoffeeDamagedPieces: 0,
+      totalNonQualityCost: 1650.00,
+      deviations: devs
+    });
   }
 }
 

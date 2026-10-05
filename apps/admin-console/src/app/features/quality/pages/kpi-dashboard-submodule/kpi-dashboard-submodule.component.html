@@ -1,0 +1,659 @@
+<!-- kpi-dashboard-submodule.component.html — Submódulo 5: Tablero de 10 KPIs & Desviaciones -->
+<div class="kpi-dashboard-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       1. BARRA DE CONTROL SUPERIOR Y SELECTOR DE PERÍODO MENSUAL
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="dashboard-control-bar" fgSpecularGlow>
+    <div class="control-bar-left">
+      <div class="month-selector-wrap">
+        <span class="material-symbols-outlined select-icon">calendar_month</span>
+        <label class="control-label">Período de Análisis:</label>
+        <select
+          class="period-select"
+          [ngModel]="selectedPeriodKey()"
+          (ngModelChange)="onPeriodChange($event)"
+        >
+          @for (opt of monthOptions; track opt.label) {
+            <option [value]="opt.year + '-' + opt.month">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="branch-badge">
+        <span class="material-symbols-outlined text-xs text-gold">warehouse</span>
+        <span>Almacén Central Toluca — Nave M1</span>
+      </div>
+    </div>
+
+    <div class="control-bar-right">
+      <!-- Botón Exportar Reporte Excel/CSV -->
+      <button type="button" class="btn-export-excel" (click)="qualityState.exportMonthlyExcel()" title="Descargar reporte mensual equivalente al Excel de Google Forms">
+        <span class="material-symbols-outlined">table_chart</span>
+        <span>Exportar Reporte Mensual</span>
+      </button>
+
+      <!-- Botón Primario: Registrar Desviación -->
+      <button type="button" class="btn-create-deviation" (click)="openCreateModal()">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>+ Registrar Desviación</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       2. BENTO GRID DE LOS 10 INDICADORES CLAVE DE CALIDAD (KPIS)
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (qualityState.monthlyBoard(); as board) {
+    <section class="bento-grid-section" aria-label="Matriz Bento Grid de 10 KPIs de Calidad">
+      
+      <!-- KPI 1: % Liberaciones sin Desviación (Card Ancha) -->
+      <div class="bento-card bento-card--featured" [class.bento-card--success]="board.kpiCards[0]?.status === 'SUCCESS'" [class.bento-card--warning]="board.kpiCards[0]?.status === 'WARNING'">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap">
+            <span class="material-symbols-outlined">verified</span>
+          </div>
+          <div class="bento-card__meta">
+            <span class="bento-card__tag">KPI 1 · CÁLCULO AUTOMÁTICO</span>
+            <span class="bento-card__target">Meta: {{ board.kpiCards[0]?.target }}</span>
+          </div>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[0]?.title }}</h4>
+          <div class="bento-card__metric-row">
+            <strong class="bento-card__value text-emerald-500">{{ board.kpiCards[0]?.value }}</strong>
+            <span class="compliance-badge" [class.badge-success]="board.kpiCards[0]?.status === 'SUCCESS'">
+              {{ board.kpiCards[0]?.status === 'SUCCESS' ? '✓ CUMPLE META' : '⚠ EN RIESGO' }}
+            </span>
+          </div>
+          <p class="bento-card__sub">{{ board.kpiCards[0]?.sublabel }} ({{ board.totalInspectedLots }} lotes inspeccionados)</p>
+          
+          <!-- Mini Progress Bar -->
+          <div class="kpi-progress-track mt-3">
+            <div class="kpi-progress-bar bg-emerald-500" [style.width.%]="board.kpiCards[0]?.compliancePercentage || 98"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 2: % Transporte en Buenas Condiciones -->
+      <div class="bento-card" [class.bento-card--success]="board.kpiCards[1]?.status === 'SUCCESS'">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--blue">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <span class="bento-card__tag">KPI 2 · TRANSPORTE</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[1]?.title }}</h4>
+          <strong class="bento-card__value">{{ board.kpiCards[1]?.value }}</strong>
+          <span class="bento-card__sub">{{ board.kpiCards[1]?.sublabel }}</span>
+          <div class="kpi-target-pill mt-2">
+            <span>Meta: {{ board.kpiCards[1]?.target }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Liberaciones por Colaborador (Inspector Top) -->
+      <div class="bento-card bento-card--gold">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--gold">
+            <span class="material-symbols-outlined">badge</span>
+          </div>
+          <span class="bento-card__tag">KPI 3 · PRODUCTIVIDAD</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[2]?.title }}</h4>
+          <strong class="bento-card__value text-gold" style="font-size: 1.25rem;">{{ board.kpiCards[2]?.value }}</strong>
+          <span class="bento-card__sub">{{ board.kpiCards[2]?.sublabel }}</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Producto Dañado en Almacenamiento -->
+      <div class="bento-card" [class.bento-card--danger]="board.kpiCards[3]?.status === 'DANGER'">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--amber">
+            <span class="material-symbols-outlined">shelves</span>
+          </div>
+          <span class="bento-card__tag">KPI 4 · ALMACÉN</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[3]?.title }}</h4>
+          <div class="flex items-baseline gap-1">
+            <strong class="bento-card__value text-amber-500">{{ board.kpiCards[3]?.value }}</strong>
+            <span class="text-xs text-slate-400">eventos</span>
+          </div>
+          <span class="bento-card__sub">{{ board.kpiCards[3]?.sublabel }}</span>
+          <div class="kpi-target-pill mt-2">
+            <span>Tolerancia: {{ board.kpiCards[3]?.target }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 5: Motivos del Daño (Causa Raíz) -->
+      <div class="bento-card">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--purple">
+            <span class="material-symbols-outlined">psychology_alt</span>
+          </div>
+          <span class="bento-card__tag">KPI 5 · CAUSA RAÍZ</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[4]?.title }}</h4>
+          <strong class="bento-card__value" style="font-size: 1.1rem;">{{ board.kpiCards[4]?.value }}</strong>
+          <span class="bento-card__sub">{{ board.kpiCards[4]?.sublabel }}</span>
+        </div>
+      </div>
+
+      <!-- KPI 6: Desviaciones en Descarga -->
+      <div class="bento-card">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--cyan">
+            <span class="material-symbols-outlined">move_to_inbox</span>
+          </div>
+          <span class="bento-card__tag">KPI 6 · INBOUND</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[6]?.title }}</h4>
+          <div class="flex items-baseline gap-1">
+            <strong class="bento-card__value">{{ board.kpiCards[5]?.value }}</strong>
+            <span class="text-xs text-slate-400">fallas</span>
+          </div>
+          <span class="bento-card__sub">{{ board.kpiCards[5]?.sublabel }}</span>
+        </div>
+      </div>
+
+      <!-- KPI 7: Reclamos de Cliente -->
+      <div class="bento-card" [class.bento-card--success]="board.kpiCards[6]?.numericValue === 0">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--emerald">
+            <span class="material-symbols-outlined">support_agent</span>
+          </div>
+          <span class="bento-card__tag">KPI 7 · CLIENTE</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[6]?.title }}</h4>
+          <div class="flex items-baseline gap-1">
+            <strong class="bento-card__value">{{ board.kpiCards[6]?.value }}</strong>
+            <span class="text-xs text-slate-400">quejas</span>
+          </div>
+          <span class="bento-card__sub">{{ board.kpiCards[6]?.sublabel }}</span>
+        </div>
+      </div>
+
+      <!-- KPI 8: Costo de la No Calidad ($ MXN) (Card Financiera Destacada) -->
+      <div class="bento-card bento-card--cost">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--gold">
+            <span class="material-symbols-outlined">payments</span>
+          </div>
+          <span class="bento-card__tag text-gold">KPI 8 · FINANZAS QM</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[7]?.title }}</h4>
+          <strong class="bento-card__value text-gold font-mono">{{ board.kpiCards[7]?.value }}</strong>
+          <span class="bento-card__sub">{{ board.kpiCards[7]?.sublabel }}</span>
+          <div class="kpi-target-pill mt-2">
+            <span>Límite: {{ board.kpiCards[7]?.target }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 9: Total Producto Dañado en Unidades -->
+      <div class="bento-card">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--coral">
+            <span class="material-symbols-outlined">broken_image</span>
+          </div>
+          <span class="bento-card__tag">KPI 9 · MERMA FÍSICA</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[8]?.title }}</h4>
+          <strong class="bento-card__value text-coral">{{ board.kpiCards[8]?.value }}</strong>
+          <span class="bento-card__sub">{{ board.kpiCards[8]?.sublabel }}</span>
+          <div class="kpi-target-pill mt-2">
+            <span>Meta: {{ board.kpiCards[8]?.target }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 10: Acciones Realizadas & Resoluciones FSM -->
+      <div class="bento-card bento-card--accent">
+        <div class="bento-card__header">
+          <div class="bento-card__icon-wrap icon-wrap--emerald">
+            <span class="material-symbols-outlined">task_alt</span>
+          </div>
+          <span class="bento-card__tag">KPI 10 · RESOLUCIÓN</span>
+        </div>
+        <div class="bento-card__body">
+          <h4 class="bento-card__title">{{ board.kpiCards[9]?.title }}</h4>
+          <strong class="bento-card__value text-emerald-400">{{ board.kpiCards[9]?.value }}</strong>
+          <span class="bento-card__sub">{{ board.kpiCards[9]?.sublabel }}</span>
+        </div>
+      </div>
+
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       3. TABLA CONCENTRADORA DE DESVIACIONES REGISTRADAS
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="deviations-table-card" fgSpecularGlow>
+    
+    <!-- Barra de Filtros de la Tabla -->
+    <div class="table-toolbar">
+      <div class="toolbar-left">
+        <!-- Buscador -->
+        <div class="search-input-wrap">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Buscar por Folio, Remisión, SKU, UA o Colaborador..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+          />
+          @if (searchQuery()) {
+            <button type="button" class="btn-clear-search" (click)="searchQuery.set('')">
+              <span class="material-symbols-outlined text-xs">close</span>
+            </button>
+          }
+        </div>
+
+        <!-- Filtro por Tipo de Material -->
+        <select
+          class="filter-select"
+          [ngModel]="selectedMaterialFilter()"
+          (ngModelChange)="selectedMaterialFilter.set($event)"
+        >
+          <option value="ALL">Todos los Materiales</option>
+          <option value="PRODUCTO_TERMINADO">Producto Terminado (PT)</option>
+          <option value="EMBALAJES">Embalajes</option>
+          <option value="CAFE_VERDE">Café Verde</option>
+          <option value="OTRO">Otro Material</option>
+        </select>
+
+        <!-- Filtro por Causa Raíz -->
+        <select
+          class="filter-select"
+          [ngModel]="selectedRootCauseFilter()"
+          (ngModelChange)="selectedRootCauseFilter.set($event)"
+        >
+          <option value="ALL">Todas las Causas Raíz</option>
+          <option value="MANEJO_INADECUADO">Manejo Inadecuado (Montacargas)</option>
+          <option value="INFRAESTRUCTURA">Infraestructura</option>
+          <option value="PLAGAS">Plagas</option>
+          <option value="LIMPIEZA">Limpieza</option>
+          <option value="TRANSPORTE_INTERNO">Transporte Interno</option>
+          <option value="EMPAQUE_ORIGINAL">Empaque Original</option>
+        </select>
+      </div>
+
+      <div class="toolbar-right">
+        <span class="deviations-count-pill">{{ filteredDeviations().length }} desviaciones registradas</span>
+      </div>
+    </div>
+
+    <!-- Tabla Reactiva -->
+    <div class="table-responsive">
+      <table class="deviations-table" aria-label="Concentrado de desviaciones de calidad">
+        <thead>
+          <tr>
+            <th>Folio / Fecha</th>
+            <th>Material & SKU</th>
+            <th>Lote / UA (SSCC)</th>
+            <th>Condición Detectada</th>
+            <th>Causa Raíz</th>
+            <th>Piezas Dañadas</th>
+            <th>Costo ($ MXN)</th>
+            <th>Acción Aplicada</th>
+            <th class="text-right">Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (dev of filteredDeviations(); track dev.id) {
+            <tr class="deviation-row">
+              
+              <!-- Folio & Fecha -->
+              <td>
+                <div class="flex flex-col gap-0.5">
+                  <span class="font-mono font-bold text-xs text-gold">{{ dev.folio }}</span>
+                  <span class="text-[11px] text-slate-500">{{ dev.deviationDate }} · {{ dev.deviationTime }}</span>
+                </div>
+              </td>
+
+              <!-- Material & SKU -->
+              <td>
+                <div class="flex flex-col">
+                  <span class="material-type-tag" [class.tag--pt]="dev.materialType === 'PRODUCTO_TERMINADO'" [class.tag--emb]="dev.materialType === 'EMBALAJES'" [class.tag--coffee]="dev.materialType === 'CAFE_VERDE'">
+                    {{ materialLabels[dev.materialType] || dev.materialType }}
+                  </span>
+                  <strong class="text-xs font-mono mt-0.5">{{ dev.skuId }}</strong>
+                  <span class="text-[11px] text-slate-400 truncate max-w-[180px]">{{ dev.skuDescription }}</span>
+                </div>
+              </td>
+
+              <!-- UA / Remisión -->
+              <td>
+                <div class="ua-box">
+                  <span class="ua-code font-mono">{{ dev.uaCode }}</span>
+                  <span class="text-[11px] text-slate-500 font-mono">REM: {{ dev.remisionNumber }}</span>
+                </div>
+              </td>
+
+              <!-- Condición -->
+              <td>
+                <span class="condition-badge">
+                  {{ conditionLabels[dev.conditionDeviation] || dev.conditionDeviation }}
+                </span>
+              </td>
+
+              <!-- Causa Raíz -->
+              <td>
+                <span class="root-cause-tag">
+                  {{ rootCauseLabels[dev.rootCauseMotive] || dev.rootCauseMotive }}
+                </span>
+              </td>
+
+              <!-- Piezas Dañadas -->
+              <td>
+                @if (dev.damagedUnits > 0) {
+                  <span class="damaged-units-pill">
+                    <span class="material-symbols-outlined text-xs">broken_image</span>
+                    <span>{{ dev.damagedUnits }} Pzas</span>
+                  </span>
+                } @else {
+                  <span class="text-xs text-slate-400">0 U</span>
+                }
+              </td>
+
+              <!-- Costo ($ MXN) -->
+              <td>
+                <strong class="font-mono text-emerald-500 text-xs">
+                  {{ formatCurrency(dev.materialCost) }}
+                </strong>
+              </td>
+
+              <!-- Acción -->
+              <td>
+                <span class="action-badge">
+                  {{ actionLabels[dev.actionTaken] || dev.actionTaken }}
+                </span>
+              </td>
+
+              <!-- Detalle e Impresión -->
+              <td class="text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <button type="button" class="btn-action-view" (click)="openPrintPreview(dev)" title="Imprimir cédula oficial PDF">
+                    <span class="material-symbols-outlined text-sm">print</span>
+                    <span>Imprimir</span>
+                  </button>
+                  <button type="button" class="btn-action-view" (click)="openDetail(dev)" title="Ver detalle de la desviación">
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    <span>Ver</span>
+                  </button>
+                </div>
+              </td>
+
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="empty-state-cell">
+                <div class="empty-state-wrap">
+                  <span class="material-symbols-outlined empty-icon">assignment_turned_in</span>
+                  <h4>No se registran desviaciones en este período</h4>
+                  <p>Las condiciones de almacenamiento, descarga y transporte se mantienen conformes.</p>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       4. MODAL DE CAPTURA RÁPIDA (SUBMÓDULO 5)
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (qualityState.isDeviationModalOpen()) {
+    <app-quality-deviation-modal (close)="closeCreateModal()"></app-quality-deviation-modal>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       5. MODAL DE DETALLE DE DESVIACIÓN DE CALIDAD
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (isDetailOpen() && selectedDeviation(); as dev) {
+    <div class="modal-backdrop" (click)="closeDetail()">
+      <div class="modal-card modal-card--detail" (click)="$event.stopPropagation()">
+        
+        <!-- Header del Modal -->
+        <header class="modal-header">
+          <div class="modal-header__left">
+            <div class="modal-icon-badge modal-icon-badge--gold">
+              <span class="material-symbols-outlined">assignment_late</span>
+            </div>
+            <div>
+              <span class="modal-eyebrow">EXPEDIENTE TÉCNICO DE CALIDAD · QM 4GUARD</span>
+              <div class="flex items-center gap-2">
+                <h3 class="modal-title font-mono font-bold">{{ dev.folio }}</h3>
+                <span class="detail-material-badge" [class.tag--pt]="dev.materialType === 'PRODUCTO_TERMINADO'" [class.tag--emb]="dev.materialType === 'EMBALAJES'" [class.tag--coffee]="dev.materialType === 'CAFE_VERDE'">
+                  {{ materialLabels[dev.materialType] || dev.materialType }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeDetail()" title="Cerrar ventana">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <!-- Cuerpo del Modal -->
+        <div class="modal-body space-y-4">
+          
+          <!-- Fila 1: Metadatos de Rastreo e Identificación del Producto -->
+          <div class="detail-section">
+            <div class="detail-section__header">
+              <span class="material-symbols-outlined text-sm text-gold">qr_code_2</span>
+              <span class="detail-section__title">Identificación de Material, Lote y Trazabilidad</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+              <div class="detail-field">
+                <span class="detail-label">SKU & Descripción</span>
+                <strong class="detail-value font-mono text-gold-light">{{ dev.skuId }}</strong>
+                <span class="text-xs text-slate-400 block mt-0.5">{{ dev.skuDescription || 'Sin descripción' }}</span>
+              </div>
+
+              <div class="detail-field">
+                <span class="detail-label">No. Remisión / Factura</span>
+                <strong class="detail-value font-mono text-amber-500">{{ dev.remisionNumber }}</strong>
+                <span class="text-[11px] text-slate-500 block">Doc. de Transporte</span>
+              </div>
+
+              <div class="detail-field">
+                <span class="detail-label">Código UA / SSCC (Lote)</span>
+                <strong class="detail-value font-mono text-blue-400">{{ dev.uaCode }}</strong>
+                <span class="text-[11px] text-slate-500 block">Bahía de Origen: {{ dev.bayLocationCode || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fila 2: Diagnóstico de Calidad y Causa Raíz -->
+          <div class="detail-section">
+            <div class="detail-section__header">
+              <span class="material-symbols-outlined text-sm text-gold">troubleshoot</span>
+              <span class="detail-section__title">Diagnóstico de la Desviación y Causa Raíz</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              <div class="detail-field">
+                <span class="detail-label">Condición Detectada</span>
+                <div class="mt-1">
+                  <span class="condition-badge condition-badge--lg">
+                    {{ conditionLabels[dev.conditionDeviation] || dev.conditionDeviation }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="detail-field">
+                <span class="detail-label">Motivo del Daño / Causa Raíz</span>
+                <div class="mt-1">
+                  <span class="root-cause-tag root-cause-tag--lg">
+                    {{ rootCauseLabels[dev.rootCauseMotive] || dev.rootCauseMotive }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="detail-field">
+                <span class="detail-label">Área de Detección</span>
+                <strong class="detail-value text-slate-300">{{ dev.originArea || 'OPERACIONES' }}</strong>
+              </div>
+
+              <div class="detail-field">
+                <span class="detail-label">Colaborador Involucrado / Operador</span>
+                <strong class="detail-value text-slate-300">{{ dev.responsibleCollaborator || 'No especificado' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fila 3: Impacto Cuantitativo, Financiero y Resolución FSM -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            
+            <div class="impact-metric-card">
+              <div class="impact-metric-card__icon text-amber-500">
+                <span class="material-symbols-outlined">broken_image</span>
+              </div>
+              <div>
+                <span class="impact-metric-card__label">Piezas Dañadas</span>
+                <strong class="impact-metric-card__value text-amber-500">{{ dev.damagedUnits }} Pzas</strong>
+              </div>
+            </div>
+
+            <div class="impact-metric-card">
+              <div class="impact-metric-card__icon text-emerald-500">
+                <span class="material-symbols-outlined">payments</span>
+              </div>
+              <div>
+                <span class="impact-metric-card__label">Costo No Calidad</span>
+                <strong class="impact-metric-card__value text-emerald-500">{{ formatCurrency(dev.materialCost) }}</strong>
+              </div>
+            </div>
+
+            <div class="impact-metric-card">
+              <div class="impact-metric-card__icon text-blue-400">
+                <span class="material-symbols-outlined">rule</span>
+              </div>
+              <div>
+                <span class="impact-metric-card__label">Acción / Dictamen FSM</span>
+                <strong class="impact-metric-card__value text-xs text-blue-400">{{ actionLabels[dev.actionTaken] || dev.actionTaken }}</strong>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Fila 4: Observaciones Técnicas y Dictamen -->
+          <div class="detail-section">
+            <div class="detail-section__header">
+              <span class="material-symbols-outlined text-sm text-gold">notes</span>
+              <span class="detail-section__title">Observaciones y Justificación Técnica de Calidad</span>
+            </div>
+            <p class="detail-observations">
+              {{ dev.observations || 'Sin observaciones adicionales asentadas para esta desviación.' }}
+            </p>
+            <div class="mt-2 text-[11px] text-slate-500 flex items-center gap-2">
+              <span class="material-symbols-outlined text-xs">schedule</span>
+              <span>Fecha de Asentamiento: {{ dev.deviationDate }} a las {{ dev.deviationTime }} hrs</span>
+            </div>
+          </div>
+
+          <!-- Fila 5: Evidencias Fotográficas -->
+          @if (dev.evidencePhotoUrls && dev.evidencePhotoUrls.length > 0) {
+            <div class="detail-section">
+              <div class="detail-section__header">
+                <span class="material-symbols-outlined text-sm text-gold">photo_library</span>
+                <span class="detail-section__title">Evidencias Fotográficas Digitalizadas ({{ dev.evidencePhotoUrls.length }})</span>
+              </div>
+              <div class="photo-preview-grid mt-2">
+                @for (photo of dev.evidencePhotoUrls; track $index) {
+                  <div class="photo-preview-item photo-preview-item--lg">
+                    <img [src]="photo" alt="Evidencia de Desviación" class="photo-img" />
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeDetail()">Cerrar Expediente</button>
+          <button type="button" class="btn-confirm-gold" (click)="openPrintPreview(dev)">
+            <span class="material-symbols-outlined">print</span>
+            <span>Imprimir Cédula Oficial</span>
+          </button>
+        </footer>
+
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       6. MODAL OFICIAL DE VISTA PREVIA E IMPRESIÓN (ADR-015 / SDD)
+       ═══════════════════════════════════════════════════════════════════ -->
+  @if (showPrintModal() && deviationToPrint(); as dev) {
+    <div class="modal-backdrop" (click)="closePrintModal()">
+      <div class="modal-card max-w-3xl w-full p-3 sm:p-4 space-y-2.5 max-h-[96vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" (click)="$event.stopPropagation()">
+        
+        <!-- Barra Superior en UNA SOLA FILA -->
+        <div class="flex items-center justify-between gap-3 no-print border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-amber-500 text-base shrink-0">print</span>
+            <span class="font-black text-xs text-slate-800 dark:text-slate-100 uppercase tracking-wider truncate">
+              Cédula Oficial — {{ dev.folio }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <!-- Botón 1-Clic Descarga Directa -->
+            <button
+              type="button"
+              (click)="downloadDirectPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="btn-confirm-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined text-sm">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + dev.folio + '.pdf)' }}</span>
+            </button>
+            
+            <!-- Botón Impresión Física -->
+            <button
+              type="button"
+              (click)="triggerBrowserPrint()"
+              class="btn-cancel px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir</span>
+            </button>
+            
+            <!-- Botón Cerrar -->
+            <button
+              type="button"
+              (click)="closePrintModal()"
+              class="btn-cancel px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenedor del Documento -->
+        <div class="flex-1 overflow-y-auto pr-0.5">
+          <fg-print-deviation-layout [deviation]="dev"></fg-print-deviation-layout>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
