@@ -13,8 +13,9 @@ import {
   LoadVerification,
   QualityClaim,
   QualityDashboardKpis,
-  VerificationCriterion,
-  AttachedEvidence
+  QualityDeviation,
+  CreateQualityDeviationPayload,
+  QualityMonthlyBoard
 } from '../models/quality.models';
 
 interface ApiResponse<T> {
@@ -253,11 +254,69 @@ export class HttpQualityAdapter implements QualityRepository {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // 5. SUBMÓDULO: DESVIACIONES NATIVAS Y TABLERO MENSUAL DE 10 KPIS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  getDeviations(filters?: { materialType?: string; rootCause?: string; month?: string }): Observable<QualityDeviation[]> {
+    let params = new HttpParams();
+    if (filters?.materialType && filters.materialType !== 'ALL') params = params.set('materialType', filters.materialType);
+    if (filters?.rootCause && filters.rootCause !== 'ALL') params = params.set('rootCause', filters.rootCause);
+    if (filters?.month && filters.month !== 'ALL') params = params.set('month', filters.month);
+
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/deviations`, { params }).pipe(
+      map(res => this.unwrap(res)),
+      map(list => (list || []).map(d => this.mapToDeviation(d))),
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  getDeviationById(id: string): Observable<QualityDeviation> {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/deviations/${id}`).pipe(
+      map(res => this.unwrap(res)),
+      map(d => this.mapToDeviation(d)),
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  createDeviation(payload: CreateQualityDeviationPayload): Observable<QualityDeviation> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/deviations`, payload).pipe(
+      map(res => this.unwrap(res)),
+      map(d => this.mapToDeviation(d)),
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  getMonthlyBoard(year?: number, month?: number): Observable<QualityMonthlyBoard> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year.toString());
+    if (month) params = params.set('month', month.toString());
+
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/kpis/monthly-board`, { params }).pipe(
+      map(res => this.unwrap(res)),
+      map(b => this.mapToMonthlyBoard(b)),
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  exportDeviationsExcel(year?: number, month?: number): Observable<Blob> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year.toString());
+    if (month) params = params.set('month', month.toString());
+
+    return this.http.get(`${this.baseUrl}/deviations/export-excel`, {
+      params,
+      responseType: 'blob'
+    }).pipe(
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // HELPER MAPPERS & UTILITIES
   // ══════════════════════════════════════════════════════════════════════════
 
   private unwrap<T>(res: ApiResponse<T> | T): T {
-    if (res && typeof res === 'object' && 'data' in res) {
+    if (res && typeof res === 'object' && 'data' in (res as any)) {
       return (res as ApiResponse<T>).data;
     }
     return res as T;
@@ -371,6 +430,59 @@ export class HttpQualityAdapter implements QualityRepository {
       status: c.status || 'OPEN',
       createdAt: c.createdAt ? String(c.createdAt) : new Date().toISOString(),
       updatedAt: c.updatedAt ? String(c.updatedAt) : new Date().toISOString()
+    };
+  }
+
+  private mapToDeviation(d: any): QualityDeviation {
+    return {
+      id: String(d.id || ''),
+      folio: d.folio || '',
+      remisionNumber: d.remisionNumber || '',
+      skuId: d.skuId || '',
+      skuDescription: d.skuDescription || '',
+      uaCode: d.uaCode || '',
+      materialType: d.materialType || 'OTRO',
+      deviationDate: typeof d.deviationDate === 'string' ? d.deviationDate : (d.deviationDate ? String(d.deviationDate) : new Date().toISOString().substring(0, 10)),
+      deviationTime: typeof d.deviationTime === 'string' ? d.deviationTime.substring(0, 5) : '00:00',
+      detectedById: d.detectedById,
+      detectedByName: d.detectedByName || 'Auditor QM',
+      responsibleCollaborator: d.responsibleCollaborator || '',
+      bayLocationCode: d.bayLocationCode || '',
+      damagedUnits: Number(d.damagedUnits || 0),
+      materialCost: Number(d.materialCost || 0),
+      currency: d.currency || 'MXN',
+      conditionDeviation: d.conditionDeviation || 'OTRO',
+      rootCauseMotive: d.rootCauseMotive || 'OTRO',
+      originArea: d.originArea || 'CALIDAD',
+      evidencePhotoUrls: Array.isArray(d.evidencePhotoUrls) ? d.evidencePhotoUrls : [],
+      actionTaken: d.actionTaken || 'BLOQUEO_CALIDAD',
+      observations: d.observations || '',
+      isResolved: Boolean(d.isResolved),
+      createdAt: d.createdAt ? String(d.createdAt) : new Date().toISOString()
+    };
+  }
+
+  private mapToMonthlyBoard(b: any): QualityMonthlyBoard {
+    return {
+      year: Number(b.year || new Date().getFullYear()),
+      month: Number(b.month || (new Date().getMonth() + 1)),
+      monthName: b.monthName || 'Octubre',
+      branchName: b.branchName || 'Toluca - Nave M1',
+      kpiCards: Array.isArray(b.kpiCards) ? b.kpiCards : [],
+      releasesByCollaborator: b.releasesByCollaborator || {},
+      rootCauseDistribution: b.rootCauseDistribution || {},
+      storageDeviationsByType: b.storageDeviationsByType || {},
+      inboundDeviationsByType: b.inboundDeviationsByType || {},
+      clientClaimsByOrigin: b.clientClaimsByOrigin || {},
+      actionsTakenDistribution: b.actionsTakenDistribution || {},
+      totalInspectedLots: Number(b.totalInspectedLots || 0),
+      totalDeviations: Number(b.totalDeviations || 0),
+      totalDamagedPieces: Number(b.totalDamagedPieces || 0),
+      ptDamagedPieces: Number(b.ptDamagedPieces || 0),
+      packagingDamagedPieces: Number(b.packagingDamagedPieces || 0),
+      greenCoffeeDamagedPieces: Number(b.greenCoffeeDamagedPieces || 0),
+      totalNonQualityCost: Number(b.totalNonQualityCost || 0),
+      deviations: (b.deviations || []).map((d: any) => this.mapToDeviation(d))
     };
   }
 

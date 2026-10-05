@@ -5,7 +5,10 @@ import {
   QualityRelease,
   LoadVerification,
   QualityClaim,
-  QualityDashboardKpis
+  QualityDashboardKpis,
+  QualityDeviation,
+  CreateQualityDeviationPayload,
+  QualityMonthlyBoard
 } from '../models/quality.models';
 
 export interface CreateBlockPayload {
@@ -55,6 +58,13 @@ export interface QualityRepository {
   getClaims(stage?: string): Observable<QualityClaim[]>;
   createClaim(claim: Partial<QualityClaim>): Observable<QualityClaim>;
   getDashboardKpis(): Observable<QualityDashboardKpis>;
+
+  // Submódulo 5: Desviaciones y Tablero Mensual de 10 KPIs
+  getDeviations(filters?: { materialType?: string; rootCause?: string; month?: string }): Observable<QualityDeviation[]>;
+  getDeviationById(id: string): Observable<QualityDeviation>;
+  createDeviation(payload: CreateQualityDeviationPayload): Observable<QualityDeviation>;
+  getMonthlyBoard(year?: number, month?: number): Observable<QualityMonthlyBoard>;
+  exportDeviationsExcel(year?: number, month?: number): Observable<Blob>;
 }
 
 export const QUALITY_REPOSITORY_TOKEN = new InjectionToken<QualityRepository>('QUALITY_REPOSITORY_TOKEN');
