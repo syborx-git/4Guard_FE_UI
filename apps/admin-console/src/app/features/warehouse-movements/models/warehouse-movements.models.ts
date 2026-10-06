@@ -87,7 +87,7 @@ export interface CheckInCasetaData {
   clientCode?: string;      // Código Cliente (ej. CLI-004)
   client: string;           // Cliente Descripción
   rampCode?: string;        // Código Rampa
-  rampNumber: number;       // Rampa No. (1-12)
+  rampNumber?: number | null; // Rampa No. (1-12, opcional en arribo de caseta)
   forkliftOperatorCode?: string; // ID Montacarguista
   forkliftOperator?: string; // Montacarguista Nombre (asignado en recepción)
   driverName: string;       // Operador (Chofer)

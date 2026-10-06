@@ -18,6 +18,7 @@ import { WarehouseMovementsService } from '../../warehouse-movements/services/wa
 import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { SmartNotificationService } from '../../../core/services/smart-notification.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
@@ -43,20 +44,13 @@ export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
 export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly smartNotification = inject(SmartNotificationService);
   private readonly printService = inject(PrintService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private refreshIntervalId: any = null;
 
-  constructor() {
-    effect(() => {
-      const recs = this.movementsService.receptions();
-      const outs = this.movementsService.outbounds();
-      if (recs.length > 0 || outs.length > 0) {
-        this.mergeInYardPasses(this.inYardPasses());
-      }
-    });
-  }
+  constructor() {}
 
   // ── Navegación por Pestañas ───────────────────────────────────────────────
   protected readonly activeTab = signal<SecurityGateTab>('REGISTRATION');
@@ -108,11 +102,134 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Pases QR Dinámicos y Choferes en Espera ──
   protected readonly activePasses       = signal<any[]>([]);
-  protected readonly inYardPasses       = signal<any[]>([]);
+  protected readonly backendInYardPasses = signal<any[]>([]);
   protected readonly historyPasses      = signal<any[]>([]);
   protected readonly historySearch      = signal<string>('');
   protected readonly isLoadingHistory   = signal<boolean>(false);
   protected readonly isLoadingInYard    = signal<boolean>(false);
+
+  /**
+   * Señal computada reactiva y pura para las unidades en patio (In-Yard).
+   * Combina automáticamente los pases de caseta, recepciones WMS y salidas WMS,
+   * excluyendo las unidades que ya concluyeron su salida en historial.
+   */
+  protected readonly inYardPasses = computed<any[]>(() => {
+    const mergedMap = new Map<string, any>();
+    const exitTokensOrFolios = new Set<string>();
+
+    // 1. Folios que ya salieron de la planta
+    for (const h of this.historyPasses()) {
+      if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
+      if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
+    }
+
+    // 2. Pases devueltos por el backend
+    for (const p of this.backendInYardPasses()) {
+      const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
+      mergedMap.set(key, {
+        ...p,
+        receptionTime: timeVal,
+        horaEntrada: timeVal
+      });
+    }
+
+    // 3. Recepciones registradas en el WMS (Inbound)
+    const activeReceptions = this.movementsService.receptions();
+    for (const r of activeReceptions) {
+      if (r.status === 'CANCELLED') continue;
+      const key = (r.folio || r.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (!mergedMap.has(key)) {
+        const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
+          ? r.checkIn.sealNumbers
+          : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
+
+        const isReady = r.status === 'COMPLETED';
+        const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
+
+        mergedMap.set(key, {
+          id: r.id || ('rec-' + r.folio),
+          token: r.folio,
+          generatedFolio: r.folio,
+          status: 'COMPLETED',
+          operationType: 'DESCARGA',
+          operacion: 'DESCARGA',
+          clientCode: r.checkIn?.clientCode || '',
+          clientName: r.checkIn?.client || 'Cliente General',
+          carrierLineCode: r.checkIn?.carrierLineCode || '',
+          carrierLine: r.checkIn?.carrierLine || 'Transportista',
+          driverName: r.checkIn?.driverName || 'Operador Transportista',
+          tractorPlates: r.checkIn?.tractorPlates || '-',
+          boxPlates: r.checkIn?.boxPlates || '-',
+          economicNumber: r.checkIn?.economicNumber || '',
+          boxDimensions: r.checkIn?.medidasCaja || '53 Pies',
+          transportType: r.checkIn?.transportType || 'Caja Seca',
+          sealNumbers: seals,
+          docNumber: r.checkIn?.docNumber || ('REM-' + r.folio),
+          docDate: r.checkIn?.docDate || r.createdAt,
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
+          rampNumber: r.checkIn?.rampNumber || 1,
+          rampCode: r.checkIn?.rampCode || (r.checkIn?.rampNumber ? `R-${r.checkIn.rampNumber}` : 'R-01'),
+          observations: r.observations || r.checkIn?.observations || '',
+          warehouseStatus: r.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: r.createdAt
+        });
+      }
+    }
+
+    // 4. Salidas registradas en el WMS (Outbound)
+    const activeOutbounds = this.movementsService.outbounds();
+    for (const o of activeOutbounds) {
+      if (o.status === 'CANCELLED') continue;
+      const key = (o.folio || o.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (!mergedMap.has(key)) {
+        const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
+        const isReady = o.status === 'COMPLETED' || o.status === 'LOADED';
+        const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
+
+        mergedMap.set(key, {
+          id: o.id || ('out-' + o.folio),
+          token: o.folio,
+          generatedFolio: o.folio,
+          status: 'COMPLETED',
+          operationType: 'CARGA',
+          operacion: 'CARGA',
+          clientCode: o.clientCode || '',
+          clientName: o.clientName || 'Cliente General',
+          carrierCode: o.carrierCode || '',
+          carrierLineCode: o.carrierCode || '',
+          carrierLine: o.carrierName || 'Transportista',
+          driverName: o.driverName || 'Operador Transportista',
+          tractorPlates: o.tractorPlates || '-',
+          boxPlates: o.boxPlates || '-',
+          economicNumber: o.economicNumber || '',
+          boxDimensions: '53 Pies',
+          transportType: o.transportType || 'TRAILER',
+          sealNumbers: seals,
+          docNumber: o.remisionNo || ('SAL-' + o.folio),
+          docDate: o.dispatchedAt || this.getCurrentDateString(),
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
+          rampNumber: o.rampNumber || 1,
+          rampCode: o.rampCode || (o.rampNumber ? `R-${o.rampNumber}` : 'R-01'),
+          observations: o.observations || '',
+          warehouseStatus: o.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: o.dispatchedAt || new Date().toISOString()
+        });
+      }
+    }
+
+    return Array.from(mergedMap.values());
+  });
 
   protected readonly activeToken        = signal<string | null>(null);
   protected readonly qrModalToken       = signal<string>('PASS-4G-2026');
@@ -196,8 +313,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
     driverPhone: [''],
-    rampCode: ['', Validators.required],
-    rampNumber: [0, Validators.required],
+    rampCode: [''],
+    rampNumber: [null as number | null],
     placasTracto: ['', Validators.required],
     noEcoTractor: ['', Validators.required],
     placasCaja: ['', Validators.required],
@@ -313,8 +430,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return `${hrs}h ${mins}m`;
   }
 
+  protected hasRampAssigned(item: any): boolean {
+    if (!item) return false;
+    if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
+      return true;
+    }
+    const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
+    return !!code && code !== '0' && code !== 'null' && code !== 'undefined';
+  }
+
   protected formatRampDisplay(item: any): string {
-    if (!item) return 'R-01';
+    if (!item) return 'Por Asignar';
 
     // 1. Si viene rampNumber numérico explícito y válido (1 a 50)
     if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
@@ -324,7 +450,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     // 2. Extraer cualquier código o ID disponible
     const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
-    if (code) {
+    if (code && code !== '0' && code !== 'null' && code !== 'undefined') {
       // Si es un código con prefijo conocido o formato legible (LOC-RAMP-06, RAMPA-02, R-03)
       if (code.toUpperCase().includes('RAMP') || code.toUpperCase().startsWith('R-') || code.toUpperCase().startsWith('LOC-RAMP-') || code.toLowerCase().startsWith('rampa')) {
         const digitMatch = code.match(/(\d+)/);
@@ -348,15 +474,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         if (std) {
           return `R-${String(std.rampNumber).padStart(2, '0')}`;
         }
-
-        // Mapeo determinístico hash a R-01 .. R-12
-        try {
-          const hex = code.replace(/-/g, '').slice(-4);
-          const val = (parseInt(hex, 16) % 12) + 1;
-          return `R-${String(val).padStart(2, '0')}`;
-        } catch {
-          return 'R-01';
-        }
       }
 
       // Si es un texto corto libre legible
@@ -365,7 +482,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     }
 
-    return item.rampNumber ? `R-${String(item.rampNumber).padStart(2, '0')}` : 'R-01';
+    return 'Por Asignar';
   }
 
   protected readonly filteredInYardPasses = computed(() => {
@@ -409,25 +526,31 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected autoDetectNgrok(): void {
     if (typeof window === 'undefined') return;
-    fetch('http://127.0.0.1:4040/api/tunnels')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.tunnels && data.tunnels.length > 0) {
-          const publicUrl = data.tunnels[0].public_url;
-          if (publicUrl) {
-            const cleaned = this.cleanTunnelUrl(publicUrl);
-            this.tunnelUrl.set(cleaned);
-            this.tunnelInputUrl.set(cleaned);
-            if (typeof localStorage !== 'undefined') {
-              localStorage.setItem('4g_security_tunnel_url', cleaned);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600);
+      fetch('http://127.0.0.1:4040/api/tunnels', { signal: controller.signal })
+        .then(res => res.json())
+        .then(data => {
+          clearTimeout(timeoutId);
+          if (data && data.tunnels && data.tunnels.length > 0) {
+            const publicUrl = data.tunnels[0].public_url;
+            if (publicUrl) {
+              const cleaned = this.cleanTunnelUrl(publicUrl);
+              this.tunnelUrl.set(cleaned);
+              this.tunnelInputUrl.set(cleaned);
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('4g_security_tunnel_url', cleaned);
+              }
+              this.updateQrModalUrl();
             }
-            this.updateQrModalUrl();
           }
-        }
-      })
-      .catch(() => {
-        // ngrok API no alcanzable (normal si no hay ngrok en ejecución local)
-      });
+        })
+        .catch(() => {
+          clearTimeout(timeoutId);
+          // ngrok no detectado localmente — fallback normal a URL local
+        });
+    } catch (_) {}
   }
 
   protected getPublicBaseUrl(): string {
@@ -465,21 +588,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.autoDetectNgrok();
-
     this.movementsService.loadInitialBackendData();
-    this.movementsService.reloadCarriers();
     this.loadPublicCatalogs();
-    this.reloadAllData();
+    this.reloadActivePasses();
 
-    // Auto-refresco en tiempo real de choferes en espera y unidades en patio
+    // Auto-refresco en tiempo real no bloqueante
     this.refreshIntervalId = setInterval(() => {
       if (this.activeTab() === 'REGISTRATION') {
         this.reloadActivePasses();
       } else if (this.activeTab() === 'IN_YARD') {
         this.reloadInYardPasses();
       }
-    }, 10000);
+    }, 15000);
   }
 
   ngOnDestroy(): void {
@@ -634,7 +754,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
   protected generateDriverPass(): void {
-    this.autoDetectNgrok();
     this.isGeneratingPass.set(true);
     const session = this.movementsService.movementsApi.getSessionOrg();
     const formVal = this.checkInForm.value;
@@ -768,6 +887,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
       const mergedList = Array.from(mergedMap.values());
       this.activePasses.set(mergedList);
+      this.smartNotification.updateSubmittedDriverPasses(mergedList);
 
       // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
       for (const p of mergedList) {
@@ -781,6 +901,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     } catch {
       this.activePasses.set(backendPasses || []);
+      this.smartNotification.updateSubmittedDriverPasses(backendPasses || []);
     }
   }
 
@@ -819,131 +940,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
-        this.mergeInYardPasses(passes || []);
+        this.backendInYardPasses.set(passes || []);
       },
       error: () => {
         this.isLoadingInYard.set(false);
-        this.mergeInYardPasses([]);
+        this.backendInYardPasses.set([]);
       }
     });
-  }
-
-  private mergeInYardPasses(backendPasses: any[]): void {
-    const mergedMap = new Map<string, any>();
-    const exitTokensOrFolios = new Set<string>();
-
-    // 1. Folios que ya salieron de la planta
-    for (const h of this.historyPasses()) {
-      if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
-      if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
-    }
-
-    // 2. Pases devueltos por el backend
-    for (const p of backendPasses || []) {
-      const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
-      if (!key || exitTokensOrFolios.has(key)) continue;
-
-      const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
-      mergedMap.set(key, {
-        ...p,
-        receptionTime: timeVal,
-        horaEntrada: timeVal
-      });
-    }
-
-    // 3. Recepciones registradas en el WMS (Inbound)
-    const activeReceptions = this.movementsService.receptions();
-    for (const r of activeReceptions) {
-      if (r.status === 'CANCELLED') continue;
-      const key = (r.folio || r.id || '').trim().toUpperCase();
-      if (!key || exitTokensOrFolios.has(key)) continue;
-
-      if (!mergedMap.has(key)) {
-        const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
-          ? r.checkIn.sealNumbers
-          : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
-
-        const isReady = r.status === 'COMPLETED';
-        const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
-
-        mergedMap.set(key, {
-          id: r.id || ('rec-' + r.folio),
-          token: r.folio,
-          generatedFolio: r.folio,
-          status: 'COMPLETED',
-          operationType: 'DESCARGA',
-          operacion: 'DESCARGA',
-          clientCode: r.checkIn?.clientCode || '',
-          clientName: r.checkIn?.client || 'Cliente General',
-          carrierLineCode: r.checkIn?.carrierLineCode || '',
-          carrierLine: r.checkIn?.carrierLine || 'Transportista',
-          driverName: r.checkIn?.driverName || 'Operador Transportista',
-          tractorPlates: r.checkIn?.tractorPlates || '-',
-          boxPlates: r.checkIn?.boxPlates || '-',
-          economicNumber: r.checkIn?.economicNumber || '',
-          boxDimensions: r.checkIn?.medidasCaja || '53 Pies',
-          transportType: r.checkIn?.transportType || 'Caja Seca',
-          sealNumbers: seals,
-          docNumber: r.checkIn?.docNumber || ('REM-' + r.folio),
-          docDate: r.checkIn?.docDate || r.createdAt,
-          receptionTime: timeVal,
-          horaEntrada: timeVal,
-          rampNumber: r.checkIn?.rampNumber || 1,
-          rampCode: r.checkIn?.rampCode || (r.checkIn?.rampNumber ? `R-${r.checkIn.rampNumber}` : 'R-01'),
-          observations: r.observations || r.checkIn?.observations || '',
-          warehouseStatus: r.status || 'REGISTERED',
-          isReadyForExit: isReady,
-          createdAt: r.createdAt
-        });
-      }
-    }
-
-    // 4. Salidas registradas en el WMS (Outbound)
-    const activeOutbounds = this.movementsService.outbounds();
-    for (const o of activeOutbounds) {
-      if (o.status === 'CANCELLED') continue;
-      const key = (o.folio || o.id || '').trim().toUpperCase();
-      if (!key || exitTokensOrFolios.has(key)) continue;
-
-      if (!mergedMap.has(key)) {
-        const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
-        const isReady = o.status === 'COMPLETED' || o.status === 'LOADED';
-        const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
-
-        mergedMap.set(key, {
-          id: o.id || ('out-' + o.folio),
-          token: o.folio,
-          generatedFolio: o.folio,
-          status: 'COMPLETED',
-          operationType: 'CARGA',
-          operacion: 'CARGA',
-          clientCode: o.clientCode || '',
-          clientName: o.clientName || 'Cliente General',
-          carrierCode: o.carrierCode || '',
-          carrierLineCode: o.carrierCode || '',
-          carrierLine: o.carrierName || 'Transportista',
-          driverName: o.driverName || 'Operador Transportista',
-          tractorPlates: o.tractorPlates || '-',
-          boxPlates: o.boxPlates || '-',
-          economicNumber: o.economicNumber || '',
-          boxDimensions: '53 Pies',
-          transportType: o.transportType || 'TRAILER',
-          sealNumbers: seals,
-          docNumber: o.remisionNo || ('SAL-' + o.folio),
-          docDate: o.dispatchedAt || this.getCurrentDateString(),
-          receptionTime: timeVal,
-          horaEntrada: timeVal,
-          rampNumber: o.rampNumber || 1,
-          rampCode: o.rampCode || (o.rampNumber ? `R-${o.rampNumber}` : 'R-01'),
-          observations: o.observations || '',
-          warehouseStatus: o.status || 'REGISTERED',
-          isReadyForExit: isReady,
-          createdAt: o.dispatchedAt || new Date().toISOString()
-        });
-      }
-    }
-
-    this.inYardPasses.set(Array.from(mergedMap.values()));
   }
 
   protected reloadHistoryPasses(): void {
@@ -1619,7 +1622,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
     }
     if (!formVal.clientCode || !formVal.client || !formVal.client.trim()) missing.push('Cliente Destinatario');
-    if (!formVal.rampCode || !formVal.rampNumber) missing.push('Andén / Rampa Asignada');
     if (!formVal.carrierLineCode || !formVal.carrierLine) missing.push('Línea Transportista');
     if (!formVal.nombreOperador || !formVal.nombreOperador.trim()) missing.push('Nombre del Operador / Chofer');
     if (!formVal.placasTracto || !formVal.placasTracto.trim()) missing.push('Placas del Tracto');
@@ -1654,6 +1656,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
     ].join(' | ');
 
+    const rCode = formVal.rampCode || null;
+    const rNum = formVal.rampNumber ? Number(formVal.rampNumber) : null;
+    const rDisplay = rCode || (rNum ? `R-${rNum}` : 'Pendiente en Almacén');
+
     const checkInData: CheckInCasetaData = {
       carrierLineCode: formVal.carrierLineCode,
       carrierLine: formVal.carrierLine,
@@ -1662,8 +1668,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       docDate: formVal.fecha,
       clientCode: formVal.clientCode,
       client: formVal.client,
-      rampCode: formVal.rampCode,
-      rampNumber: Number(formVal.rampNumber) || 1,
+      rampCode: rCode || undefined,
+      rampNumber: rNum || undefined,
       driverName: formVal.nombreOperador,
       driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
@@ -1682,8 +1688,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         clientName: formVal.client,
         carrierLineCode: formVal.carrierLineCode,
         carrierLine: formVal.carrierLine,
-        rampNumber: Number(formVal.rampNumber) || 1,
-        rampCode: formVal.rampCode,
+        rampNumber: rNum,
+        rampCode: rCode,
         driverName: formVal.nombreOperador,
         driverPhone: formVal.driverPhone || '',
         tractorPlates: (formVal.placasTracto || '').toUpperCase().trim(),
@@ -1704,7 +1710,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.isSaving.set(false);
           const folio = passRes?.generatedFolio || passRes?.folio || this.activeToken() || 'OK';
           this.createdFolio.set(folio);
-          this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
+          this.assignedRampLabel.set(rDisplay);
 
           const printSnapshot = {
             ...formVal,
@@ -1712,14 +1718,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             checklistData: inspectionObservations,
             generatedFolio: folio,
             folio: folio,
-            rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
+            rampCode: rDisplay
           };
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
 
           // Notificación flotante del sistema y scroll al menú superior
           const opLabel = op === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga';
-          this.toast.success(`¡${opLabel} registrada con éxito! Folio #${folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+          this.toast.success(`¡${opLabel} autorizada con éxito! Folio #${folio} (Rampa: ${rDisplay})`, 4500);
           this.scrollToTop();
 
           this.reloadAllData();
@@ -1741,7 +1747,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           next: (outbound) => {
             this.isSaving.set(false);
             this.createdFolio.set(outbound.folio);
-            this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
+            this.assignedRampLabel.set(rDisplay);
 
             const printSnapshot = {
               ...formVal,
@@ -1749,13 +1755,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
               checklistData: inspectionObservations,
               generatedFolio: outbound.folio,
               folio: outbound.folio,
-              rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
+              rampCode: rDisplay
             };
             this.lastCompletedPrintItem.set(printSnapshot);
             this.resetForm();
 
             // Notificación flotante del sistema y scroll al menú superior
-            this.toast.success(`¡Carga / Salida registrada con éxito! Folio #${outbound.folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+            this.toast.success(`¡Carga / Salida autorizada con éxito! Folio #${outbound.folio} (Rampa: ${rDisplay})`, 4500);
             this.scrollToTop();
 
             this.reloadAllData();
@@ -1774,7 +1780,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           next: (header) => {
             this.isSaving.set(false);
             this.createdFolio.set(header.folio);
-            this.assignedRampLabel.set(formVal.rampCode || `R-${formVal.rampNumber}`);
+            this.assignedRampLabel.set(rDisplay);
 
             const printSnapshot = {
               ...formVal,
@@ -1782,13 +1788,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
               checklistData: inspectionObservations,
               generatedFolio: header.folio,
               folio: header.folio,
-              rampCode: formVal.rampCode || `R-${formVal.rampNumber}`
+              rampCode: rDisplay
             };
             this.lastCompletedPrintItem.set(printSnapshot);
             this.resetForm();
 
             // Notificación flotante del sistema y scroll al menú superior
-            this.toast.success(`¡Recepción / Descarga registrada con éxito! Folio #${header.folio} (Rampa: ${formVal.rampCode || 'R-' + formVal.rampNumber})`, 4500);
+            this.toast.success(`¡Recepción / Descarga autorizada con éxito! Folio #${header.folio} (Rampa: ${rDisplay})`, 4500);
             this.scrollToTop();
 
             this.reloadAllData();

@@ -34,6 +34,7 @@ import {
   MovementAuditDetail,
 } from '../models/warehouse-movements.models';
 import { WarehouseMovementsApiService } from './warehouse-movements-api.service';
+import { SmartNotificationService } from '../../../core/services/smart-notification.service';
 
 export const isUuid = (val: any): boolean =>
   typeof val === 'string' &&
@@ -45,6 +46,7 @@ export const isUuid = (val: any): boolean =>
 export class WarehouseMovementsService {
   public readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
+  private readonly smartNotification = inject(SmartNotificationService);
   // Consecutivo base de recepción
   private nextFolioNumber = signal(26510);
   private nextTransferNumber = signal(4081);
@@ -95,6 +97,11 @@ export class WarehouseMovementsService {
 
   // Consecutivo Global de Tarimas (Continuidad estricta entre remisiones y recepciones)
   private readonly globalMaxPalletNumberSignal = signal<number>(0);
+
+  // Alerta de nueva pre-recepción arribada en tiempo real
+  public readonly latestArrivedReception = signal<ReceptionHeader | null>(null);
+  private knownReceptionFolios = new Set<string>();
+  private isInitialReceptionsLoaded = false;
 
   // Readonly Computed Public Exposures
   readonly receptions = this.receptionsSignal.asReadonly();
@@ -621,7 +628,41 @@ export class WarehouseMovementsService {
             unique.push(r);
           }
         }
+
+        const previousKnown = this.knownReceptionFolios;
+        const newKnown = new Set<string>();
+        let newlyArrived: ReceptionHeader | null = null;
+
+        for (const r of unique) {
+          const key = (r.folio || r.id || '').trim();
+          if (key) {
+            newKnown.add(key);
+            if (this.isInitialReceptionsLoaded && r.status === 'REGISTERED' && !previousKnown.has(key)) {
+              newlyArrived = r;
+            }
+          }
+        }
+
+        this.knownReceptionFolios = newKnown;
         this.receptionsSignal.set(unique);
+
+        if (this.isInitialReceptionsLoaded && newlyArrived) {
+          this.latestArrivedReception.set(newlyArrived);
+          this.smartNotification.dispatch({
+            category: 'RECEIVING',
+            title: '🚚 Nueva Pre-Recepción en Caseta',
+            message: `Folio #${newlyArrived.folio} (${newlyArrived.checkIn?.client || 'Cliente'}) en espera de descarga.`,
+            referenceFolio: newlyArrived.folio,
+            route: '/warehouse-movements/receiving',
+            queryParams: { folio: newlyArrived.folio },
+            targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+            targetRoutes: ['/warehouse-movements', '/receiving'],
+            severity: 'INFO',
+            data: newlyArrived
+          });
+        }
+        this.isInitialReceptionsLoaded = true;
+
         if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
           this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
         }

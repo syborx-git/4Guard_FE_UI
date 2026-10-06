@@ -1033,6 +1033,37 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.8rem;
   border: 1px solid var(--gold-border);
   box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.cell-ramp-badge--assigned {
+  background: rgba(16, 185, 129, 0.18);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.45);
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+:host-context(.dark) .cell-ramp-badge--assigned,
+:host-context(.theme-dark) .cell-ramp-badge--assigned {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.cell-ramp-badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.35);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+:host-context(.dark) .cell-ramp-badge--pending,
+:host-context(.theme-dark) .cell-ramp-badge--pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
 }
 
 .cell-op-badge-inbound {
