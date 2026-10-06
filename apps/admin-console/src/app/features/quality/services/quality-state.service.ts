@@ -25,6 +25,7 @@ import {
 } from '../models/quality.models';
 import { environment } from '../../../../environments/environment';
 import { HttpQualityAdapter } from './http-quality.adapter';
+import { QualityExcelExportService } from './quality-excel-export.service';
 
 @Injectable({
   providedIn: 'root'
@@ -33,6 +34,7 @@ export class QualityStateService {
 
   private movementsService = inject(WarehouseMovementsService);
   private qualityAdapter = inject(HttpQualityAdapter);
+  private excelExportService = inject(QualityExcelExportService);
 
   constructor() {
     if (!environment.useMockData) {
@@ -1103,19 +1105,24 @@ export class QualityStateService {
   }
 
   exportMonthlyExcel(): void {
-    const y = this.selectedKpiYear();
-    const m = this.selectedKpiMonth();
-    this.qualityAdapter.exportDeviationsExcel(y, m).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte-kpis-calidad-${y}-${String(m).padStart(2, '0')}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: (err) => console.error('[QualityStateService] Error exportando reporte:', err)
-    });
+    const board = this.monthlyBoard();
+    if (board) {
+      this.excelExportService.exportQualityWorkbook(board, this.claims(), this.loadVerifications());
+    } else {
+      const y = this.selectedKpiYear();
+      const m = this.selectedKpiMonth();
+      this.qualityAdapter.exportDeviationsExcel(y, m).subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-kpis-calidad-${y}-${String(m).padStart(2, '0')}.csv`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: (err) => console.error('[QualityStateService] Error exportando reporte:', err)
+      });
+    }
   }
 
   private computeLocalMonthlyBoard(year: number, month: number): void {

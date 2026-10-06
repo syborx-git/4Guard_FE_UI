@@ -116,7 +116,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     driverName: ['', [Validators.required]],
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
-    rampNumber: [1, [Validators.required]],
+    rampNumber: [null as number | null],
   });
 
   openEditCasetaModal(): void {
@@ -513,8 +513,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     lotNumber: [''],
     clientCode: [''],
     client: ['', [Validators.required]],
-    rampCode: ['R-01'],
-    rampNumber: [1, [Validators.required]],
+    rampCode: [''],
+    rampNumber: [null as number | null],
     forkliftOperatorCode: [''],
     forkliftOperator: ['', [Validators.required]],
     driverName: ['', [Validators.required]],
@@ -559,7 +559,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     storageLocation: [''],
     storageLocationId: [''],
     forkliftOperator: ['', [Validators.required]],
-    rampNumber: [1, [Validators.required]],
+    rampNumber: [null as number | null, [Validators.required]],
     productId: ['', [Validators.required]],
     productName: [''],
     supplierName: ['', [Validators.required]],
@@ -795,8 +795,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       lotNumber: '',
       clientCode: firstClient ? firstClient.code : '',
       client: firstClient ? firstClient.name : '',
-      rampCode: firstRamp ? firstRamp.code : 'R-01',
-      rampNumber: firstRamp ? firstRamp.rampNumber : 1,
+      rampCode: '',
+      rampNumber: null,
       forkliftOperatorCode: firstOp ? firstOp.code : '',
       forkliftOperator: firstOp ? firstOp.name : '',
       driverName: '',
@@ -815,7 +815,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       storageLocation: '',
       storageLocationId: '',
       forkliftOperator: '',
-      rampNumber: 1,
+      rampNumber: null,
       productId: '',
       productName: '',
       supplierName: '',
@@ -954,7 +954,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const bayLoc = rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1';
     this.selectedBayName.set(bayLoc);
 
-    const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : 1;
+    const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
 
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
