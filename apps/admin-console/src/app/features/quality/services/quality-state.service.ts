@@ -26,6 +26,7 @@ import {
 import { environment } from '../../../../environments/environment';
 import { HttpQualityAdapter } from './http-quality.adapter';
 import { QualityExcelExportService } from './quality-excel-export.service';
+import { SmartNotificationService } from '../../../core/services/smart-notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -35,6 +36,7 @@ export class QualityStateService {
   private movementsService = inject(WarehouseMovementsService);
   private qualityAdapter = inject(HttpQualityAdapter);
   private excelExportService = inject(QualityExcelExportService);
+  private smartNotification = inject(SmartNotificationService);
 
   constructor() {
     if (!environment.useMockData) {
@@ -551,6 +553,18 @@ export class QualityStateService {
       reportedAt: new Date().toISOString()
     };
     this.blocks.update(list => [created, ...list]);
+
+    this.smartNotification.dispatch({
+      category: 'QUALITY',
+      title: '⚠️ Alerta de Calidad - Producto No Conforme',
+      message: `Bloqueo #${folio} para SKU ${created.sku} (${created.defectCategory || 'Defecto'} - ${created.quantity} ${created.unitOfMeasure || 'UAs'}).`,
+      referenceFolio: folio,
+      route: '/quality/blocks',
+      targetRoles: ['ADMIN', 'QM_INSPECTOR', 'QUALITY_LEADER', 'AUDITOR', 'OPERATIONS_MANAGER'],
+      targetRoutes: ['/quality'],
+      severity: created.severity === 'CRITICAL' ? 'CRITICAL' : 'WARNING',
+      data: created
+    });
 
     if (!environment.useMockData) {
       this.qualityAdapter.createBlock({

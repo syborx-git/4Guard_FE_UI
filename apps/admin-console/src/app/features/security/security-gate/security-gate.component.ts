@@ -18,6 +18,7 @@ import { WarehouseMovementsService } from '../../warehouse-movements/services/wa
 import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { SmartNotificationService } from '../../../core/services/smart-notification.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
@@ -43,6 +44,7 @@ export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
 export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly smartNotification = inject(SmartNotificationService);
   private readonly printService = inject(PrintService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -885,6 +887,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
       const mergedList = Array.from(mergedMap.values());
       this.activePasses.set(mergedList);
+      this.smartNotification.updateSubmittedDriverPasses(mergedList);
 
       // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
       for (const p of mergedList) {
@@ -898,6 +901,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     } catch {
       this.activePasses.set(backendPasses || []);
+      this.smartNotification.updateSubmittedDriverPasses(backendPasses || []);
     }
   }
 
