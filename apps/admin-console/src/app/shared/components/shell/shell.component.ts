@@ -13,7 +13,8 @@ import {
   HostListener,
   OnInit,
   OnDestroy,
-  PLATFORM_ID
+  PLATFORM_ID,
+  effect
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -24,6 +25,9 @@ import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
 import { UsersService } from '../../../core/services/users.service';
 import { UserProfileDto } from '../../../core/models/user.models';
+import { ToastService } from '../../../core/services/toast.service';
+import { SmartNotificationService, SmartNotification } from '../../../core/services/smart-notification.service';
+import { ReceptionHeader } from '../../../features/warehouse-movements/models/warehouse-movements.models';
 
 export interface WaffleItem {
   id: string;
@@ -89,26 +93,220 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
   protected readonly forbotEngine = inject(ForbotEngineService);
+  protected readonly smartNotification = inject(SmartNotificationService);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
-  // ── Pre-Recepciones en Cola de Notificaciones ──
+  // ── Segmentación Inteligente por Rol y Contexto ──
+  protected readonly isSecurityUser = computed(() => {
+    const role = (this.authState.role() || '').toUpperCase();
+    const route = this.router.url;
+    return (
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('SECURITY') ||
+      role.includes('VIGILAN') ||
+      role.includes('GUARD') ||
+      role.includes('CASETA') ||
+      route.startsWith('/security')
+    );
+  });
+
+  protected readonly isReceivingUser = computed(() => {
+    const role = (this.authState.role() || '').toUpperCase();
+    const route = this.router.url;
+    return (
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('WAREHOUSE') ||
+      role.includes('DOCK') ||
+      role.includes('OPERAT') ||
+      role.includes('ALMACEN') ||
+      route.startsWith('/warehouse-movements') ||
+      route.startsWith('/receiving')
+    );
+  });
+
+  protected readonly isQualityUser = computed(() => {
+    const role = (this.authState.role() || '').toUpperCase();
+    const route = this.router.url;
+    return (
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('QM') ||
+      role.includes('QUALIT') ||
+      role.includes('CALIDAD') ||
+      role.includes('INSPECT') ||
+      role.includes('AUDIT') ||
+      route.startsWith('/quality')
+    );
+  });
+
+  // ── Pre-Recepciones en Cola de Notificaciones (Almacén) ──
   protected readonly pendingReceptions = this.movementsService.pendingReceptions;
   protected readonly pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
   protected readonly showReceptionAlertsDropdown = signal(false);
+  protected readonly hasNewUnseenPreReception = signal(false);
+
+  // ── Pases de Chofer QR en Espera (Caseta / Seguridad) ──
+  protected readonly pendingDriverPasses = this.smartNotification.pendingDriverPasses;
+  protected readonly pendingDriverPassesCount = this.smartNotification.pendingDriverPassesCount;
+  protected readonly showDriverPassesDropdown = signal(false);
+  protected readonly hasNewUnseenDriverPass = this.smartNotification.hasNewDriverSubmission;
+
+  private autoCloseAlertTimeout: any = null;
+  private preReceptionPollIntervalId: any = null;
+
+  constructor() {
+    effect(() => {
+      const arrived = this.movementsService.latestArrivedReception();
+      if (arrived && this.isReceivingUser()) {
+        this.handleNewPreReceptionAlert(arrived);
+      }
+    });
+
+    effect(() => {
+      const notif = this.smartNotification.latestNotification();
+      if (notif) {
+        this.handleSmartNotificationEvent(notif);
+      }
+    });
+  }
+
+  private handleSmartNotificationEvent(notif: SmartNotification): void {
+    if (notif.category === 'SECURITY' && this.isSecurityUser()) {
+      this.showDriverPassesDropdown.set(true);
+      if (this.autoCloseAlertTimeout) clearTimeout(this.autoCloseAlertTimeout);
+      this.autoCloseAlertTimeout = setTimeout(() => {
+        this.showDriverPassesDropdown.set(false);
+      }, 12000);
+    }
+  }
+
+  private handleNewPreReceptionAlert(rec: ReceptionHeader): void {
+    this.hasNewUnseenPreReception.set(true);
+    this.showReceptionAlertsDropdown.set(true);
+    this.playNotificationSound();
+
+    const clientName = rec.checkIn?.client || 'Cliente';
+    const folioStr = rec.folio || 'S/N';
+    this.toast.info(`🚚 ¡Nueva Pre-Recepción en Caseta! Folio #${folioStr} (${clientName}) arribó y espera atención en almacén.`, 7000);
+
+    if (this.autoCloseAlertTimeout) {
+      clearTimeout(this.autoCloseAlertTimeout);
+    }
+    this.autoCloseAlertTimeout = setTimeout(() => {
+      this.showReceptionAlertsDropdown.set(false);
+      this.hasNewUnseenPreReception.set(false);
+    }, 12000);
+  }
+
+  private playNotificationSound(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const now = ctx.currentTime;
+
+      // Tone 1: D5 (587.33 Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.18, now + 0.04);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+
+      // Tone 2: A5 (880 Hz)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, now + 0.12);
+      gain2.gain.setValueAtTime(0, now + 0.12);
+      gain2.gain.linearRampToValueAtTime(0.22, now + 0.16);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.6);
+    } catch (_) {}
+  }
 
   protected toggleReceptionAlerts(event: MouseEvent): void {
     event.stopPropagation();
     this.showProfileMenu.set(false);
     this.showWaffleMenu.set(false);
+    this.showDriverPassesDropdown.set(false);
+    this.showCriticalAlertsModal.set(false);
+    this.hasNewUnseenPreReception.set(false);
+    if (this.autoCloseAlertTimeout) {
+      clearTimeout(this.autoCloseAlertTimeout);
+    }
     this.showReceptionAlertsDropdown.update((v) => !v);
   }
 
-  protected openReceptionFromAlert(folio: string): void {
+  protected closeReceptionAlerts(): void {
     this.showReceptionAlertsDropdown.set(false);
+    this.hasNewUnseenPreReception.set(false);
+    if (this.autoCloseAlertTimeout) {
+      clearTimeout(this.autoCloseAlertTimeout);
+    }
+  }
+
+  protected goToReceptionsModule(): void {
+    this.closeReceptionAlerts();
+    this.router.navigate(['/warehouse-movements/receiving']);
+  }
+
+  protected openReceptionFromAlert(folio: string): void {
+    this.closeReceptionAlerts();
     this.router.navigate(['/warehouse-movements/receiving'], { queryParams: { folio } });
+  }
+
+  protected toggleDriverPassesAlerts(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showProfileMenu.set(false);
+    this.showWaffleMenu.set(false);
+    this.showReceptionAlertsDropdown.set(false);
+    this.showCriticalAlertsModal.set(false);
+    this.smartNotification.hasNewDriverSubmission.set(false);
+    if (this.autoCloseAlertTimeout) {
+      clearTimeout(this.autoCloseAlertTimeout);
+    }
+    this.showDriverPassesDropdown.update((v) => !v);
+  }
+
+  protected closeDriverPassesAlerts(): void {
+    this.showDriverPassesDropdown.set(false);
+    this.smartNotification.hasNewDriverSubmission.set(false);
+    if (this.autoCloseAlertTimeout) {
+      clearTimeout(this.autoCloseAlertTimeout);
+    }
+  }
+
+  protected goToSecurityModule(): void {
+    this.closeDriverPassesAlerts();
+    this.router.navigate(['/security']);
+  }
+
+  protected openDriverPassFromAlert(pass: any): void {
+    this.closeDriverPassesAlerts();
+    const token = pass.token || pass.id || pass.qrCode;
+    this.router.navigate(['/security'], { queryParams: { token } });
   }
 
   /** Listener global para abrir/cerrar ForBot con Ctrl + K */
@@ -343,6 +541,9 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (!target.closest('.shell__reception-pill-container')) {
       this.showReceptionAlertsDropdown.set(false);
     }
+    if (!target.closest('.shell__driver-pill-container')) {
+      this.showDriverPassesDropdown.set(false);
+    }
   }
 
   protected toggleWaffleMenu(event: MouseEvent): void {
@@ -547,6 +748,11 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.refreshIntervalId = setInterval(() => {
       this.runHeaderRefreshAnimation();
     }, 30000);
+
+    // Polling reactivo cada 6 segundos para recepciones de caseta en tiempo real
+    this.preReceptionPollIntervalId = setInterval(() => {
+      this.movementsService.reloadReceptions();
+    }, 6000);
   }
 
   ngOnDestroy(): void {
@@ -560,6 +766,14 @@ export class ShellComponent implements OnInit, OnDestroy {
 
     if (this.refreshTimeoutId) {
       clearTimeout(this.refreshTimeoutId);
+    }
+
+    if (this.preReceptionPollIntervalId) {
+      clearInterval(this.preReceptionPollIntervalId);
+    }
+
+    if (this.autoCloseAlertTimeout) {
+      clearTimeout(this.autoCloseAlertTimeout);
     }
   }
 

@@ -26,39 +26,33 @@ export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router      = inject(Router);
 
-  const isLogged      = authService.isAuthenticated();
+  const hasToken      = !!authService.getAccessToken();
   const isExpired     = authService.isTokenExpired();
+  const isLogged      = authService.isAuthenticated();
   const requestedUrl  = state.url;
 
   // ─ CASO 1: Sesión válida y token vigente ───────────────────────────────────
   if (isLogged && !isExpired) {
-    // El temporizador proactivo de renovación fue iniciado en handleAuthentication().
-    // No hay nada más que hacer: dejar pasar la navegación.
     return true;
   }
 
-  // ─ CASO 2: Sesión presente pero token expirado (refresco proactivo falló) ────
-  // ─ CASO 3: Sin sesión (primer acceso o sesión limpiada) ────────────────
-
-  // Preservar la URL actual como returnUrl para reanudar el proceso post-login.
-  // No guardar rutas excluidas (evitar redirigir a /login después del login).
+  // ─ CASO 2 / 3: Sesión expirada o inexistente ────────────────────────────────
   const shouldSaveReturnUrl =
     requestedUrl &&
     !EXCLUDED_RETURN_PATHS.some((p) => requestedUrl.startsWith(p));
 
   if (shouldSaveReturnUrl) {
     localStorage.setItem('4g_return_url', requestedUrl);
-    // Inferir el nombre del proceso desde la URL para el mensaje de reanudación.
     const processName = inferProcessName(requestedUrl);
     if (processName) {
       localStorage.setItem('4g_pending_process_name', processName);
     }
   }
 
-  // Limpiar la sesión local si el token expiró (estado inconsistente).
-  if (isLogged && isExpired) {
+  // Si había un token guardado pero ya expiró: limpiar y redirigir con razón de expiración
+  if (hasToken && isExpired) {
     authService.clearSessionAndRedirect('session_expired');
-    return false; // clearSessionAndRedirect ya navega a /login
+    return false;
   }
 
   // Sin sesión: redirigir directamente al login.

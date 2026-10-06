@@ -149,7 +149,9 @@ export class WarehouseMovementsApiService {
     if (options?.branchId) params = params.set('branchId', options.branchId);
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
-      map((res) => res.data || [])
+      timeout(8000),
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -160,7 +162,9 @@ export class WarehouseMovementsApiService {
     if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
-      map((res) => res.data || [])
+      timeout(8000),
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -333,7 +337,8 @@ export class WarehouseMovementsApiService {
     if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(this.receptionsUrl, { params }).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -346,7 +351,10 @@ export class WarehouseMovementsApiService {
     return this.http.get<ApiResponse<{ nextPalletNumber: number; lastPalletNumber: number }>>(
       `${this.receptionsUrl}/next-pallet-number`,
       { params }
-    ).pipe(map((res) => res.data));
+    ).pipe(
+      map((res) => res.data),
+      catchError(() => of({ nextPalletNumber: 1, lastPalletNumber: 0 }))
+    );
   }
 
   addReceptionPallets(receptionId: string, pallets: any[]): Observable<any[]> {
@@ -357,7 +365,8 @@ export class WarehouseMovementsApiService {
 
   getReceptionLots(receptionId: string): Observable<any[]> {
     return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/${receptionId}/lots`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -405,7 +414,8 @@ export class WarehouseMovementsApiService {
 
   getReceptionAudit(id: string): Observable<any[]> {
     return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/${id}/audit`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -417,7 +427,8 @@ export class WarehouseMovementsApiService {
 
   getRemissionTree(folio: string): Observable<any[]> {
     return this.http.get<ApiResponse<any[]>>(`${this.receptionsUrl}/remissions/${folio}/tree`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -428,7 +439,8 @@ export class WarehouseMovementsApiService {
     if (branch) params = params.set('branchId', branch);
 
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/locations/bays/occupancy`, { params }).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -454,7 +466,8 @@ export class WarehouseMovementsApiService {
     if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(this.transfersUrl, { params }).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -466,7 +479,8 @@ export class WarehouseMovementsApiService {
 
   getTransferAudit(id: string): Observable<any[]> {
     return this.http.get<ApiResponse<any[]>>(`${this.transfersUrl}/${id}/audit`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -498,7 +512,8 @@ export class WarehouseMovementsApiService {
     if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(this.outboundsUrl, { params }).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -523,7 +538,8 @@ export class WarehouseMovementsApiService {
     if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(`${this.outboundsUrl}/inventory-batches`, { params }).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -560,21 +576,24 @@ export class WarehouseMovementsApiService {
   getCarriers(orgId?: string): Observable<any[]> {
     const id = orgId || this.getSessionOrgId();
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/carriers?organizationId=${id}`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
   getClients(orgId?: string): Observable<any[]> {
     const id = orgId || this.getSessionOrgId();
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/clients?organizationId=${id}&status=ACTIVE`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
   getForkliftOperators(orgId?: string): Observable<any[]> {
     const id = orgId || this.getSessionOrgId();
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/forklift-operators?organizationId=${id}&status=ACTIVO`).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -582,7 +601,8 @@ export class WarehouseMovementsApiService {
     let url = `${this.baseUrl}/api/v1/locations`;
     if (branchId) url += `?branchId=${branchId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -590,7 +610,8 @@ export class WarehouseMovementsApiService {
     let url = `${this.baseUrl}/api/v1/product-skus`;
     if (clientId) url += `?clientId=${clientId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
-      map((res) => res.data || [])
+      map((res) => res.data || []),
+      catchError(() => of([]))
     );
   }
 
@@ -602,7 +623,8 @@ export class WarehouseMovementsApiService {
         if (Array.isArray(res.data)) return res.data;
         if (Array.isArray(res.data.content)) return res.data.content;
         return [];
-      })
+      }),
+      catchError(() => of([]))
     );
   }
 
@@ -628,7 +650,14 @@ export class WarehouseMovementsApiService {
           transportTypes: raw.transportTypes || [],
           boxDimensions: raw.boxDimensions || [],
         };
-      })
+      }),
+      catchError(() => of({
+        clients: [],
+        carriers: [],
+        carrierLines: [],
+        transportTypes: [],
+        boxDimensions: [],
+      }))
     );
   }
 }

@@ -215,24 +215,44 @@ export class AuthState {
     const role = this.role();
     if (!role) return false;
 
-    // Guardia de seguridad: Acceso EXCLUSIVO a Caseta de Seguridad
+    // Super Administradores, Administradores, Gerentes y Directores tienen acceso completo
+    if (
+      role === 'SUPER_ADMIN' ||
+      role === 'ROLE_SUPER_ADMIN' ||
+      role === 'ROLE_ADMIN' ||
+      role === 'ADMIN' ||
+      role === 'OPERATIONS_MANAGER' ||
+      role === 'ROLE_OPERATIONS_MANAGER' ||
+      role === 'CEO' ||
+      role === 'ROLE_CEO' ||
+      role === 'WAREHOUSE_MANAGER' ||
+      role === 'ROLE_WAREHOUSE_MANAGER' ||
+      role === 'OPERATIONS_SUPERVISOR' ||
+      role === 'ROLE_OPERATIONS_SUPERVISOR' ||
+      role === 'WAREHOUSE_SUPERVISOR' ||
+      role === 'ROLE_WAREHOUSE_SUPERVISOR' ||
+      role === 'SHIFT_LEADER' ||
+      role === 'ROLE_SHIFT_LEADER'
+    ) {
+      return true;
+    }
+
+    // Guardia de seguridad / Vigilancia
     if (
       role === 'SECURITY_GUARD' ||
       role === 'ROLE_SECURITY_GUARD' ||
       role === 'VIGILANCIA' ||
       role === 'ROLE_VIGILANCIA'
     ) {
-      return module === 'security';
-    }
-
-    // Los Administradores y Gerentes de Operaciones tienen acceso completo
-    if (
-      role === 'ROLE_ADMIN' ||
-      role === 'ADMIN' ||
-      role === 'OPERATIONS_MANAGER' ||
-      role === 'ROLE_OPERATIONS_MANAGER'
-    ) {
-      return true;
+      return (
+        module === 'security' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
+        module === 'dashboard' ||
+        module === 'carriers' ||
+        module === 'catalogs'
+      );
     }
 
     const permissions = this.permissions();

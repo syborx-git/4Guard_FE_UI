@@ -778,6 +778,157 @@
   color: #fbbf24;
 }
 
+.shell__alert-badge--driver {
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.15);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.shell__alert-badge--driver:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.6);
+  transform: translateY(-1px);
+}
+
+.shell__alert-badge--driver .shell__alert-icon {
+  color: #34d399 !important;
+}
+
+/* Driver QR Dropdown customizations */
+.driver-dropdown__icon-wrap {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #059669 !important;
+}
+
+:host-context(.theme-dark) .driver-dropdown__icon-wrap,
+:host-context(.dark) .driver-dropdown__icon-wrap {
+  color: #34d399 !important;
+}
+
+.driver-dropdown__badge {
+  color: #059669 !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+:host-context(.theme-dark) .driver-dropdown__badge,
+:host-context(.dark) .driver-dropdown__badge {
+  color: #34d399 !important;
+}
+
+.driver-dropdown__arrival-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #047857;
+}
+
+:host-context(.theme-dark) .driver-dropdown__arrival-banner,
+:host-context(.dark) .driver-dropdown__arrival-banner {
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.driver-dropdown__folio {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #059669;
+}
+
+:host-context(.theme-dark) .driver-dropdown__folio,
+:host-context(.dark) .driver-dropdown__folio {
+  color: #34d399;
+}
+
+.driver-dropdown__status-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #047857;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+}
+
+:host-context(.theme-dark) .driver-dropdown__status-badge,
+:host-context(.dark) .driver-dropdown__status-badge {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.driver-dropdown__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.32rem 0.75rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.18s ease;
+}
+
+.driver-dropdown__action-btn:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
+}
+
+.driver-dropdown__footer-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+:host-context(.theme-dark) .driver-dropdown__footer-btn,
+:host-context(.dark) .driver-dropdown__footer-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.driver-dropdown__footer-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #059669;
+}
+
+:host-context(.theme-dark) .driver-dropdown__footer-btn:hover,
+:host-context(.dark) .driver-dropdown__footer-btn:hover {
+  color: #34d399;
+}
+
 /* ─────────────────────────────────────────────────────────────
    PANEL FLOTANTE DE NOTIFICACIONES (PRE-RECEPCIONES)
    ───────────────────────────────────────────────────────────── */
@@ -1074,6 +1225,153 @@
   background: linear-gradient(135deg, #f5e2a2 0%, #d4af37 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(184, 134, 11, 0.45);
+}
+
+.reception-dropdown__close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reception-dropdown__close-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.reception-dropdown__arrival-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b8860b;
+}
+
+:host-context(.theme-dark) .reception-dropdown__arrival-banner,
+:host-context(.dark) .reception-dropdown__arrival-banner {
+  color: #fde047;
+  background: rgba(234, 179, 8, 0.18);
+  border-color: rgba(234, 179, 8, 0.45);
+}
+
+.reception-dropdown__footer {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+:host-context(.theme-dark) .reception-dropdown__footer,
+:host-context(.dark) .reception-dropdown__footer {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.reception-dropdown__footer-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+:host-context(.theme-dark) .reception-dropdown__footer-btn,
+:host-context(.dark) .reception-dropdown__footer-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.reception-dropdown__footer-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: rgba(212, 175, 55, 0.4);
+  color: #b8860b;
+}
+
+:host-context(.theme-dark) .reception-dropdown__footer-btn:hover,
+:host-context(.dark) .reception-dropdown__footer-btn:hover {
+  color: #fbbf24;
+}
+
+.shell__alert-badge--pulse {
+  animation: pre-reception-gold-pulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.45);
+}
+
+@keyframes pre-reception-gold-pulse {
+  0%, 100% {
+    background: rgba(234, 179, 8, 0.2);
+    border-color: rgba(234, 179, 8, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    background: rgba(234, 179, 8, 0.38);
+    border-color: rgba(234, 179, 8, 0.95);
+    box-shadow: 0 0 24px rgba(234, 179, 8, 0.65);
+    transform: scale(1.04);
+  }
+}
+
+.shell__alert-beacon {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+  margin-left: 2px;
+  animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.shell__alert-badge--pulse-driver {
+  animation: driver-qr-emerald-pulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.45);
+}
+
+@keyframes driver-qr-emerald-pulse {
+  0%, 100% {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    background: rgba(16, 185, 129, 0.38);
+    border-color: rgba(52, 211, 153, 0.95);
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.65);
+    transform: scale(1.04);
+  }
+}
+
+.shell__alert-beacon--driver {
+  background: #34d399 !important;
+  box-shadow: 0 0 8px #34d399 !important;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 @keyframes critical-soft-pulse {

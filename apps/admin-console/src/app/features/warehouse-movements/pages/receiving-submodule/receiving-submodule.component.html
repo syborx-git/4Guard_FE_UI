@@ -290,8 +290,8 @@
                 <div class="executive-detail-col">
                   <span class="executive-detail-label">UBICACIÓN ANDÉN</span>
                   <div class="executive-detail-val">
-                    <span class="filter-pill-dot dot--amber"></span>
-                    <span>Rampa {{ rec.checkIn.rampNumber }}</span>
+                    <span class="filter-pill-dot" [ngClass]="rec.checkIn.rampNumber ? 'dot--amber' : 'dot--slate'"></span>
+                    <span>{{ rec.checkIn.rampNumber ? ('Rampa ' + rec.checkIn.rampNumber) : 'Sin Rampa Asignada' }}</span>
                   </div>
                 </div>
                 <div class="executive-detail-col">
@@ -1243,7 +1243,7 @@
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Rampa Bloqueada</span>
-                  <span class="reception-readonly-val font-bold text-amber-700 dark:text-amber-400">Rampa {{ rec.checkIn?.rampNumber }}</span>
+                  <span class="reception-readonly-val font-bold text-amber-700 dark:text-amber-400">{{ rec.checkIn?.rampNumber ? ('Rampa ' + rec.checkIn.rampNumber) : 'Por Asignar' }}</span>
                 </div>
                 <div class="reception-readonly-item sm:col-span-2">
                   <span class="reception-readonly-label">Producto / SKU</span>
