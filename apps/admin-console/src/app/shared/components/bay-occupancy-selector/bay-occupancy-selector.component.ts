@@ -30,6 +30,7 @@ export interface BaySelectionResult {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './bay-occupancy-selector.component.html',
+  styleUrls: ['./bay-occupancy-selector.component.css'],
 })
 export class BayOccupancySelectorComponent implements OnInit {
   private readonly apiService = inject(WarehouseMovementsApiService);

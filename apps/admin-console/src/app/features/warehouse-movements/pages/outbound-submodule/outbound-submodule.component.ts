@@ -25,6 +25,7 @@ import {
 } from '../../models/warehouse-movements.models';
 import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
 import { PrintOutboundCancellationLayoutComponent } from '../../components/print-layouts/print-outbound-cancellation-layout.component';
+import { SmartNotificationService } from '../../../../core/services/smart-notification.service';
 
 export interface ForkliftOperatorOption {
   id: string;
@@ -95,6 +96,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
+  private readonly smartNotification = inject(SmartNotificationService);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
   protected readonly authState = inject(AuthState);
@@ -1985,6 +1987,21 @@ export class OutboundSubmoduleComponent implements OnInit {
 
     this.isAssigningRamp.set(true);
 
+    const notifyCaseta = (outbound: WarehouseOutbound) => {
+      const rLabel = rampNum ? `R-${String(rampNum).padStart(2, '0')}` : 'Andén';
+      this.smartNotification.dispatch({
+        category: 'SECURITY',
+        title: '🎯 Rampa Asignada por Almacén',
+        message: `Rampa ${rLabel} asignada para Salida Folio #${outbound.folio} (${outbound.clientName || 'Cliente'}) — Chofer: ${outbound.driverName || 'Transportista'} (Placas: ${outbound.tractorPlates})`,
+        referenceFolio: String(outbound.folio),
+        route: '/security',
+        targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+        targetRoutes: ['/security'],
+        severity: 'SUCCESS',
+        data: outbound
+      });
+    };
+
     if (cur.id && cur.id.includes('-')) {
       this.movementsApi.updateOutbound(cur.id, {
         status: 'ASSIGNED',
@@ -2000,6 +2017,7 @@ export class OutboundSubmoduleComponent implements OnInit {
             this.selectedOutbound.set(updated);
             this.loadAuditLogs(updated.id || updated.folio);
             this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+            notifyCaseta(updated);
           }
         },
         error: () => {
@@ -2009,6 +2027,7 @@ export class OutboundSubmoduleComponent implements OnInit {
             this.selectedOutbound.set(updated);
             this.loadAuditLogs(updated.id || updated.folio);
             this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+            notifyCaseta(updated);
           }
         }
       });
@@ -2019,6 +2038,7 @@ export class OutboundSubmoduleComponent implements OnInit {
         this.selectedOutbound.set(updated);
         this.loadAuditLogs(updated.id || updated.folio);
         this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+        notifyCaseta(updated);
       }
     }
   }

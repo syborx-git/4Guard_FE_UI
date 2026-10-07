@@ -1,0 +1,392 @@
+@if (totalVisibleCount() > 0) {
+  <div class="op-notif__container relative" (click)="$event.stopPropagation()">
+    <!-- Botón / Pill Superior en Barra de Navegación -->
+    <button
+      type="button"
+      (click)="toggleDropdown($event)"
+      class="op-notif__badge cursor-pointer"
+      [class.op-notif__badge--pulse]="hasNewArrivalBeacon()"
+      [class.op-notif__badge--security]="isSecurityContext()"
+      [class.op-notif__badge--quality]="isQualityContext()"
+      [attr.title]="'Notificaciones Operativas (' + totalVisibleCount() + ' activas)'"
+    >
+      <div class="op-notif__badge-icon-box">
+        <span class="material-symbols-outlined op-notif__icon" [class.animate-pulse]="hasNewArrivalBeacon()">
+          @if (isSecurityContext()) {
+            {{ pendingRampAssignmentsCount() > 0 ? 'dock' : 'qr_code_scanner' }}
+          } @else if (isQualityContext()) {
+            warning
+          } @else {
+            move_to_inbox
+          }
+        </span>
+      </div>
+
+      <div class="op-notif__badge-content">
+        <span class="op-notif__badge-text">
+          @if (isSecurityContext()) {
+            @if (pendingRampAssignmentsCount() > 0 && pendingDriverPassesCount() > 0) {
+              {{ totalSecurityAlertsCount() }} EN ESPERA CASETA
+            } @else if (pendingRampAssignmentsCount() > 0) {
+              {{ pendingRampAssignmentsCount() }} {{ pendingRampAssignmentsCount() === 1 ? 'RAMPA ASIGNADA' : 'RAMPAS ASIGNADAS' }}
+            } @else {
+              {{ pendingDriverPassesCount() }} {{ pendingDriverPassesCount() === 1 ? 'CHOFER QR' : 'CHOFERES QR' }}
+            }
+          } @else if (isQualityContext()) {
+            {{ blockedQualityCount() }} {{ blockedQualityCount() === 1 ? 'BLOQUEO QM' : 'BLOQUEOS QM' }}
+          } @else {
+            {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
+          }
+        </span>
+      </div>
+
+      @if (hasNewArrivalBeacon()) {
+        <span class="op-notif__beacon" aria-hidden="true">
+          <span class="op-notif__beacon-ping"></span>
+        </span>
+      }
+    </button>
+
+    <!-- Modal Dropdown Flotante con las Notificaciones Operativas -->
+    @if (isOpen()) {
+      <div class="op-notif__dropdown shadow-2xl animate-fade-up">
+        
+        <!-- Header del Dropdown -->
+        <div class="op-notif__header">
+          <div class="op-notif__header-left">
+            <div class="op-notif__icon-wrap" [class.op-notif__icon-wrap--security]="isSecurityContext()" [class.op-notif__icon-wrap--quality]="isQualityContext()">
+              <span class="material-symbols-outlined text-[20px]">
+                @if (isSecurityContext()) {
+                  {{ pendingRampAssignmentsCount() > 0 ? 'dock' : 'local_police' }}
+                } @else if (isQualityContext()) {
+                  fact_check
+                } @else {
+                  move_to_inbox
+                }
+              </span>
+            </div>
+            <div class="op-notif__header-text">
+              <div class="op-notif__title-row">
+                <h4 class="op-notif__title">
+                  @if (isSecurityContext()) {
+                    Eventos de Caseta &amp; Andenes
+                  } @else if (isQualityContext()) {
+                    Alertas de Calidad QM
+                  } @else {
+                    Pre-Recepciones en Caseta
+                  }
+                </h4>
+                <span class="op-notif__live-pill">
+                  <span class="op-notif__live-dot"></span>
+                  <span>EN VIVO</span>
+                </span>
+              </div>
+              <p class="op-notif__subtitle">
+                @if (isSecurityContext()) {
+                  Auto-registros de transportistas y andenes en tiempo real
+                } @else if (isQualityContext()) {
+                  Lotes en cuarentena e inspecciones pendientes
+                } @else {
+                  Unidades listas para descarga en almacén
+                }
+              </p>
+            </div>
+          </div>
+
+          <div class="op-notif__header-right">
+            <span class="op-notif__count-badge font-mono">
+              {{ totalVisibleCount() }} en cola
+            </span>
+            <button
+              type="button"
+              (click)="closeDropdown()"
+              class="op-notif__close-btn"
+              aria-label="Cerrar ventana"
+            >
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Banners Dinámicos de Novedad en Tiempo Real -->
+        @if (hasNewUnseenPreReception() && isReceivingContext()) {
+          <div class="op-notif__arrival-banner op-notif__arrival-banner--gold">
+            <span class="material-symbols-outlined text-[18px] text-amber-400 animate-bounce">local_shipping</span>
+            <div class="flex-1 text-left">
+              <div class="font-bold">¡Nueva unidad en Caseta lista para descarga!</div>
+              <div class="text-[11px] opacity-90">Verifique folio y asigne rampa de descarga.</div>
+            </div>
+          </div>
+        }
+        @if (hasNewRampAssignment() && isSecurityContext()) {
+          <div class="op-notif__arrival-banner op-notif__arrival-banner--emerald">
+            <span class="material-symbols-outlined text-[18px] text-emerald-400 animate-bounce">dock</span>
+            <div class="flex-1 text-left">
+              <div class="font-bold">¡Almacén asignó rampa de descarga!</div>
+              <div class="text-[11px] opacity-90">Indique al operador avanzar a la rampa asignada.</div>
+            </div>
+          </div>
+        }
+        @if (hasNewUnseenDriverPass() && isSecurityContext()) {
+          <div class="op-notif__arrival-banner op-notif__arrival-banner--emerald">
+            <span class="material-symbols-outlined text-[18px] text-emerald-400 animate-bounce">how_to_reg</span>
+            <div class="flex-1 text-left">
+              <div class="font-bold">¡Nuevo transportista completó el auto-registro F01!</div>
+              <div class="text-[11px] opacity-90">Haga clic en <strong>Cargar en Caseta</strong> para procesar su acceso.</div>
+            </div>
+          </div>
+        }
+
+        <!-- Cola de Tarjetas según Categoría -->
+        <div class="op-notif__list">
+          
+          <!-- ── SECCIÓN 1: PRE-RECEPCIONES (RECEPCIÓN / SUPERVISOR) ── -->
+          @if (isReceivingContext()) {
+            @for (rec of pendingReceptions(); track rec.folio) {
+              <div class="op-notif__card op-notif__card--receiving">
+                <div class="op-notif__card-header">
+                  <div class="op-notif__card-header-left">
+                    <span class="op-notif__pill op-notif__pill--amber">
+                      <span>📥</span>
+                      <span>RECEPCIÓN</span>
+                    </span>
+                    <span class="op-notif__folio-chip font-mono">#{{ rec.folio }}</span>
+                  </div>
+                  <div class="op-notif__card-header-right">
+                    <span class="op-notif__ramp-badge">
+                      {{ rec.checkIn.rampNumber ? 'Rampa ' + rec.checkIn.rampNumber : (rec.checkIn.rampCode || 'Por Asignar') }}
+                    </span>
+                    <span class="op-notif__time">{{ rec.checkIn.receptionTime || 'Reciente' }}</span>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-body">
+                  <div class="op-notif__avatar-box">
+                    <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                  </div>
+                  <div class="op-notif__info-box">
+                    <div class="op-notif__entity-title">{{ rec.checkIn.client }}</div>
+                    <div class="op-notif__details-row">
+                      <span class="op-notif__carrier-name">🚚 {{ rec.checkIn.carrierLine }}</span>
+                      <span class="op-notif__dot">·</span>
+                      <span class="op-notif__doc-tag">Doc: <strong>{{ rec.checkIn.docNumber || 'S/N' }}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-footer">
+                  <span class="op-notif__driver-tag">
+                    <span class="material-symbols-outlined text-[14px]">person</span>
+                    <span>{{ rec.checkIn.driverName || 'Operador transportista' }}</span>
+                  </span>
+                  <button
+                    type="button"
+                    (click)="openReception(rec.folio)"
+                    class="op-notif__action-btn op-notif__action-btn--gold"
+                  >
+                    <span>Atender Folio</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+
+          <!-- ── SECCIÓN 2: RAMPAS ASIGNADAS (CASETA) ── -->
+          @if (isSecurityContext()) {
+            @for (ramp of pendingRampAssignments(); track ramp.folio) {
+              <div class="op-notif__card op-notif__card--ramp">
+                <div class="op-notif__card-header">
+                  <div class="op-notif__card-header-left">
+                    <span class="op-notif__pill op-notif__pill--emerald">
+                      <span>🏢</span>
+                      <span>RAMPA ASIGNADA</span>
+                    </span>
+                    <span class="op-notif__folio-chip font-mono">#{{ ramp.folio }}</span>
+                  </div>
+                  <div class="op-notif__card-header-right">
+                    <span class="op-notif__ramp-badge op-notif__ramp-badge--emerald font-mono">
+                      Rampa {{ ramp.rampNumber }}
+                    </span>
+                    <span class="op-notif__time">{{ ramp.time }}</span>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-body">
+                  <div class="op-notif__avatar-box op-notif__avatar-box--emerald">
+                    <span class="material-symbols-outlined text-[20px]">dock</span>
+                  </div>
+                  <div class="op-notif__info-box">
+                    <div class="op-notif__entity-title">{{ ramp.client }}</div>
+                    <div class="op-notif__details-row">
+                      <span>👤 {{ ramp.driverName }}</span>
+                      <span class="op-notif__dot">·</span>
+                      <span class="font-mono">Placas: <strong>{{ ramp.tractorPlates }}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-footer">
+                  <span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[15px]">verified</span>
+                    Andén Asignado
+                  </span>
+                  <button
+                    type="button"
+                    (click)="openRampAlert(ramp)"
+                    class="op-notif__action-btn op-notif__action-btn--emerald"
+                  >
+                    <span>Dar Acceso</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Pases Chofer QR (Auto-Registro Móvil Transportista) -->
+            @for (pass of pendingDriverPasses(); track (pass.token || pass.id)) {
+              <div class="op-notif__card op-notif__card--driver">
+                <div class="op-notif__card-header">
+                  <div class="op-notif__card-header-left">
+                    <span class="op-notif__pill" [class.op-notif__pill--emerald]="pass.operationType !== 'CARGA'" [class.op-notif__pill--blue]="pass.operationType === 'CARGA'">
+                      <span>{{ pass.operationType === 'CARGA' ? '📤' : '📥' }}</span>
+                      <span>{{ pass.operationType === 'CARGA' ? 'CARGA' : 'DESCARGA' }}</span>
+                    </span>
+                    <span class="op-notif__folio-chip font-mono">#{{ pass.token || pass.id }}</span>
+                  </div>
+                  <div class="op-notif__card-header-right">
+                    <span class="op-notif__status-badge font-mono">
+                      ✓ F01 ENVIADO
+                    </span>
+                    <span class="op-notif__time">{{ pass.receptionTime || 'Reciente' }}</span>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-body">
+                  <div class="op-notif__avatar-box op-notif__avatar-box--emerald">
+                    <span class="material-symbols-outlined text-[20px]">person</span>
+                  </div>
+                  <div class="op-notif__info-box">
+                    <div class="op-notif__entity-title">{{ pass.driverName || pass.nombreOperador || 'Operador Transportista' }}</div>
+                    <div class="op-notif__details-row">
+                      <span class="op-notif__carrier-name">🚚 {{ pass.carrierLine || pass.carrierLineCode || 'Transportista' }}</span>
+                      <span class="op-notif__dot">·</span>
+                      <span class="font-mono text-[11px]">Placas: <strong>{{ pass.tractorPlates || pass.placasTracto || 'S/P' }}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-footer">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-emerald-400 font-mono text-[11px] flex items-center gap-1 font-semibold">
+                      <span class="material-symbols-outlined text-[15px]">smartphone</span>
+                      <span>Auto-Registro QR</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="openDriverPass(pass)"
+                    class="op-notif__action-btn op-notif__action-btn--primary-cta"
+                    title="Cargar automáticamente todos los datos del transportista en el formulario de Caseta"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">download</span>
+                    <span>Cargar en Caseta</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+
+          <!-- ── SECCIÓN 3: BLOQUEOS DE CALIDAD (CALIDAD QM) ── -->
+          @if (isQualityContext()) {
+            @for (blk of blockedQualityItems(); track blk.id) {
+              <div class="op-notif__card op-notif__card--quality">
+                <div class="op-notif__card-header">
+                  <div class="op-notif__card-header-left">
+                    <span class="op-notif__pill op-notif__pill--rose">
+                      <span>⚠️</span>
+                      <span>BLOQUEO QM</span>
+                    </span>
+                    <span class="op-notif__folio-chip font-mono">#{{ blk.folio }}</span>
+                  </div>
+                  <div class="op-notif__card-header-right">
+                    <span class="op-notif__ramp-badge op-notif__ramp-badge--rose font-mono">
+                      {{ blk.defectCategory || 'Defecto' }}
+                    </span>
+                    <span class="op-notif__time">{{ blk.reportedAt | date:'shortTime' }}</span>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-body">
+                  <div class="op-notif__avatar-box op-notif__avatar-box--rose">
+                    <span class="material-symbols-outlined text-[20px]">block</span>
+                  </div>
+                  <div class="op-notif__info-box">
+                    <div class="op-notif__entity-title">{{ blk.clientName }}</div>
+                    <div class="op-notif__details-row">
+                      <span>SKU: <strong>{{ blk.sku }}</strong></span>
+                      <span class="op-notif__dot">·</span>
+                      <span>Lote: {{ blk.batchNumber }} ({{ blk.quantity }} {{ blk.unitOfMeasure }})</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-footer">
+                  <span class="text-rose-400 font-mono text-[11px] flex items-center gap-1 font-bold">
+                    <span class="material-symbols-outlined text-[14px]">gavel</span>
+                    En Cuarentena
+                  </span>
+                  <button
+                    type="button"
+                    (click)="openQualityBlock(blk)"
+                    class="op-notif__action-btn op-notif__action-btn--rose"
+                  >
+                    <span>Inspeccionar Lote</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+
+        </div>
+
+        <!-- Footer del Dropdown según el contexto (oculto si ya está en la vista correspondiente) -->
+        @if (showFooterButton()) {
+          <div class="op-notif__footer">
+            @if (isSecurityContext()) {
+              <button
+                type="button"
+                (click)="goToSecurityModule()"
+                class="op-notif__footer-btn op-notif__footer-btn--emerald"
+              >
+                <span class="material-symbols-outlined text-[16px]">security</span>
+                <span>Ir al Módulo de Caseta</span>
+              </button>
+            } @else if (isQualityContext()) {
+              <button
+                type="button"
+                (click)="goToQualityModule()"
+                class="op-notif__footer-btn op-notif__footer-btn--rose"
+              >
+                <span class="material-symbols-outlined text-[16px]">verified</span>
+                <span>Ir al Tablero de Calidad</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                (click)="goToReceptionsModule()"
+                class="op-notif__footer-btn"
+              >
+                <span class="material-symbols-outlined text-[16px]">move_to_inbox</span>
+                <span>Ir a Mesa de Recepciones</span>
+              </button>
+            }
+          </div>
+        }
+
+      </div>
+    }
+  </div>
+}

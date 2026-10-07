@@ -143,14 +143,41 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  loadExitedPassTokens(): Set<string> {
+    try {
+      const stored = localStorage.getItem('4g_exited_passes');
+      return stored ? new Set(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  }
+
+  saveExitedPassTokens(set: Set<string>): void {
+    try {
+      localStorage.setItem('4g_exited_passes', JSON.stringify(Array.from(set)));
+    } catch {
+      // Ignore
+    }
+  }
+
   getInYardPasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
     if (options?.branchId) params = params.set('branchId', options.branchId);
 
+    const exitedSet = this.loadExitedPassTokens();
+
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
       timeout(8000),
-      map((res) => res.data || []),
+      map((res) => {
+        const list = res.data || [];
+        return list.filter((p: any) => {
+          const tok = (p.token || '').trim().toUpperCase();
+          const fol = (p.generatedFolio || '').trim().toUpperCase();
+          const id = (p.id || '').trim().toUpperCase();
+          return !exitedSet.has(tok) && !exitedSet.has(fol) && !exitedSet.has(id) && p.status !== 'COMPLETED_EXIT';
+        });
+      }),
       catchError(() => of([]))
     );
   }
@@ -169,14 +196,59 @@ export class WarehouseMovementsApiService {
   }
 
   completePassCheckin(token: string, body: any): Observable<any> {
+    const cleanToken = (token || '').trim().toUpperCase();
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/complete`, body).pipe(
-      map((res) => res.data)
+      map((res) => {
+        const pass = res?.data;
+        const list = this.loadLocalPassesFromStorage().map(p => {
+          const pTok = (p.token || '').trim().toUpperCase();
+          const pId = (p.id || '').trim().toUpperCase();
+          if (pTok === cleanToken || pId === cleanToken) {
+            return {
+              ...p,
+              ...pass,
+              status: 'COMPLETED',
+              generatedFolio: pass?.generatedFolio || p.generatedFolio
+            };
+          }
+          return p;
+        });
+        this.saveLocalPassesToStorage(list);
+        return pass;
+      })
     );
   }
 
   checkOutPass(token: string, body: any): Observable<any> {
+    const cleanToken = (token || '').trim().toUpperCase();
+    const exitedSet = this.loadExitedPassTokens();
+    if (cleanToken) exitedSet.add(cleanToken);
+    this.saveExitedPassTokens(exitedSet);
+
+    // Actualizar también en 4g_local_passes
+    const list = this.loadLocalPassesFromStorage().map(p => {
+      const pTok = (p.token || '').trim().toUpperCase();
+      const pId = (p.id || '').trim().toUpperCase();
+      const pFol = (p.generatedFolio || '').trim().toUpperCase();
+      if (pTok === cleanToken || pId === cleanToken || pFol === cleanToken) {
+        return { ...p, status: 'COMPLETED_EXIT', isReadyForExit: false, departureTime: body.departureTime };
+      }
+      return p;
+    });
+    this.saveLocalPassesToStorage(list);
+
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/check-out`, body).pipe(
-      map((res) => res.data)
+      map((res) => {
+        if (res?.data?.generatedFolio) {
+          exitedSet.add(res.data.generatedFolio.trim().toUpperCase());
+          this.saveExitedPassTokens(exitedSet);
+        }
+        if (res?.data?.token) {
+          exitedSet.add(res.data.token.trim().toUpperCase());
+          this.saveExitedPassTokens(exitedSet);
+        }
+        return res.data;
+      })
     );
   }
 

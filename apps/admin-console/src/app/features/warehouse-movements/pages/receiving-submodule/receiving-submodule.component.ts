@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
+import { SmartNotificationService } from '../../../../core/services/smart-notification.service';
 import { WarehouseMovementsService, isUuid } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import {
@@ -56,6 +57,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly qualityState = inject(QualityStateService);
+  private readonly smartNotification = inject(SmartNotificationService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
@@ -254,12 +256,36 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.showEditCasetaModal.set(false);
         this.toast.success('Ficha operativa actualizada y guardada correctamente en la base de datos.');
         this.loadAuditLogs(persisted.id || persisted.folio);
+
+        this.smartNotification.dispatch({
+          category: 'SECURITY',
+          title: '🎯 Rampa/Ficha Actualizada en Almacén',
+          message: `Rampa R-${String(rNum).padStart(2, '0')} actualizada para Folio #${persisted.folio} (${updatedCheckIn.client || 'Cliente'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
+          referenceFolio: persisted.folio,
+          route: '/security',
+          targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+          targetRoutes: ['/security'],
+          severity: 'INFO',
+          data: persisted
+        });
       },
       error: () => {
         this.selectedReception.set(updatedReception);
         this.altaForm.patchValue({ rampNumber: rNum });
         this.showEditCasetaModal.set(false);
         this.toast.success('Ficha operativa actualizada.');
+
+        this.smartNotification.dispatch({
+          category: 'SECURITY',
+          title: '🎯 Rampa/Ficha Actualizada en Almacén',
+          message: `Rampa R-${String(rNum).padStart(2, '0')} actualizada para Folio #${currentRec.folio} (${updatedCheckIn.client || 'Cliente'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
+          referenceFolio: currentRec.folio,
+          route: '/security',
+          targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+          targetRoutes: ['/security'],
+          severity: 'INFO',
+          data: updatedReception
+        });
       }
     });
 
@@ -1583,6 +1609,21 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.patchAltaFormWithReception(updated);
           this.loadAuditLogs(updated.folio);
           this.toast.success(`¡Folio #${updated.folio} asignado a Rampa ${updated.checkIn.rampNumber} y Montacarguista ${updated.checkIn.forkliftOperator}! Notificación enviada a la terminal.`);
+
+          // Despachar alerta en vivo a Caseta de Seguridad
+          const rNum = updated.checkIn.rampNumber;
+          const rLabel = rNum ? `R-${String(rNum).padStart(2, '0')}` : 'Andén';
+          this.smartNotification.dispatch({
+            category: 'SECURITY',
+            title: '🎯 Rampa Asignada por Almacén',
+            message: `Rampa ${rLabel} asignada para Folio #${updated.folio} (${updated.checkIn.client || 'Cliente'}) — Chofer: ${updated.checkIn.driverName || 'Transportista'} (Placas: ${updated.checkIn.tractorPlates})`,
+            referenceFolio: updated.folio,
+            route: '/security',
+            targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+            targetRoutes: ['/security'],
+            severity: 'SUCCESS',
+            data: updated
+          });
         },
         error: (err) => {
           this.isAssigning.set(false);

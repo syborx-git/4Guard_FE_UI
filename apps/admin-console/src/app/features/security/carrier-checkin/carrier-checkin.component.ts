@@ -53,7 +53,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   ];
 
   private readonly defaultTransports = [
-    'Camioneta',
     'Tortón',
     'Tráiler',
     'Otro (Especificar)'
@@ -117,19 +116,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     medidasCaja: ['', Validators.required],
     tipoTransporte: ['', Validators.required],
 
-    // Criterios EPP
-    eppZapatos: ['SI', Validators.required],
-    eppCofia: ['SI', Validators.required],
-    eppCubrebocas: ['SI', Validators.required],
-    eppChaleco: ['SI', Validators.required],
-
-    // Criterios Unidad
-    revInteriorCaja: ['SI', Validators.required],
-    revDanosCaja: ['NO', Validators.required],
-    revDanosPuertas: ['NO', Validators.required],
-    revOloresExtranos: ['NO', Validators.required],
-    revIndiciosPlagas: ['NO', Validators.required],
-
     observaciones: [''],
     declaracionVerdad: [false, Validators.requiredTrue]
   });
@@ -188,7 +174,11 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
             this.carrierLinesList.set(carriers);
           }
           if (data.transportTypes && Array.isArray(data.transportTypes) && data.transportTypes.length > 0) {
-            this.transportTypesList.set(data.transportTypes);
+            const allowed = ['Tortón', 'Tráiler', 'Otro (Especificar)'];
+            const filtered = data.transportTypes.filter((t: string) => allowed.includes(t));
+            this.transportTypesList.set(filtered.length > 0 ? filtered : allowed);
+          } else {
+            this.transportTypesList.set(this.defaultTransports);
           }
           if (data.boxDimensions && Array.isArray(data.boxDimensions) && data.boxDimensions.length > 0) {
             this.boxDimensionsList.set(data.boxDimensions);
@@ -197,6 +187,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       },
       error: () => {
         // Mantiene catalogos cargados por defecto en signals
+        this.transportTypesList.set(this.defaultTransports);
       }
     });
   }
@@ -422,10 +413,16 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       cartaCtrl?.setValidators([Validators.required]);
       remCtrl?.clearValidators();
       remCtrl?.setValue('');
+      // En maniobras de CARGA, los sellos se asignan en andén tras la carga
+      this.sealList.set(['N/A - Sellos asignados en andén al concluir carga']);
+      this.tempSealInput.set('');
     } else {
       remCtrl?.setValidators([Validators.required]);
       cartaCtrl?.clearValidators();
       cartaCtrl?.setValue('');
+      if (this.sealList().some(s => s.includes('N/A'))) {
+        this.sealList.set([]);
+      }
     }
     cartaCtrl?.updateValueAndValidity();
     remCtrl?.updateValueAndValidity();
@@ -441,7 +438,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     }
     this.validationErrorsList.set([]);
     this.currentStep.set(step);
-    if (step === 4) {
+    if (step === 3) {
       setTimeout(() => this.initCanvas(), 100);
     }
   }
@@ -477,11 +474,15 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         missing.push(`${docName} (Obligatorio en Descarga)`);
       }
     } else if (step === 2) {
-      if (this.tempSealInput().trim()) {
-        this.addSeal();
-      }
-      if (this.sealList().length === 0) {
-        this.sealList.set(['S/N']);
+      if (f.operacion === 'CARGA') {
+        this.sealList.set(['N/A - Sellos asignados en andén al concluir carga']);
+      } else {
+        if (this.tempSealInput().trim()) {
+          this.addSeal();
+        }
+        if (this.sealList().length === 0) {
+          this.sealList.set(['S/N']);
+        }
       }
       if (!f.carrierLine || !f.carrierLine.trim()) missing.push('Línea Transportista / Fletera');
       if (!f.nombreOperador || f.nombreOperador.trim().length < 3) missing.push('Nombre Completo del Operador / Chofer (mínimo 3 letras)');
@@ -493,13 +494,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       if (!f.placasTracto || f.placasTracto.trim().length < 3) missing.push('Placas de Tracto');
       if (!f.placasCaja || f.placasCaja.trim().length < 3) missing.push('Placas de Caja');
     } else if (step === 3) {
-      if (!f.eppZapatos || !f.eppCofia || !f.eppCubrebocas || !f.eppChaleco) {
-        missing.push('Verificación de criterios de Equipo de Protección Personal (EPP)');
-      }
-      if (!f.revInteriorCaja || !f.revDanosCaja || !f.revDanosPuertas || !f.revOloresExtranos || !f.revIndiciosPlagas) {
-        missing.push('Verificación de criterios de Inspección Física de la Unidad');
-      }
-    } else if (step === 4) {
       if (!this.hasSignature()) {
         missing.push('Firma Digital del Chofer en el recuadro');
       }
@@ -520,9 +514,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       return;
     }
     this.validationErrorsList.set([]);
-    if (this.currentStep() < 4) {
+    if (this.currentStep() < 3) {
       this.currentStep.update((s) => s + 1);
-      if (this.currentStep() === 4) {
+      if (this.currentStep() === 3) {
         setTimeout(() => this.initCanvas(), 100);
       }
     }
@@ -537,6 +531,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
 
   // ── MANEJO DE SELLOS ──
   protected addSeal(): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga
+    }
     const val = this.tempSealInput().trim().toUpperCase();
     if (val && !this.sealList().includes(val)) {
       this.sealList.update((list) => [...list, val]);
@@ -545,6 +542,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   }
 
   protected removeSeal(index: number): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return;
+    }
     this.sealList.update((list) => list.filter((_, i) => i !== index));
   }
 
@@ -624,19 +624,20 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
 
   // ── SUBMIT CHOFER ──
   protected submitDriverForm(): void {
-    if (this.tempSealInput().trim()) {
+    const isCarga = this.checkInForm.get('operacion')?.value === 'CARGA';
+    if (!isCarga && this.tempSealInput().trim()) {
       this.addSeal();
     }
 
-    for (let s = 1; s <= 4; s++) {
+    for (let s = 1; s <= 3; s++) {
       if (!this.validateStep(s)) {
         this.currentStep.set(s);
-        if (s === 4) setTimeout(() => this.initCanvas(), 100);
+        if (s === 3) setTimeout(() => this.initCanvas(), 100);
         return;
       }
     }
 
-    if (this.checkInForm.invalid || !this.hasSignature() || this.sealList().length === 0) {
+    if (this.checkInForm.invalid || !this.hasSignature() || (!isCarga && this.sealList().length === 0)) {
       this.checkInForm.markAllAsTouched();
       return;
     }
@@ -645,7 +646,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.submitError.set(null);
 
     const f = this.checkInForm.value;
-    const seals = [...this.sealList()];
+    const seals = isCarga ? ['N/A - Sellos asignados en andén al concluir carga'] : [...this.sealList()];
 
     let sigData = '';
     if (this.signatureCanvasRef && this.hasSignature()) {
@@ -686,10 +687,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       sealNumbers: seals,
       observations: f.observaciones || 'Registro completado por chofer vía smartphone',
       driverSignature: sigData || 'FIRMA_DIGITAL_AUTORIZADA_CHOFER',
-      checklistData: JSON.stringify({
-        epp: { zapatos: f.eppZapatos, cofia: f.eppCofia, cubrebocas: f.eppCubrebocas, chaleco: f.eppChaleco },
-        caja: { interior: f.revInteriorCaja, danos: f.revDanosCaja, puertas: f.revDanosPuertas, olores: f.revOloresExtranos, plagas: f.revIndiciosPlagas }
-      })
+      checklistData: null
     };
 
     const tokenToSend = this.token() || 'PASS-DEMO';

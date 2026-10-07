@@ -14,7 +14,8 @@ import {
   OnInit,
   OnDestroy,
   PLATFORM_ID,
-  effect
+  effect,
+  ViewChild
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -72,6 +73,7 @@ import { ForbotTriggerButtonComponent } from '../forbot/forbot-trigger-button/fo
 import { ForbotChatDrawerComponent } from '../forbot/forbot-chat-drawer/forbot-chat-drawer.component';
 import { ForbotEngineService } from '../../../core/forbot/services/forbot-engine.service';
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
+import { OperationalNotificationsComponent } from '../operational-notifications/operational-notifications.component';
 
 @Component({
   selector: 'fg-admin-shell',
@@ -84,12 +86,15 @@ import { WarehouseMovementsService } from '../../../features/warehouse-movements
     CommonModule,
     QuickOperatorSwitchModalComponent,
     ForbotTriggerButtonComponent,
-    ForbotChatDrawerComponent
+    ForbotChatDrawerComponent,
+    OperationalNotificationsComponent
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
 export class ShellComponent implements OnInit, OnDestroy {
+  @ViewChild(OperationalNotificationsComponent) protected readonly opNotif?: OperationalNotificationsComponent;
+
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
   protected readonly forbotEngine = inject(ForbotEngineService);
@@ -101,6 +106,19 @@ export class ShellComponent implements OnInit, OnDestroy {
   private readonly toast = inject(ToastService);
 
   // ── Segmentación Inteligente por Rol y Contexto ──
+  protected readonly isGuardOnly = computed(() => {
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdmin = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('DIRECTOR') || role.includes('CEO');
+    if (isAdmin) return false;
+    return (
+      role.includes('GUARD') ||
+      role.includes('VIGILAN') ||
+      role.includes('CASETA') ||
+      role === 'SECURITY_GUARD' ||
+      role === 'ROLE_SECURITY_GUARD'
+    );
+  });
+
   protected readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
     const route = this.router.url;
@@ -117,6 +135,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   });
 
   protected readonly isReceivingUser = computed(() => {
+    if (this.isGuardOnly()) return false;
     const role = (this.authState.role() || '').toUpperCase();
     const route = this.router.url;
     return (
@@ -133,6 +152,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   });
 
   protected readonly isQualityUser = computed(() => {
+    if (this.isGuardOnly()) return false;
     const role = (this.authState.role() || '').toUpperCase();
     const route = this.router.url;
     return (
@@ -148,166 +168,29 @@ export class ShellComponent implements OnInit, OnDestroy {
     );
   });
 
-  // ── Pre-Recepciones en Cola de Notificaciones (Almacén) ──
-  protected readonly pendingReceptions = this.movementsService.pendingReceptions;
-  protected readonly pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
-  protected readonly showReceptionAlertsDropdown = signal(false);
-  protected readonly hasNewUnseenPreReception = signal(false);
-
-  // ── Pases de Chofer QR en Espera (Caseta / Seguridad) ──
-  protected readonly pendingDriverPasses = this.smartNotification.pendingDriverPasses;
-  protected readonly pendingDriverPassesCount = this.smartNotification.pendingDriverPassesCount;
-  protected readonly showDriverPassesDropdown = signal(false);
-  protected readonly hasNewUnseenDriverPass = this.smartNotification.hasNewDriverSubmission;
-
-  private autoCloseAlertTimeout: any = null;
-  private preReceptionPollIntervalId: any = null;
-
   constructor() {
     effect(() => {
       const arrived = this.movementsService.latestArrivedReception();
       if (arrived && this.isReceivingUser()) {
-        this.handleNewPreReceptionAlert(arrived);
+        this.opNotif?.triggerArrival('RECEIVING');
       }
     });
 
     effect(() => {
       const notif = this.smartNotification.latestNotification();
       if (notif) {
-        this.handleSmartNotificationEvent(notif);
+        if (notif.category === 'SECURITY' && this.isSecurityUser()) {
+          this.opNotif?.triggerArrival('SECURITY');
+        } else if (notif.category === 'RECEIVING' && this.isReceivingUser()) {
+          this.opNotif?.triggerArrival('RECEIVING');
+        } else if (notif.category === 'QUALITY' && this.isQualityUser()) {
+          this.opNotif?.triggerArrival('QUALITY');
+        }
       }
     });
   }
 
-  private handleSmartNotificationEvent(notif: SmartNotification): void {
-    if (notif.category === 'SECURITY' && this.isSecurityUser()) {
-      this.showDriverPassesDropdown.set(true);
-      if (this.autoCloseAlertTimeout) clearTimeout(this.autoCloseAlertTimeout);
-      this.autoCloseAlertTimeout = setTimeout(() => {
-        this.showDriverPassesDropdown.set(false);
-      }, 12000);
-    }
-  }
-
-  private handleNewPreReceptionAlert(rec: ReceptionHeader): void {
-    this.hasNewUnseenPreReception.set(true);
-    this.showReceptionAlertsDropdown.set(true);
-    this.playNotificationSound();
-
-    const clientName = rec.checkIn?.client || 'Cliente';
-    const folioStr = rec.folio || 'S/N';
-    this.toast.info(`🚚 ¡Nueva Pre-Recepción en Caseta! Folio #${folioStr} (${clientName}) arribó y espera atención en almacén.`, 7000);
-
-    if (this.autoCloseAlertTimeout) {
-      clearTimeout(this.autoCloseAlertTimeout);
-    }
-    this.autoCloseAlertTimeout = setTimeout(() => {
-      this.showReceptionAlertsDropdown.set(false);
-      this.hasNewUnseenPreReception.set(false);
-    }, 12000);
-  }
-
-  private playNotificationSound(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-      const now = ctx.currentTime;
-
-      // Tone 1: D5 (587.33 Hz)
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(587.33, now);
-      gain1.gain.setValueAtTime(0, now);
-      gain1.gain.linearRampToValueAtTime(0.18, now + 0.04);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.35);
-
-      // Tone 2: A5 (880 Hz)
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(880, now + 0.12);
-      gain2.gain.setValueAtTime(0, now + 0.12);
-      gain2.gain.linearRampToValueAtTime(0.22, now + 0.16);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.12);
-      osc2.stop(now + 0.6);
-    } catch (_) {}
-  }
-
-  protected toggleReceptionAlerts(event: MouseEvent): void {
-    event.stopPropagation();
-    this.showProfileMenu.set(false);
-    this.showWaffleMenu.set(false);
-    this.showDriverPassesDropdown.set(false);
-    this.showCriticalAlertsModal.set(false);
-    this.hasNewUnseenPreReception.set(false);
-    if (this.autoCloseAlertTimeout) {
-      clearTimeout(this.autoCloseAlertTimeout);
-    }
-    this.showReceptionAlertsDropdown.update((v) => !v);
-  }
-
-  protected closeReceptionAlerts(): void {
-    this.showReceptionAlertsDropdown.set(false);
-    this.hasNewUnseenPreReception.set(false);
-    if (this.autoCloseAlertTimeout) {
-      clearTimeout(this.autoCloseAlertTimeout);
-    }
-  }
-
-  protected goToReceptionsModule(): void {
-    this.closeReceptionAlerts();
-    this.router.navigate(['/warehouse-movements/receiving']);
-  }
-
-  protected openReceptionFromAlert(folio: string): void {
-    this.closeReceptionAlerts();
-    this.router.navigate(['/warehouse-movements/receiving'], { queryParams: { folio } });
-  }
-
-  protected toggleDriverPassesAlerts(event: MouseEvent): void {
-    event.stopPropagation();
-    this.showProfileMenu.set(false);
-    this.showWaffleMenu.set(false);
-    this.showReceptionAlertsDropdown.set(false);
-    this.showCriticalAlertsModal.set(false);
-    this.smartNotification.hasNewDriverSubmission.set(false);
-    if (this.autoCloseAlertTimeout) {
-      clearTimeout(this.autoCloseAlertTimeout);
-    }
-    this.showDriverPassesDropdown.update((v) => !v);
-  }
-
-  protected closeDriverPassesAlerts(): void {
-    this.showDriverPassesDropdown.set(false);
-    this.smartNotification.hasNewDriverSubmission.set(false);
-    if (this.autoCloseAlertTimeout) {
-      clearTimeout(this.autoCloseAlertTimeout);
-    }
-  }
-
-  protected goToSecurityModule(): void {
-    this.closeDriverPassesAlerts();
-    this.router.navigate(['/security']);
-  }
-
-  protected openDriverPassFromAlert(pass: any): void {
-    this.closeDriverPassesAlerts();
-    const token = pass.token || pass.id || pass.qrCode;
-    this.router.navigate(['/security'], { queryParams: { token } });
-  }
+  private preReceptionPollIntervalId: any = null;
 
   /** Listener global para abrir/cerrar ForBot con Ctrl + K */
   @HostListener('window:keydown', ['$event'])
@@ -515,6 +398,16 @@ export class ShellComponent implements OnInit, OnDestroy {
       badgeBg: '#b8860b',
       route: '/business-rules',
     },
+    {
+      id: 'seguridad',
+      name: 'CASETA & SEGURIDAD',
+      category: 'wms',
+      icon: 'security',
+      iconBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      badge: 'CASETA',
+      badgeBg: '#059669',
+      route: '/security',
+    },
   ];
 
   protected readonly filteredWaffleItems = computed(() => {
@@ -524,11 +417,21 @@ export class ShellComponent implements OnInit, OnDestroy {
     return this.waffleItems.filter((item) => {
       const matchesTab = tab === 'all' || item.category === tab;
       const matchesQuery = !query || item.name.toLowerCase().includes(query);
-      return matchesTab && matchesQuery;
+      if (!matchesTab || !matchesQuery) return false;
+
+      // Restricción RBAC en accesos directos
+      if (item.route) {
+        if (item.route.startsWith('/security') && !this.authState.canAccessModule('security')) return false;
+        if (item.route.startsWith('/receiving') && !this.authState.canAccessModule('warehouse-movements') && !this.authState.canAccessModule('receiving')) return false;
+        if (item.route.startsWith('/dashboard') && !this.authState.canAccessModule('dashboard')) return false;
+        if (item.route.startsWith('/layout') && !this.authState.canAccessModule('layout') && !this.authState.canAccessModule('catalogs')) return false;
+        if (item.route.startsWith('/business-rules') && !this.authState.canAccessModule('business-rules')) return false;
+      }
+      return true;
     });
   });
 
-  /** Cierra el menú de perfil, Waffle menu y dropdown de recepciones al hacer click fuera */
+  /** Cierra el menú de perfil y Waffle menu al hacer click fuera */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
@@ -537,12 +440,6 @@ export class ShellComponent implements OnInit, OnDestroy {
     }
     if (!target.closest('.shell__waffle-container')) {
       this.showWaffleMenu.set(false);
-    }
-    if (!target.closest('.shell__reception-pill-container')) {
-      this.showReceptionAlertsDropdown.set(false);
-    }
-    if (!target.closest('.shell__driver-pill-container')) {
-      this.showDriverPassesDropdown.set(false);
     }
   }
 
@@ -770,10 +667,6 @@ export class ShellComponent implements OnInit, OnDestroy {
 
     if (this.preReceptionPollIntervalId) {
       clearInterval(this.preReceptionPollIntervalId);
-    }
-
-    if (this.autoCloseAlertTimeout) {
-      clearTimeout(this.autoCloseAlertTimeout);
     }
   }
 

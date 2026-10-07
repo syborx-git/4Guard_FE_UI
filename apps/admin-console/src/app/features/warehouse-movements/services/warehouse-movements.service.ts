@@ -18,7 +18,9 @@ import {
   InventoryBatch,
   OutboundDispatch,
   CarrierLineItem,
+  STANDARD_CARRIERS,
   ClientItem,
+  STANDARD_CLIENTS,
   RampItem,
   RampOccupancyStatus,
   STANDARD_WAREHOUSE_RAMPS,
@@ -58,9 +60,9 @@ export class WarehouseMovementsService {
   private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
   private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
-  // Catálogos Reactivos
-  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([]);
-  private readonly clientsSignal = signal<ClientItem[]>([]);
+  // Catálogos Reactivos (con valores estándar inmediatos y sincronización posterior con backend)
+  private readonly carrierLinesSignal = signal<CarrierLineItem[]>(STANDARD_CARRIERS);
+  private readonly clientsSignal = signal<ClientItem[]>(STANDARD_CLIENTS);
   private readonly rampsSignal = signal<RampItem[]>(STANDARD_WAREHOUSE_RAMPS);
   private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
   private readonly suppliersSignal = signal<{ code: string; name: string }[]>([]);

@@ -449,11 +449,14 @@
           </div>
 
           <!-- 2. FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
+          <!-- 2. FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
           <div class="logistics-command-panel">
             <div class="logistics-command-panel__header">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">local_shipping</span>
-                <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              <div class="logistics-command-panel__title-wrap">
+                <div class="logistics-command-panel__icon">
+                  <span class="material-symbols-outlined text-lg">local_shipping</span>
+                </div>
+                <span class="logistics-command-panel__title">
                   Ficha Operativa de Arribo &amp; Caseta
                 </span>
               </div>
@@ -462,14 +465,14 @@
                   <button
                     type="button"
                     (click)="openEditCasetaModal()"
-                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                    class="logistics-command-btn-edit"
                     title="Modificar datos de caseta, transportista, placas o chofer"
                   >
                     <span class="material-symbols-outlined text-sm">edit</span>
                     <span>Modificar Ficha</span>
                   </button>
                 }
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
+                <span class="logistics-command-panel__tag">
                   <span class="material-symbols-outlined text-xs">alt_route</span>
                   <span>WMS Auto-Slotting</span>
                 </span>
@@ -481,10 +484,10 @@
               <!-- Cliente Destinatario / Propietario -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">business</span>
+                  <span class="material-symbols-outlined">business</span>
                   Cliente Destinatario
                 </span>
-                <span class="logistics-command-value font-bold text-slate-900 dark:text-slate-100 truncate" [title]="rec.checkIn.client">
+                <span class="logistics-command-value truncate" [title]="rec.checkIn.client">
                   {{ rec.checkIn.client || 'Cliente General' }}
                 </span>
               </div>
@@ -492,10 +495,10 @@
               <!-- No. Remisión -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">receipt_long</span>
+                  <span class="material-symbols-outlined">receipt_long</span>
                   No. Remisión / Factura
                 </span>
-                <span class="logistics-command-value font-mono font-black text-amber-700 dark:text-amber-400 text-sm">
+                <span class="logistics-command-value logistics-command-value--doc text-sm">
                   {{ rec.checkIn.docNumber }}
                 </span>
               </div>
@@ -503,10 +506,10 @@
               <!-- Hora Llegada -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">schedule</span>
+                  <span class="material-symbols-outlined">schedule</span>
                   Hora de Llegada
                 </span>
-                <span class="logistics-command-value font-mono font-bold">
+                <span class="logistics-command-value logistics-command-value--time">
                   {{ rec.checkIn.receptionTime }}
                 </span>
               </div>
@@ -514,10 +517,10 @@
               <!-- Línea Transportadora -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">domain</span>
+                  <span class="material-symbols-outlined">domain</span>
                   Línea Transportista
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="rec.checkIn.carrierLine">
+                <span class="logistics-command-value truncate" [title]="rec.checkIn.carrierLine">
                   {{ rec.checkIn.carrierLine }}
                 </span>
               </div>
@@ -525,28 +528,28 @@
               <!-- Chofer / Operador -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">badge</span>
+                  <span class="material-symbols-outlined">badge</span>
                   Operador / Chofer
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="rec.checkIn.driverName">
+                <span class="logistics-command-value truncate" [title]="rec.checkIn.driverName">
                   {{ rec.checkIn.driverName }}
                 </span>
               </div>
             </div>
 
             <!-- FILA 2: 3 Columnas amplias (Placas, Sellos, Bahía WMS) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-amber-500/15">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-slate-200 dark:border-slate-800">
               <!-- Placas Tracto y Caja (3 cols) -->
               <div class="logistics-command-cell lg:col-span-3">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">pin</span>
+                  <span class="material-symbols-outlined">pin</span>
                   Placas Tracto &amp; Caja
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  <span class="logistics-command-badge-plate">
                     T: {{ rec.checkIn.tractorPlates || 'S/P' }}
                   </span>
-                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  <span class="logistics-command-badge-plate">
                     C: {{ rec.checkIn.boxPlates || 'S/P' }}
                   </span>
                 </div>
@@ -555,19 +558,21 @@
               <!-- Sellos / Cinchos de Seguridad (4 cols) -->
               <div class="logistics-command-cell lg:col-span-4">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">lock</span>
+                  <span class="material-symbols-outlined">lock</span>
                   Sellos / Cinchos de Seguridad
                 </span>
                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                   @if (rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0) {
                     @for (s of rec.checkIn.sealNumbers; track s) {
-                      <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
-                        🔒 {{ s }}
+                      <span class="logistics-command-badge-seal">
+                        <span>🔒</span>
+                        <span>{{ s }}</span>
                       </span>
                     }
                   } @else {
-                    <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
-                      🔒 {{ rec.checkIn.sealNumber || 'N/A' }}
+                    <span class="logistics-command-badge-seal">
+                      <span>🔒</span>
+                      <span>{{ rec.checkIn.sealNumber || 'N/A' }}</span>
                     </span>
                   }
                 </div>
@@ -576,12 +581,12 @@
               <!-- Bahía Asignada Automáticamente por WMS & Rampa (5 cols) -->
               <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-5">
                 <div class="flex items-center justify-between gap-1.5 flex-wrap">
-                  <span class="logistics-command-label text-blue-800 dark:text-blue-300 font-extrabold flex items-center gap-1">
-                    <span class="material-symbols-outlined text-xs">warehouse</span>
+                  <span class="logistics-command-label font-extrabold flex items-center gap-1">
+                    <span class="material-symbols-outlined">warehouse</span>
                     <span>Bahía WMS Asignada</span>
                   </span>
                   <div class="flex items-center gap-1.5">
-                    <span class="text-[10px] font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                    <span class="logistics-command-ramp-badge">
                       Andén {{ rec.checkIn.rampNumber || 1 }}
                     </span>
                     <button
@@ -596,15 +601,15 @@
                   </div>
                 </div>
 
-                <div class="flex items-center justify-between gap-2 mt-1.5 pt-1 border-t border-blue-200/60 dark:border-blue-800/40">
+                <div class="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-blue-200/60 dark:border-blue-800/40">
                   <span
                     (click)="openBaySelector()"
-                    class="font-mono font-black text-slate-950 dark:text-white text-sm truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                    class="logistics-command-bay-text truncate"
                     [title]="'Haga clic para cambiar bahía: ' + (selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'LOC-A-01-N1')"
                   >
                     {{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'LOC-A-01-N1' }}
                   </span>
-                  <span class="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-300/80 dark:border-blue-700 flex items-center gap-1 shrink-0">
+                  <span class="logistics-command-autoslot-tag shrink-0">
                     <span class="material-symbols-outlined text-[11px]">bolt</span>
                     <span>Auto-Slotting</span>
                   </span>
@@ -2793,20 +2798,20 @@
 
   <!-- ── MODAL: PLANO INTERACTIVO DE ANDENES Y RAMPAS (1 - 12) ── -->
   @if (showDockMapModal()) {
-    <div class="modal-overlay p-4 animate-fade-in">
-      <div class="modal-card max-w-4xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl">
+    <div class="modal-overlay p-4 animate-fade-in" (click)="showDockMapModal.set(false)">
+      <div class="dock-map-modal-card" (click)="$event.stopPropagation()">
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-subtle pb-3">
+        <div class="dock-map-modal-header">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-blue-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+            <div class="dock-map-modal-icon">
               <span class="material-symbols-outlined text-2xl">domain</span>
             </div>
             <div>
-              <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                <span>Plano de Andenes &amp; Rampas de Descarga</span>
-                <span class="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">(Almacén Central)</span>
-              </h3>
-              <p class="text-xs text-slate-800 dark:text-slate-200 font-bold">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="dock-map-modal-title">Plano de Andenes &amp; Rampas de Descarga</h3>
+                <span class="dock-map-branch-badge">Almacén Central</span>
+              </div>
+              <p class="dock-map-modal-subtitle">
                 Haz clic en una rampa disponible para seleccionarla o en una ocupada para ver su detalle operativo.
               </p>
             </div>
@@ -2814,31 +2819,32 @@
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white p-1.5 rounded-lg transition-colors cursor-pointer"
+            class="dock-map-modal-close-btn"
+            title="Cerrar Plano"
           >
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
-        <!-- Leyenda -->
-        <div class="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
-          <div class="flex items-center gap-4">
-            <span class="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-400">
-              <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm inline-block"></span>
+        <!-- Leyenda / Status Bar -->
+        <div class="dock-map-legend-bar">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="dock-map-legend-pill dock-map-legend-pill--free">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm inline-block animate-pulse"></span>
               <span>{{ totalFreeRampsCount() }} Andenes Libres</span>
             </span>
-            <span class="flex items-center gap-1.5 font-bold text-rose-800 dark:text-rose-400">
-              <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm inline-block"></span>
+            <span class="dock-map-legend-pill dock-map-legend-pill--busy">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm inline-block"></span>
               <span>{{ totalBusyRampsCount() }} Ocupados</span>
             </span>
           </div>
-          <span class="text-[11px] text-slate-800 dark:text-slate-200 font-bold italic hidden sm:inline">
+          <span class="dock-map-legend-notice hidden sm:inline">
             Bloqueo automático hasta notificación de finalización de maniobra
           </span>
         </div>
 
         <!-- Grid Visual de Andenes (12 Bahías de Carga) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           @for (ramp of rampOccupancyStatus(); track ramp.rampNumber) {
             <div
               (click)="onRampMatrixClick(ramp)"
@@ -2849,20 +2855,20 @@
             >
               <!-- Puerta de Andén -->
               <div class="dock-bay-door">
-                <span class="font-mono font-black text-xs">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
+                <span class="dock-bay-number">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
                 <span class="dock-bay-dot"></span>
               </div>
 
               <!-- Ilustración de Tráiler / Estado -->
               <div class="dock-bay-body">
                 @if (ramp.status === 'AVAILABLE') {
-                  <span class="material-symbols-outlined text-2xl text-emerald-600 mb-0.5">garage_home</span>
-                  <span class="font-black text-[11px] text-emerald-800 dark:text-emerald-400">DISPONIBLE</span>
-                  <span class="text-[9px] text-slate-800 dark:text-slate-300 font-bold">clic para asignar</span>
+                  <span class="material-symbols-outlined text-2xl dock-bay-icon--free mb-0.5">garage_home</span>
+                  <span class="dock-bay-status-text--free">DISPONIBLE</span>
+                  <span class="dock-bay-helper-text">clic para asignar</span>
                 } @else {
-                  <span class="material-symbols-outlined text-2xl text-rose-600 mb-0.5 animate-pulse">local_shipping</span>
-                  <span class="font-black text-[11px] text-rose-800 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
-                  <span class="text-[9px] text-slate-900 dark:text-slate-200 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
+                  <span class="material-symbols-outlined text-2xl dock-bay-icon--busy mb-0.5 animate-pulse">local_shipping</span>
+                  <span class="dock-bay-folio-text truncate">#{{ ramp.operationFolio }}</span>
+                  <span class="dock-bay-doc-badge truncate" [title]="ramp.docNumber || 'En Operación'">
                     {{ ramp.docNumber || 'En Operación' }}
                   </span>
                 }
@@ -2872,11 +2878,11 @@
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end pt-2 border-t border-subtle">
+        <div class="dock-map-modal-footer">
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="btn-secondary-outline text-xs px-4 py-1.5 rounded-xl font-bold"
+            class="dock-map-btn-close"
           >
             Cerrar Plano
           </button>

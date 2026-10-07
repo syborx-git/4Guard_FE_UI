@@ -70,14 +70,6 @@
             <span class="step-number">3</span>
           }
         </div>
-        <span class="step-label">Inspección</span>
-      </div>
-      <div class="step-connector" [class.step-connector--active]="currentStep() > 3"></div>
-
-      <div class="step-item" [class.step-item--active]="currentStep() === 4" [class.step-item--completed]="currentStep() > 4" (click)="setStep(4)">
-        <div class="step-number-wrap">
-          <span class="step-number">4</span>
-        </div>
         <span class="step-label">Firma</span>
       </div>
     </div>
@@ -160,7 +152,7 @@
         @if (currentStep() === 1) {
           <div class="step-card animate-fade-in">
             <div class="step-header">
-              <span class="step-badge">Paso 1 de 4</span>
+              <span class="step-badge">Paso 1 de 3</span>
               <h2 class="step-title">1. Tipo de Operación y Documento</h2>
               <p class="step-desc">Indique el motivo de su visita e ingrese el folio de su documento de traslado.</p>
             </div>
@@ -300,7 +292,7 @@
         @if (currentStep() === 2) {
           <div class="step-card animate-fade-in">
             <div class="step-header">
-              <span class="step-badge">Paso 2 de 4</span>
+              <span class="step-badge">Paso 2 de 3</span>
               <h2 class="step-title">2. Datos del Chofer y Unidad</h2>
               <p class="step-desc">Capture la información del operador, vehículo y línea transportista.</p>
             </div>
@@ -390,7 +382,7 @@
               <!-- Tipo de Transporte -->
               <div class="form-group">
                 <label class="form-label mb-1.5 block">Tipo de Transporte <span class="req-star">*</span></label>
-                <div class="chip-grid-4">
+                <div class="chip-grid-3">
                   @for (t of transportTypesList(); track $index) {
                     <button
                       type="button"
@@ -484,307 +476,52 @@
                   @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
                     <span class="req-star">*</span>
                   } @else {
-                    <span class="text-xs font-medium text-amber-600 dark:text-amber-400 font-sans ml-1">(Opcional / Se asignan en andén)</span>
+                    <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 font-sans ml-1">(Asignación en Andén)</span>
                   }
                 </span>
-                <span class="seals-count">{{ sealList().length }} agregado(s)</span>
-              </div>
-              <div class="seal-input-row">
-                <input 
-                  type="text" 
-                  [ngModel]="tempSealInput()" 
-                  (ngModelChange)="tempSealInput.set($event)"
-                  [ngModelOptions]="{standalone: true}"
-                  placeholder="Ej. SEAL-4G-9001" 
-                  class="form-input font-mono uppercase flex-1" 
-                  (keydown.enter)="$event.preventDefault(); addSeal()" />
-                <button type="button" class="btn btn--secondary" (click)="addSeal()">+ Agregar</button>
+                @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+                  <span class="seals-count">{{ sealList().length }} agregado(s)</span>
+                }
               </div>
 
-              <div class="seal-chips">
-                @for (seal of sealList(); track seal; let i = $index) {
-                  <span class="seal-chip animate-fade-in">
-                    <span class="seal-chip-icon">🔒</span>
-                    <span class="seal-chip-text font-mono">{{ seal }}</span>
-                    <button type="button" class="seal-remove" (click)="removeSeal(i)" title="Eliminar sello">×</button>
-                  </span>
-                }
-                @if (sealList().length === 0) {
-                  @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
-                    <span class="seal-empty-note">⚠️ Ingrese al menos un número de sello o marchamo de seguridad.</span>
-                  } @else {
-                    <span class="text-xs text-slate-500 dark:text-slate-400 italic">ℹ️ En maniobras de Carga, los sellos oficiales se instalarán en el andén al finalizar el embarque.</span>
+              @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl my-2 text-xs text-amber-800 dark:text-amber-300">
+                  <div class="flex items-center gap-2 font-bold mb-1">
+                    <span>ℹ️ Operación de CARGA:</span>
+                  </div>
+                  <p>En maniobras de Carga, los números de sellos de seguridad oficiales se colocarán en el andén al finalizar el embarque. (No requiere captura por el chofer en el check-in de acceso).</p>
+                </div>
+              } @else {
+                <div class="seal-input-row">
+                  <input 
+                    type="text" 
+                    [ngModel]="tempSealInput()" 
+                    (ngModelChange)="tempSealInput.set($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Ej. SEAL-4G-9001" 
+                    class="form-input font-mono uppercase flex-1" 
+                    (keydown.enter)="$event.preventDefault(); addSeal()" />
+                  <button type="button" class="btn btn--secondary" (click)="addSeal()">+ Agregar</button>
+                </div>
+
+                <div class="seal-chips">
+                  @for (seal of sealList(); track seal; let i = $index) {
+                    <span class="seal-chip animate-fade-in">
+                      <span class="seal-chip-icon">🔒</span>
+                      <span class="seal-chip-text font-mono">{{ seal }}</span>
+                      <button type="button" class="seal-remove" (click)="removeSeal(i)" title="Eliminar sello">×</button>
+                    </span>
                   }
-                }
-              </div>
+                  @if (sealList().length === 0) {
+                    <span class="seal-empty-note">⚠️ Ingrese al menos un número de sello o marchamo de seguridad.</span>
+                  }
+                </div>
+              }
             </div>
 
-            <div class="wizard-actions">
-              <button type="button" class="btn btn--outline" (click)="prevStep()">← Atrás</button>
-              <button type="button" class="btn btn--primary flex-1" (click)="nextStep()">
-                <span>Continuar a Inspección</span>
-                <span class="btn-arrow">→</span>
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- ════════════════════════════════════════════════════════════════
-             STEP 3: VERIFICACIÓN DE EPP E INSPECCIÓN
-             ════════════════════════════════════════════════════════════════ -->
-        @if (currentStep() === 3) {
-          <div class="step-card animate-fade-in">
-            <div class="step-header">
-              <span class="step-badge">Paso 3 de 4</span>
-              <h2 class="step-title">3. Verificación de EPP e Inspección</h2>
-              <p class="step-desc">Confirme que cuenta con su equipo de protección y el estado físico de la unidad.</p>
-            </div>
-
-            <!-- EPP Section -->
-            <div class="checklist-section">
-              <div class="checklist-section-header">
-                <div class="checklist-icon-wrap">🦺</div>
-                <div class="checklist-meta">
-                  <h3 class="checklist-section-title">Equipo de Protección Personal (EPP)</h3>
-                  <span class="checklist-section-sub">Requisitos obligatorios para ingresar a patio y andenes</span>
-                </div>
-              </div>
-
-              <div class="checklist-items-grid">
-                <!-- Calzado de seguridad -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">🥾</span>
-                    <div class="check-details">
-                      <span class="check-name">Calzado con casquillo</span>
-                      <span class="check-sub">Botas o zapatos de seguridad</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('eppZapatos')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({eppZapatos: 'SI'})">
-                      ✓ SÍ
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('eppZapatos')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({eppZapatos: 'NO'})">
-                      ✕ NO
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Chaleco reflejante -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">🦺</span>
-                    <div class="check-details">
-                      <span class="check-name">Chaleco reflejante</span>
-                      <span class="check-sub">Alta visibilidad con cintas</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('eppChaleco')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({eppChaleco: 'SI'})">
-                      ✓ SÍ
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('eppChaleco')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({eppChaleco: 'NO'})">
-                      ✕ NO
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Cofia o gorra -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">🧢</span>
-                    <div class="check-details">
-                      <span class="check-name">Cofia o gorra</span>
-                      <span class="check-sub">Protección para cabello</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('eppCofia')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({eppCofia: 'SI'})">
-                      ✓ SÍ
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('eppCofia')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({eppCofia: 'NO'})">
-                      ✕ NO
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Cubrebocas / Mascarilla -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">😷</span>
-                    <div class="check-details">
-                      <span class="check-name">Cubrebocas / Mascarilla</span>
-                      <span class="check-sub">Higiene en zona de grado alimenticio</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('eppCubrebocas')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({eppCubrebocas: 'SI'})">
-                      ✓ SÍ
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('eppCubrebocas')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({eppCubrebocas: 'NO'})">
-                      ✕ NO
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Conditions of Box Section -->
-            <div class="checklist-section mt-4">
-              <div class="checklist-section-header">
-                <div class="checklist-icon-wrap">🚛</div>
-                <div class="checklist-meta">
-                  <h3 class="checklist-section-title">Condiciones Físicas de la Caja</h3>
-                  <span class="checklist-section-sub">Inspección de inocuidad y estructura del remolque</span>
-                </div>
-              </div>
-
-              <div class="checklist-items-grid">
-                <!-- Interior Limpio -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">🧹</span>
-                    <div class="check-details">
-                      <span class="check-name">Interior de caja</span>
-                      <span class="check-sub">Sin basura, clavos ni astillas</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('revInteriorCaja')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({revInteriorCaja: 'SI'})">
-                      ✓ CUMPLE
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('revInteriorCaja')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({revInteriorCaja: 'NO'})">
-                      ✕ NO
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Sin Plagas -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">🐜</span>
-                    <div class="check-details">
-                      <span class="check-name">Sin plagas ni humedad</span>
-                      <span class="check-sub">Libre de insectos o filtraciones</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('revIndiciosPlagas')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({revIndiciosPlagas: 'NO'})">
-                      ✓ CUMPLE
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('revIndiciosPlagas')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({revIndiciosPlagas: 'SI'})">
-                      ✕ CON DETALLE
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Puertas y Empaques -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">🚪</span>
-                    <div class="check-details">
-                      <span class="check-name">Puertas y empaques</span>
-                      <span class="check-sub">Cierres herméticos y sin roturas</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('revDanosPuertas')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({revDanosPuertas: 'NO'})">
-                      ✓ CUMPLE
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('revDanosPuertas')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({revDanosPuertas: 'SI'})">
-                      ✕ CON DETALLE
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Olores extraños -->
-                <div class="check-card">
-                  <div class="check-card-info">
-                    <span class="check-emoji">💨</span>
-                    <div class="check-details">
-                      <span class="check-name">Libre de olores</span>
-                      <span class="check-sub">Sin químicos ni sustancias ajenas</span>
-                    </div>
-                  </div>
-                  <div class="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--yes"
-                      [class.pill-btn--active]="checkInForm.get('revOloresExtranos')?.value === 'NO'"
-                      (click)="checkInForm.patchValue({revOloresExtranos: 'NO'})">
-                      ✓ CUMPLE
-                    </button>
-                    <button 
-                      type="button" 
-                      class="pill-btn pill-btn--no"
-                      [class.pill-btn--active]="checkInForm.get('revOloresExtranos')?.value === 'SI'"
-                      (click)="checkInForm.patchValue({revOloresExtranos: 'SI'})">
-                      ✕ CON DETALLE
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Observaciones -->
-            <div class="form-group mt-4">
-              <label class="form-label" for="observaciones">Observaciones Adicionales</label>
+            <!-- Observaciones Adicionales -->
+            <div class="form-group mt-3">
+              <label class="form-label" for="observaciones">Observaciones Adicionales (Opcional)</label>
               <textarea 
                 id="observaciones" 
                 formControlName="observaciones" 
@@ -803,13 +540,13 @@
         }
 
         <!-- ════════════════════════════════════════════════════════════════
-             STEP 4: FIRMA DIGITAL Y ENVÍO A CASETA
+             STEP 3: FIRMA DIGITAL Y ENVÍO A CASETA
              ════════════════════════════════════════════════════════════════ -->
-        @if (currentStep() === 4) {
+        @if (currentStep() === 3) {
           <div class="step-card animate-fade-in">
             <div class="step-header">
-              <span class="step-badge">Paso 4 de 4</span>
-              <h2 class="step-title">4. Firma Digital del Transportista</h2>
+              <span class="step-badge">Paso 3 de 3</span>
+              <h2 class="step-title">3. Firma Digital del Transportista</h2>
               <p class="step-desc">Firme en el recuadro táctil para validar su declaración formal de ingreso a planta.</p>
             </div>
 

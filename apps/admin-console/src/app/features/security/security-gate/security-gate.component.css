@@ -584,6 +584,168 @@
   transition: all 0.25s ease;
 }
 
+/* ── BARRA FLOTANTE DE PASOS (STEPPER NAVIGATION) & CONTROLES STICKY ── */
+.form-stepper-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-stepper-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: var(--radius-btn);
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-family: var(--font-body);
+  background: rgba(241, 245, 249, 0.9);
+  color: #475569;
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.stepper-btn:hover {
+  background: var(--gold-bg);
+  color: var(--text-gold);
+  border-color: var(--gold-border);
+  transform: translateY(-1px);
+}
+
+:host-context(.theme-dark) .stepper-btn,
+:host-context(.dark) .stepper-btn {
+  background: rgba(26, 38, 56, 0.75);
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+:host-context(.theme-dark) .stepper-btn:hover,
+:host-context(.dark) .stepper-btn:hover {
+  background: var(--gold-bg);
+  color: var(--gold-light);
+  border-color: var(--gold-border);
+}
+
+.stepper-btn--active {
+  background: linear-gradient(135deg, #d4af37 0%, #c5a86b 100%) !important;
+  color: #1c2940 !important;
+  font-weight: 900 !important;
+  border-color: #b8860b !important;
+  box-shadow: 0 3px 12px rgba(197, 168, 107, 0.35) !important;
+}
+
+:host-context(.theme-dark) .stepper-btn--active,
+:host-context(.dark) .stepper-btn--active {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%) !important;
+  color: #0b1119 !important;
+  border-color: rgba(212, 175, 55, 0.7) !important;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4) !important;
+}
+
+.stepper-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: var(--radius-btn);
+  font-size: 0.76rem;
+  font-weight: 900;
+  font-family: var(--font-body);
+  background: var(--gold-bg);
+  color: var(--text-gold);
+  border: 1px solid var(--gold-border);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  margin-right: 0.25rem;
+}
+
+.stepper-expand-btn:hover {
+  background: rgba(197, 168, 107, 0.25);
+  transform: translateY(-1px);
+}
+
+.stepper-token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-btn);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  background: var(--gold-bg);
+  color: var(--text-gold);
+  border: 1px solid var(--gold-border);
+}
+
+.form-floating-footer {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 20;
+  margin-top: 1rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-floating-footer__title {
+  font-size: 0.8125rem;
+  font-weight: 900;
+  font-family: var(--font-display);
+  color: #0f172a !important;
+  letter-spacing: -0.01em;
+}
+
+.form-floating-footer__subtitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155 !important;
+  font-family: var(--font-body);
+}
+
+:host-context(.theme-dark) .form-floating-footer__title,
+:host-context(.dark) .form-floating-footer__title {
+  color: #f8fafc !important;
+}
+
+:host-context(.theme-dark) .form-floating-footer__subtitle,
+:host-context(.dark) .form-floating-footer__subtitle {
+  color: #94a3b8 !important;
+}
+
 /* Scoped Typography & Headings Contrast */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display) !important;

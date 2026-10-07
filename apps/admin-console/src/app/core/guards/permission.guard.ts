@@ -6,9 +6,11 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { AuthState } from '../auth/auth.state';
 
 export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const authService = inject(AuthService);
+  const authState = inject(AuthState);
   const router = inject(Router);
 
   const requiredPermissions = route.data?.['permissions'] as string[] | undefined;
@@ -23,6 +25,10 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
     return true;
   }
 
-  // Si no tiene permisos, redirigir al Dashboard
-  return router.createUrlTree(['/dashboard']);
+  const defaultHome = authState.canAccessModule('security') && !authState.canAccessModule('dashboard')
+    ? '/security'
+    : '/dashboard';
+
+  // Si no tiene permisos, redirigir al Dashboard o Caseta
+  return router.createUrlTree([defaultHome]);
 };

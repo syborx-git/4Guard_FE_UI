@@ -1678,11 +1678,14 @@
           }
 
           <!-- 3. FICHA OPERATIVA UNIFICADA: CASETA & TRANSPORTE (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
+          <!-- 3. FICHA OPERATIVA UNIFICADA: CASETA & TRANSPORTE (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
           <div class="logistics-command-panel">
             <div class="logistics-command-panel__header">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">local_shipping</span>
-                <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              <div class="logistics-command-panel__title-wrap">
+                <div class="logistics-command-panel__icon">
+                  <span class="material-symbols-outlined text-lg">local_shipping</span>
+                </div>
+                <span class="logistics-command-panel__title">
                   Ficha Operativa de Arribo &amp; Caseta
                 </span>
               </div>
@@ -1691,7 +1694,7 @@
                   <button
                     type="button"
                     (click)="openEditCasetaModal()"
-                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+                    class="logistics-command-btn-edit"
                     title="Asignar o modificar planta destino, número de sello y transporte"
                   >
                     <span class="material-symbols-outlined text-sm">
@@ -1710,7 +1713,7 @@
                     </span>
                   </button>
                 }
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
+                <span class="logistics-command-panel__tag">
                   <span class="material-symbols-outlined text-xs">alt_route</span>
                   <span>WMS Auto-Slotting</span>
                 </span>
@@ -1722,10 +1725,10 @@
               <!-- Cliente -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">person</span>
+                  <span class="material-symbols-outlined">person</span>
                   Cliente Propietario
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.clientName">
+                <span class="logistics-command-value truncate" [title]="selectedOutbound()!.clientName">
                   {{ selectedOutbound()!.clientName }}
                 </span>
               </div>
@@ -1734,13 +1737,13 @@
               <div class="logistics-command-cell cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para asignar o cambiar Planta / Destino">
                 <span class="logistics-command-label flex items-center justify-between">
                   <span class="flex items-center gap-1">
-                    <span class="material-symbols-outlined text-xs">pin_drop</span>
+                    <span class="material-symbols-outlined">pin_drop</span>
                     Planta / Destino
                   </span>
                   <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
                 </span>
                 @if (selectedOutbound()!.destinationName) {
-                  <span class="logistics-command-value font-bold truncate text-slate-900 dark:text-white" [title]="selectedOutbound()!.destinationName + (selectedOutbound()!.destinationAddress ? ' — ' + selectedOutbound()!.destinationAddress : '')">
+                  <span class="logistics-command-value truncate text-slate-900 dark:text-white" [title]="selectedOutbound()!.destinationName + (selectedOutbound()!.destinationAddress ? ' — ' + selectedOutbound()!.destinationAddress : '')">
                     {{ selectedOutbound()!.destinationName }}
                   </span>
                 } @else {
@@ -1754,10 +1757,10 @@
               <!-- Línea Transportista -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">domain</span>
+                  <span class="material-symbols-outlined">domain</span>
                   Línea Transportista
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.carrierName">
+                <span class="logistics-command-value truncate" [title]="selectedOutbound()!.carrierName">
                   {{ selectedOutbound()!.carrierName }}
                 </span>
               </div>
@@ -1765,28 +1768,28 @@
               <!-- Chofer / Operador -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">badge</span>
+                  <span class="material-symbols-outlined">badge</span>
                   Operador / Chofer
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.driverName">
+                <span class="logistics-command-value truncate" [title]="selectedOutbound()!.driverName">
                   {{ selectedOutbound()!.driverName }} ({{ getTransportLabel(selectedOutbound()!.transportType) }})
                 </span>
               </div>
             </div>
 
             <!-- FILA 2: 3 Columnas amplias (Placas Tracto & Caja, Sellos Oficiales, Bahía / Rampa Asignada) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-amber-500/15">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-slate-200 dark:border-slate-800">
               <!-- Placas Tracto y Caja (4 cols) -->
               <div class="logistics-command-cell lg:col-span-4">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">pin</span>
+                  <span class="material-symbols-outlined">pin</span>
                   Eco / Placas (Tracto &amp; Caja)
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  <span class="logistics-command-badge-plate">
                     T: {{ selectedOutbound()!.economicNumber || '-' }} / {{ selectedOutbound()!.tractorPlates || 'S/P' }}
                   </span>
-                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  <span class="logistics-command-badge-plate">
                     C: {{ selectedOutbound()!.boxEconomicNumber || '-' }} / {{ selectedOutbound()!.boxPlates || 'S/P' }}
                   </span>
                 </div>
@@ -1796,15 +1799,16 @@
               <div class="logistics-command-cell lg:col-span-4 cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para capturar o actualizar número de sello">
                 <span class="logistics-command-label flex items-center justify-between">
                   <span class="flex items-center gap-1">
-                    <span class="material-symbols-outlined text-xs">lock</span>
+                    <span class="material-symbols-outlined">lock</span>
                     Número de Sello o Cincho
                   </span>
                   <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
                 </span>
                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                   @if (selectedOutbound()!.sealNumber && selectedOutbound()!.sealNumber !== 'PENDIENTE_ANDEN' && selectedOutbound()!.sealNumber !== 'S/S' && selectedOutbound()!.sealNumber !== 'PENDIENTE') {
-                    <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
-                      🔒 {{ selectedOutbound()!.sealNumber }}
+                    <span class="logistics-command-badge-seal">
+                      <span>🔒</span>
+                      <span>{{ selectedOutbound()!.sealNumber }}</span>
                     </span>
                   } @else {
                     <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 flex items-center gap-1 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors animate-pulse">
@@ -1819,15 +1823,15 @@
               <!-- Andén de Salida & Montacarguista (4 cols) -->
               <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-4">
                 <div class="flex items-center justify-between">
-                  <span class="logistics-command-label text-blue-700 dark:text-blue-300">
-                    <span class="material-symbols-outlined text-xs">warehouse</span>
-                    Andén de Carga
+                  <span class="logistics-command-label font-extrabold flex items-center gap-1">
+                    <span class="material-symbols-outlined">warehouse</span>
+                    <span>Andén de Carga</span>
                   </span>
-                  <span class="text-[10px] font-mono font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                  <span class="logistics-command-ramp-badge">
                     {{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Por Asignar' }}
                   </span>
                 </div>
-                <span class="font-mono font-black text-blue-900 dark:text-blue-200 text-xs mt-0.5 block truncate" [title]="selectedOutbound()!.forkliftOperator || 'Operador por asignar'">
+                <span class="font-mono font-black text-slate-900 dark:text-white text-xs mt-0.5 block truncate" [title]="selectedOutbound()!.forkliftOperator || 'Operador por asignar'">
                   {{ selectedOutbound()!.forkliftOperator ? ('Montacarguista: ' + selectedOutbound()!.forkliftOperator) : 'Sin montacarguista asignado' }}
                 </span>
               </div>
@@ -3238,19 +3242,19 @@
        ════════════════════════════════════════════════════════════════ -->
   @if (showDockMapModal()) {
     <div class="modal-overlay p-4 animate-fade-in" (click)="showDockMapModal.set(false)">
-      <div class="modal-card max-w-4xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="dock-map-modal-card" (click)="$event.stopPropagation()">
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-subtle pb-3">
+        <div class="dock-map-modal-header">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-blue-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+            <div class="dock-map-modal-icon">
               <span class="material-symbols-outlined text-2xl">domain</span>
             </div>
             <div>
-              <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                <span>Plano de Andenes &amp; Rampas de Carga</span>
-                <span class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">(Almacén Central)</span>
-              </h3>
-              <p class="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="dock-map-modal-title">Plano de Andenes &amp; Rampas de Carga</h3>
+                <span class="dock-map-branch-badge">Almacén Central</span>
+              </div>
+              <p class="dock-map-modal-subtitle">
                 Haz clic en una rampa disponible para seleccionarla o en una ocupada para ver su detalle operativo.
               </p>
             </div>
@@ -3258,31 +3262,32 @@
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white p-1.5 rounded-lg"
+            class="dock-map-modal-close-btn"
+            title="Cerrar Plano"
           >
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
-        <!-- Leyenda -->
-        <div class="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
-          <div class="flex items-center gap-4">
-            <span class="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-              <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm inline-block"></span>
+        <!-- Leyenda / Status Bar -->
+        <div class="dock-map-legend-bar">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="dock-map-legend-pill dock-map-legend-pill--free">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm inline-block animate-pulse"></span>
               <span>{{ totalFreeRampsCount() }} Andenes Libres</span>
             </span>
-            <span class="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
-              <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm inline-block"></span>
+            <span class="dock-map-legend-pill dock-map-legend-pill--busy">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm inline-block"></span>
               <span>{{ totalBusyRampsCount() }} Ocupados</span>
             </span>
           </div>
-          <span class="text-[11px] text-slate-700 dark:text-slate-300 font-semibold italic hidden sm:inline">
+          <span class="dock-map-legend-notice hidden sm:inline">
             Bloqueo automático hasta notificación de finalización de maniobra
           </span>
         </div>
 
         <!-- Grid Visual de Andenes (12 Bahías de Carga) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           @for (ramp of rampOccupancyStatus(); track ramp.rampNumber) {
             <div
               (click)="onRampMatrixClick(ramp)"
@@ -3293,20 +3298,20 @@
             >
               <!-- Puerta de Andén -->
               <div class="dock-bay-door">
-                <span class="font-mono font-black text-xs">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
+                <span class="dock-bay-number">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
                 <span class="dock-bay-dot"></span>
               </div>
 
               <!-- Ilustración de Tráiler / Estado -->
               <div class="dock-bay-body">
                 @if (ramp.status === 'AVAILABLE') {
-                  <span class="material-symbols-outlined text-2xl text-emerald-600 mb-0.5">garage_home</span>
-                  <span class="font-black text-[11px] text-emerald-800 dark:text-emerald-400">DISPONIBLE</span>
-                  <span class="text-[9px] text-slate-800 dark:text-slate-300 font-bold">clic para asignar</span>
+                  <span class="material-symbols-outlined text-2xl dock-bay-icon--free mb-0.5">garage_home</span>
+                  <span class="dock-bay-status-text--free">DISPONIBLE</span>
+                  <span class="dock-bay-helper-text">clic para asignar</span>
                 } @else {
-                  <span class="material-symbols-outlined text-2xl text-rose-600 mb-0.5 animate-pulse">local_shipping</span>
-                  <span class="font-black text-[11px] text-rose-800 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
-                  <span class="text-[9px] text-slate-900 dark:text-slate-200 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
+                  <span class="material-symbols-outlined text-2xl dock-bay-icon--busy mb-0.5 animate-pulse">local_shipping</span>
+                  <span class="dock-bay-folio-text truncate">#{{ ramp.operationFolio }}</span>
+                  <span class="dock-bay-doc-badge truncate" [title]="ramp.docNumber || 'En Operación'">
                     {{ ramp.docNumber || 'En Operación' }}
                   </span>
                 }
@@ -3316,11 +3321,11 @@
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end pt-2 border-t border-subtle">
+        <div class="dock-map-modal-footer">
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="btn-secondary-outline text-xs px-4 py-1.5 rounded-xl font-bold"
+            class="dock-map-btn-close"
           >
             Cerrar Plano
           </button>
