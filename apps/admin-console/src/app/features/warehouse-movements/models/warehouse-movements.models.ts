@@ -218,6 +218,9 @@ export interface ReceptionHeader {
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  reopenedAt?: string;
+  reopenedBy?: string;
+  reopenReason?: string;
   capturedBy: string;        // Nombre del usuario activo
   leaderAuthorizedBy?: string; // Nombre del líder que autorizó
   operationType?: 'ENTRY' | 'REENTRY'; // ADR-021: Reingresos y Logística Inversa

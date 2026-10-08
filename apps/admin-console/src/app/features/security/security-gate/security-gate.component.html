@@ -876,43 +876,65 @@
               </div>
 
               <!-- Sellos de Seguridad (Cinchos) -->
-              <div class="sm:col-span-2">
+              <div class="col-span-full w-full">
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Sellos / Cinchos de Seguridad
                   @if (checkInForm.get('operacion')?.value === 'CARGA') {
-                    <span class="text-amber-600 dark:text-amber-400 font-medium font-sans ml-1">(Opcional / Se asignan en andén)</span>
+                    <span class="text-amber-600 dark:text-amber-400 font-medium font-sans ml-1">(Bloqueado — Se asignan en andén de salida)</span>
                   } @else {
-                    <span class="text-rose-500 font-bold ml-0.5">*</span>
+                    <span class="text-rose-500 font-bold ml-0.5">* (Obligatorio en Descarga)</span>
                   }
                 </label>
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    [ngModel]="tempSealInput()"
-                    (ngModelChange)="tempSealInput.set($event)"
-                    [ngModelOptions]="{standalone: true}"
-                    (keyup.enter)="addSeal()"
-                    placeholder="Ingresar número de sello y presionar Enter..."
-                    class="form-input text-xs font-mono uppercase flex-1"
-                  />
-                  <button
-                    type="button"
-                    (click)="addSeal()"
-                    class="btn-secondary-outline"
-                  >
-                    Agregar
-                  </button>
-                </div>
 
-                @if (sealList().length > 0) {
-                  <div class="flex flex-wrap gap-1.5 mt-2">
-                    @for (seal of sealList(); track seal; let i = $index) {
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold border border-amber-500/20">
-                        <span>{{ seal }}</span>
-                        <button type="button" (click)="removeSeal(i)" class="hover:text-rose-500 text-xs font-bold">✕</button>
-                      </span>
-                    }
+                @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                  <div class="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                      <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">lock</span>
+                      <div>
+                        <span class="font-bold text-xs">🔒 No requiere captura de sellos en Caseta para maniobra de CARGA</span>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          La unidad ingresa vacía. Los sellos de seguridad oficiales serán colocados y registrados en el <strong>Andén de Salida / Embarque</strong> al concluir la estiba física de la mercancía.
+                        </p>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-[11px] font-bold border border-amber-500/40 whitespace-nowrap">
+                      PENDIENTE_ANDEN
+                    </span>
                   </div>
+                } @else {
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      [ngModel]="tempSealInput()"
+                      (ngModelChange)="tempSealInput.set($event)"
+                      [ngModelOptions]="{standalone: true}"
+                      (keyup.enter)="addSeal()"
+                      placeholder="Ingresar número de sello y presionar Enter..."
+                      class="form-input text-xs font-mono uppercase flex-1"
+                    />
+                    <button
+                      type="button"
+                      (click)="addSeal()"
+                      class="btn-secondary-outline"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+
+                  @if (sealList().length > 0) {
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      @for (seal of sealList(); track seal; let i = $index) {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold border border-amber-500/20">
+                          <span>{{ seal }}</span>
+                          <button type="button" (click)="removeSeal(i)" class="hover:text-rose-500 text-xs font-bold">✕</button>
+                        </span>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-[11px] text-rose-500 font-medium mt-1">
+                      ⚠️ Es obligatorio ingresar al menos 1 número de sello o cincho de seguridad que trae el transporte de llegada.
+                    </p>
+                  }
                 }
               </div>
             </div>

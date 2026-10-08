@@ -568,6 +568,21 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     }
 
     for (const b of backendPositions) {
+      if (b.code && !b.code.startsWith('POS-')) {
+        // Ignorar códigos legacy obsoletos; transferir ocupación a POS-X-001 si existe
+        if (b.currentTarimas && b.currentTarimas > 0) {
+          const match = b.code.match(/LOC[-_]?(?:ALM[-_]?)?(?:Z)?([A-Ma-m])/i);
+          const zoneChar = match ? match[1].toUpperCase() : 'A';
+          const targetCode = `POS-${zoneChar}-001`;
+          if (mapByCode.has(targetCode)) {
+            const target = mapByCode.get(targetCode)!;
+            target.currentTarimas = Math.min(target.capacityTarimas, target.currentTarimas + b.currentTarimas);
+            target.status = target.currentTarimas >= target.capacityTarimas ? 'OCCUPIED' : target.status;
+          }
+        }
+        continue;
+      }
+
       if (mapByCode.has(b.code)) {
         const existing = mapByCode.get(b.code)!;
         mapByCode.set(b.code, {
@@ -581,7 +596,7 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
           lastMovement: b.lastMovement !== 'Sin movimientos' ? b.lastMovement : existing.lastMovement,
           blockReason: b.blockReason || existing.blockReason
         });
-      } else {
+      } else if (b.code && b.code.startsWith('POS-')) {
         mapByCode.set(b.code, b);
       }
     }
@@ -598,6 +613,21 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     }
 
     for (const b of backendPositions) {
+      if (b.code && !b.code.startsWith('POS-')) {
+        // Ignorar códigos legacy obsoletos; transferir ocupación a POS-X-001 si existe
+        if (b.currentTarimas && b.currentTarimas > 0) {
+          const match = b.code.match(/LOC[-_]?(?:ALM[-_]?)?(?:Z)?([A-Ma-m])/i);
+          const zoneChar = match ? match[1].toUpperCase() : 'A';
+          const targetCode = `POS-${zoneChar}-001`;
+          if (mapByCode.has(targetCode)) {
+            const target = mapByCode.get(targetCode)!;
+            target.currentTarimas = Math.min(target.capacityTarimas, target.currentTarimas + b.currentTarimas);
+            target.status = target.currentTarimas >= target.capacityTarimas ? 'OCCUPIED' : target.status;
+          }
+        }
+        continue;
+      }
+
       if (mapByCode.has(b.code)) {
         const existing = mapByCode.get(b.code)!;
         mapByCode.set(b.code, {
@@ -611,7 +641,7 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
           lastMovement: b.lastMovement !== 'Sin movimientos' ? b.lastMovement : existing.lastMovement,
           blockReason: b.blockReason || existing.blockReason
         });
-      } else {
+      } else if (b.code && b.code.startsWith('POS-')) {
         mapByCode.set(b.code, b);
       }
     }

@@ -10,13 +10,15 @@ import {
   PLATFORM_ID
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { AuthState } from '../../../core/auth/auth.state';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 import { QualityStateService } from '../../../features/quality/services/quality-state.service';
 
-export type NotificationTab = 'ALL' | 'RECEIVING' | 'SECURITY' | 'QUALITY';
+export type NotificationTab = 'ALL' | 'RECEIVING' | 'OUTBOUND' | 'SECURITY' | 'QUALITY';
 
 @Component({
   selector: 'fg-operational-notifications',
@@ -34,14 +36,23 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly elementRef = inject(ElementRef);
 
+  // ── URL Activa como Señal Reactiva ──
+  public readonly currentUrl = signal<string>(this.router.url);
+  private routerSub?: Subscription;
+
   // ── Estado de apertura del dropdown ──
   public readonly isOpen = signal<boolean>(false);
   protected readonly selectedTab = signal<NotificationTab>('ALL');
 
-  // ── Almacén / Pre-Recepciones ──
+  // ── Almacén / Pre-Recepciones (Inbound) ──
   public readonly pendingReceptions = this.movementsService.pendingReceptions;
   public readonly pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
   public readonly hasNewUnseenPreReception = signal<boolean>(false);
+
+  // ── Almacén / Pre-Salidas (Outbound) ──
+  public readonly pendingOutbounds = this.movementsService.pendingOutbounds;
+  public readonly pendingOutboundsCount = this.movementsService.pendingOutboundsCount;
+  public readonly hasNewUnseenOutbound = signal<boolean>(false);
 
   // ── Caseta / Seguridad (Choferes QR + Rampas Asignadas) ──
   public readonly pendingDriverPasses = this.smartNotification.pendingDriverPasses;
@@ -62,10 +73,28 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   );
   public readonly blockedQualityCount = computed(() => this.blockedQualityItems().length);
 
-  // ── Roles y Contexto Activo (Supervisor Global enfocado 100% en Recepción) ──
+  // ── Roles y Contexto Activo Reactivo ──
+  public readonly isCurrentlyOnSecurityPage = computed(() => {
+    return this.currentUrl().startsWith('/security');
+  });
+
+  public readonly isCurrentlyOnOutboundPage = computed(() => {
+    return this.currentUrl().includes('/warehouse-movements/outbound') || this.currentUrl().includes('/outbound');
+  });
+
+  public readonly isCurrentlyOnReceivingPage = computed(() => {
+    const url = this.currentUrl();
+    return url.includes('/warehouse-movements/receiving') || 
+           url.includes('/receiving') || 
+           (url.startsWith('/warehouse-movements') && !url.includes('/outbound') && !url.includes('/transfers'));
+  });
+
+  public readonly isCurrentlyOnQualityPage = computed(() => {
+    return this.currentUrl().startsWith('/quality');
+  });
+
   public readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
-    const url = this.router.url;
     return (
       (role.includes('SECURITY') ||
        role.includes('VIGILAN') ||
@@ -73,12 +102,11 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
        role.includes('CASETA')) &&
       !role.includes('ADMIN') &&
       !role.includes('MANAGER')
-    ) || url.startsWith('/security');
+    ) || this.isCurrentlyOnSecurityPage();
   });
 
   public readonly isQualityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
-    const url = this.router.url;
     return (
       (role.includes('QM') ||
        role.includes('QUALIT') ||
@@ -87,28 +115,13 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
        role.includes('AUDIT')) &&
       !role.includes('ADMIN') &&
       !role.includes('MANAGER')
-    ) || url.startsWith('/quality');
+    ) || this.isCurrentlyOnQualityPage();
   });
 
-  // Por defecto, Supervisor Global, Administrador y Almacén están en contexto Recepción
-  public readonly isReceivingContext = computed(() => {
-    return !this.isSecurityUser() && !this.isQualityUser();
-  });
-
-  public readonly isSecurityContext = computed(() => this.isSecurityUser());
-  public readonly isQualityContext = computed(() => this.isQualityUser());
-
-  public readonly isCurrentlyOnSecurityPage = computed(() => {
-    return this.router.url.startsWith('/security');
-  });
-
-  public readonly isCurrentlyOnReceivingPage = computed(() => {
-    return this.router.url.startsWith('/warehouse-movements') || this.router.url.startsWith('/receiving');
-  });
-
-  public readonly isCurrentlyOnQualityPage = computed(() => {
-    return this.router.url.startsWith('/quality');
-  });
+  public readonly isSecurityContext = computed(() => this.isCurrentlyOnSecurityPage() || (this.isSecurityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage()));
+  public readonly isQualityContext = computed(() => this.isCurrentlyOnQualityPage() || (this.isQualityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage()));
+  public readonly isOutboundContext = computed(() => this.isCurrentlyOnOutboundPage());
+  public readonly isReceivingContext = computed(() => this.isCurrentlyOnReceivingPage() || (!this.isSecurityContext() && !this.isQualityContext() && !this.isOutboundContext()));
 
   public readonly showFooterButton = computed(() => {
     if (this.isSecurityContext()) {
@@ -117,6 +130,9 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     if (this.isQualityContext()) {
       return !this.isCurrentlyOnQualityPage();
     }
+    if (this.isOutboundContext()) {
+      return !this.isCurrentlyOnOutboundPage();
+    }
     return !this.isCurrentlyOnReceivingPage();
   });
 
@@ -124,30 +140,48 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public readonly totalVisibleCount = computed(() => {
     if (this.isSecurityContext()) return this.totalSecurityAlertsCount();
     if (this.isQualityContext()) return this.blockedQualityCount();
-    // Supervisor Global / Almacén: Estrictamente Pre-Recepciones
-    return this.pendingReceptionsCount();
+    if (this.isOutboundContext()) return this.pendingOutboundsCount();
+    if (this.isReceivingContext()) return this.pendingReceptionsCount();
+    
+    // Fallback general si está en dashboard u otra ruta neutra
+    if (this.pendingReceptionsCount() > 0) return this.pendingReceptionsCount();
+    if (this.pendingOutboundsCount() > 0) return this.pendingOutboundsCount();
+    return 0;
   });
 
   public readonly hasNewArrivalBeacon = computed(() => {
     if (this.isSecurityContext()) return this.hasNewUnseenDriverPass() || this.hasNewRampAssignment();
     if (this.isQualityContext()) return false;
+    if (this.isOutboundContext()) return this.hasNewUnseenOutbound();
     return this.hasNewUnseenPreReception();
   });
 
   private autoCloseTimeoutId: any = null;
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.currentUrl.set(this.router.url);
+    this.routerSub = this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd)
+    ).subscribe((e) => {
+      this.currentUrl.set(e.urlAfterRedirects || e.url);
+    });
+  }
 
   ngOnDestroy(): void {
     if (this.autoCloseTimeoutId) {
       clearTimeout(this.autoCloseTimeoutId);
     }
+    this.routerSub?.unsubscribe();
   }
 
   // ── Disparador de Llegadas en Vivo ──
-  public triggerArrival(category: 'RECEIVING' | 'SECURITY' | 'QUALITY'): void {
+  public triggerArrival(category: 'RECEIVING' | 'OUTBOUND' | 'SECURITY' | 'QUALITY'): void {
     if (category === 'RECEIVING' && this.isReceivingContext()) {
       this.hasNewUnseenPreReception.set(true);
+      this.isOpen.set(true);
+      this.playChime();
+    } else if (category === 'OUTBOUND' && this.isOutboundContext()) {
+      this.hasNewUnseenOutbound.set(true);
       this.isOpen.set(true);
       this.playChime();
     } else if (category === 'SECURITY' && this.isSecurityContext()) {
@@ -159,6 +193,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     this.autoCloseTimeoutId = setTimeout(() => {
       this.isOpen.set(false);
       this.hasNewUnseenPreReception.set(false);
+      this.hasNewUnseenOutbound.set(false);
       this.smartNotification.hasNewDriverSubmission.set(false);
       this.smartNotification.hasNewRampAssignment.set(false);
     }, 12000);
@@ -195,6 +230,17 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public goToReceptionsModule(): void {
     this.closeDropdown();
     this.router.navigate(['/warehouse-movements/receiving']);
+  }
+
+  // ── Acciones de Salidas / Outbound ──
+  public openOutbound(folio: string): void {
+    this.closeDropdown();
+    this.router.navigate(['/warehouse-movements/outbound'], { queryParams: { folio } });
+  }
+
+  public goToOutboundModule(): void {
+    this.closeDropdown();
+    this.router.navigate(['/warehouse-movements/outbound']);
   }
 
   // ── Acciones de Caseta ──

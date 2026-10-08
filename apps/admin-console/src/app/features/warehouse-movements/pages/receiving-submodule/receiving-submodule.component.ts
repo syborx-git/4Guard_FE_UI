@@ -253,6 +253,26 @@ export class ReceivingSubmoduleComponent implements OnInit {
       sealNumber: this.editCasetaSeals().join(', '),
     };
 
+    const auditDetails = [
+      { fieldName: 'No. Remisión / Factura', oldValue: currentRec.checkIn?.docNumber, newValue: updatedCheckIn.docNumber },
+      { fieldName: 'Línea Transportista', oldValue: currentRec.checkIn?.carrierLine, newValue: updatedCheckIn.carrierLine },
+      { fieldName: 'Operador / Chofer', oldValue: currentRec.checkIn?.driverName, newValue: updatedCheckIn.driverName },
+      { fieldName: 'Placas del Tracto', oldValue: currentRec.checkIn?.tractorPlates, newValue: updatedCheckIn.tractorPlates },
+      { fieldName: 'Placas de la Caja', oldValue: currentRec.checkIn?.boxPlates, newValue: updatedCheckIn.boxPlates },
+      { fieldName: 'Sellos de Seguridad', oldValue: currentRec.checkIn?.sealNumber, newValue: updatedCheckIn.sealNumber },
+    ].filter(d => d.oldValue !== d.newValue);
+
+    if (auditDetails.length > 0) {
+      this.movementsService.addReceptionAudit(currentRec.folio, {
+        id: `aud-caseta-${Date.now()}`,
+        action: 'FICHA_CASETA_MODIFICADA',
+        actionLabel: 'Modificación de Ficha Operativa de Arribo',
+        username: 'Operador Caseta / Administrador',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: auditDetails,
+      });
+    }
+
     const updatedReception: ReceptionHeader = {
       ...currentRec,
       checkIn: updatedCheckIn,
@@ -375,6 +395,19 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   toggleShowCancelPassword(): void {
     this.showCancelPassword.update((v) => !v);
+  }
+
+  // Modal Reapertura con Autorización de Supervisor / Administrador
+  showReopenModal = signal(false);
+  reopenReason = signal('');
+  reopenAdminUser = signal('');
+  reopenAdminPassword = signal('');
+  reopenErrorMessage = signal<string | null>(null);
+  showReopenPassword = signal(false);
+  isReopening = signal(false);
+
+  toggleShowReopenPassword(): void {
+    this.showReopenPassword.update((v) => !v);
   }
 
   // Modal Cambio de Remisión con Autorización de Rango Superior
@@ -1033,6 +1066,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
     this.loadAuditLogs(rec.folio);
     this.patchAltaFormWithReception(rec);
+    this.movementsService.syncGlobalMaxPalletNumber();
 
     if (rec.pallets && Array.isArray(rec.pallets)) {
       for (const p of rec.pallets) {
@@ -1127,7 +1161,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       ? ''
       : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
 
-    const bayLoc = rec.storageLocation || rec.storageLocationCode || 'Pasillo A - Rack 01 - Nivel 1';
+    const bayLoc = rec.storageLocation || rec.storageLocationCode || 'POS-A-001';
     this.selectedBayName.set(bayLoc);
 
     const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
@@ -1629,6 +1663,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
     switch (action) {
       case 'RECEPCION_CREADA':     return 'add_circle';
       case 'RECEPCION_COMPLETADA': return 'check_circle';
+      case 'RECEPCION_REABIERTA':  return 'lock_open_right';
+      case 'BAHIA_REUBICADA':      return 'swap_horiz';
+      case 'BAHIA_MODIFICADA':     return 'grid_view';
+      case 'FICHA_CASETA_MODIFICADA': return 'badge';
       case 'REENTRY_COMPLETED':
       case 'REINGRESO_REGISTRADO': return 'replay';
       case 'REENTRY_SCANNED':      return 'qr_code_scanner';
@@ -1644,6 +1682,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
     switch (action) {
       case 'RECEPCION_CREADA':     return 'carriers-tl-node--emerald';
       case 'RECEPCION_COMPLETADA': return 'carriers-tl-node--blue';
+      case 'RECEPCION_REABIERTA':  return 'carriers-tl-node--purple';
+      case 'BAHIA_REUBICADA':      return 'carriers-tl-node--amber';
+      case 'BAHIA_MODIFICADA':     return 'carriers-tl-node--blue';
+      case 'FICHA_CASETA_MODIFICADA': return 'carriers-tl-node--indigo';
       case 'REENTRY_COMPLETED':
       case 'REINGRESO_REGISTRADO':
       case 'REENTRY_SCANNED':      return 'carriers-tl-node--indigo';
@@ -1659,6 +1701,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
     switch (action) {
       case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
       case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cierre F01';
+      case 'RECEPCION_REABIERTA':  return 'Reapertura Extraordinaria con Autorización';
+      case 'BAHIA_REUBICADA':      return 'Reubicación a Posición Fija Definitiva';
+      case 'BAHIA_MODIFICADA':     return 'Cambio de Bahía de Almacenamiento';
+      case 'FICHA_CASETA_MODIFICADA': return 'Modificación de Ficha Operativa de Arribo';
       case 'REENTRY_COMPLETED':    return 'Reingreso Formal / Devolución Concluida F01-R';
       case 'REINGRESO_REGISTRADO': return 'Arribo de Reingreso en Caseta';
       case 'REENTRY_SCANNED':      return 'UA Reingresada Escaneada en Andén';
@@ -2109,8 +2155,31 @@ export class ReceivingSubmoduleComponent implements OnInit {
     );
   });
 
+  // ── ESTADOS DE REUBICACIÓN DESDE BUFFER TEMPORAL ──
+  isReallocatingMode = signal<boolean>(false);
+  reallocatingSourceBay = signal<string>('');
+
+  isTemporaryBay(code?: string | null): boolean {
+    if (!code) return false;
+    const c = code.toUpperCase().trim();
+    return c.includes('-T') || c.includes('TMP') || c.startsWith('T') || c.includes('TEMPORAL');
+  }
+
   openBaySelector(): void {
+    this.isReallocatingMode.set(false);
     this.showBaySelectorModal.set(true);
+  }
+
+  openReallocationModal(rec: ReceptionHeader): void {
+    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'POS-A-T01';
+    this.isReallocatingMode.set(true);
+    this.reallocatingSourceBay.set(bay);
+    this.showBaySelectorModal.set(true);
+  }
+
+  closeBaySelectorModal(): void {
+    this.isReallocatingMode.set(false);
+    this.showBaySelectorModal.set(false);
   }
 
   onBayInput(query: string): void {
@@ -2134,42 +2203,93 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   onBaySelected(res: BaySelectionResult): void {
-    this.selectedBayName.set(res.locationCode);
+    const isReallocation = this.isReallocatingMode();
+    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'Buffer Temporal';
+    const targetBay = res.locationCode;
+
+    this.selectedBayName.set(targetBay);
     this.altaForm.patchValue({
-      storageLocation: res.locationCode,
-      storageLocationId: res.locationId || res.locationCode,
+      storageLocation: targetBay,
+      storageLocationId: res.locationId || targetBay,
     });
+
     const currentRec = this.selectedReception();
     if (currentRec) {
+      // Si la recepción ya tenía pallets cargados, actualizar la ubicación de todos los pallets
+      const updatedPallets = (currentRec.pallets || []).map((p) => ({
+        ...p,
+        locationId: res.locationId || targetBay,
+        currentLocation: targetBay,
+        observations: isReallocation 
+          ? `Reubicado desde buffer temporal ${sourceBay} a posición fija ${targetBay}` 
+          : p.observations,
+      }));
+
       const updatedRec: ReceptionHeader = {
         ...currentRec,
-        storageLocation: res.locationCode,
-        storageLocationId: res.locationId || res.locationCode,
-        storageLocationCode: res.locationCode,
+        storageLocation: targetBay,
+        storageLocationId: res.locationId || targetBay,
+        storageLocationCode: targetBay,
+        pallets: updatedPallets,
       };
       this.selectedReception.set(updatedRec);
+
+      // Registrar explícitamente en la línea de tiempo de auditoría
+      const auditAction = isReallocation ? 'BAHIA_REUBICADA' : 'BAHIA_MODIFICADA';
+      const actionLabel = isReallocation 
+        ? 'Reubicación a Posición Fija Definitiva' 
+        : 'Cambio de Bahía de Almacenamiento';
+
+      this.movementsService.addReceptionAudit(updatedRec.folio, {
+        id: `aud-bay-${Date.now()}`,
+        action: auditAction,
+        actionLabel: actionLabel,
+        username: 'Administrador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        reason: isReallocation 
+          ? `Reubicación desde buffer temporal ${sourceBay} a posición fija ${targetBay}` 
+          : `Asignación de bahía ${targetBay}`,
+        details: [
+          { fieldName: 'Bahía Origen', oldValue: sourceBay },
+          { fieldName: 'Bahía Destino', newValue: targetBay },
+          { fieldName: 'Tarimas Involucradas', newValue: `${updatedPallets.length} Tarimas` },
+        ],
+      });
+      this.loadAuditLogs(updatedRec.folio);
 
       // Sincronizar inmediatamente al Backend en tiempo real si el registro ya existe
       if (currentRec.id && isUuid(currentRec.id)) {
         this.movementsApi
           .updateReceptionParameters(currentRec.id, {
             storageLocationId: isUuid(res.locationId) ? res.locationId : undefined,
-            storageLocationCode: res.locationCode,
+            storageLocationCode: targetBay,
           } as any)
           .subscribe({
             next: () => {
               this.movementsService.updateReception(currentRec.id!, updatedRec, true);
+              this.loadAuditLogs(currentRec.id!);
             },
             error: (err) => console.warn('Error sincronizando bahía:', err),
           });
       }
+
+      if (isReallocation) {
+        const operatorName = currentRec.checkIn?.forkliftOperator || 'Hector Villalva Ayala';
+        const folioStr = currentRec.folio || currentRec.checkIn?.docNumber || 'REM';
+        this.toast.success(
+          `⚡ Reubicación Exitosa: Remisión ${folioStr} trasladada de ${sourceBay} a ${targetBay}. Notificación enviada al montacarguista (${operatorName}).`
+        );
+      } else {
+        if (res.isOverride) {
+          this.toast.info(`Bahía ${targetBay} asignada con Anulación de Administrador.`);
+        } else {
+          this.toast.success(`Bahía ${targetBay} asignada correctamente.`);
+        }
+      }
     }
+
+    this.isReallocatingMode.set(false);
     this.showBaySelectorModal.set(false);
-    if (res.isOverride) {
-      this.toast.info(`Bahía ${res.locationCode} asignada con Anulación de Administrador.`);
-    } else {
-      this.toast.success(`Bahía ${res.locationCode} asignada correctamente.`);
-    }
   }
 
   // ── RE-ETIQUETADO SELECTIVO DE UAS (SSCC GS1-128) ──
@@ -2339,6 +2459,121 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.showPrintModal.set(true);
       } else {
         this.toast.error('No se pudo procesar la cancelación de la recepción.');
+      }
+    }
+  }
+
+  // ── REAPERTURA EXTRAORDINARIA DE RECEPCIÓN ──
+  openReopenModal(): void {
+    this.reopenReason.set('');
+    this.reopenAdminUser.set('');
+    this.reopenAdminPassword.set('');
+    this.reopenErrorMessage.set(null);
+    this.showReopenPassword.set(false);
+    this.showReopenModal.set(true);
+  }
+
+  closeReopenModal(): void {
+    this.showReopenModal.set(false);
+  }
+
+  confirmReopenReception(): void {
+    this.reopenErrorMessage.set(null);
+    const reason = this.reopenReason().trim();
+    const user = this.reopenAdminUser().trim();
+    const pass = this.reopenAdminPassword().trim();
+    const current = this.selectedReception();
+
+    if (!current) return;
+
+    if (!reason) {
+      this.reopenErrorMessage.set('El motivo o justificación de reapertura es obligatorio.');
+      return;
+    }
+    if (!user || !pass) {
+      this.reopenErrorMessage.set('Ingresa usuario y contraseña de Administrador / Supervisor.');
+      return;
+    }
+
+    this.isReopening.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    if (current.id && isUuid(current.id) && pass) {
+      this.movementsApi
+        .reopenReception(current.id, {
+          adminUsername: user,
+          adminPassword: pass,
+          reason,
+        })
+        .subscribe({
+          next: () => {
+            this.isReopening.set(false);
+            this.showReopenModal.set(false);
+
+            const reopened = this.movementsService.reopenReception(
+              current.folio,
+              reason,
+              adminLabel
+            );
+
+            if (reopened) {
+              this.selectReception(reopened);
+              this.loadAuditLogs(reopened.id || reopened.folio);
+              this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Ya puedes cargar pallets adicionales.`);
+
+              this.smartNotification.dispatch({
+                category: 'RECEIVING',
+                title: '🔓 Recepción Reabierta para Captura',
+                message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${reason}. Habilitada para captura de pallets faltantes.`,
+                referenceFolio: reopened.folio,
+                route: '/movements/receiving',
+                targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
+                targetRoutes: ['/movements/receiving'],
+                severity: 'WARNING',
+                data: reopened,
+              });
+            }
+          },
+          error: (err: any) => {
+            this.isReopening.set(false);
+            const msg =
+              err.error?.message ||
+              err.message ||
+              'Error al validar credenciales o reabrir la recepción en el servidor.';
+            this.reopenErrorMessage.set(msg);
+          },
+        });
+    } else {
+      const reopened = this.movementsService.reopenReception(
+        current.folio,
+        reason,
+        adminLabel
+      );
+
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+
+      if (reopened) {
+        this.selectReception(reopened);
+        this.loadAuditLogs(reopened.id || reopened.folio);
+        this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Ya puedes cargar pallets adicionales.`);
+
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🔓 Recepción Reabierta para Captura',
+          message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${reason}. Habilitada para captura de pallets faltantes.`,
+          referenceFolio: reopened.folio,
+          route: '/movements/receiving',
+          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
+          targetRoutes: ['/movements/receiving'],
+          severity: 'WARNING',
+          data: reopened,
+        });
+      } else {
+        this.toast.error('No se pudo procesar la reapertura de la recepción.');
       }
     }
   }

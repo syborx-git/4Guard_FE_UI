@@ -63,6 +63,64 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.smartNotification.clearRequestedPassToLoad();
       }
     });
+
+    // Auto-asignar el nombre del guardia autenticado si está disponible en la sesión activa
+    effect(() => {
+      const guardName = this.getLoggedGuardName();
+      if (guardName && guardName !== 'Guardia de Turno - Caseta Principal') {
+        const currentVal = this.checkInForm.get('responsableVigilanciaNombre')?.value;
+        if (!currentVal || currentVal === 'Guardia de Turno - Caseta Principal') {
+          this.checkInForm.patchValue({ responsableVigilanciaNombre: guardName });
+        }
+      }
+    });
+
+    // Notificar al guardia en tiempo real cuando una unidad concluye maniobra y queda autorizada para salida
+    effect(() => {
+      const yardList = this.inYardPasses();
+      for (const p of yardList) {
+        if (p && p.isReadyForExit) {
+          const key = (p.token || p.generatedFolio || p.id || '').trim().toUpperCase();
+          if (key && !this.notifiedReadyExitTokens.has(key)) {
+            this.notifiedReadyExitTokens.add(key);
+
+            // Alerta acústica y visual en caseta
+            this.playCheckinChime();
+
+            const unitLabel = p.economicNumber ? `Eco ${p.economicNumber}` : (p.tractorPlates ? `Placas ${p.tractorPlates}` : 'Unidad');
+            const rampLabel = p.rampCode || (p.rampNumber ? `R-${p.rampNumber}` : 'Andén');
+            const chofer = p.driverName || 'Chofer';
+            const carrier = p.carrierLine || 'Transportista';
+            const folio = p.token || p.generatedFolio || 'S/F';
+
+            this.toast.info(
+              `🏁 ¡Unidad Lista para Salida! ${unitLabel} (${carrier} - ${chofer}) concluyó maniobra en ${rampLabel}. Proceda a registrar su Salida en Caseta.`
+            );
+
+            this.smartNotification.dispatch({
+              category: 'SECURITY',
+              title: '🏁 Unidad Lista para Salida (Check-Out)',
+              message: `La unidad ${unitLabel} (${carrier} - Chofer: ${chofer}) concluyó maniobra en ${rampLabel}. Registre su Salida física y sellos de salida.`,
+              referenceFolio: folio,
+              route: '/security',
+              targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA', 'GUARD'],
+              targetRoutes: ['/security'],
+              severity: 'WARNING',
+              data: p
+            });
+          }
+        }
+      }
+    });
+  }
+
+  protected getLoggedGuardName(): string {
+    const fullName = this.authState.userFullName()?.trim();
+    if (fullName) return fullName;
+    const user = this.authState.currentUser();
+    if (user?.fullName?.trim()) return user.fullName.trim();
+    if (user?.username?.trim()) return user.username.trim();
+    return 'Guardia de Turno - Caseta Principal';
   }
 
   // ── Navegación por Pestañas ───────────────────────────────────────────────
@@ -146,9 +204,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
 
+      const isReady = p.isReadyForExit === true || p.status === 'READY_FOR_EXIT' || p.status === 'DISCHARGED' || p.status === 'LOADED' || p.status === 'COMPLETED';
       const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
       mergedMap.set(key, {
         ...p,
+        isReadyForExit: isReady,
         receptionTime: timeVal,
         horaEntrada: timeVal
       });
@@ -170,7 +230,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           ? r.checkIn.sealNumbers
           : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
 
-        const isReady = false;
+        const isReady = r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED' || (r as any).isReadyForExit === true;
         const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -215,7 +275,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
       if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED') {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
-        const isReady = o.status === 'LOADED';
+        const isReady = o.status === 'LOADED' || (o.status as string) === 'COMPLETED' || (o as any).isReadyForExit === true;
         const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -374,7 +434,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     revIndiciosPlagasObs: [''],
 
     // 5. FIRMAS Y RESPONSABLES
-    responsableVigilanciaNombre: ['Guardia de Turno - Caseta Principal', Validators.required],
+    responsableVigilanciaNombre: [this.getLoggedGuardName(), Validators.required],
     responsableVigilanciaFirma: [true, Validators.requiredTrue],
     transportistaNombre: ['', Validators.required],
     transportistaFirma: [false, Validators.requiredTrue]
@@ -382,6 +442,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Notificaciones de Caseta / Comanda en Vivo ───────────────────────────
   private readonly notifiedSubmittedTokens = new Set<string>();
+  private readonly notifiedReadyExitTokens = new Set<string>();
 
   private playCheckinChime(): void {
     try {
@@ -631,12 +692,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     // Auto-refresco en tiempo real no bloqueante
     this.refreshIntervalId = setInterval(() => {
-      if (this.activeTab() === 'REGISTRATION') {
-        this.reloadActivePasses();
-      } else if (this.activeTab() === 'IN_YARD') {
-        this.reloadInYardPasses();
-        this.reloadHistoryPasses();
-      } else if (this.activeTab() === 'HISTORY') {
+      this.reloadActivePasses();
+      this.reloadInYardPasses();
+      if (this.activeTab() === 'HISTORY') {
         this.reloadHistoryPasses();
       }
     }, 15000);
@@ -781,11 +839,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         docCartaPorte: 'SI',
         docCartaPorteObs: '',
         docRemision: 'NO',
-        docRemisionObs: 'N/A - Operación de Carga/Embarque'
+        docRemisionObs: 'N/A - Operación de Carga/Embarque',
+        noSello: 'PENDIENTE_ANDEN'
       });
-      if (this.sealList().length === 0) {
-        this.sealList.set(['PENDIENTE_ANDEN']);
-      }
+      this.sealList.set(['PENDIENTE_ANDEN']);
+      this.tempSealInput.set('');
     } else {
       remisionControl?.setValidators([Validators.required]);
       cartaControl?.clearValidators();
@@ -794,7 +852,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         docRemision: 'SI',
         docRemisionObs: '',
         docCartaPorte: 'NO',
-        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción'
+        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción',
+        noSello: ''
       });
       if (this.sealList().some(s => s === 'PENDIENTE_ANDEN')) {
         this.sealList.set([]);
@@ -1315,7 +1374,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       eppChaleco:          'SI',
       eppChalecoObs:       '',
       // Responsable Vigilancia
-      responsableVigilanciaNombre: 'Guardia de Turno - Caseta Principal',
+      responsableVigilanciaNombre: this.checkInForm.get('responsableVigilanciaNombre')?.value || this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
       rampCode:            '',
       rampNumber:          null
@@ -1603,7 +1662,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       revIndiciosPlagas: caja.plagas || item.revIndiciosPlagas || formVal.revIndiciosPlagas || 'NO',
       revIndiciosPlagasObs: item.revIndiciosPlagasObs || formVal.revIndiciosPlagasObs || '',
 
-      responsableVigilanciaNombre: item.responsableVigilanciaNombre || item.processedBy || formVal.responsableVigilanciaNombre || 'Guardia de Turno - Caseta Principal',
+      responsableVigilanciaNombre: item.responsableVigilanciaNombre || item.processedBy || formVal.responsableVigilanciaNombre || this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
       transportistaNombre: item.transportistaNombre || item.driverName || item.nombreOperador || formVal.transportistaNombre || formVal.nombreOperador || 'Chofer Transportista',
       driverSignature: item.driverSignature,
@@ -1743,6 +1802,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── MANEJO DE SELLOS DE SEGURIDAD ──────────────────────────────────────────
   protected addSeal(): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga (Se asignan en andén de salida)
+    }
     const val = this.tempSealInput().trim().toUpperCase();
     if (val && !this.sealList().includes(val)) {
       this.sealList.update((list) => [...list, val]);
@@ -1751,6 +1813,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected removeSeal(index: number): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga
+    }
     this.sealList.update((list) => list.filter((_, i) => i !== index));
   }
 
@@ -1837,7 +1902,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
       `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
       `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtranos}, Plagas=${formVal.revIndiciosPlagas}`,
-      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
+      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || this.getLoggedGuardName()}`
     ].join(' | ');
 
     const rCode = formVal.rampCode || null;
@@ -2135,7 +2200,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       revOloresExtranosObs: '',
       revIndiciosPlagas: 'NO',
       revIndiciosPlagasObs: '',
-      responsableVigilanciaNombre: 'Guardia de Turno - Caseta Principal',
+      responsableVigilanciaNombre: this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
       transportistaNombre: '',
       transportistaFirma: false

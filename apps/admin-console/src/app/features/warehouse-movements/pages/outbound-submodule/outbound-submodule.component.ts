@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -101,6 +101,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly printService = inject(PrintService);
   protected readonly authState = inject(AuthState);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   goToManageCarriers(): void {
     this.router.navigate(['/admin/carriers']);
@@ -2382,6 +2383,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   closeOutboundDetail(): void {
     this.selectedOutbound.set(null);
     this.formMode.set('idle');
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
   }
 
   // ── DIRECTORIO GENERAL DE SALIDAS ──────────────────────────────────────────
@@ -2433,6 +2435,30 @@ export class OutboundSubmoduleComponent implements OnInit {
     this._loadCatalogSkus();
     this.formMode.set('idle');
     this.selectedOutbound.set(null);
+
+    this.route.queryParams.subscribe((params) => {
+      const folio = params['folio'] || params['id'];
+      if (folio) {
+        this.searchQuery.set(folio);
+        const found = this.svc.findOutboundByFolio(folio);
+        if (found) {
+          this.selectOutboundItem(found);
+        } else {
+          this.movementsApi.getOutbounds({ search: folio }).subscribe({
+            next: (list: any[]) => {
+              if (list && list.length > 0) {
+                const match = list.find((o: any) => o.folio === folio || o.id === folio || o.folioNumber === folio) || list[0];
+                if (match) {
+                  const mapped = this.svc.mapOutboundResponseToHeader(match);
+                  this.selectOutboundItem(mapped);
+                }
+              }
+            },
+            error: () => {},
+          });
+        }
+      }
+    });
   }
 
   private _loadCatalogSkus(): void {

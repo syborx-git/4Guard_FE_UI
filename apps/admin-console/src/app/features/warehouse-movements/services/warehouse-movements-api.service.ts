@@ -483,6 +483,12 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  reopenReception(id: string, body: { adminUsername: string; adminPassword: string; reason: string }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.receptionsUrl}/${id}/reopen`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
   changeRemision(id: string, body: { newDocNumber: string; reason: string; adminUsername: string; adminPassword: string }): Observable<any> {
     return this.http.put<ApiResponse<any>>(`${this.receptionsUrl}/${id}/change-remision`, body).pipe(
       map((res) => res.data)

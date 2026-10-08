@@ -106,7 +106,7 @@
 
     @if (isKpiCollapsed()) {
       <!-- Vista Compacta Resumida Homologada -->
-      <div class="movement-kpi-summary-bar animate-fade-in" fgStarBorder fgSpecularGlow>
+      <div class="movement-kpi-summary-bar animate-fade-in">
         <div class="movement-kpi-summary-items">
           <div class="movement-kpi-summary-item">
             <span class="movement-kpi-summary-dot bg-blue-500 shadow-sm"></span>
@@ -137,11 +137,6 @@
             <span class="movement-kpi-summary-label">Canceladas:</span>
             <strong class="movement-kpi-summary-value text-rose-600 dark:text-rose-400">{{ kpiCancelled() }}</strong>
           </div>
-        </div>
-
-        <div class="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          <span class="material-symbols-outlined text-sm text-amber-600 dark:text-amber-400">domain</span>
-          <span>Andenes: <strong>{{ totalBusyRampsCount() }} ocupado{{ totalBusyRampsCount() === 1 ? '' : 's' }}</strong></span>
         </div>
       </div>
     } @else {
@@ -518,6 +513,17 @@
                   <span>Cambiar Remisión</span>
                 </button>
               }
+              @if (rec.status === 'COMPLETED') {
+                <button
+                  type="button"
+                  (click)="openReopenModal()"
+                  class="px-3 py-1.5 text-xs font-black rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                  title="Reabrir recepción finalizada con autorización de supervisor para registrar pallets omitidos"
+                >
+                  <span class="material-symbols-outlined text-sm font-bold">lock_open</span>
+                  <span>Reabrir Recepción</span>
+                </button>
+              }
               @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
                 <button
                   type="button"
@@ -532,7 +538,6 @@
           </div>
 
           <!-- 2. FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
-          <!-- 2. FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
           <div class="logistics-command-panel">
             <div class="logistics-command-panel__header">
               <div class="logistics-command-panel__title-wrap">
@@ -544,7 +549,7 @@
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                @if (rec.status === 'REGISTERED') {
+                @if (rec.status !== 'CANCELLED') {
                   <button
                     type="button"
                     (click)="openEditCasetaModal()"
@@ -672,30 +677,63 @@
                     <span class="logistics-command-ramp-badge">
                       Andén {{ rec.checkIn.rampNumber || 1 }}
                     </span>
-                    <button
-                      type="button"
-                      (click)="openBaySelector()"
-                      class="btn-bay-action"
-                      title="Ver mapa de ocupación en tiempo real y reasignar bahía (Semáforo estándar 22 tarimas)"
-                    >
-                      <span class="material-symbols-outlined text-xs">grid_view</span>
-                      <span>Cambiar Bahía (22)</span>
-                    </button>
+
+                    @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
+                      <!-- Caso 1: En proceso -> Asignación de bahía -->
+                      <button
+                        type="button"
+                        (click)="openBaySelector()"
+                        class="btn-bay-action"
+                        title="Ver mapa de ocupación en tiempo real y asignar bahía"
+                      >
+                        <span class="material-symbols-outlined text-xs">grid_view</span>
+                        <span>Cambiar Bahía</span>
+                      </button>
+                    } @else if (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) {
+                      <!-- Caso 2: Completado en temporal -> Reubicar a bahía fija -->
+                      <button
+                        type="button"
+                        (click)="openReallocationModal(rec)"
+                        class="px-2.5 py-1 text-[11px] font-black rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 flex items-center gap-1 shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                        title="Reubicar esta remisión desde el buffer temporal hacia una bahía fija definitiva"
+                      >
+                        <span class="material-symbols-outlined text-xs">swap_horiz</span>
+                        <span>Reubicar a Posición Fija</span>
+                      </button>
+                    } @else {
+                      <!-- Caso 3: Completado en fija -> Inmutable / Bloqueado -->
+                      <span
+                        class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1 select-none"
+                        title="Esta remisión ya se encuentra almacenada definitivamente en una posición fija."
+                      >
+                        <span class="material-symbols-outlined text-xs">lock</span>
+                        <span>Almacenamiento Fijo</span>
+                      </span>
+                    }
                   </div>
                 </div>
 
                 <div class="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-blue-200/60 dark:border-blue-800/40">
                   <span
-                    (click)="openBaySelector()"
+                    (click)="rec.status !== 'COMPLETED' ? openBaySelector() : (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode) ? openReallocationModal(rec) : null)"
                     class="logistics-command-bay-text truncate"
-                    [title]="'Haga clic para cambiar bahía: ' + (selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'LOC-A-01-N1')"
+                    [class.cursor-pointer]="rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)"
+                    [title]="(rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) ? 'Haga clic para seleccionar bahía' : 'Posición fija definitiva'"
                   >
-                    {{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'LOC-A-01-N1' }}
+                    {{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'POS-A-001' }}
                   </span>
-                  <span class="logistics-command-autoslot-tag shrink-0">
-                    <span class="material-symbols-outlined text-[11px]">bolt</span>
-                    <span>Auto-Slotting</span>
-                  </span>
+
+                  @if (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) {
+                    <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-400 shrink-0 flex items-center gap-0.5">
+                      <span class="material-symbols-outlined text-[10px]">pending_actions</span>
+                      <span>Buffer Temporal</span>
+                    </span>
+                  } @else {
+                    <span class="logistics-command-autoslot-tag shrink-0">
+                      <span class="material-symbols-outlined text-[11px]">bolt</span>
+                      <span>Auto-Slotting</span>
+                    </span>
+                  }
                 </div>
               </div>
             </div>
@@ -896,14 +934,14 @@
                       (input)="onOperatorInput($any($event.target).value)"
                       (focus)="isOperatorDropdownOpen.set(true)"
                       placeholder="Buscar montacarguista..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (operatorSearchQuery()) {
                       <button
                         type="button"
                         (click)="clearOperatorSelection()"
-                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar montacarguista seleccionado"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
@@ -971,7 +1009,7 @@
                     <button
                       type="button"
                       (click)="showDockMapModal.set(true)"
-                      class="text-[10px] font-bold text-amber-700 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      class="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
                       title="Abrir mapa visual de andenes"
                     >
                       <span class="material-symbols-outlined text-[13px]">grid_view</span>
@@ -985,14 +1023,14 @@
                       (input)="onRampInput($any($event.target).value)"
                       (focus)="isRampDropdownOpen.set(true)"
                       placeholder="Seleccionar rampa..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (rampSearchQuery()) {
                       <button
                         type="button"
                         (click)="clearRampSelection()"
-                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar rampa seleccionada"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
@@ -1063,14 +1101,14 @@
                       (input)="onSupplierInput($any($event.target).value)"
                       (focus)="isSupplierDropdownOpen.set(true)"
                       placeholder="Buscar proveedor..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (supplierSearchQuery()) {
                       <button
                         type="button"
                         (click)="clearSupplierSelection()"
-                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar proveedor seleccionado"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
@@ -1136,14 +1174,14 @@
                       (input)="onPalletTypeInput($any($event.target).value)"
                       (focus)="isPalletTypeDropdownOpen.set(true)"
                       placeholder="Buscar tipo de tarima..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (palletTypeSearchQuery()) {
                       <button
                         type="button"
                         (click)="clearPalletTypeSelection()"
-                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar tipo de tarima seleccionado"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
@@ -1206,14 +1244,14 @@
                       (input)="onSkuInput($any($event.target).value)"
                       (focus)="isSkuDropdownOpen.set(true)"
                       placeholder="Escribe dígitos del SKU (ej. 4321)..."
-                      class="fg-input font-bold w-full pr-8 !text-slate-950"
+                      class="fg-input font-bold w-full pr-8"
                       autocomplete="off"
                     />
                     @if (skuSearchQuery()) {
                       <button
                         type="button"
                         (click)="clearSkuSelection()"
-                        class="absolute right-2 text-slate-600 hover:text-slate-950 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
                         title="Limpiar SKU seleccionado"
                       >
                         <span class="material-symbols-outlined text-sm">close</span>
@@ -1267,13 +1305,13 @@
                 <!-- Piezas por Tarima: 2 columnas -->
                 <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-2">
                   <label class="fg-label fg-label--required">Piezas por Tarima</label>
-                  <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono text-center font-black !text-slate-950" placeholder="0" />
+                  <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono text-center font-black" placeholder="0" />
                 </div>
 
                 <!-- Observaciones: 6 columnas -->
                 <div class="fg-field col-span-1 sm:col-span-2 lg:col-span-6">
                   <label class="fg-label">Observaciones de la Descarga</label>
-                  <input type="text" formControlName="observations" class="fg-input font-medium !text-slate-950" placeholder="Ej. Ingreso directo andén 4 sin incidentes..." />
+                  <input type="text" formControlName="observations" class="fg-input font-medium" placeholder="Ej. Ingreso directo andén 4 sin incidentes..." />
                 </div>
               </div>
             </form>
@@ -1343,7 +1381,7 @@
                 }
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
-                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'POS-A-001' }}</span>
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Montacarguista Asignado</span>
@@ -1637,7 +1675,7 @@
                 }
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
-                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'Pasillo A - Rack 01 - Nivel 1' }}</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'POS-A-001' }}</span>
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Montacarguista</span>
@@ -2182,34 +2220,34 @@
         <form [formGroup]="editPalletForm" (ngSubmit)="saveEditedPallet()" class="flex flex-col flex-1 min-h-0">
           <div class="modal-body space-y-3.5 text-xs">
             <div>
-              <label class="font-bold !text-amber-900 uppercase block mb-1">CÓDIGO TARIMA (UA):</label>
-              <input type="text" formControlName="palletCode" class="fg-input font-mono uppercase w-full font-bold !text-slate-950" />
+              <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">CÓDIGO TARIMA (UA):</label>
+              <input type="text" formControlName="palletCode" class="fg-input font-mono uppercase w-full font-bold" />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="font-bold !text-amber-900 uppercase block mb-1">SKU:</label>
-                <input type="text" formControlName="productId" class="fg-input font-mono w-full font-bold !text-slate-950" />
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">SKU:</label>
+                <input type="text" formControlName="productId" class="fg-input font-mono w-full font-bold" />
               </div>
               <div>
-                <label class="font-bold !text-amber-900 uppercase block mb-1">CANT X TARIMA:</label>
-                <input type="number" formControlName="pieces" class="fg-input font-mono w-full font-bold !text-slate-950" />
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">CANT X TARIMA:</label>
+                <input type="number" formControlName="pieces" class="fg-input font-mono w-full font-bold" />
               </div>
             </div>
 
             <div>
-              <label class="font-bold !text-amber-900 uppercase block mb-1">DESCRIPCIÓN SKU:</label>
-              <input type="text" formControlName="description" class="fg-input w-full font-bold !text-slate-950" />
+              <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">DESCRIPCIÓN SKU:</label>
+              <input type="text" formControlName="description" class="fg-input w-full font-bold" />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="font-bold !text-amber-900 uppercase block mb-1">PROVEEDOR:</label>
-                <input type="text" formControlName="supplierName" class="fg-input w-full uppercase font-bold !text-slate-950" />
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">PROVEEDOR:</label>
+                <input type="text" formControlName="supplierName" class="fg-input w-full uppercase font-bold" />
               </div>
               <div>
-                <label class="font-bold !text-amber-900 uppercase block mb-1">TIPO TARIMA:</label>
-                <select formControlName="palletTypeId" class="fg-input w-full font-bold !text-slate-950">
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">TIPO TARIMA:</label>
+                <select formControlName="palletTypeId" class="fg-input w-full font-bold">
                   @for (pt of palletTypes; track pt[0]) {
                     <option [value]="pt[0]">{{ pt[1] }}</option>
                   }
@@ -2219,23 +2257,23 @@
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="font-bold !text-amber-900 uppercase block mb-1">LOTE ASIGNADO:</label>
-                <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase w-full font-bold !text-slate-950" placeholder="Ej. LOT-2026-A1" />
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">LOTE ASIGNADO:</label>
+                <input type="text" formControlName="lotNumber" class="fg-input font-mono uppercase w-full font-bold" placeholder="Ej. LOT-2026-A1" />
               </div>
               <div>
-                <label class="font-bold !text-amber-900 uppercase block mb-1">FECHA CADUCIDAD:</label>
-                <input type="date" formControlName="expirationDate" class="fg-input font-mono w-full font-bold !text-slate-950" />
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">FECHA CADUCIDAD:</label>
+                <input type="date" formControlName="expirationDate" class="fg-input font-mono w-full font-bold" />
               </div>
             </div>
 
             <div>
-              <label class="font-bold !text-amber-900 uppercase block mb-1">NO. DE REMISIÓN / DOCUMENTO:</label>
-              <input type="text" formControlName="docNumber" class="fg-input font-mono uppercase w-full font-bold !text-slate-950" placeholder="Ej. REM-26510" />
+              <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">NO. DE REMISIÓN / DOCUMENTO:</label>
+              <input type="text" formControlName="docNumber" class="fg-input font-mono uppercase w-full font-bold" placeholder="Ej. REM-26510" />
             </div>
 
             <div>
-              <label class="font-bold !text-amber-900 uppercase block mb-1">OBSERVACIONES:</label>
-              <input type="text" formControlName="observations" class="fg-input w-full font-medium !text-slate-950" placeholder="Observación específica de esta tarima..." />
+              <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">OBSERVACIONES:</label>
+              <input type="text" formControlName="observations" class="fg-input w-full font-medium" placeholder="Observación específica de esta tarima..." />
             </div>
           </div>
 
@@ -2378,6 +2416,156 @@
           >
             <span class="material-symbols-outlined text-base">security_update_warning</span>
             <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Modal Reapertura de Recepción (Con Autorización de Supervisor / Administrador) -->
+  @if (showReopenModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeReopenModal()">
+      <div class="modal-card max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+        
+        <!-- Header del Modal -->
+        <div class="modal-header flex items-center justify-between border-b border-amber-500/20 bg-amber-500/5">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+              <span class="material-symbols-outlined text-xl">lock_open</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title text-slate-950 dark:text-slate-100 font-black text-sm">
+                Reabrir Recepción #{{ selectedReception()?.folio }}
+              </h3>
+              <p class="modal-header-subtitle text-[11px] text-slate-600 dark:text-slate-400">
+                Autorización para carga complementaria de pallets faltantes
+              </p>
+            </div>
+          </div>
+          <button (click)="closeReopenModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body del Modal -->
+        <div class="modal-body space-y-3.5 text-xs p-5 overflow-y-auto">
+          <!-- Banner Informativo -->
+          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-amber-700 dark:text-amber-300">
+            <span class="material-symbols-outlined text-lg shrink-0 mt-0.5">info</span>
+            <div class="text-[11px] leading-relaxed">
+              <strong class="font-bold block text-xs mb-0.5">Reactivación de Proceso de Descarga</strong>
+              Al reabrir, el estado cambiará a <span class="font-bold underline">En Proceso</span> y la recepción reaparecerá en la terminal de montacargas para capturar los pallets omitidos.
+            </div>
+          </div>
+
+          <!-- Resumen de la Recepción -->
+          <div class="modal-summary-box grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-subtle">
+            <div>
+              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Cliente:</span>
+              <span class="modal-summary-val truncate block font-bold text-slate-900 dark:text-slate-100">{{ selectedReception()?.checkIn?.client }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Remisión / Factura:</span>
+              <span class="modal-summary-val font-mono font-bold text-slate-900 dark:text-slate-100">{{ selectedReception()?.checkIn?.docNumber || selectedReception()?.folio }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Tarimas Actuales:</span>
+              <span class="modal-summary-val font-bold text-amber-600 dark:text-amber-400">{{ totalTarimas() }} Tarimas registradas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Piezas Totales:</span>
+              <span class="modal-summary-val font-bold text-emerald-600 dark:text-emerald-400">{{ totalPiezas() }} Piezas</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de Error si aplica -->
+          @if (reopenErrorMessage()) {
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ reopenErrorMessage() }}</span>
+            </div>
+          }
+
+          <!-- Motivo de reapertura obligatorio -->
+          <div class="space-y-1">
+            <label class="modal-field-label font-bold text-slate-800 dark:text-slate-200">
+              Motivo o Justificación Obligatoria de Reapertura <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <textarea
+              [ngModel]="reopenReason()"
+              (ngModelChange)="reopenReason.set($event)"
+              rows="2"
+              placeholder="Describe la justificación de la reapertura (ej. Se omitió 1 tarima física en andén por error operativo en descarga)..."
+              class="fg-input w-full text-xs font-medium"
+            ></textarea>
+          </div>
+
+          <!-- Credenciales del ADMIN / SUPERVISOR -->
+          <div class="pt-3 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-slate-100">
+              <span class="material-symbols-outlined text-base text-amber-500">lock_person</span>
+              <span>Validación de Credenciales de Supervisor / Administrador</span>
+            </div>
+
+            <div>
+              <label class="modal-field-label text-slate-700 dark:text-slate-300 font-semibold">Usuario / Correo Supervisor</label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="reopenAdminUser()"
+                  (ngModelChange)="reopenAdminUser.set($event)"
+                  placeholder="admin@4guard.com"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label text-slate-700 dark:text-slate-300 font-semibold">Contraseña de Supervisor / Admin <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showReopenPassword() ? 'text' : 'password'"
+                  [ngModel]="reopenAdminPassword()"
+                  (ngModelChange)="reopenAdminPassword.set($event)"
+                  (keyup.enter)="confirmReopenReception()"
+                  placeholder="Ingresa tu contraseña de autorización"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowReopenPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showReopenPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer flex items-center justify-between p-4 border-t border-subtle bg-slate-50/50 dark:bg-slate-900/50">
+          <button
+            type="button"
+            (click)="closeReopenModal()"
+            class="btn-ghost text-xs px-3.5 py-1.5 rounded-xl cursor-pointer"
+          >
+            Regresar
+          </button>
+          <button
+            type="button"
+            (click)="confirmReopenReception()"
+            [disabled]="isReopening()"
+            class="px-4 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-amber-500/25 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+          >
+            <span class="material-symbols-outlined text-base">lock_open</span>
+            <span>{{ isReopening() ? 'Reabriendo...' : 'Confirmar Reapertura' }}</span>
           </button>
         </div>
 
@@ -2777,13 +2965,13 @@
               <!-- No. de Remisión / Factura -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">No. Remisión / Factura</label>
-                <input type="text" formControlName="docNumber" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="Ej. REM-2026-101" />
+                <input type="text" formControlName="docNumber" class="fg-input font-mono uppercase font-bold" placeholder="Ej. REM-2026-101" />
               </div>
 
               <!-- Cliente Destinatario -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">Cliente Destinatario</label>
-                <select formControlName="client" (change)="onEditCasetaClientChange($event)" class="fg-input font-bold !text-slate-950">
+                <select formControlName="client" (change)="onEditCasetaClientChange($event)" class="fg-input font-bold">
                   <option value="">-- Selecciona Cliente --</option>
                   @for (cl of clients(); track cl.code) {
                     <option [value]="cl.name">{{ cl.name }}</option>
@@ -2794,7 +2982,7 @@
               <!-- Línea Transportista -->
               <div class="fg-field sm:col-span-2">
                 <label class="fg-label fg-label--required">Línea Transportista</label>
-                <select formControlName="carrierLine" (change)="onEditCasetaCarrierChange($event)" class="fg-input font-bold !text-slate-950">
+                <select formControlName="carrierLine" (change)="onEditCasetaCarrierChange($event)" class="fg-input font-bold">
                   <option value="">-- Selecciona Transportista --</option>
                   @for (tr of carrierLines(); track tr.code) {
                     <option [value]="tr.name">{{ tr.name }}</option>
@@ -2805,25 +2993,25 @@
               <!-- Hora de Llegada -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">Hora de Llegada (HH:mm)</label>
-                <input type="text" formControlName="receptionTime" class="fg-input font-mono font-bold !text-slate-950" placeholder="11:15" />
+                <input type="text" formControlName="receptionTime" class="fg-input font-mono font-bold" placeholder="11:15" />
               </div>
 
               <!-- Chofer / Operador -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">Nombre del Chofer / Operador</label>
-                <input type="text" formControlName="driverName" class="fg-input font-bold !text-slate-950" placeholder="Nombre completo" />
+                <input type="text" formControlName="driverName" class="fg-input font-bold" placeholder="Nombre completo" />
               </div>
 
               <!-- Placas Tracto -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">Placas Tracto</label>
-                <input type="text" formControlName="tractorPlates" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="77-AB-99" />
+                <input type="text" formControlName="tractorPlates" class="fg-input font-mono uppercase font-bold" placeholder="77-AB-99" />
               </div>
 
               <!-- Placas Caja -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">Placas Caja</label>
-                <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold !text-slate-950" placeholder="55-XX-11" />
+                <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold" placeholder="55-XX-11" />
               </div>
             </div>
 
@@ -2838,7 +3026,7 @@
                   [ngModelOptions]="{ standalone: true }"
                   (keyup.enter)="addEditSeal()"
                   placeholder="Ingresar número de sello (ej. SL-98421)..."
-                  class="fg-input font-mono uppercase text-xs flex-1 !text-slate-950"
+                  class="fg-input font-mono uppercase text-xs flex-1"
                 />
                 <button
                   type="button"
@@ -3166,9 +3354,10 @@
   <!-- MODAL: SELECTOR VISUAL DE BAHÍAS (22 PALLETS) -->
   @if (showBaySelectorModal()) {
     <fg-bay-occupancy-selector
-      [selectedLocationCode]="altaForm.value.storageLocation"
+      [selectedLocationCode]="isReallocatingMode() ? reallocatingSourceBay() : altaForm.value.storageLocation"
+      [dialogTitle]="isReallocatingMode() ? 'Reubicación de Buffer Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías (Estándar 22 Pallets)'"
       (locationSelected)="onBaySelected($event)"
-      (closed)="showBaySelectorModal.set(false)"
+      (closed)="closeBaySelectorModal()"
     ></fg-bay-occupancy-selector>
   }
 

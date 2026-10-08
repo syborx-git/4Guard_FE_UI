@@ -16,6 +16,8 @@
             {{ pendingRampAssignmentsCount() > 0 ? 'dock' : 'qr_code_scanner' }}
           } @else if (isQualityContext()) {
             warning
+          } @else if (isOutboundContext()) {
+            local_shipping
           } @else {
             move_to_inbox
           }
@@ -34,6 +36,8 @@
             }
           } @else if (isQualityContext()) {
             {{ blockedQualityCount() }} {{ blockedQualityCount() === 1 ? 'BLOQUEO QM' : 'BLOQUEOS QM' }}
+          } @else if (isOutboundContext()) {
+            {{ pendingOutboundsCount() }} {{ pendingOutboundsCount() === 1 ? 'PRE-SALIDA' : 'PRE-SALIDAS' }}
           } @else {
             {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
           }
@@ -60,6 +64,8 @@
                   {{ pendingRampAssignmentsCount() > 0 ? 'dock' : 'local_police' }}
                 } @else if (isQualityContext()) {
                   fact_check
+                } @else if (isOutboundContext()) {
+                  local_shipping
                 } @else {
                   move_to_inbox
                 }
@@ -72,6 +78,8 @@
                     Eventos de Caseta &amp; Andenes
                   } @else if (isQualityContext()) {
                     Alertas de Calidad QM
+                  } @else if (isOutboundContext()) {
+                    Pre-Salidas / Embarques en Caseta
                   } @else {
                     Pre-Recepciones en Caseta
                   }
@@ -86,6 +94,8 @@
                   Auto-registros de transportistas y andenes en tiempo real
                 } @else if (isQualityContext()) {
                   Lotes en cuarentena e inspecciones pendientes
+                } @else if (isOutboundContext()) {
+                  Unidades listas para maniobra de carga en almacén
                 } @else {
                   Unidades listas para descarga en almacén
                 }
@@ -115,6 +125,15 @@
             <div class="flex-1 text-left">
               <div class="font-bold">¡Nueva unidad en Caseta lista para descarga!</div>
               <div class="text-[11px] opacity-90">Verifique folio y asigne rampa de descarga.</div>
+            </div>
+          </div>
+        }
+        @if (hasNewUnseenOutbound() && isOutboundContext()) {
+          <div class="op-notif__arrival-banner op-notif__arrival-banner--gold">
+            <span class="material-symbols-outlined text-[18px] text-amber-400 animate-bounce">local_shipping</span>
+            <div class="flex-1 text-left">
+              <div class="font-bold">¡Nueva unidad en Caseta lista para carga/embarque!</div>
+              <div class="text-[11px] opacity-90">Verifique folio y proceda con el armado del pedido.</div>
             </div>
           </div>
         }
@@ -185,6 +204,58 @@
                     class="op-notif__action-btn op-notif__action-btn--gold"
                   >
                     <span>Atender Folio</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+
+          <!-- ── SECCIÓN: PRE-SALIDAS / EMBARQUES (OUTBOUND) ── -->
+          @if (isOutboundContext()) {
+            @for (ob of pendingOutbounds(); track ob.folio) {
+              <div class="op-notif__card op-notif__card--receiving">
+                <div class="op-notif__card-header">
+                  <div class="op-notif__card-header-left">
+                    <span class="op-notif__pill op-notif__pill--amber">
+                      <span>📤</span>
+                      <span>SALIDA / CARGA</span>
+                    </span>
+                    <span class="op-notif__folio-chip font-mono">#{{ ob.folio }}</span>
+                  </div>
+                  <div class="op-notif__card-header-right">
+                    <span class="op-notif__ramp-badge">
+                      {{ ob.rampNumber ? 'Rampa ' + ob.rampNumber : (ob.rampCode || 'Por Asignar') }}
+                    </span>
+                    <span class="op-notif__time">{{ ob.timestamp || 'Reciente' }}</span>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-body">
+                  <div class="op-notif__avatar-box">
+                    <span class="material-symbols-outlined text-[20px]">local_shipping</span>
+                  </div>
+                  <div class="op-notif__info-box">
+                    <div class="op-notif__entity-title">{{ ob.clientName || 'Cliente General' }}</div>
+                    <div class="op-notif__details-row">
+                      <span class="op-notif__carrier-name">🚚 {{ ob.carrierName || 'Transportista' }}</span>
+                      <span class="op-notif__dot">·</span>
+                      <span class="op-notif__doc-tag">Placas: <strong>{{ ob.tractorPlates || ob.economicNumber || 'S/N' }}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-footer">
+                  <span class="op-notif__driver-tag">
+                    <span class="material-symbols-outlined text-[14px]">person</span>
+                    <span>{{ ob.driverName || 'Operador transportista' }}</span>
+                  </span>
+                  <button
+                    type="button"
+                    (click)="openOutbound(ob.folio)"
+                    class="op-notif__action-btn op-notif__action-btn--gold"
+                  >
+                    <span>Atender Salida</span>
                     <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                   </button>
                 </div>
@@ -372,6 +443,15 @@
               >
                 <span class="material-symbols-outlined text-[16px]">verified</span>
                 <span>Ir al Tablero de Calidad</span>
+              </button>
+            } @else if (isOutboundContext()) {
+              <button
+                type="button"
+                (click)="goToOutboundModule()"
+                class="op-notif__footer-btn"
+              >
+                <span class="material-symbols-outlined text-[16px]">local_shipping</span>
+                <span>Ir a Mesa de Salidas</span>
               </button>
             } @else {
               <button

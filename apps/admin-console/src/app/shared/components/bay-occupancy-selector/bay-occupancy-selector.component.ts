@@ -116,7 +116,7 @@ export class BayOccupancySelectorComponent implements OnInit {
 
   // ── AGRUPACIÓN JERÁRQUICA POR ALMACÉN / ZONA (12 ALMACENES) ──
   zoneGroups = computed<WarehouseZoneGroup[]>(() => {
-    const list = this.bays();
+    const list = this.bays().filter(p => !p.code.startsWith('LOC-') && !p.code.startsWith('LOC_') && !p.code.startsWith('LOCALM-'));
     if (list.length === 0) return [];
 
     const groupMap = new Map<string, {
@@ -144,37 +144,19 @@ export class BayOccupancySelectorComponent implements OnInit {
         zoneKey = `Almacén ${zoneKey.toUpperCase()}`;
       }
 
-      // Limpieza de nombres redundantes tipo "Ubicación General Almacén A" -> "Almacén A"
-      let cleanName = item.name || zoneKey;
-      cleanName = cleanName
-        .replace(/^(?:Ubicaci[oó]n\s+General\s+|General\s+|Ubicaci[oó]n\s+)/i, '')
-        .trim();
-      if (!cleanName || cleanName.length <= 1) {
-        cleanName = zoneKey;
-      }
-
-      const isMacro = item.code.startsWith('LOC-ALM-') || item.capacityPallets > 100;
-
       if (!groupMap.has(zoneKey)) {
         groupMap.set(zoneKey, {
           id: zoneKey.toLowerCase().replace(/\s+/g, '-'),
           code: zoneKey,
-          name: cleanName,
+          name: zoneKey,
           zone: item.zone || zoneKey,
-          sectionName: item.sectionName || 'Nave Principal',
+          sectionName: item.sectionName || zoneKey,
           positions: [],
-          macroCapacity: isMacro ? item.capacityPallets : 0,
+          macroCapacity: 0,
         });
       }
 
       const g = groupMap.get(zoneKey)!;
-      if (isMacro && item.capacityPallets > g.macroCapacity) {
-        g.macroCapacity = item.capacityPallets;
-        if (cleanName && !cleanName.startsWith('POS-')) {
-          g.name = cleanName;
-        }
-      }
-
       g.positions.push(item);
     }
 
@@ -369,7 +351,9 @@ export class BayOccupancySelectorComponent implements OnInit {
     this.layoutService.fetchPositions().subscribe({
       next: (positions: PositionDetail[]) => {
         if (positions && positions.length > 0) {
-          const mapped: BayOccupancyItem[] = positions.map((p) => this.mapPositionDetailToBayItem(p));
+          const mapped: BayOccupancyItem[] = positions
+            .filter((p) => !p.code.startsWith('LOC-') && !p.code.startsWith('LOC_') && !p.code.startsWith('LOCALM-'))
+            .map((p) => this.mapPositionDetailToBayItem(p));
           this.bays.set(mapped);
           this.applyPreselection(mapped);
         } else {
