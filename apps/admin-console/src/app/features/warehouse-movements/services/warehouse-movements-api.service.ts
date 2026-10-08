@@ -10,6 +10,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, timeout, retry, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import {
+  ReturnDetectionResponse,
+  VerifyPalletRequest,
+  VerifyPalletResponse
+} from '../models/warehouse-movements.models';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -504,17 +509,28 @@ export class WarehouseMovementsApiService {
     );
   }
 
-  getBayOccupancy(branchId?: string): Observable<any[]> {
-    const { branchId: bId } = this.getSessionOrg();
-    const branch = branchId || bId;
-    let params = new HttpParams();
-    if (branch) params = params.set('branchId', branch);
+  detectReturn(query: string, organizationId?: string, branchId?: string): Observable<ReturnDetectionResponse> {
+    if (!query || !query.trim()) {
+      return of({ isReturn: false, expectedPallets: [] });
+    }
+    const { organizationId: orgId, branchId: bId } = this.getSessionOrg();
+    let params = new HttpParams()
+      .set('organizationId', organizationId || orgId)
+      .set('query', query.trim());
+    if (branchId || bId) params = params.set('branchId', branchId || bId);
 
-    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/api/v1/locations/bays/occupancy`, { params }).pipe(
-      map((res) => res.data || []),
-      catchError(() => of([]))
+    return this.http.get<ApiResponse<ReturnDetectionResponse>>(`${this.receptionsUrl}/detect-return`, { params }).pipe(
+      map((res) => res.data || { isReturn: false, expectedPallets: [] }),
+      catchError(() => of({ isReturn: false, expectedPallets: [] }))
     );
   }
+
+  verifyPallet(receptionId: string, body: VerifyPalletRequest): Observable<VerifyPalletResponse> {
+    return this.http.post<ApiResponse<VerifyPalletResponse>>(`${this.receptionsUrl}/${receptionId}/verify-pallet`, body).pipe(
+      map((res) => res.data)
+    );
+  }
+
 
   // ─── 2. CAMBIO DE ALMACÉN (TRAPASOS) ────────────────────────────────────────
 
@@ -670,8 +686,19 @@ export class WarehouseMovementsApiService {
   }
 
   getLocations(branchId?: string): Observable<any[]> {
-    let url = `${this.baseUrl}/api/v1/locations`;
-    if (branchId) url += `?branchId=${branchId}`;
+    let url = `${this.baseUrl}/api/v1/warehouse-map/positions`;
+    const bId = branchId || this.getSessionOrg().branchId;
+    if (bId) url += `?branchId=${bId}`;
+    return this.http.get<ApiResponse<any[]>>(url).pipe(
+      map((res) => res.data || []),
+      catchError(() => of([]))
+    );
+  }
+
+  getBayOccupancy(branchId?: string): Observable<any[]> {
+    let url = `${this.baseUrl}/api/v1/warehouse-map/positions`;
+    const bId = branchId || this.getSessionOrg().branchId;
+    if (bId) url += `?branchId=${bId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map((res) => res.data || []),
       catchError(() => of([]))

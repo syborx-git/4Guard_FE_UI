@@ -1,5 +1,6 @@
 import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -20,6 +21,11 @@ import {
   PatioUnitMonitor,
   RampOccupancyStatus,
   RampItem,
+  ReturnDetectionResponse,
+  ExpectedReturnPalletDto,
+  VerifyPalletResponse,
+  VerifyPalletRequest,
+  LocationStockInfo,
 } from '../../models/warehouse-movements.models';
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
@@ -570,6 +576,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
   showAddLotModal = signal(false);
   showOpsAuthPassword = signal(false);
 
+  // ── LOGÍSTICA INVERSA Y AUTO-DETECCIÓN INTELIGENTE DE RETORNOS (ADR-021) ──
+  detectedReturn = signal<ReturnDetectionResponse | null>(null);
+  isDetectingReturn = signal<boolean>(false);
+  isVerifyingDockPallet = signal<boolean>(false);
+  dockScanUaCode = signal<string>('');
+  dockScanResult = signal<VerifyPalletResponse | null>(null);
+  showRemissionTreeModal = signal<boolean>(false);
+  remissionTreeLogs = signal<any[]>([]);
+  selectedTreeFolio = signal<string>('');
+  kpiReturns = computed(() => this.movementsService.receptions().filter((r: any) => r.operationType === 'REENTRY' || !!r.sourceOutboundFolio).length);
+
   toggleShowOpsAuthPassword(): void {
     this.showOpsAuthPassword.update((v) => !v);
   }
@@ -715,11 +732,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
       let matchStatus = true;
       if (multi.length > 0) {
         matchStatus = multi.some((m) => {
+          if (m === 'REENTRY') return r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
           if (m === 'IN_PROGRESS') return r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
           return r.status === m;
         });
       } else if (st !== 'ALL') {
-        if (st === 'IN_PROGRESS') {
+        if (st === 'REENTRY') {
+          matchStatus = r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
+        } else if (st === 'IN_PROGRESS') {
           matchStatus = r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
         } else {
           matchStatus = r.status === st;
@@ -729,6 +749,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       const matchQuery =
         !q ||
         r.folio.toLowerCase().includes(q) ||
+        (r.sourceOutboundFolio && r.sourceOutboundFolio.toLowerCase().includes(q)) ||
         (r.checkIn?.docNumber && r.checkIn.docNumber.toLowerCase().includes(q)) ||
         (r.checkIn?.client && r.checkIn.client.toLowerCase().includes(q)) ||
         (r.checkIn?.driverName && r.checkIn.driverName.toLowerCase().includes(q)) ||
@@ -809,6 +830,126 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.selectedReception.set(null);
         this.palletStream.set([]);
       }
+    });
+
+    // Subscripción reactiva con debounce a cambios de número de remisión/documento para detección automática
+    this.checkInForm.get('docNumber')?.valueChanges.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe((val) => {
+      if (!val || val.trim().length < 3) {
+        this.detectedReturn.set(null);
+        return;
+      }
+      this.isDetectingReturn.set(true);
+      this.movementsApi.detectReturn(val.trim()).subscribe({
+        next: (res) => {
+          this.isDetectingReturn.set(false);
+          if (res && res.isReturn) {
+            this.detectedReturn.set(res);
+            this.toast.info(`⚡ Retorno detectado: Corresponde a salida previa #${res.sourceOutboundFolio}`);
+            this.smartNotification.dispatch({
+              category: 'RECEIVING',
+              title: '⚡ Retorno Detectado Automáticamente',
+              message: `La remisión '${res.remisionNo || val}' corresponde a la salida previa #${res.sourceOutboundFolio}.`,
+              severity: 'INFO',
+            });
+          } else {
+            this.detectedReturn.set(null);
+          }
+        },
+        error: () => {
+          this.isDetectingReturn.set(false);
+          this.detectedReturn.set(null);
+        }
+      });
+    });
+  }
+
+  applyDetectedReturn(ret: ReturnDetectionResponse): void {
+    if (!ret) return;
+    this.checkInForm.patchValue({
+      client: ret.clientName || this.checkInForm.value.client,
+      clientCode: ret.clientId || this.checkInForm.value.clientCode,
+      carrierLine: ret.carrierName || this.checkInForm.value.carrierLine,
+      carrierLineCode: ret.carrierId || this.checkInForm.value.carrierLineCode,
+      driverName: ret.driverName || this.checkInForm.value.driverName,
+      tractorPlates: ret.tractorPlates || this.checkInForm.value.tractorPlates,
+      boxPlates: ret.boxPlates || this.checkInForm.value.boxPlates,
+      docNumber: ret.remisionNo || this.checkInForm.value.docNumber,
+    });
+    this.toast.success(`Datos del retorno #${ret.sourceOutboundFolio} precargados exitosamente.`);
+  }
+
+  onVerifyDockPallet(code: string): void {
+    if (!code || !code.trim()) {
+      this.toast.warning('Ingresa o escanea el código de tarima.');
+      return;
+    }
+    const rec = this.selectedReception();
+    const recId = rec?.id;
+    if (!recId) {
+      this.toast.error('No hay una recepción activa seleccionada.');
+      return;
+    }
+    this.isVerifyingDockPallet.set(true);
+    this.movementsApi.verifyPallet(recId, { palletCode: code.trim() }).subscribe({
+      next: (res) => {
+        this.isVerifyingDockPallet.set(false);
+        this.dockScanResult.set(res);
+        this.dockScanUaCode.set('');
+        if (res.valid) {
+          this.toast.success(res.message);
+          this.refreshReceptionDetail(recId);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: (err) => {
+        this.isVerifyingDockPallet.set(false);
+        const msg = err?.error?.message || 'Error al validar la tarima en andén.';
+        this.dockScanResult.set({
+          valid: false,
+          status: 'DISCREPANCY',
+          palletCode: code,
+          verifiedCount: 0,
+          totalExpected: 0,
+          remainingCount: 0,
+          message: msg
+        });
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  openRemissionTreeModal(folio: string): void {
+    if (!folio) return;
+    this.selectedTreeFolio.set(folio);
+    this.showRemissionTreeModal.set(true);
+    this.movementsApi.getRemissionTree(folio).subscribe({
+      next: (logs) => this.remissionTreeLogs.set(logs || []),
+      error: () => this.remissionTreeLogs.set([])
+    });
+  }
+
+  closeRemissionTreeModal(): void {
+    this.showRemissionTreeModal.set(false);
+    this.remissionTreeLogs.set([]);
+    this.selectedTreeFolio.set('');
+  }
+
+  private refreshReceptionDetail(recId: string): void {
+    this.movementsApi.getReceptionById(recId).subscribe({
+      next: (res: any) => {
+        if (res) {
+          const mapped = this.movementsService.mapReceptionResponseToHeader(res);
+          this.selectedReception.set(mapped);
+          if (mapped.pallets) {
+            this.palletStream.set(mapped.pallets);
+          }
+        }
+      },
+      error: () => {}
     });
   }
 
@@ -1945,9 +2086,51 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.toast.info('Tarima removida de la descarga');
   }
 
-  // ── SELECTOR VISUAL DE BAHÍAS (22 PALLETS) ──
+  // ── SELECTOR VISUAL DE BAHÍAS (22 PALLETS) & CATÁLOGO WMS ──
+  baySearchQuery = signal<string>('');
+  isBayDropdownOpen = signal<boolean>(false);
+
+  allWarehouseLocations = computed(() => {
+    const locMap = this.movementsService.locations();
+    return Object.values(locMap).filter((loc) => !loc.isBlocked);
+  });
+
+  filteredWarehouseLocations = computed(() => {
+    const q = this.baySearchQuery().toLowerCase().trim();
+    const list = this.allWarehouseLocations();
+    if (!q) return list;
+    return list.filter(
+      (l) =>
+        l.locationCode.toLowerCase().includes(q) ||
+        (l.warehouseName && l.warehouseName.toLowerCase().includes(q)) ||
+        (l.zone && l.zone.toLowerCase().includes(q)) ||
+        (l.aisle && l.aisle.toLowerCase().includes(q)) ||
+        (l.rack && l.rack.toLowerCase().includes(q))
+    );
+  });
+
   openBaySelector(): void {
     this.showBaySelectorModal.set(true);
+  }
+
+  onBayInput(query: string): void {
+    this.baySearchQuery.set(query);
+    this.isBayDropdownOpen.set(true);
+  }
+
+  selectBayFromList(loc: LocationStockInfo): void {
+    this.onBaySelected({
+      locationId: loc.locationId || loc.locationCode,
+      locationCode: loc.locationCode,
+      isOverride: false,
+    });
+    this.baySearchQuery.set(loc.locationCode);
+    this.isBayDropdownOpen.set(false);
+  }
+
+  clearBaySelection(): void {
+    this.baySearchQuery.set('');
+    this.isBayDropdownOpen.set(false);
   }
 
   onBaySelected(res: BaySelectionResult): void {
@@ -1956,9 +2139,31 @@ export class ReceivingSubmoduleComponent implements OnInit {
       storageLocation: res.locationCode,
       storageLocationId: res.locationId || res.locationCode,
     });
-    this.selectedReception.update((r) =>
-      r ? { ...r, storageLocation: res.locationCode, storageLocationId: res.locationId || res.locationCode } : null
-    );
+    const currentRec = this.selectedReception();
+    if (currentRec) {
+      const updatedRec: ReceptionHeader = {
+        ...currentRec,
+        storageLocation: res.locationCode,
+        storageLocationId: res.locationId || res.locationCode,
+        storageLocationCode: res.locationCode,
+      };
+      this.selectedReception.set(updatedRec);
+
+      // Sincronizar inmediatamente al Backend en tiempo real si el registro ya existe
+      if (currentRec.id && isUuid(currentRec.id)) {
+        this.movementsApi
+          .updateReceptionParameters(currentRec.id, {
+            storageLocationId: isUuid(res.locationId) ? res.locationId : undefined,
+            storageLocationCode: res.locationCode,
+          } as any)
+          .subscribe({
+            next: () => {
+              this.movementsService.updateReception(currentRec.id!, updatedRec, true);
+            },
+            error: (err) => console.warn('Error sincronizando bahía:', err),
+          });
+      }
+    }
     this.showBaySelectorModal.set(false);
     if (res.isOverride) {
       this.toast.info(`Bahía ${res.locationCode} asignada con Anulación de Administrador.`);

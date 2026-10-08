@@ -49,8 +49,8 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   min-height: 100%;
   width: 100%;
-  padding: 1.75rem 2rem;
-  gap: 1.25rem;
+  padding: 1.25rem 1.75rem;
+  gap: 0.75rem;
   font-family: var(--font-body);
   color: var(--text-primary);
   background:
@@ -5114,9 +5114,9 @@ input[type="number"] {
   background: var(--bg-card, #ffffff);
   border: 1px solid var(--border-card, #e2e8f0);
   border-radius: 20px;
-  padding: 1.5rem 1.75rem;
+  padding: 1.25rem 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  margin-top: 1.25rem;
+  margin-top: 0;
 }
 
 :host-context(.theme-dark) .executive-directory-card,

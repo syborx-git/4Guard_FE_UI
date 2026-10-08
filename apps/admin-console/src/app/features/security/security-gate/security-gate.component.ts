@@ -11,11 +11,12 @@
 
 import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
-import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS, STANDARD_CLIENTS, STANDARD_CARRIERS } from '../../warehouse-movements/models/warehouse-movements.models';
+import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS, STANDARD_CLIENTS, STANDARD_CARRIERS, ReturnDetectionResponse } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
@@ -86,6 +87,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly lastCompletedPrintItem = signal<any | null>(null);
   protected readonly showQrModal        = signal<boolean>(false);
   protected readonly showPassListModal  = signal<boolean>(false);
+
+  // ── Auto-Detección Inteligente de Retornos (ADR-021) ──
+  protected readonly detectedReturn     = signal<ReturnDetectionResponse | null>(null);
+  protected readonly isDetectingReturn  = signal<boolean>(false);
 
   // ── Catálogos Flexibles de Tipos de Transporte y Medidas ──
   protected readonly transportTypesList = signal<string[]>([
@@ -635,6 +640,49 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.reloadHistoryPasses();
       }
     }, 15000);
+
+    // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
+    this.checkInForm.get('remision')?.valueChanges.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(val => {
+      if (!val || val.trim().length < 3) {
+        this.detectedReturn.set(null);
+        return;
+      }
+      this.isDetectingReturn.set(true);
+      this.movementsService.movementsApi.detectReturn(val.trim()).subscribe({
+        next: (res) => {
+          this.isDetectingReturn.set(false);
+          if (res && res.isReturn) {
+            this.detectedReturn.set(res);
+            this.toast.info(`⚡ Retorno detectado para remisión '${val}': Corresponde a salida #${res.sourceOutboundFolio}`);
+          } else {
+            this.detectedReturn.set(null);
+          }
+        },
+        error: () => {
+          this.isDetectingReturn.set(false);
+          this.detectedReturn.set(null);
+        }
+      });
+    });
+  }
+
+  protected applyDetectedReturn(ret: ReturnDetectionResponse): void {
+    if (!ret) return;
+    this.checkInForm.patchValue({
+      client: ret.clientName || this.checkInForm.value.client,
+      clientCode: ret.clientId || this.checkInForm.value.clientCode,
+      carrierLine: ret.carrierName || this.checkInForm.value.carrierLine,
+      carrierLineCode: ret.carrierId || this.checkInForm.value.carrierLineCode,
+      nombreOperador: ret.driverName || this.checkInForm.value.nombreOperador,
+      placasTracto: ret.tractorPlates || this.checkInForm.value.placasTracto,
+      placasCaja: ret.boxPlates || this.checkInForm.value.placasCaja,
+      remision: ret.remisionNo || this.checkInForm.value.remision,
+      operacion: 'DESCARGA',
+    });
+    this.toast.success(`Datos del retorno #${ret.sourceOutboundFolio} aplicados al pase de caseta.`);
   }
 
   ngOnDestroy(): void {

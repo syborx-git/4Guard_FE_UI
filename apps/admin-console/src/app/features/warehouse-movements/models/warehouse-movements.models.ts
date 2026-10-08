@@ -495,3 +495,58 @@ export function parseAuditTimestamp(ts?: string | number | Date | null): number 
   return isNaN(fallback) ? 0 : fallback;
 }
 
+// ─── LOGÍSTICA INVERSA Y DETECCIÓN AUTOMÁTICA DE RETORNOS (ADR-021) ──────────
+
+export interface ExpectedReturnPalletDto {
+  itemId?: string;
+  palletCode: string;
+  lotNumber?: string;
+  skuId?: string;
+  skuCode?: string;
+  productName?: string;
+  pieces?: number;
+  expirationDate?: string;
+  palletType?: string;
+  verified?: boolean;
+}
+
+export interface ReturnDetectionResponse {
+  isReturn: boolean;
+  sourceOutboundId?: string;
+  sourceOutboundFolio?: string;
+  remisionNo?: string;
+  clientId?: string;
+  clientName?: string;
+  carrierId?: string;
+  carrierName?: string;
+  driverName?: string;
+  tractorPlates?: string;
+  boxPlates?: string;
+  dispatchedAt?: string;
+  totalPallets?: number;
+  totalPieces?: number;
+  destinationName?: string;
+  expectedPallets?: ExpectedReturnPalletDto[];
+}
+
+export interface VerifyPalletRequest {
+  palletCode: string;
+  forkliftOperatorId?: string;
+}
+
+export interface VerifyPalletResponse {
+  valid: boolean;
+  status: 'VERIFIED' | 'ALREADY_VERIFIED' | 'DISCREPANCY';
+  palletId?: string;
+  palletCode: string;
+  lotNumber?: string;
+  skuCode?: string;
+  productName?: string;
+  pieces?: number;
+  expirationDate?: string;
+  verifiedCount: number;
+  totalExpected: number;
+  remainingCount: number;
+  message: string;
+}
+

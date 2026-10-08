@@ -1,7 +1,7 @@
 # SDD: Gestión de Reingresos, Logística Inversa y Trazabilidad Multiciclo
 
-- **Versión:** 1.0.0
-- **Fecha:** 2026-10-07
+- **Versión:** 2.0.0
+- **Fecha:** 2026-10-08
 - **ADR de Referencia:** [ADR-021](../adr/ADR-021-gestion-reingresos-logistica-inversa-trazabilidad.md)
 - **Framework:** SDOP (Spec-Driven Oracle-Bridge)
 
@@ -9,63 +9,102 @@
 
 ## 1. Alcance y Objetivos
 
-Definir los contratos de datos, reglas de negocio y ciclo de vida para el manejo integral de **Reingresos y Devoluciones** en 4GUARD WMS, garantizando la preservación inmutable del histórico de movimientos de cada tarima (UA).
+Definir los contratos de datos, especificaciones de endpoints REST, reglas de negocio y ciclo de vida de la máquina de 8 estados para el manejo integral de **Logística Inversa, Auto-Detección de Retornos y Verificación Física en Andén** en 4GUARD WMS.
 
 ---
 
-## 2. Contratos de Datos y Endpoints
+## 2. Contratos de Endpoints REST
 
-### 2.1 Enums y Tipos
+### 2.1 Auto-Detección Inteligente de Retornos
+- **Ruta:** `GET /api/v1/warehouse-receptions/detect-return`
+- **Query Params:**
+  - `query`: `string` (Número de remisión, folio `SAL-YYYY-XXXXXX` o lote).
+  - `organizationId`: `UUID` (Opcional).
+  - `branchId`: `UUID` (Opcional).
+- **Respuesta:** `ApiResponse<ReturnDetectionResponse>`
 
 ```typescript
-export type ReceptionOperationType = 'ENTRY' | 'REENTRY';
+export interface ReturnDetectionResponse {
+  isReturn: boolean;
+  sourceOutboundId?: string;
+  sourceOutboundFolio?: string;
+  remisionNo?: string;
+  clientId?: string;
+  clientName?: string;
+  carrierId?: string;
+  carrierName?: string;
+  driverName?: string;
+  tractorPlates?: string;
+  boxPlates?: string;
+  dispatchedAt?: string;
+  totalPallets?: number;
+  totalPieces?: number;
+  destinationName?: string;
+  expectedPallets: ExpectedReturnPalletDto[];
+}
 
-export type ReentryReason =
-  | 'RECHAZO_CLIENTE_DESTINO'
-  | 'NO_ENTREGA_RUTA'
-  | 'DEVOLUCION_CALIDAD'
-  | 'CANCELACION_DESPACHO'
-  | 'OTRO';
-```
-
-### 2.2 Extensiones en Request/Response DTOs
-
-#### CreateSecurityPassRequest (Extensión)
-```json
-{
-  "operationType": "REENTRY",
-  "sourceOutboundId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "sourceOutboundFolio": "SAL-2026-000045",
-  "reentryReason": "RECHAZO_CLIENTE_DESTINO",
-  "reentryNotes": "Cliente rechazó 5 tarimas por horario de recepción vencido"
+export interface ExpectedReturnPalletDto {
+  itemId?: string;
+  palletCode: string;
+  lotNumber?: string;
+  skuId?: string;
+  skuCode?: string;
+  productName?: string;
+  pieces: number;
+  expirationDate?: string;
+  palletType?: string;
 }
 ```
 
-#### ReceptionResponse (Extensión)
-```json
-{
-  "id": "UUID",
-  "folio": "REC-2026-000180",
-  "operationType": "REENTRY",
-  "sourceOutboundId": "UUID",
-  "sourceOutboundFolio": "SAL-2026-000045",
-  "reentryReason": "RECHAZO_CLIENTE_DESTINO",
-  "reentryNotes": "...",
-  "status": "REGISTERED",
-  "pallets": []
+### 2.2 Verificación Física de UA en Andén
+- **Ruta:** `POST /api/v1/warehouse-receptions/{id}/verify-pallet`
+- **Body:** `VerifyPalletRequest`
+```typescript
+export interface VerifyPalletRequest {
+  palletCode: string;
 }
 ```
+- **Respuesta:** `ApiResponse<VerifyPalletResponse>`
+```typescript
+export interface VerifyPalletResponse {
+  valid: boolean;
+  status: 'VERIFIED' | 'ALREADY_VERIFIED' | 'DISCREPANCY';
+  palletId?: string;
+  palletCode: string;
+  lotNumber?: string;
+  skuCode?: string;
+  productName?: string;
+  pieces?: number;
+  expirationDate?: string;
+  verifiedCount: number;
+  totalExpected: number;
+  remainingCount: number;
+  message: string;
+}
+```
+
+### 2.3 Árbol de la Vida de Remisión (Audit Trail Multiciclo)
+- **Ruta:** `GET /api/v1/warehouse-receptions/remissions/{folio}/tree`
+- **Respuesta:** `ApiResponse<InventoryAuditLogEntity[]>`
 
 ---
 
-## 3. Matriz de Estados y Reglas de Negocio
+## 3. Máquina de 8 Estados del Inventario en Retornos
 
-1. **Escaneo de UAs en Reingreso:**
-   - Si la UA existe en estado `DISPATCHED` o `RETURNED`, se permite agregar a la recepción de reingreso.
-   - Si la UA ya está activa (`AVAILABLE`, `IN_QUALITY`, etc.) en el almacén y no ha salido, se rechaza la duplicidad.
-2. **Cierre de Recepción de Reingreso:**
-   - Transiciona `wms.inventory_items.state` a `AVAILABLE`.
-   - Inserta `wms.inventory_movements` con `type = 'REENTRY'`.
-   - Registra en `wms.inventory_audit_logs` el evento `REENTRY_COMPLETED` vinculando el folio de salida anterior y el folio de reingreso nuevo.
-3. **Árbol de la Vida (Tree of Life):**
-   - El historial de la UA consolida en orden cronológico todos los eventos de su ciclo de vida.
+```mermaid
+stateDiagram-v2
+    [*] --> DISPATCHED: Salida previa (50)
+    DISPATCHED --> RETURNED: Detección en Caseta (80)
+    RETURNED --> RECEIVED: Arribo / Descarga física (10)
+    RECEIVED --> IN_QUALITY: Bloqueo en Cuarentena (20)
+    IN_QUALITY --> AVAILABLE: Liberación Calidad (30)
+    IN_QUALITY --> DAMAGED: Rechazo por daño (60)
+    AVAILABLE --> [*]
+    DAMAGED --> [*]
+```
+
+1. **DISPATCHED (50):** Estado original al momento del despacho inicial.
+2. **RETURNED (80):** Estado transicional asignado al detectar el retorno y completar pre-checkin.
+3. **RECEIVED (10):** Tarima descargada y verificada físicamente en el andén.
+4. **IN_QUALITY (20):** Retención preventiva automática para inspección de inocuidad y empaque.
+5. **AVAILABLE (30) / DAMAGED (60):** Veredicto formal emitido por el inspector de Calidad.

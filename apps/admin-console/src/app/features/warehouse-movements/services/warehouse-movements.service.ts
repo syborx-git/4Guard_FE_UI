@@ -97,6 +97,8 @@ export class WarehouseMovementsService {
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
 
+  private isReloadingReceptions = false;
+
   // Consecutivo Global de Tarimas (Continuidad estricta entre remisiones y recepciones)
   private readonly globalMaxPalletNumberSignal = signal<number>(0);
 
@@ -612,6 +614,8 @@ export class WarehouseMovementsService {
   }
 
   public reloadReceptions(): void {
+    if (this.isReloadingReceptions) return;
+    this.isReloadingReceptions = true;
     this.syncGlobalMaxPalletNumber();
     this.movementsApi.getReceptions().subscribe({
       next: (receptions: any) => {
@@ -668,8 +672,11 @@ export class WarehouseMovementsService {
         if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
           this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
         }
+        this.isReloadingReceptions = false;
       },
-      error: () => {},
+      error: () => {
+        this.isReloadingReceptions = false;
+      },
     });
   }
 

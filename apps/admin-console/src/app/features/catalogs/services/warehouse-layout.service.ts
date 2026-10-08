@@ -93,6 +93,10 @@ export class WarehouseLayoutService {
     });
   }
 
+  fetchPositions(sectionId?: string, status?: string, query?: string): Observable<PositionDetail[]> {
+    return this.repository.getAllPositions(sectionId, status, query);
+  }
+
   getSectionById(id: string): WarehouseSection | undefined {
     return this._sections().find((s) => s.id === id);
   }
@@ -212,6 +216,39 @@ export class WarehouseLayoutService {
         this._positionsVersion.update(v => v + 1);
       }
     });
+  }
+
+  createPosition(payload: import('../models/warehouse-catalog.models').CreatePositionRequest): Observable<PositionDetail> {
+    return this.repository.createPosition(payload).pipe(
+      tap((newPos) => {
+        this._positionsCache.delete(payload.sectionId);
+        this.loadTopology();
+        this.loadAllPositions();
+        this.loadPositionsForSection(payload.sectionId);
+      })
+    );
+  }
+
+  updatePositionDetails(positionId: string, sectionId: string, payload: import('../models/warehouse-catalog.models').UpdatePositionDetailsRequest): Observable<PositionDetail> {
+    return this.repository.updatePositionDetails(positionId, payload).pipe(
+      tap((updated) => {
+        this._positionsCache.delete(sectionId);
+        this.loadTopology();
+        this.loadAllPositions();
+        if (sectionId) this.loadPositionsForSection(sectionId);
+      })
+    );
+  }
+
+  deletePosition(positionId: string, sectionId?: string): Observable<void> {
+    return this.repository.deletePosition(positionId).pipe(
+      tap(() => {
+        if (sectionId) this._positionsCache.delete(sectionId);
+        this.loadTopology();
+        this.loadAllPositions();
+        if (sectionId) this.loadPositionsForSection(sectionId);
+      })
+    );
   }
 
   initializeSection(sectionId: string, payload: InitializeSectionRequest): Observable<any> {

@@ -1,140 +1,470 @@
 <div class="bay-modal-overlay" (click)="closeModal()">
   <div class="bay-modal-card" (click)="$event.stopPropagation()">
     
-    <!-- Modal Header -->
+    <!-- ══════════════════════════════════════════════════════
+         1. MODAL HEADER & GLOBAL WAREHOUSE CONTEXT (COMPACT)
+         ══════════════════════════════════════════════════════ -->
     <div class="bay-modal-header">
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
         <div class="bay-modal-icon-wrap">
-          <span class="material-symbols-outlined text-xl">warehouse</span>
+          <span class="material-symbols-outlined text-lg">warehouse</span>
         </div>
-        <div>
-          <h3 class="bay-modal-title">{{ dialogTitle }}</h3>
-          <p class="bay-modal-subtitle">Capacidad estándar: 22 Pallets por Bahía con Semáforo en Tiempo Real</p>
+        <div class="min-w-0">
+          <h3 class="bay-modal-title truncate">
+            {{ activeZoneGroup() ? activeZoneGroup()!.name : dialogTitle }}
+          </h3>
+          <p class="bay-modal-subtitle truncate">
+            @if (activeZoneGroup(); as grp) {
+              <span>
+                <strong>{{ grp.fixedPositionsCount }} Fijas</strong> (100% Base: {{ grp.fixedCapacityPallets | number }}T) · 
+                <span class="text-amber-600 dark:text-amber-400"><strong>{{ grp.tempPositionsCount }} Temporales</strong> (Buffer)</span> · 
+                <span class="text-cyan-600 dark:text-cyan-400"><strong>{{ grp.preloadPositionsCount }} Precarga</strong></span>
+              </span>
+            } @else {
+              <span>
+                <strong>{{ globalKpis().totalWarehouses }} Almacenes</strong> · 
+                <strong>{{ globalKpis().totalFixedPositions }} Fijas</strong> ({{ globalKpis().totalCapacity | number }} T) · 
+                <strong>{{ globalKpis().totalTempPositions }} Temporales</strong> · 
+                <strong>{{ globalKpis().totalPreloadPositions }} Precarga</strong>
+              </span>
+            }
+          </p>
         </div>
       </div>
-      <button type="button" (click)="closeModal()" class="bay-modal-close-btn" title="Cerrar modal">
-        <span class="material-symbols-outlined text-xl">close</span>
+      <button type="button" (click)="closeModal()" class="bay-modal-close-btn" title="Cerrar selector">
+        <span class="material-symbols-outlined text-lg">close</span>
       </button>
     </div>
 
-    <!-- Search & Filters -->
-    <div class="bay-modal-search-bar">
-      <div class="relative flex-1">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-        <input
-          type="text"
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-          placeholder="Buscar bahía por código o nave..."
-          class="bay-modal-search-input"
-        />
-      </div>
-      <button type="button" (click)="loadBays()" class="bay-modal-reload-btn" title="Recargar estado en tiempo real">
-        <span class="material-symbols-outlined text-base">refresh</span>
-        <span>Recargar</span>
-      </button>
+    <!-- ══════════════════════════════════════════════════════
+         2. BARRA DE CONTROL, BREADCRUMB Y FILTROS REACTIVOS
+         ══════════════════════════════════════════════════════ -->
+    <div class="bay-modal-nav-bar">
+      @if (activeZoneGroup(); as currentGroup) {
+        <!-- Modo 2: Navegación dentro de un Almacén (Drill-Down) -->
+        <div class="flex items-center justify-between gap-2 w-full flex-wrap">
+          
+          <!-- Breadcrumb con botón de retroceso -->
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              (click)="backToGlobalView()"
+              class="bay-btn-back"
+              title="Volver a los 12 almacenes"
+            >
+              <span class="material-symbols-outlined text-xs">arrow_back</span>
+              <span>Almacenes</span>
+            </button>
+            <span class="text-slate-300 dark:text-slate-600 font-bold">/</span>
+            <span class="font-extrabold text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs">domain</span>
+              {{ currentGroup.name }}
+            </span>
+          </div>
+
+          <!-- Buscador Rápido de Posiciones -->
+          <div class="relative flex-1 max-w-[170px]">
+            <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            <input
+              type="text"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="searchQuery.set($event); currentPage.set(1)"
+              placeholder="Buscar posición..."
+              class="bay-modal-search-input"
+            />
+            @if (searchQuery()) {
+              <button
+                type="button"
+                (click)="searchQuery.set(''); currentPage.set(1)"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <span class="material-symbols-outlined text-xs">close</span>
+              </button>
+            }
+          </div>
+
+          <!-- Filtros de Categoría (Fijas, Temporales, Precarga) -->
+          <div class="flex items-center gap-1 overflow-x-auto">
+            <button
+              type="button"
+              (click)="setCategoryFilter('ALL')"
+              class="bay-pill-tab"
+              [class.bay-pill-tab--active]="categoryFilter() === 'ALL'"
+            >
+              Todas ({{ currentGroup.totalPositions }})
+            </button>
+            <button
+              type="button"
+              (click)="setCategoryFilter('FIXED')"
+              class="bay-pill-tab"
+              [class.bay-pill-tab--active]="categoryFilter() === 'FIXED'"
+            >
+              Fijas ({{ currentGroup.fixedPositionsCount }})
+            </button>
+            <button
+              type="button"
+              (click)="setCategoryFilter('TEMPORARY')"
+              class="bay-pill-tab bay-pill-tab--temp"
+              [class.bay-pill-tab--active]="categoryFilter() === 'TEMPORARY'"
+            >
+              Temporales ({{ currentGroup.tempPositionsCount }})
+            </button>
+            <button
+              type="button"
+              (click)="setCategoryFilter('PRELOAD')"
+              class="bay-pill-tab bay-pill-tab--preload"
+              [class.bay-pill-tab--active]="categoryFilter() === 'PRELOAD'"
+            >
+              Precarga ({{ currentGroup.preloadPositionsCount }})
+            </button>
+          </div>
+
+          <!-- Filtro de Estado Rápido -->
+          <div class="flex items-center gap-1">
+            <button
+              type="button"
+              (click)="setStatusFilter(statusFilter() === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')"
+              class="bay-pill-tab bay-pill-tab--available"
+              [class.bay-pill-tab--active]="statusFilter() === 'AVAILABLE'"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Libres ({{ currentGroup.availablePositions }})
+            </button>
+          </div>
+        </div>
+
+      } @else {
+        <!-- Modo 1: Vista General de los 12 Almacenes Reales -->
+        <div class="flex items-center justify-between gap-2.5 w-full flex-wrap">
+          
+          <!-- KPIs ejecutivos miniatura -->
+          <div class="flex items-center gap-2 text-xs">
+            <div class="flex items-center gap-1 font-bold text-slate-700 dark:text-slate-300">
+              <span class="material-symbols-outlined text-amber-500 text-sm">domain</span>
+              <span>12 Almacenes Registrados</span>
+            </div>
+            <span class="text-slate-300 dark:text-slate-700">•</span>
+            <div class="flex items-center gap-1 font-mono text-slate-600 dark:text-slate-400">
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold">{{ globalKpis().totalAvailable }} Libres</span>
+              <span class="text-slate-300 dark:text-slate-700">/</span>
+              <span>1,702 Posiciones Reales</span>
+            </div>
+            @if (globalKpis().totalReallocations > 0) {
+              <span class="text-slate-300 dark:text-slate-700">•</span>
+              <span class="text-amber-700 dark:text-amber-400 font-bold text-[11px] flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-xs">sync_alt</span>
+                {{ globalKpis().totalReallocations }} Reubicaciones Sugeridas
+              </span>
+            }
+          </div>
+
+          <!-- Buscador Global -->
+          <div class="relative flex-1 max-w-[200px]">
+            <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            <input
+              type="text"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="searchQuery.set($event)"
+              placeholder="Buscar almacén..."
+              class="bay-modal-search-input"
+            />
+          </div>
+
+          <button type="button" (click)="loadBays()" class="bay-modal-reload-btn" title="Recargar estado de almacenes">
+            <span class="material-symbols-outlined text-xs">refresh</span>
+            <span>Actualizar</span>
+          </button>
+        </div>
+      }
     </div>
 
-    <!-- Bay List Content -->
+    <!-- ══════════════════════════════════════════════════════
+         3. CUERPO DEL SELECTOR: VISTA GLOBAL O DRILL-DOWN
+         ══════════════════════════════════════════════════════ -->
     <div class="bay-modal-body">
       @if (loading()) {
-        <div class="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
+        <div class="py-12 flex flex-col items-center justify-center gap-2 text-slate-500">
           <span class="material-symbols-outlined animate-spin text-3xl text-amber-500">progress_activity</span>
-          <span class="text-xs font-medium">Calculando matriz de cubicaje y ocupación...</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Cargando cubicaje de almacenes...</span>
         </div>
-      } @else if (filteredBays().length === 0) {
+      } @else if (zoneGroups().length === 0) {
         <div class="py-12 text-center text-slate-500 text-xs">
-          No se encontraron bahías activas con el filtro indicado.
+          No se encontraron ubicaciones físicas ni bahías activas en el almacén.
         </div>
-      } @else {
-        <div class="bay-grid">
-          @for (bay of filteredBays(); track bay.id) {
+      } @else if (!selectedZoneId()) {
+
+        <!-- ══════════════════════════════════════════════════════
+             VISTA 1: TARJETAS EJECUTIVAS DE LOS 12 ALMACENES
+             ══════════════════════════════════════════════════════ -->
+        <div class="bay-warehouse-grid">
+          @for (grp of zoneGroups(); track grp.id) {
             <div
-              (click)="selectBay(bay)"
-              [class.bay-item-card--selected]="selectedBay()?.id === bay.id"
-              [class.opacity-50]="bay.isBlocked || bay.status !== 'ACTIVE'"
-              [class.cursor-not-allowed]="bay.isBlocked || bay.status !== 'ACTIVE'"
-              class="bay-item-card"
+              (click)="openZone(grp)"
+              class="bay-warehouse-card group"
             >
-              <!-- Header with Badges -->
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-2">
-                  <span class="bay-item-code">{{ bay.code }}</span>
-                  @if (bay.isRecommended) {
-                    <span class="bay-badge-suggested">
-                      <span class="material-symbols-outlined text-xs">recommend</span> Sugerida
+              <div class="bay-wh-header">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="bay-wh-icon">
+                    <span class="material-symbols-outlined text-lg">domain</span>
+                  </div>
+                  <div class="flex flex-col min-w-0">
+                    <span class="bay-wh-title truncate">{{ grp.name }}</span>
+                    <span class="bay-wh-subtitle font-mono truncate">
+                      {{ grp.fixedPositionsCount }} Fijas · {{ grp.tempPositionsCount }} Temp · {{ grp.preloadPositionsCount }} Precarga
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Semáforo de Ocupación Nominal y Desbordamiento -->
+                <div class="flex flex-col items-end gap-0.5">
+                  @if (grp.overflowPercentage > 0) {
+                    <span class="bay-badge-overflow" title="Sobreocupación en Posiciones Temporales">
+                      <span class="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse"></span>
+                      100% + {{ grp.overflowPercentage }}% Extra
+                    </span>
+                  } @else if (grp.nominalOccupancyPercentage > 90) {
+                    <span class="bay-badge-warning">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      {{ grp.nominalOccupancyPercentage }}% Saturado
+                    </span>
+                  } @else {
+                    <span class="bay-badge-available">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      {{ grp.nominalOccupancyPercentage }}% Ocupado
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Indicadores de Capacidad en Franja Horizontal Homologada -->
+              <div class="bay-wh-metric-strip">
+                <div class="bay-wh-metric-col">
+                  <span class="bay-wh-metric-lbl">100% Base Fija</span>
+                  <span class="bay-wh-metric-val">{{ grp.fixedCapacityPallets | number }} T</span>
+                </div>
+                <div class="bay-wh-metric-sep"></div>
+                <div class="bay-wh-metric-col">
+                  <span class="bay-wh-metric-lbl">Almacenadas</span>
+                  <span class="bay-wh-metric-val font-mono">{{ grp.fixedOccupiedPallets | number }} T</span>
+                </div>
+                <div class="bay-wh-metric-sep"></div>
+                <div class="bay-wh-metric-col">
+                  <span class="bay-wh-metric-lbl">Libres Fijas</span>
+                  <span class="bay-wh-metric-val text-emerald-600 dark:text-emerald-400 font-mono">{{ grp.fixedAvailablePallets | number }} T</span>
+                </div>
+                <div class="bay-wh-metric-sep"></div>
+                <div class="bay-wh-metric-col">
+                  <span class="bay-wh-metric-lbl">Temporales</span>
+                  <span class="bay-wh-metric-val" [class.text-violet-600]="grp.tempOccupiedPallets > 0" [class.dark:text-violet-400]="grp.tempOccupiedPallets > 0">
+                    {{ grp.tempOccupiedPallets }}/{{ grp.tempCapacityPallets }} T
+                  </span>
+                </div>
+              </div>
+
+              <!-- Barra de Progreso Doble (Nominal + Buffer Extra) -->
+              <div class="bay-progress-track">
+                <div
+                  class="bay-progress-fill"
+                  [ngClass]="grp.nominalOccupancyPercentage <= 70 ? 'bay-progress-fill--green' : (grp.nominalOccupancyPercentage <= 90 ? 'bay-progress-fill--amber' : 'bay-progress-fill--red')"
+                  [style.width]="grp.nominalOccupancyPercentage + '%'"
+                ></div>
+              </div>
+
+              <!-- Desglose de Posiciones, Sugerencia de Reubicación y Botón -->
+              <div class="bay-wh-footer">
+                <div class="flex items-center gap-1.5 text-[10.5px] font-mono">
+                  <span class="text-emerald-700 dark:text-emerald-400 font-bold">🟢 {{ grp.fixedAvailableCount }} Libres</span>
+                  <span class="text-slate-300 dark:text-slate-700">•</span>
+                  <span class="text-slate-500 dark:text-slate-400">🟡 {{ grp.fixedOccupiedCount }} Ocup</span>
+                  @if (grp.hasReallocationOpportunity) {
+                    <span class="text-slate-300 dark:text-slate-700">•</span>
+                    <span class="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-0.5" title="Mover pallets de temporal a fija disponible">
+                      ⚡ Mover {{ grp.reallocationCandidateCount }}
                     </span>
                   }
                 </div>
 
-                <!-- Traffic light badge -->
-                @if (bay.trafficLight === 'GREEN') {
-                  <span class="bay-badge-available">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Disponible
-                  </span>
-                } @else if (bay.trafficLight === 'AMBER') {
-                  <span class="bay-badge-warning">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Ocupación Alta
-                  </span>
-                } @else {
-                  <span class="bay-badge-danger">
-                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Saturada
-                  </span>
-                }
-              </div>
-
-              <!-- Section & Location info -->
-              <div class="bay-item-details">
-                <span>{{ bay.sectionName }}</span>
-                <span class="bay-item-pallets">{{ bay.currentStoredPallets }} / {{ bay.capacityPallets }} Pallets</span>
-              </div>
-
-              <!-- Progress Semaphore Bar -->
-              <div class="bay-progress-track">
-                <div
-                  class="bay-progress-fill"
-                  [ngClass]="bay.trafficLight === 'GREEN' ? 'bay-progress-fill--green' : (bay.trafficLight === 'AMBER' ? 'bay-progress-fill--amber' : 'bay-progress-fill--red')"
-                  [style.width]="bay.occupancyPercentage + '%'"
-                ></div>
-              </div>
-
-              <div class="text-right text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                {{ bay.occupancyPercentage }}% Ocupado
+                <div class="bay-wh-explore-cta">
+                  <span>Ver {{ grp.totalPositions }} Bahías</span>
+                  <span class="material-symbols-outlined text-xs group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                </div>
               </div>
             </div>
           }
         </div>
+
+      } @else {
+
+        <!-- ══════════════════════════════════════════════════════
+             VISTA 2: MATRIZ DETALLADA DE POSICIONES (DRILL-DOWN)
+             ══════════════════════════════════════════════════════ -->
+        @if (activeZoneGroup()?.hasReallocationOpportunity) {
+          <!-- Banner de Sugerencia de Reubicación Inteligente -->
+          <div class="bay-reallocation-banner">
+            <span class="material-symbols-outlined text-amber-500 text-base">swap_horiz</span>
+            <div class="flex-1 text-xs">
+              <strong class="text-amber-800 dark:text-amber-300">Sugerencia de Reubicación Inteligente:</strong>
+              <span class="text-amber-700 dark:text-amber-400">
+                Se detectaron remisiones en posiciones temporales con {{ activeZoneGroup()!.fixedAvailableCount }} posiciones fijas disponibles. Se sugiere trasladarlas a una bahía fija.
+              </span>
+            </div>
+          </div>
+        }
+
+        @if (filteredPositions().length === 0) {
+          <div class="py-10 text-center text-slate-500 text-xs">
+            No se encontraron posiciones con los filtros seleccionados.
+          </div>
+        } @else {
+          <div class="bay-position-grid">
+            @for (pos of pagedPositions(); track pos.id) {
+              <div
+                (click)="selectBay(pos)"
+                [class.bay-item-card--selected]="selectedBay()?.id === pos.id || (selectedBay()?.code === pos.code)"
+                [class.opacity-50]="pos.isBlocked || pos.status !== 'ACTIVE'"
+                [class.cursor-not-allowed]="pos.isBlocked || pos.status !== 'ACTIVE'"
+                class="bay-position-card"
+              >
+                <!-- Cabecera de Tarjeta de Posición con Categoría -->
+                <div class="flex items-start justify-between gap-1">
+                  <div class="flex items-center gap-1 min-w-0">
+                    <span class="bay-pos-code truncate">{{ pos.code }}</span>
+                    @if (pos.category === 'TEMPORARY_BUFFER') {
+                      <span class="bay-badge-cat-temp" title="Posición Temporal / Sobrecupo">TEMP</span>
+                    } @else if (pos.category === 'PRELOAD_STAGING') {
+                      <span class="bay-badge-cat-preload" title="Posición de Precarga / Salida">PRE</span>
+                    }
+                  </div>
+
+                  <!-- Semáforo de Posición -->
+                  @if (pos.isBlocked || pos.status !== 'ACTIVE') {
+                    <span class="bay-badge-danger">Bloq</span>
+                  } @else if (pos.currentStoredPallets === 0) {
+                    <span class="bay-badge-available">Libre</span>
+                  } @else if (pos.trafficLight === 'GREEN') {
+                    <span class="bay-badge-available">{{ pos.occupancyPercentage }}%</span>
+                  } @else if (pos.trafficLight === 'AMBER') {
+                    <span class="bay-badge-warning">{{ pos.occupancyPercentage }}%</span>
+                  } @else {
+                    <span class="bay-badge-danger">Sat</span>
+                  }
+                </div>
+
+                <!-- Detalle Físico (Pasillo, Rack, Nivel, Capacidad) -->
+                <div class="bay-pos-details">
+                  <span class="text-[9.5px] text-slate-500 dark:text-slate-400 truncate">
+                    @if (pos.aisle || pos.rack || pos.level) {
+                      P:{{ pos.aisle || '-' }} · R:{{ pos.rack || '-' }} · N:{{ pos.level || '-' }}
+                    } @else {
+                      {{ pos.name }}
+                    }
+                  </span>
+                  <span class="bay-pos-capacity font-mono font-bold">
+                    {{ pos.currentStoredPallets }}/{{ pos.capacityPallets }}T
+                  </span>
+                </div>
+
+                <!-- Mini Barra de Progreso -->
+                <div class="bay-progress-track">
+                  <div
+                    class="bay-progress-fill"
+                    [ngClass]="pos.trafficLight === 'GREEN' ? 'bay-progress-fill--green' : (pos.trafficLight === 'AMBER' ? 'bay-progress-fill--amber' : 'bay-progress-fill--red')"
+                    [style.width]="pos.occupancyPercentage + '%'"
+                  ></div>
+                </div>
+
+                <div class="flex items-center justify-between text-[9px] font-mono font-bold text-slate-500 pt-0.5">
+                  <span class="text-emerald-700 dark:text-emerald-400">{{ pos.availableUnits }} libres</span>
+                  <span>{{ pos.capacityPallets }} Pallets</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Paginador de Posiciones -->
+          @if (totalPages() > 1) {
+            <div class="bay-pagination-bar">
+              <span class="text-[11px] text-slate-600 dark:text-slate-400">
+                Mostrando <strong>{{ (currentPage() - 1) * pageSize + 1 }}-{{ (currentPage() * pageSize > filteredPositions().length ? filteredPositions().length : currentPage() * pageSize) }}</strong> de <strong>{{ filteredPositions().length }}</strong>
+              </span>
+
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  (click)="setPage(currentPage() - 1)"
+                  [disabled]="currentPage() === 1"
+                  class="bay-btn-page"
+                  title="Página anterior"
+                >
+                  <span class="material-symbols-outlined text-xs">chevron_left</span>
+                  <span>Ant</span>
+                </button>
+                <span class="text-xs font-mono font-bold px-1.5 text-slate-700 dark:text-slate-300">
+                  {{ currentPage() }} / {{ totalPages() }}
+                </span>
+                <button
+                  type="button"
+                  (click)="setPage(currentPage() + 1)"
+                  [disabled]="currentPage() === totalPages()"
+                  class="bay-btn-page"
+                  title="Página siguiente"
+                >
+                  <span>Sig</span>
+                  <span class="material-symbols-outlined text-xs">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          }
+        }
       }
 
       <!-- Admin Override Form (Pablo) -->
       @if (showOverrideForm() && allowAdminOverride) {
         <div class="bay-override-box">
           <div class="bay-override-title">
-            <span class="material-symbols-outlined text-base">shield_person</span>
-            <span>Anulación Manual de Sugerencia (Override Administrador - Pablo)</span>
+            <span class="material-symbols-outlined text-sm">shield_person</span>
+            <span>Anulación Manual de Sugerencia (Override Administrador)</span>
           </div>
           <p class="bay-override-desc">
-            Ha seleccionado una bahía distinta a la recomendada por el algoritmo de cubicaje. Ingrese el motivo para registrarlo en la bitácora de auditoría inmutable:
+            Ha seleccionado una posición distinta a la sugerida por el algoritmo de cubicaje. Ingrese el motivo para registrar en bitácora de auditoría:
           </p>
           <input
             type="text"
             [ngModel]="overrideReason()"
             (ngModelChange)="overrideReason.set($event)"
-            placeholder="Ej: Acomodo estratégico por consolidación de lote de alta rotación..."
+            placeholder="Ej: Acomodo estratégico por rotación de lote..."
             class="bay-override-input"
           />
         </div>
       }
     </div>
 
-    <!-- Modal Footer -->
+    <!-- ══════════════════════════════════════════════════════
+         4. FOOTER DE ASIGNACIÓN Y ACCIÓN (ALTO CONTRASTE)
+         ══════════════════════════════════════════════════════ -->
     <div class="bay-modal-footer">
       <div class="bay-footer-summary">
-        @if (selectedBay()) {
-          Seleccionada: <strong>{{ selectedBay()?.code }}</strong>
-          ({{ selectedBay()?.currentStoredPallets }}/{{ selectedBay()?.capacityPallets }} Pallets)
+        @if (selectedBay(); as sBay) {
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="material-symbols-outlined text-emerald-600 text-base">check_circle</span>
+            <span class="text-slate-700 dark:text-slate-300 text-xs">Seleccionada:</span>
+            <span class="bay-selected-badge">{{ sBay.code }}</span>
+            @if (sBay.category === 'TEMPORARY_BUFFER') {
+              <span class="bay-badge-cat-temp">TEMPORAL</span>
+            } @else if (sBay.category === 'PRELOAD_STAGING') {
+              <span class="bay-badge-cat-preload">PRECARGA</span>
+            }
+            <span class="text-slate-600 dark:text-slate-400 text-xs truncate">
+              @if (sBay.aisle || sBay.rack || sBay.level) {
+                Pasillo {{ sBay.aisle || '-' }} · Rack {{ sBay.rack || '-' }} · Nivel {{ sBay.level || '-' }}
+              } @else {
+                {{ sBay.name }}
+              }
+              ({{ sBay.currentStoredPallets }}/{{ sBay.capacityPallets }} T · <strong class="text-emerald-600 dark:text-emerald-400">{{ sBay.availableUnits }} Libres</strong>)
+            </span>
+          </div>
         } @else {
-          Ninguna bahía seleccionada
+          <span class="text-slate-400 text-xs">Haga clic en una posición para seleccionarla</span>
         }
       </div>
 
@@ -152,7 +482,7 @@
           [disabled]="!selectedBay()"
           class="bay-btn-confirm"
         >
-          <span class="material-symbols-outlined text-base">check</span>
+          <span class="material-symbols-outlined text-sm">check</span>
           <span>Asignar Bahía</span>
         </button>
       </div>
