@@ -145,6 +145,21 @@ export interface PatioUnitMonitor {
   hasDischargeAlert: boolean; // Alerta > 2.5 horas en descarga
 }
 
+export interface ReceptionLot {
+  id?: string;
+  lotNumber: string;
+  elaborationDate?: string;
+  expirationDate: string;
+  supplierName?: string;
+  shelfLifeDaysRemaining?: number;
+  shelfLifeStatus?: string;
+  requiresOpsAuthorization?: boolean;
+  authorizedByOpsManager?: string;
+  opsManagerReason?: string;
+  opsAuthorizationDate?: string;
+  observations?: string;
+}
+
 export interface ReceptionPalletItem {
   id: string;               // ID consecutivo o timestamp (o UUID de inventory_items)
   palletNumber?: number;    // N. Tarima (1, 2, 3...)
@@ -161,6 +176,10 @@ export interface ReceptionPalletItem {
   lotNumber?: string;       // Lote
   expirationDate?: string;  // Fecha de caducidad
   docNumber?: string;       // No. Remisión / Documento
+  isUaRelabelled?: boolean; // Re-etiquetada
+  requiresOpsAuthorization?: boolean;
+  authorizedByOpsManager?: string;
+  opsManagerReason?: string;
 }
 
 export type ReceptionStatus =
@@ -190,13 +209,22 @@ export interface ReceptionHeader {
   selectedPalletType: PalletType;
   observations?: string;
   pallets: ReceptionPalletItem[];
-  lots?: any[];
+  lots?: ReceptionLot[];
+  requiresOpsAuthorization?: boolean;
+  authorizedByOpsManager?: string;
+  opsManagerReason?: string;
+  opsAuthorizationDate?: string;
   createdAt: string;
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
   capturedBy: string;        // Nombre del usuario activo
   leaderAuthorizedBy?: string; // Nombre del líder que autorizó
+  operationType?: 'ENTRY' | 'REENTRY'; // ADR-021: Reingresos y Logística Inversa
+  sourceOutboundId?: string;
+  sourceOutboundFolio?: string;
+  reentryReason?: string;
+  reentryNotes?: string;
 }
 
 export interface TransferReasonItem {

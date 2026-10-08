@@ -122,10 +122,10 @@
         <button
           type="button"
           (click)="toggleQueueCollapse()"
-          class="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 shadow-sm border"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 shadow-sm"
           [ngClass]="isQueueCollapsed()
-            ? 'bg-gradient-to-r from-[#c5a86b] to-[#b8860b] hover:from-[#e0c87a] hover:to-[#c5a86b] text-slate-950 border-[#b8860b] shadow-md font-extrabold'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'"
+            ? 'bg-gradient-to-r from-[#c5a86b] to-[#b8860b] hover:from-[#e0c87a] hover:to-[#c5a86b] text-slate-950 border border-[#b8860b] shadow-md font-extrabold'
+            : 'security-toggle-sidebar-btn'"
           [title]="isQueueCollapsed() ? 'Mostrar el panel lateral de Choferes en Espera' : 'Ocultar el panel lateral para expandir el formulario al 100%'"
         >
           <span class="material-symbols-outlined text-sm font-bold">{{ isQueueCollapsed() ? 'dock_to_right' : 'dock_to_left' }}</span>
@@ -154,30 +154,30 @@
     </div>
 
     @if (isKpiCollapsed()) {
-      <!-- Vista Compacta Resumida -->
-      <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 shadow-sm flex-wrap text-xs animate-fade-in">
-        <div class="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-800">
-          <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-          <span class="text-slate-600 dark:text-slate-400 font-semibold">En Planta:</span>
-          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ inYardCount() }}</span>
+      <!-- Vista Compacta Resumida Homologada -->
+      <div class="security-kpi-summary-bar animate-fade-in">
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-blue-500"></span>
+          <span class="security-kpi-summary-label">En Planta:</span>
+          <span class="security-kpi-summary-value">{{ inYardCount() }}</span>
         </div>
 
-        <div class="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-800">
-          <span class="w-2.5 h-2.5 rounded-full bg-[#c5a86b]"></span>
-          <span class="text-slate-600 dark:text-slate-400 font-semibold">QR Pendientes:</span>
-          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ pendingDriverCount() }}</span>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-[#c5a86b]"></span>
+          <span class="security-kpi-summary-label">QR Pendientes:</span>
+          <span class="security-kpi-summary-value">{{ pendingDriverCount() }}</span>
         </div>
 
-        <div class="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-800">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-          <span class="text-slate-600 dark:text-slate-400 font-semibold">Listos Salida:</span>
-          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ readyForExitCount() }}</span>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-emerald-500"></span>
+          <span class="security-kpi-summary-label">Listos Salida:</span>
+          <span class="security-kpi-summary-value">{{ readyForExitCount() }}</span>
         </div>
 
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
-          <span class="text-slate-600 dark:text-slate-400 font-semibold">Salidas Turno:</span>
-          <span class="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{{ completedShiftExitsCount() }}</span>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-sky-500"></span>
+          <span class="security-kpi-summary-label">Salidas Turno:</span>
+          <span class="security-kpi-summary-value">{{ completedShiftExitsCount() }}</span>
         </div>
       </div>
     } @else {
@@ -326,7 +326,7 @@
                 <button
                   type="button"
                   (click)="toggleQueueCollapse()"
-                  class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#c5a86b]/20 text-slate-600 dark:text-slate-300 hover:text-[#9b7626] dark:hover:text-[#e0c87a] transition-all border border-slate-200 dark:border-slate-700 flex items-center gap-1 text-xs font-extrabold"
+                  class="security-toggle-queue-btn"
                   title="Ocultar panel lateral para maximizar el formulario al 100%"
                 >
                   <span class="material-symbols-outlined text-base">dock_to_left</span>
@@ -683,7 +683,7 @@
               <!-- Rampa / Andén (Asignación en Almacén) -->
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Andén / Rampa</label>
-                <div class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-2" title="La rampa es asignada automáticamente por el personal de Recepción / Almacén">
+                <div class="security-ramp-locked-badge" title="La rampa es asignada automáticamente por el personal de Recepción / Almacén">
                   <span class="material-symbols-outlined text-sm text-amber-500">lock_clock</span>
                   <span class="truncate text-[11px]">Pendiente de asignación por Almacén</span>
                 </div>
@@ -898,7 +898,7 @@
             <!-- Tabla de Inspección F01 -->
             <div class="overflow-x-auto border border-slate-200 dark:border-slate-700/80 rounded-xl">
               <table class="w-full text-left text-xs">
-                <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-black text-[10px]">
+                <thead class="checklist-thead">
                   <tr>
                     <th class="py-2.5 px-3 w-[40%]">Criterio de Inspección</th>
                     <th class="py-2.5 px-2 text-center w-[15%]">Cumple (Sí / No)</th>
@@ -908,7 +908,7 @@
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
                   
                   <!-- Grupo EPP -->
-                  <tr class="bg-slate-50 dark:bg-slate-850 font-bold text-[11px] text-slate-800 dark:text-slate-200">
+                  <tr class="checklist-section-header">
                     <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
                       EPP (Equipo de Protección Personal)
                     </td>
@@ -955,7 +955,7 @@
                   </tr>
 
                   <!-- Grupo Documentos -->
-                  <tr class="bg-slate-50 dark:bg-slate-850 font-bold text-[11px] text-slate-800 dark:text-slate-200">
+                  <tr class="checklist-section-header">
                     <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
                       Documentos Obligatorios
                     </td>
@@ -967,7 +967,7 @@
                         @if (checkInForm.get('operacion')?.value === 'CARGA') {
                           <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
                         } @else {
-                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">N/A en Descarga</span>
+                          <span class="checklist-na-badge">N/A en Descarga</span>
                         }
                       </div>
                     </td>
@@ -986,7 +986,7 @@
                         @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
                           <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
                         } @else {
-                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">N/A en Carga</span>
+                          <span class="checklist-na-badge">N/A en Carga</span>
                         }
                       </div>
                     </td>
@@ -1000,7 +1000,7 @@
                   </tr>
 
                   <!-- Grupo Revisión Unidad -->
-                  <tr class="bg-slate-50 dark:bg-slate-850 font-bold text-[11px] text-slate-800 dark:text-slate-200">
+                  <tr class="checklist-section-header">
                     <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
                       Revisión Física de la Unidad
                     </td>
@@ -1179,16 +1179,16 @@
         </div>
       </div>
 
-      <!-- Barra de Filtros Segmentados -->
-      <div class="flex items-center gap-2 flex-wrap pb-1">
+      <!-- Barra de Filtros Segmentados Homologada -->
+      <div class="security-filters-container">
         <button
           type="button"
           (click)="inYardFilter.set('ALL')"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
-          [ngClass]="inYardFilter() === 'ALL' ? 'bg-gradient-to-r from-[#c5a86b] to-[#b8860b] text-slate-950 font-black shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          class="security-filter-btn"
+          [class.security-filter-btn--active-all]="inYardFilter() === 'ALL'"
         >
           <span>Todas en Planta</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'ALL' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+          <span class="security-filter-badge">
             {{ inYardCount() }}
           </span>
         </button>
@@ -1196,12 +1196,12 @@
         <button
           type="button"
           (click)="inYardFilter.set('IN_MANEUVER')"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
-          [ngClass]="inYardFilter() === 'IN_MANEUVER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          class="security-filter-btn"
+          [class.security-filter-btn--active-maneuver]="inYardFilter() === 'IN_MANEUVER'"
         >
           <span class="material-symbols-outlined text-xs animate-spin">sync</span>
           <span>En Descarga / Maniobra</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'IN_MANEUVER' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+          <span class="security-filter-badge">
             {{ inManeuverCount() }}
           </span>
         </button>
@@ -1209,12 +1209,12 @@
         <button
           type="button"
           (click)="inYardFilter.set('READY_EXIT')"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
-          [ngClass]="inYardFilter() === 'READY_EXIT' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          class="security-filter-btn"
+          [class.security-filter-btn--active-ready]="inYardFilter() === 'READY_EXIT'"
         >
           <span class="material-symbols-outlined text-xs">check_circle</span>
           <span>Listas para Salida</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black" [ngClass]="inYardFilter() === 'READY_EXIT' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+          <span class="security-filter-badge">
             {{ readyForExitCount() }}
           </span>
         </button>
@@ -1227,7 +1227,7 @@
           <p class="text-xs font-semibold text-slate-500 mt-2">Consultando unidades en planta...</p>
         </div>
       } @else if (filteredInYardPasses().length === 0) {
-        <div class="text-center py-12 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+        <div class="security-empty-state my-4">
           <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">garage</span>
           <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No hay unidades en esta categoría</h3>
           <p class="text-xs text-slate-500 mt-1">
@@ -1395,7 +1395,7 @@
           <p class="text-xs font-semibold text-slate-500 mt-2">Consultando historial de auditoría...</p>
         </div>
       } @else if (historyPasses().length === 0) {
-        <div class="text-center py-12 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+        <div class="security-empty-state my-4">
           <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">history</span>
           <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No se encontraron registros finalizados</h3>
           <p class="text-xs text-slate-500 mt-1">Las salidas con Check-Out concluido aparecerán listadas aquí.</p>

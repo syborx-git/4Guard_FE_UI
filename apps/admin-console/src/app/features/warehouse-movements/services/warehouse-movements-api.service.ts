@@ -442,7 +442,7 @@ export class WarehouseMovementsApiService {
     );
   }
 
-  addReceptionLot(receptionId: string, body: { lotNumber: string; elaborationDate?: string; expirationDate?: string; notes?: string }): Observable<any> {
+  addReceptionLot(receptionId: string, body: { lotNumber: string; elaborationDate?: string; expirationDate?: string; notes?: string; authorizedByOpsManager?: string; opsManagerReason?: string }): Observable<any> {
     return this.http.post<ApiResponse<any>>(`${this.receptionsUrl}/${receptionId}/lots`, body).pipe(
       map((res) => res.data)
     );

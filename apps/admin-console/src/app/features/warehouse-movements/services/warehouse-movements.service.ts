@@ -1598,6 +1598,11 @@ export class WarehouseMovementsService {
       capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
       leaderAuthorizedBy: r.leaderAuthorizedBy || '',
       cancellationReason: r.cancellationReason || '',
+      operationType: r.operationType || 'ENTRY',
+      sourceOutboundId: r.sourceOutboundId || undefined,
+      sourceOutboundFolio: r.sourceOutboundFolio || undefined,
+      reentryReason: r.reentryReason || undefined,
+      reentryNotes: r.reentryNotes || undefined,
     } as ReceptionHeader;
   }
 
@@ -1708,9 +1713,8 @@ export class WarehouseMovementsService {
       carrierLine: checkIn.carrierLine || null,
       clientId: isUuid(checkIn.clientCode || '') ? checkIn.clientCode : null,
       clientCode: checkIn.clientCode || null,
-      clientName: checkIn.client || null,
-      rampNumber: checkIn.rampNumber || 1,
-      rampCode: checkIn.rampCode || `LOC-RAMP-${String(checkIn.rampNumber || 1).padStart(2, '0')}`,
+      rampNumber: checkIn.rampNumber != null ? checkIn.rampNumber : ((current as any)?.rampNumber ?? null),
+      rampCode: checkIn.rampCode || (checkIn.rampNumber ? `LOC-RAMP-${String(checkIn.rampNumber).padStart(2, '0')}` : ((current as any)?.rampCode ?? null)),
       sealNumbers: checkIn.sealNumbers && checkIn.sealNumbers.length > 0 ? checkIn.sealNumbers : (checkIn.sealNumber ? [checkIn.sealNumber] : []),
       piecesPerPallet: current?.piecesPerPallet != null ? Number(current.piecesPerPallet) : 0,
       observations: checkIn.observations || current?.observations || '',

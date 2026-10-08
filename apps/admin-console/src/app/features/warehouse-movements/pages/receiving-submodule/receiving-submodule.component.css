@@ -697,6 +697,64 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* ── BARRA RESUMEN KPI COMPACTA (RECEIVING LIGHT & DARK HOMOLOGADO) ── */
+.movement-kpi-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-card, 14px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.movement-kpi-summary-items {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  flex-wrap: wrap;
+}
+
+.movement-kpi-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-right: 1.15rem;
+  border-right: 1px solid var(--border-subtle, rgba(226, 232, 240, 0.6));
+}
+
+.movement-kpi-summary-item:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.movement-kpi-summary-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.movement-kpi-summary-label {
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.movement-kpi-summary-value {
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9rem;
+}
+
 .movement-kpi-card {
   position: relative;
   overflow: hidden;
@@ -5415,6 +5473,189 @@ h1, h2, h3, h4, h5, h6 {
 :host-context(.dark) .relabel-selected-summary,
 :host-context(.theme-dark) .relabel-selected-summary {
   color: #cbd5e1 !important;
+}
+
+.modal-header-icon-box--lot {
+  background: rgba(214, 174, 61, 0.14) !important;
+  color: #9b7626 !important;
+  border: 1px solid rgba(214, 174, 61, 0.3) !important;
+}
+
+:host-context(.dark) .modal-header-icon-box--lot,
+:host-context(.theme-dark) .modal-header-icon-box--lot {
+  background: rgba(237, 199, 78, 0.15) !important;
+  color: #edc74e !important;
+  border-color: rgba(237, 199, 78, 0.35) !important;
+}
+
+.modal-header-subtitle--lot {
+  color: #64748b !important;
+}
+
+:host-context(.dark) .modal-header-subtitle--lot,
+:host-context(.theme-dark) .modal-header-subtitle--lot {
+  color: #94a3b8 !important;
+}
+
+/* ── MODAL: ALERTA Y CREDENCIALES GERENCIA DE OPERACIONES (< 9 MESES) ── */
+.modal-summary-box--ops-auth {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 4px solid #f59e0b !important;
+  border-radius: 12px !important;
+  padding: 0.85rem 1rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+:host-context(.dark) .modal-summary-box--ops-auth,
+:host-context(.theme-dark) .modal-summary-box--ops-auth {
+  background: #0b111e !important;
+  border-color: #1e293b !important;
+  border-left-color: #f59e0b !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+.ops-auth-icon-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+:host-context(.dark) .ops-auth-icon-badge,
+:host-context(.theme-dark) .ops-auth-icon-badge {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.ops-auth-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+:host-context(.dark) .ops-auth-title,
+:host-context(.theme-dark) .ops-auth-title {
+  color: #f8fafc;
+}
+
+.ops-auth-pill {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+}
+
+:host-context(.dark) .ops-auth-pill,
+:host-context(.theme-dark) .ops-auth-pill {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.ops-auth-desc {
+  font-size: 0.72rem;
+  color: #475569;
+  line-height: 1.35;
+  margin: 0;
+}
+
+:host-context(.dark) .ops-auth-desc,
+:host-context(.theme-dark) .ops-auth-desc {
+  color: #94a3b8;
+}
+
+.modal-ops-credentials-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+:host-context(.dark) .modal-ops-credentials-panel,
+:host-context(.theme-dark) .modal-ops-credentials-panel {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: #1e293b;
+}
+
+.modal-section-legend--ops {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.modal-section-legend--ops .material-symbols-outlined {
+  color: #d97706;
+  font-size: 1.15rem;
+}
+
+:host-context(.dark) .modal-section-legend--ops,
+:host-context(.theme-dark) .modal-section-legend--ops {
+  color: #f8fafc;
+}
+
+:host-context(.dark) .modal-section-legend--ops .material-symbols-outlined,
+:host-context(.theme-dark) .modal-section-legend--ops .material-symbols-outlined {
+  color: #fbbf24;
+}
+
+.lot-active-badge-shelf--authorized {
+  background: #fef3c7 !important;
+  border: 1px solid #f59e0b !important;
+  color: #92400e !important;
+  font-weight: 700 !important;
+}
+
+:host-context(.dark) .lot-active-badge-shelf--authorized,
+:host-context(.theme-dark) .lot-active-badge-shelf--authorized {
+  background: rgba(245, 158, 11, 0.2) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #fde68a !important;
+}
+
+.carriers-btn--ghost {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid rgba(88, 98, 116, 0.2);
+  border-radius: 12px;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.carriers-btn--ghost:hover:not(:disabled) {
+  background: rgba(88, 98, 116, 0.1);
+  color: #172033;
+  border-color: rgba(88, 98, 116, 0.35);
+}
+
+:host-context(.dark) .carriers-btn--ghost,
+:host-context(.theme-dark) .carriers-btn--ghost {
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:host-context(.dark) .carriers-btn--ghost:hover:not(:disabled),
+:host-context(.theme-dark) .carriers-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 
