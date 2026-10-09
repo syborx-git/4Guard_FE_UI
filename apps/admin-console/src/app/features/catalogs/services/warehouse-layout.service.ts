@@ -15,11 +15,14 @@ import {
 } from '../models/warehouse-catalog.models';
 import { WAREHOUSE_LAYOUT_REPOSITORY } from '../ports/warehouse-layout.repository.port';
 
+import { SessionStorageService } from '../../../core/services/session-storage.service';
+
 @Injectable({
   providedIn: 'root'
 })
 export class WarehouseLayoutService {
   private readonly repository = inject(WAREHOUSE_LAYOUT_REPOSITORY);
+  private readonly sessionStorageService = inject(SessionStorageService);
 
   private readonly _sections = signal<WarehouseSection[]>([]);
   private readonly _stats = signal<WarehouseLayoutStats>({
@@ -48,12 +51,15 @@ export class WarehouseLayoutService {
   readonly blockReasons = computed(() => this._blockReasons());
 
   constructor() {
-    this.loadTopology();
-    this.loadBlockReasons();
-    this.loadAllPositions();
+    if (this.sessionStorageService.isLogged()) {
+      this.loadTopology();
+      this.loadBlockReasons();
+      this.loadAllPositions();
+    }
   }
 
   loadTopology(): void {
+    if (!this.sessionStorageService.isLogged()) return;
     this._isLoadingTopology.set(true);
     this.repository.getTopology().subscribe({
       next: (data) => {
@@ -63,23 +69,29 @@ export class WarehouseLayoutService {
       },
       error: (err) => {
         this._isLoadingTopology.set(false);
-        console.error('Error al cargar topología desde el backend:', err);
+        if (err?.status !== 403) {
+          console.error('Error al cargar topología desde el backend:', err);
+        }
       }
     });
   }
 
   loadBlockReasons(): void {
+    if (!this.sessionStorageService.isLogged()) return;
     this.repository.getBlockReasons().subscribe({
       next: (reasons) => {
         this._blockReasons.set(reasons);
       },
       error: (err) => {
-        console.error('Error al cargar catálogo de motivos de bloqueo QM:', err);
+        if (err?.status !== 403) {
+          console.error('Error al cargar catálogo de motivos de bloqueo QM:', err);
+        }
       }
     });
   }
 
   loadAllPositions(sectionId?: string, status?: string, query?: string): void {
+    if (!this.sessionStorageService.isLogged()) return;
     this._isLoadingAllPositions.set(true);
     this.repository.getAllPositions(sectionId, status, query).subscribe({
       next: (positions) => {
@@ -88,7 +100,9 @@ export class WarehouseLayoutService {
       },
       error: (err) => {
         this._isLoadingAllPositions.set(false);
-        console.error('Error al cargar todas las posiciones desde el backend:', err);
+        if (err?.status !== 403) {
+          console.error('Error al cargar todas las posiciones desde el backend:', err);
+        }
       }
     });
   }
