@@ -110,7 +110,10 @@ export interface CheckInCasetaData {
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
-  economicNumber?: string;  // Número económico del vehículo
+  economicNumber?: string;  // Número económico del vehículo / tracto
+  noEcoTractor?: string;
+  boxEconomicNumber?: string; // Número económico de la caja
+  noEcoCaja?: string;
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte

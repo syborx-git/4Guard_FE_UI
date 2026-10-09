@@ -204,7 +204,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
 
-      const isReady = p.isReadyForExit === true || p.status === 'READY_FOR_EXIT' || p.status === 'DISCHARGED' || p.status === 'LOADED' || p.status === 'COMPLETED';
+      const ws = (p.warehouseStatus || '').toUpperCase();
+      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || p.status === 'READY_FOR_EXIT';
       const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
       mergedMap.set(key, {
         ...p,
@@ -224,13 +225,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       // Si ya está en mergedMap no duplicar
       if (mergedMap.has(key)) continue;
 
-      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED)
-      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED') {
+      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED)
+      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED') {
         const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
           ? r.checkIn.sealNumbers
           : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
 
-        const isReady = r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED' || (r as any).isReadyForExit === true;
+        const isReady = (r.status as string) === 'COMPLETED' || (r as any).isReadyForExit === true;
         const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -273,9 +274,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (!key || exitTokensOrFolios.has(key)) continue;
       if (mergedMap.has(key)) continue;
 
-      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED') {
+      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED') {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
-        const isReady = o.status === 'LOADED' || (o.status as string) === 'COMPLETED' || (o as any).isReadyForExit === true;
+        const isReady = (o.status as string) === 'COMPLETED' || (o as any).isReadyForExit === true;
         const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -401,6 +402,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     placasTracto: ['', Validators.required],
     noEcoTractor: ['', Validators.required],
     placasCaja: ['', Validators.required],
+    noEcoCaja: [''],
     medidasCaja: ['', Validators.required],
     noSello: [''],
     tipoTransporte: ['', Validators.required],
@@ -1228,7 +1230,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const boxPlatesVal      = passData.boxPlates      || passData.placasCaja      || passData.trailerPlates  || '';
     const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '53 Pies';
     const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || 'Tráiler';
-    const ecoNumberVal      = passData.economicNumber || passData.noEcoTractor    || passData.ecoTractor     || '';
+    const ecoNumberVal      = passData.economicNumber || passData.noEcoTractor    || passData.ecoTractor     || passData.eco_tractor || '';
+    const boxEcoVal         = passData.boxEconomicNumber || passData.noEcoCaja    || passData.ecoCaja        || passData.box_economic_number || '';
     const docNumberVal      = passData.docNumber      || passData.remision        || passData.noCartaPorte   || '';
     const isSubmitted       = passData.status === 'SUBMITTED';
 
@@ -1349,6 +1352,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       placasTracto:        tractorPlatesVal,
       noEcoTractor:        ecoNumberVal,
       placasCaja:          boxPlatesVal,
+      noEcoCaja:           boxEcoVal,
       medidasCaja:         boxDimensionsVal,
       tipoTransporte:      transportTypeVal,
       transportistaNombre: driverNameVal,
@@ -1923,6 +1927,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
       boxPlates: (formVal.placasCaja || '').toUpperCase(),
+      economicNumber: formVal.noEcoTractor || formVal.economicNumber || '',
+      noEcoTractor: formVal.noEcoTractor || formVal.economicNumber || '',
+      boxEconomicNumber: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+      noEcoCaja: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+      transportType: formVal.tipoTransporte || '',
+      medidasCaja: formVal.medidasCaja || '',
+      noCartaPorte: formVal.noCartaPorte || '',
       sealNumbers: seals,
       sealNumber: seals.join(', '),
       observations: inspectionObservations,
@@ -1944,6 +1955,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         tractorPlates: (formVal.placasTracto || 'S/P').toUpperCase().trim(),
         boxPlates: (formVal.placasCaja || 'S/P').toUpperCase().trim(),
         noEcoTractor: formVal.noEcoTractor || 'S/N',
+        economicNumber: formVal.noEcoTractor || formVal.economicNumber || 'S/N',
+        boxEconomicNumber: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+        noEcoCaja: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
         transportType: formVal.tipoTransporte || 'Caja Seca',
         boxDimensions: formVal.medidasCaja || '53 Pies',
         docNumber: op === 'CARGA' 
@@ -2175,6 +2189,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       placasTracto: '',
       noEcoTractor: '',
       placasCaja: '',
+      noEcoCaja: '',
       medidasCaja: '',
       noSello: '',
       tipoTransporte: '',
@@ -2273,5 +2288,40 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // ── HELPERS ESTATUS DE MANIOBRA & CANDADO DE SALIDA (SDOP) ──────────────────
+  protected getWarehouseStatusLabel(item: any): string {
+    if (!item) return 'En Maniobra';
+    if (item.isReadyForExit) return 'Autorizado / Listo Salida';
+    const isCarga = (item.operacion === 'CARGA' || item.operationType === 'CARGA');
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+
+    if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'Autorizado / Listo Salida';
+    if (ws === 'REGISTERED' || ws === 'PENDING') return 'En Patio / Espera';
+    if (ws === 'ASSIGNED') return isCarga ? 'Asignado a Rampa' : 'Asignado a Rampa';
+    if (ws === 'IN_PROGRESS') return isCarga ? 'Cargando en Andén' : 'Descargando en Andén';
+    if (ws === 'LOADED') return 'Carga Concluida / Auditoría';
+    if (ws === 'DISCHARGED') return 'Descarga Concluida / Auditoría';
+    return isCarga ? 'En Proceso de Carga' : 'En Maniobra';
+  }
+
+  protected getWarehouseStatusIcon(item: any): string {
+    if (!item) return 'sync';
+    if (item.isReadyForExit) return 'verified';
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+    if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'verified';
+    if (ws === 'REGISTERED' || ws === 'PENDING') return 'hourglass_empty';
+    if (ws === 'ASSIGNED') return 'dock';
+    if (ws === 'IN_PROGRESS') return 'sync';
+    if (ws === 'LOADED' || ws === 'DISCHARGED') return 'fact_check';
+    return 'pending';
+  }
+
+  protected getWarehouseLockTooltip(item: any): string {
+    const isCarga = (item?.operacion === 'CARGA' || item?.operationType === 'CARGA');
+    return isCarga
+      ? 'Maniobra de carga en proceso en almacén. Requiere autorización y cierre del Líder de Salidas antes de dar Check-Out.'
+      : 'Maniobra de descarga en proceso en almacén. Requiere autorización y cierre del Líder de Recepción antes de dar Check-Out.';
   }
 }

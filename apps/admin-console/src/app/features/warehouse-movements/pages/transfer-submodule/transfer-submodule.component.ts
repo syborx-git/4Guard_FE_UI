@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -54,6 +54,8 @@ export class TransferSubmoduleComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
   public readonly authState = inject(AuthState);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   // -- ESTADO DEL WORKBENCH UNIFICADO (MASTER-DETAIL) --
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
@@ -62,6 +64,15 @@ export class TransferSubmoduleComponent implements OnInit {
   statusFilter = signal<string>('ALL');
   auditEntries = signal<MovementAuditEntry[]>([]);
   isLoadingAudit = signal(false);
+
+  // Estado de Compactación de Métricas / KPIs
+  isKpiCollapsed = signal<boolean>(localStorage.getItem('4g_transfers_kpis_collapsed') === 'true');
+
+  toggleKpiCollapse(): void {
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    localStorage.setItem('4g_transfers_kpis_collapsed', String(next));
+  }
 
   // Modal Cancelacion con Autorizacion de Administrador
   showCancelModal = signal(false);
@@ -670,19 +681,44 @@ export class TransferSubmoduleComponent implements OnInit {
   ngOnInit(): void {
     // Cargar catalogo de montacarguistas desde el BE
     this._loadForkliftOperators();
-
     this.movementsService.loadInitialBackendData();
-    const savedFolio = localStorage.getItem('4g_active_transfer_folio');
-    if (savedFolio) {
-      const list = this.movementsService.transfers();
-      const found = list.find((t) => t.folio === savedFolio);
-      if (found) {
-        this.selectTransferItem(found);
-        return;
+
+    this.route.queryParams.subscribe((params) => {
+      const folio = params['folio'] || params['id'];
+      if (folio) {
+        this.searchQuery.set(folio);
+        const found = this.movementsService.findTransferByFolio(folio);
+        if (found) {
+          this.selectTransferItem(found);
+        } else {
+          this.movementsApi.getTransfers({ search: folio }).subscribe({
+            next: (list: any[]) => {
+              if (list && list.length > 0) {
+                const match = list.find((t: any) => t.folio === folio || t.id === folio) || list[0];
+                if (match) {
+                  const mapped = this.movementsService.mapTransferResponseToHeader(match);
+                  this.selectTransferItem(mapped);
+                }
+              }
+            },
+            error: () => {},
+          });
+        }
+      } else {
+        const savedFolio = localStorage.getItem('4g_active_transfer_folio');
+        if (savedFolio) {
+          const list = this.movementsService.transfers();
+          const found = list.find((t) => t.folio === savedFolio);
+          if (found) {
+            this.selectTransferItem(found);
+            return;
+          }
+        }
+        if (this.formMode() === 'idle') {
+          this.formMode.set('idle');
+        }
       }
-    }
-    // Estado inicial: Sin seleccion (Empty State)
-    this.formMode.set('idle');
+    });
   }
 
   private _loadForkliftOperators(): void {
@@ -724,6 +760,7 @@ export class TransferSubmoduleComponent implements OnInit {
     this.formMode.set('idle');
     this.selectedTransfer.set(null);
     localStorage.removeItem('4g_active_transfer_folio');
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
   }
 
   toggleStatusFilter(status: string): void {
@@ -937,7 +974,7 @@ export class TransferSubmoduleComponent implements OnInit {
     const found = all.find(
       (l: LocationStockInfo) =>
         (l.locationCode && l.locationCode.toUpperCase().trim() === clean) ||
-        (l.locationId && /^[0-9a-fA-F-]{36}$/.test(l.locationId))
+        (l.locationId && l.locationId.toLowerCase() === clean.toLowerCase())
     );
     if (found?.locationId && /^[0-9a-fA-F-]{36}$/.test(found.locationId)) {
       return found.locationId;

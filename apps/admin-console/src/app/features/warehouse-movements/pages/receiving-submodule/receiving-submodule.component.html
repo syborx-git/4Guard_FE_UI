@@ -627,18 +627,18 @@
 
             <!-- FILA 2: 3 Columnas amplias (Placas, Sellos, Bahía WMS) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-slate-200 dark:border-slate-800">
-              <!-- Placas Tracto y Caja (3 cols) -->
-              <div class="logistics-command-cell lg:col-span-3">
+              <!-- Eco y Placas Tracto y Caja (4 cols) -->
+              <div class="logistics-command-cell lg:col-span-4">
                 <span class="logistics-command-label">
                   <span class="material-symbols-outlined">pin</span>
-                  Placas Tracto &amp; Caja
+                  Eco / Placas (Tracto &amp; Caja)
                 </span>
-                <div class="flex items-center gap-1.5 mt-0.5">
+                <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="logistics-command-badge-plate">
-                    T: {{ rec.checkIn.tractorPlates || 'S/P' }}
+                    T: {{ (rec.checkIn.economicNumber || rec.checkIn.noEcoTractor ? 'Eco ' + (rec.checkIn.economicNumber || rec.checkIn.noEcoTractor) + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
                   </span>
                   <span class="logistics-command-badge-plate">
-                    C: {{ rec.checkIn.boxPlates || 'S/P' }}
+                    C: {{ (rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja ? 'Eco ' + (rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja) + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
                   </span>
                 </div>
               </div>
@@ -666,8 +666,8 @@
                 </div>
               </div>
 
-              <!-- Bahía Asignada Automáticamente por WMS & Rampa (5 cols) -->
-              <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-5">
+              <!-- Bahía Asignada Automáticamente por WMS & Rampa (4 cols) -->
+              <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-4">
                 <div class="flex items-center justify-between gap-1.5 flex-wrap">
                   <span class="logistics-command-label font-extrabold flex items-center gap-1">
                     <span class="material-symbols-outlined">warehouse</span>
@@ -3008,10 +3008,22 @@
                 <input type="text" formControlName="tractorPlates" class="fg-input font-mono uppercase font-bold" placeholder="77-AB-99" />
               </div>
 
+              <!-- No. Económico Tracto -->
+              <div class="fg-field">
+                <label class="fg-label">No. Económico Tracto (Eco)</label>
+                <input type="text" formControlName="economicNumber" class="fg-input font-mono uppercase font-bold" placeholder="TR-01" />
+              </div>
+
               <!-- Placas Caja -->
               <div class="fg-field">
                 <label class="fg-label fg-label--required">Placas Caja</label>
                 <input type="text" formControlName="boxPlates" class="fg-input font-mono uppercase font-bold" placeholder="55-XX-11" />
+              </div>
+
+              <!-- No. Económico Caja -->
+              <div class="fg-field">
+                <label class="fg-label">No. Económico Caja (Eco)</label>
+                <input type="text" formControlName="boxEconomicNumber" class="fg-input font-mono uppercase font-bold" placeholder="BOX-01" />
               </div>
             </div>
 
