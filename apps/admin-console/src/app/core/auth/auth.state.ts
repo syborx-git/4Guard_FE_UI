@@ -118,11 +118,17 @@ export class AuthState {
       return;
     }
 
+    const normLoginRole = (session.user.role || '').toUpperCase();
     if (
-      session.user.role === 'SECURITY_GUARD' ||
-      session.user.role === 'ROLE_SECURITY_GUARD' ||
-      session.user.role === 'VIGILANCIA' ||
-      session.user.role === 'ROLE_VIGILANCIA'
+      normLoginRole === 'SECURITY_GUARD' ||
+      normLoginRole === 'ROLE_SECURITY_GUARD' ||
+      normLoginRole === 'VIGILANCIA' ||
+      normLoginRole === 'ROLE_VIGILANCIA' ||
+      normLoginRole === 'GUARD' ||
+      normLoginRole === 'ROLE_GUARD' ||
+      normLoginRole.includes('GUARD') ||
+      normLoginRole.includes('VIGILAN') ||
+      normLoginRole.includes('CASETA')
     ) {
       localStorage.removeItem('4g_return_url');
       localStorage.removeItem('4g_pending_process_name');
@@ -205,6 +211,14 @@ export class AuthState {
 
     this._currentUser.set(updatedUser);
     this._currentShift.set(updatedUser.shift || 'TURNO 1');
+
+    if (this.canAccessModule('security') && !this.canAccessModule('dashboard')) {
+      const currentUrl = this.router.url;
+      if (!currentUrl.startsWith('/security')) {
+        this.router.navigate(['/security']);
+      }
+    }
+
     return true;
   }
 
@@ -237,22 +251,20 @@ export class AuthState {
       return true;
     }
 
-    // Guardia de seguridad / Vigilancia
+    // Guardia de seguridad / Vigilancia -> Acceso EXCLUSIVO a Caseta (security)
+    const normRole = (role || '').toUpperCase();
     if (
-      role === 'SECURITY_GUARD' ||
-      role === 'ROLE_SECURITY_GUARD' ||
-      role === 'VIGILANCIA' ||
-      role === 'ROLE_VIGILANCIA'
+      normRole === 'SECURITY_GUARD' ||
+      normRole === 'ROLE_SECURITY_GUARD' ||
+      normRole === 'VIGILANCIA' ||
+      normRole === 'ROLE_VIGILANCIA' ||
+      normRole === 'GUARD' ||
+      normRole === 'ROLE_GUARD' ||
+      normRole.includes('GUARD') ||
+      normRole.includes('VIGILAN') ||
+      normRole.includes('CASETA')
     ) {
-      return (
-        module === 'security' ||
-        module === 'warehouse-movements' ||
-        module === 'receiving' ||
-        module === 'shipping' ||
-        module === 'dashboard' ||
-        module === 'carriers' ||
-        module === 'catalogs'
-      );
+      return module === 'security';
     }
 
     const permissions = this.permissions();

@@ -11,7 +11,8 @@ import {
   InventoryFilterCriteria,
   PalletType,
   LabeledStatus,
-  ExpirationFilterMode
+  ExpirationFilterMode,
+  ExpirationBadgeStatus
 } from '../../models/inventory-query.models';
 import { InventoryQueryService } from '../../services/inventory-query.service';
 
@@ -24,12 +25,18 @@ import { InventoryQueryService } from '../../services/inventory-query.service';
 })
 export class InventoryQueryFilterModalComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
-  private readonly inventoryService = inject(InventoryQueryService);
+  protected readonly inventoryService = inject(InventoryQueryService);
 
   @Input() isOpen = false;
   @Output() closeModal = new EventEmitter<void>();
 
   protected filterForm!: FormGroup;
+
+  // Multi-select arrays
+  protected selectedSkus: string[] = [];
+  protected selectedWarehouses: string[] = [];
+  protected selectedExpirationStatuses: ExpirationBadgeStatus[] = [];
+  protected skuSearchTerm = '';
 
   // Opciones de Dropdowns oficiales 4GUARD (7 tipos maestros)
   protected readonly palletTypes: PalletType[] = [
@@ -54,6 +61,10 @@ export class InventoryQueryFilterModalComponent implements OnInit {
 
   ngOnInit(): void {
     const active = this.inventoryService.activeFilters();
+
+    this.selectedSkus = active.selectedSkus ? [...active.selectedSkus] : [];
+    this.selectedWarehouses = active.selectedWarehouses ? [...active.selectedWarehouses] : [];
+    this.selectedExpirationStatuses = active.selectedExpirationStatuses ? [...active.selectedExpirationStatuses] : [];
 
     this.filterForm = this.fb.group({
       entryDateFrom: [active.entryDateFrom || ''],
@@ -83,6 +94,57 @@ export class InventoryQueryFilterModalComponent implements OnInit {
     this.productSuggestions = allProducts;
   }
 
+  // --- MULTI-SELECT HANDLERS ---
+  protected toggleSku(sku: string): void {
+    if (this.selectedSkus.includes(sku)) {
+      this.selectedSkus = this.selectedSkus.filter((s) => s !== sku);
+    } else {
+      this.selectedSkus = [...this.selectedSkus, sku];
+    }
+  }
+
+  protected isSkuSelected(sku: string): boolean {
+    return this.selectedSkus.includes(sku);
+  }
+
+  protected toggleWarehouse(wh: string): void {
+    if (this.selectedWarehouses.includes(wh)) {
+      this.selectedWarehouses = this.selectedWarehouses.filter((w) => w !== wh);
+    } else {
+      this.selectedWarehouses = [...this.selectedWarehouses, wh];
+    }
+  }
+
+  protected isWarehouseSelected(wh: string): boolean {
+    return this.selectedWarehouses.includes(wh);
+  }
+
+  protected toggleExpirationStatus(st: ExpirationBadgeStatus): void {
+    if (this.selectedExpirationStatuses.includes(st)) {
+      this.selectedExpirationStatuses = this.selectedExpirationStatuses.filter((s) => s !== st);
+    } else {
+      this.selectedExpirationStatuses = [...this.selectedExpirationStatuses, st];
+    }
+  }
+
+  protected isExpirationStatusSelected(st: ExpirationBadgeStatus): boolean {
+    return this.selectedExpirationStatuses.includes(st);
+  }
+
+  protected filteredAvailableSkus(): { sku: string; description: string; count: number }[] {
+    const list = this.inventoryService.distinctSkus();
+    if (!this.skuSearchTerm.trim()) return list;
+    const term = this.skuSearchTerm.toUpperCase().trim();
+    return list.filter(
+      (s) => s.sku.toUpperCase().includes(term) || s.description.toUpperCase().includes(term)
+    );
+  }
+
+  protected onSkuSearchChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.skuSearchTerm = input.value;
+  }
+
   protected selectProductSuggestion(desc: string): void {
     this.filterForm.patchValue({ productDescription: desc });
     this.showSuggestions = false;
@@ -90,11 +152,20 @@ export class InventoryQueryFilterModalComponent implements OnInit {
 
   protected onApplyFilters(): void {
     const val = this.filterForm.value as InventoryFilterCriteria;
+    val.selectedSkus = this.selectedSkus.length > 0 ? this.selectedSkus : undefined;
+    val.selectedWarehouses = this.selectedWarehouses.length > 0 ? this.selectedWarehouses : undefined;
+    val.selectedExpirationStatuses = this.selectedExpirationStatuses.length > 0 ? this.selectedExpirationStatuses : undefined;
+
     this.inventoryService.setFilters(val);
     this.closeModal.emit();
   }
 
   protected onClearFilters(): void {
+    this.selectedSkus = [];
+    this.selectedWarehouses = [];
+    this.selectedExpirationStatuses = [];
+    this.skuSearchTerm = '';
+
     this.filterForm.reset({
       entryDateFrom: '',
       entryDateTo: '',

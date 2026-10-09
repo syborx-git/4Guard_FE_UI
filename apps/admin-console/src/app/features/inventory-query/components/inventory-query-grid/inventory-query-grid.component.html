@@ -80,14 +80,15 @@
   <!-- ══ BARRA DE HERRAMIENTAS Y ACCIONES PRINCIPALES ═══════════════════════════ -->
   <div class="iq-toolbar">
     
-    <!-- Buscador rápido local -->
-    <div class="iq-search-wrap">
+    <!-- Buscador predictivo rápido local con sugerencias agrupadas -->
+    <div class="iq-search-wrap" (click)="$event.stopPropagation()">
       <span class="material-symbols-outlined iq-search-icon">search</span>
       <input
         type="text"
         [ngModel]="searchTerm()"
-        (ngModelChange)="searchTerm.set($event)"
-        placeholder="Buscar por SKU, Remisión, Producto, Ubicación..."
+        (ngModelChange)="onSearchInput($event)"
+        (focus)="isSuggestionsOpen.set(searchTerm().trim().length >= 2)"
+        placeholder="Buscar por SKU, Frasco, Remisión, Producto, Bodega..."
         class="iq-search-input"
         aria-label="Buscar inventario"
       />
@@ -100,6 +101,39 @@
         >
           <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
         </button>
+      }
+
+      <!-- Menú Desplegable de Sugerencias Predictivas ("Comienza con" / Keywords) -->
+      @if (isSuggestionsOpen() && searchSuggestions().length > 0) {
+        <div class="iq-suggestions-dropdown animate-fade-in shadow-2xl">
+          <div class="iq-suggestions-header">
+            <span class="material-symbols-outlined text-xs">auto_awesome</span>
+            <span>Sugerencias Predictivas ("Comienza con" / Palabras clave)</span>
+          </div>
+          <div class="iq-suggestions-list">
+            @for (item of searchSuggestions(); track item.value) {
+              <button
+                type="button"
+                (click)="selectSuggestion(item)"
+                class="iq-suggestion-item"
+              >
+                <span class="material-symbols-outlined iq-sugg-icon">{{ item.icon }}</span>
+                <div class="iq-sugg-content">
+                  <div class="iq-sugg-title-row">
+                    <span class="iq-sugg-title">{{ item.label }}</span>
+                    <span class="iq-sugg-type-badge">{{ item.type }}</span>
+                  </div>
+                  @if (item.subLabel) {
+                    <span class="iq-sugg-sub">{{ item.subLabel }}</span>
+                  }
+                </div>
+                @if (item.count !== undefined) {
+                  <span class="iq-sugg-count">{{ item.count }} tarima(s)</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
       }
     </div>
 
@@ -114,7 +148,11 @@
       >
         <span class="material-symbols-outlined">tune</span>
         <span>FILTROS AVANZADOS</span>
-        @if (inventoryService.activeFilters().expirationMode !== 'GENERAL') {
+        @if (
+          inventoryService.activeFilters().expirationMode !== 'GENERAL' ||
+          (inventoryService.activeFilters().selectedSkus && inventoryService.activeFilters().selectedSkus!.length > 0) ||
+          (inventoryService.activeFilters().selectedWarehouses && inventoryService.activeFilters().selectedWarehouses!.length > 0)
+        ) {
           <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
         }
       </button>
@@ -144,20 +182,104 @@
         type="button"
         (click)="onExportExcel()"
         class="iq-btn iq-btn-emerald"
+        [title]="selectedIds().size > 0 ? 'Exportar ' + selectedIds().size + ' tarimas seleccionadas' : 'Exportar todas las tarimas filtradas'"
       >
         <span class="material-symbols-outlined">download_for_offline</span>
-        <span>EXPORTAR A EXCEL (21 COLS)</span>
+        <span>
+          {{ selectedIds().size > 0 ? 'EXPORTAR SELECCIÓN (' + selectedIds().size + ')' : 'EXPORTAR A EXCEL (21 COLS)' }}
+        </span>
       </button>
 
     </div>
   </div>
 
-  <!-- ══ TABLA INTERACTIVA DE INVENTARIOS ═════════════════════════════════════════ -->
+  <!-- ══ BARRA DE CHIPS DE FILTROS Y BÚSQUEDA ACTIVOS ═══════════════════════════ -->
+  @if (
+    searchTerm() ||
+    (inventoryService.activeFilters().selectedSkus && inventoryService.activeFilters().selectedSkus!.length > 0) ||
+    (inventoryService.activeFilters().selectedWarehouses && inventoryService.activeFilters().selectedWarehouses!.length > 0) ||
+    (inventoryService.activeFilters().selectedExpirationStatuses && inventoryService.activeFilters().selectedExpirationStatuses!.length > 0) ||
+    inventoryService.activeFilters().expirationMode !== 'GENERAL'
+  ) {
+    <div class="iq-active-filters-bar animate-fade-in">
+      <div class="iq-active-filters-label">
+        <span class="material-symbols-outlined text-sm">filter_alt</span>
+        <span>Filtros Activos:</span>
+      </div>
+
+      <div class="iq-active-chips-list">
+        @if (searchTerm()) {
+          <span class="iq-chip iq-chip--search">
+            <span>Búsqueda: "<strong>{{ searchTerm() }}</strong>"</span>
+            <button type="button" (click)="clearSearch()" title="Quitar término de búsqueda">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </span>
+        }
+
+        @for (sku of inventoryService.activeFilters().selectedSkus || []; track sku) {
+          <span class="iq-chip iq-chip--sku">
+            <span>SKU: <strong>{{ sku }}</strong></span>
+            <button type="button" (click)="removeSkuFilter(sku)" title="Quitar filtro de SKU">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </span>
+        }
+
+        @for (wh of inventoryService.activeFilters().selectedWarehouses || []; track wh) {
+          <span class="iq-chip iq-chip--wh">
+            <span>Bodega: <strong>{{ wh }}</strong></span>
+            <button type="button" (click)="removeWarehouseFilter(wh)" title="Quitar filtro de bodega">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </span>
+        }
+
+        @for (st of inventoryService.activeFilters().selectedExpirationStatuses || []; track st) {
+          <span class="iq-chip iq-chip--exp">
+            <span>{{ st }}</span>
+            <button type="button" (click)="removeExpirationStatusFilter(st)" title="Quitar filtro de estado">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </span>
+        }
+
+        @if (inventoryService.activeFilters().expirationMode !== 'GENERAL') {
+          <span class="iq-chip iq-chip--pablo">
+            <span>Regla Pablo: <strong>{{ inventoryService.activeFilters().expirationMode === 'CADUCO' ? '🔴 Caduco' : '🟡 Próximo <30d' }}</strong></span>
+          </span>
+        }
+
+        <button
+          type="button"
+          (click)="resetAllFilters()"
+          class="iq-btn-reset-filters"
+          title="Limpiar todos los filtros y búsqueda"
+        >
+          <span class="material-symbols-outlined">restart_alt</span>
+          <span>Limpiar Todo</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ══ TABLA INTERACTIVA DE INVENTARIOS CON SELECCIÓN MÚLTIPLE ═════════════════ -->
   <div class="iq-table-card">
     <div class="iq-table-responsive">
       <table class="iq-table">
         <thead>
           <tr>
+            <!-- Columna de Checkbox Maestro de Selección Múltiple -->
+            <th style="width: 44px; text-align: center;">
+              <input
+                type="checkbox"
+                [checked]="isAllDisplayedSelected()"
+                [indeterminate]="isPartiallySelected()"
+                (change)="toggleSelectAllDisplayed()"
+                class="iq-checkbox"
+                title="Seleccionar / Deseleccionar todas las tarimas mostradas"
+              />
+            </th>
             <th>NO. (#)</th>
             <th>FECHA INGRESO</th>
             <th>FECHA CADUCIDAD</th>
@@ -174,8 +296,23 @@
         </thead>
         <tbody>
           @for (rec of paginatedRecords(); track rec.id) {
-            <tr>
+            <tr
+              [class.tr-selected]="isRecordSelected(rec.id)"
+              (click)="toggleSelectRecord(rec.id)"
+              style="cursor: pointer;"
+            >
               
+              <!-- Checkbox de Selección Individual -->
+              <td style="text-align: center;" (click)="$event.stopPropagation()">
+                <input
+                  type="checkbox"
+                  [checked]="isRecordSelected(rec.id)"
+                  (change)="toggleSelectRecord(rec.id, $event)"
+                  class="iq-checkbox"
+                  [title]="'Seleccionar tarima #' + rec.id"
+                />
+              </td>
+
               <!-- NO. (#) -->
               <td class="iq-cell-id">
                 #{{ rec.id }}
@@ -262,7 +399,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="12">
+              <td colspan="13">
                 <div class="iq-table-empty">
                   <span class="material-symbols-outlined">inventory</span>
                   <p style="margin: 0; font-weight: 600;">No se encontraron registros de inventario que coincidan con los filtros.</p>
@@ -278,6 +415,11 @@
     <div class="iq-pagination">
       <div class="iq-pagination-info">
         Mostrando <strong>{{ paginatedRecords().length }}</strong> de <strong>{{ displayedRecords().length }}</strong> tarimas registradas
+        @if (selectedIds().size > 0) {
+          <span class="ml-2 font-bold text-amber-600 dark:text-amber-400">
+            · {{ selectedIds().size }} seleccionada(s)
+          </span>
+        }
       </div>
 
       <div class="iq-pagination-controls">
@@ -305,6 +447,78 @@
       </div>
     </div>
   </div>
+
+  <!-- ══ BARRA FLOTANTE DE ACCIÓN PARA SELECCIÓN MÚLTIPLE ════════════════════════ -->
+  @if (selectedIds().size > 0) {
+    <div class="iq-floating-selection-bar animate-slide-up shadow-2xl">
+      <div class="iq-selection-info-cluster">
+        <div class="iq-selection-badge">
+          <span class="material-symbols-outlined text-base text-amber-500">check_circle</span>
+          <span class="font-bold text-slate-900 dark:text-slate-100">
+            {{ selectedKpiSummary().totalCount }} Tarima(s) Seleccionada(s)
+          </span>
+        </div>
+
+        <div class="iq-selection-metrics hidden sm:flex">
+          <span class="iq-selection-metric-item">
+            <strong class="font-mono text-emerald-600 dark:text-emerald-400">{{ selectedKpiSummary().totalPieces | number }}</strong> PZ
+          </span>
+          <span class="text-slate-300 dark:text-slate-600">|</span>
+          <span class="iq-selection-metric-item">
+            <strong class="font-mono text-amber-600 dark:text-amber-400">{{ selectedKpiSummary().distinctSkus }}</strong> SKU(s) distintos
+          </span>
+          <span class="text-slate-300 dark:text-slate-600">|</span>
+          <span class="iq-selection-metric-item">
+            <strong class="font-mono text-blue-600 dark:text-blue-400">{{ selectedKpiSummary().totalPallets | number:'1.2-2' }}</strong> Pallets
+          </span>
+        </div>
+      </div>
+
+      <div class="iq-selection-actions-cluster">
+        @if (!isAllDisplayedSelected()) {
+          <button
+            type="button"
+            (click)="selectAllFiltered()"
+            class="iq-sel-btn iq-sel-btn--subtle"
+            title="Seleccionar todos los registros del filtro actual"
+          >
+            <span class="material-symbols-outlined text-sm">done_all</span>
+            <span>Seleccionar Todo ({{ displayedRecords().length }})</span>
+          </button>
+        }
+
+        <button
+          type="button"
+          (click)="invertSelection()"
+          class="iq-sel-btn iq-sel-btn--subtle"
+          title="Invertir la selección actual"
+        >
+          <span class="material-symbols-outlined text-sm">swap_horiz</span>
+          <span>Invertir</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="clearSelection()"
+          class="iq-sel-btn iq-sel-btn--danger"
+          title="Deseleccionar todas las tarimas"
+        >
+          <span class="material-symbols-outlined text-sm">clear_all</span>
+          <span>Limpiar Selección</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="onExportExcel()"
+          class="iq-sel-btn iq-sel-btn--emerald font-bold"
+          title="Exportar únicamente las tarimas seleccionadas"
+        >
+          <span class="material-symbols-outlined text-sm">download</span>
+          <span>Exportar Selección ({{ selectedIds().size }})</span>
+        </button>
+      </div>
+    </div>
+  }
 
 </div>
 

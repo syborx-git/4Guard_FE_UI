@@ -47,8 +47,8 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   min-height: 100%;
   width: 100%;
-  padding: 1.75rem 2rem;
-  gap: 1.25rem;
+  padding: 1.25rem 1.75rem;
+  gap: 0.75rem;
   font-family: var(--font-body);
   color: var(--text-primary);
   background:
@@ -387,6 +387,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 0.85rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--border-subtle);
+  margin-top: 0 !important;
 }
 
 @media (min-width: 640px) {
@@ -695,6 +696,67 @@ h1, h2, h3, h4, h5, h6 {
   .movement-kpi-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── BARRA RESUMEN KPI COMPACTA (RECEIVING LIGHT & DARK HOMOLOGADO) ── */
+.movement-kpi-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 1rem;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.78rem;
+  min-height: 38px;
+  transition: all 0.2s ease-in-out;
+}
+
+.movement-kpi-summary-items {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  flex-wrap: nowrap;
+}
+
+.movement-kpi-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-right: 1.25rem;
+  border-right: 1px solid var(--border-subtle, rgba(226, 232, 240, 0.6));
+  line-height: 1.2;
+}
+
+.movement-kpi-summary-item:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.movement-kpi-summary-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.movement-kpi-summary-label {
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  line-height: 1.2;
+}
+
+.movement-kpi-summary-value {
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 .movement-kpi-card {
@@ -1090,11 +1152,37 @@ h1, h2, h3, h4, h5, h6 {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
+:host-context(.dark) .fg-input,
+:host-context(.theme-dark) .fg-input {
+  color: #f8fafc !important;
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+:host-context(.dark) .fg-input::placeholder,
+:host-context(.theme-dark) .fg-input::placeholder {
+  color: #64748b !important;
+}
+
 .fg-input:focus {
   outline: none;
   border-color: var(--gold);
   background: #ffffff;
   box-shadow: 0 0 0 3px var(--gold-border);
+}
+
+:host-context(.dark) .fg-input:focus,
+:host-context(.theme-dark) .fg-input:focus {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+}
+
+:host-context(.dark) .fg-input option,
+:host-context(.theme-dark) .fg-input option {
+  background: #0f172a !important;
+  color: #f8fafc !important;
 }
 
 .fg-btn-icon {
@@ -2162,30 +2250,240 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ── MODAL: PLANO INTERACTIVO DE BAHÍAS / ANDENES (1 - 12) ── */
+.dock-map-modal-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  max-width: 54rem !important;
+  width: 100% !important;
+  padding: 1.25rem 1.5rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: min(84vh, 680px);
+  overflow-y: auto;
+  margin: auto;
+  animation: bayModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:host-context(.theme-dark) .dock-map-modal-card,
+:host-context(.dark) .dock-map-modal-card {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dock-map-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.85rem;
+}
+
+:host-context(.theme-dark) .dock-map-modal-header,
+:host-context(.dark) .dock-map-modal-header {
+  border-bottom-color: #1e293b;
+}
+
+.dock-map-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+:host-context(.theme-dark) .dock-map-modal-icon,
+:host-context(.dark) .dock-map-modal-icon {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+
+.dock-map-modal-title {
+  font-family: var(--font-display);
+  font-size: 0.92rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: #0f172a !important;
+}
+
+:host-context(.theme-dark) .dock-map-modal-title,
+:host-context(.dark) .dock-map-modal-title {
+  color: #f8fafc !important;
+}
+
+.dock-map-branch-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569 !important;
+}
+
+:host-context(.theme-dark) .dock-map-branch-badge,
+:host-context(.dark) .dock-map-branch-badge {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8 !important;
+}
+
+.dock-map-modal-subtitle {
+  font-size: 0.74rem !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
+  margin-top: 0.2rem;
+}
+
+:host-context(.theme-dark) .dock-map-modal-subtitle,
+:host-context(.dark) .dock-map-modal-subtitle {
+  color: #94a3b8 !important;
+}
+
+.dock-map-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dock-map-modal-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:host-context(.theme-dark) .dock-map-modal-close-btn,
+:host-context(.dark) .dock-map-modal-close-btn {
+  color: #94a3b8;
+}
+
+:host-context(.theme-dark) .dock-map-modal-close-btn:hover,
+:host-context(.dark) .dock-map-modal-close-btn:hover {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+.dock-map-legend-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+}
+
+:host-context(.theme-dark) .dock-map-legend-bar,
+:host-context(.dark) .dock-map-legend-bar {
+  background: #111a26;
+  border-color: #1e293b;
+}
+
+.dock-map-legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.dock-map-legend-pill--free {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857 !important;
+}
+
+:host-context(.theme-dark) .dock-map-legend-pill--free,
+:host-context(.dark) .dock-map-legend-pill--free {
+  background: rgba(6, 78, 59, 0.35);
+  border-color: rgba(5, 150, 105, 0.4);
+  color: #34d399 !important;
+}
+
+.dock-map-legend-pill--busy {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c !important;
+}
+
+:host-context(.theme-dark) .dock-map-legend-pill--busy,
+:host-context(.dark) .dock-map-legend-pill--busy {
+  background: rgba(153, 27, 27, 0.35);
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #fca5a5 !important;
+}
+
+.dock-map-legend-notice {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  font-style: italic;
+}
+
+:host-context(.theme-dark) .dock-map-legend-notice,
+:host-context(.dark) .dock-map-legend-notice {
+  color: #94a3b8;
+}
+
 .dock-bay-card {
   display: flex;
   flex-direction: column;
-  border-radius: 0.875rem;
-  border: 1.5px solid transparent;
-  background: var(--bg-subtle, #f8fafc);
+  border-radius: 0.85rem;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
   overflow: hidden;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
 }
 
 .dock-bay-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+:host-context(.theme-dark) .dock-bay-card,
+:host-context(.dark) .dock-bay-card {
+  background: #111a26;
+  border-color: #1e293b;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .dock-bay-door {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.4rem 0.6rem;
+  padding: 0.4rem 0.65rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(0, 0, 0, 0.03);
+}
+
+.dock-bay-number {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .dock-bay-dot {
@@ -2199,92 +2497,247 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 0.4rem;
+  padding: 0.85rem 0.5rem;
   text-align: center;
-  min-height: 85px;
+  min-height: 88px;
+  gap: 0.2rem;
 }
 
 /* Estado: Libre */
 .dock-bay-card--free {
-  background: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.35);
+  border-color: #a7f3d0 !important;
+  background: #ffffff;
 }
 
 .dock-bay-card--free .dock-bay-door {
-  background: rgba(16, 185, 129, 0.1);
-  color: #065f46;
+  background: #f0fdf4;
+  border-bottom-color: #bbf7d0;
+}
+
+.dock-bay-card--free .dock-bay-number {
+  color: #047857 !important;
 }
 
 .dock-bay-card--free .dock-bay-dot {
   background: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
 }
 
-:host-context(.theme-dark) .dock-bay-card--free,
-:host-context(.dark) .dock-bay-card--free {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.4);
+.dock-bay-icon--free {
+  color: #059669;
+}
+
+.dock-bay-status-text--free {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.72rem;
+  color: #047857 !important;
+  letter-spacing: 0.04em;
+}
+
+.dock-bay-helper-text {
+  font-size: 0.64rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+:host-context(.theme-dark) .dock-bay-card--free {
+  border-color: rgba(5, 150, 105, 0.4) !important;
+  background: #111a26;
+}
+
+:host-context(.theme-dark) .dock-bay-card--free .dock-bay-door,
+:host-context(.dark) .dock-bay-card--free .dock-bay-door {
+  background: rgba(6, 78, 59, 0.35);
+  border-bottom-color: rgba(5, 150, 105, 0.3);
+}
+
+:host-context(.theme-dark) .dock-bay-card--free .dock-bay-number,
+:host-context(.dark) .dock-bay-card--free .dock-bay-number {
+  color: #34d399 !important;
+}
+
+:host-context(.theme-dark) .dock-bay-status-text--free,
+:host-context(.dark) .dock-bay-status-text--free {
+  color: #34d399 !important;
+}
+
+:host-context(.theme-dark) .dock-bay-helper-text,
+:host-context(.dark) .dock-bay-helper-text {
+  color: #94a3b8;
 }
 
 /* Estado: Ocupada Inbound */
 .dock-bay-card--busy-in {
-  background: rgba(239, 68, 68, 0.06);
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: #fecaca !important;
+  background: #fffafa;
 }
 
 .dock-bay-card--busy-in .dock-bay-door {
-  background: rgba(239, 68, 68, 0.12);
-  color: #991b1b;
+  background: #fef2f2;
+  border-bottom-color: #fee2e2;
+}
+
+.dock-bay-card--busy-in .dock-bay-number {
+  color: #b91c1c !important;
 }
 
 .dock-bay-card--busy-in .dock-bay-dot {
   background: #ef4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.75);
 }
 
-:host-context(.theme-dark) .dock-bay-card--busy-in,
-:host-context(.dark) .dock-bay-card--busy-in {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.5);
+.dock-bay-icon--busy {
+  color: #dc2626;
+}
+
+.dock-bay-folio-text {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 0.75rem;
+  color: #991b1b !important;
+}
+
+.dock-bay-doc-badge {
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  font-weight: 850;
+  color: #1e293b !important;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  max-width: 95%;
+  margin-top: 2px;
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-in {
+  border-color: rgba(220, 38, 38, 0.4) !important;
+  background: #141015;
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-in .dock-bay-door,
+:host-context(.dark) .dock-bay-card--busy-in .dock-bay-door {
+  background: rgba(153, 27, 27, 0.35);
+  border-bottom-color: rgba(220, 38, 38, 0.3);
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-in .dock-bay-number,
+:host-context(.dark) .dock-bay-card--busy-in .dock-bay-number {
+  color: #fca5a5 !important;
+}
+
+:host-context(.theme-dark) .dock-bay-folio-text,
+:host-context(.dark) .dock-bay-folio-text {
+  color: #fca5a5 !important;
+}
+
+:host-context(.theme-dark) .dock-bay-doc-badge,
+:host-context(.dark) .dock-bay-doc-badge {
+  color: #f8fafc !important;
+  background: #1e293b;
+  border-color: #334155;
 }
 
 /* Estado: Ocupada Outbound */
 .dock-bay-card--busy-out {
-  background: rgba(59, 130, 246, 0.06);
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: #bfdbfe !important;
+  background: #fafcff;
 }
 
 .dock-bay-card--busy-out .dock-bay-door {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1e40af;
+  background: #eff6ff;
+  border-bottom-color: #dbeafe;
+}
+
+.dock-bay-card--busy-out .dock-bay-number {
+  color: #1d4ed8 !important;
 }
 
 .dock-bay-card--busy-out .dock-bay-dot {
   background: #3b82f6;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.75);
 }
 
-@keyframes pulse-busy {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
+:host-context(.theme-dark) .dock-bay-card--busy-out {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  background: #10141e;
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-out .dock-bay-door,
+:host-context(.dark) .dock-bay-card--busy-out .dock-bay-door {
+  background: rgba(30, 58, 138, 0.35);
+  border-bottom-color: rgba(59, 130, 246, 0.3);
+}
+
+:host-context(.theme-dark) .dock-bay-card--busy-out .dock-bay-number,
+:host-context(.dark) .dock-bay-card--busy-out .dock-bay-number {
+  color: #93c5fd !important;
+}
+
+.dock-map-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+:host-context(.theme-dark) .dock-map-modal-footer,
+:host-context(.dark) .dock-map-modal-footer {
+  border-top-color: #1e293b;
+}
+
+.dock-map-btn-close {
+  padding: 0.45rem 1.25rem;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #1e293b;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dock-map-btn-close:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+:host-context(.theme-dark) .dock-map-btn-close,
+:host-context(.dark) .dock-map-btn-close {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+:host-context(.theme-dark) .dock-map-btn-close:hover,
+:host-context(.dark) .dock-map-btn-close:hover {
+  background: #334155;
 }
 
 /* ── FICHA OPERATIVA UNIFICADA: CASETA & BAHÍA WMS (DISTRIBUCIÓN EN 2 FILAS) ── */
 .logistics-command-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.95rem 1.25rem;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.06) 100%);
-  border: 1.5px solid rgba(245, 158, 11, 0.35);
-  border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  gap: 0.85rem;
+  padding: 1.15rem 1.35rem;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 4.5px solid #f59e0b !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+  transition: all 0.25s ease;
 }
 
 :host-context(.theme-dark) .logistics-command-panel,
 :host-context(.dark) .logistics-command-panel {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(59, 130, 246, 0.12) 100%);
-  border-color: rgba(245, 158, 11, 0.4);
+  background: #111a26 !important;
+  border-color: #1e293b !important;
+  border-left-color: #f59e0b !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45) !important;
 }
 
 .logistics-command-panel__header {
@@ -2292,32 +2745,310 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
-  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.75rem;
+}
+
+:host-context(.theme-dark) .logistics-command-panel__header,
+:host-context(.dark) .logistics-command-panel__header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.logistics-command-panel__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.logistics-command-panel__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706 !important;
+}
+
+:host-context(.theme-dark) .logistics-command-panel__icon,
+:host-context(.dark) .logistics-command-panel__icon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24 !important;
+}
+
+.logistics-command-panel__title {
+  font-family: var(--font-display);
+  font-size: 0.78rem !important;
+  font-weight: 850 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #0f172a !important;
+}
+
+:host-context(.theme-dark) .logistics-command-panel__title,
+:host-context(.dark) .logistics-command-panel__title {
+  color: #f8fafc !important;
+}
+
+.logistics-command-panel__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8 !important;
+}
+
+:host-context(.theme-dark) .logistics-command-panel__tag,
+:host-context(.dark) .logistics-command-panel__tag {
+  background: rgba(30, 58, 138, 0.35);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #93c5fd !important;
+}
+
+.logistics-command-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  background: #ffffff;
+  border: 1.5px solid #d97706;
+  color: #b45309 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logistics-command-btn-edit:hover {
+  background: #fef3c7;
+  border-color: #b45309;
+  color: #92400e !important;
+  transform: translateY(-1px);
+}
+
+.logistics-command-btn-edit:active {
+  transform: scale(0.96);
+}
+
+:host-context(.theme-dark) .logistics-command-btn-edit,
+:host-context(.dark) .logistics-command-btn-edit {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #d97706;
+  color: #fcd34d !important;
+  box-shadow: none;
+}
+
+:host-context(.theme-dark) .logistics-command-btn-edit:hover,
+:host-context(.dark) .logistics-command-btn-edit:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
 }
 
 .logistics-command-cell {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   min-width: 0;
-  padding: 0.15rem 0.25rem;
+  padding: 0.2rem 0.3rem;
+}
+
+.logistics-command-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.67rem !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #64748b !important;
+}
+
+.logistics-command-label .material-symbols-outlined {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+:host-context(.theme-dark) .logistics-command-label,
+:host-context(.dark) .logistics-command-label {
+  color: #94a3b8 !important;
+}
+
+:host-context(.theme-dark) .logistics-command-label .material-symbols-outlined,
+:host-context(.dark) .logistics-command-label .material-symbols-outlined {
+  color: #64748b;
+}
+
+.logistics-command-value {
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+:host-context(.theme-dark) .logistics-command-value,
+:host-context(.dark) .logistics-command-value {
+  color: #f8fafc !important;
+}
+
+.logistics-command-value--doc {
+  font-family: var(--font-mono);
+  font-weight: 900 !important;
+  color: #b45309 !important;
+}
+
+:host-context(.theme-dark) .logistics-command-value--doc,
+:host-context(.dark) .logistics-command-value--doc {
+  color: #fbbf24 !important;
+}
+
+.logistics-command-value--time {
+  font-family: var(--font-mono);
+  font-weight: 850 !important;
+  color: #0f172a !important;
+}
+
+:host-context(.theme-dark) .logistics-command-value--time,
+:host-context(.dark) .logistics-command-value--time {
+  color: #f8fafc !important;
+}
+
+.logistics-command-badge-plate {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b !important;
+  display: inline-flex;
+  align-items: center;
+}
+
+:host-context(.theme-dark) .logistics-command-badge-plate,
+:host-context(.dark) .logistics-command-badge-plate {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc !important;
+}
+
+.logistics-command-badge-seal {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+:host-context(.theme-dark) .logistics-command-badge-seal,
+:host-context(.dark) .logistics-command-badge-seal {
+  background: rgba(6, 78, 59, 0.4);
+  border-color: #059669;
+  color: #34d399 !important;
 }
 
 .logistics-command-cell--highlight {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(219, 234, 254, 0.55) 100%);
-  border: 1.5px solid rgba(37, 99, 235, 0.35);
-  padding: 0.55rem 0.85rem;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%) !important;
+  border: 1.5px solid #bfdbfe !important;
+  padding: 0.65rem 0.95rem !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05) !important;
   transition: all 0.2s ease;
 }
 
 :host-context(.theme-dark) .logistics-command-cell--highlight,
 :host-context(.dark) .logistics-command-cell--highlight {
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%);
-  border-color: rgba(96, 165, 250, 0.45);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.28) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.logistics-command-cell--highlight .logistics-command-label {
+  color: #1e40af !important;
+  font-weight: 850 !important;
+}
+
+:host-context(.theme-dark) .logistics-command-cell--highlight .logistics-command-label,
+:host-context(.dark) .logistics-command-cell--highlight .logistics-command-label {
+  color: #93c5fd !important;
+}
+
+.logistics-command-ramp-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 850;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #92400e !important;
+  display: inline-flex;
+  align-items: center;
+}
+
+:host-context(.theme-dark) .logistics-command-ramp-badge,
+:host-context(.dark) .logistics-command-ramp-badge {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fcd34d !important;
+}
+
+.logistics-command-bay-text {
+  font-family: var(--font-mono);
+  font-size: 0.92rem !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.logistics-command-bay-text:hover {
+  color: #2563eb !important;
+}
+
+:host-context(.theme-dark) .logistics-command-bay-text,
+:host-context(.dark) .logistics-command-bay-text {
+  color: #38bdf8 !important;
+}
+
+:host-context(.theme-dark) .logistics-command-bay-text:hover {
+  color: #60a5fa !important;
+}
+
+.logistics-command-autoslot-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.18rem 0.5rem;
+  border-radius: 9999px;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  color: #1e40af !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+:host-context(.theme-dark) .logistics-command-autoslot-tag,
+:host-context(.dark) .logistics-command-autoslot-tag {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: rgba(14, 165, 233, 0.4);
+  color: #7dd3fc !important;
 }
 
 .btn-bay-action {
@@ -2353,35 +3084,6 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border-color: rgba(147, 197, 253, 0.35);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-.logistics-command-label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #78350f !important;
-}
-
-:host-context(.theme-dark) .logistics-command-label,
-:host-context(.dark) .logistics-command-label {
-  color: #fcd34d !important;
-}
-
-.logistics-command-value {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: #0f172a !important;
-  letter-spacing: 0.01em;
-  line-height: 1.25;
-}
-
-:host-context(.theme-dark) .logistics-command-value,
-:host-context(.dark) .logistics-command-value {
-  color: #f8fafc !important;
 }
 
 /* Fallback para caseta-summary-card */
@@ -2713,6 +3415,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .tarimas-table {
   width: 100%;
+  min-width: 820px;
   font-size: 0.75rem;
   text-align: left;
   border-collapse: collapse;
@@ -2736,7 +3439,7 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #0f172a !important;
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 :host-context(.theme-dark) .tarimas-table th,
@@ -2767,6 +3470,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.75rem 0.85rem;
   font-size: 0.76rem;
   vertical-align: middle;
+  white-space: nowrap !important;
 }
 
 .tarimas-cell-num {
@@ -3917,9 +4621,9 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-card, #ffffff);
   border: 1px solid var(--border-card, #e2e8f0);
   border-radius: 20px;
-  padding: 1.5rem 1.75rem;
+  padding: 1.25rem 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  margin-top: 1.25rem;
+  margin-top: 0;
 }
 
 :host-context(.theme-dark) .executive-directory-card,
@@ -4802,6 +5506,208 @@ h1, h2, h3, h4, h5, h6 {
 :host-context(.theme-dark) .relabel-selected-summary {
   color: #cbd5e1 !important;
 }
+
+.modal-header-icon-box--lot {
+  background: rgba(214, 174, 61, 0.14) !important;
+  color: #9b7626 !important;
+  border: 1px solid rgba(214, 174, 61, 0.3) !important;
+}
+
+:host-context(.dark) .modal-header-icon-box--lot,
+:host-context(.theme-dark) .modal-header-icon-box--lot {
+  background: rgba(237, 199, 78, 0.15) !important;
+  color: #edc74e !important;
+  border-color: rgba(237, 199, 78, 0.35) !important;
+}
+
+.modal-header-subtitle--lot {
+  color: #64748b !important;
+}
+
+:host-context(.dark) .modal-header-subtitle--lot,
+:host-context(.theme-dark) .modal-header-subtitle--lot {
+  color: #94a3b8 !important;
+}
+
+/* ── MODAL: ALERTA Y CREDENCIALES GERENCIA DE OPERACIONES (< 9 MESES) ── */
+.modal-summary-box--ops-auth {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 4px solid #f59e0b !important;
+  border-radius: 12px !important;
+  padding: 0.85rem 1rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+:host-context(.dark) .modal-summary-box--ops-auth,
+:host-context(.theme-dark) .modal-summary-box--ops-auth {
+  background: #0b111e !important;
+  border-color: #1e293b !important;
+  border-left-color: #f59e0b !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+.ops-auth-icon-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+:host-context(.dark) .ops-auth-icon-badge,
+:host-context(.theme-dark) .ops-auth-icon-badge {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.ops-auth-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+:host-context(.dark) .ops-auth-title,
+:host-context(.theme-dark) .ops-auth-title {
+  color: #f8fafc;
+}
+
+.ops-auth-pill {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+}
+
+:host-context(.dark) .ops-auth-pill,
+:host-context(.theme-dark) .ops-auth-pill {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.ops-auth-desc {
+  font-size: 0.72rem;
+  color: #475569;
+  line-height: 1.35;
+  margin: 0;
+}
+
+:host-context(.dark) .ops-auth-desc,
+:host-context(.theme-dark) .ops-auth-desc {
+  color: #94a3b8;
+}
+
+.modal-ops-credentials-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+:host-context(.dark) .modal-ops-credentials-panel,
+:host-context(.theme-dark) .modal-ops-credentials-panel {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: #1e293b;
+}
+
+.modal-section-legend--ops {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.modal-section-legend--ops .material-symbols-outlined {
+  color: #d97706;
+  font-size: 1.15rem;
+}
+
+:host-context(.dark) .modal-section-legend--ops,
+:host-context(.theme-dark) .modal-section-legend--ops {
+  color: #f8fafc;
+}
+
+:host-context(.dark) .modal-section-legend--ops .material-symbols-outlined,
+:host-context(.theme-dark) .modal-section-legend--ops .material-symbols-outlined {
+  color: #fbbf24;
+}
+
+.lot-active-badge-shelf--authorized {
+  background: #fef3c7 !important;
+  border: 1px solid #f59e0b !important;
+  color: #92400e !important;
+  font-weight: 700 !important;
+}
+
+:host-context(.dark) .lot-active-badge-shelf--authorized,
+:host-context(.theme-dark) .lot-active-badge-shelf--authorized {
+  background: rgba(245, 158, 11, 0.2) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #fde68a !important;
+}
+
+.carriers-btn--ghost {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid rgba(88, 98, 116, 0.2);
+  border-radius: 12px;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.carriers-btn--ghost:hover:not(:disabled) {
+  background: rgba(88, 98, 116, 0.1);
+  color: #172033;
+  border-color: rgba(88, 98, 116, 0.35);
+}
+
+:host-context(.dark) .carriers-btn--ghost,
+:host-context(.theme-dark) .carriers-btn--ghost {
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:host-context(.dark) .carriers-btn--ghost:hover:not(:disabled),
+:host-context(.theme-dark) .carriers-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── ESTILOS DE LOGÍSTICA INVERSA & RETORNOS (ADR-021) ── */
+.dot--indigo {
+  background: #6366f1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+.dock-return-validation-box {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.15);
+}
+
+:host-context(.dark) .dock-return-validation-box,
+:host-context(.theme-dark) .dock-return-validation-box {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-color: rgba(129, 140, 248, 0.4);
+}
+
 
 
 

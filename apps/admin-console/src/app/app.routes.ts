@@ -78,9 +78,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Mi Perfil',
       },
 
-      // Dashboard: Acceso a todos los roles autenticados
+      // Dashboard: Acceso con validación RBAC
       {
         path: 'dashboard',
+        canActivate: [rbacGuard],
+        data: { module: 'dashboard' },
         loadChildren: () =>
           import('./features/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
         title: '4GUARD WMS — Dashboard',
@@ -113,6 +115,8 @@ export const adminRoutes: Routes = [
       // Caseta de Seguridad (Módulo Autónomo Independiente)
       {
         path: 'security',
+        canActivate: [rbacGuard],
+        data: { module: 'security' },
         loadComponent: () =>
           import('./features/security/security-gate/security-gate.component').then(
             (m) => m.SecurityGateComponent

@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -25,6 +25,7 @@ import {
 } from '../../models/warehouse-movements.models';
 import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
 import { PrintOutboundCancellationLayoutComponent } from '../../components/print-layouts/print-outbound-cancellation-layout.component';
+import { SmartNotificationService } from '../../../../core/services/smart-notification.service';
 
 export interface ForkliftOperatorOption {
   id: string;
@@ -70,6 +71,12 @@ export interface OutboundPalletItem {
   pabloLabel: string;
   pabloColor: 'amber' | 'emerald' | 'rose';
   isSuggestedFefo: boolean;
+  inventoryStatus: 'AVAILABLE' | 'BLOCKED' | 'EXPIRED';
+  statusLabel: string;
+  statusColor: 'emerald' | 'rose' | 'amber';
+  blockReason?: string;
+  qualityFolio?: string;
+  isSelectableForDispatch: boolean;
 }
 
 import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
@@ -95,10 +102,12 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly svc = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
+  private readonly smartNotification = inject(SmartNotificationService);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
   protected readonly authState = inject(AuthState);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   goToManageCarriers(): void {
     this.router.navigate(['/admin/carriers']);
@@ -120,6 +129,15 @@ export class OutboundSubmoduleComponent implements OnInit {
   readonly kpiInAnden = computed(() => this.svc.outbounds().filter((o) => ['ASSIGNED', 'IN_PROGRESS', 'LOADED'].includes(o.status)).length);
   readonly kpiCompleted = computed(() => this.svc.outbounds().filter((o) => o.status === 'COMPLETED').length);
   readonly kpiCancelled = computed(() => this.svc.outbounds().filter((o) => o.status === 'CANCELLED').length);
+
+  // Estado de Compactación de Métricas / KPIs
+  isKpiCollapsed = signal<boolean>(localStorage.getItem('4g_outbound_kpis_collapsed') === 'true');
+
+  toggleKpiCollapse(): void {
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    localStorage.setItem('4g_outbound_kpis_collapsed', String(next));
+  }
 
   // Matriz de Ocupación de Rampas 1-12
   readonly ramps = this.svc.ramps;
@@ -173,9 +191,31 @@ export class OutboundSubmoduleComponent implements OnInit {
   editDestinations = computed(() => {
     const ob = this.selectedOutbound();
     const all = this.allDestinations();
-    if (!ob || !ob.clientCode) return all;
-    const clientSpecific = all.filter((d) => !d.clientCode || d.clientCode === ob.clientCode);
-    return clientSpecific.length > 0 ? clientSpecific : all;
+    if (!ob) return all;
+
+    const cCode = (ob.clientCode || '').toLowerCase().trim();
+    const cName = (ob.clientName || '').toLowerCase().trim();
+
+    // 1. Filtrar por coincidencias con el cliente (código, nombre, externalId, etc.)
+    const clientSpecific = all.filter((d) => {
+      if (!d.clientCode) return true;
+      const dCode = d.clientCode.toLowerCase().trim();
+      return (
+        (cCode && (dCode === cCode || dCode.includes(cCode) || cCode.includes(dCode))) ||
+        (cName && (dCode === cName || dCode.includes(cName) || cName.includes(dCode)))
+      );
+    });
+
+    let list = clientSpecific.length > 0 ? clientSpecific : all;
+
+    // Si el destino actual ya asignado ob.destinationId no está en la lista, incluirlo al inicio
+    if (ob.destinationId && !list.some((d) => d.id === ob.destinationId)) {
+      const current = all.find((d) => d.id === ob.destinationId);
+      if (current) {
+        list = [current, ...list];
+      }
+    }
+    return list;
   });
 
   // Computed: Dirección del destino seleccionado en el modal para preview inmediato
@@ -196,19 +236,55 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.editBoxPlates.set(ob.boxPlates || '');
     const seal = (ob.sealNumber === 'PENDIENTE_ANDEN' || ob.sealNumber === 'S/S' || ob.sealNumber === 'PENDIENTE') ? '' : (ob.sealNumber || '');
     this.editSealNumber.set(seal);
-    this.editEconomicNumber.set(ob.economicNumber || '');
-    this.editBoxEconomicNumber.set(ob.boxEconomicNumber || '');
+    this.editEconomicNumber.set(
+      ob.economicNumber ||
+      (ob as any).noEcoTractor ||
+      (ob as any).ecoTractor ||
+      (ob as any).eco_tractor ||
+      (ob as any).economic_number ||
+      (ob as any).preCheckin?.economicNumber ||
+      (ob as any).preCheckin?.noEcoTractor ||
+      ''
+    );
+    this.editBoxEconomicNumber.set(
+      ob.boxEconomicNumber ||
+      (ob as any).noEcoCaja ||
+      (ob as any).ecoCaja ||
+      (ob as any).box_economic_number ||
+      (ob as any).eco_caja ||
+      (ob as any).preCheckin?.boxEconomicNumber ||
+      (ob as any).preCheckin?.noEcoCaja ||
+      ''
+    );
 
     // Resolviendo el ID del destino si no venía asignado de caseta
     let matchedDestId = ob.destinationId || '';
     if (!matchedDestId && ob.destinationName) {
-      const match = this.allDestinations().find(
-        (d) => d.name?.toLowerCase() === ob.destinationName?.toLowerCase()
-      );
+      const cleanTarget = ob.destinationName.toLowerCase().trim();
+      const match = this.allDestinations().find((d) => {
+        const dName = (d.name || '').toLowerCase().trim();
+        const dAddr = (d.address || '').toLowerCase().trim();
+        return (
+          dName === cleanTarget ||
+          dName.includes(cleanTarget) ||
+          cleanTarget.includes(dName) ||
+          (dAddr && (dAddr.includes(cleanTarget) || cleanTarget.includes(dAddr)))
+        );
+      });
       if (match) {
         matchedDestId = match.id;
       }
     }
+
+    // Fallback inteligente: Si aún no tiene un destino asignado, preseleccionar automáticamente
+    // el primer destino disponible del cliente o catálogo
+    if (!matchedDestId) {
+      const avail = this.editDestinations();
+      if (avail && avail.length > 0) {
+        matchedDestId = avail[0].id;
+      }
+    }
+
     this.editDestinationId.set(matchedDestId);
     this.showEditCasetaModal.set(true);
   }
@@ -244,8 +320,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       tractorPlates: this.editTractorPlates() || ob.tractorPlates,
       boxPlates: this.editBoxPlates() || ob.boxPlates,
       sealNumber: sealVal,
-      economicNumber: this.editEconomicNumber() || ob.economicNumber,
-      boxEconomicNumber: this.editBoxEconomicNumber() || ob.boxEconomicNumber,
+      economicNumber: this.editEconomicNumber() != null ? this.editEconomicNumber().trim() : (ob.economicNumber || ''),
+      boxEconomicNumber: this.editBoxEconomicNumber() != null ? this.editBoxEconomicNumber().trim() : (ob.boxEconomicNumber || ''),
       destinationId: this.editDestinationId() || ob.destinationId,
       destinationName: destName,
       destinationAddress: destAddress,
@@ -273,9 +349,11 @@ export class OutboundSubmoduleComponent implements OnInit {
             ...updated,
             destinationName: resp?.destinationName || updated.destinationName,
             destinationAddress: resp?.destinationAddress || updated.destinationAddress,
-            destinationId: resp?.destinationId || updated.destinationId,
+            destinationId: this.editDestinationId() || resp?.destinationId || updated.destinationId,
             carrierName: resp?.carrierName || updated.carrierName,
             sealNumber: resp?.sealNumber || updated.sealNumber,
+            economicNumber: resp?.economicNumber !== undefined ? (resp.economicNumber || '') : updated.economicNumber,
+            boxEconomicNumber: resp?.boxEconomicNumber !== undefined ? (resp.boxEconomicNumber || '') : updated.boxEconomicNumber,
           };
           this.selectedOutbound.set(finalData);
           this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? finalData : o)));
@@ -987,6 +1065,66 @@ export class OutboundSubmoduleComponent implements OnInit {
     };
   }
 
+  // ── MOTOR DE GOBERNANZA DE ESTATUS DE INVENTARIO Y CALIDAD (SDOP) ───────────
+  getInventoryStatus(
+    p: any,
+    expDate?: string,
+    pablo?: { status: string; label: string; color: string; daysRemaining: number }
+  ): {
+    status: 'AVAILABLE' | 'BLOCKED' | 'EXPIRED';
+    label: string;
+    color: 'emerald' | 'rose' | 'amber';
+    blockReason?: string;
+    qualityFolio?: string;
+    isSelectable: boolean;
+  } {
+    // 1. Detección de Bloqueo por Calidad / PNC / Cuarentena / Retención
+    const isQualityHold =
+      !!p.isBlocked ||
+      !!p.isQualityBlocked ||
+      p.state === 'IN_QUALITY' ||
+      p.state === 20 ||
+      !!p.quarantineReason ||
+      !!p.blockReason ||
+      (typeof p.palletCode === 'string' &&
+        (p.palletCode.toUpperCase().includes('BLOQ') || p.palletCode.toUpperCase().includes('PNC')));
+
+    if (isQualityHold) {
+      const reason = p.blockReason || p.quarantineReason || 'Retención por Control de Calidad (Inspección PNC)';
+      const folio = p.qualityFolio || p.pncFolio || 'PNC-QM';
+      return {
+        status: 'BLOCKED',
+        label: 'Bloqueado (Calidad)',
+        color: 'rose',
+        blockReason: reason,
+        qualityFolio: folio,
+        isSelectable: false,
+      };
+    }
+
+    // 2. Detección de Caduco / Merma / Destrucción
+    const days = pablo ? pablo.daysRemaining : this.calculateDaysRemaining(expDate);
+    const isExpired = p.state === 'EXPIRED' || p.state === 70 || pablo?.status === 'EXPIRED' || days <= 0;
+
+    if (isExpired) {
+      return {
+        status: 'EXPIRED',
+        label: `Caduco (${days <= 0 ? Math.abs(days) + 'd vencido' : days + 'd'})`,
+        color: 'amber',
+        blockReason: 'Producto caduco - Solo apto para salida por destrucción o merma',
+        isSelectable: false,
+      };
+    }
+
+    // 3. Disponible para despacho comercial estándar (FEFO)
+    return {
+      status: 'AVAILABLE',
+      label: `Disponible (${days}d)`,
+      color: 'emerald',
+      isSelectable: true,
+    };
+  }
+
   // ── PASO 2: BUSCADOR PREDICTIVO DE PRODUCTOS / SKUS Y ESCÁNER DE UAS ───
   skuSearchQuery = signal<string>('');
   isSkuDropdownOpen = signal<boolean>(false);
@@ -1178,6 +1316,7 @@ export class OutboundSubmoduleComponent implements OnInit {
       for (const p of b.pallets || []) {
         const expDate = p.expirationDate || b.expirationDate;
         const pablo = this.getPabloStatus(expDate);
+        const invStatus = this.getInventoryStatus(p, expDate, pablo);
         list.push({
           id: p.id,
           palletCode: p.palletCode,
@@ -1197,6 +1336,12 @@ export class OutboundSubmoduleComponent implements OnInit {
           pabloLabel: pablo.label,
           pabloColor: pablo.color,
           isSuggestedFefo: false,
+          inventoryStatus: invStatus.status,
+          statusLabel: invStatus.label,
+          statusColor: invStatus.color,
+          blockReason: invStatus.blockReason,
+          qualityFolio: invStatus.qualityFolio,
+          isSelectableForDispatch: invStatus.isSelectable,
         });
       }
     }
@@ -1397,6 +1542,13 @@ export class OutboundSubmoduleComponent implements OnInit {
   requestedPalletsCount = signal<number>(0);
   palletTableSearchQuery = signal<string>('');
 
+  // Filtro de Estatus de Tarimas (SDOP: Todas / Disponibles / Bloqueados / Caducos)
+  palletStatusFilter = signal<'ALL' | 'AVAILABLE' | 'BLOCKED' | 'EXPIRED'>('ALL');
+
+  setPalletStatusFilter(filter: 'ALL' | 'AVAILABLE' | 'BLOCKED' | 'EXPIRED'): void {
+    this.palletStatusFilter.set(filter);
+  }
+
   onPalletTableSearchInput(val: string): void {
     this.palletTableSearchQuery.set(val);
   }
@@ -1421,14 +1573,43 @@ export class OutboundSubmoduleComponent implements OnInit {
     return this.allFlatPalletsInWarehouse().filter((p) => p.productId === sku).length;
   });
 
+  // Conteo de tarimas por estatus para el SKU actual
+  availableCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.filter((p) => p.inventoryStatus === 'AVAILABLE').length;
+  });
+
+  blockedCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.filter((p) => p.inventoryStatus === 'BLOCKED').length;
+  });
+
+  expiredCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.filter((p) => p.inventoryStatus === 'EXPIRED').length;
+  });
+
+  totalCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.length;
+  });
+
   maxAvailablePalletsForCurrentSku = computed(() => {
     const sku = this.selectedSkuCode();
     const all = this.allFlatPalletsInWarehouse();
     const selectedSet = new Set(this.selectedPalletIds());
     if (sku) {
-      return all.filter((p) => p.productId === sku && p.pabloStatus !== 'EXPIRED' && !selectedSet.has(p.id)).length;
+      return all.filter((p) => p.productId === sku && p.inventoryStatus === 'AVAILABLE' && !selectedSet.has(p.id)).length;
     }
-    return all.filter((p) => p.pabloStatus !== 'EXPIRED' && !selectedSet.has(p.id)).length;
+    return all.filter((p) => p.inventoryStatus === 'AVAILABLE' && !selectedSet.has(p.id)).length;
   });
 
   incrementFefoQuantity(): void {
@@ -1457,6 +1638,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     const targetSku = this.selectedSkuCode();
     const tableSearch = this.palletTableSearchQuery().toLowerCase().trim();
     const selectedSet = new Set(this.selectedPalletIds());
+    const statusFilter = this.palletStatusFilter();
 
     const filteredBatches = targetSku
       ? batches.filter((b) => b.productId === targetSku)
@@ -1475,11 +1657,18 @@ export class OutboundSubmoduleComponent implements OnInit {
 
         const expDate = p.expirationDate || b.expirationDate;
         const pablo = this.getPabloStatus(expDate);
+        const invStatus = this.getInventoryStatus(p, expDate, pablo);
         const loc = p.locationCode || b.locationCode || 'A-01-N1';
         const palletCode = p.palletCode || '';
         const lotNumber = p.lotNumber || b.lotNumber || '';
         const desc = p.description || b.productName || '';
         const rem = b.remisionNo || '';
+
+        // Filtrar por pestaña de estatus
+        if (statusFilter !== 'ALL' && invStatus.status !== statusFilter) {
+          pos++;
+          continue;
+        }
 
         const matchesSearch =
           !tableSearch ||
@@ -1488,7 +1677,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           rem.toLowerCase().includes(tableSearch) ||
           desc.toLowerCase().includes(tableSearch) ||
           loc.toLowerCase().includes(tableSearch) ||
-          String(pos).includes(tableSearch);
+          String(pos).includes(tableSearch) ||
+          invStatus.label.toLowerCase().includes(tableSearch);
 
         if (matchesSearch) {
           palletsList.push({
@@ -1510,19 +1700,29 @@ export class OutboundSubmoduleComponent implements OnInit {
             pabloLabel: pablo.label,
             pabloColor: pablo.color,
             isSuggestedFefo: false,
+            inventoryStatus: invStatus.status,
+            statusLabel: invStatus.label,
+            statusColor: invStatus.color,
+            blockReason: invStatus.blockReason,
+            qualityFolio: invStatus.qualityFolio,
+            isSelectableForDispatch: invStatus.isSelectable,
           });
         }
         pos++;
       }
     }
 
-    // Ordenamiento FEFO estricto (menor días restantes primero)
-    palletsList.sort((a, b) => a.daysRemaining - b.daysRemaining);
+    // Ordenamiento: Disponibles primero por FEFO, luego Bloqueados, luego Caducos
+    palletsList.sort((a, b) => {
+      if (a.inventoryStatus === 'AVAILABLE' && b.inventoryStatus !== 'AVAILABLE') return -1;
+      if (a.inventoryStatus !== 'AVAILABLE' && b.inventoryStatus === 'AVAILABLE') return 1;
+      return a.daysRemaining - b.daysRemaining;
+    });
 
-    // Marcar como sugeridos FEFO los primeros que no estén caducos
+    // Marcar como sugeridos FEFO los primeros que estén disponibles
     let fefoCount = 0;
     for (const p of palletsList) {
-      if (p.pabloStatus !== 'EXPIRED' && fefoCount < 5) {
+      if (p.inventoryStatus === 'AVAILABLE' && fefoCount < 5) {
         p.isSuggestedFefo = true;
         fefoCount++;
       }
@@ -1533,7 +1733,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   maxAvailablePallets = computed(() => {
     return this.allAvailablePalletsForCurrentView().filter(
-      (p) => p.pabloStatus !== 'EXPIRED'
+      (p) => p.inventoryStatus === 'AVAILABLE'
     ).length;
   });
 
@@ -1545,9 +1745,9 @@ export class OutboundSubmoduleComponent implements OnInit {
 
     const pool = all.filter((p) => {
       const matchSku = !sku || p.productId === sku;
-      const notExpired = p.pabloStatus !== 'EXPIRED';
+      const isAvailable = p.inventoryStatus === 'AVAILABLE';
       const notSelected = !selectedSet.has(p.id);
-      return matchSku && notExpired && notSelected;
+      return matchSku && isAvailable && notSelected;
     });
 
     pool.sort((a, b) => a.daysRemaining - b.daysRemaining);
@@ -1574,14 +1774,14 @@ export class OutboundSubmoduleComponent implements OnInit {
   }
 
   addAllPalletsForCurrentSku(): void {
-    const unselected = this.allAvailablePalletsForCurrentView();
+    const unselected = this.allAvailablePalletsForCurrentView().filter((p) => p.inventoryStatus === 'AVAILABLE');
     if (unselected.length === 0) {
-      this.toast.info('Todas las tarimas disponibles ya están en el manifiesto.');
+      this.toast.info('No hay tarimas disponibles aptas para agregar al manifiesto.');
       return;
     }
     const toAddIds = unselected.map((p) => p.id);
     this.selectedPalletIds.update((ids) => Array.from(new Set([...ids, ...toAddIds])));
-    this.toast.success(`Se agregaron ${toAddIds.length} tarima(s) al manifiesto de salida.`);
+    this.toast.success(`Se agregaron ${toAddIds.length} tarima(s) disponibles al manifiesto de salida.`);
     this.fefoQuantityInput.set(1);
   }
 
@@ -1589,28 +1789,57 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.addFefoPalletsForCurrentSku();
   }
 
-  // Agrega o quita una tarima individual del manifiesto
+  // Agrega o quita una tarima individual del manifiesto con validación de estatus
   addPalletToManifest(id: string, event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
     const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    if (!pallet) return;
+
     if (!this.selectedPalletIds().includes(id)) {
-      this.selectedPalletIds.update((ids) => [...ids, id]);
-      if (pallet) {
-        this.toast.success(`Tarima [UA: ${pallet.palletCode}] agregada al manifiesto.`);
+      if (pallet.inventoryStatus === 'BLOCKED') {
+        this.toast.warning(
+          `🚫 Tarima [UA: ${pallet.palletCode}] RETENIDA por Control de Calidad (${pallet.blockReason || 'PNC'}). No puede asignarse a un despacho regular.`
+        );
+        return;
       }
+      if (pallet.inventoryStatus === 'EXPIRED') {
+        this.toast.warning(
+          `⚠️ Tarima [UA: ${pallet.palletCode}] CADUCA. Requiere orden de salida tipo DESTRUCCIÓN o MERMA.`
+        );
+        return;
+      }
+
+      this.selectedPalletIds.update((ids) => [...ids, id]);
+      this.toast.success(`Tarima [UA: ${pallet.palletCode}] agregada al manifiesto.`);
     } else {
       this.selectedPalletIds.update((ids) => ids.filter((x) => x !== id));
-      if (pallet) {
-        this.toast.info(`Tarima [UA: ${pallet.palletCode}] removida del manifiesto.`);
-      }
+      this.toast.info(`Tarima [UA: ${pallet.palletCode}] removida del manifiesto.`);
     }
   }
 
   togglePallet(id: string): void {
+    const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    if (!pallet) return;
+
+    const exists = this.selectedPalletIds().includes(id);
+    if (!exists) {
+      if (pallet.inventoryStatus === 'BLOCKED') {
+        this.toast.warning(
+          `🚫 Tarima [UA: ${pallet.palletCode}] BLOQUEADA por Calidad (${pallet.blockReason || 'PNC'}). No elegible para despacho estándar.`
+        );
+        return;
+      }
+      if (pallet.inventoryStatus === 'EXPIRED') {
+        this.toast.warning(
+          `⚠️ Tarima [UA: ${pallet.palletCode}] CADUCA. No disponible para despacho ordinario.`
+        );
+        return;
+      }
+    }
+
     this.selectedPalletIds.update((ids) => {
-      const exists = ids.includes(id);
       const updated = exists ? ids.filter((x) => x !== id) : [...ids, id];
       return updated;
     });
@@ -1618,7 +1847,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   }
 
   toggleAllPallets(): void {
-    const viewPallets = this.allAvailablePalletsForCurrentView();
+    const viewPallets = this.allAvailablePalletsForCurrentView().filter((p) => p.inventoryStatus === 'AVAILABLE');
     const viewIds = viewPallets.map((p) => p.id);
     const selectedSet = new Set(this.selectedPalletIds());
     const allViewSelected = viewIds.length > 0 && viewIds.every((id) => selectedSet.has(id));
@@ -1640,7 +1869,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   }
 
   areAllPalletsSelected(): boolean {
-    const viewPallets = this.allAvailablePalletsForCurrentView();
+    const viewPallets = this.allAvailablePalletsForCurrentView().filter((p) => p.inventoryStatus === 'AVAILABLE');
     if (viewPallets.length === 0) return false;
     const selectedSet = new Set(this.selectedPalletIds());
     return viewPallets.every((p) => selectedSet.has(p.id));
@@ -1985,6 +2214,21 @@ export class OutboundSubmoduleComponent implements OnInit {
 
     this.isAssigningRamp.set(true);
 
+    const notifyCaseta = (outbound: WarehouseOutbound) => {
+      const rLabel = rampNum ? `R-${String(rampNum).padStart(2, '0')}` : 'Andén';
+      this.smartNotification.dispatch({
+        category: 'SECURITY',
+        title: '🎯 Rampa Asignada por Almacén',
+        message: `Rampa ${rLabel} asignada para Salida Folio #${outbound.folio} (${outbound.clientName || 'Cliente'}) — Chofer: ${outbound.driverName || 'Transportista'} (Placas: ${outbound.tractorPlates})`,
+        referenceFolio: String(outbound.folio),
+        route: '/security',
+        targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+        targetRoutes: ['/security'],
+        severity: 'SUCCESS',
+        data: outbound
+      });
+    };
+
     if (cur.id && cur.id.includes('-')) {
       this.movementsApi.updateOutbound(cur.id, {
         status: 'ASSIGNED',
@@ -2000,6 +2244,7 @@ export class OutboundSubmoduleComponent implements OnInit {
             this.selectedOutbound.set(updated);
             this.loadAuditLogs(updated.id || updated.folio);
             this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+            notifyCaseta(updated);
           }
         },
         error: () => {
@@ -2009,6 +2254,7 @@ export class OutboundSubmoduleComponent implements OnInit {
             this.selectedOutbound.set(updated);
             this.loadAuditLogs(updated.id || updated.folio);
             this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+            notifyCaseta(updated);
           }
         }
       });
@@ -2019,6 +2265,7 @@ export class OutboundSubmoduleComponent implements OnInit {
         this.selectedOutbound.set(updated);
         this.loadAuditLogs(updated.id || updated.folio);
         this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+        notifyCaseta(updated);
       }
     }
   }
@@ -2362,6 +2609,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   closeOutboundDetail(): void {
     this.selectedOutbound.set(null);
     this.formMode.set('idle');
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
   }
 
   // ── DIRECTORIO GENERAL DE SALIDAS ──────────────────────────────────────────
@@ -2413,6 +2661,30 @@ export class OutboundSubmoduleComponent implements OnInit {
     this._loadCatalogSkus();
     this.formMode.set('idle');
     this.selectedOutbound.set(null);
+
+    this.route.queryParams.subscribe((params) => {
+      const folio = params['folio'] || params['id'];
+      if (folio) {
+        this.searchQuery.set(folio);
+        const found = this.svc.findOutboundByFolio(folio);
+        if (found) {
+          this.selectOutboundItem(found);
+        } else {
+          this.movementsApi.getOutbounds({ search: folio }).subscribe({
+            next: (list: any[]) => {
+              if (list && list.length > 0) {
+                const match = list.find((o: any) => o.folio === folio || o.id === folio || o.folioNumber === folio) || list[0];
+                if (match) {
+                  const mapped = this.svc.mapOutboundResponseToHeader(match);
+                  this.selectOutboundItem(mapped);
+                }
+              }
+            },
+            error: () => {},
+          });
+        }
+      }
+    });
   }
 
   private _loadCatalogSkus(): void {
@@ -2533,8 +2805,8 @@ export class OutboundSubmoduleComponent implements OnInit {
               tractorPlates: full.tractorPlates || outbound.tractorPlates || '',
               boxPlates: full.boxPlates || outbound.boxPlates || '',
               status: full.status || outbound.status,
-              economicNumber: full.economicNumber || outbound.economicNumber || '',
-              boxEconomicNumber: full.boxEconomicNumber || outbound.boxEconomicNumber || '',
+              economicNumber: full.economicNumber || (full as any).noEcoTractor || (full as any).ecoTractor || (full.preCheckin ? (full.preCheckin.economicNumber || full.preCheckin.noEcoTractor) : '') || outbound.economicNumber || '',
+              boxEconomicNumber: full.boxEconomicNumber || (full as any).noEcoCaja || (full as any).ecoCaja || (full.preCheckin ? (full.preCheckin.boxEconomicNumber || full.preCheckin.noEcoCaja) : '') || outbound.boxEconomicNumber || '',
               dispatchedBy: full.createdBy || outbound.dispatchedBy || currentLoggedIn,
               items: mappedItems.length > 0 ? mappedItems : (outbound.items || []),
               totalPallets: full.totalPallets || (mappedItems.length > 0 ? mappedItems.length : outbound.totalPallets),
@@ -3045,8 +3317,8 @@ export class OutboundSubmoduleComponent implements OnInit {
     if (outbound && outbound.id && outbound.id.includes('-')) {
       this.movementsApi.getOutboundById(outbound.id).subscribe({
         next: (full: any) => {
-          if (full && full.items && full.items.length > 0) {
-            const mappedItems: OutboundItem[] = full.items.map((it: any, idx: number) => ({
+          if (full) {
+            const mappedItems: OutboundItem[] = (full.items || []).map((it: any, idx: number) => ({
               id: it.id || it.itemId || `item-${idx + 1}`,
               palletNumber: idx + 1,
               palletCode: it.palletCode || it.item?.sscc || `UA-${resolvedOutbound.folio}-${idx + 1}`,
@@ -3063,10 +3335,20 @@ export class OutboundSubmoduleComponent implements OnInit {
             }));
             const updatedPrint: WarehouseOutbound = {
               ...resolvedOutbound,
-              items: mappedItems,
-              totalPallets: mappedItems.length,
-              totalPieces: mappedItems.reduce((acc, it) => acc + (it.pieces || 0), 0),
-              distinctSkus: new Set(mappedItems.map((it) => it.productId)).size,
+              destinationName: full.destinationName || resolvedOutbound.destinationName || '',
+              destinationAddress: full.destinationAddress || resolvedOutbound.destinationAddress || '',
+              carrierName: full.carrierName || resolvedOutbound.carrierName || '',
+              carrierCode: full.carrierId || resolvedOutbound.carrierCode || '',
+              driverName: full.driverName || resolvedOutbound.driverName || '',
+              tractorPlates: full.tractorPlates || resolvedOutbound.tractorPlates || '',
+              boxPlates: full.boxPlates || resolvedOutbound.boxPlates || '',
+              economicNumber: full.economicNumber || (full as any).noEcoTractor || (full as any).ecoTractor || resolvedOutbound.economicNumber || '',
+              boxEconomicNumber: full.boxEconomicNumber || (full as any).noEcoCaja || (full as any).ecoCaja || resolvedOutbound.boxEconomicNumber || '',
+              sealNumber: full.sealNumber || resolvedOutbound.sealNumber || '',
+              items: mappedItems.length > 0 ? mappedItems : resolvedOutbound.items,
+              totalPallets: mappedItems.length > 0 ? mappedItems.length : resolvedOutbound.totalPallets,
+              totalPieces: mappedItems.length > 0 ? mappedItems.reduce((acc, it) => acc + (it.pieces || 0), 0) : resolvedOutbound.totalPieces,
+              distinctSkus: mappedItems.length > 0 ? new Set(mappedItems.map((it) => it.productId)).size : resolvedOutbound.distinctSkus,
             };
             this.selectedPrintOutbound.set(updatedPrint);
             this.svc.outboundsSignal.update((list) =>

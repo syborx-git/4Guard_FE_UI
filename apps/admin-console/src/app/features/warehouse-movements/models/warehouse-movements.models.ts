@@ -27,11 +27,25 @@ export interface CarrierLineItem {
   name: string;
 }
 
+export const STANDARD_CARRIERS: CarrierLineItem[] = [
+  { code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA' },
+  { code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ' },
+  { code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM' },
+  { code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER' },
+  { code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO' }
+];
+
 export interface ClientItem {
   code: string;
   name: string;
   destinations?: ClientDestination[];
 }
+
+export const STANDARD_CLIENTS: ClientItem[] = [
+  { code: '87c07cb2-61c3-4006-a88c-265bd1eee2df', name: 'MARCAS NESTLE S.A. DE C.V.' },
+  { code: 'c083251b-e210-494e-80f3-38814eaba992', name: 'NESTLE MEXICO S.A. DE C.V.' },
+  { code: 'edc885c6-0216-405a-84cc-841f47f30f48', name: 'QUALAMEX S.A. DE C.V.' }
+];
 
 export interface RampItem {
   id?: string;
@@ -96,7 +110,10 @@ export interface CheckInCasetaData {
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
-  economicNumber?: string;  // Número económico del vehículo
+  economicNumber?: string;  // Número económico del vehículo / tracto
+  noEcoTractor?: string;
+  boxEconomicNumber?: string; // Número económico de la caja
+  noEcoCaja?: string;
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte
@@ -131,6 +148,21 @@ export interface PatioUnitMonitor {
   hasDischargeAlert: boolean; // Alerta > 2.5 horas en descarga
 }
 
+export interface ReceptionLot {
+  id?: string;
+  lotNumber: string;
+  elaborationDate?: string;
+  expirationDate: string;
+  supplierName?: string;
+  shelfLifeDaysRemaining?: number;
+  shelfLifeStatus?: string;
+  requiresOpsAuthorization?: boolean;
+  authorizedByOpsManager?: string;
+  opsManagerReason?: string;
+  opsAuthorizationDate?: string;
+  observations?: string;
+}
+
 export interface ReceptionPalletItem {
   id: string;               // ID consecutivo o timestamp (o UUID de inventory_items)
   palletNumber?: number;    // N. Tarima (1, 2, 3...)
@@ -147,6 +179,10 @@ export interface ReceptionPalletItem {
   lotNumber?: string;       // Lote
   expirationDate?: string;  // Fecha de caducidad
   docNumber?: string;       // No. Remisión / Documento
+  isUaRelabelled?: boolean; // Re-etiquetada
+  requiresOpsAuthorization?: boolean;
+  authorizedByOpsManager?: string;
+  opsManagerReason?: string;
 }
 
 export type ReceptionStatus =
@@ -176,13 +212,25 @@ export interface ReceptionHeader {
   selectedPalletType: PalletType;
   observations?: string;
   pallets: ReceptionPalletItem[];
-  lots?: any[];
+  lots?: ReceptionLot[];
+  requiresOpsAuthorization?: boolean;
+  authorizedByOpsManager?: string;
+  opsManagerReason?: string;
+  opsAuthorizationDate?: string;
   createdAt: string;
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  reopenedAt?: string;
+  reopenedBy?: string;
+  reopenReason?: string;
   capturedBy: string;        // Nombre del usuario activo
   leaderAuthorizedBy?: string; // Nombre del líder que autorizó
+  operationType?: 'ENTRY' | 'REENTRY'; // ADR-021: Reingresos y Logística Inversa
+  sourceOutboundId?: string;
+  sourceOutboundFolio?: string;
+  reentryReason?: string;
+  reentryNotes?: string;
 }
 
 export interface TransferReasonItem {
@@ -451,5 +499,60 @@ export function parseAuditTimestamp(ts?: string | number | Date | null): number 
   // 3. Fallback direct parsing
   const fallback = new Date(clean).getTime();
   return isNaN(fallback) ? 0 : fallback;
+}
+
+// ─── LOGÍSTICA INVERSA Y DETECCIÓN AUTOMÁTICA DE RETORNOS (ADR-021) ──────────
+
+export interface ExpectedReturnPalletDto {
+  itemId?: string;
+  palletCode: string;
+  lotNumber?: string;
+  skuId?: string;
+  skuCode?: string;
+  productName?: string;
+  pieces?: number;
+  expirationDate?: string;
+  palletType?: string;
+  verified?: boolean;
+}
+
+export interface ReturnDetectionResponse {
+  isReturn: boolean;
+  sourceOutboundId?: string;
+  sourceOutboundFolio?: string;
+  remisionNo?: string;
+  clientId?: string;
+  clientName?: string;
+  carrierId?: string;
+  carrierName?: string;
+  driverName?: string;
+  tractorPlates?: string;
+  boxPlates?: string;
+  dispatchedAt?: string;
+  totalPallets?: number;
+  totalPieces?: number;
+  destinationName?: string;
+  expectedPallets?: ExpectedReturnPalletDto[];
+}
+
+export interface VerifyPalletRequest {
+  palletCode: string;
+  forkliftOperatorId?: string;
+}
+
+export interface VerifyPalletResponse {
+  valid: boolean;
+  status: 'VERIFIED' | 'ALREADY_VERIFIED' | 'DISCREPANCY';
+  palletId?: string;
+  palletCode: string;
+  lotNumber?: string;
+  skuCode?: string;
+  productName?: string;
+  pieces?: number;
+  expirationDate?: string;
+  verifiedCount: number;
+  totalExpected: number;
+  remainingCount: number;
+  message: string;
 }
 

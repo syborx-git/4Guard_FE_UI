@@ -86,70 +86,124 @@
     </div>
   </header>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       KPI CARDS SUPERIORES (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT)
-       ═══════════════════════════════════════════════════════════════════ -->
-  <div class="movement-kpi-grid">
-    <!-- Total Salidas -->
-    <div class="movement-kpi-card movement-kpi-card--primary" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">local_shipping</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">TOTAL SALIDAS</span>
-        <strong class="movement-kpi-card__value">{{ kpiTotalOutbounds() }}</strong>
-        <span class="movement-kpi-card__sub">En sistema / General</span>
-      </div>
+  <!-- ── 1. KPI CARDS HEADER (CON VISTA COMPACTA COLAPSABLE HOMOLOGADA) ── -->
+  <section aria-label="Métricas Operativas de Salidas de Almacén" class="mb-0">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-amber-500">analytics</span>
+        <span>Métricas Operativas de Salidas &amp; Embarques</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors py-0.5 px-2 rounded-md hover:bg-amber-500/10 cursor-pointer"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
     </div>
 
-    <!-- 1. Caseta / Registradas -->
-    <div class="movement-kpi-card movement-kpi-card--warning" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">shield_person</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">1. REGISTRADAS CASETA</span>
-        <strong class="movement-kpi-card__value">{{ kpiCaseta() }}</strong>
-        <span class="movement-kpi-card__sub">Por asignar andén</span>
-      </div>
-    </div>
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida Homologada -->
+      <div class="movement-kpi-summary-bar animate-fade-in">
+        <div class="movement-kpi-summary-items">
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-blue-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Total:</span>
+            <strong class="movement-kpi-summary-value">{{ kpiTotalOutbounds() }}</strong>
+          </div>
 
-    <!-- 2-4. En Andén / Carga -->
-    <div class="movement-kpi-card movement-kpi-card--info" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">forklift</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">2-4. EN ANDÉN / CARGA</span>
-        <strong class="movement-kpi-card__value">{{ kpiInAnden() }}</strong>
-        <span class="movement-kpi-card__sub">Andén bloqueado / Carga</span>
-      </div>
-    </div>
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-amber-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">1. Caseta:</span>
+            <strong class="movement-kpi-summary-value text-amber-600 dark:text-amber-400">{{ kpiCaseta() }}</strong>
+          </div>
 
-    <!-- 5. Completadas -->
-    <div class="movement-kpi-card movement-kpi-card--success" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">check_circle</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">5. COMPLETADAS</span>
-        <strong class="movement-kpi-card__value">{{ kpiCompleted() }}</strong>
-        <span class="movement-kpi-card__sub">Despachadas / F03 cerrado</span>
-      </div>
-    </div>
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-purple-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">2-4. En Andén:</span>
+            <strong class="movement-kpi-summary-value text-purple-600 dark:text-purple-400">{{ kpiInAnden() }}</strong>
+          </div>
 
-    <!-- Canceladas -->
-    <div class="movement-kpi-card movement-kpi-card--danger" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">cancel</span>
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-emerald-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">5. Completadas:</span>
+            <strong class="movement-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiCompleted() }}</strong>
+          </div>
+
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-rose-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Canceladas:</span>
+            <strong class="movement-kpi-summary-value text-rose-600 dark:text-rose-400">{{ kpiCancelled() }}</strong>
+          </div>
+        </div>
       </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">CANCELADAS</span>
-        <strong class="movement-kpi-card__value">{{ kpiCancelled() }}</strong>
-        <span class="movement-kpi-card__sub">Rechazadas / Cero</span>
+    } @else {
+      <!-- ── GRID COMPLETO DE KPIS (5 TARJETAS) ── -->
+      <div class="movement-kpi-grid animate-fade-in">
+        <!-- Total Salidas -->
+        <div class="movement-kpi-card movement-kpi-card--primary" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">TOTAL SALIDAS</span>
+            <strong class="movement-kpi-card__value">{{ kpiTotalOutbounds() }}</strong>
+            <span class="movement-kpi-card__sub">En sistema / General</span>
+          </div>
+        </div>
+
+        <!-- 1. Caseta / Registradas -->
+        <div class="movement-kpi-card movement-kpi-card--warning" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">shield_person</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">1. REGISTRADAS CASETA</span>
+            <strong class="movement-kpi-card__value">{{ kpiCaseta() }}</strong>
+            <span class="movement-kpi-card__sub">Por asignar andén</span>
+          </div>
+        </div>
+
+        <!-- 2-4. En Andén / Carga -->
+        <div class="movement-kpi-card movement-kpi-card--info" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">forklift</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">2-4. EN ANDÉN / CARGA</span>
+            <strong class="movement-kpi-card__value">{{ kpiInAnden() }}</strong>
+            <span class="movement-kpi-card__sub">Andén bloqueado / Carga</span>
+          </div>
+        </div>
+
+        <!-- 5. Completadas -->
+        <div class="movement-kpi-card movement-kpi-card--success" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">check_circle</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">5. COMPLETADAS</span>
+            <strong class="movement-kpi-card__value">{{ kpiCompleted() }}</strong>
+            <span class="movement-kpi-card__sub">Despachadas / F03 cerrado</span>
+          </div>
+        </div>
+
+        <!-- Canceladas -->
+        <div class="movement-kpi-card movement-kpi-card--danger" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">cancel</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">CANCELADAS</span>
+            <strong class="movement-kpi-card__value">{{ kpiCancelled() }}</strong>
+            <span class="movement-kpi-card__sub">Rechazadas / Cero</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    }
+  </section>
 
   <!-- ── 2. EXECUTIVE OUTBOUND DIRECTORY OR FULL-WIDTH WORKBENCH ── -->
   @if (formMode() === 'idle') {
@@ -1678,11 +1732,14 @@
           }
 
           <!-- 3. FICHA OPERATIVA UNIFICADA: CASETA & TRANSPORTE (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
+          <!-- 3. FICHA OPERATIVA UNIFICADA: CASETA & TRANSPORTE (DISTRIBUCIÓN EN 2 FILAS ESPACIOSAS) -->
           <div class="logistics-command-panel">
             <div class="logistics-command-panel__header">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">local_shipping</span>
-                <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              <div class="logistics-command-panel__title-wrap">
+                <div class="logistics-command-panel__icon">
+                  <span class="material-symbols-outlined text-lg">local_shipping</span>
+                </div>
+                <span class="logistics-command-panel__title">
                   Ficha Operativa de Arribo &amp; Caseta
                 </span>
               </div>
@@ -1691,7 +1748,7 @@
                   <button
                     type="button"
                     (click)="openEditCasetaModal()"
-                    class="btn-gold-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+                    class="logistics-command-btn-edit"
                     title="Asignar o modificar planta destino, número de sello y transporte"
                   >
                     <span class="material-symbols-outlined text-sm">
@@ -1710,7 +1767,7 @@
                     </span>
                   </button>
                 }
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
+                <span class="logistics-command-panel__tag">
                   <span class="material-symbols-outlined text-xs">alt_route</span>
                   <span>WMS Auto-Slotting</span>
                 </span>
@@ -1722,10 +1779,10 @@
               <!-- Cliente -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">person</span>
+                  <span class="material-symbols-outlined">person</span>
                   Cliente Propietario
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.clientName">
+                <span class="logistics-command-value truncate" [title]="selectedOutbound()!.clientName">
                   {{ selectedOutbound()!.clientName }}
                 </span>
               </div>
@@ -1734,13 +1791,13 @@
               <div class="logistics-command-cell cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para asignar o cambiar Planta / Destino">
                 <span class="logistics-command-label flex items-center justify-between">
                   <span class="flex items-center gap-1">
-                    <span class="material-symbols-outlined text-xs">pin_drop</span>
+                    <span class="material-symbols-outlined">pin_drop</span>
                     Planta / Destino
                   </span>
                   <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
                 </span>
                 @if (selectedOutbound()!.destinationName) {
-                  <span class="logistics-command-value font-bold truncate text-slate-900 dark:text-white" [title]="selectedOutbound()!.destinationName + (selectedOutbound()!.destinationAddress ? ' — ' + selectedOutbound()!.destinationAddress : '')">
+                  <span class="logistics-command-value truncate text-slate-900 dark:text-white" [title]="selectedOutbound()!.destinationName + (selectedOutbound()!.destinationAddress ? ' — ' + selectedOutbound()!.destinationAddress : '')">
                     {{ selectedOutbound()!.destinationName }}
                   </span>
                 } @else {
@@ -1754,10 +1811,10 @@
               <!-- Línea Transportista -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">domain</span>
+                  <span class="material-symbols-outlined">domain</span>
                   Línea Transportista
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.carrierName">
+                <span class="logistics-command-value truncate" [title]="selectedOutbound()!.carrierName">
                   {{ selectedOutbound()!.carrierName }}
                 </span>
               </div>
@@ -1765,28 +1822,28 @@
               <!-- Chofer / Operador -->
               <div class="logistics-command-cell">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">badge</span>
+                  <span class="material-symbols-outlined">badge</span>
                   Operador / Chofer
                 </span>
-                <span class="logistics-command-value font-bold truncate" [title]="selectedOutbound()!.driverName">
+                <span class="logistics-command-value truncate" [title]="selectedOutbound()!.driverName">
                   {{ selectedOutbound()!.driverName }} ({{ getTransportLabel(selectedOutbound()!.transportType) }})
                 </span>
               </div>
             </div>
 
             <!-- FILA 2: 3 Columnas amplias (Placas Tracto & Caja, Sellos Oficiales, Bahía / Rampa Asignada) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-amber-500/15">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-2.5 border-t border-slate-200 dark:border-slate-800">
               <!-- Placas Tracto y Caja (4 cols) -->
               <div class="logistics-command-cell lg:col-span-4">
                 <span class="logistics-command-label">
-                  <span class="material-symbols-outlined text-xs">pin</span>
+                  <span class="material-symbols-outlined">pin</span>
                   Eco / Placas (Tracto &amp; Caja)
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  <span class="logistics-command-badge-plate">
                     T: {{ selectedOutbound()!.economicNumber || '-' }} / {{ selectedOutbound()!.tractorPlates || 'S/P' }}
                   </span>
-                  <span class="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  <span class="logistics-command-badge-plate">
                     C: {{ selectedOutbound()!.boxEconomicNumber || '-' }} / {{ selectedOutbound()!.boxPlates || 'S/P' }}
                   </span>
                 </div>
@@ -1796,15 +1853,16 @@
               <div class="logistics-command-cell lg:col-span-4 cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para capturar o actualizar número de sello">
                 <span class="logistics-command-label flex items-center justify-between">
                   <span class="flex items-center gap-1">
-                    <span class="material-symbols-outlined text-xs">lock</span>
+                    <span class="material-symbols-outlined">lock</span>
                     Número de Sello o Cincho
                   </span>
                   <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
                 </span>
                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                   @if (selectedOutbound()!.sealNumber && selectedOutbound()!.sealNumber !== 'PENDIENTE_ANDEN' && selectedOutbound()!.sealNumber !== 'S/S' && selectedOutbound()!.sealNumber !== 'PENDIENTE') {
-                    <span class="font-mono text-xs font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
-                      🔒 {{ selectedOutbound()!.sealNumber }}
+                    <span class="logistics-command-badge-seal">
+                      <span>🔒</span>
+                      <span>{{ selectedOutbound()!.sealNumber }}</span>
                     </span>
                   } @else {
                     <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 flex items-center gap-1 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors animate-pulse">
@@ -1819,15 +1877,15 @@
               <!-- Andén de Salida & Montacarguista (4 cols) -->
               <div class="logistics-command-cell logistics-command-cell--highlight lg:col-span-4">
                 <div class="flex items-center justify-between">
-                  <span class="logistics-command-label text-blue-700 dark:text-blue-300">
-                    <span class="material-symbols-outlined text-xs">warehouse</span>
-                    Andén de Carga
+                  <span class="logistics-command-label font-extrabold flex items-center gap-1">
+                    <span class="material-symbols-outlined">warehouse</span>
+                    <span>Andén de Carga</span>
                   </span>
-                  <span class="text-[10px] font-mono font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                  <span class="logistics-command-ramp-badge">
                     {{ selectedOutbound()!.rampNumber ? ('Rampa ' + selectedOutbound()!.rampNumber) : 'Por Asignar' }}
                   </span>
                 </div>
-                <span class="font-mono font-black text-blue-900 dark:text-blue-200 text-xs mt-0.5 block truncate" [title]="selectedOutbound()!.forkliftOperator || 'Operador por asignar'">
+                <span class="font-mono font-black text-slate-900 dark:text-white text-xs mt-0.5 block truncate" [title]="selectedOutbound()!.forkliftOperator || 'Operador por asignar'">
                   {{ selectedOutbound()!.forkliftOperator ? ('Montacarguista: ' + selectedOutbound()!.forkliftOperator) : 'Sin montacarguista asignado' }}
                 </span>
               </div>
@@ -3187,7 +3245,7 @@
                 [ngModel]="editEconomicNumber()"
                 (ngModelChange)="editEconomicNumber.set($event)"
                 class="fg-input font-mono uppercase font-bold"
-                placeholder="ECO-101"
+                placeholder="Ej. ECO-901"
               />
             </div>
 
@@ -3199,7 +3257,7 @@
                 [ngModel]="editBoxEconomicNumber()"
                 (ngModelChange)="editBoxEconomicNumber.set($event)"
                 class="fg-input font-mono uppercase font-bold"
-                placeholder="BOX-202"
+                placeholder="Ej. BOX-402"
               />
             </div>
           </div>
@@ -3238,19 +3296,19 @@
        ════════════════════════════════════════════════════════════════ -->
   @if (showDockMapModal()) {
     <div class="modal-overlay p-4 animate-fade-in" (click)="showDockMapModal.set(false)">
-      <div class="modal-card max-w-4xl w-full p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="dock-map-modal-card" (click)="$event.stopPropagation()">
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-subtle pb-3">
+        <div class="dock-map-modal-header">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-blue-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+            <div class="dock-map-modal-icon">
               <span class="material-symbols-outlined text-2xl">domain</span>
             </div>
             <div>
-              <h3 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                <span>Plano de Andenes &amp; Rampas de Carga</span>
-                <span class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">(Almacén Central)</span>
-              </h3>
-              <p class="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="dock-map-modal-title">Plano de Andenes &amp; Rampas de Carga</h3>
+                <span class="dock-map-branch-badge">Almacén Central</span>
+              </div>
+              <p class="dock-map-modal-subtitle">
                 Haz clic en una rampa disponible para seleccionarla o en una ocupada para ver su detalle operativo.
               </p>
             </div>
@@ -3258,31 +3316,32 @@
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white p-1.5 rounded-lg"
+            class="dock-map-modal-close-btn"
+            title="Cerrar Plano"
           >
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
-        <!-- Leyenda -->
-        <div class="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
-          <div class="flex items-center gap-4">
-            <span class="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-              <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm inline-block"></span>
+        <!-- Leyenda / Status Bar -->
+        <div class="dock-map-legend-bar">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="dock-map-legend-pill dock-map-legend-pill--free">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm inline-block animate-pulse"></span>
               <span>{{ totalFreeRampsCount() }} Andenes Libres</span>
             </span>
-            <span class="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
-              <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm inline-block"></span>
+            <span class="dock-map-legend-pill dock-map-legend-pill--busy">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm inline-block"></span>
               <span>{{ totalBusyRampsCount() }} Ocupados</span>
             </span>
           </div>
-          <span class="text-[11px] text-slate-700 dark:text-slate-300 font-semibold italic hidden sm:inline">
+          <span class="dock-map-legend-notice hidden sm:inline">
             Bloqueo automático hasta notificación de finalización de maniobra
           </span>
         </div>
 
         <!-- Grid Visual de Andenes (12 Bahías de Carga) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           @for (ramp of rampOccupancyStatus(); track ramp.rampNumber) {
             <div
               (click)="onRampMatrixClick(ramp)"
@@ -3293,20 +3352,20 @@
             >
               <!-- Puerta de Andén -->
               <div class="dock-bay-door">
-                <span class="font-mono font-black text-xs">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
+                <span class="dock-bay-number">R-{{ ramp.rampNumber < 10 ? '0' + ramp.rampNumber : ramp.rampNumber }}</span>
                 <span class="dock-bay-dot"></span>
               </div>
 
               <!-- Ilustración de Tráiler / Estado -->
               <div class="dock-bay-body">
                 @if (ramp.status === 'AVAILABLE') {
-                  <span class="material-symbols-outlined text-2xl text-emerald-600 mb-0.5">garage_home</span>
-                  <span class="font-black text-[11px] text-emerald-800 dark:text-emerald-400">DISPONIBLE</span>
-                  <span class="text-[9px] text-slate-800 dark:text-slate-300 font-bold">clic para asignar</span>
+                  <span class="material-symbols-outlined text-2xl dock-bay-icon--free mb-0.5">garage_home</span>
+                  <span class="dock-bay-status-text--free">DISPONIBLE</span>
+                  <span class="dock-bay-helper-text">clic para asignar</span>
                 } @else {
-                  <span class="material-symbols-outlined text-2xl text-rose-600 mb-0.5 animate-pulse">local_shipping</span>
-                  <span class="font-black text-[11px] text-rose-800 dark:text-rose-400 truncate">#{{ ramp.operationFolio }}</span>
-                  <span class="text-[9px] text-slate-900 dark:text-slate-200 font-mono font-bold truncate" [title]="ramp.docNumber || ''">
+                  <span class="material-symbols-outlined text-2xl dock-bay-icon--busy mb-0.5 animate-pulse">local_shipping</span>
+                  <span class="dock-bay-folio-text truncate">#{{ ramp.operationFolio }}</span>
+                  <span class="dock-bay-doc-badge truncate" [title]="ramp.docNumber || 'En Operación'">
                     {{ ramp.docNumber || 'En Operación' }}
                   </span>
                 }
@@ -3316,11 +3375,11 @@
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end pt-2 border-t border-subtle">
+        <div class="dock-map-modal-footer">
           <button
             type="button"
             (click)="showDockMapModal.set(false)"
-            class="btn-secondary-outline text-xs px-4 py-1.5 rounded-xl font-bold"
+            class="dock-map-btn-close"
           >
             Cerrar Plano
           </button>
@@ -3955,6 +4014,49 @@
                 }
               </div>
 
+              <!-- Pestañas de Filtro por Estatus (SDOP: Todas / Disponibles / Bloqueados / Caducos) -->
+              <div class="pallet-picker-status-tabs flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  (click)="setPalletStatusFilter('ALL')"
+                  class="pallet-picker-status-tab"
+                  [class.pallet-picker-status-tab--active]="palletStatusFilter() === 'ALL'"
+                >
+                  <span class="material-symbols-outlined text-xs">view_list</span>
+                  <span>Todas ({{ totalCountForCurrentSku() }})</span>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="setPalletStatusFilter('AVAILABLE')"
+                  class="pallet-picker-status-tab pallet-picker-status-tab--available"
+                  [class.pallet-picker-status-tab--active]="palletStatusFilter() === 'AVAILABLE'"
+                >
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span>Disponibles ({{ availableCountForCurrentSku() }})</span>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="setPalletStatusFilter('BLOCKED')"
+                  class="pallet-picker-status-tab pallet-picker-status-tab--blocked"
+                  [class.pallet-picker-status-tab--active]="palletStatusFilter() === 'BLOCKED'"
+                >
+                  <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                  <span>Bloqueados Calidad ({{ blockedCountForCurrentSku() }})</span>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="setPalletStatusFilter('EXPIRED')"
+                  class="pallet-picker-status-tab pallet-picker-status-tab--expired"
+                  [class.pallet-picker-status-tab--active]="palletStatusFilter() === 'EXPIRED'"
+                >
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                  <span>Caducos / Destrucción ({{ expiredCountForCurrentSku() }})</span>
+                </button>
+              </div>
+
               <!-- Buscador Rápido Interno de Tarimas (UA / Lote / Bahía) -->
               <div class="pallet-picker-table-toolbar">
                 <div class="pallet-picker-table-search-box-inner">
@@ -3981,7 +4083,7 @@
                 <div class="text-[11px] font-bold text-slate-600 dark:text-slate-300 shrink-0 flex items-center gap-1.5 px-1">
                   <span class="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
                   <span>Mostrando <strong class="text-slate-900 dark:text-white font-mono">{{ allAvailablePalletsForCurrentView().length }}</strong> tarima(s)</span>
-                  @if (palletTableSearchQuery()) {
+                  @if (palletTableSearchQuery() || palletStatusFilter() !== 'ALL') {
                     <span class="text-amber-700 dark:text-amber-400 font-bold">(filtrado)</span>
                   }
                 </div>
@@ -3993,22 +4095,22 @@
                   <table class="pallet-picker-table">
                     <thead>
                       <tr>
-                        <th class="w-10 text-center">
+                        <th class="w-10 text-center" style="width: 44px; min-width: 44px;">
                           <input
                             type="checkbox"
                             [checked]="areAllPalletsSelected()"
                             (change)="toggleAllPallets()"
                             class="cursor-pointer rounded"
-                            title="Seleccionar todas las tarimas visibles"
+                            title="Seleccionar todas las tarimas disponibles visibles"
                           />
                         </th>
-                        <th>Código UA / SSCC</th>
-                        <th>Bahía / Ubicación</th>
-                        <th>Lote</th>
-                        <th>Caducidad</th>
-                        <th>Estatus</th>
-                        <th class="text-right">Piezas</th>
-                        <th class="w-16 text-center">Acción</th>
+                        <th style="min-width: 170px;">Código UA / SSCC</th>
+                        <th style="min-width: 140px;">Bahía / Ubicación</th>
+                        <th style="min-width: 120px;">Lote</th>
+                        <th style="min-width: 115px;">Caducidad</th>
+                        <th style="min-width: 140px;">Estatus</th>
+                        <th class="text-right" style="min-width: 90px;">Piezas</th>
+                        <th class="w-16 text-center" style="width: 65px; min-width: 65px;">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4016,22 +4118,41 @@
                         <tr
                           (click)="togglePallet(pallet.id)"
                           [class.selected-row]="isPalletSelected(pallet.id)"
+                          [class.opacity-75]="pallet.inventoryStatus !== 'AVAILABLE'"
                         >
                           <td class="text-center" (click)="$event.stopPropagation()">
-                            <input
-                              type="checkbox"
-                              [checked]="isPalletSelected(pallet.id)"
-                              (change)="togglePallet(pallet.id)"
-                              class="cursor-pointer rounded"
-                            />
+                            @if (pallet.inventoryStatus === 'BLOCKED') {
+                              <span
+                                class="material-symbols-outlined text-rose-500 text-sm opacity-80 cursor-not-allowed"
+                                [title]="'Bloqueado por Calidad: ' + (pallet.blockReason || 'PNC')"
+                              >
+                                lock
+                              </span>
+                            } @else if (pallet.inventoryStatus === 'EXPIRED') {
+                              <input
+                                type="checkbox"
+                                [checked]="isPalletSelected(pallet.id)"
+                                (change)="togglePallet(pallet.id)"
+                                class="cursor-pointer rounded opacity-60"
+                                [title]="'Caduco - Salida por Destrucción/Merma'"
+                              />
+                            } @else {
+                              <input
+                                type="checkbox"
+                                [checked]="isPalletSelected(pallet.id)"
+                                (change)="togglePallet(pallet.id)"
+                                class="cursor-pointer rounded"
+                                title="Seleccionar tarima para despacho"
+                              />
+                            }
                           </td>
                           <td class="pallet-picker-ua-code">
                             {{ pallet.palletCode }}
                           </td>
                           <td>
                             <span class="pallet-picker-loc-badge">
-                              <span class="material-symbols-outlined text-xs text-amber-500">pin_drop</span>
-                              {{ pallet.locationCode }}
+                              <span class="material-symbols-outlined text-xs text-amber-500 shrink-0">pin_drop</span>
+                              <span>{{ pallet.locationCode }}</span>
                             </span>
                           </td>
                           <td class="pallet-picker-text-mono">
@@ -4041,29 +4162,62 @@
                             {{ pallet.expirationDate || 'N/A' }}
                           </td>
                           <td>
-                            <span
-                              [ngClass]="pallet.pabloStatus === 'EXPIRED' ? 'pallet-picker-badge-expired' : (pallet.pabloStatus === 'PABLO_ALERT' ? 'pallet-picker-badge-pablo' : 'pallet-picker-badge-optimo')"
-                            >
-                              {{ pallet.pabloLabel }}
-                            </span>
+                            @if (pallet.inventoryStatus === 'BLOCKED') {
+                              <span
+                                class="pallet-picker-badge-blocked"
+                                [title]="'Causa: ' + (pallet.blockReason || 'Retención por Calidad') + ' (' + (pallet.qualityFolio || 'QM') + ')'"
+                              >
+                                <span class="material-symbols-outlined text-[12px] shrink-0">lock</span>
+                                <span>{{ pallet.statusLabel }}</span>
+                              </span>
+                            } @else if (pallet.inventoryStatus === 'EXPIRED') {
+                              <span
+                                class="pallet-picker-badge-expired"
+                                [title]="'Producto caduco - Solo apto para destrucción o merma (' + pallet.daysRemaining + 'd)'"
+                              >
+                                <span class="material-symbols-outlined text-[12px] shrink-0">warning</span>
+                                <span>{{ pallet.statusLabel }}</span>
+                              </span>
+                            } @else {
+                              <span
+                                class="pallet-picker-badge-available"
+                                [title]="'Apto para despacho regular FEFO (' + pallet.daysRemaining + 'd restantes)'"
+                              >
+                                <span class="material-symbols-outlined text-[12px] shrink-0 text-emerald-600 dark:text-emerald-400">verified</span>
+                                <span>{{ pallet.statusLabel }}</span>
+                              </span>
+                            }
                           </td>
                           <td class="pallet-picker-pieces">
                             {{ pallet.pieces | number }} pz
                           </td>
                           <td class="text-center" (click)="$event.stopPropagation()">
-                            <button
-                              type="button"
-                              (click)="addPalletToManifest(pallet.id, $event)"
-                              class="text-xs font-bold p-1 rounded hover:opacity-80 cursor-pointer"
-                              [title]="isPalletSelected(pallet.id) ? 'Quitar del manifiesto' : 'Agregar al manifiesto'"
-                            >
-                              <span
-                                class="material-symbols-outlined text-base"
-                                [ngClass]="isPalletSelected(pallet.id) ? 'text-rose-500' : 'text-emerald-600'"
+                            @if (pallet.inventoryStatus === 'BLOCKED') {
+                              <button
+                                type="button"
+                                (click)="addPalletToManifest(pallet.id, $event)"
+                                class="text-xs font-bold p-1 rounded opacity-60 hover:opacity-100 cursor-pointer"
+                                [title]="'Bloqueado por Calidad: ' + (pallet.blockReason || 'PNC')"
                               >
-                                {{ isPalletSelected(pallet.id) ? 'remove_circle' : 'add_circle' }}
-                              </span>
-                            </button>
+                                <span class="material-symbols-outlined text-base text-rose-500">
+                                  block
+                                </span>
+                              </button>
+                            } @else {
+                              <button
+                                type="button"
+                                (click)="addPalletToManifest(pallet.id, $event)"
+                                class="text-xs font-bold p-1 rounded hover:opacity-80 cursor-pointer"
+                                [title]="isPalletSelected(pallet.id) ? 'Quitar del manifiesto' : 'Agregar al manifiesto'"
+                              >
+                                <span
+                                  class="material-symbols-outlined text-base"
+                                  [ngClass]="isPalletSelected(pallet.id) ? 'text-rose-500' : 'text-emerald-600'"
+                                >
+                                  {{ isPalletSelected(pallet.id) ? 'remove_circle' : 'add_circle' }}
+                                </span>
+                              </button>
+                            }
                           </td>
                         </tr>
                       }
@@ -4074,15 +4228,19 @@
                 <div class="p-6 text-center text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex flex-col items-center justify-center gap-1">
                   <span class="material-symbols-outlined text-2xl text-slate-400">search_off</span>
                   <span class="font-extrabold text-slate-800 dark:text-slate-200">
-                    @if (palletTableSearchQuery()) {
-                      No se encontraron tarimas para "{{ palletTableSearchQuery() }}"
+                    @if (palletTableSearchQuery() || palletStatusFilter() !== 'ALL') {
+                      No se encontraron tarimas con el filtro actual.
                     } @else {
                       Todas las tarimas de este producto ya han sido agregadas al manifiesto.
                     }
                   </span>
-                  @if (palletTableSearchQuery()) {
-                    <button type="button" (click)="clearPalletTableSearch()" class="text-amber-700 dark:text-amber-400 underline font-bold mt-1 cursor-pointer">
-                      Limpiar filtro de búsqueda
+                  @if (palletTableSearchQuery() || palletStatusFilter() !== 'ALL') {
+                    <button
+                      type="button"
+                      (click)="clearPalletTableSearch(); setPalletStatusFilter('ALL')"
+                      class="text-amber-700 dark:text-amber-400 underline font-bold mt-1 cursor-pointer"
+                    >
+                      Limpiar filtros y mostrar todas
                     </button>
                   }
                 </div>
@@ -4115,35 +4273,60 @@
                 <span class="text-[11px] font-bold text-slate-800 dark:text-slate-200">Selecciona un producto arriba y agrega tarimas o aplica la regla FEFO.</span>
               </div>
             } @else {
-              <div class="space-y-2 max-h-52 overflow-y-auto">
+              <div class="space-y-3 max-h-64 overflow-y-auto pr-1">
                 @for (group of manifestGroupedBySku(); track group.skuCode) {
-                  <div class="pallet-picker-manifest-item p-2.5 rounded-lg flex items-center justify-between gap-3 text-xs">
-                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-950 font-bold text-[10px] flex items-center justify-center shrink-0 border border-amber-300">
-                        {{ group.totalPallets }}T
-                      </div>
-                      <div class="min-w-0 flex-1">
-                        <div class="font-extrabold text-slate-900 dark:text-slate-100 truncate">
-                          {{ group.productName }}
+                  <div class="pallet-picker-manifest-item p-3 rounded-xl flex flex-col gap-2.5">
+                    <!-- Header del grupo SKU -->
+                    <div class="flex items-center justify-between gap-3 text-xs pb-2 border-b border-slate-200 dark:border-slate-700/60">
+                      <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-950 font-bold text-[10px] flex items-center justify-center shrink-0 border border-amber-300">
+                          {{ group.totalPallets }}T
                         </div>
-                        <div class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5">
-                          <span>SKU: {{ group.skuCode }}</span>
-                          <span>·</span>
-                          <span>{{ group.totalPieces | number }} pz</span>
-                          <span>·</span>
-                          <span>UAs: {{ group.items.map(getPalletCodeOrId).slice(0, 3).join(', ') }}{{ group.items.length > 3 ? '...' : '' }}</span>
+                        <div class="min-w-0 flex-1">
+                          <div class="font-extrabold text-slate-900 dark:text-slate-100 truncate">
+                            {{ group.productName }}
+                          </div>
+                          <div class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5">
+                            <span>SKU: {{ group.skuCode }}</span>
+                            <span>·</span>
+                            <span>{{ group.totalPieces | number }} pz</span>
+                            <span>·</span>
+                            <span>{{ group.items.length }} UA(s) seleccionada(s)</span>
+                          </div>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        (click)="removeSkuFromManifest(group.skuCode)"
+                        class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 px-2 py-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-colors border border-transparent hover:border-rose-200 dark:hover:border-rose-900/60"
+                        title="Quitar todas las tarimas de este SKU"
+                      >
+                        <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                        <span class="hidden sm:inline">Quitar Todo</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      (click)="removeSkuFromManifest(group.skuCode)"
-                      class="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
-                      title="Quitar todas las tarimas de este SKU"
-                    >
-                      <span class="material-symbols-outlined text-sm">delete</span>
-                      <span class="hidden sm:inline">Quitar</span>
-                    </button>
+
+                    <!-- Lista de UAs individuales seleccionadas de este SKU -->
+                    <div class="pallet-picker-manifest-uas-grid flex flex-wrap gap-1.5">
+                      @for (it of group.items; track it.id) {
+                        <div class="pallet-picker-ua-chip flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-[11px] font-mono transition-all">
+                          <span class="material-symbols-outlined text-[13px] text-amber-600 dark:text-amber-400">qr_code_2</span>
+                          <span class="font-black text-slate-900 dark:text-slate-100">{{ it.palletCode || it.id }}</span>
+                          @if (it.locationCode) {
+                            <span class="pallet-picker-chip-loc px-1.5 py-0.2 rounded text-[9.5px] font-bold">{{ it.locationCode }}</span>
+                          }
+                          <span class="text-slate-600 dark:text-slate-300 text-[10.5px] font-bold">({{ it.pieces | number }} pz)</span>
+                          <button
+                            type="button"
+                            (click)="removePalletFromManifest(it.id)"
+                            class="pallet-picker-ua-remove-btn w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-950/60 dark:hover:text-rose-400 transition-colors cursor-pointer ml-1"
+                            title="Quitar esta UA del despacho"
+                          >
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                          </button>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
               </div>

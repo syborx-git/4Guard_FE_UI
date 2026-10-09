@@ -78,56 +78,106 @@
     </div>
   </header>
 
-  <!-- ── 1. KPI CARDS HEADER (ESTILO HOMOLOGADO QM / SYNEXIA LIGHT) ── -->
-  <div class="movement-kpi-grid">
-    <!-- Total Traspasos -->
-    <div class="movement-kpi-card movement-kpi-card--primary" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">swap_horiz</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">TOTAL TRASPASOS</span>
-        <strong class="movement-kpi-card__value">{{ kpiTotalTransfers() }}</strong>
-        <span class="movement-kpi-card__sub">En sistema / General</span>
-      </div>
+  <!-- ── 1. KPI CARDS HEADER (CON VISTA COMPACTA COLAPSABLE HOMOLOGADA) ── -->
+  <section aria-label="Métricas Operativas de Cambio de Almacén" class="mb-0">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-amber-500">analytics</span>
+        <span>Métricas Operativas de Reubicación &amp; Traspasos</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors py-0.5 px-2 rounded-md hover:bg-amber-500/10 cursor-pointer"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
     </div>
 
-    <!-- Bahías Ocupadas -->
-    <div class="movement-kpi-card movement-kpi-card--warning" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">warehouse</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">BAHÍAS CON STOCK</span>
-        <strong class="movement-kpi-card__value">{{ kpiOccupiedLocations() }}</strong>
-        <span class="movement-kpi-card__sub">Ocupadas / Activas</span>
-      </div>
-    </div>
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida Homologada -->
+      <div class="movement-kpi-summary-bar animate-fade-in">
+        <div class="movement-kpi-summary-items">
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-blue-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Total Traspasos:</span>
+            <strong class="movement-kpi-summary-value">{{ kpiTotalTransfers() }}</strong>
+          </div>
 
-    <!-- Bahías Disponibles (En Ceros) -->
-    <div class="movement-kpi-card movement-kpi-card--success" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">check_circle</span>
-      </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">BAHÍAS EN CEROS</span>
-        <strong class="movement-kpi-card__value">{{ kpiAvailableLocations() }}</strong>
-        <span class="movement-kpi-card__sub">Listas para putaway</span>
-      </div>
-    </div>
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-amber-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Bahías con Stock:</span>
+            <strong class="movement-kpi-summary-value text-amber-600 dark:text-amber-400">{{ kpiOccupiedLocations() }}</strong>
+          </div>
 
-    <!-- UAs Reubicadas -->
-    <div class="movement-kpi-card movement-kpi-card--info" fgStarBorder fgSpecularGlow>
-      <div class="movement-kpi-card__icon">
-        <span class="material-symbols-outlined">move_to_inbox</span>
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-emerald-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Bahías en Ceros:</span>
+            <strong class="movement-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiAvailableLocations() }}</strong>
+          </div>
+
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-purple-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">UAs Reubicadas:</span>
+            <strong class="movement-kpi-summary-value text-purple-600 dark:text-purple-400">{{ kpiTotalPalletsMoved() }}</strong>
+          </div>
+        </div>
       </div>
-      <div class="movement-kpi-card__info">
-        <span class="movement-kpi-card__label">UAS REUBICADAS</span>
-        <strong class="movement-kpi-card__value">{{ kpiTotalPalletsMoved() }}</strong>
-        <span class="movement-kpi-card__sub">Tarimas transferidas</span>
+    } @else {
+      <!-- ── GRID COMPLETO DE KPIS (4 TARJETAS CENTRADAS) ── -->
+      <div class="movement-kpi-grid animate-fade-in">
+        <!-- Total Traspasos -->
+        <div class="movement-kpi-card movement-kpi-card--primary" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">swap_horiz</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">TOTAL TRASPASOS</span>
+            <strong class="movement-kpi-card__value">{{ kpiTotalTransfers() }}</strong>
+            <span class="movement-kpi-card__sub">En sistema / General</span>
+          </div>
+        </div>
+
+        <!-- Bahías Ocupadas -->
+        <div class="movement-kpi-card movement-kpi-card--warning" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">warehouse</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">BAHÍAS CON STOCK</span>
+            <strong class="movement-kpi-card__value">{{ kpiOccupiedLocations() }}</strong>
+            <span class="movement-kpi-card__sub">Ocupadas / Activas</span>
+          </div>
+        </div>
+
+        <!-- Bahías Disponibles (En Ceros) -->
+        <div class="movement-kpi-card movement-kpi-card--success" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">check_circle</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">BAHÍAS EN CEROS</span>
+            <strong class="movement-kpi-card__value">{{ kpiAvailableLocations() }}</strong>
+            <span class="movement-kpi-card__sub">Listas para putaway</span>
+          </div>
+        </div>
+
+        <!-- UAs Reubicadas -->
+        <div class="movement-kpi-card movement-kpi-card--info" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">move_to_inbox</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">UAS REUBICADAS</span>
+            <strong class="movement-kpi-card__value">{{ kpiTotalPalletsMoved() }}</strong>
+            <span class="movement-kpi-card__sub">Tarimas transferidas</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    }
+  </section>
 
   <!-- ── 2. EXECUTIVE TRANSFERS DIRECTORY OR FULL-WIDTH WORKBENCH ── -->
   @if (formMode() === 'idle') {

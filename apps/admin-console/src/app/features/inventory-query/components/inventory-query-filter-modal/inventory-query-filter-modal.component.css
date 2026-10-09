@@ -522,6 +522,96 @@
   transform: translateY(-1px);
 }
 
+/* ── Multi-Select Chips (SKUs, Bodegas, Estados) ── */
+.multi-chips-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-page);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-input);
+  padding: 10px 12px;
+}
+
+.multi-chips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.multi-chips-search-input {
+  width: 100%;
+  max-width: 220px;
+  height: 28px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.multi-chips-search-input:focus {
+  border-color: var(--gold);
+}
+
+.multi-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.multi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 120ms ease;
+  user-select: none;
+}
+
+.multi-chip:hover {
+  border-color: var(--gold-border);
+  color: var(--text-primary);
+}
+
+.multi-chip--selected {
+  background: var(--gold-bg) !important;
+  border-color: var(--gold) !important;
+  color: var(--text-gold) !important;
+  font-weight: 750;
+  box-shadow: 0 0 0 1px var(--gold-border);
+}
+
+.multi-chip--selected-success {
+  background: var(--c-success-bg) !important;
+  border-color: var(--c-success) !important;
+  color: var(--c-success) !important;
+}
+
+.multi-chip--selected-warning {
+  background: var(--c-warning-bg) !important;
+  border-color: var(--c-warning) !important;
+  color: var(--c-warning) !important;
+}
+
+.multi-chip--selected-danger {
+  background: var(--c-danger-bg) !important;
+  border-color: var(--c-danger) !important;
+  color: var(--c-danger) !important;
+}
+
 /* ══════════════════════════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════════════════════════ */
@@ -543,3 +633,4 @@
     justify-content: center;
   }
 }
+

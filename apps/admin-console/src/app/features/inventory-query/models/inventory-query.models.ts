@@ -81,8 +81,25 @@ export interface InventoryFilterCriteria {
   palletType?: PalletType | '' | null;
   labeledStatus?: LabeledStatus | '' | null;
 
+  // Selección Múltiple Avanzada (SDOP)
+  selectedSkus?: string[];
+  selectedWarehouses?: string[];
+  selectedExpirationStatuses?: ExpirationBadgeStatus[];
+
   // Radio Buttons de Regla de Pablo
   expirationMode: ExpirationFilterMode;
+}
+
+/**
+ * Elemento de sugerencia predictiva de búsqueda
+ */
+export interface SearchSuggestionItem {
+  type: 'SKU' | 'PRODUCT' | 'WAREHOUSE' | 'REVISION' | 'KEYWORD';
+  label: string;
+  subLabel?: string;
+  value: string;
+  count?: number;
+  icon: string;
 }
 
 /**

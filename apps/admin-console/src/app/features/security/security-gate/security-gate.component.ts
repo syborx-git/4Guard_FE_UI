@@ -11,11 +11,12 @@
 
 import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
-import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS } from '../../warehouse-movements/models/warehouse-movements.models';
+import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS, STANDARD_CLIENTS, STANDARD_CARRIERS, ReturnDetectionResponse } from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
@@ -23,6 +24,7 @@ import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
 } from '../../warehouse-movements/components/print-layouts/print-transport-checklist-layout.component';
+import { AuthState } from '../../../core/auth/auth.state';
 import { environment } from '../../../../environments/environment';
 
 export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
@@ -42,15 +44,84 @@ export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
   styleUrl: './security-gate.component.css',
 })
 export class SecurityGateComponent implements OnInit, OnDestroy {
+  protected readonly authState = inject(AuthState);
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly smartNotification = inject(SmartNotificationService);
   private readonly printService = inject(PrintService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private refreshIntervalId: any = null;
 
-  constructor() {}
+  constructor() {
+    effect(() => {
+      const passToLoad = this.smartNotification.requestedPassToLoad();
+      if (passToLoad) {
+        this.setTab('REGISTRATION');
+        this.loadDriverSubmission(passToLoad);
+        this.smartNotification.clearRequestedPassToLoad();
+      }
+    });
+
+    // Auto-asignar el nombre del guardia autenticado si está disponible en la sesión activa
+    effect(() => {
+      const guardName = this.getLoggedGuardName();
+      if (guardName && guardName !== 'Guardia de Turno - Caseta Principal') {
+        const currentVal = this.checkInForm.get('responsableVigilanciaNombre')?.value;
+        if (!currentVal || currentVal === 'Guardia de Turno - Caseta Principal') {
+          this.checkInForm.patchValue({ responsableVigilanciaNombre: guardName });
+        }
+      }
+    });
+
+    // Notificar al guardia en tiempo real cuando una unidad concluye maniobra y queda autorizada para salida
+    effect(() => {
+      const yardList = this.inYardPasses();
+      for (const p of yardList) {
+        if (p && p.isReadyForExit) {
+          const key = (p.token || p.generatedFolio || p.id || '').trim().toUpperCase();
+          if (key && !this.notifiedReadyExitTokens.has(key)) {
+            this.notifiedReadyExitTokens.add(key);
+
+            // Alerta acústica y visual en caseta
+            this.playCheckinChime();
+
+            const unitLabel = p.economicNumber ? `Eco ${p.economicNumber}` : (p.tractorPlates ? `Placas ${p.tractorPlates}` : 'Unidad');
+            const rampLabel = p.rampCode || (p.rampNumber ? `R-${p.rampNumber}` : 'Andén');
+            const chofer = p.driverName || 'Chofer';
+            const carrier = p.carrierLine || 'Transportista';
+            const folio = p.token || p.generatedFolio || 'S/F';
+
+            this.toast.info(
+              `🏁 ¡Unidad Lista para Salida! ${unitLabel} (${carrier} - ${chofer}) concluyó maniobra en ${rampLabel}. Proceda a registrar su Salida en Caseta.`
+            );
+
+            this.smartNotification.dispatch({
+              category: 'SECURITY',
+              title: '🏁 Unidad Lista para Salida (Check-Out)',
+              message: `La unidad ${unitLabel} (${carrier} - Chofer: ${chofer}) concluyó maniobra en ${rampLabel}. Registre su Salida física y sellos de salida.`,
+              referenceFolio: folio,
+              route: '/security',
+              targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA', 'GUARD'],
+              targetRoutes: ['/security'],
+              severity: 'WARNING',
+              data: p
+            });
+          }
+        }
+      }
+    });
+  }
+
+  protected getLoggedGuardName(): string {
+    const fullName = this.authState.userFullName()?.trim();
+    if (fullName) return fullName;
+    const user = this.authState.currentUser();
+    if (user?.fullName?.trim()) return user.fullName.trim();
+    if (user?.username?.trim()) return user.username.trim();
+    return 'Guardia de Turno - Caseta Principal';
+  }
 
   // ── Navegación por Pestañas ───────────────────────────────────────────────
   protected readonly activeTab = signal<SecurityGateTab>('REGISTRATION');
@@ -75,9 +146,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly showQrModal        = signal<boolean>(false);
   protected readonly showPassListModal  = signal<boolean>(false);
 
+  // ── Auto-Detección Inteligente de Retornos (ADR-021) ──
+  protected readonly detectedReturn     = signal<ReturnDetectionResponse | null>(null);
+  protected readonly isDetectingReturn  = signal<boolean>(false);
+
   // ── Catálogos Flexibles de Tipos de Transporte y Medidas ──
   protected readonly transportTypesList = signal<string[]>([
-    'Camioneta',
     'Tortón',
     'Tráiler',
     'Otro (Especificar)'
@@ -115,47 +189,56 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
    */
   protected readonly inYardPasses = computed<any[]>(() => {
     const mergedMap = new Map<string, any>();
-    const exitTokensOrFolios = new Set<string>();
+    const exitTokensOrFolios = this.movementsService.movementsApi.loadExitedPassTokens();
 
-    // 1. Folios que ya salieron de la planta
+    // 1. Folios que ya salieron de la planta (desde historial en memoria)
     for (const h of this.historyPasses()) {
       if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
       if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
+      if (h.id) exitTokensOrFolios.add(h.id.trim().toUpperCase());
     }
 
-    // 2. Pases devueltos por el backend
+    // 2. Pases devueltos por el backend como en patio (In-Yard)
     for (const p of this.backendInYardPasses()) {
+      if (p.status === 'COMPLETED_EXIT') continue;
       const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
 
+      const ws = (p.warehouseStatus || '').toUpperCase();
+      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || p.status === 'READY_FOR_EXIT';
       const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
       mergedMap.set(key, {
         ...p,
+        isReadyForExit: isReady,
         receptionTime: timeVal,
         horaEntrada: timeVal
       });
     }
 
-    // 3. Recepciones registradas en el WMS (Inbound)
+    // 3. Recepciones registradas en el WMS (Inbound) - Solo si están en patio activo y no han salido
     const activeReceptions = this.movementsService.receptions();
     for (const r of activeReceptions) {
       if (r.status === 'CANCELLED') continue;
       const key = (r.folio || r.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
 
-      if (!mergedMap.has(key)) {
+      // Si ya está en mergedMap no duplicar
+      if (mergedMap.has(key)) continue;
+
+      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED)
+      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED') {
         const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
           ? r.checkIn.sealNumbers
           : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
 
-        const isReady = r.status === 'COMPLETED';
+        const isReady = (r.status as string) === 'COMPLETED' || (r as any).isReadyForExit === true;
         const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
           id: r.id || ('rec-' + r.folio),
           token: r.folio,
           generatedFolio: r.folio,
-          status: 'COMPLETED',
+          status: r.status,
           operationType: 'DESCARGA',
           operacion: 'DESCARGA',
           clientCode: r.checkIn?.clientCode || '',
@@ -183,23 +266,24 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 4. Salidas registradas en el WMS (Outbound)
+    // 4. Salidas registradas en el WMS (Outbound) - Solo si están en patio activo y no han salido
     const activeOutbounds = this.movementsService.outbounds();
     for (const o of activeOutbounds) {
       if (o.status === 'CANCELLED') continue;
       const key = (o.folio || o.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
+      if (mergedMap.has(key)) continue;
 
-      if (!mergedMap.has(key)) {
+      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED') {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
-        const isReady = o.status === 'COMPLETED' || o.status === 'LOADED';
+        const isReady = (o.status as string) === 'COMPLETED' || (o as any).isReadyForExit === true;
         const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
           id: o.id || ('out-' + o.folio),
           token: o.folio,
           generatedFolio: o.folio,
-          status: 'COMPLETED',
+          status: o.status,
           operationType: 'CARGA',
           operacion: 'CARGA',
           clientCode: o.clientCode || '',
@@ -232,7 +316,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
 
   protected readonly activeToken        = signal<string | null>(null);
-  protected readonly qrModalToken       = signal<string>('PASS-4G-2026');
+  protected readonly qrModalToken       = signal<string>('PORTAL-DIRECTO');
   protected readonly qrModalUrl         = signal<string>('');
   protected readonly isGeneratingPass   = signal<boolean>(false);
   protected readonly copyNotice         = signal<string | null>(null);
@@ -318,6 +402,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     placasTracto: ['', Validators.required],
     noEcoTractor: ['', Validators.required],
     placasCaja: ['', Validators.required],
+    noEcoCaja: [''],
     medidasCaja: ['', Validators.required],
     noSello: [''],
     tipoTransporte: ['', Validators.required],
@@ -338,7 +423,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     docRemision: ['SI', Validators.required],
     docRemisionObs: [''],
 
-    // 4. REVISIÓN DE LA UNIDAD
+    // 4. REVISIÓN DE LA UNIDAD (5 Puntos Oficiales de Caseta)
     revInteriorCaja: ['SI', Validators.required],
     revInteriorCajaObs: [''],
     revDanosCaja: ['NO', Validators.required],
@@ -351,7 +436,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     revIndiciosPlagasObs: [''],
 
     // 5. FIRMAS Y RESPONSABLES
-    responsableVigilanciaNombre: ['Guardia de Turno - Caseta Principal', Validators.required],
+    responsableVigilanciaNombre: [this.getLoggedGuardName(), Validators.required],
     responsableVigilanciaFirma: [true, Validators.requiredTrue],
     transportistaNombre: ['', Validators.required],
     transportistaFirma: [false, Validators.requiredTrue]
@@ -359,6 +444,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Notificaciones de Caseta / Comanda en Vivo ───────────────────────────
   private readonly notifiedSubmittedTokens = new Set<string>();
+  private readonly notifiedReadyExitTokens = new Set<string>();
 
   private playCheckinChime(): void {
     try {
@@ -408,7 +494,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
 
   protected readonly completedShiftExitsCount = computed(() => {
-    return this.historyPasses().length;
+    const fromHistory = this.historyPasses().length;
+    const fromStorage = this.movementsService.movementsApi.loadExitedPassTokens().size;
+    return Math.max(fromHistory, fromStorage);
   });
 
   protected calculateDuration(inTime: any, outTime: any): string {
@@ -590,16 +678,71 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     this.movementsService.loadInitialBackendData();
     this.loadPublicCatalogs();
-    this.reloadActivePasses();
+    this.reloadAllData();
+
+    // Escuchar parámetros de consulta (token o tab) desde notificaciones o links directos
+    this.route.queryParams.subscribe(params => {
+      const tab = params['tab'];
+      if (tab === 'IN_YARD' || tab === 'HISTORY' || tab === 'REGISTRATION') {
+        this.setTab(tab);
+      }
+      const token = params['token'] || params['folio'];
+      if (token) {
+        this.handleIncomingPassToken(token);
+      }
+    });
 
     // Auto-refresco en tiempo real no bloqueante
     this.refreshIntervalId = setInterval(() => {
-      if (this.activeTab() === 'REGISTRATION') {
-        this.reloadActivePasses();
-      } else if (this.activeTab() === 'IN_YARD') {
-        this.reloadInYardPasses();
+      this.reloadActivePasses();
+      this.reloadInYardPasses();
+      if (this.activeTab() === 'HISTORY') {
+        this.reloadHistoryPasses();
       }
     }, 15000);
+
+    // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
+    this.checkInForm.get('remision')?.valueChanges.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(val => {
+      if (!val || val.trim().length < 3) {
+        this.detectedReturn.set(null);
+        return;
+      }
+      this.isDetectingReturn.set(true);
+      this.movementsService.movementsApi.detectReturn(val.trim()).subscribe({
+        next: (res) => {
+          this.isDetectingReturn.set(false);
+          if (res && res.isReturn) {
+            this.detectedReturn.set(res);
+            this.toast.info(`⚡ Retorno detectado para remisión '${val}': Corresponde a salida #${res.sourceOutboundFolio}`);
+          } else {
+            this.detectedReturn.set(null);
+          }
+        },
+        error: () => {
+          this.isDetectingReturn.set(false);
+          this.detectedReturn.set(null);
+        }
+      });
+    });
+  }
+
+  protected applyDetectedReturn(ret: ReturnDetectionResponse): void {
+    if (!ret) return;
+    this.checkInForm.patchValue({
+      client: ret.clientName || this.checkInForm.value.client,
+      clientCode: ret.clientId || this.checkInForm.value.clientCode,
+      carrierLine: ret.carrierName || this.checkInForm.value.carrierLine,
+      carrierLineCode: ret.carrierId || this.checkInForm.value.carrierLineCode,
+      nombreOperador: ret.driverName || this.checkInForm.value.nombreOperador,
+      placasTracto: ret.tractorPlates || this.checkInForm.value.placasTracto,
+      placasCaja: ret.boxPlates || this.checkInForm.value.placasCaja,
+      remision: ret.remisionNo || this.checkInForm.value.remision,
+      operacion: 'DESCARGA',
+    });
+    this.toast.success(`Datos del retorno #${ret.sourceOutboundFolio} aplicados al pase de caseta.`);
   }
 
   ngOnDestroy(): void {
@@ -614,12 +757,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       next: (data) => {
         if (data) {
           if (data.transportTypes && data.transportTypes.length > 0) {
-            const allowed = ['Camioneta', 'Tortón', 'Tráiler', 'Otro (Especificar)'];
+            const allowed = ['Tortón', 'Tráiler', 'Otro (Especificar)'];
             const filtered = data.transportTypes.filter((t: string) => allowed.includes(t));
-            if (filtered.length > 0) {
-              if (!filtered.includes('Otro (Especificar)')) filtered.push('Otro (Especificar)');
-              this.transportTypesList.set(filtered);
-            }
+            this.transportTypesList.set(filtered.length > 0 ? filtered : allowed);
+          } else {
+            this.transportTypesList.set(['Tortón', 'Tráiler', 'Otro (Especificar)']);
           }
           if (data.boxDimensions && data.boxDimensions.length > 0) {
             this.boxDimensionsList.set(data.boxDimensions);
@@ -668,6 +810,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.activeTab.set(tab);
     if (tab === 'IN_YARD') {
       this.reloadInYardPasses();
+      this.reloadHistoryPasses();
     } else if (tab === 'HISTORY') {
       this.reloadHistoryPasses();
     } else {
@@ -698,8 +841,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         docCartaPorte: 'SI',
         docCartaPorteObs: '',
         docRemision: 'NO',
-        docRemisionObs: 'N/A - Operación de Carga/Embarque'
+        docRemisionObs: 'N/A - Operación de Carga/Embarque',
+        noSello: 'PENDIENTE_ANDEN'
       });
+      this.sealList.set(['PENDIENTE_ANDEN']);
+      this.tempSealInput.set('');
     } else {
       remisionControl?.setValidators([Validators.required]);
       cartaControl?.clearValidators();
@@ -708,8 +854,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         docRemision: 'SI',
         docRemisionObs: '',
         docCartaPorte: 'NO',
-        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción'
+        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción',
+        noSello: ''
       });
+      if (this.sealList().some(s => s === 'PENDIENTE_ANDEN')) {
+        this.sealList.set([]);
+      }
     }
 
     cartaControl?.updateValueAndValidity();
@@ -722,9 +872,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected updateQrModalUrl(): void {
     const token = this.qrModalToken();
-    if (token) {
-      const baseUrl = this.getPublicBaseUrl();
+    const baseUrl = this.getPublicBaseUrl();
+    if (token && token !== 'PORTAL-DIRECTO') {
       this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
+    } else {
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin`);
     }
   }
 
@@ -978,12 +1130,68 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       .trim();
   }
 
+  protected handleIncomingPassToken(token: string): void {
+    if (!token) return;
+    const cleanToken = token.trim();
+
+    // 1. Si ya se solicitó un pase directamente por signal, procesarlo
+    const requested = this.smartNotification.requestedPassToLoad();
+    if (requested && (requested.token === cleanToken || requested.id === cleanToken)) {
+      this.setTab('REGISTRATION');
+      this.loadDriverSubmission(requested);
+      this.smartNotification.clearRequestedPassToLoad();
+      return;
+    }
+
+    // 2. Buscar en activePasses locales
+    const foundInActive = this.activePasses().find(p => p.token === cleanToken || p.id === cleanToken);
+    if (foundInActive) {
+      this.setTab('REGISTRATION');
+      this.loadDriverSubmission(foundInActive);
+      return;
+    }
+
+    // 3. Buscar en localStorage
+    try {
+      const localStr = localStorage.getItem('4g_local_passes');
+      if (localStr) {
+        const localPasses: any[] = JSON.parse(localStr);
+        const found = localPasses.find(p => p.token === cleanToken || p.id === cleanToken);
+        if (found) {
+          this.setTab('REGISTRATION');
+          this.loadDriverSubmission(found);
+          return;
+        }
+      }
+    } catch {}
+
+    // 4. Buscar en pendingDriverPasses de smartNotification
+    const foundInPending = this.smartNotification.pendingDriverPasses().find(p => p.token === cleanToken || p.id === cleanToken);
+    if (foundInPending) {
+      this.setTab('REGISTRATION');
+      this.loadDriverSubmission(foundInPending);
+      return;
+    }
+
+    // 5. Cargar desde el backend
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
+      next: (passes) => {
+        const match = (passes || []).find(p => p.token === cleanToken || p.id === cleanToken);
+        if (match) {
+          this.setTab('REGISTRATION');
+          this.loadDriverSubmission(match);
+        }
+      }
+    });
+  }
+
   protected loadDriverSubmission(pass: any): void {
     if (!pass) return;
 
+    this.activeTab.set('REGISTRATION');
+
     // 1. Enriquecer el objeto pass con la versión más completa guardada en localStorage.
-    //    El móvil siempre guarda todos los campos del chofer en localStorage con status SUBMITTED.
-    //    El objeto que llega desde activePasses() puede ser el del backend (PENDING_DRIVER, sin datos del chofer).
     let enrichedPass = { ...pass };
     try {
       const localStr = localStorage.getItem('4g_local_passes');
@@ -993,44 +1201,41 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           p.token === pass.token || p.id === pass.token || p.token === pass.id
         );
         if (localVersion) {
-          // Fusionar: el pase local (con datos del chofer) prevalece sobre el del backend en campos de datos
           enrichedPass = {
             ...enrichedPass,
             ...localVersion,
-            // Conservar identificadores del backend
             id: pass.id || localVersion.id,
             token: pass.token || localVersion.token,
-            // El status más avanzado gana: SUBMITTED > PENDING_DRIVER
             status: (localVersion.status === 'SUBMITTED' || pass.status === 'SUBMITTED') ? 'SUBMITTED' : (pass.status || localVersion.status || 'PENDING_DRIVER'),
           };
         }
       }
     } catch {
-      // Si localStorage falla, usar el objeto original
+      // Storage fallback
     }
 
-    // Usar el pase enriquecido desde aquí en adelante
     const passData = enrichedPass;
 
-    // 2. Limpiar estado previo del formulario para evitar datos residuales
+    // 2. Limpiar formulario previo
     this.resetFormFieldsOnly();
     this.activeToken.set(passData.token || pass.token);
 
-    // 3. Tipo de Operación (usar passData enriquecido)
-    const opVal = passData.operationType || passData.operacion || 'DESCARGA';
+    // 3. Tipo de Operación
+    const opVal = (passData.operationType || passData.operacion || 'DESCARGA').toUpperCase();
     this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
 
-    // 4. Extraer valores del pase enriquecido
+    // 4. Extraer valores del pase
     const driverNameVal     = passData.driverName     || passData.nombreOperador  || passData.operatorName   || passData.driver_name  || '';
     const tractorPlatesVal  = passData.tractorPlates  || passData.placasTracto    || passData.truckPlates    || passData.plates        || '';
     const boxPlatesVal      = passData.boxPlates      || passData.placasCaja      || passData.trailerPlates  || '';
-    const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '';
-    const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || '';
-    const ecoNumberVal      = passData.economicNumber || passData.noEcoTractor    || passData.ecoTractor     || '';
+    const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '53 Pies';
+    const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || 'Tráiler';
+    const ecoNumberVal      = passData.economicNumber || passData.noEcoTractor    || passData.ecoTractor     || passData.eco_tractor || '';
+    const boxEcoVal         = passData.boxEconomicNumber || passData.noEcoCaja    || passData.ecoCaja        || passData.box_economic_number || '';
     const docNumberVal      = passData.docNumber      || passData.remision        || passData.noCartaPorte   || '';
     const isSubmitted       = passData.status === 'SUBMITTED';
 
-    // 5. Resolver Cliente en el catálogo (Búsqueda tolerante por código, nombre o coincidencia difusa)
+    // 5. Resolver Cliente en el catálogo
     const rawClientCode = (passData.clientCode || '').trim();
     const rawClientName = (passData.clientName || passData.client || '').trim();
     let matchedClientCode = '';
@@ -1038,19 +1243,34 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     let matchedClientCustom = '';
 
     if (rawClientCode || rawClientName) {
-      const normInputCode = this.normalizeSearchStr(rawClientCode);
-      const normInputName = this.normalizeSearchStr(rawClientName);
+      const allClients = this.clients().length > 0 ? this.clients() : STANDARD_CLIENTS;
 
-      const foundClient = this.clients().find(c => {
-        const normCCode = this.normalizeSearchStr(c.code);
-        const normCName = this.normalizeSearchStr(c.name);
+      // 1. Coincidencia exacta por código o ID
+      let foundClient = allClients.find(c =>
+        rawClientCode && (c.code === rawClientCode || (c as any).id === rawClientCode)
+      );
 
-        if (c.code === rawClientCode) return true;
-        if (normInputCode && normCCode && normInputCode === normCCode) return true;
-        if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
-        if (normInputCode && normCName && (normCName.includes(normInputCode) || normInputCode.includes(normCName))) return true;
-        return false;
-      });
+      // 2. Coincidencia exacta por nombre (case-insensitive)
+      if (!foundClient && rawClientName) {
+        foundClient = allClients.find(c =>
+          c.name.trim().toLowerCase() === rawClientName.toLowerCase()
+        );
+      }
+
+      // 3. Coincidencia normalizada
+      if (!foundClient) {
+        const normInputCode = this.normalizeSearchStr(rawClientCode);
+        const normInputName = this.normalizeSearchStr(rawClientName);
+
+        foundClient = allClients.find(c => {
+          const normCCode = this.normalizeSearchStr(c.code);
+          const normCName = this.normalizeSearchStr(c.name);
+
+          if (normInputCode && normCCode && normInputCode === normCCode) return true;
+          if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
+          return false;
+        });
+      }
 
       if (foundClient) {
         matchedClientCode = foundClient.code;
@@ -1071,19 +1291,34 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     let matchedCarrierCustom = '';
 
     if (rawCarrierCode || rawCarrierName) {
-      const normInputCode = this.normalizeSearchStr(rawCarrierCode);
-      const normInputName = this.normalizeSearchStr(rawCarrierName);
+      const allCarriers = this.carrierLines().length > 0 ? this.carrierLines() : STANDARD_CARRIERS;
 
-      const foundCarrier = this.carrierLines().find(c => {
-        const normCCode = this.normalizeSearchStr(c.code);
-        const normCName = this.normalizeSearchStr(c.name);
+      // 1. Coincidencia exacta por código o ID
+      let foundCarrier = allCarriers.find(c =>
+        rawCarrierCode && (c.code === rawCarrierCode || (c as any).id === rawCarrierCode)
+      );
 
-        if (c.code === rawCarrierCode) return true;
-        if (normInputCode && normCCode && normInputCode === normCCode) return true;
-        if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
-        if (normInputCode && normCName && (normCName.includes(normInputCode) || normInputCode.includes(normCName))) return true;
-        return false;
-      });
+      // 2. Coincidencia exacta por nombre (case-insensitive)
+      if (!foundCarrier && rawCarrierName) {
+        foundCarrier = allCarriers.find(c =>
+          c.name.trim().toLowerCase() === rawCarrierName.toLowerCase()
+        );
+      }
+
+      // 3. Coincidencia normalizada
+      if (!foundCarrier) {
+        const normInputCode = this.normalizeSearchStr(rawCarrierCode);
+        const normInputName = this.normalizeSearchStr(rawCarrierName);
+
+        foundCarrier = allCarriers.find(c => {
+          const normCCode = this.normalizeSearchStr(c.code);
+          const normCName = this.normalizeSearchStr(c.name);
+
+          if (normInputCode && normCCode && normInputCode === normCCode) return true;
+          if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
+          return false;
+        });
+      }
 
       if (foundCarrier) {
         matchedCarrierCode = foundCarrier.code;
@@ -1104,23 +1339,49 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), boxDimensionsVal, 'Otra Medida']);
     }
 
-    // 8. Poblar formulario del guardia con datos del chofer
+    // 8. Poblar formulario del guardia con datos del chofer al 100%
     this.checkInForm.patchValue({
-      clientCode:          matchedClientCode,
-      client:              matchedClientName,
-      clientNameCustom:    matchedClientCustom,
-      carrierLineCode:     matchedCarrierCode,
-      carrierLine:         matchedCarrierName,
-      carrierLineCustom:   matchedCarrierCustom,
+      clientCode:          matchedClientCode || 'OTRO',
+      client:              matchedClientName || rawClientName,
+      clientNameCustom:    matchedClientCode === 'OTRO' ? (matchedClientCustom || rawClientName) : '',
+      carrierLineCode:     matchedCarrierCode || 'OTRO',
+      carrierLine:         matchedCarrierName || rawCarrierName,
+      carrierLineCustom:   matchedCarrierCode === 'OTRO' ? (matchedCarrierCustom || rawCarrierName) : '',
       nombreOperador:      driverNameVal,
       driverPhone:         passData.driverPhone || passData.telefonoChofer || passData.telefonoOperador || passData.phone || '',
       placasTracto:        tractorPlatesVal,
       noEcoTractor:        ecoNumberVal,
       placasCaja:          boxPlatesVal,
+      noEcoCaja:           boxEcoVal,
       medidasCaja:         boxDimensionsVal,
       tipoTransporte:      transportTypeVal,
       transportistaNombre: driverNameVal,
-      transportistaFirma:  isSubmitted || !!passData.driverSignature,
+      transportistaFirma:  true,
+      // 5 Puntos de Inspección Física con valores de CUMPLE por defecto
+      revInteriorCaja:     'SI',
+      revInteriorCajaObs:  '',
+      revDanosCaja:        'NO',
+      revDanosCajaObs:     '',
+      revDanosPuertas:     'NO',
+      revDanosPuertasObs:  '',
+      revOloresExtranos:   'NO',
+      revOloresExtranosObs:'',
+      revIndiciosPlagas:   'NO',
+      revIndiciosPlagasObs:'',
+      // EPP
+      eppZapatos:          'SI',
+      eppZapatosObs:       '',
+      eppCofia:            'SI',
+      eppCofiaObs:         '',
+      eppCubrebocas:       'SI',
+      eppCubrebocasObs:    '',
+      eppChaleco:          'SI',
+      eppChalecoObs:       '',
+      // Responsable Vigilancia
+      responsableVigilanciaNombre: this.checkInForm.get('responsableVigilanciaNombre')?.value || this.getLoggedGuardName(),
+      responsableVigilanciaFirma: true,
+      rampCode:            '',
+      rampNumber:          null
     });
 
     if (docNumberVal) {
@@ -1140,7 +1401,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
 
     // 9. Sellos de seguridad
-    if (passData.sealNumbers && Array.isArray(passData.sealNumbers) && passData.sealNumbers.length > 0) {
+    if (opVal === 'CARGA') {
+      this.sealList.set(['PENDIENTE_ANDEN']);
+      this.checkInForm.patchValue({ noSello: 'PENDIENTE_ANDEN' });
+    } else if (passData.sealNumbers && Array.isArray(passData.sealNumbers) && passData.sealNumbers.length > 0 && !passData.sealNumbers[0].includes('N/A')) {
       this.sealList.set(passData.sealNumbers);
       this.checkInForm.patchValue({ noSello: passData.sealNumbers[0] });
     } else if (passData.sealNumber || passData.noSello) {
@@ -1151,27 +1415,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.sealList.set([]);
     }
 
-    // 10. Datos del checklist (EPP e inspección de caja)
-    if (passData.checklistData) {
-      try {
-        const parsed = typeof passData.checklistData === 'string' ? JSON.parse(passData.checklistData) : passData.checklistData;
-        if (parsed?.epp) {
-          if (parsed.epp.zapatos)    this.checkInForm.patchValue({ eppZapatos:    parsed.epp.zapatos, eppZapatosObs: '' });
-          if (parsed.epp.cofia)      this.checkInForm.patchValue({ eppCofia:      parsed.epp.cofia, eppCofiaObs: '' });
-          if (parsed.epp.cubrebocas) this.checkInForm.patchValue({ eppCubrebocas: parsed.epp.cubrebocas, eppCubrebocasObs: '' });
-          if (parsed.epp.chaleco)    this.checkInForm.patchValue({ eppChaleco:    parsed.epp.chaleco, eppChalecoObs: '' });
-        }
-        if (parsed?.caja) {
-          if (parsed.caja.interior) this.checkInForm.patchValue({ revInteriorCaja:    parsed.caja.interior, revInteriorCajaObs: '' });
-          if (parsed.caja.danos)    this.checkInForm.patchValue({ revDanosCaja:       parsed.caja.danos, revDanosCajaObs: '' });
-          if (parsed.caja.puertas)  this.checkInForm.patchValue({ revDanosPuertas:    parsed.caja.puertas, revDanosPuertasObs: '' });
-          if (parsed.caja.olores)   this.checkInForm.patchValue({ revOloresExtranos:  parsed.caja.olores, revOloresExtranosObs: '' });
-          if (parsed.caja.plagas)   this.checkInForm.patchValue({ revIndiciosPlagas:  parsed.caja.plagas, revIndiciosPlagasObs: '' });
-        }
-      } catch {}
-    }
-
-    // 11. Toast de confirmación y cerrar panel
+    // 10. Toast de confirmación y cerrar panel
     this.showPassListModal.set(false);
     if (isSubmitted) {
       this.toast.success(`¡Todos los datos del Chofer (${driverNameVal || 'Transportista'}) fueron cargados en Caseta!`);
@@ -1179,11 +1423,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.toast.info(`Pase #${passData.token} vinculado. Puedes completar los campos pendientes manualmente.`);
     }
 
-    // 12. Desplazar suavemente a la Sección 1 del formulario para que el guardia visualice todo
+    // 11. Desplazar suavemente a la Sección 1 del formulario para que el guardia visualice todo
     this.scrollToFormSection('form-step-1', 'STEP1');
   }
 
-  // ── MÉTODOS DEL MODAL DE QR DE PRUEBA ─────────────────────────────────────
+  // ── MÉTODOS DEL MODAL DE QR (ESTÁTICO PERMANENTE POR DEFECTO) ─────────────
   protected openPassQr(pass: any, event?: Event): void {
     if (event) {
       event.stopPropagation();
@@ -1195,17 +1439,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected openQrModal(): void {
-    // Si ya existe un pase PENDING_DRIVER activo, reutilizarlo para no generar pases huérfanos
-    const existingPending = this.activePasses().find(p => p.status === 'PENDING_DRIVER');
-    if (existingPending) {
-      this.qrModalToken.set(existingPending.token);
-      this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${existingPending.token}`);
-      this.showQrModal.set(true);
-    } else if (!this.qrModalUrl()) {
-      this.generateDriverPass();
-    } else {
-      this.showQrModal.set(true);
-    }
+    const baseUrl = this.getPublicBaseUrl();
+    // Código QR permanente y estático por defecto apuntando a /carrier-checkin
+    this.qrModalToken.set('PORTAL-DIRECTO');
+    this.qrModalUrl.set(`${baseUrl}/carrier-checkin`);
+    this.showQrModal.set(true);
   }
 
   protected generateNewDriverPass(): void {
@@ -1307,6 +1545,15 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     };
 
     const token = pass.token || pass.generatedFolio;
+
+    // Registrar inmediatamente en el conjunto persistente de salidas
+    const exitedSet = this.movementsService.movementsApi.loadExitedPassTokens();
+    if (token) exitedSet.add(token.trim().toUpperCase());
+    if (pass.token) exitedSet.add(pass.token.trim().toUpperCase());
+    if (pass.generatedFolio) exitedSet.add(pass.generatedFolio.trim().toUpperCase());
+    if (pass.id) exitedSet.add(pass.id.trim().toUpperCase());
+    this.movementsService.movementsApi.saveExitedPassTokens(exitedSet);
+
     this.movementsService.movementsApi.checkOutPass(token, payload).subscribe({
       next: (res) => {
         this.isCheckingOut.set(false);
@@ -1419,7 +1666,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       revIndiciosPlagas: caja.plagas || item.revIndiciosPlagas || formVal.revIndiciosPlagas || 'NO',
       revIndiciosPlagasObs: item.revIndiciosPlagasObs || formVal.revIndiciosPlagasObs || '',
 
-      responsableVigilanciaNombre: item.responsableVigilanciaNombre || item.processedBy || formVal.responsableVigilanciaNombre || 'Guardia de Turno - Caseta Principal',
+      responsableVigilanciaNombre: item.responsableVigilanciaNombre || item.processedBy || formVal.responsableVigilanciaNombre || this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
       transportistaNombre: item.transportistaNombre || item.driverName || item.nombreOperador || formVal.transportistaNombre || formVal.nombreOperador || 'Chofer Transportista',
       driverSignature: item.driverSignature,
@@ -1559,6 +1806,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── MANEJO DE SELLOS DE SEGURIDAD ──────────────────────────────────────────
   protected addSeal(): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga (Se asignan en andén de salida)
+    }
     const val = this.tempSealInput().trim().toUpperCase();
     if (val && !this.sealList().includes(val)) {
       this.sealList.update((list) => [...list, val]);
@@ -1567,6 +1817,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected removeSeal(index: number): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga
+    }
     this.sealList.update((list) => list.filter((_, i) => i !== index));
   }
 
@@ -1653,7 +1906,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
       `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
       `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtranos}, Plagas=${formVal.revIndiciosPlagas}`,
-      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || 'Guardia'}`
+      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || this.getLoggedGuardName()}`
     ].join(' | ');
 
     const rCode = formVal.rampCode || null;
@@ -1674,6 +1927,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
       boxPlates: (formVal.placasCaja || '').toUpperCase(),
+      economicNumber: formVal.noEcoTractor || formVal.economicNumber || '',
+      noEcoTractor: formVal.noEcoTractor || formVal.economicNumber || '',
+      boxEconomicNumber: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+      noEcoCaja: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+      transportType: formVal.tipoTransporte || '',
+      medidasCaja: formVal.medidasCaja || '',
+      noCartaPorte: formVal.noCartaPorte || '',
       sealNumbers: seals,
       sealNumber: seals.join(', '),
       observations: inspectionObservations,
@@ -1684,25 +1944,30 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       const op = formVal.operacion || 'DESCARGA';
       const completePayload = {
         operationType: op,
-        clientCode: formVal.clientCode,
-        clientName: formVal.client,
-        carrierLineCode: formVal.carrierLineCode,
-        carrierLine: formVal.carrierLine,
-        rampNumber: rNum,
-        rampCode: rCode,
-        driverName: formVal.nombreOperador,
+        clientCode: formVal.clientCode || 'CLI-001',
+        clientName: formVal.client || 'Cliente General',
+        carrierLineCode: formVal.carrierLineCode || 'LINEA-01',
+        carrierLine: formVal.carrierLine || 'Transportista General',
+        rampNumber: (rNum != null && rNum > 0) ? rNum : 0,
+        rampCode: rCode || undefined,
+        driverName: formVal.nombreOperador || formVal.transportistaNombre || 'Operador Transportista',
         driverPhone: formVal.driverPhone || '',
-        tractorPlates: (formVal.placasTracto || '').toUpperCase().trim(),
-        boxPlates: (formVal.placasCaja || '').toUpperCase().trim(),
-        noEcoTractor: formVal.noEcoTractor,
-        transportType: formVal.tipoTransporte,
-        boxDimensions: formVal.medidasCaja,
-        docNumber: op === 'CARGA' ? formVal.noCartaPorte : formVal.remision,
-        docDate: formVal.fecha,
-        receptionTime: formVal.horaEntrada,
-        sealNumbers: seals,
+        tractorPlates: (formVal.placasTracto || 'S/P').toUpperCase().trim(),
+        boxPlates: (formVal.placasCaja || 'S/P').toUpperCase().trim(),
+        noEcoTractor: formVal.noEcoTractor || 'S/N',
+        economicNumber: formVal.noEcoTractor || formVal.economicNumber || 'S/N',
+        boxEconomicNumber: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+        noEcoCaja: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+        transportType: formVal.tipoTransporte || 'Caja Seca',
+        boxDimensions: formVal.medidasCaja || '53 Pies',
+        docNumber: op === 'CARGA' 
+          ? (formVal.noCartaPorte || formVal.remision || 'CP-' + this.activeToken()) 
+          : (formVal.remision || formVal.noCartaPorte || 'REM-' + this.activeToken()),
+        docDate: formVal.fecha || this.getCurrentDateString(),
+        receptionTime: formVal.horaEntrada || this.getCurrentTimeString(),
+        sealNumbers: seals.length > 0 ? seals : ['SEAL-4G-001'],
         observations: inspectionObservations,
-        guardNotes: formVal.guardNotes
+        guardNotes: formVal.guardNotes || ''
       };
 
       this.movementsService.movementsApi.completePassCheckin(this.activeToken()!, completePayload).subscribe({
@@ -1733,8 +1998,94 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.movementsService.reloadOutbounds();
         },
         error: (err) => {
-          this.isSaving.set(false);
           const msg = err?.error?.message || err?.message || 'Error al completar el pase en el servidor';
+
+          // Manejo resiliente: Si el pase ya fue procesado y completado previamente
+          if (msg.includes('ya fue completado') || msg.includes('COMPLETED')) {
+            this.isSaving.set(false);
+            const matchFolio = msg.match(/folio:\s*([A-Za-z0-9-]+)/i);
+            const resolvedFolio = matchFolio ? matchFolio[1] : (this.activeToken() || 'OK');
+            this.createdFolio.set(resolvedFolio);
+            this.assignedRampLabel.set(rDisplay);
+            this.resetForm();
+            this.toast.success(`Pase procesado exitosamente. Folio #${resolvedFolio} (Rampa: ${rDisplay})`, 4500);
+            this.scrollToTop();
+            this.reloadAllData();
+            return;
+          }
+
+          // Fallback resiliente: Si el pase no fue encontrado en BD (token local o pre-registro directo), registrar en WMS
+          if (msg.includes('no encontrado') || msg.includes('not found') || err?.status === 404 || this.activeToken()?.startsWith('PASS-LOCAL')) {
+            const currentPassToken = this.activeToken();
+            if (op === 'CARGA') {
+              this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
+                next: (outbound) => {
+                  this.isSaving.set(false);
+                  this.createdFolio.set(outbound.folio);
+                  this.assignedRampLabel.set(rDisplay);
+                  if (currentPassToken) {
+                    this.movementsService.movementsApi.deletePass(currentPassToken);
+                  }
+                  const printSnapshot = {
+                    ...formVal,
+                    sealNumbers: [...seals],
+                    checklistData: inspectionObservations,
+                    generatedFolio: outbound.folio,
+                    folio: outbound.folio,
+                    rampCode: rDisplay
+                  };
+                  this.lastCompletedPrintItem.set(printSnapshot);
+                  this.resetForm();
+                  this.toast.success(`¡Carga / Salida autorizada con éxito! Folio #${outbound.folio} (Rampa: ${rDisplay})`, 4500);
+                  this.scrollToTop();
+                  this.reloadAllData();
+                  this.movementsService.reloadOutbounds();
+                },
+                error: (directErr) => {
+                  this.isSaving.set(false);
+                  const dMsg = directErr?.error?.message || directErr?.message || msg;
+                  this.errorMessage.set(dMsg);
+                  this.toast.error(dMsg, 4500);
+                  this.scrollToTop();
+                }
+              });
+            } else {
+              this.movementsService.createCheckInBackend(checkInData).subscribe({
+                next: (header) => {
+                  this.isSaving.set(false);
+                  this.createdFolio.set(header.folio);
+                  this.assignedRampLabel.set(rDisplay);
+                  if (currentPassToken) {
+                    this.movementsService.movementsApi.deletePass(currentPassToken);
+                  }
+                  const printSnapshot = {
+                    ...formVal,
+                    sealNumbers: [...seals],
+                    checklistData: inspectionObservations,
+                    generatedFolio: header.folio,
+                    folio: header.folio,
+                    rampCode: rDisplay
+                  };
+                  this.lastCompletedPrintItem.set(printSnapshot);
+                  this.resetForm();
+                  this.toast.success(`¡Recepción / Descarga autorizada con éxito! Folio #${header.folio} (Rampa: ${rDisplay})`, 4500);
+                  this.scrollToTop();
+                  this.reloadAllData();
+                  this.movementsService.reloadReceptions();
+                },
+                error: (directErr) => {
+                  this.isSaving.set(false);
+                  const dMsg = directErr?.error?.message || directErr?.message || msg;
+                  this.errorMessage.set(dMsg);
+                  this.toast.error(dMsg, 4500);
+                  this.scrollToTop();
+                }
+              });
+            }
+            return;
+          }
+
+          this.isSaving.set(false);
           this.errorMessage.set(msg);
           this.toast.error(msg, 4500);
           this.scrollToTop();
@@ -1838,6 +2189,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       placasTracto: '',
       noEcoTractor: '',
       placasCaja: '',
+      noEcoCaja: '',
       medidasCaja: '',
       noSello: '',
       tipoTransporte: '',
@@ -1863,7 +2215,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       revOloresExtranosObs: '',
       revIndiciosPlagas: 'NO',
       revIndiciosPlagasObs: '',
-      responsableVigilanciaNombre: 'Guardia de Turno - Caseta Principal',
+      responsableVigilanciaNombre: this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
       transportistaNombre: '',
       transportistaFirma: false
@@ -1936,5 +2288,40 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // ── HELPERS ESTATUS DE MANIOBRA & CANDADO DE SALIDA (SDOP) ──────────────────
+  protected getWarehouseStatusLabel(item: any): string {
+    if (!item) return 'En Maniobra';
+    if (item.isReadyForExit) return 'Autorizado / Listo Salida';
+    const isCarga = (item.operacion === 'CARGA' || item.operationType === 'CARGA');
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+
+    if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'Autorizado / Listo Salida';
+    if (ws === 'REGISTERED' || ws === 'PENDING') return 'En Patio / Espera';
+    if (ws === 'ASSIGNED') return isCarga ? 'Asignado a Rampa' : 'Asignado a Rampa';
+    if (ws === 'IN_PROGRESS') return isCarga ? 'Cargando en Andén' : 'Descargando en Andén';
+    if (ws === 'LOADED') return 'Carga Concluida / Auditoría';
+    if (ws === 'DISCHARGED') return 'Descarga Concluida / Auditoría';
+    return isCarga ? 'En Proceso de Carga' : 'En Maniobra';
+  }
+
+  protected getWarehouseStatusIcon(item: any): string {
+    if (!item) return 'sync';
+    if (item.isReadyForExit) return 'verified';
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+    if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'verified';
+    if (ws === 'REGISTERED' || ws === 'PENDING') return 'hourglass_empty';
+    if (ws === 'ASSIGNED') return 'dock';
+    if (ws === 'IN_PROGRESS') return 'sync';
+    if (ws === 'LOADED' || ws === 'DISCHARGED') return 'fact_check';
+    return 'pending';
+  }
+
+  protected getWarehouseLockTooltip(item: any): string {
+    const isCarga = (item?.operacion === 'CARGA' || item?.operationType === 'CARGA');
+    return isCarga
+      ? 'Maniobra de carga en proceso en almacén. Requiere autorización y cierre del Líder de Salidas antes de dar Check-Out.'
+      : 'Maniobra de descarga en proceso en almacén. Requiere autorización y cierre del Líder de Recepción antes de dar Check-Out.';
   }
 }

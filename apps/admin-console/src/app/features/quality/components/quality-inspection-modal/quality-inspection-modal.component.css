@@ -162,6 +162,7 @@
     transparent 360deg
   ) !important;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
   -webkit-mask-composite: xor !important;
   mask-composite: exclude !important;
   pointer-events: none !important;

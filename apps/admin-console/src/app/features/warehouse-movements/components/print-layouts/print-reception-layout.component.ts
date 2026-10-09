@@ -61,6 +61,11 @@ import { AuthState } from '../../../../core/auth/auth.state';
           </div>
 
           <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
+            <span class="font-bold text-slate-700 shrink-0">NO. ECO (TRACTO / CAJA):</span>
+            <span class="font-mono font-black text-black text-right break-words flex-1 min-w-0 leading-tight text-amber-950">{{ economicNumber.toUpperCase() }} / {{ boxEconomicNumber.toUpperCase() }}</span>
+          </div>
+
+          <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">PLACAS (TRACTO / CAJA):</span>
             <span class="font-mono font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (reception.checkIn.tractorPlates || '-').toUpperCase() }} / {{ (reception.checkIn.boxPlates || '-').toUpperCase() }}</span>
           </div>
@@ -229,6 +234,32 @@ export class PrintReceptionLayoutComponent {
       this.authState.currentUser()?.fullName ||
       'OPERADOR WMS'
     ).toUpperCase();
+  }
+
+  get economicNumber(): string {
+    if (!this.reception) return '-';
+    return (
+      this.reception.checkIn?.economicNumber ||
+      this.reception.checkIn?.noEcoTractor ||
+      (this.reception as any).economicNumber ||
+      (this.reception as any).noEcoTractor ||
+      (this.reception as any).preCheckin?.economicNumber ||
+      (this.reception as any).preCheckin?.noEcoTractor ||
+      '-'
+    );
+  }
+
+  get boxEconomicNumber(): string {
+    if (!this.reception) return '-';
+    return (
+      this.reception.checkIn?.boxEconomicNumber ||
+      this.reception.checkIn?.noEcoCaja ||
+      (this.reception as any).boxEconomicNumber ||
+      (this.reception as any).noEcoCaja ||
+      (this.reception as any).preCheckin?.boxEconomicNumber ||
+      (this.reception as any).preCheckin?.noEcoCaja ||
+      '-'
+    );
   }
 
   get rampDisplay(): string {

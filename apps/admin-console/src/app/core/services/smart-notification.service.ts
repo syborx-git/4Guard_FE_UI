@@ -55,8 +55,35 @@ export class SmartNotificationService {
   public readonly pendingDriverPassesCount = computed(() => this.pendingDriverPasses().length);
   public readonly hasNewDriverSubmission = signal<boolean>(false);
 
+  // Rampas Asignadas por Almacén pendientes de acceso en Caseta
+  public readonly pendingRampAssignments = signal<Array<{
+    id: string;
+    folio: string;
+    rampNumber: number | string;
+    client: string;
+    driverName: string;
+    tractorPlates: string;
+    docNumber?: string;
+    carrierLine?: string;
+    time: string;
+    timestamp: Date;
+  }>>([]);
+  public readonly pendingRampAssignmentsCount = computed(() => this.pendingRampAssignments().length);
+  public readonly hasNewRampAssignment = signal<boolean>(false);
+
   // Última notificación despachada
   public readonly latestNotification = signal<SmartNotification | null>(null);
+
+  // Pase seleccionado para ser cargado automáticamente en el formulario de Caseta
+  public readonly requestedPassToLoad = signal<any | null>(null);
+
+  public requestLoadDriverPass(pass: any): void {
+    this.requestedPassToLoad.set(pass);
+  }
+
+  public clearRequestedPassToLoad(): void {
+    this.requestedPassToLoad.set(null);
+  }
 
   /**
    * Determina si el usuario logueado actualmente debe recibir la notificación
@@ -149,22 +176,47 @@ export class SmartNotificationService {
     // Agregar al historial global
     this._notifications.update(list => [notification, ...list.slice(0, 49)]);
 
+    // Registrar en cola de rampas si aplica
+    if (notification.category === 'SECURITY' && notification.title.includes('Rampa') && notification.data) {
+      const d = notification.data;
+      const checkIn = d.checkIn || {};
+      const rampNum = checkIn.rampNumber || d.rampNumber || '';
+      if (rampNum) {
+        const rampAlert = {
+          id: notification.id,
+          folio: String(d.folio || notification.referenceFolio || 'S/F'),
+          rampNumber: rampNum,
+          client: checkIn.client || d.client || 'Cliente',
+          driverName: checkIn.driverName || d.driverName || 'Chofer Transportista',
+          tractorPlates: checkIn.tractorPlates || d.tractorPlates || 'S/P',
+          docNumber: checkIn.docNumber || d.docNumber || '',
+          carrierLine: checkIn.carrierLine || d.carrierLine || '',
+          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date()
+        };
+        this.pendingRampAssignments.update(list => [rampAlert, ...list.filter(item => item.folio !== rampAlert.folio)]);
+        this.hasNewRampAssignment.set(true);
+      }
+    }
+
     // Verificar si aplica al usuario logueado en este momento
     if (this.isRelevantForCurrentUser(notification)) {
       this.latestNotification.set(notification);
       this.playChime(notification.severity);
-
-      // Toast feedback contextual
-      if (notification.severity === 'CRITICAL' || notification.severity === 'WARNING') {
-        this.toast.warning(`${notification.title}: ${notification.message}`, 6000);
-      } else {
-        this.toast.info(`${notification.title}: ${notification.message}`, 6000);
-      }
-
       return notification;
     }
 
     return null;
+  }
+
+  /**
+   * Descarta una alerta de asignación de rampa una vez atendida por el oficial de Caseta.
+   */
+  public dismissRampAssignment(folio: string): void {
+    this.pendingRampAssignments.update(list => list.filter(item => item.folio !== folio && item.id !== folio));
+    if (this.pendingRampAssignments().length === 0) {
+      this.hasNewRampAssignment.set(false);
+    }
   }
 
   /**
