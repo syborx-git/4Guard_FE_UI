@@ -1354,8 +1354,10 @@
                       </span>
                     } @else {
                       <span class="cell-status-maneuver">
-                        <span class="material-symbols-outlined text-sm text-amber-800 animate-spin">sync</span>
-                        <span>{{ item.warehouseStatus === 'ASSIGNED' ? 'Asignado a Rampa' : (item.warehouseStatus || 'En Maniobra') }}</span>
+                        <span class="material-symbols-outlined text-sm text-amber-800" [ngClass]="{ 'animate-spin': item.warehouseStatus === 'IN_PROGRESS' }">
+                          {{ getWarehouseStatusIcon(item) }}
+                        </span>
+                        <span>{{ getWarehouseStatusLabel(item) }}</span>
                       </span>
                     }
                   </td>
@@ -1383,11 +1385,11 @@
                         </button>
                       } @else {
                         <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-slate-800 border border-slate-400 cursor-not-allowed select-none"
-                          title="Maniobra en proceso en almacén. Requiere autorización del Líder antes de dar salida."
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-not-allowed select-none opacity-80"
+                          [title]="getWarehouseLockTooltip(item)"
                         >
                           <span class="material-symbols-outlined text-xs">lock</span>
-                          <span>En Maniobra</span>
+                          <span>{{ item.operacion === 'CARGA' || item.operationType === 'CARGA' ? 'En Carga' : 'En Descarga' }}</span>
                         </span>
                       }
                     </div>

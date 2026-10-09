@@ -430,23 +430,7 @@ export class WarehouseMovementsService {
     this.movementsApi.getTransfers().subscribe({
       next: (transfers: any) => {
         this.transfersSignal.set(
-          (transfers || []).map((t: any) => ({
-            id: t.id,
-            folio: t.folio,
-            status: t.status,
-            forkliftOperator: t.forkliftOperatorName || '',
-            forkliftOperatorId: t.forkliftOperatorId,
-            originLocation: t.originLocationCode || '',
-            destinationLocation: t.destinationLocationCode || '',
-            reasonId: t.reasonCode,
-            reasonLabel: t.reasonLabel || t.reasonCode,
-            pallets: [],
-            totalPallets: t.totalPallets || 0,
-            totalPieces: t.totalPieces || 0,
-            distinctSkus: t.distinctSkus || 0,
-            transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
-            transferredBy: t.createdBy || '',
-          }))
+          (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t))
         );
       },
       error: () => {},
@@ -663,23 +647,7 @@ export class WarehouseMovementsService {
     this.movementsApi.getTransfers().subscribe({
       next: (transfers: any) => {
         this.transfersSignal.set(
-          (transfers || []).map((t: any) => ({
-            id: t.id,
-            folio: t.folio,
-            status: t.status,
-            forkliftOperator: t.forkliftOperatorName || '',
-            forkliftOperatorId: t.forkliftOperatorId,
-            originLocation: t.originLocationCode || '',
-            destinationLocation: t.destinationLocationCode || '',
-            reasonId: t.reasonCode,
-            reasonLabel: t.reasonLabel || t.reasonCode,
-            pallets: [],
-            totalPallets: t.totalPallets || 0,
-            totalPieces: t.totalPieces || 0,
-            distinctSkus: t.distinctSkus || 0,
-            transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : '',
-            transferredBy: t.createdBy || '',
-          }))
+          (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t))
         );
       },
       error: () => {},
@@ -1325,12 +1293,12 @@ export class WarehouseMovementsService {
       rampId: rampId,
       rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
       rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
-      transportType: 'TRAILER',
+      transportType: (data.transportType || 'TRAILER').toUpperCase(),
       driverName: data.driverName,
       tractorPlates: data.tractorPlates,
       boxPlates: data.boxPlates,
-      economicNumber: '',
-      boxEconomicNumber: '',
+      economicNumber: data.economicNumber || data.noEcoTractor || (data as any).ecoTractor || '',
+      boxEconomicNumber: data.boxEconomicNumber || data.noEcoCaja || (data as any).ecoCaja || '',
       sealNumber: seals.join(', '),
       remisionNo: data.docNumber,
       observations: data.observations || '',
@@ -1354,11 +1322,11 @@ export class WarehouseMovementsService {
           rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
           rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
           driverName: data.driverName,
-          economicNumber: '',
-          boxEconomicNumber: '',
+          economicNumber: res.economicNumber || data.economicNumber || data.noEcoTractor || '',
+          boxEconomicNumber: res.boxEconomicNumber || data.boxEconomicNumber || data.noEcoCaja || '',
           tractorPlates: data.tractorPlates,
           boxPlates: data.boxPlates,
-          transportType: (res.transportType || 'TRAILER') as TransportType,
+          transportType: (res.transportType || data.transportType || 'TRAILER') as TransportType,
           sealNumber: seals.join(', '),
           remisionNo: res.remisionNo || data.docNumber,
           observations: data.observations || '',
@@ -1492,6 +1460,10 @@ export class WarehouseMovementsService {
         driverName: r.driverName || r.checkIn?.driverName || '',
         tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
         boxPlates: r.boxPlates || r.checkIn?.boxPlates || '',
+        economicNumber: r.economicNumber || r.noEcoTractor || r.checkIn?.economicNumber || r.checkIn?.noEcoTractor || (r.preCheckin ? (r.preCheckin.economicNumber || r.preCheckin.noEcoTractor) : '') || '',
+        noEcoTractor: r.noEcoTractor || r.economicNumber || r.checkIn?.noEcoTractor || r.checkIn?.economicNumber || (r.preCheckin ? (r.preCheckin.noEcoTractor || r.preCheckin.economicNumber) : '') || '',
+        boxEconomicNumber: r.boxEconomicNumber || r.noEcoCaja || r.checkIn?.boxEconomicNumber || r.checkIn?.noEcoCaja || (r.preCheckin ? (r.preCheckin.boxEconomicNumber || r.preCheckin.noEcoCaja) : '') || '',
+        noEcoCaja: r.noEcoCaja || r.boxEconomicNumber || r.checkIn?.noEcoCaja || r.checkIn?.boxEconomicNumber || (r.preCheckin ? (r.preCheckin.boxEconomicNumber || r.preCheckin.noEcoCaja) : '') || '',
         sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers.join(', ') : (r.sealNumber || r.checkIn?.sealNumber || ''),
         sealNumbers: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers : (r.sealNumber ? [r.sealNumber] : (r.checkIn?.sealNumbers || [])),
       },
@@ -1544,12 +1516,12 @@ export class WarehouseMovementsService {
       forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
       forkliftOperatorId: o.forkliftOperatorId || '',
       driverName: o.driverName || '',
-      economicNumber: o.economicNumber || '',
-      boxEconomicNumber: o.boxEconomicNumber || '',
+      economicNumber: o.economicNumber || o.noEcoTractor || o.ecoTractor || (o.preCheckin ? (o.preCheckin.economicNumber || o.preCheckin.noEcoTractor) : '') || '',
+      boxEconomicNumber: o.boxEconomicNumber || o.noEcoCaja || o.ecoCaja || (o.preCheckin ? o.preCheckin.boxEconomicNumber : '') || '',
       tractorPlates: o.tractorPlates || '',
       boxPlates: o.boxPlates || '',
       transportType: o.transportType || 'TRAILER',
-      sealNumber: o.sealNumber || '',
+      sealNumber: o.sealNumber || (o.preCheckin?.sealNumbers ? o.preCheckin.sealNumbers.join(', ') : '') || '',
       remisionNo: o.remisionNo || '',
       observations: o.observations || '',
       items: (o.items || []).map((it: any, idx: number) => ({
@@ -1583,6 +1555,53 @@ export class WarehouseMovementsService {
     if (!folio) return undefined;
     const clean = folio.trim();
     return this.outboundsSignal().find((o) => o.folio?.trim() === clean || o.id?.trim() === clean);
+  }
+
+  // Mapea un TransferResponse a WarehouseTransfer completo
+  mapTransferResponseToHeader(t: any): WarehouseTransfer {
+    if (!t) return {} as WarehouseTransfer;
+    return {
+      id: t.id,
+      folio: t.folio || '',
+      status: t.status || 'COMPLETED',
+      forkliftOperator: t.forkliftOperatorName || t.forkliftOperator || '',
+      forkliftOperatorId: t.forkliftOperatorId || '',
+      originLocation: t.originLocationCode || t.originLocation || '',
+      destinationLocation: t.destinationLocationCode || t.destinationLocation || '',
+      reasonId: t.reasonCode || t.reasonId,
+      reasonLabel: t.reasonLabel || t.reasonCode || '',
+      observations: t.observations || '',
+      pallets: (t.items || []).map((it: any, idx: number) => ({
+        id: it.id || it.itemId || `pal-${idx + 1}`,
+        palletNumber: it.palletNumber || idx + 1,
+        palletCode: it.palletCode || it.sscc || '--',
+        productId: it.skuCode || it.productId || '',
+        description: it.skuDescription || it.productName || 'Producto Reubicado',
+        pieces: it.pieces != null ? Number(it.pieces) : (it.quantity != null ? Number(it.quantity) : 0),
+        lotNumber: it.lotNumber || it.batchNumber || '--',
+        expirationDate: it.expirationDate ? String(it.expirationDate) : '--',
+        palletTypeId: it.palletTypeId || 'ESTANDAR',
+        palletTypeLabel: it.palletTypeLabel || 'Estándar',
+        observations: it.observations || '',
+        status: 'TRANSFERRED',
+        docNumber: it.docNumber || it.remisionNo || '',
+      })),
+      totalPallets: t.totalPallets || (t.items ? t.items.length : 0),
+      totalPieces: t.totalPieces != null ? Number(t.totalPieces) : (t.items ? t.items.reduce((acc: number, it: any) => acc + (it.pieces || it.quantity || 0), 0) : 0),
+      distinctSkus: t.distinctSkus || 0,
+      transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : (t.transferredAt || ''),
+      transferredBy: t.createdBy || t.transferredBy || 'Usuario en Sesión',
+      cancellationReason: t.cancellationReason || '',
+      cancelledAt: t.cancelledAt ? new Date(t.cancelledAt).toLocaleString('es-MX') : undefined,
+      cancelledBy: t.cancelledBy || '',
+    };
+  }
+
+  // Busca un traspaso por Folio o ID
+  findTransferByFolio(folio: string): WarehouseTransfer | undefined {
+    if (!folio) return undefined;
+    const clean = folio.trim();
+    return this.transfersSignal().find((t) => t.folio?.trim() === clean || t.id?.trim() === clean);
   }
 
   // Persiste avances de descarga (parámetros y tarimas) en el Backend (wms.warehouse_reception_pallets)
@@ -1683,6 +1702,10 @@ export class WarehouseMovementsService {
     const payload = {
       tractorPlates: checkIn.tractorPlates,
       boxPlates: checkIn.boxPlates,
+      economicNumber: checkIn.economicNumber || checkIn.noEcoTractor || null,
+      noEcoTractor: checkIn.noEcoTractor || checkIn.economicNumber || null,
+      boxEconomicNumber: checkIn.boxEconomicNumber || checkIn.noEcoCaja || null,
+      noEcoCaja: checkIn.noEcoCaja || checkIn.boxEconomicNumber || null,
       driverName: checkIn.driverName,
       docNumber: checkIn.docNumber,
       docDate: checkIn.docDate || null,

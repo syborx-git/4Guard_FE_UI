@@ -85,12 +85,16 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public readonly isCurrentlyOnReceivingPage = computed(() => {
     const url = this.currentUrl();
     return url.includes('/warehouse-movements/receiving') || 
-           url.includes('/receiving') || 
-           (url.startsWith('/warehouse-movements') && !url.includes('/outbound') && !url.includes('/transfers'));
+           url.includes('/receiving');
   });
 
   public readonly isCurrentlyOnQualityPage = computed(() => {
     return this.currentUrl().startsWith('/quality');
+  });
+
+  public readonly isCurrentlyOnTransferPage = computed(() => {
+    const url = this.currentUrl();
+    return url.includes('/warehouse-movements/transfers') || url.includes('/transfers');
   });
 
   public readonly isSecurityUser = computed(() => {
@@ -118,10 +122,16 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     ) || this.isCurrentlyOnQualityPage();
   });
 
-  public readonly isSecurityContext = computed(() => this.isCurrentlyOnSecurityPage() || (this.isSecurityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage()));
-  public readonly isQualityContext = computed(() => this.isCurrentlyOnQualityPage() || (this.isQualityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage()));
+  public readonly isSecurityContext = computed(() => this.isCurrentlyOnSecurityPage() || (this.isSecurityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage() && !this.isCurrentlyOnQualityPage()));
+  public readonly isQualityContext = computed(() => this.isCurrentlyOnQualityPage() || (this.isQualityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage() && !this.isCurrentlyOnSecurityPage()));
   public readonly isOutboundContext = computed(() => this.isCurrentlyOnOutboundPage());
-  public readonly isReceivingContext = computed(() => this.isCurrentlyOnReceivingPage() || (!this.isSecurityContext() && !this.isQualityContext() && !this.isOutboundContext()));
+  public readonly isReceivingContext = computed(() => this.isCurrentlyOnReceivingPage());
+  public readonly isGeneralContext = computed(() =>
+    !this.isSecurityContext() &&
+    !this.isQualityContext() &&
+    !this.isOutboundContext() &&
+    !this.isReceivingContext()
+  );
 
   public readonly showFooterButton = computed(() => {
     if (this.isSecurityContext()) {
@@ -133,7 +143,10 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     if (this.isOutboundContext()) {
       return !this.isCurrentlyOnOutboundPage();
     }
-    return !this.isCurrentlyOnReceivingPage();
+    if (this.isReceivingContext()) {
+      return !this.isCurrentlyOnReceivingPage();
+    }
+    return true;
   });
 
   // ── Total de Notificaciones Visibles según Contexto del Usuario ──
@@ -143,17 +156,16 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     if (this.isOutboundContext()) return this.pendingOutboundsCount();
     if (this.isReceivingContext()) return this.pendingReceptionsCount();
     
-    // Fallback general si está en dashboard u otra ruta neutra
-    if (this.pendingReceptionsCount() > 0) return this.pendingReceptionsCount();
-    if (this.pendingOutboundsCount() > 0) return this.pendingOutboundsCount();
-    return 0;
+    // Contexto General / Dashboard / Cambio de Almacén -> Suma de todas las operaciones pendientes (Pre-Recepciones + Pre-Salidas)
+    return this.pendingReceptionsCount() + this.pendingOutboundsCount();
   });
 
   public readonly hasNewArrivalBeacon = computed(() => {
     if (this.isSecurityContext()) return this.hasNewUnseenDriverPass() || this.hasNewRampAssignment();
     if (this.isQualityContext()) return false;
     if (this.isOutboundContext()) return this.hasNewUnseenOutbound();
-    return this.hasNewUnseenPreReception();
+    if (this.isReceivingContext()) return this.hasNewUnseenPreReception();
+    return this.hasNewUnseenPreReception() || this.hasNewUnseenOutbound();
   });
 
   private autoCloseTimeoutId: any = null;

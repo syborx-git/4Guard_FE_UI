@@ -58,7 +58,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
           <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">LÍNEA TRANSPORTADORA:</span>
-            <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.carrierName || '').toUpperCase() }}</span>
+            <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.carrierName || '-').toUpperCase() }}</span>
           </div>
 
           <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
@@ -68,12 +68,12 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
           <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">PLACAS (TRACTO / CAJA):</span>
-            <span class="font-mono font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.tractorPlates || '-').toUpperCase() }} / {{ (outbound.boxPlates || '-').toUpperCase() }}</span>
+            <span class="font-mono font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ formattedPlates }}</span>
           </div>
 
           <div class="flex justify-between items-start gap-1.5">
-            <span class="font-bold text-slate-700 shrink-0">MONTACARGUISTA / RAMPA:</span>
-            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.forkliftOperator || 'OPERADOR WMS').toUpperCase() }} {{ outbound.rampNumber ? '(RAMPA ' + outbound.rampNumber + ')' : '' }}</span>
+            <span class="font-bold text-slate-700 shrink-0">NO. ECO (TRACTO / CAJA):</span>
+            <span class="font-mono font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ formattedEcoNumbers }}</span>
           </div>
         </div>
 
@@ -90,23 +90,23 @@ import { AuthState } from '../../../../core/auth/auth.state';
           </div>
 
           <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
-            <span class="font-bold text-slate-700 shrink-0">CLIENTE:</span>
-            <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.clientName || '').toUpperCase() }}</span>
+            <span class="font-bold text-slate-700 shrink-0">CLIENTE / DESTINO:</span>
+            <span class="font-black text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.clientName || '').toUpperCase() }} {{ outbound.destinationName ? ' — ' + (outbound.destinationName).toUpperCase() : '' }}</span>
           </div>
 
           <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
-            <span class="font-bold text-slate-700 shrink-0">DESTINO:</span>
-            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.destinationName || '-').toUpperCase() }}</span>
+            <span class="font-bold text-slate-700 shrink-0">TIPO TRANSPORTE / RAMPA:</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ formatTransportType(outbound.transportType).toUpperCase() }} {{ outbound.rampNumber ? '(RAMPA ' + outbound.rampNumber + ')' : '' }}</span>
           </div>
 
           <div class="flex justify-between items-start gap-1.5 border-b border-slate-200 pb-0.5">
-            <span class="font-bold text-slate-700 shrink-0">TIPO TRANSPORTE / NO. ECO:</span>
-            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ formatTransportType(outbound.transportType).toUpperCase() }} / {{ outbound.economicNumber || '-' }}</span>
+            <span class="font-bold text-slate-700 shrink-0">MONTACARGUISTA:</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight">{{ (outbound.forkliftOperator || 'OPERADOR WMS').toUpperCase() }}</span>
           </div>
 
           <div class="flex justify-between items-center gap-1.5 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
             <span class="font-bold text-[9px] uppercase text-amber-900 shrink-0">SELLOS DE SEGURIDAD:</span>
-            <span class="font-mono font-black text-[9.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ sealsList.join(', ') || 'N/A' }}</span>
+            <span class="font-mono font-black text-[9.5px] text-amber-950 text-right break-words flex-1 min-w-0">{{ sealsDisplay }}</span>
           </div>
         </div>
 
@@ -227,9 +227,69 @@ export class PrintDispatchLayoutComponent {
     return this.outbound.remisionNo || '4GUARD-OFICIAL';
   }
 
-  get sealsList(): string[] {
-    if (!this.outbound?.sealNumber || this.outbound.sealNumber === 'N/A') return ['N/A'];
-    return this.outbound.sealNumber.split(/[,;\s]+/).filter(Boolean);
+  get formattedPlates(): string {
+    const ob = this.outbound;
+    if (!ob) return '- / -';
+    const tracto = (ob.tractorPlates || (ob as any).tractor_plates || (ob as any).plates || '-').toUpperCase().trim();
+    const caja = (ob.boxPlates || (ob as any).box_plates || '-').toUpperCase().trim();
+    return `${tracto || '-'} / ${caja || '-'}`;
+  }
+
+  get formattedEcoNumbers(): string {
+    const ob = this.outbound;
+    if (!ob) return '- / -';
+    const tracto = (
+      ob.economicNumber ||
+      (ob as any).noEcoTractor ||
+      (ob as any).ecoTractor ||
+      (ob as any).eco_tractor ||
+      (ob as any).economic_number ||
+      (ob as any).preCheckin?.economicNumber ||
+      (ob as any).preCheckin?.noEcoTractor ||
+      '-'
+    ).toUpperCase().trim();
+
+    const caja = (
+      ob.boxEconomicNumber ||
+      (ob as any).noEcoCaja ||
+      (ob as any).ecoCaja ||
+      (ob as any).box_economic_number ||
+      (ob as any).eco_caja ||
+      (ob as any).preCheckin?.boxEconomicNumber ||
+      (ob as any).preCheckin?.noEcoCaja ||
+      '-'
+    ).toUpperCase().trim();
+
+    return `${tracto || '-'} / ${caja || '-'}`;
+  }
+
+  get sealsDisplay(): string {
+    const ob = this.outbound;
+    if (!ob) return 'N/A';
+
+    if ((ob as any).sealNumbers && Array.isArray((ob as any).sealNumbers) && (ob as any).sealNumbers.length > 0) {
+      const valid = (ob as any).sealNumbers
+        .map((s: string) => String(s).trim().toUpperCase())
+        .filter((s: string) => s && s !== 'PENDIENTE_ANDEN' && s !== 'PENDIENTE' && s !== 'S/S' && s !== 'N/A');
+      if (valid.length > 0) return valid.join(', ');
+    }
+
+    if (ob.sealNumber && ob.sealNumber.trim()) {
+      const s = ob.sealNumber.trim().toUpperCase();
+      if (s === 'PENDIENTE_ANDEN' || s === 'PENDIENTE' || s === 'S/S' || s === 'N/A') {
+        return 'N/A';
+      }
+      return s;
+    }
+
+    if ((ob as any).preCheckin?.sealNumbers && Array.isArray((ob as any).preCheckin.sealNumbers)) {
+      const valid = (ob as any).preCheckin.sealNumbers
+        .map((s: string) => String(s).trim().toUpperCase())
+        .filter((s: string) => s && s !== 'PENDIENTE_ANDEN' && s !== 'PENDIENTE' && s !== 'S/S' && s !== 'N/A');
+      if (valid.length > 0) return valid.join(', ');
+    }
+
+    return 'N/A';
   }
 
   get initialDocuments(): string[] {

@@ -132,6 +132,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     driverName: ['', [Validators.required]],
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
+    economicNumber: [''],
+    boxEconomicNumber: [''],
   });
 
   openEditCasetaModal(): void {
@@ -170,6 +172,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       driverName: rec.checkIn.driverName || '',
       tractorPlates: rec.checkIn.tractorPlates || '',
       boxPlates: rec.checkIn.boxPlates || '',
+      economicNumber: rec.checkIn.economicNumber || rec.checkIn.noEcoTractor || (rec as any).economicNumber || (rec as any).noEcoTractor || '',
+      boxEconomicNumber: rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja || (rec as any).boxEconomicNumber || (rec as any).noEcoCaja || '',
     });
     const seals = rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0
       ? [...rec.checkIn.sealNumbers]
@@ -245,6 +249,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
       driverName: val.driverName || currentRec.checkIn.driverName,
       tractorPlates: (val.tractorPlates || currentRec.checkIn.tractorPlates).toUpperCase(),
       boxPlates: (val.boxPlates || currentRec.checkIn.boxPlates).toUpperCase(),
+      economicNumber: (val.economicNumber || currentRec.checkIn.economicNumber || currentRec.checkIn.noEcoTractor || '').trim(),
+      noEcoTractor: (val.economicNumber || currentRec.checkIn.economicNumber || currentRec.checkIn.noEcoTractor || '').trim(),
+      boxEconomicNumber: (val.boxEconomicNumber || currentRec.checkIn.boxEconomicNumber || currentRec.checkIn.noEcoCaja || '').trim(),
+      noEcoCaja: (val.boxEconomicNumber || currentRec.checkIn.boxEconomicNumber || currentRec.checkIn.noEcoCaja || '').trim(),
       clientCode: val.clientCode || currentRec.checkIn.clientCode,
       client: val.client || currentRec.checkIn.client,
       rampNumber: currentRampNumber,
@@ -259,6 +267,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       { fieldName: 'Operador / Chofer', oldValue: currentRec.checkIn?.driverName, newValue: updatedCheckIn.driverName },
       { fieldName: 'Placas del Tracto', oldValue: currentRec.checkIn?.tractorPlates, newValue: updatedCheckIn.tractorPlates },
       { fieldName: 'Placas de la Caja', oldValue: currentRec.checkIn?.boxPlates, newValue: updatedCheckIn.boxPlates },
+      { fieldName: 'No. Económico Tracto', oldValue: currentRec.checkIn?.economicNumber || currentRec.checkIn?.noEcoTractor, newValue: updatedCheckIn.economicNumber },
+      { fieldName: 'No. Económico Caja', oldValue: currentRec.checkIn?.boxEconomicNumber || currentRec.checkIn?.noEcoCaja, newValue: updatedCheckIn.boxEconomicNumber },
       { fieldName: 'Sellos de Seguridad', oldValue: currentRec.checkIn?.sealNumber, newValue: updatedCheckIn.sealNumber },
     ].filter(d => d.oldValue !== d.newValue);
 
@@ -567,6 +577,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     boxPlates: ['', [Validators.required]],
     sealNumber: [''],
     economicNumber: [''],
+    boxEconomicNumber: [''],
     securityApproved: [true],
   });
 
@@ -1085,6 +1096,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
           }
           if (!mapped.checkIn?.rampNumber && rec.checkIn?.rampNumber) {
             mapped.checkIn.rampNumber = rec.checkIn.rampNumber;
+          }
+          if (!mapped.checkIn?.economicNumber && (rec.checkIn?.economicNumber || rec.checkIn?.noEcoTractor)) {
+            mapped.checkIn.economicNumber = rec.checkIn.economicNumber || rec.checkIn.noEcoTractor;
+            mapped.checkIn.noEcoTractor = rec.checkIn.noEcoTractor || rec.checkIn.economicNumber;
+          }
+          if (!mapped.checkIn?.boxEconomicNumber && (rec.checkIn?.boxEconomicNumber || rec.checkIn?.noEcoCaja)) {
+            mapped.checkIn.boxEconomicNumber = rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja;
+            mapped.checkIn.noEcoCaja = rec.checkIn.noEcoCaja || rec.checkIn.boxEconomicNumber;
           }
           if (mapped.pallets && Array.isArray(mapped.pallets)) {
             for (const p of mapped.pallets) {

@@ -43,6 +43,15 @@ export class InventoryQueryService {
         if (rec.expirationStatus !== 'PROXIMO_30_DIAS') return false;
       }
 
+      // 1.1 Filtro por múltiples estados de caducidad
+      if (
+        filters.selectedExpirationStatuses &&
+        filters.selectedExpirationStatuses.length > 0 &&
+        !filters.selectedExpirationStatuses.includes(rec.expirationStatus)
+      ) {
+        return false;
+      }
+
       // 2. Rango Fechas Ingreso
       if (filters.entryDateFrom && rec.entryDate < filters.entryDateFrom) return false;
       if (filters.entryDateTo && rec.entryDate > filters.entryDateTo) return false;
@@ -55,7 +64,23 @@ export class InventoryQueryService {
       if (filters.expirationDateFrom && rec.expirationDate < filters.expirationDateFrom) return false;
       if (filters.expirationDateTo && rec.expirationDate > filters.expirationDateTo) return false;
 
-      // 5. Textos / Buscadores (Coincidencia parcial sin distinción de mayúsculas)
+      // 5. Filtro Múltiple de SKUs (Chips / Multi-Select)
+      if (filters.selectedSkus && filters.selectedSkus.length > 0) {
+        const skuMatches = filters.selectedSkus.some(
+          (s) => s.toLowerCase().trim() === rec.sku.toLowerCase().trim()
+        );
+        if (!skuMatches) return false;
+      }
+
+      // 5.1 Filtro Múltiple de Almacenes / Bodegas
+      if (filters.selectedWarehouses && filters.selectedWarehouses.length > 0) {
+        const whMatches = filters.selectedWarehouses.some(
+          (w) => w.toLowerCase().trim() === rec.warehouse.toLowerCase().trim()
+        );
+        if (!whMatches) return false;
+      }
+
+      // 6. Textos / Buscadores (Coincidencia parcial sin distinción de mayúsculas)
       if (filters.remision && !rec.remision.toLowerCase().includes(filters.remision.toLowerCase().trim())) {
         return false;
       }
@@ -78,12 +103,68 @@ export class InventoryQueryService {
         return false;
       }
 
-      // 6. Dropdowns
+      // 7. Dropdowns
       if (filters.palletType && rec.palletType !== filters.palletType) return false;
       if (filters.labeledStatus && rec.labeledStatus !== filters.labeledStatus) return false;
 
       return true;
     });
+  });
+
+  /**
+   * Catálogo Único de SKUs disponibles en inventario
+   */
+  public readonly distinctSkus = computed<{ sku: string; description: string; count: number }[]>(() => {
+    const list = this._rawInventory();
+    const map = new Map<string, { description: string; count: number }>();
+    for (const r of list) {
+      const existing = map.get(r.sku);
+      if (!existing) {
+        map.set(r.sku, { description: r.productDescription, count: 1 });
+      } else {
+        existing.count += 1;
+      }
+    }
+    return Array.from(map.entries()).map(([sku, val]) => ({
+      sku,
+      description: val.description,
+      count: val.count
+    }));
+  });
+
+  /**
+   * Catálogo Único de Almacenes / Bodegas
+   */
+  public readonly distinctWarehouses = computed<{ warehouse: string; count: number }[]>(() => {
+    const list = this._rawInventory();
+    const map = new Map<string, number>();
+    for (const r of list) {
+      map.set(r.warehouse, (map.get(r.warehouse) || 0) + 1);
+    }
+    return Array.from(map.entries()).map(([warehouse, count]) => ({ warehouse, count }));
+  });
+
+  /**
+   * Palabras clave y tokens predictivos únicos (ej. Frasco, Nescafé, Leche, etc.)
+   */
+  public readonly distinctKeywords = computed<{ word: string; count: number }[]>(() => {
+    const list = this._rawInventory();
+    const wordMap = new Map<string, number>();
+    for (const r of list) {
+      const tokens = (r.productDescription + ' ' + r.warehouse + ' ' + r.sku)
+        .replace(/[,.-]/g, ' ')
+        .split(/\s+/)
+        .map((w) => w.trim())
+        .filter((w) => w.length >= 3);
+
+      for (const t of tokens) {
+        const key = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+        wordMap.set(key, (wordMap.get(key) || 0) + 1);
+      }
+    }
+    return Array.from(wordMap.entries())
+      .map(([word, count]) => ({ word, count }))
+      .sort((a, b) => b.count - a.count);
   });
 
   /**
@@ -330,6 +411,81 @@ export class InventoryQueryService {
         remainingLifeDays: 17,
         client: 'Walmart de México VIPS',
         expirationStatus: 'PROXIMO_30_DIAS'
+      },
+      {
+        id: 563640,
+        entryDate: '2026-02-14',
+        elaborationDate: '2026-01-10',
+        expirationDate: '2026-11-20',
+        usefulLifeDays: 300,
+        remision: 'REM-93400',
+        manufacturerBatch: 'LOTE-NES-1044',
+        ssccBarcode: '750100982390192844',
+        sku: 'SKU-12448910',
+        productDescription: 'NESCAFE CLASICO FRASCO 12X200G N1',
+        receptionFolio: 'REC-2026-0155',
+        measuredQuantity: 1680,
+        palletsCount: 1.0,
+        stayDays: 2,
+        warehouse: 'Bodega A',
+        location: 'A-01-05',
+        entryNumber: 'ENT-2026-1020',
+        palletType: 'TARIMA CHEP NACIONAL',
+        labeledStatus: 'ETIQUETADO',
+        supplier: 'Nestlé México S.A. de C.V.',
+        remainingLifeDays: 280,
+        client: 'Nestlé México',
+        expirationStatus: 'EN_TIEMPO'
+      },
+      {
+        id: 563641,
+        entryDate: '2026-02-11',
+        elaborationDate: '2025-10-01',
+        expirationDate: '2026-03-08',
+        usefulLifeDays: 150,
+        remision: 'REM-93401',
+        manufacturerBatch: 'LOTE-NES-8500',
+        ssccBarcode: '750100982390192845',
+        sku: 'SKU-8500297',
+        productDescription: 'NESCAFE CLASICO 5KG MX GRAGAS',
+        receptionFolio: 'REC-2026-0156',
+        measuredQuantity: 720,
+        palletsCount: 1.0,
+        stayDays: 4,
+        warehouse: 'Bodega APC',
+        location: 'APC-02-10',
+        entryNumber: 'ENT-2026-1021',
+        palletType: 'MADERA ESTANDAR',
+        labeledStatus: 'ETIQUETADO',
+        supplier: 'Nestlé México S.A. de C.V.',
+        remainingLifeDays: 23,
+        client: 'Nestlé México',
+        expirationStatus: 'PROXIMO_30_DIAS'
+      },
+      {
+        id: 563642,
+        entryDate: '2026-01-20',
+        elaborationDate: '2025-07-15',
+        expirationDate: '2026-01-10',
+        usefulLifeDays: 180,
+        remision: 'REM-86500',
+        manufacturerBatch: 'LOTE-CARN-994',
+        ssccBarcode: '750100982390192846',
+        sku: 'SKU-12984711',
+        productDescription: 'CARNATION CLAVEL EVAPORADA 24X360G',
+        receptionFolio: 'REC-2026-0008',
+        measuredQuantity: 1920,
+        palletsCount: 1.0,
+        stayDays: 24,
+        warehouse: 'Bodega B',
+        location: 'B-04-12',
+        entryNumber: 'ENT-2026-805',
+        palletType: 'PLASTICO AZUL',
+        labeledStatus: 'OBSOLETO',
+        supplier: 'Nestlé México S.A. de C.V.',
+        remainingLifeDays: -34,
+        client: 'Nestlé México',
+        expirationStatus: 'CADUCO'
       }
     ];
 

@@ -3415,6 +3415,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .tarimas-table {
   width: 100%;
+  min-width: 820px;
   font-size: 0.75rem;
   text-align: left;
   border-collapse: collapse;
@@ -3438,7 +3439,7 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #0f172a !important;
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 :host-context(.theme-dark) .tarimas-table th,
@@ -3469,6 +3470,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.75rem 0.85rem;
   font-size: 0.76rem;
   vertical-align: middle;
+  white-space: nowrap !important;
 }
 
 .tarimas-cell-num {

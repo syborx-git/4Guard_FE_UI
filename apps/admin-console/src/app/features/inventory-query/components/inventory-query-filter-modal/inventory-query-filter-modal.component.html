@@ -150,7 +150,67 @@
           </div>
         </div>
 
-        <!-- ══ SECCIÓN 3: CAMPOS DE TEXTO Y BUSCADORES ═════════════════════════════════ -->
+        <!-- ══ SECCIÓN 3: SELECCIÓN MÚLTIPLE (SKUS Y BODEGAS) ═══════════════════════ -->
+        <div class="filter-section">
+          <div class="filter-section-title">
+            <span class="material-symbols-outlined">checklist</span>
+            <span>Selección Múltiple Avanzada (Múltiples SKUs y Bodegas)</span>
+          </div>
+
+          <!-- Selector Multi-SKU -->
+          <div class="multi-chips-wrapper">
+            <div class="multi-chips-header">
+              <span class="form-label">Filtrar por Uno o Más SKUs ({{ selectedSkus.length }} seleccionados)</span>
+              <input
+                type="text"
+                [value]="skuSearchTerm"
+                (input)="onSkuSearchChange($event)"
+                placeholder="Buscar SKU..."
+                class="multi-chips-search-input"
+              />
+            </div>
+            <div class="multi-chips-list">
+              @for (skuItem of filteredAvailableSkus(); track skuItem.sku) {
+                <button
+                  type="button"
+                  (click)="toggleSku(skuItem.sku)"
+                  class="multi-chip"
+                  [class.multi-chip--selected]="isSkuSelected(skuItem.sku)"
+                  [title]="skuItem.description"
+                >
+                  <span class="material-symbols-outlined" style="font-size: 14px;">
+                    {{ isSkuSelected(skuItem.sku) ? 'check_box' : 'check_box_outline_blank' }}
+                  </span>
+                  <span>{{ skuItem.sku }} ({{ skuItem.count }})</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Selector Multi-Bodega -->
+          <div class="multi-chips-wrapper">
+            <div class="multi-chips-header">
+              <span class="form-label">Filtrar por Una o Más Bodegas / Almacenes ({{ selectedWarehouses.length }} seleccionadas)</span>
+            </div>
+            <div class="multi-chips-list">
+              @for (wh of inventoryService.distinctWarehouses(); track wh.warehouse) {
+                <button
+                  type="button"
+                  (click)="toggleWarehouse(wh.warehouse)"
+                  class="multi-chip"
+                  [class.multi-chip--selected]="isWarehouseSelected(wh.warehouse)"
+                >
+                  <span class="material-symbols-outlined" style="font-size: 14px;">
+                    {{ isWarehouseSelected(wh.warehouse) ? 'check_box' : 'check_box_outline_blank' }}
+                  </span>
+                  <span>{{ wh.warehouse }} ({{ wh.count }})</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SECCIÓN 4: CAMPOS DE TEXTO Y BUSCADORES ═════════════════════════════════ -->
         <div class="filter-section">
           <div class="filter-section-title">
             <span class="material-symbols-outlined">search</span>
@@ -169,9 +229,9 @@
               />
             </div>
 
-            <!-- SKU -->
+            <!-- SKU Específico -->
             <div class="form-group">
-              <label class="form-label">SKU</label>
+              <label class="form-label">SKU Específico</label>
               <input
                 type="text"
                 formControlName="sku"
@@ -241,7 +301,7 @@
           </div>
         </div>
 
-        <!-- ══ SECCIÓN 4: DROPDOWNS OFICIALES DE 4GUARD ═════════════════════════════════ -->
+        <!-- ══ SECCIÓN 5: DROPDOWNS OFICIALES DE 4GUARD ═════════════════════════════════ -->
         <div class="filter-section">
           <div class="filter-section-title">
             <span class="material-symbols-outlined">category</span>

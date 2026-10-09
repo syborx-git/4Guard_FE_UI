@@ -18,8 +18,10 @@
             warning
           } @else if (isOutboundContext()) {
             local_shipping
-          } @else {
+          } @else if (isReceivingContext()) {
             move_to_inbox
+          } @else {
+            {{ pendingReceptionsCount() > 0 && pendingOutboundsCount() > 0 ? 'sync_alt' : (pendingOutboundsCount() > 0 ? 'local_shipping' : 'move_to_inbox') }}
           }
         </span>
       </div>
@@ -38,8 +40,18 @@
             {{ blockedQualityCount() }} {{ blockedQualityCount() === 1 ? 'BLOQUEO QM' : 'BLOQUEOS QM' }}
           } @else if (isOutboundContext()) {
             {{ pendingOutboundsCount() }} {{ pendingOutboundsCount() === 1 ? 'PRE-SALIDA' : 'PRE-SALIDAS' }}
-          } @else {
+          } @else if (isReceivingContext()) {
             {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
+          } @else {
+            @if (pendingReceptionsCount() > 0 && pendingOutboundsCount() > 0) {
+              {{ pendingReceptionsCount() }} PRE-REC · {{ pendingOutboundsCount() }} PRE-SAL
+            } @else if (pendingReceptionsCount() > 0) {
+              {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
+            } @else if (pendingOutboundsCount() > 0) {
+              {{ pendingOutboundsCount() }} {{ pendingOutboundsCount() === 1 ? 'PRE-SALIDA' : 'PRE-SALIDAS' }}
+            } @else {
+              {{ totalVisibleCount() }} EN ESPERA
+            }
           }
         </span>
       </div>
@@ -66,29 +78,27 @@
                   fact_check
                 } @else if (isOutboundContext()) {
                   local_shipping
-                } @else {
+                } @else if (isReceivingContext()) {
                   move_to_inbox
+                } @else {
+                  {{ pendingReceptionsCount() > 0 && pendingOutboundsCount() > 0 ? 'swap_horiz' : (pendingOutboundsCount() > 0 ? 'local_shipping' : 'move_to_inbox') }}
                 }
               </span>
             </div>
             <div class="op-notif__header-text">
-              <div class="op-notif__title-row">
-                <h4 class="op-notif__title">
-                  @if (isSecurityContext()) {
-                    Eventos de Caseta &amp; Andenes
-                  } @else if (isQualityContext()) {
-                    Alertas de Calidad QM
-                  } @else if (isOutboundContext()) {
-                    Pre-Salidas / Embarques en Caseta
-                  } @else {
-                    Pre-Recepciones en Caseta
-                  }
-                </h4>
-                <span class="op-notif__live-pill">
-                  <span class="op-notif__live-dot"></span>
-                  <span>EN VIVO</span>
-                </span>
-              </div>
+              <h4 class="op-notif__title">
+                @if (isSecurityContext()) {
+                  Eventos de Caseta &amp; Andenes
+                } @else if (isQualityContext()) {
+                  Alertas de Calidad QM
+                } @else if (isOutboundContext()) {
+                  Pre-Salidas / Embarques en Caseta
+                } @else if (isReceivingContext()) {
+                  Pre-Recepciones en Caseta
+                } @else {
+                  Operaciones en Caseta &amp; Almacén
+                }
+              </h4>
               <p class="op-notif__subtitle">
                 @if (isSecurityContext()) {
                   Auto-registros de transportistas y andenes en tiempo real
@@ -96,14 +106,20 @@
                   Lotes en cuarentena e inspecciones pendientes
                 } @else if (isOutboundContext()) {
                   Unidades listas para maniobra de carga en almacén
-                } @else {
+                } @else if (isReceivingContext()) {
                   Unidades listas para descarga en almacén
+                } @else {
+                  Pre-recepciones y pre-salidas activas en tiempo real
                 }
               </p>
             </div>
           </div>
 
           <div class="op-notif__header-right">
+            <span class="op-notif__live-pill">
+              <span class="op-notif__live-dot"></span>
+              <span>EN VIVO</span>
+            </span>
             <span class="op-notif__count-badge font-mono">
               {{ totalVisibleCount() }} en cola
             </span>
@@ -117,6 +133,39 @@
             </button>
           </div>
         </div>
+
+        <!-- Pestañas de Filtro si hay operaciones combinadas en vista General -->
+        @if (isGeneralContext() && pendingReceptionsCount() > 0 && pendingOutboundsCount() > 0) {
+          <div class="op-notif__tabs-bar">
+            <button
+              type="button"
+              (click)="setTab('ALL')"
+              class="op-notif__tab"
+              [class.op-notif__tab--active]="selectedTab() === 'ALL'"
+            >
+              <span>Todas</span>
+              <span class="op-notif__tab-count font-mono">({{ totalVisibleCount() }})</span>
+            </button>
+            <button
+              type="button"
+              (click)="setTab('RECEIVING')"
+              class="op-notif__tab"
+              [class.op-notif__tab--active]="selectedTab() === 'RECEIVING'"
+            >
+              <span>📥 Recepciones</span>
+              <span class="op-notif__tab-count font-mono">({{ pendingReceptionsCount() }})</span>
+            </button>
+            <button
+              type="button"
+              (click)="setTab('OUTBOUND')"
+              class="op-notif__tab"
+              [class.op-notif__tab--active]="selectedTab() === 'OUTBOUND'"
+            >
+              <span>📤 Salidas</span>
+              <span class="op-notif__tab-count font-mono">({{ pendingOutboundsCount() }})</span>
+            </button>
+          </div>
+        }
 
         <!-- Banners Dinámicos de Novedad en Tiempo Real -->
         @if (hasNewUnseenPreReception() && isReceivingContext()) {
@@ -159,8 +208,8 @@
         <!-- Cola de Tarjetas según Categoría -->
         <div class="op-notif__list">
           
-          <!-- ── SECCIÓN 1: PRE-RECEPCIONES (RECEPCIÓN / SUPERVISOR) ── -->
-          @if (isReceivingContext()) {
+          <!-- ── SECCIÓN 1: PRE-RECEPCIONES (RECEPCIÓN / SUPERVISOR / GENERAL) ── -->
+          @if (isReceivingContext() || (isGeneralContext() && (selectedTab() === 'ALL' || selectedTab() === 'RECEIVING'))) {
             @for (rec of pendingReceptions(); track rec.folio) {
               <div class="op-notif__card op-notif__card--receiving">
                 <div class="op-notif__card-header">
@@ -211,8 +260,8 @@
             }
           }
 
-          <!-- ── SECCIÓN: PRE-SALIDAS / EMBARQUES (OUTBOUND) ── -->
-          @if (isOutboundContext()) {
+          <!-- ── SECCIÓN: PRE-SALIDAS / EMBARQUES (OUTBOUND / GENERAL) ── -->
+          @if (isOutboundContext() || (isGeneralContext() && (selectedTab() === 'ALL' || selectedTab() === 'OUTBOUND'))) {
             @for (ob of pendingOutbounds(); track ob.folio) {
               <div class="op-notif__card op-notif__card--receiving">
                 <div class="op-notif__card-header">
@@ -453,7 +502,7 @@
                 <span class="material-symbols-outlined text-[16px]">local_shipping</span>
                 <span>Ir a Mesa de Salidas</span>
               </button>
-            } @else {
+            } @else if (isReceivingContext()) {
               <button
                 type="button"
                 (click)="goToReceptionsModule()"
@@ -462,6 +511,25 @@
                 <span class="material-symbols-outlined text-[16px]">move_to_inbox</span>
                 <span>Ir a Mesa de Recepciones</span>
               </button>
+            } @else {
+              <div class="flex items-center gap-2 w-full">
+                <button
+                  type="button"
+                  (click)="goToReceptionsModule()"
+                  class="op-notif__footer-btn flex-1"
+                >
+                  <span class="material-symbols-outlined text-[16px]">move_to_inbox</span>
+                  <span>Recepciones</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="goToOutboundModule()"
+                  class="op-notif__footer-btn flex-1"
+                >
+                  <span class="material-symbols-outlined text-[16px]">local_shipping</span>
+                  <span>Salidas</span>
+                </button>
+              </div>
             }
           </div>
         }
