@@ -32,6 +32,9 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   protected readonly submitSuccess = signal<boolean>(false);
   protected readonly submitError = signal<string | null>(null);
 
+  protected readonly organizationId = signal<string>('00000000-0000-0000-0000-000000000001');
+  protected readonly branchId = signal<string>('00000000-0000-0000-0000-000000000001');
+
   protected readonly sealList = signal<string[]>([]);
   protected readonly tempSealInput = signal<string>('');
 
@@ -148,6 +151,11 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.loadCatalogs();
 
     this.route.queryParams.subscribe((params) => {
+      const orgParam = params['org'] || params['organizationId'];
+      if (orgParam) this.organizationId.set(orgParam);
+      const branchParam = params['branch'] || params['branchId'];
+      if (branchParam) this.branchId.set(branchParam);
+
       const qToken = params['token'] || params['pass'];
       if (qToken) {
         this.token.set(qToken.trim().toUpperCase());
@@ -668,6 +676,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     }
 
     const payload = {
+      organizationId: this.organizationId(),
+      branchId: this.branchId(),
       operationType: f.operacion,
       docNumber: f.operacion === 'CARGA' ? f.noCartaPorte : f.remision,
       noCartaPorte: f.noCartaPorte,

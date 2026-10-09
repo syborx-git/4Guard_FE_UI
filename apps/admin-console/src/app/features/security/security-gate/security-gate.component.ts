@@ -62,7 +62,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         this.loadDriverSubmission(passToLoad);
         this.smartNotification.clearRequestedPassToLoad();
       }
-    });
+    }, { allowSignalWrites: true });
 
     // Auto-asignar el nombre del guardia autenticado si está disponible en la sesión activa
     effect(() => {
@@ -73,7 +73,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.checkInForm.patchValue({ responsableVigilanciaNombre: guardName });
         }
       }
-    });
+    }, { allowSignalWrites: true });
 
     // Notificar al guardia en tiempo real cuando una unidad concluye maniobra y queda autorizada para salida
     effect(() => {
@@ -111,7 +111,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           }
         }
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   protected getLoggedGuardName(): string {
@@ -699,7 +699,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (this.activeTab() === 'HISTORY') {
         this.reloadHistoryPasses();
       }
-    }, 15000);
+    }, 4000);
 
     // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
     this.checkInForm.get('remision')?.valueChanges.pipe(
@@ -873,10 +873,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected updateQrModalUrl(): void {
     const token = this.qrModalToken();
     const baseUrl = this.getPublicBaseUrl();
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
     if (token && token !== 'PORTAL-DIRECTO') {
-      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}`);
     } else {
-      this.qrModalUrl.set(`${baseUrl}/carrier-checkin`);
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}`);
     }
   }
 
@@ -929,7 +931,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         const token = res.token || res.generatedFolio || ('PASS-4G-' + Date.now());
         this.qrModalToken.set(token);
         const baseUrl = this.getPublicBaseUrl();
-        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}`);
+        const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}`);
         this.showQrModal.set(true);
         this.reloadActivePasses();
       },
@@ -938,7 +941,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         const fallbackToken = 'PASS-4G-' + Date.now();
         this.qrModalToken.set(fallbackToken);
         const baseUrl = this.getPublicBaseUrl();
-        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}`);
+        const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}&${orgQuery}`);
         this.showQrModal.set(true);
         this.reloadActivePasses();
       }
@@ -1433,16 +1437,20 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
     if (!pass || !pass.token) return;
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}`);
+    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&${orgQuery}`);
     this.showQrModal.set(true);
   }
 
   protected openQrModal(): void {
     const baseUrl = this.getPublicBaseUrl();
-    // Código QR permanente y estático por defecto apuntando a /carrier-checkin
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+    // Código QR permanente y estático por defecto apuntando a /carrier-checkin con contexto de sucursal
     this.qrModalToken.set('PORTAL-DIRECTO');
-    this.qrModalUrl.set(`${baseUrl}/carrier-checkin`);
+    this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}`);
     this.showQrModal.set(true);
   }
 
