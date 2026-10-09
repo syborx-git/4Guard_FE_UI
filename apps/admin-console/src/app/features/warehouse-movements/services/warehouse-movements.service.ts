@@ -140,10 +140,17 @@ export class WarehouseMovementsService {
   readonly rampOccupancyStatus = computed<RampOccupancyStatus[]>(() => {
     const allRamps = this.rampsSignal();
     const activeReceptions = this.receptionsSignal().filter(
-      (r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status === 'REGISTERED' && !!r.checkIn?.rampNumber)
+      (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED' && (
+        !!r.checkIn?.rampNumber || !!r.checkIn?.rampCode ||
+        !!(r as any).rampNumber || !!(r as any).rampCode || !!(r as any).rampId ||
+        !!(r as any).ramp?.rampNumber || !!(r as any).ramp?.code || !!(r as any).ramp?.id
+      )
     );
     const activeOutbounds = this.outboundsSignal().filter(
-      (o) => o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status === 'REGISTERED' && !!o.rampNumber)
+      (o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED' && (
+        !!o.rampNumber || !!o.rampCode || !!(o as any).rampId ||
+        !!(o as any).ramp?.rampNumber || !!(o as any).ramp?.code || !!(o as any).ramp?.id
+      )
     );
 
     return allRamps.map((ramp) => {
@@ -151,7 +158,13 @@ export class WarehouseMovementsService {
       const recMatch = activeReceptions.find(
         (r) =>
           (r.checkIn?.rampNumber && Number(r.checkIn.rampNumber) === Number(ramp.rampNumber)) ||
-          (r.checkIn?.rampCode && (r.checkIn.rampCode === ramp.code || r.checkIn.rampCode === ramp.id))
+          (r.checkIn?.rampCode && (r.checkIn.rampCode === ramp.code || r.checkIn.rampCode === ramp.id)) ||
+          ((r as any).rampNumber && Number((r as any).rampNumber) === Number(ramp.rampNumber)) ||
+          ((r as any).rampCode && ((r as any).rampCode === ramp.code || (r as any).rampCode === ramp.id)) ||
+          ((r as any).rampId && ((r as any).rampId === ramp.id || (r as any).rampId === ramp.code)) ||
+          ((r as any).ramp?.rampNumber && Number((r as any).ramp.rampNumber) === Number(ramp.rampNumber)) ||
+          ((r as any).ramp?.code && ((r as any).ramp.code === ramp.code || (r as any).ramp.code === ramp.id)) ||
+          ((r as any).ramp?.id && (r as any).ramp.id === ramp.id)
       );
 
       if (recMatch) {
@@ -174,10 +187,10 @@ export class WarehouseMovementsService {
           statusLabel: statusLabel,
           operationType: 'INBOUND',
           operationFolio: recMatch.folio,
-          docNumber: recMatch.checkIn?.docNumber,
-          driverName: recMatch.checkIn?.driverName,
-          carrierName: recMatch.checkIn?.carrierLine,
-          forkliftOperator: recMatch.checkIn?.forkliftOperator,
+          docNumber: recMatch.checkIn?.docNumber || (recMatch as any).docNumber,
+          driverName: recMatch.checkIn?.driverName || (recMatch as any).driverName,
+          carrierName: recMatch.checkIn?.carrierLine || (recMatch as any).carrierName,
+          forkliftOperator: recMatch.checkIn?.forkliftOperator || (recMatch as any).forkliftOperator,
           startedAt: recMatch.checkIn?.receptionTime || recMatch.createdAt,
         };
       }
@@ -186,7 +199,11 @@ export class WarehouseMovementsService {
       const outMatch = activeOutbounds.find(
         (o) =>
           (o.rampNumber && Number(o.rampNumber) === Number(ramp.rampNumber)) ||
-          (o.rampCode && (o.rampCode === ramp.code || o.rampCode === ramp.id))
+          (o.rampCode && (o.rampCode === ramp.code || o.rampCode === ramp.id)) ||
+          ((o as any).rampId && ((o as any).rampId === ramp.id || (o as any).rampId === ramp.code)) ||
+          ((o as any).ramp?.rampNumber && Number((o as any).ramp.rampNumber) === Number(ramp.rampNumber)) ||
+          ((o as any).ramp?.code && ((o as any).ramp.code === ramp.code || (o as any).ramp.code === ramp.id)) ||
+          ((o as any).ramp?.id && (o as any).ramp.id === ramp.id)
       );
 
       if (outMatch) {

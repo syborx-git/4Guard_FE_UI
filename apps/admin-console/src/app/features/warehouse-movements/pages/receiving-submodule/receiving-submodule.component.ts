@@ -2917,7 +2917,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   selectRamp(rm: RampItem): void {
     if (this.isRampBusy(rm.rampNumber, this.selectedReception()?.folio)) {
-      this.toast.warning(`La ${rm.name} se encuentra ocupada por otra operación.`);
+      const occ = this.getRampOccupancy(rm.rampNumber);
+      const opLabel = occ?.operationType === 'OUTBOUND' ? 'la Salida / Carga' : 'la Recepción / Descarga';
+      this.toast.warning(`⚠️ La ${rm.name} se encuentra ocupada por ${opLabel} (Folio #${occ?.operationFolio || 'Activo'}). Debe liberarse antes de asignarla.`);
       return;
     }
     this.altaForm.patchValue({ rampNumber: rm.rampNumber });
