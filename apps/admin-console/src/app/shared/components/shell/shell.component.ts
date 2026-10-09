@@ -648,7 +648,9 @@ export class ShellComponent implements OnInit, OnDestroy {
 
     // Polling reactivo cada 6 segundos para recepciones de caseta en tiempo real
     this.preReceptionPollIntervalId = setInterval(() => {
-      this.movementsService.reloadReceptions();
+      if (this.authState.isAuthenticated() && this.authState.accessToken()) {
+        this.movementsService.reloadReceptions();
+      }
     }, 6000);
   }
 
