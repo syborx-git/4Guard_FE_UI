@@ -18,7 +18,9 @@ import {
   InventoryBatch,
   OutboundDispatch,
   CarrierLineItem,
+  STANDARD_CARRIERS,
   ClientItem,
+  STANDARD_CLIENTS,
   RampItem,
   RampOccupancyStatus,
   STANDARD_WAREHOUSE_RAMPS,
@@ -58,9 +60,9 @@ export class WarehouseMovementsService {
   private readonly transferAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
   private readonly outboundAuditMap = signal<Record<string, MovementAuditEntry[]>>({});
 
-  // Catálogos Reactivos
-  private readonly carrierLinesSignal = signal<CarrierLineItem[]>([]);
-  private readonly clientsSignal = signal<ClientItem[]>([]);
+  // Catálogos Reactivos (con valores estándar inmediatos y sincronización posterior con backend)
+  private readonly carrierLinesSignal = signal<CarrierLineItem[]>(STANDARD_CARRIERS);
+  private readonly clientsSignal = signal<ClientItem[]>(STANDARD_CLIENTS);
   private readonly rampsSignal = signal<RampItem[]>(STANDARD_WAREHOUSE_RAMPS);
   private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
   private readonly suppliersSignal = signal<{ code: string; name: string }[]>([]);
@@ -95,6 +97,8 @@ export class WarehouseMovementsService {
   // Lotes de inventario (FIFO/FEFO)
   private readonly inventoryBatchesSignal = signal<InventoryBatch[]>([]);
 
+  private isReloadingReceptions = false;
+
   // Consecutivo Global de Tarimas (Continuidad estricta entre remisiones y recepciones)
   private readonly globalMaxPalletNumberSignal = signal<number>(0);
 
@@ -109,6 +113,10 @@ export class WarehouseMovementsService {
     this.receptionsSignal().filter((r) => r.status === 'REGISTERED')
   );
   readonly pendingReceptionsCount = computed(() => this.pendingReceptions().length);
+  readonly pendingOutbounds = computed(() =>
+    this.outboundsSignal().filter((o) => o.status === 'REGISTERED')
+  );
+  readonly pendingOutboundsCount = computed(() => this.pendingOutbounds().length);
   readonly transfers = this.transfersSignal.asReadonly();
   readonly dispatches = this.dispatchesSignal.asReadonly();
   readonly outbounds = this.outboundsSignal.asReadonly();
@@ -448,53 +456,7 @@ export class WarehouseMovementsService {
     this.movementsApi.getOutbounds().subscribe({
       next: (outbounds: any) => {
         this.outboundsSignal.set(
-          (outbounds || []).map((o: any) => ({
-            id: o.id,
-            folio: o.folio,
-            status: o.status || 'REGISTERED',
-            clientCode: o.clientId || '',
-            clientName: o.clientName || '',
-            destinationId: o.destinationId || '',
-            destinationName: o.destinationName || '',
-            destinationAddress: o.destinationAddress || '',
-            carrierCode: o.carrierId || '',
-            carrierName: o.carrierName || '',
-            rampId: o.rampId || '',
-            rampNumber: o.rampNumber ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
-            rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
-            forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
-            forkliftOperatorId: o.forkliftOperatorId || '',
-            driverName: o.driverName || '',
-            economicNumber: o.economicNumber || '',
-            boxEconomicNumber: o.boxEconomicNumber || '',
-            tractorPlates: o.tractorPlates || '',
-            boxPlates: o.boxPlates || '',
-            transportType: o.transportType || 'TRAILER',
-            sealNumber: o.sealNumber || '',
-            remisionNo: o.remisionNo || '',
-            observations: o.observations || '',
-            items: (o.items || []).map((it: any) => ({
-              id: it.id || it.itemId,
-              palletCode: it.palletCode,
-              productId: it.skuCode || it.productId || '',
-              description: it.skuDescription || it.description || '',
-              lotNumber: it.lotNumber || '',
-              expirationDate: it.expirationDate ? String(it.expirationDate) : '',
-              pieces: it.pieces || 0,
-              palletTypeId: 'ESTANDAR',
-              palletTypeLabel: 'Estándar',
-              locationCode: it.locationCode || 'N/A',
-              inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
-            })),
-            totalPallets: o.totalPallets || 0,
-            totalPieces: o.totalPieces || 0,
-            distinctSkus: o.distinctSkus || 0,
-            completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
-            leaderAuthorizedBy: o.leaderAuthorizedBy || '',
-            dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
-            dispatchedBy: o.createdBy || 'Admin',
-            timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
-          }))
+          (outbounds || []).map((o: any) => this.mapOutboundResponseToHeader(o))
         );
       },
       error: () => {},
@@ -610,6 +572,8 @@ export class WarehouseMovementsService {
   }
 
   public reloadReceptions(): void {
+    if (this.isReloadingReceptions) return;
+    this.isReloadingReceptions = true;
     this.syncGlobalMaxPalletNumber();
     this.movementsApi.getReceptions().subscribe({
       next: (receptions: any) => {
@@ -666,8 +630,11 @@ export class WarehouseMovementsService {
         if (this.lastFetchedLocations && this.lastFetchedLocations.length > 0) {
           this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
         }
+        this.isReloadingReceptions = false;
       },
-      error: () => {},
+      error: () => {
+        this.isReloadingReceptions = false;
+      },
     });
   }
 
@@ -723,56 +690,7 @@ export class WarehouseMovementsService {
     this.movementsApi.getOutbounds().subscribe({
       next: (outbounds: any) => {
         this.outboundsSignal.set(
-          (outbounds || []).map((o: any) => ({
-            id: o.id,
-            folio: o.folio,
-            status: o.status || 'REGISTERED',
-            clientCode: o.clientId || '',
-            clientName: o.clientName || '',
-            destinationId: o.destinationId || '',
-            destinationName: o.destinationName || '',
-            destinationAddress: o.destinationAddress || '',
-            carrierCode: o.carrierId || '',
-            carrierName: o.carrierName || '',
-            rampId: o.rampId || '',
-            rampNumber: o.rampNumber ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
-            rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
-            forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
-            forkliftOperatorId: o.forkliftOperatorId,
-            transportType: o.transportType || '',
-            driverName: o.driverName || '',
-            tractorPlates: o.tractorPlates || '',
-            boxPlates: o.boxPlates || '',
-            economicNumber: o.economicNumber || '',
-            boxEconomicNumber: o.boxEconomicNumber || '',
-            sealNumber: o.sealNumber || '',
-            remisionNo: o.remisionNo || '',
-            observations: o.observations || '',
-            outboundDate: o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-MX') : '',
-            outboundTime: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '',
-            authorizedBy: o.createdBy || '',
-            items: (o.items || []).map((it: any) => ({
-              id: it.id || it.itemId,
-              palletCode: it.palletCode,
-              productId: it.skuCode || it.productId || '',
-              description: it.skuDescription || it.description || '',
-              lotNumber: it.lotNumber || '',
-              expirationDate: it.expirationDate ? String(it.expirationDate) : '',
-              pieces: it.pieces || 0,
-              palletTypeId: 'ESTANDAR',
-              palletTypeLabel: 'Estándar',
-              locationCode: it.locationCode || 'N/A',
-              inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
-            })),
-            totalPallets: o.totalPallets || (o.items ? o.items.length : 0),
-            totalPieces: o.totalPieces || (o.items ? o.items.reduce((acc: number, it: any) => acc + (it.pieces || 0), 0) : 0),
-            distinctSkus: o.distinctSkus || 0,
-            completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
-            leaderAuthorizedBy: o.leaderAuthorizedBy || '',
-            dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
-            dispatchedBy: o.createdBy || 'Admin',
-            timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
-          }))
+          (outbounds || []).map((o: any) => this.mapOutboundResponseToHeader(o))
         );
       },
       error: () => {},
@@ -1072,6 +990,8 @@ export class WarehouseMovementsService {
       status: 'Estado Operativo',
       reason: 'Motivo / Justificación',
       cancellationReason: 'Motivo de Cancelación',
+      reopenReason: 'Motivo de Reapertura',
+      reopenedBy: 'Reabierto Por (Supervisor)',
       authorizedBy: 'Autorizado Por (Supervisor)',
       authorized_by: 'Autorizado Por (Supervisor)',
       cancelledBy: 'Cancelado Por',
@@ -1292,7 +1212,7 @@ export class WarehouseMovementsService {
           productId: res.skuCode || res.productSku || '',
           productName: res.productDescription || res.productName || '',
           supplierName: res.supplierName || '',
-          storageLocation: res.storageLocationCode || res.storageLocationName || res.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',
+          storageLocation: res.storageLocationCode || res.storageLocationName || res.storageLocation || 'POS-A-001',
           storageLocationId: res.storageLocationId || '',
           storageLocationCode: res.storageLocationCode || '',
           piecesPerPallet: res.piecesPerPallet != null ? Number(res.piecesPerPallet) : 0,
@@ -1584,7 +1504,7 @@ export class WarehouseMovementsService {
       supplierName: supName,
       piecesPerPallet: r.piecesPerPallet != null ? Number(r.piecesPerPallet) : (pallets.length > 0 ? pallets[0].pieces : 0),
       selectedPalletType: pType,
-      storageLocation: r.storageLocationCode || r.storageLocationName || r.storageLocation || 'Pasillo A - Rack 01 - Nivel 1',
+      storageLocation: r.storageLocationCode || r.storageLocationName || r.storageLocation || 'POS-A-001',
       storageLocationId: r.storageLocationId || '',
       storageLocationCode: r.storageLocationCode || '',
       observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
@@ -1596,7 +1516,73 @@ export class WarehouseMovementsService {
       capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
       leaderAuthorizedBy: r.leaderAuthorizedBy || '',
       cancellationReason: r.cancellationReason || '',
+      operationType: r.operationType || 'ENTRY',
+      sourceOutboundId: r.sourceOutboundId || undefined,
+      sourceOutboundFolio: r.sourceOutboundFolio || undefined,
+      reentryReason: r.reentryReason || undefined,
+      reentryNotes: r.reentryNotes || undefined,
     } as ReceptionHeader;
+  }
+
+  // Mapea un OutboundResponse a WarehouseOutbound completo
+  mapOutboundResponseToHeader(o: any): WarehouseOutbound {
+    if (!o) return {} as WarehouseOutbound;
+    return {
+      id: o.id,
+      folio: o.folio || o.folioNumber || '',
+      status: o.status || 'REGISTERED',
+      clientCode: o.clientId || o.clientCode || '',
+      clientName: o.clientName || '',
+      destinationId: o.destinationId || '',
+      destinationName: o.destinationName || '',
+      destinationAddress: o.destinationAddress || '',
+      carrierCode: o.carrierId || o.carrierCode || '',
+      carrierName: o.carrierName || '',
+      rampId: o.rampId || '',
+      rampNumber: o.rampNumber != null ? Number(o.rampNumber) : (o.rampCode ? parseInt(String(o.rampCode).replace(/\D/g, ''), 10) : undefined),
+      rampCode: o.rampCode || (o.rampNumber ? `RAMPA-${o.rampNumber}` : ''),
+      forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
+      forkliftOperatorId: o.forkliftOperatorId || '',
+      driverName: o.driverName || '',
+      economicNumber: o.economicNumber || '',
+      boxEconomicNumber: o.boxEconomicNumber || '',
+      tractorPlates: o.tractorPlates || '',
+      boxPlates: o.boxPlates || '',
+      transportType: o.transportType || 'TRAILER',
+      sealNumber: o.sealNumber || '',
+      remisionNo: o.remisionNo || '',
+      observations: o.observations || '',
+      items: (o.items || []).map((it: any, idx: number) => ({
+        id: it.id || it.itemId || `item-${idx + 1}`,
+        palletNumber: it.palletNumber || idx + 1,
+        palletCode: it.palletCode || it.item?.sscc || '--',
+        productId: it.skuCode || it.productId || it.item?.sku?.code || '',
+        description: it.skuDescription || it.description || it.item?.sku?.name || '',
+        lotNumber: it.lotNumber || it.item?.batchNumber || '',
+        expirationDate: it.expirationDate ? String(it.expirationDate) : (it.item?.expirationDate ? String(it.item.expirationDate) : ''),
+        pieces: it.pieces != null ? Number(it.pieces) : (it.item?.quantity ? Number(it.item.quantity) : 0),
+        palletTypeId: 'ESTANDAR',
+        palletTypeLabel: 'Estándar',
+        locationCode: it.locationCode || it.item?.location?.code || 'N/A',
+        inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
+        clientName: it.clientName || o.clientName || '',
+      })),
+      totalPallets: o.totalPallets || (o.items ? o.items.length : 0),
+      totalPieces: o.totalPieces || (o.items ? o.items.reduce((acc: number, it: any) => acc + (it.pieces || (it.item?.quantity ? Number(it.item.quantity) : 0)), 0) : 0),
+      distinctSkus: o.distinctSkus || 0,
+      completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
+      leaderAuthorizedBy: o.leaderAuthorizedBy || '',
+      dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+      dispatchedBy: o.createdBy || 'Admin',
+      timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
+    };
+  }
+
+  // Busca una salida por Folio o ID
+  findOutboundByFolio(folio: string): WarehouseOutbound | undefined {
+    if (!folio) return undefined;
+    const clean = folio.trim();
+    return this.outboundsSignal().find((o) => o.folio?.trim() === clean || o.id?.trim() === clean);
   }
 
   // Persiste avances de descarga (parámetros y tarimas) en el Backend (wms.warehouse_reception_pallets)
@@ -1706,9 +1692,8 @@ export class WarehouseMovementsService {
       carrierLine: checkIn.carrierLine || null,
       clientId: isUuid(checkIn.clientCode || '') ? checkIn.clientCode : null,
       clientCode: checkIn.clientCode || null,
-      clientName: checkIn.client || null,
-      rampNumber: checkIn.rampNumber || 1,
-      rampCode: checkIn.rampCode || `LOC-RAMP-${String(checkIn.rampNumber || 1).padStart(2, '0')}`,
+      rampNumber: checkIn.rampNumber != null ? checkIn.rampNumber : ((current as any)?.rampNumber ?? null),
+      rampCode: checkIn.rampCode || (checkIn.rampNumber ? `LOC-RAMP-${String(checkIn.rampNumber).padStart(2, '0')}` : ((current as any)?.rampCode ?? null)),
       sealNumbers: checkIn.sealNumbers && checkIn.sealNumbers.length > 0 ? checkIn.sealNumbers : (checkIn.sealNumber ? [checkIn.sealNumber] : []),
       piecesPerPallet: current?.piecesPerPallet != null ? Number(current.piecesPerPallet) : 0,
       observations: checkIn.observations || current?.observations || '',
@@ -2202,6 +2187,48 @@ export class WarehouseMovementsService {
       ],
     });
 
+    return updated;
+  }
+
+  // Reabre Recepción Finalizada (Compuerta de Seguridad con Autorización)
+  reopenReception(folioOrId: string, justification: string, leaderName: string): ReceptionHeader | null {
+    const list = this.receptionsSignal();
+    const cleanKey = (folioOrId || '').trim();
+    const index = list.findIndex(
+      (r) => (r.folio && r.folio.trim() === cleanKey) || (r.id && r.id.trim() === cleanKey)
+    );
+
+    if (index === -1) return null;
+
+    const previousStatus = list[index].status;
+    const updated: ReceptionHeader = {
+      ...list[index],
+      status: 'IN_PROGRESS',
+      reopenReason: justification,
+      reopenedAt: new Date().toLocaleString('es-MX'),
+      reopenedBy: leaderName,
+    };
+
+    const newArr = [...list];
+    newArr[index] = updated;
+    this.receptionsSignal.set(newArr);
+
+    this.addReceptionAudit(updated.folio, {
+      id: `aud-rec-reopen-${Date.now()}`,
+      action: 'RECEPCION_REABIERTA',
+      actionLabel: 'Reapertura Extraordinaria con Autorización',
+      username: leaderName,
+      authorizedBy: leaderName,
+      reason: justification,
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [
+        { fieldName: 'Estado Operativo', oldValue: `${previousStatus} (Finalizada)`, newValue: 'IN_PROGRESS (En Proceso)' },
+        { fieldName: 'Motivo de Reapertura', newValue: justification },
+        { fieldName: 'Autorizado Por', newValue: leaderName },
+      ],
+    });
+
+    this.syncGlobalMaxPalletNumber();
     return updated;
   }
 

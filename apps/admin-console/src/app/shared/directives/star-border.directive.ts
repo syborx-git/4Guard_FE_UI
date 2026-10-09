@@ -22,31 +22,5 @@ export class StarBorderDirective implements OnInit {
   ngOnInit(): void {
     const target = this.el.nativeElement as HTMLElement;
     this.renderer.addClass(target, 'star-border-container');
-
-    // Elemento gradiente inferior (bottom)
-    const bottomGrad = this.renderer.createElement('div');
-    this.renderer.addClass(bottomGrad, 'border-gradient-bottom');
-    if (this.color.includes('gradient')) {
-      this.renderer.setStyle(bottomGrad, 'background', this.color);
-    } else {
-      this.renderer.setStyle(bottomGrad, 'background', `radial-gradient(circle, ${this.color}, transparent 12%)`);
-    }
-    this.renderer.setStyle(bottomGrad, 'animationDuration', this.speed);
-    this.renderer.setStyle(bottomGrad, 'opacity', `${this.glowIntensity}`);
-
-    // Elemento gradiente superior (top)
-    const topGrad = this.renderer.createElement('div');
-    this.renderer.addClass(topGrad, 'border-gradient-top');
-    if (this.color.includes('gradient')) {
-      this.renderer.setStyle(topGrad, 'background', this.color);
-    } else {
-      this.renderer.setStyle(topGrad, 'background', `radial-gradient(circle, ${this.color}, transparent 12%)`);
-    }
-    this.renderer.setStyle(topGrad, 'animationDuration', this.speed);
-    this.renderer.setStyle(topGrad, 'opacity', `${this.glowIntensity}`);
-
-    // Insertar capas animadas al inicio del contenedor
-    this.renderer.insertBefore(target, bottomGrad, target.firstChild);
-    this.renderer.insertBefore(target, topGrad, target.firstChild);
   }
 }

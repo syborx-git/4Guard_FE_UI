@@ -11,9 +11,10 @@ export type PositionStatus = 'AVAILABLE' | 'OCCUPIED' | 'BLOCKED' | 'MAINTENANCE
 export interface PositionDetail {
   id: string;             // UUID de la ubicación en BD o código
   positionNumber: number; // Número ordinal 1..N
-  code: string;           // Código de ubicación (ej. 'POS-A-001', 'A-01')
+  code: string;           // Código de ubicación (ej. 'POS-A-001', 'POS-A-T01', 'POS-A-PRE01')
   sectionId: string;      // UUID de la sección/almacén
   sectionName: string;    // Nombre descriptivo de la nave
+  category?: 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
   skuCode?: string;
   skuDescription: string;
   status: PositionStatus;
@@ -26,10 +27,12 @@ export interface PositionDetail {
 
 export interface WarehouseSection {
   id: string;                  // UUID de la sección
-  code: string;                // 'A', 'E', 'F (D)', 'G', 'I', 'J(C)', 'L', 'K', 'B', 'C', 'H'
+  code: string;                // 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M'
   name: string;
   category: string;
   posFijas: number;
+  posTemp?: number;
+  posPreload?: number;
   capacidadTarimas: number;
   factorEstiba: string;
   materials: string[];
@@ -84,3 +87,27 @@ export interface InitializeSectionRequest {
   generateLocations?: boolean;
   authorizedSkuIds?: string[];
 }
+
+export interface CreatePositionRequest {
+  sectionId: string;
+  code?: string;
+  category?: 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
+  capacityTarimas?: number;
+  aisle?: string;
+  rack?: string;
+  level?: number;
+  notes?: string;
+}
+
+export interface UpdatePositionDetailsRequest {
+  code?: string;
+  category?: 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
+  capacityTarimas?: number;
+  skuCode?: string;
+  skuDescription?: string;
+  aisle?: string;
+  rack?: string;
+  level?: number;
+  notes?: string;
+}
+

@@ -17,6 +17,9 @@ export interface WarehouseLayoutRepositoryPort {
     action: 'BLOCK' | 'RELEASE' | 'OCCUPY',
     meta?: { reasonCode?: string; comment?: string }
   ): Observable<PositionDetail>;
+  createPosition(payload: import('../models/warehouse-catalog.models').CreatePositionRequest): Observable<PositionDetail>;
+  updatePositionDetails(positionId: string, payload: import('../models/warehouse-catalog.models').UpdatePositionDetailsRequest): Observable<PositionDetail>;
+  deletePosition(positionId: string): Observable<void>;
   getBlockReasons(): Observable<string[]>;
   initializeSection(sectionId: string, payload: InitializeSectionRequest): Observable<any>;
 }

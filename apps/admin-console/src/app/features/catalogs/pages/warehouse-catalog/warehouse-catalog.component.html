@@ -7,10 +7,9 @@
 <div class="warehouse-page" aria-label="Catálogo de Almacén y Topología">
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       HEADER HERO GOLDEN STANDARD (Sin botón de navegación a /admin)
+       1. CABECERA HERO GOLDEN STANDARD (HOMOLOGADA CON SEGURIDAD & RECEPCIÓN)
        ════════════════════════════════════════════════════════════════ -->
   <header class="warehouse-header">
-
     <div class="warehouse-header__top">
       <div class="warehouse-header__left">
         <div class="warehouse-header__icon-wrap">
@@ -21,7 +20,7 @@
           <div class="warehouse-header__eyebrow">
             <span class="warehouse-header__eyebrow-tag">TOPOLOGÍA FÍSICA & BAHÍAS EN TIEMPO REAL</span>
             <span class="warehouse-header__eyebrow-sep">·</span>
-            <span class="warehouse-header__eyebrow-sub">11 NAVES REGISTRADAS</span>
+            <span class="warehouse-header__eyebrow-sub">12 NAVES REGISTRADAS</span>
           </div>
           <h1 class="warehouse-header__title">Catálogo por Almacén / Topología</h1>
           <p class="warehouse-header__subtitle">
@@ -30,102 +29,158 @@
         </div>
       </div>
 
-      <!-- Selector de Pestañas Principales (Sub-tabs Bar) -->
-      <nav class="subtabs-bar" aria-label="Vistas del catálogo">
+      <div class="warehouse-status-badge">
+        <span class="warehouse-status-badge__dot"></span>
+        <span>TOPOLOGÍA SINCRONIZADA</span>
+      </div>
+    </div>
+
+    <!-- ── BARRA DE PESTAÑAS (PILL NAV HOMOLOGADO) ── -->
+    <div class="warehouse-tabs-bar">
+      <div class="warehouse-tabs-group" role="tablist">
         <button
           type="button"
+          role="tab"
+          [attr.aria-selected]="activeTab() === 'topology'"
           (click)="activeTab.set('topology')"
-          [class.subtab-btn--active]="activeTab() === 'topology'"
-          class="subtab-btn"
+          [class.active]="activeTab() === 'topology'"
+          class="warehouse-tab-btn"
         >
-          <span class="material-symbols-outlined subtab-btn__icon">grid_view</span>
+          <span class="material-symbols-outlined text-sm">grid_view</span>
           <span>1. Mapa Visual de Topología</span>
         </button>
 
         <button
           type="button"
+          role="tab"
+          [attr.aria-selected]="activeTab() === 'bays'"
           (click)="activeTab.set('bays')"
-          [class.subtab-btn--active]="activeTab() === 'bays'"
-          class="subtab-btn"
+          [class.active]="activeTab() === 'bays'"
+          class="warehouse-tab-btn"
         >
-          <span class="material-symbols-outlined subtab-btn__icon">table_rows</span>
+          <span class="material-symbols-outlined text-sm">table_rows</span>
           <span>2. Consulta de Bahías</span>
         </button>
-      </nav>
-    </div>
-
-    <!-- ── KPI Cards Grid Homologadas ─────────────────────────────────── -->
-    <div class="warehouse-kpi-grid" aria-label="Indicadores de topología y ocupación">
-
-      <!-- Total Posiciones -->
-      <div class="warehouse-kpi-card warehouse-kpi-card--total">
-        <div class="warehouse-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">warehouse</span>
-        </div>
-        <div class="warehouse-kpi-card__body">
-          <span class="warehouse-kpi-card__value">{{ stats().totalPositions | number }}</span>
-          <span class="warehouse-kpi-card__label">Total Posiciones</span>
-          <span class="warehouse-kpi-card__hint">8 Almacenes productivos</span>
-        </div>
-        <div class="warehouse-kpi-card__bar warehouse-kpi-card__bar--total"></div>
       </div>
-
-      <!-- Naves Activas -->
-      <div class="warehouse-kpi-card warehouse-kpi-card--active">
-        <div class="warehouse-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">domain_verification</span>
-        </div>
-        <div class="warehouse-kpi-card__body">
-          <span class="warehouse-kpi-card__value">
-            {{ stats().loadedSections }}<small class="warehouse-kpi-card__subval">/{{ stats().totalSections }}</small>
-          </span>
-          <span class="warehouse-kpi-card__label">Naves Activas</span>
-          <span class="warehouse-kpi-card__hint">A, E, F(D), G, I, J(C), L, K</span>
-        </div>
-        <div class="warehouse-kpi-card__bar warehouse-kpi-card__bar--active"></div>
-      </div>
-
-      <!-- Ocupación Actual -->
-      <div class="warehouse-kpi-card warehouse-kpi-card--warning">
-        <div class="warehouse-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">inventory_2</span>
-        </div>
-        <div class="warehouse-kpi-card__body">
-          <span class="warehouse-kpi-card__value">{{ stats().occupiedPositions | number }}</span>
-          <span class="warehouse-kpi-card__label">Ocupación Actual</span>
-          <span class="warehouse-kpi-card__hint">{{ stats().totalCapacityTarimas | number }} Tarimas Cap.</span>
-        </div>
-        <div class="warehouse-kpi-card__bar warehouse-kpi-card__bar--warning"></div>
-      </div>
-
-      <!-- Bloqueadas QM -->
-      <div class="warehouse-kpi-card warehouse-kpi-card--danger">
-        <div class="warehouse-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="warehouse-kpi-card__body">
-          <span class="warehouse-kpi-card__value">{{ stats().blockedPositions | number }}</span>
-          <span class="warehouse-kpi-card__label">Bloqueadas QM</span>
-          <span class="warehouse-kpi-card__hint">Cuarentena / Inspección</span>
-        </div>
-        <div class="warehouse-kpi-card__bar warehouse-kpi-card__bar--danger"></div>
-      </div>
-
-      <!-- Áreas Futuras -->
-      <div class="warehouse-kpi-card warehouse-kpi-card--info">
-        <div class="warehouse-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">design_services</span>
-        </div>
-        <div class="warehouse-kpi-card__body">
-          <span class="warehouse-kpi-card__value">{{ stats().pendingSections }}</span>
-          <span class="warehouse-kpi-card__label">Áreas Futuras</span>
-          <span class="warehouse-kpi-card__hint">B, C, H en homologación</span>
-        </div>
-        <div class="warehouse-kpi-card__bar warehouse-kpi-card__bar--info"></div>
-      </div>
-
     </div>
   </header>
+
+  <!-- ── 2. TARJETAS DE MÉTRICAS KPI (CON VISTA COMPACTA COLAPSABLE HOMOLOGADA) ── -->
+  <section aria-label="Métricas de Almacén / Topología">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-[#c5a86b]">analytics</span>
+        <span>Métricas Operativas del Almacén / Topología</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="inline-flex items-center gap-1 text-[11px] font-bold text-[#9b7626] dark:text-[#e0c87a] hover:text-[#845d17] dark:hover:text-white transition-colors py-0.5 px-2 rounded-md hover:bg-[#c5a86b]/10 cursor-pointer"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
+    </div>
+
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida Homologada -->
+      <div class="security-kpi-summary-bar animate-fade-in">
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-blue-500"></span>
+          <span class="security-kpi-summary-label">Total Posiciones:</span>
+          <span class="security-kpi-summary-value">{{ 1702 | number }}</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-emerald-500"></span>
+          <span class="security-kpi-summary-label">Naves Activas:</span>
+          <span class="security-kpi-summary-value">12/12</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-[#c5a86b]"></span>
+          <span class="security-kpi-summary-label">Ocupación:</span>
+          <span class="security-kpi-summary-value">{{ stats().occupiedPositions | number }}</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-rose-500"></span>
+          <span class="security-kpi-summary-label">Bloqueadas QM:</span>
+          <span class="security-kpi-summary-value">{{ stats().blockedPositions | number }}</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-purple-500"></span>
+          <span class="security-kpi-summary-label">Buffer Extra:</span>
+          <span class="security-kpi-summary-value">474 Temp</span>
+        </div>
+      </div>
+    } @else {
+      <!-- Grid Completo de KPIs (Homologado con module-kpi-grid & module-kpi-card) -->
+      <div class="module-kpi-grid animate-fade-in">
+        <!-- KPI 1: Total Posiciones -->
+        <div class="module-kpi-card module-kpi-card--primary">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">warehouse</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Total Posiciones</span>
+            <span class="module-kpi-card__value">{{ 1702 | number }}</span>
+            <span class="module-kpi-card__sub">1,180 Fijas · 474 Temp · 48 Pre</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: Naves Activas -->
+        <div class="module-kpi-card module-kpi-card--success">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">domain_verification</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Naves Activas</span>
+            <span class="module-kpi-card__value">12/12</span>
+            <span class="module-kpi-card__sub">A, B, C, D, E, F, G, H, I, K, L, M</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Ocupación Actual -->
+        <div class="module-kpi-card module-kpi-card--warning">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">inventory_2</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Ocupación Actual</span>
+            <span class="module-kpi-card__value">{{ stats().occupiedPositions | number }}</span>
+            <span class="module-kpi-card__sub">25,960 Tarimas (Base Nominal)</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Bloqueadas QM -->
+        <div class="module-kpi-card module-kpi-card--danger">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">block</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Bloqueadas QM</span>
+            <span class="module-kpi-card__value">{{ stats().blockedPositions | number }}</span>
+            <span class="module-kpi-card__sub">Cuarentena / Inspección</span>
+          </div>
+        </div>
+
+        <!-- KPI 5: Buffer Extra -->
+        <div class="module-kpi-card module-kpi-card--info">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">layers</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Buffer Extra</span>
+            <span class="module-kpi-card__value">474</span>
+            <span class="module-kpi-card__sub">+10,428 T en Temporales</span>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
 
   <!-- ════════════════════════════════════════════════════════════════════════
        1. MAPA VISUAL DE TOPOLOGÍA (PLANO INTERACTIVO 2D)
@@ -445,72 +500,73 @@
         <!-- Panel Lateral / Drawer de Sección -->
         @if (selectedSection(); as sec) {
           <aside class="wmap__detail" aria-label="Detalle de sección seleccionada">
+            <!-- Header del Drawer -->
             <div class="wmap__detail-hdr">
               <div class="wmap__detail-hdr-left">
                 <span class="wmap__detail-badge">{{ sec.code }}</span>
-                <div>
-                  <h2 class="wmap__detail-title">{{ sec.name }}</h2>
-                  <p class="wmap__detail-sub">{{ sec.category }} · {{ sec.notes }}</p>
+                <div class="min-w-0">
+                  <h2 class="wmap__detail-title truncate">{{ sec.name }}</h2>
+                  <p class="wmap__detail-sub">{{ sec.category }} · {{ sec.notes || 'Bahías operativas' }}</p>
                 </div>
               </div>
               <div class="wmap__detail-hdr-actions">
+                <button type="button" class="wmap__add-pos-btn" (click)="openNewPositionModal(sec.id)" title="Dar de alta nueva posición en esta nave">
+                  <span class="material-symbols-outlined">add_circle</span>
+                  <span>+ Nueva Posición</span>
+                </button>
                 <button type="button" class="wmap__icon-btn" (click)="openSetupModal(sec)" title="Configurar Parámetros de Nave">
                   <span class="material-symbols-outlined">tune</span>
                 </button>
-                <button type="button" class="wmap__icon-btn" (click)="closeSectionDetail()" title="Cerrar">
+                <button type="button" class="wmap__icon-btn" (click)="closeSectionDetail()" title="Cerrar Panel">
                   <span class="material-symbols-outlined">close</span>
                 </button>
               </div>
             </div>
 
-            <!-- Callout de activación si la nave está PENDING o sin posiciones -->
-            @if (sec.posFijas === 0 || sec.status === 'PENDING') {
-              <div class="wmap__setup-callout">
-                <div class="wmap__setup-callout-ico">
-                  <span class="material-symbols-outlined">build_circle</span>
-                </div>
-                <div class="wmap__setup-callout-body">
-                  <h4 class="wmap__setup-callout-title">Nave pendiente de activación</h4>
-                  <p class="wmap__setup-callout-desc">
-                    Esta área física ya está delimitada en el plano SVG. Configura sus parámetros de estiba y genera sus bahías operativas.
-                  </p>
-                  <button class="wmap__setup-callout-btn" type="button" (click)="openSetupModal(sec)">
-                    <span class="material-symbols-outlined">add_task</span>
-                    <span>Configurar y Activar Nave</span>
-                  </button>
-                </div>
-              </div>
-            }
-
+            <!-- Barra de Métricas Compacta de Alto Rendimiento -->
             @if (sectionMetrics(); as m) {
-              <div class="wmap__detail-kpis">
-                <div class="wmap__dkpi">
-                  <span class="wmap__dkpi-l">Posiciones</span>
-                  <div class="wmap__dkpi-v">{{ m.total }}</div>
+              <div class="wmap__metrics-strip">
+                <div class="wmap__metric-item">
+                  <span class="wmap__metric-label">100% FIJAS</span>
+                  <div class="wmap__metric-val">
+                    <span class="text-blue-600 dark:text-blue-400 font-black">{{ m.fixedCount }}</span>
+                    <span class="wmap__metric-sub">({{ m.fixedCapacity | number }}T)</span>
+                  </div>
                 </div>
-                <div class="wmap__dkpi wmap__dkpi--cyan">
-                  <span class="wmap__dkpi-l">Capacidad</span>
-                  <div class="wmap__dkpi-v">{{ m.capacityTarimas | number }}<small>T</small></div>
+
+                <div class="wmap__metric-item">
+                  <span class="wmap__metric-label">TEMPORALES</span>
+                  <div class="wmap__metric-val">
+                    <span class="text-purple-600 dark:text-purple-400 font-black">{{ m.tempCount }}</span>
+                    <span class="wmap__metric-sub">({{ m.tempCapacity | number }}T)</span>
+                  </div>
                 </div>
-                <div class="wmap__dkpi wmap__dkpi--green">
-                  <span class="wmap__dkpi-l">Ocupación</span>
-                  <div class="wmap__dkpi-v">{{ m.occupancyPct }}%</div>
-                  <span class="wmap__dkpi-s">{{ m.occupied }} ocup. · {{ m.available }} libres</span>
+
+                <div class="wmap__metric-item">
+                  <span class="wmap__metric-label">OCUPACIÓN</span>
+                  <div class="wmap__metric-val">
+                    <span class="text-emerald-600 dark:text-emerald-400 font-black">{{ m.nominalOccupancyPct }}%</span>
+                    <span class="wmap__metric-sub">({{ m.fixedOccupied }}/{{ m.fixedCount }})</span>
+                  </div>
                 </div>
-                <div class="wmap__dkpi wmap__dkpi--red">
-                  <span class="wmap__dkpi-l">Bloqueadas QM</span>
-                  <div class="wmap__dkpi-v">{{ m.blocked }}</div>
+
+                <div class="wmap__metric-item">
+                  <span class="wmap__metric-label">PRECARGA</span>
+                  <div class="wmap__metric-val">
+                    <span class="text-amber-600 dark:text-amber-400 font-black">{{ m.preloadCount }}</span>
+                    <span class="wmap__metric-sub">Bahías</span>
+                  </div>
                 </div>
               </div>
             }
 
-            <!-- Búsqueda en sección -->
+            <!-- Búsqueda rápida -->
             <div class="wmap__search">
               <span class="material-symbols-outlined wmap__search-ico">search</span>
               <input
                 class="wmap__search-input"
                 type="text"
-                placeholder="Buscar posición (ej: POS-020), SKU o lote..."
+                placeholder="Buscar posición (ej: POS-A-001, POS-A-T01), SKU..."
                 [value]="sectionSearchQuery()"
                 (input)="sectionSearchQuery.set($any($event.target).value)"
               />
@@ -521,23 +577,40 @@
               }
             </div>
 
-            <!-- Filtros de estado de sección -->
-            <div class="wmap__tabs">
-              <button type="button" class="wmap__tab" [class.wmap__tab--active]="sectionStatusFilter() === 'ALL'" (click)="sectionStatusFilter.set('ALL')">
-                Todas ({{ sectionMetrics()?.total || 0 }})
-              </button>
-              <button type="button" class="wmap__tab" [class.wmap__tab--active]="sectionStatusFilter() === 'OCCUPIED'" (click)="sectionStatusFilter.set('OCCUPIED')">
-                <span class="wmap__tab-dot wmap__tab-dot--blue"></span>Ocupadas ({{ sectionMetrics()?.occupied || 0 }})
-              </button>
-              <button type="button" class="wmap__tab" [class.wmap__tab--active]="sectionStatusFilter() === 'AVAILABLE'" (click)="sectionStatusFilter.set('AVAILABLE')">
-                <span class="wmap__tab-dot wmap__tab-dot--green"></span>Disponibles ({{ sectionMetrics()?.available || 0 }})
-              </button>
-              <button type="button" class="wmap__tab" [class.wmap__tab--active]="sectionStatusFilter() === 'BLOCKED'" (click)="sectionStatusFilter.set('BLOCKED')">
-                <span class="wmap__tab-dot wmap__tab-dot--red"></span>Bloqueadas ({{ sectionMetrics()?.blocked || 0 }})
-              </button>
+            <!-- Filtros Segmentados Limpios (Sin barras de desplazamiento toscas) -->
+            <div class="wmap__filters-wrapper">
+              <div class="wmap__chips-row">
+                <button type="button" class="wmap__filter-chip" [class.active]="sectionCategoryFilter() === 'ALL'" (click)="sectionCategoryFilter.set('ALL')">
+                  Todas ({{ sectionMetrics()?.total || 0 }})
+                </button>
+                <button type="button" class="wmap__filter-chip" [class.active]="sectionCategoryFilter() === 'FIXED'" (click)="sectionCategoryFilter.set('FIXED')">
+                  Fijas ({{ sectionMetrics()?.fixedCount || 0 }})
+                </button>
+                <button type="button" class="wmap__filter-chip wmap__filter-chip--temp" [class.active]="sectionCategoryFilter() === 'TEMPORARY'" (click)="sectionCategoryFilter.set('TEMPORARY')">
+                  Temporales ({{ sectionMetrics()?.tempCount || 0 }})
+                </button>
+                <button type="button" class="wmap__filter-chip wmap__filter-chip--pre" [class.active]="sectionCategoryFilter() === 'PRELOAD'" (click)="sectionCategoryFilter.set('PRELOAD')">
+                  Precarga ({{ sectionMetrics()?.preloadCount || 0 }})
+                </button>
+              </div>
+
+              <div class="wmap__chips-row">
+                <button type="button" class="wmap__filter-chip" [class.active]="sectionStatusFilter() === 'ALL'" (click)="sectionStatusFilter.set('ALL')">
+                  Todos
+                </button>
+                <button type="button" class="wmap__filter-chip" [class.active]="sectionStatusFilter() === 'AVAILABLE'" (click)="sectionStatusFilter.set('AVAILABLE')">
+                  <span class="wmap__tab-dot wmap__tab-dot--green"></span>Libres ({{ sectionMetrics()?.available || 0 }})
+                </button>
+                <button type="button" class="wmap__filter-chip" [class.active]="sectionStatusFilter() === 'OCCUPIED'" (click)="sectionStatusFilter.set('OCCUPIED')">
+                  <span class="wmap__tab-dot wmap__tab-dot--blue"></span>Ocupadas ({{ sectionMetrics()?.occupied || 0 }})
+                </button>
+                <button type="button" class="wmap__filter-chip" [class.active]="sectionStatusFilter() === 'BLOCKED'" (click)="sectionStatusFilter.set('BLOCKED')">
+                  <span class="wmap__tab-dot wmap__tab-dot--red"></span>Bloqueadas ({{ sectionMetrics()?.blocked || 0 }})
+                </button>
+              </div>
             </div>
 
-            <!-- Cuadrícula de posiciones con scroll -->
+            <!-- Cuadrícula de posiciones de alto rendimiento y máxima visibilidad -->
             <div class="wmap__pos-scroll">
               @if (isPositionsLoading()) {
                 <div class="wmap__empty">
@@ -548,21 +621,42 @@
                 <div class="wmap__pos-grid">
                   @for (pos of filteredSectionPositions(); track pos.id) {
                     <div
-                      class="wmap__pos"
-                      [class.wmap__pos--occupied]="pos.status === 'OCCUPIED'"
-                      [class.wmap__pos--available]="pos.status === 'AVAILABLE'"
-                      [class.wmap__pos--blocked]="pos.status === 'BLOCKED'"
-                      [class.wmap__pos--inspected]="inspectedPosition()?.id === pos.id"
+                      class="wmap__pos-card"
+                      [class.wmap__pos-card--occupied]="pos.status === 'OCCUPIED'"
+                      [class.wmap__pos-card--available]="pos.status === 'AVAILABLE'"
+                      [class.wmap__pos-card--blocked]="pos.status === 'BLOCKED'"
+                      [class.wmap__pos-card--inspected]="inspectedPosition()?.id === pos.id"
                       (click)="inspectPosition(pos)"
                     >
-                      <div class="wmap__pos-header">
-                        <span class="wmap__pos-code">{{ pos.code }}</span>
+                      <div class="wmap__pos-card-head">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <span class="wmap__pos-card-code truncate">{{ pos.code }}</span>
+                          @if (pos.category === 'TEMPORARY_BUFFER' || pos.code.includes('-T')) {
+                            <span class="wmap__badge-cat-temp" title="Posición Temporal">TEMP</span>
+                          } @else if (pos.category === 'PRELOAD_STAGING' || pos.code.includes('-PRE')) {
+                            <span class="wmap__badge-cat-preload" title="Posición de Precarga">PRE</span>
+                          }
+                        </div>
                         <span class="wmap__status-badge" [class]="getStatusClass(pos.status)">{{ getStatusLabel(pos.status) }}</span>
                       </div>
-                      <div class="wmap__pos-sku" [title]="pos.skuDescription">{{ pos.skuDescription }}</div>
-                      <div class="wmap__pos-footer">
-                        <span class="wmap__pos-lote">{{ pos.batchNumber }}</span>
-                        <span class="wmap__pos-cap">{{ pos.currentTarimas }}/{{ pos.capacityTarimas }}T</span>
+
+                      <div class="wmap__pos-card-material">
+                        @if (pos.status === 'OCCUPIED' && pos.skuDescription) {
+                          <span class="wmap__pos-sku-text truncate" [title]="pos.skuDescription">{{ pos.skuDescription }}</span>
+                        } @else if (pos.status === 'BLOCKED') {
+                          <span class="text-rose-500 dark:text-rose-400 font-semibold text-[11px] flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[13px]">lock</span> Bloqueada QM
+                          </span>
+                        } @else {
+                          <span class="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px] flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[13px]">check_circle</span> Disponible
+                          </span>
+                        }
+                      </div>
+
+                      <div class="wmap__pos-card-foot">
+                        <span class="wmap__pos-card-batch truncate">{{ pos.batchNumber ? 'Lot: ' + pos.batchNumber : 'Sin Lote' }}</span>
+                        <span class="wmap__pos-card-cap">{{ pos.currentTarimas }}/{{ pos.capacityTarimas }} T</span>
                       </div>
                     </div>
                   }
@@ -570,7 +664,7 @@
               } @else {
                 <div class="wmap__empty">
                   <span class="material-symbols-outlined">search_off</span>
-                  <p>Sin posiciones con los criterios actuales</p>
+                  <p>Sin posiciones con los filtros seleccionados</p>
                 </div>
               }
             </div>
@@ -618,6 +712,20 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">Tipo de Bahía / Categoría</label>
+          <select
+            [value]="selectedCategory()"
+            (change)="selectedCategory.set($any($event.target.value))"
+            class="form-select"
+          >
+            <option value="ALL">Todas las Categorías</option>
+            <option value="FIXED">📦 Fijas Nominales (100% Base)</option>
+            <option value="TEMPORARY">🟣 Temporales (Buffer Extra / Sobrecupo)</option>
+            <option value="PRELOAD">🔵 Precarga / Rampa / Staging</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Estado de Disponibilidad</label>
           <select
             [value]="occupancyFilter()"
@@ -629,6 +737,14 @@
             <option value="OCCUPIED">📦 Ocupadas</option>
             <option value="BLOCKED">🛑 Bloqueadas QM (Cuarentena)</option>
           </select>
+        </div>
+
+        <div class="form-group form-group--btn">
+          <label class="form-label">&nbsp;</label>
+          <button type="button" class="btn-create-pos" (click)="openNewPositionModal()">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span>+ Nueva Posición</span>
+          </button>
         </div>
       </div>
 
@@ -660,7 +776,14 @@
               @for (b of filteredBays(); track b.id) {
                 <tr>
                   <td class="td-mono td-code">
-                    <span class="code-badge">{{ b.bayCode }}</span>
+                    <div class="flex items-center gap-1.5">
+                      <span class="code-badge">{{ b.bayCode }}</span>
+                      @if (b.rawPosition.category === 'TEMPORARY_BUFFER' || b.bayCode.includes('-T')) {
+                        <span class="wmap__badge-cat-temp" title="Posición Temporal de Sobrecupo">TEMP</span>
+                      } @else if (b.rawPosition.category === 'PRELOAD_STAGING' || b.bayCode.includes('-PRE')) {
+                        <span class="wmap__badge-cat-preload" title="Posición de Precarga">PRE</span>
+                      }
+                    </div>
                   </td>
                   <td class="td-primary">
                     <span class="font-medium">{{ b.warehouseZoneName }}</span>
@@ -754,8 +877,14 @@
         </div>
 
         <!-- Body Modal: Vista Normal -->
-        @if (inspectorMode() === 'view') {
+        @if (inspectorMode() === 'view' && !isEditPositionMode()) {
           <div class="wmap__modal-body">
+            <div class="wmap__info-row">
+              <span class="wmap__info-label">Categoría</span>
+              <span class="wmap__badge-cat-temp" *ngIf="item.category === 'TEMPORARY_BUFFER' || item.code.includes('-T')">Temporal Buffer</span>
+              <span class="wmap__badge-cat-preload" *ngIf="item.category === 'PRELOAD_STAGING' || item.code.includes('-PRE')">Precarga Staging</span>
+              <span class="code-badge" *ngIf="!item.category || item.category === 'FIXED_STORAGE'">Fija Nominal (100%)</span>
+            </div>
             <div class="wmap__info-row">
               <span class="wmap__info-label">Estado Actual</span>
               <span class="wmap__status-badge" [class]="getStatusClass(item.status)">{{ getStatusLabel(item.status) }}</span>
@@ -814,6 +943,77 @@
                 <span>Bloquear QM</span>
               </button>
             </div>
+
+            <!-- Acciones CRUD de Posición -->
+            <div class="wmap__modal-crud-actions">
+              <button type="button" class="wmap__crud-btn wmap__crud-btn--edit" (click)="enterEditPositionMode()">
+                <span class="material-symbols-outlined">edit</span>
+                <span>Modificar Capacidad / Datos</span>
+              </button>
+              <button type="button" class="wmap__crud-btn wmap__crud-btn--delete" (click)="deleteInspectedPosition()">
+                <span class="material-symbols-outlined">delete_forever</span>
+                <span>Dar de Baja Posición</span>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Body Modal: Formulario Edición de Capacidad/Datos -->
+        @if (inspectorMode() === 'view' && isEditPositionMode()) {
+          <div class="wmap__modal-body">
+            <div class="wmap__edit-banner">
+              <span class="material-symbols-outlined">edit_note</span>
+              <div>
+                <strong>Modificar Parámetros de Bahía</strong>
+                <p>Ajusta la capacidad individual de estiba o cambia la categoría operativa.</p>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label--required">Capacidad en Tarimas</label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                class="form-input"
+                [ngModel]="editPosCapacity()"
+                (ngModelChange)="editPosCapacity.set($event)"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label--required">Categoría Operativa</label>
+              <select class="form-select" [ngModel]="editPosCategory()" (ngModelChange)="editPosCategory.set($event)">
+                <option value="FIXED_STORAGE">Fija Nominal (100% Base)</option>
+                <option value="TEMPORARY_BUFFER">Temporal (Buffer Extra / Sobrecupo)</option>
+                <option value="PRELOAD_STAGING">Precarga / Rampa / Staging</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Material / SKU Predeterminado</label>
+              <input
+                type="text"
+                class="form-input"
+                placeholder="Descripción del material asignado..."
+                [ngModel]="editPosSku()"
+                (ngModelChange)="editPosSku.set($event)"
+              />
+            </div>
+
+            <div class="wmap__modal-actions">
+              <button type="button" class="wmap__action-btn wmap__action-btn--ghost" (click)="cancelEditPositionMode()">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="wmap__action-btn wmap__action-btn--blue wmap__action-btn--full"
+                [disabled]="isSavingEditPosition()"
+                (click)="submitEditPosition()">
+                <span class="material-symbols-outlined">save</span>
+                <span>{{ isSavingEditPosition() ? 'Guardando...' : 'Guardar Cambios' }}</span>
+              </button>
+            </div>
           </div>
         }
 
@@ -864,6 +1064,145 @@
     </div>
   }
 
+  <!-- ════════════════════════════════════════════════════════════════════════
+       4. MODAL DE ALTA DE NUEVA POSICIÓN / BAHÍA
+       ════════════════════════════════════════════════════════════════════════ -->
+  @if (isNewPositionModalOpen()) {
+    <div class="wmap__modal-backdrop" (click)="closeNewPositionModal()">
+      <div class="wmap__modal wmap__modal--lg" (click)="$event.stopPropagation()">
+
+        <div class="wmap__modal-hdr">
+          <div class="wmap__modal-hdr-ico">
+            <span class="material-symbols-outlined">add_circle</span>
+          </div>
+          <div>
+            <h3 class="wmap__modal-title">Registrar Nueva Posición de Almacén</h3>
+            <span class="wmap__modal-sub">Alta física de posición / bahía en la topología operativa</span>
+          </div>
+          <button type="button" class="wmap__icon-btn" (click)="closeNewPositionModal()" title="Cerrar modal">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="wmap__modal-body">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="form-group">
+              <label class="form-label form-label--required">Almacén / Nave Destino</label>
+              <select
+                class="form-select"
+                [ngModel]="newPosSectionId()"
+                (ngModelChange)="newPosSectionId.set($event); onNewPosSectionOrCategoryChange()"
+              >
+                @for (sec of sections(); track sec.id) {
+                  <option [value]="sec.id">{{ sec.name }} (Nave {{ sec.code }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label--required">Categoría de Posición</label>
+              <select
+                class="form-select"
+                [ngModel]="newPosCategory()"
+                (ngModelChange)="newPosCategory.set($event); onNewPosSectionOrCategoryChange()"
+              >
+                <option value="FIXED_STORAGE">Fija Nominal (100% Base)</option>
+                <option value="TEMPORARY_BUFFER">Temporal (Buffer Extra / Sobrecupo)</option>
+                <option value="PRELOAD_STAGING">Precarga / Rampa / Staging</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="form-group">
+              <label class="form-label form-label--required">Código de Posición (Bahía)</label>
+              <input
+                type="text"
+                class="form-input font-mono uppercase"
+                placeholder="Ej. POS-A-176"
+                [ngModel]="newPosCode()"
+                (ngModelChange)="newPosCode.set($event)"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label--required">Capacidad en Tarimas</label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                class="form-input font-mono"
+                [ngModel]="newPosCapacity()"
+                (ngModelChange)="newPosCapacity.set($event)"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="form-group">
+              <label class="form-label">Pasillo (Opcional)</label>
+              <input
+                type="text"
+                class="form-input font-mono"
+                placeholder="01"
+                [ngModel]="newPosAisle()"
+                (ngModelChange)="newPosAisle.set($event)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Rack (Opcional)</label>
+              <input
+                type="text"
+                class="form-input font-mono"
+                placeholder="01"
+                [ngModel]="newPosRack()"
+                (ngModelChange)="newPosRack.set($event)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nivel (Opcional)</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                class="form-input font-mono"
+                placeholder="1"
+                [ngModel]="newPosLevel()"
+                (ngModelChange)="newPosLevel.set($event)"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Notas / Observaciones</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Ej. Bahía habilitada para contingencia temporada alta..."
+              [ngModel]="newPosNotes()"
+              (ngModelChange)="newPosNotes.set($event)"
+            />
+          </div>
+
+          <div class="wmap__modal-actions mt-2">
+            <button type="button" class="wmap__action-btn wmap__action-btn--ghost" (click)="closeNewPositionModal()">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="wmap__action-btn wmap__action-btn--green wmap__action-btn--full"
+              [disabled]="isSavingNewPosition() || !newPosCode()"
+              (click)="submitNewPosition()">
+              <span class="material-symbols-outlined">add_circle</span>
+              <span>{{ isSavingNewPosition() ? 'Guardando...' : 'Dar de Alta Posición' }}</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
   <!-- ── Modal Reutilizable de Configuración y Activación de Nave ── -->
   <fg-warehouse-section-setup-modal
     [(isOpen)]="isSetupModalOpen"
@@ -872,3 +1211,4 @@
   ></fg-warehouse-section-setup-modal>
 
 </div>
+
