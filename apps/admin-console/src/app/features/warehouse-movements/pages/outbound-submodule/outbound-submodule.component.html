@@ -358,6 +358,18 @@
                 </div>
               </div>
 
+              <!-- Unidad & Números Económicos / Placas (Tracto y Caja) -->
+              <div class="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-[11px] font-mono flex items-center justify-between text-slate-700 dark:text-slate-300">
+                <span class="truncate mr-2" title="Eco y Placas de Tracto">
+                  <strong class="font-sans text-[10px] text-slate-500 uppercase">Tracto:</strong>
+                  {{ outbound.economicNumber || '-' }} ({{ outbound.tractorPlates || 'S/P' }})
+                </span>
+                <span class="truncate text-right" title="Eco y Placas de Caja">
+                  <strong class="font-sans text-[10px] text-slate-500 uppercase">Caja:</strong>
+                  {{ outbound.boxEconomicNumber || '-' }} ({{ outbound.boxPlates || 'S/P' }})
+                </span>
+              </div>
+
               <!-- Progress Bar: Fase Operativa de la Salida (Fase 1 a 5) -->
               @if (getOutboundPhaseInfo(outbound.status); as phase) {
                 <div class="executive-progress-section">
