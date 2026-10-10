@@ -239,12 +239,12 @@ export class PrintReceptionLayoutComponent {
   get economicNumber(): string {
     if (!this.reception) return '-';
     return (
-      this.reception.checkIn?.economicNumber ||
       this.reception.checkIn?.noEcoTractor ||
-      (this.reception as any).economicNumber ||
+      this.reception.checkIn?.economicNumber ||
       (this.reception as any).noEcoTractor ||
-      (this.reception as any).preCheckin?.economicNumber ||
+      (this.reception as any).economicNumber ||
       (this.reception as any).preCheckin?.noEcoTractor ||
+      (this.reception as any).preCheckin?.economicNumber ||
       '-'
     );
   }
@@ -252,12 +252,12 @@ export class PrintReceptionLayoutComponent {
   get boxEconomicNumber(): string {
     if (!this.reception) return '-';
     return (
-      this.reception.checkIn?.boxEconomicNumber ||
       this.reception.checkIn?.noEcoCaja ||
-      (this.reception as any).boxEconomicNumber ||
+      this.reception.checkIn?.boxEconomicNumber ||
       (this.reception as any).noEcoCaja ||
-      (this.reception as any).preCheckin?.boxEconomicNumber ||
+      (this.reception as any).boxEconomicNumber ||
       (this.reception as any).preCheckin?.noEcoCaja ||
+      (this.reception as any).preCheckin?.boxEconomicNumber ||
       '-'
     );
   }
