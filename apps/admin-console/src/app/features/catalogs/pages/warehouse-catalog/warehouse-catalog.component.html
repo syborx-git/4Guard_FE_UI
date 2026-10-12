@@ -485,12 +485,15 @@
                       [attr.height]="bay.height"
                       rx="1"
                       class="cad__bay-slot"
-                      [class.cad__bay-slot--avail]="bay.status === 'AVAILABLE'"
-                      [class.cad__bay-slot--occ]="bay.status === 'OCCUPIED'"
+                      [class.cad__bay-slot--highlighted]="activeHoveredCode() === bay.code"
+                      [class.cad__bay-slot--alert-red]="bay.alertType === 'CRITICAL'"
+                      [class.cad__bay-slot--alert-yellow]="bay.alertType === 'WARNING'"
+                      [class.cad__bay-slot--avail]="bay.alertType === 'NONE' && bay.status === 'AVAILABLE'"
+                      [class.cad__bay-slot--occ]="bay.alertType === 'NONE' && bay.status === 'OCCUPIED'"
                       [class.cad__bay-slot--block]="bay.status === 'BLOCKED'"
                       [class.cad__bay-slot--temp]="bay.category === 'TEMPORARY_BUFFER'"
                       [class.cad__bay-slot--preload]="bay.category === 'PRELOAD_STAGING'"
-                      [class.cad__bay-slot--selected]="inspectedPosition()?.id === bay.id"
+                      [class.cad__bay-slot--selected]="inspectedPosition()?.id === bay.id || inspectedPosition()?.code === bay.code"
                       (mouseenter)="onSvgBayMouseEnter($event, bay)"
                       (mouseleave)="onSvgBayMouseLeave()"
                       (click)="onSvgBayClick(bay, $event)"
@@ -629,6 +632,20 @@
                   </div>
                 }
               </div>
+
+              <!-- Alerta Dinámica en Croquis -->
+              @if (bay.alertType === 'CRITICAL') {
+                <div class="px-2.5 py-1.5 mx-2 mb-2 bg-rose-500/20 border border-rose-500/40 rounded text-rose-300 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
+                  <span class="material-symbols-outlined text-[15px] text-rose-400">error</span>
+                  <span class="truncate">{{ bay.alertMessage || 'Alerta Crítica: Bloqueo QM / Sobrecupo' }}</span>
+                </div>
+              } @else if (bay.alertType === 'WARNING') {
+                <div class="px-2.5 py-1.5 mx-2 mb-2 bg-amber-500/20 border border-amber-500/40 rounded text-amber-300 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
+                  <span class="material-symbols-outlined text-[15px] text-amber-400">warning</span>
+                  <span class="truncate">{{ bay.alertMessage || 'Alerta Preventiva: Capacidad Crítica' }}</span>
+                </div>
+              }
+
               <div class="wmap__tt-footer">
                 <span class="material-symbols-outlined text-[13px]">touch_app</span> Clic para inspeccionar y gestionar
               </div>
@@ -760,11 +777,17 @@
                 <div class="wmap__pos-grid">
                   @for (pos of filteredSectionPositions(); track pos.id) {
                     <div
+                      [id]="'pos-card-' + pos.code"
                       class="wmap__pos-card"
                       [class.wmap__pos-card--occupied]="pos.status === 'OCCUPIED'"
                       [class.wmap__pos-card--available]="pos.status === 'AVAILABLE'"
                       [class.wmap__pos-card--blocked]="pos.status === 'BLOCKED'"
                       [class.wmap__pos-card--inspected]="inspectedPosition()?.id === pos.id"
+                      [class.wmap__pos-card--highlighted]="activeHoveredCode() === pos.code"
+                      [class.wmap__pos-card--alert-red]="getPosAlert(pos).type === 'CRITICAL'"
+                      [class.wmap__pos-card--alert-yellow]="getPosAlert(pos).type === 'WARNING'"
+                      (mouseenter)="onPosCardMouseEnter(pos)"
+                      (mouseleave)="onPosCardMouseLeave()"
                       (click)="inspectPosition(pos)"
                     >
                       <div class="wmap__pos-card-head">
@@ -778,6 +801,21 @@
                         </div>
                         <span class="wmap__status-badge" [class]="getStatusClass(pos.status)">{{ getStatusLabel(pos.status) }}</span>
                       </div>
+
+                      <!-- Alerta Dinámica en Tarjeta -->
+                      @if (getPosAlert(pos); as alert) {
+                        @if (alert.type === 'CRITICAL') {
+                          <div class="wmap__pos-card-alert wmap__pos-card-alert--red">
+                            <span class="material-symbols-outlined text-[13px]">error</span>
+                            <span class="truncate">{{ alert.message }}</span>
+                          </div>
+                        } @else if (alert.type === 'WARNING') {
+                          <div class="wmap__pos-card-alert wmap__pos-card-alert--yellow">
+                            <span class="material-symbols-outlined text-[13px]">warning</span>
+                            <span class="truncate">{{ alert.message }}</span>
+                          </div>
+                        }
+                      }
 
                       <div class="wmap__pos-card-material">
                         @if (pos.status === 'OCCUPIED' && pos.skuDescription) {

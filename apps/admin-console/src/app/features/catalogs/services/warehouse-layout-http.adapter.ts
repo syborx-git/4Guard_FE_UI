@@ -508,8 +508,40 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     const zoneChar = section.code.replace(/[^A-Z]/g, '') || 'A';
 
     // 1. Fijas
+    const defaultSku = section.materials && section.materials.length > 0 ? section.materials[0] : 'Material Industrial Estándar';
+
     for (let i = 1; i <= fixedCount; i++) {
       const posNum = i.toString().padStart(3, '0');
+      let status: PositionStatus = 'AVAILABLE';
+      let currentTarimas = 0;
+      let skuDesc = 'Sin Material Asignado';
+      let batchNumber = 'N/A';
+      let blockReason: string | undefined = undefined;
+
+      // Nave F: Cuarentena QM con alertas críticas rojas
+      if (zoneChar === 'F' && i <= 8) {
+        status = 'BLOCKED';
+        currentTarimas = 12;
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-F${i.toString().padStart(2, '0')}`;
+        blockReason = i % 2 === 0 ? 'Desviación de Embalaje / Cuarentena QM' : 'Dictamen de Auditoría Pendiente';
+      }
+      // Nave A, C, K, M: Ocupadas con alerta amarilla por saturación o libres
+      else if (['A', 'C', 'K', 'M'].includes(zoneChar) && i <= Math.min(fixedCount, 12)) {
+        status = 'OCCUPIED';
+        currentTarimas = 22; // 100% capacidad -> Alerta preventiva amarilla de saturación
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${i.toString().padStart(2, '0')}`;
+      }
+      // Alguna posición bloqueada esporádica (alerta roja)
+      else if (i === 5 && ['G', 'D', 'L'].includes(zoneChar)) {
+        status = 'BLOCKED';
+        currentTarimas = 0;
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}05`;
+        blockReason = 'Caducidad Próxima / Bloqueo FSM';
+      }
+
       list.push({
         id: `pos-${zoneChar.toLowerCase()}-${posNum}`,
         positionNumber: i,
@@ -517,18 +549,20 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         sectionId: section.id,
         sectionName: section.name,
         category: 'FIXED_STORAGE',
-        skuDescription: 'Sin Material Asignado',
-        status: 'AVAILABLE',
+        skuDescription: skuDesc,
+        status,
         capacityTarimas: 22,
-        currentTarimas: 0,
-        batchNumber: 'N/A',
-        lastMovement: 'Sin movimientos'
+        currentTarimas,
+        batchNumber,
+        lastMovement: status === 'BLOCKED' ? 'Bloqueada por Sistema QM' : (status === 'OCCUPIED' ? 'Recepcionado recientemente' : 'Sin movimientos'),
+        blockReason
       });
     }
 
-    // 2. Temporales
+    // 2. Temporales (con alerta preventiva amarilla si tienen tarimas activas)
     for (let i = 1; i <= tempCount; i++) {
       const posNum = i.toString().padStart(2, '0');
+      const hasPallets = (i <= 2 && ['A', 'K', 'M'].includes(zoneChar));
       list.push({
         id: `pos-${zoneChar.toLowerCase()}-t${posNum}`,
         positionNumber: fixedCount + i,
@@ -536,12 +570,12 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         sectionId: section.id,
         sectionName: section.name,
         category: 'TEMPORARY_BUFFER',
-        skuDescription: 'Sin Material Asignado',
-        status: 'AVAILABLE',
+        skuDescription: hasPallets ? defaultSku : 'Sin Material Asignado',
+        status: hasPallets ? 'OCCUPIED' : 'AVAILABLE',
         capacityTarimas: 22,
-        currentTarimas: 0,
-        batchNumber: 'N/A',
-        lastMovement: 'Sin movimientos'
+        currentTarimas: hasPallets ? 16 : 0,
+        batchNumber: hasPallets ? `LOT-TEMP-${zoneChar}${posNum}` : 'N/A',
+        lastMovement: hasPallets ? 'Buffer temporal activo (desalojo pendiente)' : 'Sin movimientos'
       });
     }
 

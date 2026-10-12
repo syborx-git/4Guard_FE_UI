@@ -39,6 +39,8 @@ export interface SvgBayItem {
   skuDescription: string;
   batchNumber?: string;
   rawPosition?: PositionDetail;
+  alertType?: 'NONE' | 'WARNING' | 'CRITICAL';
+  alertMessage?: string;
 }
 
 export interface SectionAisleRoute {
@@ -124,6 +126,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly showBaysInBlueprint   = signal<boolean>(true);
   protected readonly showTransitRoutes     = signal<boolean>(true);
   protected readonly hoveredSvgBay         = signal<SvgBayItem | null>(null);
+  protected readonly activeHoveredCode     = signal<string | null>(null);
 
   // ─── Generador Paramétrico de Bahías ────────────────────────────────────
   protected readonly isBayGeneratorOpen      = signal<boolean>(false);
@@ -408,6 +411,42 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     return routes;
   });
 
+  // ─── Detección de Alertas en Bahías y Posiciones ─────────────────────────
+  protected getPosAlert(pos: PositionDetail | null): { type: 'NONE' | 'WARNING' | 'CRITICAL'; message?: string } {
+    if (!pos) return { type: 'NONE' };
+    
+    // Alerta Crítica (Rojo): Bloqueada QM o sobrecupo
+    if (pos.status === 'BLOCKED' || (pos.blockReason && pos.blockReason.trim())) {
+      return {
+        type: 'CRITICAL',
+        message: pos.blockReason || 'Bloqueo por Cuarentena / Control de Calidad (QM)'
+      };
+    }
+    if (pos.currentTarimas > pos.capacityTarimas && pos.capacityTarimas > 0) {
+      return {
+        type: 'CRITICAL',
+        message: `Sobrecupo Crítico (${pos.currentTarimas}/${pos.capacityTarimas} T)`
+      };
+    }
+
+    // Alerta Preventiva (Amarillo): Ocupación >= 85%, buffer temporal ocupado
+    const occupancyRatio = pos.capacityTarimas > 0 ? (pos.currentTarimas / pos.capacityTarimas) : 0;
+    if (occupancyRatio >= 0.85 && occupancyRatio <= 1.0) {
+      return {
+        type: 'WARNING',
+        message: `Capacidad Crítica (${Math.round(occupancyRatio * 100)}% estibado)`
+      };
+    }
+    if ((pos.category === 'TEMPORARY_BUFFER' || pos.code.includes('-T')) && pos.currentTarimas > 0) {
+      return {
+        type: 'WARNING',
+        message: 'Buffer Temporal Ocupado: Requiere traslado a nave fija'
+      };
+    }
+
+    return { type: 'NONE' };
+  }
+
   protected readonly svgBays = computed<SvgBayItem[]>(() => {
     const allPositions = this.allPositions();
     const result: SvgBayItem[] = [];
@@ -426,6 +465,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
           posIdx++;
           const posRight = zonePositions[posIdx] || null;
           posIdx++;
+
+          const alertLeft = this.getPosAlert(posLeft);
+          const alertRight = this.getPosAlert(posRight);
 
           if (a.orientation === 'vertical') {
             const ySlot = a.start + i * step + 2;
@@ -450,7 +492,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
               currentTarimas: posLeft?.currentTarimas || 0,
               skuDescription: posLeft?.skuDescription || 'Sin Material Asignado',
               batchNumber: posLeft?.batchNumber,
-              rawPosition: posLeft || undefined
+              rawPosition: posLeft || undefined,
+              alertType: alertLeft.type,
+              alertMessage: alertLeft.message
             });
 
             // Bahía Derecha
@@ -472,7 +516,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
               currentTarimas: posRight?.currentTarimas || 0,
               skuDescription: posRight?.skuDescription || 'Sin Material Asignado',
               batchNumber: posRight?.batchNumber,
-              rawPosition: posRight || undefined
+              rawPosition: posRight || undefined,
+              alertType: alertRight.type,
+              alertMessage: alertRight.message
             });
           } else {
             // Horizontal
@@ -498,7 +544,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
               currentTarimas: posLeft?.currentTarimas || 0,
               skuDescription: posLeft?.skuDescription || 'Sin Material Asignado',
               batchNumber: posLeft?.batchNumber,
-              rawPosition: posLeft || undefined
+              rawPosition: posLeft || undefined,
+              alertType: alertLeft.type,
+              alertMessage: alertLeft.message
             });
 
             // Bahía Inferior
@@ -520,7 +568,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
               currentTarimas: posRight?.currentTarimas || 0,
               skuDescription: posRight?.skuDescription || 'Sin Material Asignado',
               batchNumber: posRight?.batchNumber,
-              rawPosition: posRight || undefined
+              rawPosition: posRight || undefined,
+              alertType: alertRight.type,
+              alertMessage: alertRight.message
             });
           }
         }
@@ -602,13 +652,28 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
   protected onSvgBayMouseEnter(event: MouseEvent, bay: SvgBayItem): void {
     this.hoveredSvgBay.set(bay);
+    this.activeHoveredCode.set(bay.code);
     this.updateTooltip(event);
     this.isTooltipVisible.set(true);
+
+    const cardEl = document.getElementById('pos-card-' + bay.code);
+    if (cardEl) {
+      cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   protected onSvgBayMouseLeave(): void {
     this.hoveredSvgBay.set(null);
+    this.activeHoveredCode.set(null);
     this.isTooltipVisible.set(false);
+  }
+
+  protected onPosCardMouseEnter(pos: PositionDetail): void {
+    this.activeHoveredCode.set(pos.code);
+  }
+
+  protected onPosCardMouseLeave(): void {
+    this.activeHoveredCode.set(null);
   }
 
   protected onSvgBayClick(bay: SvgBayItem, event: MouseEvent): void {
