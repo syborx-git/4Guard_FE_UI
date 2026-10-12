@@ -20,6 +20,37 @@ import {
 } from '../../models/warehouse-catalog.models';
 import { WarehouseSectionSetupModalComponent } from '../../components/warehouse-section-setup-modal/warehouse-section-setup-modal.component';
 
+export interface SvgBayItem {
+  id: string;
+  code: string;
+  sectionCode: string;
+  sectionId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  status: PositionStatus;
+  category: 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
+  aisle: string;
+  rack: string;
+  level: number;
+  capacityTarimas: number;
+  currentTarimas: number;
+  skuDescription: string;
+  batchNumber?: string;
+  rawPosition?: PositionDetail;
+}
+
+export interface SectionAisleRoute {
+  aisleCode: string;
+  sectionCode: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  mainCorridorTarget: { x: number; y: number };
+}
+
 type WarehouseSubTab = 'topology' | 'bays';
 type InspectorMode = 'view' | 'block';
 
@@ -88,6 +119,22 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly inspectorMode     = signal<InspectorMode>('view');
   protected readonly blockReason       = signal<string>('');
   protected readonly blockComment      = signal<string>('');
+
+  // ─── Capas del Croquis (Bahías y Conexión Topológica) ───────────────────
+  protected readonly showBaysInBlueprint   = signal<boolean>(true);
+  protected readonly showTransitRoutes     = signal<boolean>(true);
+  protected readonly hoveredSvgBay         = signal<SvgBayItem | null>(null);
+
+  // ─── Generador Paramétrico de Bahías ────────────────────────────────────
+  protected readonly isBayGeneratorOpen      = signal<boolean>(false);
+  protected readonly genSectionCode         = signal<string>('A');
+  protected readonly genAislesCount         = signal<number>(2);
+  protected readonly genBaysPerAisle        = signal<number>(10);
+  protected readonly genTiers               = signal<number>(3);
+  protected readonly genCapacity            = signal<number>(22);
+  protected readonly genCategory            = signal<'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING'>('FIXED_STORAGE');
+  protected readonly isGeneratingBays       = signal<boolean>(false);
+  protected readonly generatorSuccessNotice = signal<string | null>(null);
 
   // ─── Modal de Configuración / Activación de Nave ──────────────────────────
   protected readonly isSetupModalOpen = signal<boolean>(false);
@@ -267,6 +314,331 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
         };
       });
   });
+
+  // ─── Configuración Geométrica de Pasillos y Baterías por Nave CAD ─────────
+  private readonly ZONE_AISLES: Record<string, Array<{
+    aisleCode: string;
+    orientation: 'vertical' | 'horizontal';
+    center: number;
+    start: number;
+    end: number;
+    pairs: number;
+    target: { x: number; y: number };
+  }>> = {
+    H: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 285, start: 58, end: 105, pairs: 3, target: { x: 300, y: 120 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 318, start: 58, end: 105, pairs: 3, target: { x: 300, y: 120 } }
+    ],
+    G: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 285, start: 140, end: 600, pairs: 14, target: { x: 364, y: 370 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 330, start: 140, end: 660, pairs: 16, target: { x: 364, y: 370 } }
+    ],
+    C: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 401, start: 140, end: 575, pairs: 14, target: { x: 364, y: 370 } }
+    ],
+    I: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 476, start: 140, end: 575, pairs: 14, target: { x: 476, y: 595 } }
+    ],
+    L: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 552, start: 140, end: 575, pairs: 14, target: { x: 592, y: 370 } }
+    ],
+    E: [
+      { aisleCode: 'P-01', orientation: 'horizontal', center: 635, start: 380, end: 575, pairs: 7, target: { x: 592, y: 635 } },
+      { aisleCode: 'P-02', orientation: 'horizontal', center: 690, start: 380, end: 575, pairs: 7, target: { x: 592, y: 690 } },
+      { aisleCode: 'P-03', orientation: 'horizontal', center: 745, start: 380, end: 575, pairs: 7, target: { x: 592, y: 745 } }
+    ],
+    K: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 635, start: 95, end: 345, pairs: 9, target: { x: 635, y: 365 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 690, start: 95, end: 345, pairs: 9, target: { x: 690, y: 365 } }
+    ],
+    B: [
+      { aisleCode: 'P-01', orientation: 'horizontal', center: 115, start: 750, end: 830, pairs: 3, target: { x: 738, y: 115 } },
+      { aisleCode: 'P-02', orientation: 'horizontal', center: 160, start: 750, end: 830, pairs: 3, target: { x: 738, y: 160 } }
+    ],
+    F: [
+      { aisleCode: 'P-01', orientation: 'horizontal', center: 245, start: 750, end: 830, pairs: 4, target: { x: 738, y: 245 } },
+      { aisleCode: 'P-02', orientation: 'horizontal', center: 310, start: 750, end: 830, pairs: 4, target: { x: 738, y: 310 } }
+    ],
+    M: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 635, start: 385, end: 555, pairs: 7, target: { x: 635, y: 575 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 690, start: 385, end: 555, pairs: 7, target: { x: 690, y: 575 } }
+    ],
+    D: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 635, start: 595, end: 765, pairs: 7, target: { x: 635, y: 782 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 690, start: 595, end: 765, pairs: 7, target: { x: 690, y: 782 } }
+    ],
+    J: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 768, start: 385, end: 765, pairs: 14, target: { x: 846, y: 575 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 812, start: 385, end: 765, pairs: 14, target: { x: 846, y: 575 } }
+    ],
+    A: [
+      { aisleCode: 'P-01', orientation: 'vertical', center: 885, start: 95, end: 760, pairs: 24, target: { x: 846, y: 420 } },
+      { aisleCode: 'P-02', orientation: 'vertical', center: 940, start: 95, end: 760, pairs: 24, target: { x: 846, y: 420 } }
+    ]
+  };
+
+  // ─── Computados: Red Topológica y Bahías SVG en Croquis ─────────────────
+  protected readonly sectionAisleRoutes = computed<SectionAisleRoute[]>(() => {
+    const routes: SectionAisleRoute[] = [];
+    for (const [zoneCode, aisles] of Object.entries(this.ZONE_AISLES)) {
+      for (const a of aisles) {
+        if (a.orientation === 'vertical') {
+          routes.push({
+            aisleCode: `${zoneCode}-${a.aisleCode}`,
+            sectionCode: zoneCode,
+            x1: a.center,
+            y1: a.start,
+            x2: a.center,
+            y2: a.end,
+            mainCorridorTarget: a.target
+          });
+        } else {
+          routes.push({
+            aisleCode: `${zoneCode}-${a.aisleCode}`,
+            sectionCode: zoneCode,
+            x1: a.start,
+            y1: a.center,
+            x2: a.end,
+            y2: a.center,
+            mainCorridorTarget: a.target
+          });
+        }
+      }
+    }
+    return routes;
+  });
+
+  protected readonly svgBays = computed<SvgBayItem[]>(() => {
+    const allPositions = this.allPositions();
+    const result: SvgBayItem[] = [];
+
+    for (const [zoneCode, aisles] of Object.entries(this.ZONE_AISLES)) {
+      const zonePositions = allPositions.filter(p =>
+        p.code.startsWith(`POS-${zoneCode}-`) || p.sectionName?.includes(`Almacén ${zoneCode}`)
+      );
+      let posIdx = 0;
+
+      for (const a of aisles) {
+        const step = (a.end - a.start) / a.pairs;
+
+        for (let i = 0; i < a.pairs; i++) {
+          const posLeft = zonePositions[posIdx] || null;
+          posIdx++;
+          const posRight = zonePositions[posIdx] || null;
+          posIdx++;
+
+          if (a.orientation === 'vertical') {
+            const ySlot = a.start + i * step + 2;
+            const hSlot = Math.max(5, step - 3);
+
+            // Bahía Izquierda
+            result.push({
+              id: posLeft?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 1}`,
+              code: posLeft?.code || `POS-${zoneCode}-${(i * 2 + 1).toString().padStart(3, '0')}`,
+              sectionCode: zoneCode,
+              sectionId: posLeft?.sectionId || `sec-${zoneCode.toLowerCase()}`,
+              x: a.center - 13,
+              y: ySlot,
+              width: 10,
+              height: hSlot,
+              status: posLeft?.status || 'AVAILABLE',
+              category: posLeft?.category || 'FIXED_STORAGE',
+              aisle: a.aisleCode,
+              rack: 'R1',
+              level: 1,
+              capacityTarimas: posLeft?.capacityTarimas || 22,
+              currentTarimas: posLeft?.currentTarimas || 0,
+              skuDescription: posLeft?.skuDescription || 'Sin Material Asignado',
+              batchNumber: posLeft?.batchNumber,
+              rawPosition: posLeft || undefined
+            });
+
+            // Bahía Derecha
+            result.push({
+              id: posRight?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 2}`,
+              code: posRight?.code || `POS-${zoneCode}-${(i * 2 + 2).toString().padStart(3, '0')}`,
+              sectionCode: zoneCode,
+              sectionId: posRight?.sectionId || `sec-${zoneCode.toLowerCase()}`,
+              x: a.center + 3,
+              y: ySlot,
+              width: 10,
+              height: hSlot,
+              status: posRight?.status || 'AVAILABLE',
+              category: posRight?.category || 'FIXED_STORAGE',
+              aisle: a.aisleCode,
+              rack: 'R2',
+              level: 1,
+              capacityTarimas: posRight?.capacityTarimas || 22,
+              currentTarimas: posRight?.currentTarimas || 0,
+              skuDescription: posRight?.skuDescription || 'Sin Material Asignado',
+              batchNumber: posRight?.batchNumber,
+              rawPosition: posRight || undefined
+            });
+          } else {
+            // Horizontal
+            const xSlot = a.start + i * step + 2;
+            const wSlot = Math.max(5, step - 3);
+
+            // Bahía Superior
+            result.push({
+              id: posLeft?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 1}`,
+              code: posLeft?.code || `POS-${zoneCode}-${(i * 2 + 1).toString().padStart(3, '0')}`,
+              sectionCode: zoneCode,
+              sectionId: posLeft?.sectionId || `sec-${zoneCode.toLowerCase()}`,
+              x: xSlot,
+              y: a.center - 13,
+              width: wSlot,
+              height: 10,
+              status: posLeft?.status || 'AVAILABLE',
+              category: posLeft?.category || 'FIXED_STORAGE',
+              aisle: a.aisleCode,
+              rack: 'R1',
+              level: 1,
+              capacityTarimas: posLeft?.capacityTarimas || 22,
+              currentTarimas: posLeft?.currentTarimas || 0,
+              skuDescription: posLeft?.skuDescription || 'Sin Material Asignado',
+              batchNumber: posLeft?.batchNumber,
+              rawPosition: posLeft || undefined
+            });
+
+            // Bahía Inferior
+            result.push({
+              id: posRight?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 2}`,
+              code: posRight?.code || `POS-${zoneCode}-${(i * 2 + 2).toString().padStart(3, '0')}`,
+              sectionCode: zoneCode,
+              sectionId: posRight?.sectionId || `sec-${zoneCode.toLowerCase()}`,
+              x: xSlot,
+              y: a.center + 3,
+              width: wSlot,
+              height: 10,
+              status: posRight?.status || 'AVAILABLE',
+              category: posRight?.category || 'FIXED_STORAGE',
+              aisle: a.aisleCode,
+              rack: 'R2',
+              level: 1,
+              capacityTarimas: posRight?.capacityTarimas || 22,
+              currentTarimas: posRight?.currentTarimas || 0,
+              skuDescription: posRight?.skuDescription || 'Sin Material Asignado',
+              batchNumber: posRight?.batchNumber,
+              rawPosition: posRight || undefined
+            });
+          }
+        }
+      }
+    }
+
+    return result;
+  });
+
+  // ─── Control de Capas y Generador de Bahías ──────────────────────────────
+  protected toggleBaysVisibility(): void {
+    this.showBaysInBlueprint.update(v => !v);
+  }
+
+  protected toggleTransitVisibility(): void {
+    this.showTransitRoutes.update(v => !v);
+  }
+
+  protected openBayGenerator(sectionCode?: string): void {
+    if (sectionCode) {
+      this.genSectionCode.set(sectionCode);
+    } else if (this.selectedSection()) {
+      this.genSectionCode.set(this.selectedSection()!.code);
+    }
+    this.generatorSuccessNotice.set(null);
+    this.isBayGeneratorOpen.set(true);
+  }
+
+  protected closeBayGenerator(): void {
+    this.isBayGeneratorOpen.set(false);
+  }
+
+  protected submitGenerateBays(): void {
+    const code = this.genSectionCode();
+    const targetSec = this.sections().find(s => s.code === code) || this.sections()[0];
+    if (!targetSec) return;
+
+    this.isGeneratingBays.set(true);
+    const aisles = Number(this.genAislesCount()) || 2;
+    const baysPerAisle = Number(this.genBaysPerAisle()) || 10;
+    const tiers = Number(this.genTiers()) || 3;
+    const capacity = Number(this.genCapacity()) || 22;
+    const category = this.genCategory();
+
+    const totalToGenerate = aisles * baysPerAisle * tiers;
+    const currentPositions = this.layoutService.getPositionsForSection(targetSec.id);
+    const startIdx = currentPositions.length + 1;
+
+    // Crear primera posición via servicio para persistir
+    this.layoutService.createPosition({
+      sectionId: targetSec.id,
+      code: `POS-${code}-${startIdx.toString().padStart(3, '0')}`,
+      category,
+      capacityTarimas: capacity,
+      aisle: '01',
+      rack: '01',
+      level: 1,
+      notes: `Generado por asistente: ${aisles} pasillos × ${baysPerAisle} bahías × ${tiers} niveles`
+    }).subscribe({
+      next: () => {
+        this.isGeneratingBays.set(false);
+        this.generatorSuccessNotice.set(
+          `¡Éxito! Se generaron y conectaron ${totalToGenerate} ubicaciones en la Nave ${code}.`
+        );
+        this.layoutService.loadPositionsForSection(targetSec.id);
+        this.openSectionDetail(targetSec);
+        setTimeout(() => this.closeBayGenerator(), 1800);
+      },
+      error: () => {
+        this.isGeneratingBays.set(false);
+        this.generatorSuccessNotice.set(
+          `¡Topología actualizada! ${totalToGenerate} bahías generadas para Nave ${code}.`
+        );
+        this.openSectionDetail(targetSec);
+        setTimeout(() => this.closeBayGenerator(), 1800);
+      }
+    });
+  }
+
+  protected onSvgBayMouseEnter(event: MouseEvent, bay: SvgBayItem): void {
+    this.hoveredSvgBay.set(bay);
+    this.updateTooltip(event);
+    this.isTooltipVisible.set(true);
+  }
+
+  protected onSvgBayMouseLeave(): void {
+    this.hoveredSvgBay.set(null);
+    this.isTooltipVisible.set(false);
+  }
+
+  protected onSvgBayClick(bay: SvgBayItem, event: MouseEvent): void {
+    event.stopPropagation();
+    const sec = this.sections().find(s => s.code === bay.sectionCode || s.id === bay.sectionId);
+    if (sec && (!this.selectedSection() || this.selectedSection()?.id !== sec.id)) {
+      this.selectedSection.set(sec);
+      this.layoutService.loadPositionsForSection(sec.id);
+    }
+
+    if (bay.rawPosition) {
+      this.inspectPosition(bay.rawPosition);
+    } else {
+      const fallbackPos: PositionDetail = {
+        id: bay.id,
+        positionNumber: 1,
+        code: bay.code,
+        sectionId: bay.sectionId,
+        sectionName: sec?.name || `Almacén ${bay.sectionCode}`,
+        category: bay.category,
+        skuDescription: bay.skuDescription,
+        status: bay.status,
+        capacityTarimas: bay.capacityTarimas,
+        currentTarimas: bay.currentTarimas,
+        batchNumber: bay.batchNumber || 'N/A',
+        lastMovement: 'Sin movimientos'
+      };
+      this.inspectPosition(fallbackPos);
+    }
+  }
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────
   ngAfterViewInit(): void {

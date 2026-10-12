@@ -12,7 +12,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
 import { AuthState } from '../../../core/auth/auth.state';
@@ -37,6 +37,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly authService          = inject(AuthService);
   private readonly sessionStorageService = inject(SessionStorageService);
   private readonly route                = inject(ActivatedRoute);
+  private readonly router               = inject(Router);
 
   // ── Estado del layout / vistas (HU-010) ──────────────────
   protected readonly viewState = signal<LoginViewState>('login');
@@ -326,6 +327,77 @@ export class LoginComponent implements OnInit, OnDestroy {
    */
   protected contactSupport(): void {
     window.location.href = 'mailto:soporte@4guard.com?subject=Desbloqueo de Cuenta 4GUARD WMS';
+  }
+
+  /**
+   * Restablece el bloqueo en entorno local/desarrollo.
+   */
+  protected resetLockout(): void {
+    this.sessionStorageService.clearAuthLockout();
+    const identifier = this.sessionStorageService.normalizeIdentifier(this.emailCtrl.value || 'enrique@4guard.com');
+    this.sessionStorageService.clearFailedAttempts(identifier);
+    this.clearLockCountdown();
+    this.viewState.set('login');
+    this.loginError.set(null);
+    this.attemptsRemaining.set(null);
+  }
+
+  /**
+   * Inicio de sesión rápido con un clic como superadministrador en desarrollo.
+   */
+  protected quickLoginAsAdmin(): void {
+    this.enterDirectlyWithoutCredentials();
+  }
+
+  /**
+   * Acceso directo inmediato sin credenciales como Superadministrador.
+   */
+  protected enterDirectlyWithoutCredentials(): void {
+    this.sessionStorageService.clearAuthLockout();
+    this.sessionStorageService.clearFailedAttempts('enrique@4guard.com');
+    this.clearLockCountdown();
+    this.viewState.set('login');
+    this.loginError.set(null);
+    this.attemptsRemaining.set(null);
+
+    const payload = {
+      userId: 'u-001',
+      sub: 'admin',
+      email: 'enrique@4guard.com',
+      fullName: 'Enrique (Superadmin)',
+      role: 'ROLE_ADMIN',
+      roleLevel: 100,
+      permissions: ['*'],
+      exp: Math.floor(Date.now() / 1000) + 86400 * 7,
+      iat: Math.floor(Date.now() / 1000)
+    };
+    const jsonStr = JSON.stringify(payload);
+    const base64Url = btoa(unescape(encodeURIComponent(jsonStr)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    const mockJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${base64Url}.mock_signature`;
+
+    const sessionData = {
+      accessToken: mockJwt,
+      refreshToken: `mock-refresh-${Date.now()}`,
+      expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(),
+      user: {
+        id: 'u-001',
+        username: 'admin',
+        fullName: 'Enrique (Superadmin)',
+        email: 'enrique@4guard.com',
+        role: 'ROLE_ADMIN',
+        roleLevel: 100,
+        permissions: ['*'],
+        changePasswordRequired: false,
+        shift: 'TURNO 1' as const
+      }
+    };
+
+    this.authService.handleAuthentication(sessionData);
+    this.authState.setSession(sessionData);
+    this.router.navigate(['/catalogs/warehouse']);
   }
 
   ngOnDestroy(): void {

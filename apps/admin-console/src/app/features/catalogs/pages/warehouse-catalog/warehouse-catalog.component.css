@@ -640,6 +640,63 @@
   font-style: italic;
 }
 
+.wmap__actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.wmap__layer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-secondary);
+  font-size: 0.73rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.wmap__layer-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.wmap__layer-toggle--active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.wmap__gen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.2), rgba(197, 168, 107, 0.08));
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.wmap__gen-btn:hover {
+  background: var(--gold);
+  color: #0b1118;
+  border-color: var(--gold);
+  box-shadow: 0 3px 10px rgba(197, 168, 107, 0.35);
+}
+
 .wmap__legend {
   display: flex;
   align-items: center;
@@ -759,9 +816,87 @@
 /* ─── CAD: Carriles de Tráfico ──────────────────────────── */
 
 .cad__traffic-lane {
-  stroke: rgba(99, 102, 241, 0.12);
+  stroke: rgba(99, 102, 241, 0.25);
   stroke-width: 1.5;
-  stroke-dasharray: 10, 8;
+  stroke-dasharray: 8, 6;
+}
+
+.cad__traffic-lane--main {
+  stroke: rgba(234, 195, 73, 0.45);
+  stroke-width: 2;
+  stroke-dasharray: 10, 6;
+}
+
+.cad__feeder-lane {
+  stroke: rgba(148, 163, 184, 0.3);
+  stroke-width: 0.8;
+  stroke-dasharray: 4, 4;
+}
+
+.cad__feeder-junction {
+  stroke: rgba(234, 195, 73, 0.45);
+  stroke-width: 1.2;
+  stroke-dasharray: 5, 4;
+}
+
+/* ─── CAD: Bahías Físicas Individuales y Racks ──────────── */
+
+.cad__bays-layer {
+  cursor: pointer;
+}
+
+.cad__bay-slot {
+  fill: rgba(16, 185, 129, 0.25);
+  stroke: rgba(16, 185, 129, 0.7);
+  stroke-width: 0.6;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.cad__bay-slot:hover {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
+}
+
+.cad__bay-slot--avail {
+  fill: rgba(16, 185, 129, 0.22);
+  stroke: rgba(16, 185, 129, 0.75);
+}
+
+.cad__bay-slot--occ {
+  fill: rgba(59, 130, 246, 0.45);
+  stroke: #60a5fa;
+}
+
+.cad__bay-slot--block {
+  fill: rgba(239, 68, 68, 0.45);
+  stroke: #f87171;
+}
+
+.cad__bay-slot--temp {
+  fill: rgba(168, 85, 247, 0.35);
+  stroke: #c084fc;
+}
+
+.cad__bay-slot--preload {
+  fill: rgba(245, 158, 11, 0.4);
+  stroke: #fbbf24;
+}
+
+.cad__bay-slot--selected {
+  stroke: var(--gold) !important;
+  stroke-width: 2 !important;
+  filter: drop-shadow(0 0 6px rgba(197, 168, 107, 0.9));
+}
+
+.wmap__tooltip--bay {
+  border-color: var(--gold-border);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(197, 168, 107, 0.15);
+}
+
+.wmap__modal--wide {
+  max-width: 580px;
 }
 
 /* ─── CAD: Textura de Racks ─────────────────────────────── */
