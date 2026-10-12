@@ -239,24 +239,14 @@ export class PrintDispatchLayoutComponent {
     const ob = this.outbound;
     if (!ob) return '- / -';
     const tracto = (
-      (ob as any).noEcoTractor ||
-      ob.economicNumber ||
-      (ob as any).ecoTractor ||
-      (ob as any).eco_tractor ||
-      (ob as any).economic_number ||
+      ob.noEcoTractor ||
       (ob as any).preCheckin?.noEcoTractor ||
-      (ob as any).preCheckin?.economicNumber ||
       '-'
     ).toUpperCase().trim();
 
     const caja = (
-      (ob as any).noEcoCaja ||
-      ob.boxEconomicNumber ||
-      (ob as any).ecoCaja ||
-      (ob as any).box_economic_number ||
-      (ob as any).eco_caja ||
+      ob.noEcoCaja ||
       (ob as any).preCheckin?.noEcoCaja ||
-      (ob as any).preCheckin?.boxEconomicNumber ||
       '-'
     ).toUpperCase().trim();
 

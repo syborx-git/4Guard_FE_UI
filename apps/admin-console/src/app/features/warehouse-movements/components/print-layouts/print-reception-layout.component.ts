@@ -62,7 +62,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
           <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">NO. ECO (TRACTO / CAJA):</span>
-            <span class="font-mono font-black text-black text-right break-words flex-1 min-w-0 leading-tight text-amber-950">{{ economicNumber.toUpperCase() }} / {{ boxEconomicNumber.toUpperCase() }}</span>
+            <span class="font-mono font-black text-black text-right break-words flex-1 min-w-0 leading-tight text-amber-950">{{ noEcoTractor.toUpperCase() }} / {{ noEcoCaja.toUpperCase() }}</span>
           </div>
 
           <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
@@ -236,28 +236,20 @@ export class PrintReceptionLayoutComponent {
     ).toUpperCase();
   }
 
-  get economicNumber(): string {
+  get noEcoTractor(): string {
     if (!this.reception) return '-';
     return (
       this.reception.checkIn?.noEcoTractor ||
-      this.reception.checkIn?.economicNumber ||
-      (this.reception as any).noEcoTractor ||
-      (this.reception as any).economicNumber ||
       (this.reception as any).preCheckin?.noEcoTractor ||
-      (this.reception as any).preCheckin?.economicNumber ||
       '-'
     );
   }
 
-  get boxEconomicNumber(): string {
+  get noEcoCaja(): string {
     if (!this.reception) return '-';
     return (
       this.reception.checkIn?.noEcoCaja ||
-      this.reception.checkIn?.boxEconomicNumber ||
-      (this.reception as any).noEcoCaja ||
-      (this.reception as any).boxEconomicNumber ||
       (this.reception as any).preCheckin?.noEcoCaja ||
-      (this.reception as any).preCheckin?.boxEconomicNumber ||
       '-'
     );
   }

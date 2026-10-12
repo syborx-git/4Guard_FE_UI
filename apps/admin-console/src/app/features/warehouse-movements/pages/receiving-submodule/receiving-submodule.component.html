@@ -635,10 +635,10 @@
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="logistics-command-badge-plate">
-                    T: {{ (rec.checkIn.economicNumber || rec.checkIn.noEcoTractor ? 'Eco ' + (rec.checkIn.economicNumber || rec.checkIn.noEcoTractor) + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
+                    T: {{ (rec.checkIn.noEcoTractor ? 'Eco ' + rec.checkIn.noEcoTractor + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
                   </span>
                   <span class="logistics-command-badge-plate">
-                    C: {{ (rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja ? 'Eco ' + (rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja) + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
+                    C: {{ (rec.checkIn.noEcoCaja ? 'Eco ' + rec.checkIn.noEcoCaja + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
                   </span>
                 </div>
               </div>
@@ -3015,7 +3015,7 @@
               <!-- No. Económico Tracto -->
               <div class="fg-field">
                 <label class="fg-label">No. Económico Tracto (Eco)</label>
-                <input type="text" formControlName="economicNumber" class="fg-input font-mono uppercase font-bold" placeholder="TR-01" />
+                <input type="text" formControlName="noEcoTractor" class="fg-input font-mono uppercase font-bold" placeholder="TR-01" />
               </div>
 
               <!-- Placas Caja -->
@@ -3027,7 +3027,7 @@
               <!-- No. Económico Caja -->
               <div class="fg-field">
                 <label class="fg-label">No. Económico Caja (Eco)</label>
-                <input type="text" formControlName="boxEconomicNumber" class="fg-input font-mono uppercase font-bold" placeholder="BOX-01" />
+                <input type="text" formControlName="noEcoCaja" class="fg-input font-mono uppercase font-bold" placeholder="BOX-01" />
               </div>
             </div>
 

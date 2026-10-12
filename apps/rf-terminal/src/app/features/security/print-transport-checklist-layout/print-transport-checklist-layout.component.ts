@@ -130,11 +130,11 @@ export interface TransportChecklistPrintData {
               <span>Emisión: <strong>{{ data.emissionDate || '19/08/2025' }}</strong></span>
             </td>
             <td class="f01-subhead-approval">
-              <span>Elab: <strong>{{ data.elaboratedBy || 'SP' }}</strong></span>
+              <span>Elaboró: <strong>{{ formatRole(data.elaboratedBy, 'Seguridad Patrimonial') }}</strong></span>
               <span class="f01-meta-sep">•</span>
-              <span>Rev: <strong>{{ data.reviewedBy || 'CG' }}</strong></span>
+              <span>Revisó: <strong>{{ formatRole(data.reviewedBy, 'Control de Gestión') }}</strong></span>
               <span class="f01-meta-sep">•</span>
-              <span>Aprob: <strong>{{ data.approvedBy || 'DG' }}</strong></span>
+              <span>Aprobó: <strong>{{ formatRole(data.approvedBy, 'Dirección General') }}</strong></span>
             </td>
           </tr>
         </tbody>
@@ -791,6 +791,15 @@ export interface TransportChecklistPrintData {
 })
 export class PrintTransportChecklistLayoutComponent {
   @Input() data?: TransportChecklistPrintData;
+
+  formatRole(val?: string | null, fallback: string = ''): string {
+    if (!val) return fallback;
+    const clean = String(val).trim();
+    if (clean === 'SP') return 'Seguridad Patrimonial';
+    if (clean === 'CG') return 'Control de Gestión';
+    if (clean === 'DG') return 'Dirección General';
+    return clean;
+  }
 
   formatTime(val?: string | null): string {
     if (!val) return '--:--';

@@ -182,8 +182,8 @@ export class OutboundSubmoduleComponent implements OnInit {
   editTractorPlates = signal('');
   editBoxPlates = signal('');
   editSealNumber = signal('');
-  editEconomicNumber = signal('');
-  editBoxEconomicNumber = signal('');
+  editNoEcoTractor = signal('');
+  editNoEcoCaja = signal('');
   editDestinationId = signal('');
   isUpdatingCaseta = signal(false);
 
@@ -236,26 +236,8 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.editBoxPlates.set(ob.boxPlates || '');
     const seal = (ob.sealNumber === 'PENDIENTE_ANDEN' || ob.sealNumber === 'S/S' || ob.sealNumber === 'PENDIENTE') ? '' : (ob.sealNumber || '');
     this.editSealNumber.set(seal);
-    this.editEconomicNumber.set(
-      ob.economicNumber ||
-      (ob as any).noEcoTractor ||
-      (ob as any).ecoTractor ||
-      (ob as any).eco_tractor ||
-      (ob as any).economic_number ||
-      (ob as any).preCheckin?.economicNumber ||
-      (ob as any).preCheckin?.noEcoTractor ||
-      ''
-    );
-    this.editBoxEconomicNumber.set(
-      ob.boxEconomicNumber ||
-      (ob as any).noEcoCaja ||
-      (ob as any).ecoCaja ||
-      (ob as any).box_economic_number ||
-      (ob as any).eco_caja ||
-      (ob as any).preCheckin?.boxEconomicNumber ||
-      (ob as any).preCheckin?.noEcoCaja ||
-      ''
-    );
+    this.editNoEcoTractor.set(ob.noEcoTractor || (ob as any).preCheckin?.noEcoTractor || '');
+    this.editNoEcoCaja.set(ob.noEcoCaja || (ob as any).preCheckin?.noEcoCaja || '');
 
     // Resolviendo el ID del destino si no venía asignado de caseta
     let matchedDestId = ob.destinationId || '';
@@ -320,10 +302,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       tractorPlates: this.editTractorPlates() || ob.tractorPlates,
       boxPlates: this.editBoxPlates() || ob.boxPlates,
       sealNumber: sealVal,
-      economicNumber: this.editEconomicNumber() != null ? this.editEconomicNumber().trim() : (ob.noEcoTractor || ob.economicNumber || ''),
-      noEcoTractor: this.editEconomicNumber() != null ? this.editEconomicNumber().trim() : (ob.noEcoTractor || ob.economicNumber || ''),
-      boxEconomicNumber: this.editBoxEconomicNumber() != null ? this.editBoxEconomicNumber().trim() : (ob.noEcoCaja || ob.boxEconomicNumber || ''),
-      noEcoCaja: this.editBoxEconomicNumber() != null ? this.editBoxEconomicNumber().trim() : (ob.noEcoCaja || ob.boxEconomicNumber || ''),
+      noEcoTractor: this.editNoEcoTractor() != null ? this.editNoEcoTractor().trim() : (ob.noEcoTractor || ''),
+      noEcoCaja: this.editNoEcoCaja() != null ? this.editNoEcoCaja().trim() : (ob.noEcoCaja || ''),
       destinationId: this.editDestinationId() || ob.destinationId,
       destinationName: destName,
       destinationAddress: destAddress,
@@ -339,10 +319,8 @@ export class OutboundSubmoduleComponent implements OnInit {
         tractorPlates: updated.tractorPlates,
         boxPlates: updated.boxPlates,
         sealNumber: updated.sealNumber,
-        economicNumber: updated.noEcoTractor || updated.economicNumber,
-        noEcoTractor: updated.noEcoTractor || updated.economicNumber,
-        boxEconomicNumber: updated.noEcoCaja || updated.boxEconomicNumber,
-        noEcoCaja: updated.noEcoCaja || updated.boxEconomicNumber,
+        noEcoTractor: updated.noEcoTractor,
+        noEcoCaja: updated.noEcoCaja,
         destinationId: isUUID(this.editDestinationId()) ? this.editDestinationId() : undefined,
         destinationName: updated.destinationName,
         destinationAddress: updated.destinationAddress,
@@ -356,10 +334,8 @@ export class OutboundSubmoduleComponent implements OnInit {
             destinationId: this.editDestinationId() || resp?.destinationId || updated.destinationId,
             carrierName: resp?.carrierName || updated.carrierName,
             sealNumber: resp?.sealNumber || updated.sealNumber,
-            economicNumber: resp?.noEcoTractor || (resp?.economicNumber !== undefined ? (resp.economicNumber || '') : (updated.noEcoTractor || updated.economicNumber)),
-            noEcoTractor: resp?.noEcoTractor || (resp?.economicNumber !== undefined ? (resp.economicNumber || '') : (updated.noEcoTractor || updated.economicNumber)),
-            boxEconomicNumber: resp?.noEcoCaja || (resp?.boxEconomicNumber !== undefined ? (resp.boxEconomicNumber || '') : (updated.noEcoCaja || updated.boxEconomicNumber)),
-            noEcoCaja: resp?.noEcoCaja || (resp?.boxEconomicNumber !== undefined ? (resp.boxEconomicNumber || '') : (updated.noEcoCaja || updated.boxEconomicNumber)),
+            noEcoTractor: resp?.noEcoTractor || updated.noEcoTractor,
+            noEcoCaja: resp?.noEcoCaja || updated.noEcoCaja,
           };
           this.selectedOutbound.set(finalData);
           this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? finalData : o)));
@@ -899,8 +875,8 @@ export class OutboundSubmoduleComponent implements OnInit {
   selectedDestinationId = signal('');
   selectedCarrierCode = signal('');
   driverName = signal('');
-  economicNumber = signal('');
-  boxEconomicNumber = signal('');
+  noEcoTractor = signal('');
+  noEcoCaja = signal('');
   tractorPlates = signal('');
   boxPlates = signal('');
   selectedTransportType = signal<TransportType | ''>('');
@@ -2089,10 +2065,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       carrierName: carrier ? carrier.name : '',
       transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
       driverName: this.driverName(),
-      economicNumber: this.economicNumber() || '',
-      noEcoTractor: this.economicNumber() || '',
-      boxEconomicNumber: this.boxEconomicNumber() || '',
-      noEcoCaja: this.boxEconomicNumber() || '',
+      noEcoTractor: this.noEcoTractor() || '',
+      noEcoCaja: this.noEcoCaja() || '',
       tractorPlates: this.tractorPlates(),
       boxPlates: this.boxPlates(),
       sealNumber: this.sealNumber() || '',
@@ -2121,10 +2095,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           rampNumber: this.selectedRampNumber(),
           rampCode: `RAMPA-${this.selectedRampNumber()}`,
           driverName: this.driverName(),
-          economicNumber: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          noEcoTractor: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          boxEconomicNumber: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
-          noEcoCaja: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
+          noEcoTractor: res.noEcoTractor || this.noEcoTractor() || '',
+          noEcoCaja: res.noEcoCaja || this.noEcoCaja() || '',
           tractorPlates: this.tractorPlates(),
           boxPlates: this.boxPlates(),
           transportType: (res.transportType || this.selectedTransportType()) as TransportType,
@@ -2163,8 +2135,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           rampNumber: this.selectedRampNumber(),
           rampCode: `RAMPA-${this.selectedRampNumber()}`,
           driverName: this.driverName(),
-          economicNumber: this.economicNumber(),
-          boxEconomicNumber: this.boxEconomicNumber(),
+          noEcoTractor: this.noEcoTractor(),
+          noEcoCaja: this.noEcoCaja(),
           tractorPlates: this.tractorPlates(),
           boxPlates: this.boxPlates(),
           transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
@@ -2735,8 +2707,8 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.selectedDestinationId.set('');
     this.selectedCarrierCode.set('');
     this.driverName.set('');
-    this.economicNumber.set('');
-    this.boxEconomicNumber.set('');
+    this.noEcoTractor.set('');
+    this.noEcoCaja.set('');
     this.tractorPlates.set('');
     this.boxPlates.set('');
     this.selectedTransportType.set('');
@@ -2816,10 +2788,8 @@ export class OutboundSubmoduleComponent implements OnInit {
               driverName: full.driverName || outbound.driverName || '',
               tractorPlates: full.tractorPlates || outbound.tractorPlates || '',
               boxPlates: full.boxPlates || outbound.boxPlates || '',
-              economicNumber: full.noEcoTractor || full.economicNumber || (full as any).ecoTractor || (full.preCheckin ? (full.preCheckin.noEcoTractor || full.preCheckin.economicNumber) : '') || outbound.noEcoTractor || outbound.economicNumber || '',
-              noEcoTractor: full.noEcoTractor || full.economicNumber || (full as any).ecoTractor || (full.preCheckin ? (full.preCheckin.noEcoTractor || full.preCheckin.economicNumber) : '') || outbound.noEcoTractor || outbound.economicNumber || '',
-              boxEconomicNumber: full.noEcoCaja || full.boxEconomicNumber || (full as any).ecoCaja || (full.preCheckin ? (full.preCheckin.noEcoCaja || full.preCheckin.boxEconomicNumber) : '') || outbound.noEcoCaja || outbound.boxEconomicNumber || '',
-              noEcoCaja: full.noEcoCaja || full.boxEconomicNumber || (full as any).ecoCaja || (full.preCheckin ? (full.preCheckin.noEcoCaja || full.preCheckin.boxEconomicNumber) : '') || outbound.noEcoCaja || outbound.boxEconomicNumber || '',
+              noEcoTractor: full.noEcoTractor || (full.preCheckin ? full.preCheckin.noEcoTractor : '') || outbound.noEcoTractor || '',
+              noEcoCaja: full.noEcoCaja || (full.preCheckin ? full.preCheckin.noEcoCaja : '') || outbound.noEcoCaja || '',
               dispatchedBy: full.createdBy || outbound.dispatchedBy || currentLoggedIn,
               items: mappedItems.length > 0 ? mappedItems : (outbound.items || []),
               totalPallets: full.totalPallets || (mappedItems.length > 0 ? mappedItems.length : outbound.totalPallets),
@@ -3119,10 +3089,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       forkliftOperatorName: operator ? operator.name : '',
       transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
       driverName: this.driverName(),
-      economicNumber: this.economicNumber() || '',
-      noEcoTractor: this.economicNumber() || '',
-      boxEconomicNumber: this.boxEconomicNumber() || '',
-      noEcoCaja: this.boxEconomicNumber() || '',
+      noEcoTractor: this.noEcoTractor() || '',
+      noEcoCaja: this.noEcoCaja() || '',
       tractorPlates: this.tractorPlates(),
       boxPlates: this.boxPlates(),
       sealNumber: this.sealNumber(),
@@ -3169,10 +3137,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           forkliftOperator: res.forkliftOperatorName || operator?.name || '',
           forkliftOperatorId: res.forkliftOperatorId || operator?.id || '',
           driverName: res.driverName || this.driverName(),
-          economicNumber: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          noEcoTractor: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          boxEconomicNumber: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
-          noEcoCaja: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
+          noEcoTractor: res.noEcoTractor || this.noEcoTractor() || '',
+          noEcoCaja: res.noEcoCaja || this.noEcoCaja() || '',
           tractorPlates: res.tractorPlates || this.tractorPlates(),
           boxPlates: res.boxPlates || this.boxPlates(),
           transportType: (res.transportType || this.selectedTransportType()) as TransportType,
@@ -3215,8 +3181,8 @@ export class OutboundSubmoduleComponent implements OnInit {
             forkliftOperator: operator?.name,
             forkliftOperatorId: operator?.id,
             driverName: this.driverName(),
-            economicNumber: this.economicNumber(),
-            boxEconomicNumber: this.boxEconomicNumber(),
+            noEcoTractor: this.noEcoTractor(),
+            noEcoCaja: this.noEcoCaja(),
             tractorPlates: this.tractorPlates(),
             boxPlates: this.boxPlates(),
             transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
@@ -3359,8 +3325,8 @@ export class OutboundSubmoduleComponent implements OnInit {
               driverName: full.driverName || resolvedOutbound.driverName || '',
               tractorPlates: full.tractorPlates || resolvedOutbound.tractorPlates || '',
               boxPlates: full.boxPlates || resolvedOutbound.boxPlates || '',
-              economicNumber: full.economicNumber || (full as any).noEcoTractor || (full as any).ecoTractor || resolvedOutbound.economicNumber || '',
-              boxEconomicNumber: full.boxEconomicNumber || (full as any).noEcoCaja || (full as any).ecoCaja || resolvedOutbound.boxEconomicNumber || '',
+              noEcoTractor: full.noEcoTractor || resolvedOutbound.noEcoTractor || '',
+              noEcoCaja: full.noEcoCaja || resolvedOutbound.noEcoCaja || '',
               sealNumber: full.sealNumber || resolvedOutbound.sealNumber || '',
               items: mappedItems.length > 0 ? mappedItems : resolvedOutbound.items,
               totalPallets: mappedItems.length > 0 ? mappedItems.length : resolvedOutbound.totalPallets,

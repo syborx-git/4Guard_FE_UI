@@ -78,17 +78,44 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // Notificar al guardia en tiempo real cuando una unidad concluye maniobra y queda autorizada para salida
     effect(() => {
       const yardList = this.inYardPasses();
+      this.smartNotification.updateReadyForExitPasses(yardList);
+
+      const isBackendLoading = this.isLoadingInYard();
+
+      // No evaluar notificaciones durante la carga inicial del backend
+      if (isBackendLoading && !this.isInitialYardHydrated) {
+        return;
+      }
+
+      // Primera hidratación de la sesión: Registrar las unidades que YA estaban listas para salida al entrar
+      // para evitar disparar una ráfaga de notificaciones/toasts de eventos que ya ocurrieron en el pasado
+      if (!this.isInitialYardHydrated) {
+        for (const p of yardList) {
+          if (p && p.isReadyForExit) {
+            const key = (p.token || p.generatedFolio || p.id || '').trim().toUpperCase();
+            if (key) {
+              this.notifiedReadyExitTokens.add(key);
+            }
+          }
+        }
+        this.persistNotifiedExitTokensToStorage();
+        this.isInitialYardHydrated = true;
+        return;
+      }
+
+      // Durante la sesión activa: solo alertar cuando una NUEVA unidad concluye maniobra
       for (const p of yardList) {
         if (p && p.isReadyForExit) {
           const key = (p.token || p.generatedFolio || p.id || '').trim().toUpperCase();
           if (key && !this.notifiedReadyExitTokens.has(key)) {
             this.notifiedReadyExitTokens.add(key);
+            this.persistNotifiedExitTokensToStorage();
 
             // Alerta acústica y visual en caseta
             this.playCheckinChime();
 
-            const unitLabel = p.economicNumber ? `Eco ${p.economicNumber}` : (p.tractorPlates ? `Placas ${p.tractorPlates}` : 'Unidad');
-            const rampLabel = p.rampCode || (p.rampNumber ? `R-${p.rampNumber}` : 'Andén');
+            const unitLabel = p.noEcoTractor ? `Eco ${p.noEcoTractor}` : (p.tractorPlates ? `Placas ${p.tractorPlates}` : 'Unidad');
+            const rampLabel = this.getFormattedRampLabel(p.rampCode, p.rampNumber);
             const chofer = p.driverName || 'Chofer';
             const carrier = p.carrierLine || 'Transportista';
             const folio = p.token || p.generatedFolio || 'S/F';
@@ -189,7 +216,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
    */
   protected readonly inYardPasses = computed<any[]>(() => {
     const mergedMap = new Map<string, any>();
-    const exitTokensOrFolios = this.movementsService.movementsApi.loadExitedPassTokens();
+    const exitTokensOrFolios = new Set<string>();
 
     // 1. Folios que ya salieron de la planta (desde historial en memoria)
     for (const h of this.historyPasses()) {
@@ -211,9 +238,12 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         ...p,
         isReadyForExit: isReady,
         receptionTime: timeVal,
-        horaEntrada: timeVal
+        horaEntrada: timeVal,
+        rampCode: this.getFormattedRampLabel(p.rampCode, p.rampNumber)
       });
     }
+
+    const hasBackendInYard = this.backendInYardPasses().length > 0;
 
     // 3. Recepciones registradas en el WMS (Inbound) - Solo si están en patio activo y no han salido
     const activeReceptions = this.movementsService.receptions();
@@ -224,6 +254,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
       // Si ya está en mergedMap no duplicar
       if (mergedMap.has(key)) continue;
+
+      // Si el backend ya devolvió la lista oficial de patio, no re-inyectar recepciones que el backend omitió
+      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (r.status === 'COMPLETED' || !r.id)) {
+        continue;
+      }
 
       // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED)
       if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED') {
@@ -248,7 +283,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           driverName: r.checkIn?.driverName || 'Operador Transportista',
           tractorPlates: r.checkIn?.tractorPlates || '-',
           boxPlates: r.checkIn?.boxPlates || '-',
-          economicNumber: r.checkIn?.economicNumber || '',
+          noEcoTractor: r.checkIn?.noEcoTractor || '',
+          noEcoCaja: r.checkIn?.noEcoCaja || '',
           boxDimensions: r.checkIn?.medidasCaja || '53 Pies',
           transportType: r.checkIn?.transportType || 'Caja Seca',
           sealNumbers: seals,
@@ -257,7 +293,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           receptionTime: timeVal,
           horaEntrada: timeVal,
           rampNumber: r.checkIn?.rampNumber || 1,
-          rampCode: r.checkIn?.rampCode || (r.checkIn?.rampNumber ? `R-${r.checkIn.rampNumber}` : 'R-01'),
+          rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber),
           observations: r.observations || r.checkIn?.observations || '',
           warehouseStatus: r.status || 'REGISTERED',
           isReadyForExit: isReady,
@@ -273,6 +309,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       const key = (o.folio || o.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
       if (mergedMap.has(key)) continue;
+
+      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (o.status === 'COMPLETED' || !o.id)) {
+        continue;
+      }
 
       if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED') {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
@@ -294,7 +334,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           driverName: o.driverName || 'Operador Transportista',
           tractorPlates: o.tractorPlates || '-',
           boxPlates: o.boxPlates || '-',
-          economicNumber: o.economicNumber || '',
+          noEcoTractor: o.noEcoTractor || '',
+          noEcoCaja: o.noEcoCaja || '',
           boxDimensions: '53 Pies',
           transportType: o.transportType || 'TRAILER',
           sealNumbers: seals,
@@ -303,7 +344,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           receptionTime: timeVal,
           horaEntrada: timeVal,
           rampNumber: o.rampNumber || 1,
-          rampCode: o.rampCode || (o.rampNumber ? `R-${o.rampNumber}` : 'R-01'),
+          rampCode: this.getFormattedRampLabel(o.rampCode, o.rampNumber),
           observations: o.observations || '',
           warehouseStatus: o.status || 'REGISTERED',
           isReadyForExit: isReady,
@@ -339,16 +380,38 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly checkOutSuccessNotice   = signal<string | null>(null);
 
   // ── Modos de Visualización UX/UI (Colapsable y Navegación Rápida) ──────────
-  protected readonly isQueueCollapsed   = signal<boolean>(false);
-  protected readonly isKpiCollapsed     = signal<boolean>(false);
-  protected readonly activeFormStep     = signal<'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'>('STEP1');
+  protected readonly isQueueCollapsed = signal<boolean>(this.loadStorageBool('4g_security_queue_collapsed', false));
+  protected readonly isKpiCollapsed   = signal<boolean>(this.loadStorageBool('4g_security_kpis_collapsed', false));
+  protected readonly activeFormStep   = signal<'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'>('STEP1');
+
+  private loadStorageBool(key: string, defaultValue: boolean): boolean {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const val = localStorage.getItem(key);
+        if (val !== null) return val === 'true';
+      }
+    } catch {}
+    return defaultValue;
+  }
 
   protected toggleQueueCollapse(): void {
-    this.isQueueCollapsed.update(v => !v);
+    const next = !this.isQueueCollapsed();
+    this.isQueueCollapsed.set(next);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('4g_security_queue_collapsed', String(next));
+      }
+    } catch {}
   }
 
   protected toggleKpiCollapse(): void {
-    this.isKpiCollapsed.update(v => !v);
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('4g_security_kpis_collapsed', String(next));
+      }
+    } catch {}
   }
 
   protected scrollToFormSection(sectionId: string, stepName: 'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'): void {
@@ -444,7 +507,47 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Notificaciones de Caseta / Comanda en Vivo ───────────────────────────
   private readonly notifiedSubmittedTokens = new Set<string>();
-  private readonly notifiedReadyExitTokens = new Set<string>();
+  private readonly notifiedReadyExitTokens: Set<string> = this.loadNotifiedExitTokensFromStorage();
+  private isInitialYardHydrated = false;
+  private lastHandledToken: string | null = null;
+
+  private loadNotifiedExitTokensFromStorage(): Set<string> {
+    const s = new Set<string>();
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const raw = sessionStorage.getItem('4g_notified_ready_exit_tokens');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) list.forEach(k => s.add(k));
+        }
+      }
+    } catch {}
+    return s;
+  }
+
+  private persistNotifiedExitTokensToStorage(): void {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        sessionStorage.setItem('4g_notified_ready_exit_tokens', JSON.stringify(Array.from(this.notifiedReadyExitTokens)));
+      }
+    } catch {}
+  }
+
+  protected getFormattedRampLabel(rampCode?: string | null, rampNumber?: number | string | null): string {
+    if (rampCode && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rampCode)) {
+      return rampCode.startsWith('LOC-') || rampCode.startsWith('R-') || rampCode.startsWith('RAMP')
+        ? rampCode
+        : `Andén ${rampCode}`;
+    }
+    if (rampCode) {
+      const match = (this.ramps() || []).find((r: any) => r.id === rampCode || r.code === rampCode);
+      if (match) return match.code || match.name || `Andén ${match.rampNumber || ''}`.trim();
+    }
+    if (rampNumber != null && rampNumber !== '') {
+      return `Andén R-${rampNumber}`;
+    }
+    return 'Andén Principal';
+  }
 
   private playCheckinChime(): void {
     try {
@@ -494,9 +597,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
 
   protected readonly completedShiftExitsCount = computed(() => {
-    const fromHistory = this.historyPasses().length;
-    const fromStorage = this.movementsService.movementsApi.loadExitedPassTokens().size;
-    return Math.max(fromHistory, fromStorage);
+    return this.historyPasses().length;
   });
 
   protected calculateDuration(inTime: any, outTime: any): string {
@@ -668,6 +769,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('4g_local_passes');
+      localStorage.removeItem('4g_exited_passes');
+      localStorage.removeItem('4g_deleted_passes');
       const savedTunnel = localStorage.getItem('4g_security_tunnel_url');
       if (savedTunnel && savedTunnel.trim()) {
         const cleaned = this.cleanTunnelUrl(savedTunnel);
@@ -683,23 +787,24 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // Escuchar parámetros de consulta (token o tab) desde notificaciones o links directos
     this.route.queryParams.subscribe(params => {
       const tab = params['tab'];
-      if (tab === 'IN_YARD' || tab === 'HISTORY' || tab === 'REGISTRATION') {
+      if ((tab === 'IN_YARD' || tab === 'HISTORY' || tab === 'REGISTRATION') && this.activeTab() !== tab) {
         this.setTab(tab);
       }
       const token = params['token'] || params['folio'];
-      if (token) {
+      if (token && token !== this.lastHandledToken) {
+        this.lastHandledToken = token;
         this.handleIncomingPassToken(token);
       }
     });
 
-    // Auto-refresco en tiempo real no bloqueante
+    // Auto-refresco en tiempo real silencioso (no bloqueante y sin destruir el DOM ni el scroll)
     this.refreshIntervalId = setInterval(() => {
       this.reloadActivePasses();
-      this.reloadInYardPasses();
+      this.reloadInYardPasses(true);
       if (this.activeTab() === 'HISTORY') {
-        this.reloadHistoryPasses();
+        this.reloadHistoryPasses(true);
       }
-    }, 4000);
+    }, 8000);
 
     // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
     this.checkInForm.get('remision')?.valueChanges.pipe(
@@ -807,23 +912,25 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Cambio de Pestaña ─────────────────────────────────────────────────────
   protected setTab(tab: SecurityGateTab): void {
+    if (this.activeTab() === tab) {
+      return;
+    }
     this.activeTab.set(tab);
     if (tab === 'IN_YARD') {
-      this.reloadInYardPasses();
-      this.reloadHistoryPasses();
+      this.reloadInYardPasses(true);
+      this.reloadHistoryPasses(true);
     } else if (tab === 'HISTORY') {
-      this.reloadHistoryPasses();
+      this.reloadHistoryPasses(false);
     } else {
       this.reloadActivePasses();
     }
-    this.scrollToTop();
   }
 
   protected reloadAllData(): void {
     this.movementsService.reloadReceptions();
     this.reloadActivePasses();
-    this.reloadInYardPasses();
-    this.reloadHistoryPasses();
+    this.reloadInYardPasses(true);
+    this.reloadHistoryPasses(true);
   }
 
   // ── REGLA DE NEGOCIO DINÁMICA: CARGA vs DESCARGA ───────────────────────────
@@ -966,135 +1073,47 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected reloadActivePasses(): void {
     const session = this.movementsService.movementsApi.getSessionOrg();
-    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+
+    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
       next: (passes) => {
-        this.mergeLocalActivePasses(passes || []);
+        this.updateActivePasses(passes || []);
       },
       error: () => {
-        this.mergeLocalActivePasses([]);
+        this.updateActivePasses([]);
       }
     });
   }
 
-  private mergeLocalActivePasses(backendPasses: any[]): void {
-    try {
-      const localStr = localStorage.getItem('4g_local_passes');
-      const localPasses: any[] = localStr ? JSON.parse(localStr) : [];
-      const pendingLocal = localPasses.filter(p => p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER');
+  private updateActivePasses(backendPasses: any[]): void {
+    const cleanList = backendPasses || [];
+    this.activePasses.set(cleanList);
+    this.smartNotification.updateSubmittedDriverPasses(cleanList);
 
-      const mergedMap = new Map<string, any>();
-      for (const p of backendPasses) {
-        if (p && p.token) mergedMap.set(p.token, p);
+    // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
+    for (const p of cleanList) {
+      if (p && p.status === 'SUBMITTED' && p.token && !this.notifiedSubmittedTokens.has(p.token)) {
+        this.notifiedSubmittedTokens.add(p.token);
+        this.playCheckinChime();
+        const chofer = p.driverName || p.nombreOperador || 'Transportista';
+        const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
+        this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
       }
-      for (const p of pendingLocal) {
-        if (p && p.token) {
-          // Si ya hay pases en el backend, no duplicar con tokens temporales PASS-4G-
-          // EXCEPCIÓN: si el pase local es SUBMITTED, siempre conservarlo (tiene datos del chofer)
-          if (p.token.startsWith('PASS-4G-') && backendPasses.length > 0 && p.status !== 'SUBMITTED') {
-            continue;
-          }
-          const existing = mergedMap.get(p.token);
-          if (!existing) {
-            mergedMap.set(p.token, p);
-          } else {
-            const isSubmitted = existing.status === 'SUBMITTED' || p.status === 'SUBMITTED';
-            // El pase local SUBMITTED tiene todos los campos del chofer; el backend puede tener solo metadata básica.
-            // Si el local tiene SUBMITTED y el backend no, el local gana en todos los campos de datos del chofer.
-            const localIsRicher = p.status === 'SUBMITTED' && existing.status !== 'SUBMITTED';
-            const primary = localIsRicher ? p : ((existing.status === 'SUBMITTED') ? existing : ((p.status === 'SUBMITTED') ? p : existing));
-            const secondary = (primary === existing) ? p : existing;
-
-            mergedMap.set(p.token, {
-              ...secondary,
-              ...primary,
-              // Identificadores del backend (siempre conservar)
-              id: existing.id || p.id,
-              token: p.token,
-              status: isSubmitted ? 'SUBMITTED' : (primary.status || secondary.status || 'PENDING_DRIVER'),
-              // Campos de datos del chofer: el pase SUBMITTED (local) tiene precedencia
-              operationType: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
-              operacion: primary.operationType || primary.operacion || secondary.operationType || secondary.operacion || 'DESCARGA',
-              driverName: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
-              nombreOperador: primary.driverName || primary.nombreOperador || secondary.driverName || secondary.nombreOperador || '',
-              driverPhone: primary.driverPhone || primary.telefonoChofer || secondary.driverPhone || secondary.telefonoChofer || '',
-              tractorPlates: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || '',
-              placasTracto: primary.tractorPlates || primary.placasTracto || secondary.tractorPlates || secondary.placasTracto || '',
-              boxPlates: primary.boxPlates || primary.placasCaja || secondary.boxPlates || secondary.placasCaja || '',
-              placasCaja: primary.boxPlates || primary.placasCaja || secondary.boxPlates || secondary.placasCaja || '',
-              boxDimensions: primary.boxDimensions || primary.medidasCaja || secondary.boxDimensions || secondary.medidasCaja || '',
-              medidasCaja: primary.boxDimensions || primary.medidasCaja || secondary.boxDimensions || secondary.medidasCaja || '',
-              transportType: primary.transportType || primary.tipoTransporte || secondary.transportType || secondary.tipoTransporte || '',
-              noEcoTractor: primary.noEcoTractor || primary.economicNumber || secondary.noEcoTractor || secondary.economicNumber || '',
-              noEcoCaja: primary.noEcoCaja || primary.boxEconomicNumber || secondary.noEcoCaja || secondary.boxEconomicNumber || '',
-              economicNumber: primary.noEcoTractor || primary.economicNumber || secondary.noEcoTractor || secondary.economicNumber || '',
-              boxEconomicNumber: primary.noEcoCaja || primary.boxEconomicNumber || secondary.noEcoCaja || secondary.boxEconomicNumber || '',
-              clientName: primary.clientName || secondary.clientName || '',
-              carrierLineCode: primary.carrierLineCode || secondary.carrierLineCode || '',
-              carrierLine: primary.carrierLine || secondary.carrierLine || '',
-              docNumber: primary.docNumber || secondary.docNumber || '',
-              noCartaPorte: primary.noCartaPorte || secondary.noCartaPorte || '',
-              remision: primary.remision || secondary.remision || '',
-              sealNumbers: (primary.sealNumbers?.length > 0) ? primary.sealNumbers : (secondary.sealNumbers || []),
-              checklistData: primary.checklistData || secondary.checklistData || null,
-              driverSignature: primary.driverSignature || secondary.driverSignature || '',
-              observations: primary.observations || secondary.observations || '',
-            });
-          }
-        }
-      }
-      const mergedList = Array.from(mergedMap.values());
-      this.activePasses.set(mergedList);
-      this.smartNotification.updateSubmittedDriverPasses(mergedList);
-
-      // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
-      for (const p of mergedList) {
-        if (p && p.status === 'SUBMITTED' && p.token && !this.notifiedSubmittedTokens.has(p.token)) {
-          this.notifiedSubmittedTokens.add(p.token);
-          this.playCheckinChime();
-          const chofer = p.driverName || p.nombreOperador || 'Transportista';
-          const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
-          this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
-        }
-      }
-    } catch {
-      this.activePasses.set(backendPasses || []);
-      this.smartNotification.updateSubmittedDriverPasses(backendPasses || []);
     }
   }
 
-  private savePassToLocalStorage(tokenStr: string, payload: any): void {
-    try {
-      const existingStr = localStorage.getItem('4g_local_passes');
-      let passes: any[] = existingStr ? JSON.parse(existingStr) : [];
-      const passObj = {
-        id: 'pass-loc-' + Date.now(),
-        token: tokenStr,
-        status: payload.status || 'PENDING_DRIVER',
-        operationType: payload.operationType,
-        docNumber: payload.docNumber,
-        noCartaPorte: payload.operationType === 'CARGA' ? payload.docNumber : '',
-        remision: payload.operationType === 'DESCARGA' ? payload.docNumber : '',
-        clientCode: payload.clientCode,
-        clientName: payload.clientName,
-        carrierLineCode: payload.carrierLineCode,
-        carrierLine: payload.carrierLine,
-        driverName: payload.driverName,
-        tractorPlates: payload.tractorPlates,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      passes = passes.filter(p => p.token !== tokenStr);
-      passes.unshift(passObj);
-      localStorage.setItem('4g_local_passes', JSON.stringify(passes));
-    } catch {
-      // Storage error fallback
+  protected reloadInYardPasses(silent: boolean = false): void {
+    if (!silent && this.backendInYardPasses().length === 0) {
+      this.isLoadingInYard.set(true);
     }
-  }
-
-  protected reloadInYardPasses(): void {
-    this.isLoadingInYard.set(true);
     const session = this.movementsService.movementsApi.getSessionOrg();
-    this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+
+    this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
         this.backendInYardPasses.set(passes || []);
@@ -1106,12 +1125,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     });
   }
 
-  protected reloadHistoryPasses(): void {
-    this.isLoadingHistory.set(true);
+  protected reloadHistoryPasses(silent: boolean = false): void {
+    if (!silent && this.historyPasses().length === 0) {
+      this.isLoadingHistory.set(true);
+    }
     const session = this.movementsService.movementsApi.getSessionOrg();
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+
     this.movementsService.movementsApi.getPassHistory({
       organizationId: session.organizationId,
-      branchId: session.branchId,
+      branchId: branchToQuery,
       search: this.historySearch()
     }).subscribe({
       next: (passes) => {
@@ -1148,7 +1173,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 2. Buscar en activePasses locales
+    // 2. Buscar en activePasses locales en memoria
     const foundInActive = this.activePasses().find(p => p.token === cleanToken || p.id === cleanToken);
     if (foundInActive) {
       this.setTab('REGISTRATION');
@@ -1156,21 +1181,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 3. Buscar en localStorage
-    try {
-      const localStr = localStorage.getItem('4g_local_passes');
-      if (localStr) {
-        const localPasses: any[] = JSON.parse(localStr);
-        const found = localPasses.find(p => p.token === cleanToken || p.id === cleanToken);
-        if (found) {
-          this.setTab('REGISTRATION');
-          this.loadDriverSubmission(found);
-          return;
-        }
-      }
-    } catch {}
-
-    // 4. Buscar en pendingDriverPasses de smartNotification
+    // 3. Buscar en pendingDriverPasses de smartNotification
     const foundInPending = this.smartNotification.pendingDriverPasses().find(p => p.token === cleanToken || p.id === cleanToken);
     if (foundInPending) {
       this.setTab('REGISTRATION');
@@ -1178,15 +1189,36 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 5. Cargar desde el backend
+    // 4. Cargar desde el backend consultando el pase directamente por Token
     const session = this.movementsService.movementsApi.getSessionOrg();
-    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
-      next: (passes) => {
-        const match = (passes || []).find(p => p.token === cleanToken || p.id === cleanToken);
-        if (match) {
+    this.movementsService.movementsApi.getPublicPass(cleanToken).subscribe({
+      next: (pass) => {
+        if (pass) {
           this.setTab('REGISTRATION');
-          this.loadDriverSubmission(match);
+          this.loadDriverSubmission(pass);
+          return;
         }
+        // Fallback en lista activa de la organización
+        this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId }).subscribe({
+          next: (passes) => {
+            const match = (passes || []).find(p => p.token === cleanToken || p.id === cleanToken);
+            if (match) {
+              this.setTab('REGISTRATION');
+              this.loadDriverSubmission(match);
+            }
+          }
+        });
+      },
+      error: () => {
+        this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId }).subscribe({
+          next: (passes) => {
+            const match = (passes || []).find(p => p.token === cleanToken || p.id === cleanToken);
+            if (match) {
+              this.setTab('REGISTRATION');
+              this.loadDriverSubmission(match);
+            }
+          }
+        });
       }
     });
   }
@@ -1195,37 +1227,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (!pass) return;
 
     this.activeTab.set('REGISTRATION');
+    const passData = { ...pass };
 
-    // 1. Enriquecer el objeto pass con la versión más completa guardada en localStorage.
-    let enrichedPass = { ...pass };
-    try {
-      const localStr = localStorage.getItem('4g_local_passes');
-      if (localStr) {
-        const localPasses: any[] = JSON.parse(localStr);
-        const localVersion = localPasses.find(p =>
-          p.token === pass.token || p.id === pass.token || p.token === pass.id
-        );
-        if (localVersion) {
-          enrichedPass = {
-            ...enrichedPass,
-            ...localVersion,
-            id: pass.id || localVersion.id,
-            token: pass.token || localVersion.token,
-            status: (localVersion.status === 'SUBMITTED' || pass.status === 'SUBMITTED') ? 'SUBMITTED' : (pass.status || localVersion.status || 'PENDING_DRIVER'),
-          };
-        }
-      }
-    } catch {
-      // Storage fallback
-    }
-
-    const passData = enrichedPass;
-
-    // 2. Limpiar formulario previo
+    // Limpiar formulario previo
     this.resetFormFieldsOnly();
-    this.activeToken.set(passData.token || pass.token);
+    this.activeToken.set(passData.token || passData.id);
 
-    // 3. Tipo de Operación
+    // Tipo de Operación
     const opVal = (passData.operationType || passData.operacion || 'DESCARGA').toUpperCase();
     this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
 
@@ -1235,8 +1243,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const boxPlatesVal      = passData.boxPlates      || passData.placasCaja      || passData.trailerPlates  || '';
     const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '53 Pies';
     const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || 'Tráiler';
-    const ecoNumberVal      = passData.economicNumber || passData.noEcoTractor    || passData.ecoTractor     || passData.eco_tractor || '';
-    const boxEcoVal         = passData.boxEconomicNumber || passData.noEcoCaja    || passData.ecoCaja        || passData.box_economic_number || '';
+    const ecoNumberVal      = passData.noEcoTractor || '';
+    const boxEcoVal         = passData.noEcoCaja || '';
     const docNumberVal      = passData.docNumber      || passData.remision        || passData.noCartaPorte   || '';
     const isSubmitted       = passData.status === 'SUBMITTED';
 
@@ -1555,14 +1563,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     const token = pass.token || pass.generatedFolio;
 
-    // Registrar inmediatamente en el conjunto persistente de salidas
-    const exitedSet = this.movementsService.movementsApi.loadExitedPassTokens();
-    if (token) exitedSet.add(token.trim().toUpperCase());
-    if (pass.token) exitedSet.add(pass.token.trim().toUpperCase());
-    if (pass.generatedFolio) exitedSet.add(pass.generatedFolio.trim().toUpperCase());
-    if (pass.id) exitedSet.add(pass.id.trim().toUpperCase());
-    this.movementsService.movementsApi.saveExitedPassTokens(exitedSet);
-
     this.movementsService.movementsApi.checkOutPass(token, payload).subscribe({
       next: (res) => {
         this.isCheckingOut.set(false);
@@ -1604,7 +1604,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const driver = item.nombreOperador || item.driverName || item.transportistaNombre || formVal.nombreOperador || formVal.transportistaNombre || 'OPERADOR CHOFER';
     const carrier = item.carrierLine || item.carrierLineCode || formVal.carrierLine || 'TRANSPORTE GENERAL';
     const client = item.client || item.clientName || formVal.client || 'CLIENTE GENERAL';
-    const eco = item.noEcoTractor || item.economicNumber || formVal.noEcoTractor || '-';
+    const eco = item.noEcoTractor || formVal.noEcoTractor || '-';
     const dimensions = item.medidasCaja || item.boxDimensions || formVal.medidasCaja || '53 Pies';
     const transType = item.tipoTransporte || item.transportType || formVal.tipoTransporte || 'Caja Seca';
     const ramp = item.rampCode || (item.rampNumber ? `R-${item.rampNumber}` : (formVal.rampCode || (formVal.rampNumber ? `R-${formVal.rampNumber}` : 'R-01')));
@@ -1627,9 +1627,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       revisionDate: '19/08/2025',
       emissionDate: '19/08/2025',
       processOwner: 'Seguridad Patrimonial',
-      elaboratedBy: 'SP',
-      reviewedBy: 'CG',
-      approvedBy: 'DG',
+      elaboratedBy: 'Seguridad Patrimonial',
+      reviewedBy: 'Control de Gestión',
+      approvedBy: 'Dirección General',
 
       fecha: dateVal,
       noCartaPorte: op === 'CARGA' ? docNo : (item.noCartaPorte || formVal.noCartaPorte || ''),
@@ -1936,10 +1936,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       driverPhone: formVal.driverPhone || '',
       tractorPlates: (formVal.placasTracto || '').toUpperCase(),
       boxPlates: (formVal.placasCaja || '').toUpperCase(),
-      economicNumber: formVal.noEcoTractor || formVal.economicNumber || '',
-      noEcoTractor: formVal.noEcoTractor || formVal.economicNumber || '',
-      boxEconomicNumber: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
-      noEcoCaja: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+      noEcoTractor: formVal.noEcoTractor || '',
+      noEcoCaja: formVal.noEcoCaja || '',
       transportType: formVal.tipoTransporte || '',
       medidasCaja: formVal.medidasCaja || '',
       noCartaPorte: formVal.noCartaPorte || '',
@@ -1964,9 +1962,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         tractorPlates: (formVal.placasTracto || 'S/P').toUpperCase().trim(),
         boxPlates: (formVal.placasCaja || 'S/P').toUpperCase().trim(),
         noEcoTractor: formVal.noEcoTractor || 'S/N',
-        economicNumber: formVal.noEcoTractor || formVal.economicNumber || 'S/N',
-        boxEconomicNumber: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
-        noEcoCaja: formVal.noEcoCaja || formVal.boxEconomicNumber || '',
+        noEcoCaja: formVal.noEcoCaja || '',
         transportType: formVal.tipoTransporte || 'Caja Seca',
         boxDimensions: formVal.medidasCaja || '53 Pies',
         docNumber: op === 'CARGA' 

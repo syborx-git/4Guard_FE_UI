@@ -1719,7 +1719,11 @@
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showCheckOutModal() && selectedCheckOutPass()) {
   <div class="modal-overlay animate-fade-in" (click)="closeCheckOutModal()">
-    <div class="modal-card max-w-lg w-full space-y-5 relative" (click)="$event.stopPropagation()">
+    <div class="modal-card modal-card--checkout relative" (click)="$event.stopPropagation()">
+      <!-- Accent top bar -->
+      <div class="checkout-modal-accent-bar"></div>
+
+      <!-- Close Button -->
       <button
         type="button"
         (click)="closeCheckOutModal()"
@@ -1729,92 +1733,138 @@
         ✕
       </button>
 
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/25">
-          <span class="material-symbols-outlined text-2xl">logout</span>
+      <!-- Compact Header -->
+      <div class="checkout-header">
+        <div class="checkout-header-icon">
+          <span class="material-symbols-outlined text-xl">output</span>
         </div>
-        <div>
-          <h3 class="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-            Registrar Salida de Planta (Check-Out)
-          </h3>
-          <p class="text-xs text-slate-600 dark:text-slate-300 font-medium">
-            Unidad: <strong class="font-mono text-slate-900 dark:text-slate-100 font-bold">{{ selectedCheckOutPass().tractorPlates || 'S/P' }}</strong> — Folio #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
-          </p>
-        </div>
-      </div>
-
-      <!-- Resumen de Unidad (High-Contrast Clean Box) -->
-      <div class="checkout-summary-card">
-        <div class="checkout-summary-item">
-          <span class="checkout-summary-label">Chofer:</span>
-          <strong class="checkout-summary-val">{{ selectedCheckOutPass().driverName || 'S/N' }}</strong>
-        </div>
-        <div class="checkout-summary-item">
-          <span class="checkout-summary-label">Transporte:</span>
-          <strong class="checkout-summary-val">{{ selectedCheckOutPass().carrierLine || 'General' }}</strong>
-        </div>
-        <div class="checkout-summary-item">
-          <span class="checkout-summary-label">Hora Entrada:</span>
-          <strong class="checkout-summary-val font-mono">{{ formatTimeString(selectedCheckOutPass().receptionTime || selectedCheckOutPass().horaEntrada || selectedCheckOutPass().createdAt) }}</strong>
-        </div>
-        <div class="checkout-summary-item">
-          <span class="checkout-summary-label">Rampa:</span>
-          <strong class="checkout-summary-val font-mono text-amber-700 dark:text-amber-400 font-bold">{{ formatRampDisplay(selectedCheckOutPass()) }}</strong>
+        <div class="checkout-header-info min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="checkout-title">
+              Salida de Planta (Check-Out)
+            </h3>
+            <span class="checkout-folio-badge">
+              #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
+            </span>
+          </div>
+          <div class="checkout-unit-subtitle">
+            <span class="material-symbols-outlined text-xs text-amber-500">local_shipping</span>
+            <span>Unidad:</span>
+            <strong class="font-mono text-slate-900 dark:text-slate-100 font-bold tracking-wider">
+              {{ selectedCheckOutPass().tractorPlates || 'S/P' }}
+            </strong>
+            @if (selectedCheckOutPass().noEcoTractor) {
+              <span class="text-slate-300 dark:text-slate-600">•</span>
+              <span class="text-slate-600 dark:text-slate-300">Eco: {{ selectedCheckOutPass().noEcoTractor }}</span>
+            }
+          </div>
         </div>
       </div>
 
-      <!-- Formulario de Check-Out -->
-      <form [formGroup]="checkOutForm" (ngSubmit)="confirmCheckOut()" class="space-y-4">
-        <div>
-          <label class="checkout-form-label">
-            Hora Exacta de Salida *
-          </label>
-          <input
-            type="time"
-            formControlName="departureTime"
-            class="form-input text-xs font-mono font-bold"
-          />
+      <!-- Compact 4-Chip Summary Grid -->
+      <div class="checkout-summary-grid">
+        <div class="checkout-chip">
+          <span class="checkout-chip-label">
+            <span class="material-symbols-outlined text-[13px]">person</span>
+            Chofer
+          </span>
+          <span class="checkout-chip-val" [title]="selectedCheckOutPass().driverName || 'S/N'">
+            {{ selectedCheckOutPass().driverName || 'S/N' }}
+          </span>
         </div>
 
-        <div>
-          <label class="checkout-form-label">
-            Sellos / Cinchos de Salida (Opcional)
-          </label>
-          <input
-            type="text"
-            formControlName="exitSealNumbers"
-            placeholder="Dejar en blanco si la unidad salió vacía tras descarga (Opcional)"
-            class="form-input text-xs font-mono uppercase"
-          />
+        <div class="checkout-chip">
+          <span class="checkout-chip-label">
+            <span class="material-symbols-outlined text-[13px]">domain</span>
+            Transporte
+          </span>
+          <span class="checkout-chip-val" [title]="selectedCheckOutPass().carrierLine || 'General'">
+            {{ selectedCheckOutPass().carrierLine || 'General' }}
+          </span>
         </div>
 
-        <div>
+        <div class="checkout-chip">
+          <span class="checkout-chip-label">
+            <span class="material-symbols-outlined text-[13px]">login</span>
+            Entrada
+          </span>
+          <span class="checkout-chip-val font-mono">
+            {{ formatTimeString(selectedCheckOutPass().receptionTime || selectedCheckOutPass().horaEntrada || selectedCheckOutPass().createdAt) }}
+          </span>
+        </div>
+
+        <div class="checkout-chip checkout-chip--ramp">
+          <span class="checkout-chip-label text-amber-700 dark:text-amber-400">
+            <span class="material-symbols-outlined text-[13px]">warehouse</span>
+            Rampa
+          </span>
+          <span class="checkout-chip-val font-mono font-bold text-amber-800 dark:text-amber-300">
+            {{ formatRampDisplay(selectedCheckOutPass()) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Formulario de Check-Out (High-Density 2-Column) -->
+      <form [formGroup]="checkOutForm" (ngSubmit)="confirmCheckOut()" class="checkout-form">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div class="checkout-field-group">
+            <label class="checkout-form-label">
+              <span class="material-symbols-outlined text-xs text-amber-500">schedule</span>
+              <span>Hora de Salida *</span>
+            </label>
+            <div class="checkout-input-wrapper">
+              <input
+                type="time"
+                formControlName="departureTime"
+                class="checkout-form-input text-xs font-mono font-bold"
+              />
+            </div>
+          </div>
+
+          <div class="checkout-field-group">
+            <label class="checkout-form-label">
+              <span class="material-symbols-outlined text-xs text-slate-400">lock</span>
+              <span>Sellos de Salida <span class="checkout-optional-tag">(Opcional)</span></span>
+            </label>
+            <div class="checkout-input-wrapper">
+              <input
+                type="text"
+                formControlName="exitSealNumbers"
+                placeholder="Ej. S-9921 / Vacío"
+                class="checkout-form-input text-xs font-mono uppercase"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="checkout-field-group">
           <label class="checkout-form-label">
-            Observaciones de Salida
+            <span class="material-symbols-outlined text-xs text-slate-400">edit_note</span>
+            <span>Observaciones de Salida</span>
           </label>
           <textarea
             formControlName="exitObservations"
             rows="2"
-            placeholder="Condiciones de la unidad al retirarse de planta..."
-            class="form-textarea text-xs"
+            placeholder="Condiciones de la unidad al retirarse de planta (opcional)..."
+            class="checkout-form-textarea text-xs"
           ></textarea>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div class="checkout-footer">
           <button
             type="button"
             (click)="closeCheckOutModal()"
-            class="btn-secondary-outline"
+            class="btn-checkout-cancel"
           >
             Cancelar
           </button>
           <button
             type="submit"
             [disabled]="isCheckingOut()"
-            class="btn-primary-gold px-5 py-2"
+            class="btn-checkout-submit"
           >
-            <span class="material-symbols-outlined text-sm">verified</span>
-            <span>{{ isCheckingOut() ? 'Registrando Salida...' : 'Confirmar Salida y Ver Boleta F01' }}</span>
+            <span class="material-symbols-outlined text-base">verified</span>
+            <span>{{ isCheckingOut() ? 'Registrando...' : 'Confirmar Salida y Boleta F01' }}</span>
           </button>
         </div>
       </form>
@@ -1824,30 +1874,45 @@
 
 <!-- ════════════════════════════════════════════════════════════════════════════
      MODAL C: VISOR E IMPRESIÓN OFICIAL DEL FORMATO F01-PO-CP-7.1.3-03
+     (Diseño UI/UX Document Inspector: Lienzo de escritorio centrado con hoja Carta)
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showF01PrintModal() && currentPrintData()) {
-  <div class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in" (click)="closeF01Print()">
-    <div class="bg-white text-slate-900 max-h-[85vh] overflow-y-auto w-full max-w-4xl rounded-xl shadow-2xl flex flex-col p-0 border border-slate-200" (click)="$event.stopPropagation()">
+  <div
+    class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-fade-in"
+    (click)="closeF01Print()"
+  >
+    <div
+      class="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col w-full max-w-[780px] max-h-[92vh] overflow-hidden text-slate-100 animate-scale-in"
+      (click)="$event.stopPropagation()"
+    >
       
-      <!-- Top Action Bar (Compact) -->
-      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2 bg-slate-50 rounded-t-xl sticky top-0 z-10">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 flex items-center justify-center border border-amber-500/25">
-            <span class="material-symbols-outlined text-base">print</span>
+      <!-- Top Action Bar (Document Inspector Toolbar) -->
+      <div class="px-4 py-3 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+            <span class="material-symbols-outlined text-base">description</span>
           </div>
-          <div>
-            <h3 class="font-black text-xs sm:text-sm text-slate-900 leading-none">
-              Formato F01-PO-CP-7.1.3-03 (Check List de Transporte)
-            </h3>
-            <p class="text-[10px] text-slate-500 mt-0.5">Documento Oficial para Auditoría Patrimonial</p>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-xs sm:text-sm text-white truncate leading-none">
+                Formato F01-PO-CP-7.1.3-03
+              </h3>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+                {{ currentPrintData()?.folio || 'OFICIAL' }}
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-400 truncate mt-0.5">
+              Check List de Transporte • Auditoría de Seguridad Patrimonial
+            </p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 shrink-0">
           <button
             type="button"
             (click)="printF01()"
-            class="btn-primary-gold text-[11px] px-3.5 py-1.5"
+            class="btn-primary-gold text-[11px] px-3.5 py-1.5 flex items-center gap-1.5 font-bold shadow-sm"
           >
             <span class="material-symbols-outlined text-sm">print</span>
             <span>Imprimir Hoja</span>
@@ -1856,7 +1921,7 @@
           <button
             type="button"
             (click)="downloadF01Pdf()"
-            class="btn-secondary-outline text-[11px] px-3 py-1.5"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
           >
             <span class="material-symbols-outlined text-sm">download</span>
             <span>Descargar PDF</span>
@@ -1865,19 +1930,29 @@
           <button
             type="button"
             (click)="closeF01Print()"
-            class="text-slate-400 hover:text-slate-700 text-base font-bold px-1.5 cursor-pointer"
+            class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer ml-1"
             aria-label="Cerrar visor F01"
+            title="Cerrar visor"
           >
             ✕
           </button>
         </div>
       </div>
 
-      <!-- Contenedor con Scroll de la Hoja Oficial Imprimible -->
-      <div class="p-3 sm:p-5 overflow-y-auto bg-slate-100 flex-1">
-        <div id="f01-print-target">
+      <!-- Lienzo de Escritorio / Desk Canvas con la Hoja Oficial Centrada -->
+      <div class="flex-1 overflow-y-auto bg-slate-950/60 p-3 sm:p-5 flex justify-center items-start">
+        <div id="f01-print-target" class="w-full flex justify-center">
           <fg-print-transport-checklist-layout [data]="currentPrintData()!"></fg-print-transport-checklist-layout>
         </div>
+      </div>
+
+      <!-- Footer Info Bar -->
+      <div class="px-4 py-2 bg-slate-900 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Vista preliminar de impresión • Tamaño Carta (Letter 8.5" × 11")</span>
+        </div>
+        <span class="font-mono text-slate-500">4GUARD WMS SGC</span>
       </div>
 
     </div>

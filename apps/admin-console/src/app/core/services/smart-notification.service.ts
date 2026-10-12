@@ -71,6 +71,10 @@ export class SmartNotificationService {
   public readonly pendingRampAssignmentsCount = computed(() => this.pendingRampAssignments().length);
   public readonly hasNewRampAssignment = signal<boolean>(false);
 
+  // Unidades en patio autorizadas y listas para salida (Check-Out)
+  public readonly readyForExitPasses = signal<any[]>([]);
+  public readonly readyForExitCount = computed(() => this.readyForExitPasses().length);
+
   // Última notificación despachada
   public readonly latestNotification = signal<SmartNotification | null>(null);
 
@@ -166,6 +170,18 @@ export class SmartNotificationService {
    * Despacha una nueva notificación al sistema aplicando filtrado por rol y contexto.
    */
   public dispatch(notifInput: Omit<SmartNotification, 'id' | 'timestamp' | 'isRead'>): SmartNotification | null {
+    // Control Anti-Spam: Prevenir duplicados con misma categoría, título y referencia en menos de 60 segundos
+    const now = Date.now();
+    const isDuplicate = this._notifications().some(n =>
+      n.category === notifInput.category &&
+      n.title === notifInput.title &&
+      n.referenceFolio === notifInput.referenceFolio &&
+      (now - new Date(n.timestamp).getTime()) < 60000
+    );
+    if (isDuplicate) {
+      return null;
+    }
+
     const notification: SmartNotification = {
       ...notifInput,
       id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -247,6 +263,14 @@ export class SmartNotificationService {
         data: latest
       });
     }
+  }
+
+  /**
+   * Actualiza la lista de unidades en patio autorizadas y listas para salida (Check-Out).
+   */
+  public updateReadyForExitPasses(passes: any[]): void {
+    const ready = (passes || []).filter(p => p && p.isReadyForExit === true);
+    this.readyForExitPasses.set(ready);
   }
 
   /**

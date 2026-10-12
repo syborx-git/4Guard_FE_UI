@@ -362,11 +362,11 @@
               <div class="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-[11px] font-mono flex items-center justify-between text-slate-700 dark:text-slate-300">
                 <span class="truncate mr-2" title="Eco y Placas de Tracto">
                   <strong class="font-sans text-[10px] text-slate-500 uppercase">Tracto:</strong>
-                  {{ outbound.noEcoTractor || outbound.economicNumber || '-' }} ({{ outbound.tractorPlates || 'S/P' }})
+                  {{ outbound.noEcoTractor || '-' }} ({{ outbound.tractorPlates || 'S/P' }})
                 </span>
                 <span class="truncate text-right" title="Eco y Placas de Caja">
                   <strong class="font-sans text-[10px] text-slate-500 uppercase">Caja:</strong>
-                  {{ outbound.noEcoCaja || outbound.boxEconomicNumber || '-' }} ({{ outbound.boxPlates || 'S/P' }})
+                  {{ outbound.noEcoCaja || '-' }} ({{ outbound.boxPlates || 'S/P' }})
                 </span>
               </div>
 
@@ -587,8 +587,8 @@
                   <input
                     type="text"
                     class="fg-input mono"
-                    [ngModel]="economicNumber()"
-                    (ngModelChange)="economicNumber.set($event)"
+                    [ngModel]="noEcoTractor()"
+                    (ngModelChange)="noEcoTractor.set($event)"
                     placeholder="ECO-901"
                   />
                 </div>
@@ -611,8 +611,8 @@
                   <input
                     type="text"
                     class="fg-input mono"
-                    [ngModel]="boxEconomicNumber()"
-                    (ngModelChange)="boxEconomicNumber.set($event)"
+                    [ngModel]="noEcoCaja()"
+                    (ngModelChange)="noEcoCaja.set($event)"
                     placeholder="BOX-402"
                   />
                 </div>
@@ -1480,7 +1480,7 @@
                   <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col text-xs min-w-0">
                     <span class="font-bold text-slate-800 dark:text-slate-200">Eco/Placas & Sello Oficial</span>
-                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-mono font-medium truncate">Tracto: {{ economicNumber() || '-' }}/{{ tractorPlates() || '-' }} · Caja: {{ boxEconomicNumber() || '-' }}/{{ boxPlates() || '-' }} · 🔒 {{ sealNumber() }}</span>
+                    <span class="text-[11px] text-slate-700 dark:text-slate-300 font-mono font-medium truncate">Tracto: {{ noEcoTractor() || '-' }}/{{ tractorPlates() || '-' }} · Caja: {{ noEcoCaja() || '-' }}/{{ boxPlates() || '-' }} · 🔒 {{ sealNumber() }}</span>
                   </div>
                 </div>
 
@@ -1853,10 +1853,10 @@
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="logistics-command-badge-plate">
-                    T: {{ (selectedOutbound()!.noEcoTractor || selectedOutbound()!.economicNumber) || '-' }} / {{ selectedOutbound()!.tractorPlates || 'S/P' }}
+                    T: {{ selectedOutbound()!.noEcoTractor || '-' }} / {{ selectedOutbound()!.tractorPlates || 'S/P' }}
                   </span>
                   <span class="logistics-command-badge-plate">
-                    C: {{ (selectedOutbound()!.noEcoCaja || selectedOutbound()!.boxEconomicNumber) || '-' }} / {{ selectedOutbound()!.boxPlates || 'S/P' }}
+                    C: {{ selectedOutbound()!.noEcoCaja || '-' }} / {{ selectedOutbound()!.boxPlates || 'S/P' }}
                   </span>
                 </div>
               </div>
@@ -2760,14 +2760,14 @@
             <div class="confirm-data-row">
               <span class="confirm-data-label">Tracto (Eco / Placas):</span>
               <span class="confirm-data-val font-mono text-xs">
-                Eco: {{ economicNumber() || '--' }} <span class="confirm-sep">·</span> Placas: {{ tractorPlates() || '--' }}
+                Eco: {{ noEcoTractor() || '--' }} <span class="confirm-sep">·</span> Placas: {{ tractorPlates() || '--' }}
               </span>
             </div>
 
             <div class="confirm-data-row">
               <span class="confirm-data-label">Caja (Eco / Placas):</span>
               <span class="confirm-data-val font-mono text-xs">
-                Eco: {{ boxEconomicNumber() || '--' }} <span class="confirm-sep">·</span> Placas: {{ boxPlates() || '--' }}
+                Eco: {{ noEcoCaja() || '--' }} <span class="confirm-sep">·</span> Placas: {{ boxPlates() || '--' }}
               </span>
             </div>
 
@@ -3258,8 +3258,8 @@
               <label class="fg-label">Eco de Tracto</label>
               <input
                 type="text"
-                [ngModel]="editEconomicNumber()"
-                (ngModelChange)="editEconomicNumber.set($event)"
+                [ngModel]="editNoEcoTractor()"
+                (ngModelChange)="editNoEcoTractor.set($event)"
                 class="fg-input font-mono uppercase font-bold"
                 placeholder="Ej. ECO-901"
               />
@@ -3270,8 +3270,8 @@
               <label class="fg-label">Eco Caja</label>
               <input
                 type="text"
-                [ngModel]="editBoxEconomicNumber()"
-                (ngModelChange)="editBoxEconomicNumber.set($event)"
+                [ngModel]="editNoEcoCaja()"
+                (ngModelChange)="editNoEcoCaja.set($event)"
                 class="fg-input font-mono uppercase font-bold"
                 placeholder="Ej. BOX-402"
               />

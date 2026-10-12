@@ -110,10 +110,8 @@ export interface CheckInCasetaData {
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
-  economicNumber?: string;  // Número económico del vehículo / tracto
-  noEcoTractor?: string;
-  boxEconomicNumber?: string; // Número económico de la caja
-  noEcoCaja?: string;
+  noEcoTractor?: string;    // No. Económico Tracto
+  noEcoCaja?: string;       // No. Económico Caja
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte
@@ -133,7 +131,7 @@ export interface PatioUnitMonitor {
   carrierLine: string;
   tractorPlates: string;
   boxPlates: string;
-  economicNumber?: string;
+  noEcoTractor?: string;
   registeredAt: string;
   rampNumber?: number;
   rampAssignedAt?: string;
@@ -315,9 +313,7 @@ export interface OutboundDispatch {
   sealNumber: string;        // No. Sello/Cincho (Obligatorio)
   carrierName: string;       // Transportista
   driverName: string;
-  economicNumber?: string;
   noEcoTractor?: string;
-  boxEconomicNumber?: string;
   noEcoCaja?: string;
   tractorPlates: string;
   boxPlates: string;
@@ -375,9 +371,7 @@ export interface WarehouseOutbound {
   forkliftOperator?: string;
   forkliftOperatorId?: string;
   driverName: string;
-  economicNumber?: string;
   noEcoTractor?: string;
-  boxEconomicNumber?: string;
   noEcoCaja?: string;
   tractorPlates: string;
   boxPlates: string;

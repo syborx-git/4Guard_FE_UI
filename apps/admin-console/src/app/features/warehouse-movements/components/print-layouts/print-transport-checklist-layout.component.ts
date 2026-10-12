@@ -37,7 +37,6 @@ export interface TransportChecklistPrintData {
   noEcoTractor?: string;
   placasCaja?: string;
   noEcoCaja?: string;
-  boxEconomicNumber?: string;
   medidasCaja?: string;
   noSello?: string;
   tipoTransporte?: string;
@@ -86,7 +85,7 @@ export interface TransportChecklistPrintData {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="data" class="f01-print-sheet bg-white text-black p-4 sm:p-5 max-w-[850px] mx-auto font-sans text-[11px] leading-tight border border-slate-400 rounded-sm shadow-sm print:border-0 print:p-0 print:shadow-none">
+    <div *ngIf="data" class="f01-print-sheet bg-white text-black p-5 sm:p-6 max-w-[700px] w-full mx-auto font-sans text-[10px] leading-tight border border-slate-300 rounded-sm shadow-2xl ring-1 ring-black/10 print:border-0 print:p-0 print:shadow-none print:max-w-none print:ring-0">
       
       <!-- ════════════════════════════════════════════════════════════════════════════════
            1. ENCABEZADO INSTITUCIONAL OFICIAL (F01-PO-CP-7.1.3-03)
@@ -121,12 +120,12 @@ export interface TransportChecklistPrintData {
             &nbsp;|&nbsp;
             <span>Emisión: <strong>{{ data.emissionDate || '19/08/2025' }}</strong></span>
           </td>
-          <td class="border border-slate-900 p-0.5 text-center">
-            <span>Elab: <strong>{{ data.elaboratedBy || 'SP' }}</strong></span>
+          <td class="border border-slate-900 p-0.5 text-center text-[8.5px]">
+            <span>Elaboró: <strong>{{ formatRole(data.elaboratedBy, 'Seguridad Patrimonial') }}</strong></span>
             &nbsp;|&nbsp;
-            <span>Rev: <strong>{{ data.reviewedBy || 'CG' }}</strong></span>
+            <span>Revisó: <strong>{{ formatRole(data.reviewedBy, 'Control de Gestión') }}</strong></span>
             &nbsp;|&nbsp;
-            <span>Aprob: <strong>{{ data.approvedBy || 'DG' }}</strong></span>
+            <span>Aprobó: <strong>{{ formatRole(data.approvedBy, 'Dirección General') }}</strong></span>
           </td>
         </tr>
       </table>
@@ -198,7 +197,7 @@ export interface TransportChecklistPrintData {
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Placas Caja:</td>
             <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.placasCaja || '-' }}</td>
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">No. Eco Caja:</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.noEcoCaja || data.boxEconomicNumber || '-' }}</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.noEcoCaja || '-' }}</td>
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Medidas Caja:</td>
             <td class="border border-slate-900 px-2 py-0.5 font-semibold">{{ data.medidasCaja || '53 Pies' }}</td>
           </tr>
@@ -398,6 +397,15 @@ export interface TransportChecklistPrintData {
 })
 export class PrintTransportChecklistLayoutComponent {
   @Input() data?: TransportChecklistPrintData;
+
+  formatRole(val?: string | null, fallback: string = ''): string {
+    if (!val) return fallback;
+    const clean = String(val).trim();
+    if (clean === 'SP') return 'Seguridad Patrimonial';
+    if (clean === 'CG') return 'Control de Gestión';
+    if (clean === 'DG') return 'Dirección General';
+    return clean;
+  }
 
   formatTime(val?: string | null): string {
     if (!val) return '--:--';

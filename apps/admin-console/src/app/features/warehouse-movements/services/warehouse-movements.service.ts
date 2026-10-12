@@ -1314,10 +1314,8 @@ export class WarehouseMovementsService {
       driverName: data.driverName,
       tractorPlates: data.tractorPlates,
       boxPlates: data.boxPlates,
-      economicNumber: data.noEcoTractor || data.economicNumber || (data as any).ecoTractor || '',
-      noEcoTractor: data.noEcoTractor || data.economicNumber || (data as any).ecoTractor || '',
-      boxEconomicNumber: data.noEcoCaja || data.boxEconomicNumber || (data as any).ecoCaja || '',
-      noEcoCaja: data.noEcoCaja || data.boxEconomicNumber || (data as any).ecoCaja || '',
+      noEcoTractor: data.noEcoTractor || (data as any).ecoTractor || '',
+      noEcoCaja: data.noEcoCaja || (data as any).ecoCaja || '',
       sealNumber: seals.join(', '),
       remisionNo: data.docNumber,
       observations: data.observations || '',
@@ -1341,10 +1339,8 @@ export class WarehouseMovementsService {
           rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
           rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
           driverName: data.driverName,
-          economicNumber: res.noEcoTractor || res.economicNumber || data.noEcoTractor || data.economicNumber || '',
-          noEcoTractor: res.noEcoTractor || res.economicNumber || data.noEcoTractor || data.economicNumber || '',
-          boxEconomicNumber: res.noEcoCaja || res.boxEconomicNumber || data.noEcoCaja || data.boxEconomicNumber || '',
-          noEcoCaja: res.noEcoCaja || res.boxEconomicNumber || data.noEcoCaja || data.boxEconomicNumber || '',
+          noEcoTractor: res.noEcoTractor || data.noEcoTractor || '',
+          noEcoCaja: res.noEcoCaja || data.noEcoCaja || '',
           tractorPlates: data.tractorPlates,
           boxPlates: data.boxPlates,
           transportType: (res.transportType || data.transportType || 'TRAILER') as TransportType,
@@ -1481,10 +1477,8 @@ export class WarehouseMovementsService {
         driverName: r.driverName || r.checkIn?.driverName || '',
         tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
         boxPlates: r.boxPlates || r.checkIn?.boxPlates || '',
-        economicNumber: r.economicNumber || r.noEcoTractor || r.checkIn?.economicNumber || r.checkIn?.noEcoTractor || (r.preCheckin ? (r.preCheckin.economicNumber || r.preCheckin.noEcoTractor) : '') || '',
-        noEcoTractor: r.noEcoTractor || r.economicNumber || r.checkIn?.noEcoTractor || r.checkIn?.economicNumber || (r.preCheckin ? (r.preCheckin.noEcoTractor || r.preCheckin.economicNumber) : '') || '',
-        boxEconomicNumber: r.boxEconomicNumber || r.noEcoCaja || r.checkIn?.boxEconomicNumber || r.checkIn?.noEcoCaja || (r.preCheckin ? (r.preCheckin.boxEconomicNumber || r.preCheckin.noEcoCaja) : '') || '',
-        noEcoCaja: r.noEcoCaja || r.boxEconomicNumber || r.checkIn?.noEcoCaja || r.checkIn?.boxEconomicNumber || (r.preCheckin ? (r.preCheckin.boxEconomicNumber || r.preCheckin.noEcoCaja) : '') || '',
+        noEcoTractor: r.noEcoTractor || r.checkIn?.noEcoTractor || (r.preCheckin ? r.preCheckin.noEcoTractor : '') || '',
+        noEcoCaja: r.noEcoCaja || r.checkIn?.noEcoCaja || (r.preCheckin ? r.preCheckin.noEcoCaja : '') || '',
         sealNumber: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers.join(', ') : (r.sealNumber || r.checkIn?.sealNumber || ''),
         sealNumbers: (r.sealNumbers && r.sealNumbers.length > 0) ? r.sealNumbers : (r.sealNumber ? [r.sealNumber] : (r.checkIn?.sealNumbers || [])),
       },
@@ -1537,10 +1531,8 @@ export class WarehouseMovementsService {
       forkliftOperator: o.forkliftOperatorName || o.forkliftOperator || '',
       forkliftOperatorId: o.forkliftOperatorId || '',
       driverName: o.driverName || '',
-      economicNumber: o.noEcoTractor || o.economicNumber || o.ecoTractor || (o.preCheckin ? (o.preCheckin.noEcoTractor || o.preCheckin.economicNumber) : '') || '',
-      noEcoTractor: o.noEcoTractor || o.economicNumber || o.ecoTractor || (o.preCheckin ? (o.preCheckin.noEcoTractor || o.preCheckin.economicNumber) : '') || '',
-      boxEconomicNumber: o.noEcoCaja || o.boxEconomicNumber || o.ecoCaja || (o.preCheckin ? (o.preCheckin.noEcoCaja || o.preCheckin.boxEconomicNumber) : '') || '',
-      noEcoCaja: o.noEcoCaja || o.boxEconomicNumber || o.ecoCaja || (o.preCheckin ? (o.preCheckin.noEcoCaja || o.preCheckin.boxEconomicNumber) : '') || '',
+      noEcoTractor: o.noEcoTractor || (o.preCheckin ? o.preCheckin.noEcoTractor : '') || '',
+      noEcoCaja: o.noEcoCaja || (o.preCheckin ? o.preCheckin.noEcoCaja : '') || '',
       tractorPlates: o.tractorPlates || '',
       boxPlates: o.boxPlates || '',
       transportType: o.transportType || 'TRAILER',
@@ -1725,10 +1717,8 @@ export class WarehouseMovementsService {
     const payload = {
       tractorPlates: checkIn.tractorPlates,
       boxPlates: checkIn.boxPlates,
-      economicNumber: checkIn.economicNumber || checkIn.noEcoTractor || null,
-      noEcoTractor: checkIn.noEcoTractor || checkIn.economicNumber || null,
-      boxEconomicNumber: checkIn.boxEconomicNumber || checkIn.noEcoCaja || null,
-      noEcoCaja: checkIn.noEcoCaja || checkIn.boxEconomicNumber || null,
+      noEcoTractor: checkIn.noEcoTractor || null,
+      noEcoCaja: checkIn.noEcoCaja || null,
       driverName: checkIn.driverName,
       docNumber: checkIn.docNumber,
       docDate: checkIn.docDate || null,
@@ -2881,8 +2871,8 @@ export class WarehouseMovementsService {
     forkliftOperator?: string;
     forkliftOperatorId?: string;
     driverName: string;
-    economicNumber: string;
-    boxEconomicNumber?: string;
+    noEcoTractor?: string;
+    noEcoCaja?: string;
     tractorPlates: string;
     boxPlates: string;
     transportType: TransportType;
@@ -2915,8 +2905,8 @@ export class WarehouseMovementsService {
       forkliftOperator: dto.forkliftOperator,
       forkliftOperatorId: dto.forkliftOperatorId,
       driverName: dto.driverName,
-      economicNumber: dto.economicNumber,
-      boxEconomicNumber: dto.boxEconomicNumber,
+      noEcoTractor: dto.noEcoTractor,
+      noEcoCaja: dto.noEcoCaja,
       tractorPlates: dto.tractorPlates,
       boxPlates: dto.boxPlates,
       transportType: dto.transportType,
