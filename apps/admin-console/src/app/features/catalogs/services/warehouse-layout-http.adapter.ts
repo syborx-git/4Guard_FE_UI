@@ -39,9 +39,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['ADHESIVO BASE AGUA V3869 HB FULLER'],
     notes: '25 Fijas · 10 Temporales · 2 Precarga',
     status: 'LOADED',
-    polygonPoints: '255,50 345,50 345,115 255,115',
-    labelPosition: { x: 300, y: 78 },
-    sublabelPosition: { x: 300, y: 98 }
+    polygonPoints: '190,8 264,8 264,84 242,84 232,92 232,133 190,133',
+    labelPosition: { x: 227, y: 46 },
+    sublabelPosition: { x: 227, y: 68 }
   },
   {
     id: 'sec-g',
@@ -56,9 +56,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['SGM-JUICE-1L · Jugo del Valle', 'BOTELLA VIDRIO SALSA INGLESA C&B 1090 G'],
     notes: '117 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '255,125 360,125 360,700 295,700 255,640',
-    labelPosition: { x: 305, y: 390 },
-    sublabelPosition: { x: 305, y: 415 }
+    polygonPoints: '9,134 246,134 246,392 206,392 170,360 134,380 118,388 119,299 74,300 62,300',
+    labelPosition: { x: 141, y: 216 },
+    sublabelPosition: { x: 141, y: 238 }
   },
   {
     id: 'sec-c',
@@ -73,9 +73,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['ENVASE DE VIDRIO SIGNATURE 250G MX'],
     notes: '56 Fijas · 20 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '368,125 435,125 435,590 368,590',
-    labelPosition: { x: 401, y: 340 },
-    sublabelPosition: { x: 401, y: 365 }
+    polygonPoints: '702,378 802,378 802,782 718,782 718,542 720,542 720,459 702,459',
+    labelPosition: { x: 760, y: 662 },
+    sublabelPosition: { x: 760, y: 684 }
   },
   {
     id: 'sec-i',
@@ -90,9 +90,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['ALP-YOG-250G · Yogurt Alpura'],
     notes: '91 Fijas · 25 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '442,125 510,125 510,590 442,590',
-    labelPosition: { x: 476, y: 340 },
-    sublabelPosition: { x: 476, y: 365 }
+    polygonPoints: '389,276 489,216 489,690 389,690',
+    labelPosition: { x: 439, y: 483 },
+    sublabelPosition: { x: 439, y: 505 }
   },
   {
     id: 'sec-l',
@@ -107,9 +107,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['LA LECHERA LCA LATA 48X375G MX', 'ABUELITA TABLETA 24X540G MX'],
     notes: '112 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '517,125 588,125 588,590 517,590',
-    labelPosition: { x: 552, y: 340 },
-    sublabelPosition: { x: 552, y: 365 }
+    polygonPoints: '489,216 588,166 588,607 568,607 568,632 560,632 560,695 568,695 568,765 592,765 592,782 544,782 544,760 489,760',
+    labelPosition: { x: 539, y: 407 },
+    sublabelPosition: { x: 539, y: 429 }
   },
   {
     id: 'sec-e',
@@ -124,9 +124,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['LATA HOJALATA CORTA PEELOFF D 153 MM'],
     notes: '38 Fijas · 15 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '368,600 588,600 588,780 368,780',
-    labelPosition: { x: 478, y: 680 },
-    sublabelPosition: { x: 478, y: 705 }
+    polygonPoints: '280,690 489,690 489,760 451,760 451,812 280,812',
+    labelPosition: { x: 384, y: 725 },
+    sublabelPosition: { x: 384, y: 747 }
   },
   {
     id: 'sec-k',
@@ -141,9 +141,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['DAN-MILK-1L · Danone Entera'],
     notes: '181 Fijas · 40 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '596,75 730,75 730,360 596,360',
-    labelPosition: { x: 663, y: 200 },
-    sublabelPosition: { x: 663, y: 225 }
+    polygonPoints: '',
+    labelPosition: { x: 0, y: 0 },
+    sublabelPosition: { x: 0, y: 0 }
   },
   {
     id: 'sec-b',
@@ -158,9 +158,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '36 Fijas · 15 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '738,75 842,75 842,195 738,195',
-    labelPosition: { x: 790, y: 130 },
-    sublabelPosition: { x: 790, y: 152 }
+    polygonPoints: '692,145 856,52 861,52 861,188 732,188 732,328 694,328',
+    labelPosition: { x: 713, y: 258 },
+    sublabelPosition: { x: 713, y: 280 }
   },
   {
     id: 'sec-f',
@@ -175,9 +175,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['NESP-CAPS-10P · Cápsulas Nespresso'],
     notes: '91 Fijas · 25 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '738,205 842,205 842,360 738,360',
-    labelPosition: { x: 790, y: 275 },
-    sublabelPosition: { x: 790, y: 298 }
+    polygonPoints: '588,378 702,378 702,459 720,459 720,782 592,782 592,598 588,598',
+    labelPosition: { x: 654, y: 529 },
+    sublabelPosition: { x: 654, y: 551 }
   },
   {
     id: 'sec-m',
@@ -192,9 +192,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['COFFEE-MATE ORIGINAL 12X640G N1MX'],
     notes: '132 Fijas · 35 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '596,370 730,370 730,570 596,570',
-    labelPosition: { x: 663, y: 460 },
-    sublabelPosition: { x: 663, y: 485 }
+    polygonPoints: '',
+    labelPosition: { x: 0, y: 0 },
+    sublabelPosition: { x: 0, y: 0 }
   },
   {
     id: 'sec-d',
@@ -209,9 +209,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '596,580 730,580 730,780 596,780',
-    labelPosition: { x: 663, y: 670 },
-    sublabelPosition: { x: 663, y: 695 }
+    polygonPoints: '',
+    labelPosition: { x: 0, y: 0 },
+    sublabelPosition: { x: 0, y: 0 }
   },
   {
     id: 'sec-j',
@@ -226,9 +226,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['LALA-MILK-1L · Leche Entera 1L'],
     notes: '56 Fijas · 20 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '738,370 842,370 842,780 738,780',
-    labelPosition: { x: 790, y: 565 },
-    sublabelPosition: { x: 790, y: 590 }
+    polygonPoints: '246,360 272,360 281,322 389,276 389,690 280,690 280,660 272,640 272,506 246,506',
+    labelPosition: { x: 318, y: 433 },
+    sublabelPosition: { x: 318, y: 455 }
   },
   {
     id: 'sec-a',
@@ -243,9 +243,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['LALA-MILK-1L · Leche Entera 1L', 'ENVASE VIDRIO NESCAFE DOLCA 180G'],
     notes: '170 Fijas · 50 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '850,75 975,75 975,780 850,780',
-    labelPosition: { x: 912, y: 420 },
-    sublabelPosition: { x: 912, y: 445 }
+    polygonPoints: '802,378 886,335 886,738 802,738',
+    labelPosition: { x: 844, y: 625 },
+    sublabelPosition: { x: 844, y: 647 }
   }
 ];
 

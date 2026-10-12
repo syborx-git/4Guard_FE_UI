@@ -265,7 +265,7 @@
             [style.cursor]="'grab'"
             [style.transform]="'translate(' + panOffset().x + 'px, ' + panOffset().y + 'px) scale(' + zoomScale() + ')'"
           >
-            <svg viewBox="0 0 1000 870" class="wmap__svg" aria-label="Plano de distribución del almacén">
+            <svg viewBox="0 0 1000 888" class="wmap__svg" aria-label="Plano de distribución del almacén">
               <defs>
                 <!-- Grid de fondo tipo papel milimetrado -->
                 <pattern id="bg-grid-cat" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -310,109 +310,12 @@
               </defs>
 
               <!-- Capa 0: Fondo de papel técnico -->
-              <rect width="1000" height="870" fill="#0a1018"/>
-              <rect width="1000" height="870" fill="url(#bg-grid-fine)"/>
-              <rect width="1000" height="870" fill="url(#bg-grid-cat)"/>
+              <rect width="1000" height="888" fill="#0a1018"/>
+              <rect width="1000" height="888" fill="url(#bg-grid-fine)"/>
+              <rect width="1000" height="888" fill="url(#bg-grid-cat)"/>
 
-              <!-- Capa 1: Perímetro Real del Edificio Industrial CAD -->
-              <g class="cad__building-layer" filter="url(#building-shadow)">
-                <!-- Muro exterior principal del complejo (13 naves reales) -->
-                <polygon
-                  points="250,45 350,45 350,118 596,118 596,70 980,70 980,785 365,785 365,705 295,705 250,640"
-                  class="cad__building-wall"
-                />
-                <!-- Muro divisorio estructural nave central -->
-                <line x1="592" y1="70" x2="592" y2="785" class="cad__building-wall-inner"/>
-                <line x1="846" y1="70" x2="846" y2="785" class="cad__building-wall-inner"/>
-              </g>
-
-              <!-- Capa 2: Dimensiones y Cotas Perimetrales -->
-              <g class="cad__dimensions-layer">
-                <!-- Cota horizontal superior -->
-                <line x1="250" y1="35" x2="980" y2="35" class="cad__dim-line"/>
-                <line x1="250" y1="30" x2="250" y2="40" class="cad__dim-tick"/>
-                <line x1="980" y1="30" x2="980" y2="40" class="cad__dim-tick"/>
-                <text x="615" y="30" class="cad__dim-text">144.4 m (Planta Principal)</text>
-
-                <!-- Cota vertical derecha -->
-                <line x1="993" y1="70" x2="993" y2="785" class="cad__dim-line"/>
-                <line x1="988" y1="70" x2="998" y2="70" class="cad__dim-tick"/>
-                <line x1="988" y1="785" x2="998" y2="785" class="cad__dim-tick"/>
-                <text x="996" y="430" class="cad__dim-text cad__dim-text--vertical" transform="rotate(90, 996, 430)">145.0 m</text>
-              </g>
-
-              <!-- Capa 3: Rampas de Carga / Docks -->
-              <g class="cad__docks-layer">
-                <!-- Rampa 1 (Norte – Nave K/A) -->
-                <rect x="780" y="48" width="35" height="22" rx="2" class="cad__dock"/>
-                <rect x="780" y="48" width="35" height="22" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="797" y="63" class="cad__dock-label">R1</text>
-
-                <!-- Rampa 2 (Este Superior – Nave A) -->
-                <rect x="982" y="240" width="20" height="35" rx="2" class="cad__dock"/>
-                <rect x="982" y="240" width="20" height="35" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="992" y="262" class="cad__dock-label">R2</text>
-
-                <!-- Rampa 3 (Este Medio – Nave A) -->
-                <rect x="982" y="440" width="20" height="35" rx="2" class="cad__dock"/>
-                <rect x="982" y="440" width="20" height="35" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="992" y="462" class="cad__dock-label">R3</text>
-
-                <!-- Rampa 4 (Sur Este – Nave J) -->
-                <rect x="820" y="787" width="35" height="22" rx="2" class="cad__dock"/>
-                <rect x="820" y="787" width="35" height="22" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="837" y="802" class="cad__dock-label">R4</text>
-
-                <!-- Rampa 5 (Sur Medio – Nave D) -->
-                <rect x="660" y="787" width="35" height="22" rx="2" class="cad__dock"/>
-                <rect x="660" y="787" width="35" height="22" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="677" y="802" class="cad__dock-label">R5</text>
-
-                <!-- Rampa 6 (Sur Centro – Nave E) -->
-                <rect x="510" y="787" width="35" height="22" rx="2" class="cad__dock"/>
-                <rect x="510" y="787" width="35" height="22" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="527" y="802" class="cad__dock-label">R6</text>
-
-                <!-- Rampa 7 (Sur Oeste – Nave E) -->
-                <rect x="420" y="787" width="35" height="22" rx="2" class="cad__dock"/>
-                <rect x="420" y="787" width="35" height="22" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="437" y="802" class="cad__dock-label">R7</text>
-
-                <!-- Rampa 8 (Suroeste – Nave G) -->
-                <rect x="305" y="707" width="35" height="22" rx="2" class="cad__dock"/>
-                <rect x="305" y="707" width="35" height="22" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="322" y="722" class="cad__dock-label">R8</text>
-              </g>
-
-              <!-- Capa 4: Red de Tráfico de Montacargas y Pasillos Centrales Conectados -->
-              <g class="cad__traffic-layer">
-                <!-- Pasillo Norte principal -->
-                <line x1="250" y1="120" x2="980" y2="120" class="cad__traffic-lane cad__traffic-lane--main"/>
-                <!-- Corredor Vertical 1 (entre G y C) -->
-                <line x1="364" y1="120" x2="364" y2="600" class="cad__traffic-lane"/>
-                <!-- Corredor Vertical 2 (Central: L y K/M/D) -->
-                <line x1="592" y1="70" x2="592" y2="782" class="cad__traffic-lane cad__traffic-lane--main"/>
-                <!-- Corredor Vertical 3 (Este: K/M/D/J y A) -->
-                <line x1="846" y1="70" x2="846" y2="782" class="cad__traffic-lane cad__traffic-lane--main"/>
-                <!-- Pasillo Horizontal 1 (interconexión K/B/F y M) -->
-                <line x1="592" y1="365" x2="846" y2="365" class="cad__traffic-lane"/>
-                <!-- Pasillo Horizontal 2 (interconexión M y D/J) -->
-                <line x1="592" y1="575" x2="846" y2="575" class="cad__traffic-lane"/>
-                <!-- Pasillo Horizontal 3 (entre C/I/L y E) -->
-                <line x1="364" y1="595" x2="592" y2="595" class="cad__traffic-lane"/>
-                <!-- Pasillo Sur hacia Docks -->
-                <line x1="365" y1="782" x2="980" y2="782" class="cad__traffic-lane cad__traffic-lane--main"/>
-
-                <!-- Conexión a Docks R1..R8 -->
-                <line x1="797" y1="70" x2="797" y2="120" class="cad__feeder-junction"/>
-                <line x1="975" y1="257" x2="940" y2="257" class="cad__feeder-junction"/>
-                <line x1="975" y1="457" x2="940" y2="457" class="cad__feeder-junction"/>
-                <line x1="837" y1="782" x2="837" y2="787" class="cad__feeder-junction"/>
-                <line x1="677" y1="782" x2="677" y2="787" class="cad__feeder-junction"/>
-                <line x1="527" y1="782" x2="527" y2="787" class="cad__feeder-junction"/>
-                <line x1="437" y1="782" x2="437" y2="787" class="cad__feeder-junction"/>
-                <line x1="322" y1="700" x2="322" y2="707" class="cad__feeder-junction"/>
-              </g>
+              <!-- Capa 1: Plano base fiel al DXF "#Layout Almacen principal.dxf" (muros, columnas, cortinas, rampas, oficinas y textos) -->
+              <image href="assets/layout_almacen_principal.svg" x="0" y="0" width="1000" height="887.27" preserveAspectRatio="none" class="cad__base-plan"/>
 
               <!-- Capa 4.5: Pasillos de Interconexión de Baterías (Feeder Routes) -->
               @if (showTransitRoutes()) {
@@ -437,6 +340,7 @@
               <!-- Capa 5: Naves del Almacén (13 Naves CAD) -->
               <g id="zonesLayerCat">
                 @for (sec of sections(); track sec.id) {
+                  @if (sec.polygonPoints) {
                   <g class="cad__zone-group">
                     <!-- Relleno de textura de racks (debajo del polígono interactivo) -->
                     <polygon
@@ -471,6 +375,7 @@
                       @else { Pendiente }
                     </text>
                   </g>
+                  }
                 }
               </g>
 
@@ -503,7 +408,7 @@
               }
 
               <!-- Capa 6: Rosa de los Vientos -->
-              <g class="cad__compass" transform="translate(80, 180)">
+              <g class="cad__compass" transform="translate(60, 520)">
                 <circle r="28" fill="rgba(0,0,0,0.45)" stroke="rgba(197,168,107,0.35)" stroke-width="1"/>
                 <circle r="22" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
                 <!-- Aguja Norte -->
@@ -520,25 +425,12 @@
                 <text x="-32" y="4" class="cad__compass-dir">O</text>
               </g>
 
-              <!-- Capa 7: Barra de Escala Métrica -->
-              <g class="cad__scale" transform="translate(40, 840)">
-                <line x1="0" y1="0" x2="120" y2="0" class="cad__scale-line"/>
-                <line x1="0" y1="-4" x2="0" y2="4" class="cad__scale-tick"/>
-                <line x1="40" y1="-3" x2="40" y2="3" class="cad__scale-tick"/>
-                <line x1="80" y1="-3" x2="80" y2="3" class="cad__scale-tick"/>
-                <line x1="120" y1="-4" x2="120" y2="4" class="cad__scale-tick"/>
-                <text x="0" y="14" class="cad__scale-text">0</text>
-                <text x="40" y="14" class="cad__scale-text">20m</text>
-                <text x="80" y="14" class="cad__scale-text">40m</text>
-                <text x="120" y="14" class="cad__scale-text">60m</text>
-              </g>
-
-              <!-- Capa 8: Cartela del Plano -->
-              <g class="cad__titleblock" transform="translate(40, 24)">
-                <rect width="180" height="42" rx="4" class="cad__titleblock-bg"/>
+              <!-- Capa 8: Cartela del Plano (datos del DXF) -->
+              <g class="cad__titleblock" transform="translate(40, 800)">
+                <rect width="200" height="42" rx="4" class="cad__titleblock-bg"/>
                 <text x="8" y="16" class="cad__titleblock-title">PLANO DE PLANTA</text>
-                <text x="8" y="30" class="cad__titleblock-sub">4GUARD WMS · Distribución Física</text>
-                <text x="8" y="38" class="cad__titleblock-rev">REV. 2026 · ESCALA 1:200</text>
+                <text x="8" y="30" class="cad__titleblock-sub">4GUARD WMS · Layout Almacén principal</text>
+                <text x="8" y="38" class="cad__titleblock-rev">Fuente: DXF · ver PDF_P-Texto</text>
               </g>
 
             </svg>

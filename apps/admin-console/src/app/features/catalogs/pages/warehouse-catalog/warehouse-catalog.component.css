@@ -1022,9 +1022,10 @@
 /* ─── Polígonos SVG (Naves del Almacén) ─────────────────── */
 
 .wmap__poly {
-  fill: rgba(15, 23, 42, 0.55);
-  stroke: rgba(148, 163, 184, 0.35);
-  stroke-width: 1.5;
+  fill: rgba(15, 23, 42, 0.18);
+  stroke: rgba(226, 232, 240, 0.75);
+  stroke-width: 3;
+  stroke-linejoin: miter;
   transition: fill 200ms ease, stroke 200ms ease, stroke-width 200ms ease, filter 200ms ease;
   cursor: pointer;
 }
@@ -1032,7 +1033,7 @@
 .wmap__poly--active {
   fill: rgba(16, 185, 129, 0.18);
   stroke: rgba(16, 185, 129, 0.75);
-  stroke-width: 2.2;
+  stroke-width: 3;
 }
 
 .wmap__poly--active:hover {

@@ -318,98 +318,107 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
       });
   });
 
-  // ─── Configuración Geométrica de Pasillos y Baterías por Nave CAD ─────────
-  private readonly ZONE_AISLES: Record<string, Array<{
-    aisleCode: string;
-    orientation: 'vertical' | 'horizontal';
-    center: number;
-    start: number;
-    end: number;
-    pairs: number;
-    target: { x: number; y: number };
-  }>> = {
-    H: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 285, start: 58, end: 105, pairs: 3, target: { x: 300, y: 120 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 318, start: 58, end: 105, pairs: 3, target: { x: 300, y: 120 } }
-    ],
-    G: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 285, start: 140, end: 600, pairs: 14, target: { x: 364, y: 370 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 330, start: 140, end: 660, pairs: 16, target: { x: 364, y: 370 } }
-    ],
-    C: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 401, start: 140, end: 575, pairs: 14, target: { x: 364, y: 370 } }
-    ],
-    I: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 476, start: 140, end: 575, pairs: 14, target: { x: 476, y: 595 } }
-    ],
-    L: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 552, start: 140, end: 575, pairs: 14, target: { x: 592, y: 370 } }
-    ],
-    E: [
-      { aisleCode: 'P-01', orientation: 'horizontal', center: 635, start: 380, end: 575, pairs: 7, target: { x: 592, y: 635 } },
-      { aisleCode: 'P-02', orientation: 'horizontal', center: 690, start: 380, end: 575, pairs: 7, target: { x: 592, y: 690 } },
-      { aisleCode: 'P-03', orientation: 'horizontal', center: 745, start: 380, end: 575, pairs: 7, target: { x: 592, y: 745 } }
-    ],
-    K: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 635, start: 95, end: 345, pairs: 9, target: { x: 635, y: 365 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 690, start: 95, end: 345, pairs: 9, target: { x: 690, y: 365 } }
-    ],
-    B: [
-      { aisleCode: 'P-01', orientation: 'horizontal', center: 115, start: 750, end: 830, pairs: 3, target: { x: 738, y: 115 } },
-      { aisleCode: 'P-02', orientation: 'horizontal', center: 160, start: 750, end: 830, pairs: 3, target: { x: 738, y: 160 } }
-    ],
-    F: [
-      { aisleCode: 'P-01', orientation: 'horizontal', center: 245, start: 750, end: 830, pairs: 4, target: { x: 738, y: 245 } },
-      { aisleCode: 'P-02', orientation: 'horizontal', center: 310, start: 750, end: 830, pairs: 4, target: { x: 738, y: 310 } }
-    ],
-    M: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 635, start: 385, end: 555, pairs: 7, target: { x: 635, y: 575 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 690, start: 385, end: 555, pairs: 7, target: { x: 690, y: 575 } }
-    ],
-    D: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 635, start: 595, end: 765, pairs: 7, target: { x: 635, y: 782 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 690, start: 595, end: 765, pairs: 7, target: { x: 690, y: 782 } }
-    ],
-    J: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 768, start: 385, end: 765, pairs: 14, target: { x: 846, y: 575 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 812, start: 385, end: 765, pairs: 14, target: { x: 846, y: 575 } }
-    ],
-    A: [
-      { aisleCode: 'P-01', orientation: 'vertical', center: 885, start: 95, end: 760, pairs: 24, target: { x: 846, y: 420 } },
-      { aisleCode: 'P-02', orientation: 'vertical', center: 940, start: 95, end: 760, pairs: 24, target: { x: 846, y: 420 } }
-    ]
-  };
+  // ─── Geometría de Racks: bahías generadas DENTRO del contorno real (DXF) de cada nave ─
+  // Unidades del croquis: 1000 u = ancho de planta del DXF (1 u ≈ 0.275 m).
+  private readonly BAY_GEOMETRY = {
+    bayW: 9,        // ancho de bahía
+    bayH: 12,       // fondo de bahía
+    gapY: 5,        // separación entre bahías consecutivas
+    rackGap: 12,    // pasillo de montacargas entre rack izquierdo y derecho
+    pitch: 56,      // distancia entre ejes de pasillos (incluye pasillo transversal)
+    wallMargin: 8   // holgura mínima contra muros
+  } as const;
+
+  private parsePolygon(points: string | undefined | null): Array<[number, number]> {
+    return (points ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(p => {
+        const [x, y] = p.split(',').map(Number);
+        return [x, y] as [number, number];
+      })
+      .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+  }
+
+  private pointInPolygon(x: number, y: number, pts: Array<[number, number]>): boolean {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i];
+      const [xj, yj] = pts[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  /** La bahía (ampliada por la holgura) debe quedar completa dentro del polígono y sin vértices de muro dentro. */
+  private rectInsidePolygon(x: number, y: number, w: number, h: number, pts: Array<[number, number]>, m: number): boolean {
+    const x0 = x - m, y0 = y - m, x1 = x + w + m, y1 = y + h + m;
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const probes: Array<[number, number]> = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [mx, y0], [mx, y1], [x0, my], [x1, my]];
+    if (!probes.every(([px, py]) => this.pointInPolygon(px, py, pts))) return false;
+    return !pts.some(([vx, vy]) => vx > x0 && vx < x1 && vy > y0 && vy < y1);
+  }
+
+  protected readonly zoneBayLayout = computed(() => {
+    const g = this.BAY_GEOMETRY;
+    const zones: Array<{
+      zoneCode: string;
+      aisles: Array<{ aisleCode: string; cx: number; yStart: number; yEnd: number; slots: Array<{ x: number; y: number; rack: 'R1' | 'R2' }> }>;
+    }> = [];
+
+    for (const sec of this.sections()) {
+      const pts = this.parsePolygon(sec.polygonPoints);
+      if (pts.length < 3) continue;
+      const xs = pts.map(p => p[0]);
+      const ys = pts.map(p => p[1]);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+      const pairWidth = 2 * g.bayW + g.rackGap;
+      const available = (maxX - minX) - 2 * g.wallMargin;
+      if (available < pairWidth) continue;
+      const count = Math.floor((available - pairWidth) / g.pitch) + 1;
+      const firstCx = minX + ((maxX - minX) - (count - 1) * g.pitch) / 2;
+
+      const aisles: Array<{ aisleCode: string; cx: number; yStart: number; yEnd: number; slots: Array<{ x: number; y: number; rack: 'R1' | 'R2' }> }> = [];
+      for (let i = 0; i < count; i++) {
+        const cx = firstCx + i * g.pitch;
+        const xLeft = cx - g.rackGap / 2 - g.bayW;
+        const xRight = cx + g.rackGap / 2;
+        const slots: Array<{ x: number; y: number; rack: 'R1' | 'R2' }> = [];
+        for (let y = minY + g.wallMargin; y + g.bayH <= maxY - g.wallMargin; y += g.bayH + g.gapY) {
+          if (this.rectInsidePolygon(xLeft, y, g.bayW, g.bayH, pts, g.wallMargin)) slots.push({ x: xLeft, y, rack: 'R1' });
+          if (this.rectInsidePolygon(xRight, y, g.bayW, g.bayH, pts, g.wallMargin)) slots.push({ x: xRight, y, rack: 'R2' });
+        }
+        if (!slots.length) continue;
+        aisles.push({
+          aisleCode: `P-${String(aisles.length + 1).padStart(2, '0')}`,
+          cx,
+          yStart: Math.min(...slots.map(s => s.y)),
+          yEnd: Math.max(...slots.map(s => s.y)) + g.bayH,
+          slots
+        });
+      }
+      if (aisles.length) zones.push({ zoneCode: sec.code, aisles });
+    }
+    return zones;
+  });
 
   // ─── Computados: Red Topológica y Bahías SVG en Croquis ─────────────────
-  protected readonly sectionAisleRoutes = computed<SectionAisleRoute[]>(() => {
-    const routes: SectionAisleRoute[] = [];
-    for (const [zoneCode, aisles] of Object.entries(this.ZONE_AISLES)) {
-      for (const a of aisles) {
-        if (a.orientation === 'vertical') {
-          routes.push({
-            aisleCode: `${zoneCode}-${a.aisleCode}`,
-            sectionCode: zoneCode,
-            x1: a.center,
-            y1: a.start,
-            x2: a.center,
-            y2: a.end,
-            mainCorridorTarget: a.target
-          });
-        } else {
-          routes.push({
-            aisleCode: `${zoneCode}-${a.aisleCode}`,
-            sectionCode: zoneCode,
-            x1: a.start,
-            y1: a.center,
-            x2: a.end,
-            y2: a.center,
-            mainCorridorTarget: a.target
-          });
-        }
-      }
-    }
-    return routes;
-  });
+  protected readonly sectionAisleRoutes = computed<SectionAisleRoute[]>(() =>
+    this.zoneBayLayout().flatMap(zone =>
+      zone.aisles.map(a => ({
+        aisleCode: `${zone.zoneCode}-${a.aisleCode}`,
+        sectionCode: zone.zoneCode,
+        x1: a.cx,
+        y1: a.yStart,
+        x2: a.cx,
+        y2: a.yEnd,
+        mainCorridorTarget: { x: a.cx, y: a.yEnd }
+      }))
+    )
+  );
 
   // ─── Detección de Alertas en Bahías y Posiciones ─────────────────────────
   protected getPosAlert(pos: PositionDetail | null): { type: 'NONE' | 'WARNING' | 'CRITICAL'; message?: string } {
@@ -448,131 +457,44 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   }
 
   protected readonly svgBays = computed<SvgBayItem[]>(() => {
+    const g = this.BAY_GEOMETRY;
     const allPositions = this.allPositions();
     const result: SvgBayItem[] = [];
 
-    for (const [zoneCode, aisles] of Object.entries(this.ZONE_AISLES)) {
+    for (const zone of this.zoneBayLayout()) {
+      const zoneCode = zone.zoneCode;
       const zonePositions = allPositions.filter(p =>
         p.code.startsWith(`POS-${zoneCode}-`) || p.sectionName?.includes(`Almacén ${zoneCode}`)
       );
       let posIdx = 0;
 
-      for (const a of aisles) {
-        const step = (a.end - a.start) / a.pairs;
-
-        for (let i = 0; i < a.pairs; i++) {
-          const posLeft = zonePositions[posIdx] || null;
+      for (const a of zone.aisles) {
+        for (const slot of a.slots) {
+          const pos = zonePositions[posIdx] || null;
           posIdx++;
-          const posRight = zonePositions[posIdx] || null;
-          posIdx++;
-
-          const alertLeft = this.getPosAlert(posLeft);
-          const alertRight = this.getPosAlert(posRight);
-
-          if (a.orientation === 'vertical') {
-            const ySlot = a.start + i * step + 2;
-            const hSlot = Math.max(5, step - 3);
-
-            // Bahía Izquierda
-            result.push({
-              id: posLeft?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 1}`,
-              code: posLeft?.code || `POS-${zoneCode}-${(i * 2 + 1).toString().padStart(3, '0')}`,
-              sectionCode: zoneCode,
-              sectionId: posLeft?.sectionId || `sec-${zoneCode.toLowerCase()}`,
-              x: a.center - 13,
-              y: ySlot,
-              width: 10,
-              height: hSlot,
-              status: posLeft?.status || 'AVAILABLE',
-              category: posLeft?.category || 'FIXED_STORAGE',
-              aisle: a.aisleCode,
-              rack: 'R1',
-              level: 1,
-              capacityTarimas: posLeft?.capacityTarimas || 22,
-              currentTarimas: posLeft?.currentTarimas || 0,
-              skuDescription: posLeft?.skuDescription || 'Sin Material Asignado',
-              batchNumber: posLeft?.batchNumber,
-              rawPosition: posLeft || undefined,
-              alertType: alertLeft.type,
-              alertMessage: alertLeft.message
-            });
-
-            // Bahía Derecha
-            result.push({
-              id: posRight?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 2}`,
-              code: posRight?.code || `POS-${zoneCode}-${(i * 2 + 2).toString().padStart(3, '0')}`,
-              sectionCode: zoneCode,
-              sectionId: posRight?.sectionId || `sec-${zoneCode.toLowerCase()}`,
-              x: a.center + 3,
-              y: ySlot,
-              width: 10,
-              height: hSlot,
-              status: posRight?.status || 'AVAILABLE',
-              category: posRight?.category || 'FIXED_STORAGE',
-              aisle: a.aisleCode,
-              rack: 'R2',
-              level: 1,
-              capacityTarimas: posRight?.capacityTarimas || 22,
-              currentTarimas: posRight?.currentTarimas || 0,
-              skuDescription: posRight?.skuDescription || 'Sin Material Asignado',
-              batchNumber: posRight?.batchNumber,
-              rawPosition: posRight || undefined,
-              alertType: alertRight.type,
-              alertMessage: alertRight.message
-            });
-          } else {
-            // Horizontal
-            const xSlot = a.start + i * step + 2;
-            const wSlot = Math.max(5, step - 3);
-
-            // Bahía Superior
-            result.push({
-              id: posLeft?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 1}`,
-              code: posLeft?.code || `POS-${zoneCode}-${(i * 2 + 1).toString().padStart(3, '0')}`,
-              sectionCode: zoneCode,
-              sectionId: posLeft?.sectionId || `sec-${zoneCode.toLowerCase()}`,
-              x: xSlot,
-              y: a.center - 13,
-              width: wSlot,
-              height: 10,
-              status: posLeft?.status || 'AVAILABLE',
-              category: posLeft?.category || 'FIXED_STORAGE',
-              aisle: a.aisleCode,
-              rack: 'R1',
-              level: 1,
-              capacityTarimas: posLeft?.capacityTarimas || 22,
-              currentTarimas: posLeft?.currentTarimas || 0,
-              skuDescription: posLeft?.skuDescription || 'Sin Material Asignado',
-              batchNumber: posLeft?.batchNumber,
-              rawPosition: posLeft || undefined,
-              alertType: alertLeft.type,
-              alertMessage: alertLeft.message
-            });
-
-            // Bahía Inferior
-            result.push({
-              id: posRight?.id || `bay-${zoneCode}-${a.aisleCode}-${i * 2 + 2}`,
-              code: posRight?.code || `POS-${zoneCode}-${(i * 2 + 2).toString().padStart(3, '0')}`,
-              sectionCode: zoneCode,
-              sectionId: posRight?.sectionId || `sec-${zoneCode.toLowerCase()}`,
-              x: xSlot,
-              y: a.center + 3,
-              width: wSlot,
-              height: 10,
-              status: posRight?.status || 'AVAILABLE',
-              category: posRight?.category || 'FIXED_STORAGE',
-              aisle: a.aisleCode,
-              rack: 'R2',
-              level: 1,
-              capacityTarimas: posRight?.capacityTarimas || 22,
-              currentTarimas: posRight?.currentTarimas || 0,
-              skuDescription: posRight?.skuDescription || 'Sin Material Asignado',
-              batchNumber: posRight?.batchNumber,
-              rawPosition: posRight || undefined,
-              alertType: alertRight.type,
-              alertMessage: alertRight.message
-            });
-          }
+          const alert = this.getPosAlert(pos);
+          result.push({
+            id: pos?.id || `bay-${zoneCode}-${a.aisleCode}-${posIdx}`,
+            code: pos?.code || `POS-${zoneCode}-${posIdx.toString().padStart(3, '0')}`,
+            sectionCode: zoneCode,
+            sectionId: pos?.sectionId || `sec-${zoneCode.toLowerCase()}`,
+            x: slot.x,
+            y: slot.y,
+            width: g.bayW,
+            height: g.bayH,
+            status: pos?.status || 'AVAILABLE',
+            category: pos?.category || 'FIXED_STORAGE',
+            aisle: a.aisleCode,
+            rack: slot.rack,
+            level: 1,
+            capacityTarimas: pos?.capacityTarimas || 22,
+            currentTarimas: pos?.currentTarimas || 0,
+            skuDescription: pos?.skuDescription || 'Sin Material Asignado',
+            batchNumber: pos?.batchNumber,
+            rawPosition: pos || undefined,
+            alertType: alert.type,
+            alertMessage: alert.message
+          });
         }
       }
     }
