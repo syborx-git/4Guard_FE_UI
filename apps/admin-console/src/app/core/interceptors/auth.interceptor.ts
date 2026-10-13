@@ -38,6 +38,32 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!isAuthOrPublic) {
     const token = authService.getAccessToken();
     if (token) {
+      // Si el token almacenado ya expiró por tiempo, renovarlo antes de enviar la petición
+      if (authService.isTokenExpired()) {
+        return authService.refreshToken().pipe(
+          switchMap((response) => {
+            const newToken = response?.data?.accessToken || authService.getAccessToken();
+            if (!newToken) {
+              return throwError(() => new Error('No se pudo renovar token expirado'));
+            }
+            const refreshedReq = req.clone({
+              headers: req.headers.set('Authorization', `Bearer ${newToken}`)
+            });
+            return next(refreshedReq);
+          }),
+          catchError((refreshErr) => {
+            if (
+              !router.url.includes('/login') &&
+              !router.url.includes('/carrier-checkin') &&
+              !router.url.includes('/driver-checkin')
+            ) {
+              authService.clearSessionAndRedirect('session_expired');
+            }
+            return throwError(() => refreshErr);
+          })
+        );
+      }
+
       activeReq = req.clone({
         headers: req.headers.set('Authorization', `Bearer ${token}`)
       });
@@ -46,8 +72,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(activeReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Interceptar 401 Unauthorized únicamente en peticiones protegidas que no sean de auth
-      if (error.status === 401 && !isAuthOrPublic) {
+      const isExpiredForbidden =
+        error.status === 403 &&
+        error.error &&
+        typeof error.error.message === 'string' &&
+        (error.error.message.toLowerCase().includes('token expirado') ||
+         error.error.message.toLowerCase().includes('no autenticado') ||
+         error.error.message.toLowerCase().includes('jwt expired'));
+
+      // Interceptar 401 Unauthorized (o 403 con mensaje de expiración) únicamente en peticiones protegidas
+      if ((error.status === 401 || isExpiredForbidden) && !isAuthOrPublic) {
         // Detener flujo, llamar a refreshToken() y reintentar con el nuevo token obtenido
         return authService.refreshToken().pipe(
           switchMap((response) => {

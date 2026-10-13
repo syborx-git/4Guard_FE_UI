@@ -116,6 +116,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     placasTracto: ['', [Validators.required, Validators.minLength(3)]],
     noEcoTractor: [''],
     placasCaja: ['', [Validators.required, Validators.minLength(3)]],
+    noEcoCaja: [''],
     medidasCaja: ['', Validators.required],
     tipoTransporte: ['', Validators.required],
 
@@ -392,6 +393,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     if (pass.driverPhone || pass.telefonoChofer) this.checkInForm.patchValue({ driverPhone: pass.driverPhone || pass.telefonoChofer });
     if (pass.tractorPlates || pass.placasTracto) this.checkInForm.patchValue({ placasTracto: pass.tractorPlates || pass.placasTracto });
     if (pass.boxPlates || pass.placasCaja) this.checkInForm.patchValue({ placasCaja: pass.boxPlates || pass.placasCaja });
+    if (pass.noEcoTractor || pass.economicNumber) this.checkInForm.patchValue({ noEcoTractor: pass.noEcoTractor || pass.economicNumber });
+    if (pass.noEcoCaja || pass.boxEconomicNumber) this.checkInForm.patchValue({ noEcoCaja: pass.noEcoCaja || pass.boxEconomicNumber });
     
     const doc = pass.docNumber || pass.noCartaPorte || pass.remision;
     if (doc) {
@@ -691,7 +694,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       driverPhone: f.driverPhone,
       tractorPlates: (f.placasTracto || '').toUpperCase(),
       noEcoTractor: f.noEcoTractor,
+      economicNumber: f.noEcoTractor,
       boxPlates: (f.placasCaja || '').toUpperCase(),
+      noEcoCaja: f.noEcoCaja,
+      boxEconomicNumber: f.noEcoCaja,
       boxDimensions: f.medidasCaja,
       transportType: f.tipoTransporte,
       sealNumbers: seals,
@@ -741,7 +747,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         driverPhone: payload.driverPhone,
         tractorPlates: payload.tractorPlates,
         noEcoTractor: payload.noEcoTractor,
+        economicNumber: payload.economicNumber || payload.noEcoTractor,
         boxPlates: payload.boxPlates,
+        noEcoCaja: payload.noEcoCaja,
+        boxEconomicNumber: payload.boxEconomicNumber || payload.noEcoCaja,
         boxDimensions: payload.boxDimensions,
         transportType: payload.transportType,
         sealNumbers: payload.sealNumbers,

@@ -67,7 +67,7 @@ export class BlocksSubmoduleComponent {
       if (trigger > 0) {
         this.openCreateModal();
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   // Filtros reactivos

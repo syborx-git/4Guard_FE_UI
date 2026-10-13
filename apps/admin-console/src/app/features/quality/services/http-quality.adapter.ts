@@ -497,7 +497,11 @@ export class HttpQualityAdapter implements QualityRepository {
     } else if (error?.message) {
       errorMessage = error.message;
     }
-    console.error('[HttpQualityAdapter Error]:', error);
+    if (error?.status === 403) {
+      console.warn('[HttpQualityAdapter RBAC]:', errorMessage);
+    } else {
+      console.error('[HttpQualityAdapter Error]:', error);
+    }
     return throwError(() => new Error(errorMessage));
   }
 }

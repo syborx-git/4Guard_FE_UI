@@ -174,7 +174,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       if (arrived && this.isReceivingUser()) {
         this.opNotif?.triggerArrival('RECEIVING');
       }
-    });
+    }, { allowSignalWrites: true });
 
     effect(() => {
       const notif = this.smartNotification.latestNotification();
@@ -187,7 +187,7 @@ export class ShellComponent implements OnInit, OnDestroy {
           this.opNotif?.triggerArrival('QUALITY');
         }
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   private preReceptionPollIntervalId: any = null;

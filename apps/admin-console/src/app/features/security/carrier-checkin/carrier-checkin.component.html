@@ -105,7 +105,7 @@
           }
           <div class="info-row">
             <span class="label">Tracto / Caja:</span>
-            <span class="value">{{ checkInForm.get('placasTracto')?.value }} / {{ checkInForm.get('placasCaja')?.value }}</span>
+            <span class="value">{{ checkInForm.get('placasTracto')?.value }}{{ checkInForm.get('noEcoTractor')?.value ? ' (' + checkInForm.get('noEcoTractor')?.value + ')' : '' }} / {{ checkInForm.get('placasCaja')?.value }}{{ checkInForm.get('noEcoCaja')?.value ? ' (' + checkInForm.get('noEcoCaja')?.value + ')' : '' }}</span>
           </div>
           <div class="info-row">
             <span class="label">Pase ID:</span>
@@ -435,7 +435,7 @@
               </div>
             </div>
 
-            <!-- Placas y No. Económico -->
+            <!-- Placas y No. Económicos (Tracto y Caja) -->
             <div class="form-row form-row--plates">
               <div class="form-group flex-1">
                 <label class="form-label" for="placasTracto">Placas Tracto <span class="req-star">*</span></label>
@@ -448,7 +448,7 @@
               </div>
 
               <div class="form-group flex-1">
-                <label class="form-label" for="noEcoTractor">No. Económico</label>
+                <label class="form-label" for="noEcoTractor">No. Eco Tracto</label>
                 <input 
                   id="noEcoTractor" 
                   type="text" 
@@ -465,6 +465,16 @@
                   formControlName="placasCaja" 
                   class="form-input font-mono uppercase text-center font-bold" 
                   placeholder="99-XX-4G" />
+              </div>
+
+              <div class="form-group flex-1">
+                <label class="form-label" for="noEcoCaja">No. Eco Caja</label>
+                <input 
+                  id="noEcoCaja" 
+                  type="text" 
+                  formControlName="noEcoCaja" 
+                  class="form-input font-mono uppercase text-center" 
+                  placeholder="BOX-102" />
               </div>
             </div>
 

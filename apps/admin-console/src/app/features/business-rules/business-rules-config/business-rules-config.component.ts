@@ -164,7 +164,7 @@ export class BusinessRulesConfigComponent implements OnInit, OnDestroy {
       if (rule && this.isEditMode()) {
         this.populateForm(rule);
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {

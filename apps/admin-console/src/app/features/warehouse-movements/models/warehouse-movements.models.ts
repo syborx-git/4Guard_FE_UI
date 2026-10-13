@@ -315,7 +315,10 @@ export interface OutboundDispatch {
   sealNumber: string;        // No. Sello/Cincho (Obligatorio)
   carrierName: string;       // Transportista
   driverName: string;
-  economicNumber: string;
+  economicNumber?: string;
+  noEcoTractor?: string;
+  boxEconomicNumber?: string;
+  noEcoCaja?: string;
   tractorPlates: string;
   boxPlates: string;
   transportType: 'Camioneta' | 'Torton' | 'Tráiler';
@@ -372,8 +375,10 @@ export interface WarehouseOutbound {
   forkliftOperator?: string;
   forkliftOperatorId?: string;
   driverName: string;
-  economicNumber: string;
+  economicNumber?: string;
+  noEcoTractor?: string;
   boxEconomicNumber?: string;
+  noEcoCaja?: string;
   tractorPlates: string;
   boxPlates: string;
   transportType: TransportType;

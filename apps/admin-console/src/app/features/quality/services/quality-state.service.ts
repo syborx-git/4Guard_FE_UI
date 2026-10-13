@@ -28,6 +28,8 @@ import { HttpQualityAdapter } from './http-quality.adapter';
 import { QualityExcelExportService } from './quality-excel-export.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
 
+import { SessionStorageService } from '../../../core/services/session-storage.service';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -37,6 +39,7 @@ export class QualityStateService {
   private qualityAdapter = inject(HttpQualityAdapter);
   private excelExportService = inject(QualityExcelExportService);
   private smartNotification = inject(SmartNotificationService);
+  private sessionStorageService = inject(SessionStorageService);
 
   constructor() {
     if (!environment.useMockData) {
@@ -45,13 +48,17 @@ export class QualityStateService {
   }
 
   loadInitialData(): void {
+    if (!this.sessionStorageService.isLogged()) {
+      return;
+    }
+
     this.qualityAdapter.getBlocks().subscribe({
       next: (data) => {
         if (data && data.length > 0) {
           this.blocks.set(data);
         }
       },
-      error: (err) => console.warn('[QualityStateService] No se pudieron cargar bloqueos del backend:', err)
+      error: (err) => console.debug('[QualityStateService] Info bloqueos:', err?.message || err)
     });
 
     this.qualityAdapter.getReleases().subscribe({
@@ -60,7 +67,7 @@ export class QualityStateService {
           this.releases.set(data);
         }
       },
-      error: (err) => console.warn('[QualityStateService] No se pudieron cargar liberaciones del backend:', err)
+      error: (err) => console.debug('[QualityStateService] Info liberaciones:', err?.message || err)
     });
 
     this.qualityAdapter.getVerifications().subscribe({
@@ -69,7 +76,7 @@ export class QualityStateService {
           this.loadVerifications.set(data);
         }
       },
-      error: (err) => console.warn('[QualityStateService] No se pudieron cargar verificaciones del backend:', err)
+      error: (err) => console.debug('[QualityStateService] Info verificaciones:', err?.message || err)
     });
 
     this.qualityAdapter.getClaims().subscribe({
@@ -78,7 +85,7 @@ export class QualityStateService {
           this.claims.set(data);
         }
       },
-      error: (err) => console.warn('[QualityStateService] No se pudieron cargar reclamos del backend:', err)
+      error: (err) => console.debug('[QualityStateService] Info reclamos:', err?.message || err)
     });
   }
 

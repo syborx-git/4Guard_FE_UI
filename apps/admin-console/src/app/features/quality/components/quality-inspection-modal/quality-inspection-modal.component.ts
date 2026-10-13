@@ -100,7 +100,7 @@ export class QualityInspectionModalComponent implements OnDestroy {
       if (this.isOpen() && currentItem) {
         this.loadChecklistForDefectType(currentItem);
       }
-    });
+    }, { allowSignalWrites: true });
 
     // Portal Teleportation to document.body so modal sits over topbar & sidebar (100% viewport)
     effect(() => {

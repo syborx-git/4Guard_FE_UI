@@ -36,6 +36,8 @@ export interface TransportChecklistPrintData {
   placasTracto?: string;
   noEcoTractor?: string;
   placasCaja?: string;
+  noEcoCaja?: string;
+  boxEconomicNumber?: string;
   medidasCaja?: string;
   noSello?: string;
   tipoTransporte?: string;
@@ -189,16 +191,20 @@ export interface TransportChecklistPrintData {
             <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.placasTracto || '-' }}</td>
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">No. Eco Tracto:</td>
             <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.noEcoTractor || '-' }}</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Placas Caja:</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.placasCaja || '-' }}</td>
-          </tr>
-          <tr>
-            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Medidas Caja:</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-semibold">{{ data.medidasCaja || '53 Pies' }}</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">No. Sello(s):</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold break-all">{{ data.noSello || '-' }}</td>
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Tipo Transp.:</td>
             <td class="border border-slate-900 px-2 py-0.5 font-semibold">{{ data.tipoTransporte || 'Caja Seca' }}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Placas Caja:</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.placasCaja || '-' }}</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">No. Eco Caja:</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.noEcoCaja || data.boxEconomicNumber || '-' }}</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Medidas Caja:</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-semibold">{{ data.medidasCaja || '53 Pies' }}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">No. Sello(s):</td>
+            <td colspan="5" class="border border-slate-900 px-2 py-0.5 font-mono font-bold break-all">{{ data.noSello || '-' }}</td>
           </tr>
         </tbody>
       </table>

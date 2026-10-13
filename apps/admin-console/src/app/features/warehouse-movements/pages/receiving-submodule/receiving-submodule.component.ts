@@ -249,10 +249,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
       driverName: val.driverName || currentRec.checkIn.driverName,
       tractorPlates: (val.tractorPlates || currentRec.checkIn.tractorPlates).toUpperCase(),
       boxPlates: (val.boxPlates || currentRec.checkIn.boxPlates).toUpperCase(),
-      economicNumber: (val.economicNumber || currentRec.checkIn.economicNumber || currentRec.checkIn.noEcoTractor || '').trim(),
-      noEcoTractor: (val.economicNumber || currentRec.checkIn.economicNumber || currentRec.checkIn.noEcoTractor || '').trim(),
-      boxEconomicNumber: (val.boxEconomicNumber || currentRec.checkIn.boxEconomicNumber || currentRec.checkIn.noEcoCaja || '').trim(),
-      noEcoCaja: (val.boxEconomicNumber || currentRec.checkIn.boxEconomicNumber || currentRec.checkIn.noEcoCaja || '').trim(),
+      economicNumber: (val.economicNumber || (val as any).noEcoTractor || currentRec.checkIn.noEcoTractor || currentRec.checkIn.economicNumber || '').trim(),
+      noEcoTractor: (val.economicNumber || (val as any).noEcoTractor || currentRec.checkIn.noEcoTractor || currentRec.checkIn.economicNumber || '').trim(),
+      boxEconomicNumber: (val.boxEconomicNumber || (val as any).noEcoCaja || currentRec.checkIn.noEcoCaja || currentRec.checkIn.boxEconomicNumber || '').trim(),
+      noEcoCaja: (val.boxEconomicNumber || (val as any).noEcoCaja || currentRec.checkIn.noEcoCaja || currentRec.checkIn.boxEconomicNumber || '').trim(),
       clientCode: val.clientCode || currentRec.checkIn.clientCode,
       client: val.client || currentRec.checkIn.client,
       rampNumber: currentRampNumber,
@@ -267,8 +267,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       { fieldName: 'Operador / Chofer', oldValue: currentRec.checkIn?.driverName, newValue: updatedCheckIn.driverName },
       { fieldName: 'Placas del Tracto', oldValue: currentRec.checkIn?.tractorPlates, newValue: updatedCheckIn.tractorPlates },
       { fieldName: 'Placas de la Caja', oldValue: currentRec.checkIn?.boxPlates, newValue: updatedCheckIn.boxPlates },
-      { fieldName: 'No. Económico Tracto', oldValue: currentRec.checkIn?.economicNumber || currentRec.checkIn?.noEcoTractor, newValue: updatedCheckIn.economicNumber },
-      { fieldName: 'No. Económico Caja', oldValue: currentRec.checkIn?.boxEconomicNumber || currentRec.checkIn?.noEcoCaja, newValue: updatedCheckIn.boxEconomicNumber },
+      { fieldName: 'No. Eco Tracto', oldValue: currentRec.checkIn?.noEcoTractor || currentRec.checkIn?.economicNumber, newValue: updatedCheckIn.noEcoTractor },
+      { fieldName: 'No. Eco Caja', oldValue: currentRec.checkIn?.noEcoCaja || currentRec.checkIn?.boxEconomicNumber, newValue: updatedCheckIn.noEcoCaja },
       { fieldName: 'Sellos de Seguridad', oldValue: currentRec.checkIn?.sealNumber, newValue: updatedCheckIn.sealNumber },
     ].filter(d => d.oldValue !== d.newValue);
 
@@ -1097,13 +1097,13 @@ export class ReceivingSubmoduleComponent implements OnInit {
           if (!mapped.checkIn?.rampNumber && rec.checkIn?.rampNumber) {
             mapped.checkIn.rampNumber = rec.checkIn.rampNumber;
           }
-          if (!mapped.checkIn?.economicNumber && (rec.checkIn?.economicNumber || rec.checkIn?.noEcoTractor)) {
-            mapped.checkIn.economicNumber = rec.checkIn.economicNumber || rec.checkIn.noEcoTractor;
+          if (rec.checkIn?.noEcoTractor || rec.checkIn?.economicNumber) {
             mapped.checkIn.noEcoTractor = rec.checkIn.noEcoTractor || rec.checkIn.economicNumber;
+            mapped.checkIn.economicNumber = rec.checkIn.noEcoTractor || rec.checkIn.economicNumber;
           }
-          if (!mapped.checkIn?.boxEconomicNumber && (rec.checkIn?.boxEconomicNumber || rec.checkIn?.noEcoCaja)) {
-            mapped.checkIn.boxEconomicNumber = rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja;
+          if (rec.checkIn?.noEcoCaja || rec.checkIn?.boxEconomicNumber) {
             mapped.checkIn.noEcoCaja = rec.checkIn.noEcoCaja || rec.checkIn.boxEconomicNumber;
+            mapped.checkIn.boxEconomicNumber = rec.checkIn.noEcoCaja || rec.checkIn.boxEconomicNumber;
           }
           if (mapped.pallets && Array.isArray(mapped.pallets)) {
             for (const p of mapped.pallets) {
