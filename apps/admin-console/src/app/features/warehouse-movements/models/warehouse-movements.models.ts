@@ -115,6 +115,8 @@ export interface CheckInCasetaData {
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte
+  driverSignature?: string; // Firma digital del chofer (Base64 data URL)
+  driverSignedAt?: string;
   observations?: string;    // Observaciones / Resumen Check List
   securityApproved?: boolean; // Visto bueno de seguridad patrimonial
   securityApprovedAt?: string;
@@ -208,6 +210,7 @@ export interface ReceptionHeader {
   storageLocationCode?: string;
   piecesPerPallet: number;
   selectedPalletType: PalletType;
+  originalPalletType?: PalletType;
   observations?: string;
   pallets: ReceptionPalletItem[];
   lots?: ReceptionLot[];
@@ -219,6 +222,7 @@ export interface ReceptionHeader {
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  cancelledBy?: string;
   reopenedAt?: string;
   reopenedBy?: string;
   reopenReason?: string;
@@ -289,6 +293,22 @@ export interface LocationStockInfo {
   totalPallets: number;
   totalPieces: number;
   pallets: ReceptionPalletItem[];
+}
+
+export interface BayRemisionSummary {
+  receptionFolio: string;
+  remisionNo: string;
+  clientName: string;
+  palletsCount: number;
+  productName: string;
+  status: string;
+}
+
+export interface BayLiveOccupancy {
+  locationCode: string;
+  totalPallets: number;
+  totalPieces: number;
+  remisiones: BayRemisionSummary[];
 }
 
 export interface InventoryBatch {
@@ -377,6 +397,8 @@ export interface WarehouseOutbound {
   boxPlates: string;
   transportType: TransportType;
   sealNumber: string;
+  driverSignature?: string;
+  driverSignedAt?: string;
 
   // Mercancía
   remisionNo: string;

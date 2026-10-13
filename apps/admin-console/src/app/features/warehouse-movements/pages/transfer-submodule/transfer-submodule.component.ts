@@ -448,6 +448,18 @@ export class TransferSubmoduleComponent implements OnInit {
     this.quantityToMoveInput.set(0);
   }
 
+  showOriginBaySelectorModal = signal<boolean>(false);
+
+  openOriginBaySelector(): void {
+    this.showOriginBaySelectorModal.set(true);
+  }
+
+  onOriginBaySelected(res: BaySelectionResult): void {
+    this.selectOriginLocation(res.locationCode);
+    this.showOriginBaySelectorModal.set(false);
+    this.toast.success(`Bahía origen ${res.locationCode} seleccionada.`);
+  }
+
   clearOriginSelection(): void {
     this.selectedOriginCode.set('');
     this.originSearchQuery.set('');
@@ -510,11 +522,21 @@ export class TransferSubmoduleComponent implements OnInit {
     const loc = this.movementsService.getLocationInfo(code);
     this.destSearchQuery.set(this.getLocationDisplayCode(loc || code));
     this.isDestDropdownOpen.set(false);
+    if (loc) {
+      const moving = this.selectedTotalPallets();
+      const cap = this.movementsService.resolveBayCapacity(loc);
+      const total = (loc.totalPallets || 0) + moving;
+      if (loc.totalPallets > 0 && total <= cap) {
+        this.toast.info(`Consolidación en ${this.getLocationDisplayCode(loc)}: ${loc.totalPallets} actuales + ${moving} a mover = ${total}/${cap} UAs.`);
+      } else if (total > cap) {
+        this.toast.warning(`Capacidad superada en ${this.getLocationDisplayCode(loc)}: ${total} UAs excede el límite de ${cap} UAs.`);
+      }
+    }
   }
 
   allWarehouseLocations = computed(() => Object.values(this.movementsService.locations()));
 
-  // Evaluación de estado según la máquina de estados WMS
+  // Evaluación de estado según la máquina de estados WMS (soporta bahías en ceros y consolidación con espacio)
   getLocationState(loc: LocationStockInfo): {
     state: 'DISPONIBLE' | 'CON_STOCK' | 'BLOQUEADA';
     label: string;
@@ -534,13 +556,20 @@ export class TransferSubmoduleComponent implements OnInit {
       };
     }
     if (loc.totalPallets > 0) {
+      const cap = this.movementsService.resolveBayCapacity(loc);
+      const freeSlots = Math.max(0, cap - loc.totalPallets);
+      const isFull = freeSlots === 0;
       return {
         state: 'CON_STOCK',
-        label: `Con Stock (${loc.totalPallets} UAs)`,
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
-        dotClass: 'bg-amber-500',
-        description: `Ocupada (${loc.totalPallets} de ${loc.capacity} UAs)`,
-        isSelectableForDest: false,
+        label: isFull ? `Llena (${loc.totalPallets}/${cap} UAs)` : `Consolidación (${loc.totalPallets}/${cap} UAs · ${freeSlots} libres)`,
+        badgeClass: isFull
+          ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300'
+          : 'bg-teal-50 text-teal-800 border-teal-300 dark:bg-teal-950/40 dark:text-teal-300',
+        dotClass: isFull ? 'bg-rose-500' : 'bg-teal-500',
+        description: isFull
+          ? `Capacidad máxima alcanzada (${loc.totalPallets} de ${cap} UAs)`
+          : `Ocupada (${loc.totalPallets} de ${cap} UAs · ${freeSlots} espacio(s) disponible(s))`,
+        isSelectableForDest: !isFull,
       };
     }
     return {
@@ -553,18 +582,49 @@ export class TransferSubmoduleComponent implements OnInit {
     };
   }
 
+  // Filtro de solo disponibles con espacio para destino (activo por defecto para máxima velocidad y coherencia WMS)
+  destOnlyAvailableFilter = signal<boolean>(true);
+
   filteredDestLocations = computed(() => {
-    const list = this.allWarehouseLocations();
+    let list = this.allWarehouseLocations();
+    const origin = this.selectedOriginCode();
+    const onlyAvailable = this.destOnlyAvailableFilter();
     const q = this.destSearchQuery().toLowerCase().trim();
-    if (!q) return list;
+
+    // 1. Excluir la bahía origen actual
+    if (origin) {
+      list = list.filter((l) => l.locationCode !== origin);
+    }
+
+    // 2. Si el filtro de espacio está activo, toma bahías no bloqueadas que tengan espacio suficiente
+    if (onlyAvailable) {
+      const moving = this.selectedTotalPallets();
+      const needed = moving > 0 ? moving : 1;
+      list = list.filter((l) => !l.isBlocked && (this.movementsService.resolveBayCapacity(l) - l.totalPallets) >= needed);
+    }
+
+    if (!q) {
+      return list;
+    }
+
     return list.filter((loc) => {
-      const matchCode = loc.locationCode.toLowerCase().includes(q);
+      const displayCode = this.getLocationDisplayCode(loc).toLowerCase();
+      const matchCode = loc.locationCode.toLowerCase().includes(q) || displayCode.includes(q);
       const matchZone = loc.zone ? loc.zone.toLowerCase().includes(q) : false;
       const matchWarehouse = loc.warehouseName ? loc.warehouseName.toLowerCase().includes(q) : false;
-      const st = this.getLocationState(loc);
-      const matchState = st.label.toLowerCase().includes(q) || st.state.toLowerCase().includes(q);
-      return matchCode || matchZone || matchWarehouse || matchState;
+      return matchCode || matchZone || matchWarehouse;
     });
+  });
+
+  filteredDestTotalCount = computed(() => this.filteredDestLocations().length);
+
+  visibleDestLocations = computed(() => {
+    const list = this.filteredDestLocations().slice(0, 40);
+    return list.map((loc) => ({
+      ...loc,
+      displayCode: this.getLocationDisplayCode(loc),
+      stateInfo: this.getLocationState(loc),
+    }));
   });
 
   destStock = computed<LocationStockInfo>(() =>
@@ -624,17 +684,72 @@ export class TransferSubmoduleComponent implements OnInit {
     this.movementsService.transfers().reduce((acc, t) => acc + t.totalPallets, 0)
   );
 
+  // Capacidad y Métricas de la Bahía Destino
+  destCapacity = computed(() => this.movementsService.resolveBayCapacity(this.destStock()));
+  destCurrentPallets = computed(() => this.destStock().totalPallets || 0);
+  destAvailableSlots = computed(() => Math.max(0, this.destCapacity() - this.destCurrentPallets()));
+  destResultingPallets = computed(() => this.destCurrentPallets() + this.selectedTotalPallets());
+
+  destFitsCapacity = computed(() => {
+    if (!this.selectedDestinationCode()) return false;
+    return this.destResultingPallets() <= this.destCapacity();
+  });
+
   // Validaciones
   isDestinationEmpty = computed(() => {
     const dest = this.destStock();
     return !!this.selectedDestinationCode() && dest.totalPallets === 0 && !dest.isBlocked;
   });
 
+  isDestinationConsolidation = computed(() => {
+    const dest = this.destStock();
+    return (
+      !!this.selectedDestinationCode() &&
+      dest.totalPallets > 0 &&
+      !dest.isBlocked &&
+      this.destFitsCapacity() &&
+      this.selectedTotalPallets() > 0
+    );
+  });
+
+  isDestinationOverCapacity = computed(() => {
+    const dest = this.destStock();
+    return (
+      !!this.selectedDestinationCode() &&
+      !dest.isBlocked &&
+      !this.destFitsCapacity() &&
+      this.selectedTotalPallets() > 0
+    );
+  });
+
+  // Verificación de compatibilidad de SKU (mismo producto o multi-SKU)
+  isDestinationSameSku = computed(() => {
+    if (!this.isDestinationConsolidation()) return true;
+    const destPallets = this.destStock().pallets || [];
+    const movingPallets = this.selectedPalletsList();
+    if (destPallets.length === 0 || movingPallets.length === 0) return true;
+    const destProductIds = new Set(destPallets.map((p) => p.productId));
+    return movingPallets.every((p) => destProductIds.has(p.productId));
+  });
+
   // Checklist reactivo (Revise que la operación sea correcta)
   isOperatorStepValid = computed(() => !!this.selectedOperator());
   isOriginStepValid = computed(() => !!this.selectedOriginCode() && this.originStock().pallets.length > 0);
   isQuantityStepValid = computed(() => this.selectedPalletIds().length > 0);
-  isDestStepValid = computed(() => !!this.selectedDestinationCode() && this.isDestinationEmpty() && this.selectedOriginCode() !== this.selectedDestinationCode());
+
+  isDestStepValid = computed(() => {
+    if (!this.selectedDestinationCode()) return false;
+    if (this.selectedOriginCode() === this.selectedDestinationCode()) return false;
+    const dest = this.destStock();
+    if (dest.isBlocked) return false;
+
+    const moving = this.selectedTotalPallets();
+    const capacity = this.movementsService.resolveBayCapacity(dest);
+    if (moving === 0) {
+      return dest.totalPallets < capacity;
+    }
+    return (dest.totalPallets + moving) <= capacity;
+  });
   isReasonStepValid = computed(() => !!this.selectedReasonId());
 
   canProceedToConfirm = computed(() => {

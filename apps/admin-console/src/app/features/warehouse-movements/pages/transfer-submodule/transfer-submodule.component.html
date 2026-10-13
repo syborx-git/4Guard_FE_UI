@@ -515,9 +515,20 @@
             <!-- Selector Autocomplete de Bahía Origen y Metadata -->
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
               <div class="md:col-span-6 fg-field relative">
-                <label class="fg-label fg-label--required">
-                  Bahía de Origen con Stock
-                </label>
+                <div class="flex items-center justify-between">
+                  <label class="fg-label fg-label--required">
+                    Bahía de Origen con Stock
+                  </label>
+                  <button
+                    type="button"
+                    (click)="openOriginBaySelector()"
+                    class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Abrir mapa de almacén y selector visual de bahías con stock"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">map</span>
+                    <span>Selector Visual / Mapa</span>
+                  </button>
+                </div>
                 <div class="relative flex items-center">
                   <input
                     type="text"
@@ -828,7 +839,7 @@
           <div class="space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
             <div class="form-section__legend">
               <span class="material-symbols-outlined">input</span>
-              <span>3. BAHÍA DE DESTINO (EN CEROS)</span>
+              <span>3. BAHÍA DE DESTINO (DISPONIBLE O CONSOLIDACIÓN)</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
@@ -836,16 +847,16 @@
               <div class="md:col-span-6 fg-field relative">
                 <div class="flex items-center justify-between">
                   <label class="fg-label fg-label--required">
-                    Bahía de Destino Disponible
+                    Bahía de Destino (En Ceros o con Espacio)
                   </label>
                   <button
                     type="button"
                     (click)="openDestBaySelector()"
                     class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1"
-                    title="Abrir selector visual con semáforo y estándar de 22 pallets"
+                    title="Abrir selector visual con mapa 2D y capacidad real de cada bahía"
                   >
                     <span class="material-symbols-outlined text-[13px]">warehouse</span>
-                    <span>Selector Visual (22)</span>
+                    <span>Selector Visual (Mapa 2D)</span>
                   </button>
                 </div>
                 <div class="relative flex items-center">
@@ -855,7 +866,7 @@
                     (input)="onDestInput($any($event.target).value)"
                     (focus)="isDestDropdownOpen.set(true)"
                     (click)="isDestDropdownOpen.set(true)"
-                    placeholder="Selecciona Bahía Destino Disponible"
+                    placeholder="Selecciona Bahía Destino (En Ceros o Consolidación)"
                     class="fg-input font-bold font-mono w-full pr-8"
                     autocomplete="off"
                   />
@@ -879,40 +890,63 @@
                 }
 
                 <!-- Dropdown Flotante -->
-                @if (isDestDropdownOpen() && filteredDestLocations().length > 0) {
+                @if (isDestDropdownOpen() && visibleDestLocations().length > 0) {
                   <div class="sku-autocomplete-dropdown">
                     <div class="sku-autocomplete-header">
                       <div class="sku-autocomplete-header__title">
                         <span class="material-symbols-outlined text-sm">input</span>
-                        <span>-- Selecciona Bahía Destino Disponible --</span>
+                        <span>-- Bahías Destino ({{ destOnlyAvailableFilter() ? 'Con Espacio' : 'Todas' }}) --</span>
                       </div>
-                      <span class="sku-autocomplete-header__hint">{{ filteredDestLocations().length }} bahías</span>
+                      <div class="flex items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="destOnlyAvailableFilter.set(!destOnlyAvailableFilter())"
+                          class="text-[10px] px-2 py-0.5 rounded font-bold transition-all border cursor-pointer"
+                          [ngClass]="destOnlyAvailableFilter() ? 'bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950 dark:text-teal-300' : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'"
+                          title="Alternar entre solo disponibles con espacio o ver todas"
+                        >
+                          {{ destOnlyAvailableFilter() ? '✓ Con Espacio' : 'Ver Todas' }}
+                        </button>
+                        <span class="sku-autocomplete-header__hint">
+                          @if (filteredDestTotalCount() > visibleDestLocations().length) {
+                            40 de {{ filteredDestTotalCount() }}
+                          } @else {
+                            {{ filteredDestTotalCount() }}
+                          } bahías
+                        </span>
+                      </div>
                     </div>
-                    @for (loc of filteredDestLocations(); track loc.locationCode) {
+                    @for (loc of visibleDestLocations(); track loc.locationCode) {
                       <button
                         type="button"
                         (click)="selectDestinationLocation(loc.locationCode)"
                         class="sku-autocomplete-item"
                         [class.sku-autocomplete-item--selected]="selectedDestinationCode() === loc.locationCode"
+                        [class.opacity-60]="!loc.stateInfo.isSelectableForDest"
                       >
                         <div class="flex items-center gap-2.5 min-w-0 flex-1">
                           <span class="sku-autocomplete-badge" [ngClass]="loc.totalPallets === 0 ? 'border-emerald-500 text-emerald-800 bg-emerald-50' : 'border-amber-500 text-amber-800 bg-amber-50'">
-                            {{ getLocationDisplayCode(loc) }}
+                            {{ loc.displayCode }}
                           </span>
                           <div class="flex flex-col min-w-0">
                             <span class="sku-autocomplete-name">{{ loc.zone || 'Zona A' }} (Cap: {{ loc.capacity }} UAs)</span>
                             <span class="text-[10px] font-medium" [ngClass]="loc.totalPallets === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
-                              {{ getLocationState(loc).description }}
+                              {{ loc.stateInfo.description }}
                             </span>
                           </div>
                         </div>
-                        <span class="text-[10px] shrink-0 font-bold px-1.5 py-0.5 rounded border" [ngClass]="getLocationState(loc).badgeClass">
-                          {{ getLocationState(loc).label }}
+                        <span class="text-[10px] shrink-0 font-bold px-1.5 py-0.5 rounded border" [ngClass]="loc.stateInfo.badgeClass">
+                          {{ loc.stateInfo.label }}
                         </span>
                       </button>
                     }
+                    @if (filteredDestTotalCount() > visibleDestLocations().length) {
+                      <div class="p-2 text-center text-[10px] text-slate-500 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 font-medium">
+                        Mostrando 40 de {{ filteredDestTotalCount() }} bahías. Escribe en el buscador para afinar.
+                      </div>
+                    }
                   </div>
-                } @else if (isDestDropdownOpen() && filteredDestLocations().length === 0 && destSearchQuery()) {
+                } @else if (isDestDropdownOpen() && visibleDestLocations().length === 0 && destSearchQuery()) {
                   <div class="sku-autocomplete-empty">
                     No se encontraron bahías para "{{ destSearchQuery() }}"
                   </div>
@@ -923,29 +957,86 @@
               <div class="md:col-span-6 space-y-2">
                 <!-- Banner de Validación Destino -->
                 @if (selectedDestinationCode()) {
-                  <div
-                    class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all"
-                    [ngClass]="isDestinationEmpty() ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-300'"
-                  >
-                    <span class="material-symbols-outlined text-base shrink-0 mt-0.5" [ngClass]="isDestinationEmpty() ? 'text-emerald-600' : 'text-amber-600'">
-                      {{ isDestinationEmpty() ? 'check_circle' : 'warning' }}
-                    </span>
-                    <div class="space-y-0.5">
-                      <div class="font-bold flex items-center gap-2">
-                        <span>{{ isDestinationEmpty() ? 'Bahía Destino Disponible' : 'Bahía Ocupada con Stock' }}</span>
-                        <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold" [ngClass]="isDestinationEmpty() ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
-                          {{ isDestinationEmpty() ? 'En Ceros (0 UAs)' : 'Ocupada (' + destStock().totalPallets + ' UAs)' }}
-                        </span>
+                  @if (destStock().isBlocked) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-rose-600">block</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Bahía Bloqueada</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-rose-100 text-rose-800">No Disponible</span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          La bahía {{ getLocationDisplayCode(destStock()) }} se encuentra bloqueada por Calidad o Mantenimiento.
+                        </p>
                       </div>
-                      <p class="text-[11px] opacity-90">
-                        {{ isDestinationEmpty() ? 'La bahía ' + getLocationDisplayCode(destStock()) + ' está completamente en ceros (0 UAs).' : 'Atención: La bahía ' + getLocationDisplayCode(destStock()) + ' contiene inventario previo. Por regla WMS debe estar en ceros.' }}
-                      </p>
                     </div>
-                  </div>
+                  } @else if (isDestinationEmpty()) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-emerald-600">check_circle</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Bahía Destino Disponible (En Ceros)</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-100 text-emerald-800">
+                            En Ceros (0 UAs)
+                          </span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          La bahía {{ getLocationDisplayCode(destStock()) }} está vacía. {{ destCapacity() }} espacios disponibles para putaway.
+                        </p>
+                      </div>
+                    </div>
+                  } @else if (isDestinationConsolidation()) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-teal-500/10 border-teal-500/30 text-teal-900 dark:text-teal-200">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-teal-600 dark:text-teal-400">merge_type</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Consolidación de Bahía Autorizada</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
+                            {{ destCurrentPallets() }} + {{ selectedTotalPallets() }} = {{ destResultingPallets() }} / {{ destCapacity() }} UAs
+                          </span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          Espacio suficiente para consolidar (quedará <strong>{{ destCapacity() - destResultingPallets() }}</strong> espacio(s) disponible(s)).
+                          @if (isDestinationSameSku()) {
+                            <span class="text-teal-700 dark:text-teal-300 font-bold block mt-0.5">✓ Mismo producto confirmado. Se desocupará la bahía origen.</span>
+                          } @else {
+                            <span class="text-amber-700 dark:text-amber-300 font-medium block mt-0.5">ℹ Consolidación multi-producto autorizada por capacidad disponible.</span>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  } @else if (isDestinationOverCapacity()) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-rose-600">warning</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Capacidad Excedida</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-rose-100 text-rose-800">
+                            {{ destCurrentPallets() }} + {{ selectedTotalPallets() }} = {{ destResultingPallets() }} UAs (Máx: {{ destCapacity() }})
+                          </span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          No se puede reubicar: la maniobra excede la capacidad física de la bahía por <strong>{{ destResultingPallets() - destCapacity() }}</strong> tarima(s). Selecciona una bahía con más espacios disponibles.
+                        </p>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-amber-600">info</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Bahía con Stock Previo ({{ destCurrentPallets() }} / {{ destCapacity() }} UAs)</span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          Selecciona las tarimas en el Paso 2 para verificar si caben en esta bahía (Espacios libres: {{ destAvailableSlots() }}).
+                        </p>
+                      </div>
+                    </div>
+                  }
                 } @else {
                   <div class="p-2.5 rounded-xl border border-dashed border-subtle bg-surface-subtle text-slate-500 text-xs flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">info</span>
-                    <span>Selecciona Bahía Destino Disponible para verificar que esté en ceros.</span>
+                    <span>Selecciona Bahía Destino para verificar espacio o consolidación de inventario.</span>
                   </div>
                 }
 
@@ -1060,14 +1151,26 @@
                   </div>
                 </div>
 
-                <!-- Check 4: Bahía Destino en Ceros -->
+                <!-- Check 4: Bahía Destino (En Ceros o Consolidación) -->
                 <div class="p-2 rounded-lg border flex items-center gap-2" [ngClass]="isDestStepValid() ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-surface opacity-75'">
                   <span class="material-symbols-outlined text-base" [ngClass]="isDestStepValid() ? 'text-emerald-600' : 'text-slate-400'">
                     {{ isDestStepValid() ? 'check_circle' : 'radio_button_unchecked' }}
                   </span>
                   <div class="flex flex-col min-w-0">
                     <span class="font-bold text-[11px] truncate">4. Bahía Destino</span>
-                    <span class="text-[10px] font-mono truncate opacity-80">{{ isDestStepValid() ? (selectedDestinationCode() + ' (0 UAs)') : 'Sin validar' }}</span>
+                    <span class="text-[10px] font-mono truncate opacity-80">
+                      @if (isDestStepValid()) {
+                        @if (isDestinationEmpty()) {
+                          {{ selectedDestinationCode() }} (En Ceros · 0 UAs)
+                        } @else {
+                          {{ selectedDestinationCode() }} (Consolidación · {{ destResultingPallets() }}/{{ destCapacity() }} UAs)
+                        }
+                      } @else if (isDestinationOverCapacity()) {
+                        Capacidad excedida ({{ destResultingPallets() }}/{{ destCapacity() }} UAs)
+                      } @else {
+                        Sin validar
+                      }
+                    </span>
                   </div>
                 </div>
 
@@ -1782,14 +1885,27 @@
     </div>
   }
 
-  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS DESTINO (22 PALLETS) -->
-  @if (showDestBaySelectorModal()) {
-    <fg-bay-occupancy-selector
-      [selectedLocationCode]="selectedDestinationCode()"
-      dialogTitle="Selector Visual de Bahía Destino (Estándar 22 Pallets)"
-      (locationSelected)="onDestBaySelected($event)"
-      (closed)="showDestBaySelectorModal.set(false)"
-    ></fg-bay-occupancy-selector>
-  }
-
 </div>
+
+<!-- MODAL: SELECTOR VISUAL DE BAHÍAS ORIGEN (CON STOCK) -->
+@if (showOriginBaySelectorModal()) {
+  <fg-bay-occupancy-selector
+    [selectedLocationCode]="selectedOriginCode()"
+    mode="origin"
+    dialogTitle="Selector Visual / Mapa de Bahía de Origen (Con Stock)"
+    (locationSelected)="onOriginBaySelected($event)"
+    (closed)="showOriginBaySelectorModal.set(false)"
+  ></fg-bay-occupancy-selector>
+}
+
+<!-- MODAL: SELECTOR VISUAL DE BAHÍAS DESTINO (CAPACIDAD DINÁMICA) -->
+@if (showDestBaySelectorModal()) {
+  <fg-bay-occupancy-selector
+    [selectedLocationCode]="selectedDestinationCode()"
+    mode="destination"
+    dialogTitle="Selector Visual / Mapa de Bahía Destino (Ocupación y Capacidad)"
+    (locationSelected)="onDestBaySelected($event)"
+    (closed)="showDestBaySelectorModal.set(false)"
+  ></fg-bay-occupancy-selector>
+}
+

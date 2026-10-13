@@ -153,7 +153,15 @@ export class WarehouseLayoutService {
       return this._positionsCache.get(sectionId)!;
     }
 
-    const fromAll = this._allPositions().filter((p) => p.sectionId === sectionId);
+    const sec = this._sections().find(s => s.id === sectionId || s.code === sectionId);
+    const zoneChar = sec ? sec.code.replace(/[^A-Za-z]/g, '').toUpperCase() : '';
+
+    const fromAll = this._allPositions().filter((p) => {
+      if (p.sectionId === sectionId) return true;
+      if (sec && (p.sectionName === sec.name || (zoneChar && p.code.startsWith(`POS-${zoneChar}-`)))) return true;
+      return false;
+    });
+
     if (fromAll.length > 0) {
       return fromAll;
     }

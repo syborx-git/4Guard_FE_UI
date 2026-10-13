@@ -344,10 +344,28 @@ export interface TransportChecklistPrintData {
                 <span class="f01-sign-lbl">Nombre:</span>
                 <strong class="f01-sign-name">{{ data.transportistaNombre || data.nombreOperador || 'Operador Chofer' }}</strong>
               </div>
-              <div class="f01-sign-area">
-                <span class="f01-sign-placeholder">(Firma autógrafa del operador transportista)</span>
+              <div class="f01-sign-area flex items-center justify-center overflow-hidden" style="min-height: 48px; max-height: 52px;">
+                @if (data.driverSignature && (data.driverSignature.startsWith('data:image/') || data.driverSignature.length > 50)) {
+                  <img
+                    [src]="data.driverSignature.startsWith('data:image/') ? data.driverSignature : 'data:image/png;base64,' + data.driverSignature"
+                    alt="Firma Digital Chofer"
+                    style="max-height: 44px; max-width: 100%; object-fit: contain; margin: 0 auto; display: block;"
+                  />
+                } @else if (data.driverSignature) {
+                  <div style="text-align: center;">
+                    <span style="font-size: 8px; font-weight: bold; color: #065f46; letter-spacing: 0.5px; text-transform: uppercase; display: block;">✓ FIRMA DIGITAL AUTORIZADA</span>
+                    <span style="font-size: 6.5px; color: #64748b; font-family: monospace;">Dispositivo Móvil Chofer</span>
+                  </div>
+                } @else {
+                  <span class="f01-sign-placeholder">(Firma autógrafa del operador transportista)</span>
+                }
               </div>
-              <div class="f01-sign-caption">NOMBRE Y FIRMA DEL CONDUCTOR / TRANSPORTISTA</div>
+              <div class="f01-sign-caption">
+                NOMBRE Y FIRMA DEL CONDUCTOR / TRANSPORTISTA
+                @if (data.driverSignature) {
+                  <span style="color: #059669; font-weight: bold; margin-left: 4px;">(DIGITAL)</span>
+                }
+              </div>
             </td>
           </tr>
         </tbody>

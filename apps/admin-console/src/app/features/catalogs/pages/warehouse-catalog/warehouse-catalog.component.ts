@@ -128,7 +128,14 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly currentSectionPositions = computed<PositionDetail[]>(() => {
     const sec = this.selectedSection();
     if (!sec) return [];
-    return this.layoutService.getPositionsForSection(sec.id);
+    const positions = this.layoutService.getPositionsForSection(sec.id);
+    const zoneLetter = this.extractZoneLetter(sec);
+    return positions.filter(p => {
+      if (p.sectionId === sec.id) return true;
+      if (zoneLetter && p.code && p.code.startsWith(`POS-${zoneLetter}-`)) return true;
+      if (sec.name && p.sectionName === sec.name) return true;
+      return false;
+    });
   });
 
   protected readonly filteredSectionPositions = computed<PositionDetail[]>(() => {
@@ -215,7 +222,15 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
     return positions
       .filter((p) => {
-        const matchZone = zFilter === 'ALL' || p.sectionId === zFilter || p.sectionName === zFilter;
+        let matchZone = zFilter === 'ALL';
+        if (!matchZone) {
+          const targetSec = this.sections().find(s => s.id === zFilter || s.code === zFilter);
+          const targetZoneChar = targetSec ? this.extractZoneLetter(targetSec) : '';
+          matchZone = p.sectionId === zFilter ||
+                      p.sectionName === zFilter ||
+                      (targetSec && p.sectionName === targetSec.name) ||
+                      (targetZoneChar !== '' && p.code.startsWith(`POS-${targetZoneChar}-`));
+        }
         
         let matchCat = true;
         if (catFilter === 'FIXED') {

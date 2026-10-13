@@ -9,7 +9,7 @@
  * - Campos de observaciones vacíos por defecto para llenado manual.
  */
 
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
@@ -232,13 +232,15 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (!key || exitTokensOrFolios.has(key)) continue;
 
       const ws = (p.warehouseStatus || '').toUpperCase();
-      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || p.status === 'READY_FOR_EXIT';
+      const isCancelled = ws === 'CANCELLED' || p.status === 'CANCELLED';
+      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || isCancelled || p.status === 'READY_FOR_EXIT';
       const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
       mergedMap.set(key, {
         ...p,
         isReadyForExit: isReady,
         receptionTime: timeVal,
         horaEntrada: timeVal,
+        cancellationReason: p.cancellationReason || '',
         rampCode: this.getFormattedRampLabel(p.rampCode, p.rampNumber)
       });
     }
@@ -248,25 +250,41 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // 3. Recepciones registradas en el WMS (Inbound) - Solo si están en patio activo y no han salido
     const activeReceptions = this.movementsService.receptions();
     for (const r of activeReceptions) {
-      if (r.status === 'CANCELLED') continue;
       const key = (r.folio || r.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
 
-      // Si ya está en mergedMap no duplicar
-      if (mergedMap.has(key)) continue;
+      // Si ya está en mergedMap, sincronizar con el estatus más reciente de la recepción WMS
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        const isCancelled = (r.status as string) === 'CANCELLED';
+        const isCompleted = (r.status as string) === 'COMPLETED';
+        if (isCancelled || isCompleted || r.status !== existing.warehouseStatus) {
+          mergedMap.set(key, {
+            ...existing,
+            warehouseStatus: r.status,
+            status: isCancelled ? 'CANCELLED' : (isCompleted ? 'COMPLETED' : existing.status),
+            isReadyForExit: isCancelled || isCompleted || existing.isReadyForExit,
+            cancellationReason: r.cancellationReason || existing.cancellationReason,
+            cancelledBy: r.cancelledBy || existing.cancelledBy,
+            rampNumber: r.checkIn?.rampNumber ?? existing.rampNumber,
+            rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode ?? existing.rampCode, r.checkIn?.rampNumber ?? existing.rampNumber)
+          });
+        }
+        continue;
+      }
 
       // Si el backend ya devolvió la lista oficial de patio, no re-inyectar recepciones que el backend omitió
       if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (r.status === 'COMPLETED' || !r.id)) {
         continue;
       }
 
-      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED)
-      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED') {
+      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED, CANCELLED)
+      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED' || (r.status as string) === 'CANCELLED') {
         const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
           ? r.checkIn.sealNumbers
           : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
 
-        const isReady = (r.status as string) === 'COMPLETED' || (r as any).isReadyForExit === true;
+        const isReady = (r.status as string) === 'COMPLETED' || (r.status as string) === 'CANCELLED' || (r as any).isReadyForExit === true;
         const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -295,8 +313,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           rampNumber: r.checkIn?.rampNumber || 1,
           rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber),
           observations: r.observations || r.checkIn?.observations || '',
+          driverSignature: r.checkIn?.driverSignature || (r as any).driverSignature || (r as any).preCheckin?.driverSignature,
+          driverSignedAt: r.checkIn?.driverSignedAt || (r as any).driverSignedAt || (r as any).preCheckin?.driverSignedAt,
           warehouseStatus: r.status || 'REGISTERED',
           isReadyForExit: isReady,
+          cancellationReason: r.cancellationReason || (r as any).reason || '',
           createdAt: r.createdAt
         });
       }
@@ -305,18 +326,33 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // 4. Salidas registradas en el WMS (Outbound) - Solo si están en patio activo y no han salido
     const activeOutbounds = this.movementsService.outbounds();
     for (const o of activeOutbounds) {
-      if (o.status === 'CANCELLED') continue;
       const key = (o.folio || o.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
-      if (mergedMap.has(key)) continue;
+
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        const isCancelled = (o.status as string) === 'CANCELLED';
+        const isCompleted = (o.status as string) === 'COMPLETED';
+        if (isCancelled || isCompleted || o.status !== existing.warehouseStatus) {
+          mergedMap.set(key, {
+            ...existing,
+            warehouseStatus: o.status,
+            status: isCancelled ? 'CANCELLED' : (isCompleted ? 'COMPLETED' : existing.status),
+            isReadyForExit: isCancelled || isCompleted || existing.isReadyForExit,
+            rampNumber: o.rampNumber ?? existing.rampNumber,
+            rampCode: this.getFormattedRampLabel(o.rampCode ?? existing.rampCode, o.rampNumber ?? existing.rampNumber)
+          });
+        }
+        continue;
+      }
 
       if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (o.status === 'COMPLETED' || !o.id)) {
         continue;
       }
 
-      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED') {
+      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED' || (o.status as string) === 'CANCELLED') {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
-        const isReady = (o.status as string) === 'COMPLETED' || (o as any).isReadyForExit === true;
+        const isReady = (o.status as string) === 'COMPLETED' || (o.status as string) === 'CANCELLED' || (o as any).isReadyForExit === true;
         const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -346,6 +382,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           rampNumber: o.rampNumber || 1,
           rampCode: this.getFormattedRampLabel(o.rampCode, o.rampNumber),
           observations: o.observations || '',
+          driverSignature: o.driverSignature || (o as any).preCheckin?.driverSignature,
+          driverSignedAt: o.driverSignedAt || (o as any).preCheckin?.driverSignedAt,
           warehouseStatus: o.status || 'REGISTERED',
           isReadyForExit: isReady,
           createdAt: o.dispatchedAt || new Date().toISOString()
@@ -356,8 +394,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return Array.from(mergedMap.values());
   });
 
-  protected readonly activeToken        = signal<string | null>(null);
-  protected readonly qrModalToken       = signal<string>('PORTAL-DIRECTO');
+  protected readonly activeToken           = signal<string | null>(null);
+  protected readonly activeDriverSignature = signal<string | null>(null);
+  protected readonly activeDriverSignedAt  = signal<string | null>(null);
+  protected readonly qrModalToken          = signal<string>('PORTAL-DIRECTO');
   protected readonly qrModalUrl         = signal<string>('');
   protected readonly isGeneratingPass   = signal<boolean>(false);
   protected readonly copyNotice         = signal<string | null>(null);
@@ -1232,6 +1272,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // Limpiar formulario previo
     this.resetFormFieldsOnly();
     this.activeToken.set(passData.token || passData.id);
+    this.activeDriverSignature.set(passData.driverSignature || null);
+    this.activeDriverSignedAt.set(passData.driverSignedAt ? String(passData.driverSignedAt) : null);
 
     // Tipo de Operación
     const opVal = (passData.operationType || passData.operacion || 'DESCARGA').toUpperCase();
@@ -1529,11 +1571,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       return;
     }
     this.selectedCheckOutPass.set(pass);
+
+    const isCancelled = pass.status === 'CANCELLED' || pass.warehouseStatus === 'CANCELLED';
+    const reason = pass.cancellationReason || 'Cancelación de operación / Rechazo';
+    const defaultObs = isCancelled
+      ? `Salida autorizada por cancelación de folio. Motivo: ${reason}`
+      : '';
+
     this.checkOutForm.reset({
       departureTime: this.getCurrentTimeString(),
       exitSealNumbers: '',
-      exitObservations: '',
-      guardNotes: ''
+      exitObservations: defaultObs,
+      guardNotes: isCancelled ? `Folio Cancelado: ${reason}` : ''
     });
     this.showCheckOutModal.set(true);
   }
@@ -1678,8 +1727,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       responsableVigilanciaNombre: item.responsableVigilanciaNombre || item.processedBy || formVal.responsableVigilanciaNombre || this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
       transportistaNombre: item.transportistaNombre || item.driverName || item.nombreOperador || formVal.transportistaNombre || formVal.nombreOperador || 'Chofer Transportista',
-      driverSignature: item.driverSignature,
-      driverSignedAt: item.driverSignedAt ? String(item.driverSignedAt) : undefined,
+      driverSignature: item.driverSignature || this.activeDriverSignature() || (item as any)?.preCheckin?.driverSignature || undefined,
+      driverSignedAt: item.driverSignedAt ? String(item.driverSignedAt) : (this.activeDriverSignedAt() || undefined),
 
       folio: item.generatedFolio || item.folio || this.createdFolio() || 'N/A',
       token: item.token || this.activeToken() || 'N/A'
@@ -1687,6 +1736,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     this.currentPrintData.set(printData);
     this.showF01PrintModal.set(true);
+  }
+
+  @HostListener('window:keydown.escape')
+  protected handleEscapeKey(): void {
+    if (this.showF01PrintModal()) {
+      this.closeF01Print();
+    } else if (this.showCheckOutModal()) {
+      this.closeCheckOutModal();
+    } else if (this.showQrModal()) {
+      this.closeQrModal();
+    }
   }
 
   protected closeF01Print(): void {
@@ -1988,7 +2048,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             checklistData: inspectionObservations,
             generatedFolio: folio,
             folio: folio,
-            rampCode: rDisplay
+            rampCode: rDisplay,
+            driverSignature: passRes?.driverSignature || this.activeDriverSignature() || undefined,
+            driverSignedAt: passRes?.driverSignedAt ? String(passRes.driverSignedAt) : (this.activeDriverSignedAt() || undefined)
           };
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
@@ -2228,6 +2290,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.sealList.set([]);
     this.tempSealInput.set('');
     this.activeToken.set(null);
+    this.activeDriverSignature.set(null);
+    this.activeDriverSignedAt.set(null);
     this.isCustomTransportType.set(false);
     this.isCustomBoxDimension.set(false);
     this.customTransportInput.set('');
@@ -2298,9 +2362,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   // ── HELPERS ESTATUS DE MANIOBRA & CANDADO DE SALIDA (SDOP) ──────────────────
   protected getWarehouseStatusLabel(item: any): string {
     if (!item) return 'En Maniobra';
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+    if (ws === 'CANCELLED') return 'Cancelado (Listo Salida)';
     if (item.isReadyForExit) return 'Autorizado / Listo Salida';
     const isCarga = (item.operacion === 'CARGA' || item.operationType === 'CARGA');
-    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
 
     if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'Autorizado / Listo Salida';
     if (ws === 'REGISTERED' || ws === 'PENDING') return 'En Patio / Espera';
@@ -2313,8 +2378,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected getWarehouseStatusIcon(item: any): string {
     if (!item) return 'sync';
-    if (item.isReadyForExit) return 'verified';
     const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+    if (ws === 'CANCELLED') return 'cancel';
+    if (item.isReadyForExit) return 'verified';
     if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'verified';
     if (ws === 'REGISTERED' || ws === 'PENDING') return 'hourglass_empty';
     if (ws === 'ASSIGNED') return 'dock';
@@ -2324,6 +2390,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected getWarehouseLockTooltip(item: any): string {
+    const ws = (item?.warehouseStatus || item?.status || '').toUpperCase();
+    if (ws === 'DISCHARGED') {
+      return 'Descarga concluida en andén pero pendiente de auditoría. El Líder de Almacén debe autorizar la recepción o cancelarla para habilitar el Check-Out.';
+    }
     const isCarga = (item?.operacion === 'CARGA' || item?.operationType === 'CARGA');
     return isCarga
       ? 'Maniobra de carga en proceso en almacén. Requiere autorización y cierre del Líder de Salidas antes de dar Check-Out.'

@@ -342,12 +342,30 @@ export interface TransportChecklistPrintData {
                 <span class="font-bold">Nombre:</span>
                 <span class="font-semibold ml-1">{{ data.transportistaNombre || data.nombreOperador || 'Operador Chofer' }}</span>
               </div>
-              <div class="h-12 border-b border-dashed border-slate-400 flex items-center justify-center">
-                <span class="text-center text-[8.5px] text-slate-400 font-serif italic">
-                  (Firma autógrafa del chofer transportista)
-                </span>
+              <div class="h-12 border-b border-dashed border-slate-400 flex items-center justify-center overflow-hidden">
+                @if (data.driverSignature && (data.driverSignature.startsWith('data:image/') || data.driverSignature.length > 50)) {
+                  <img
+                    [src]="data.driverSignature.startsWith('data:image/') ? data.driverSignature : 'data:image/png;base64,' + data.driverSignature"
+                    alt="Firma Digital Chofer"
+                    class="max-h-11 max-w-full object-contain mx-auto"
+                  />
+                } @else if (data.driverSignature) {
+                  <div class="flex flex-col items-center justify-center text-center">
+                    <span class="text-[8px] font-bold text-emerald-800 tracking-wide uppercase">✓ FIRMA DIGITAL AUTORIZADA</span>
+                    <span class="text-[6.5px] text-slate-500 font-mono">Dispositivo Móvil Chofer</span>
+                  </div>
+                } @else {
+                  <span class="text-center text-[8.5px] text-slate-400 font-serif italic">
+                    (Firma autógrafa del chofer transportista)
+                  </span>
+                }
               </div>
-              <div class="text-center text-[8px] font-bold text-slate-700 mt-1 uppercase">Nombre y Firma del Transportista</div>
+              <div class="text-center text-[8px] font-bold text-slate-700 mt-1 uppercase flex items-center justify-center gap-1">
+                <span>Nombre y Firma del Transportista</span>
+                @if (data.driverSignature) {
+                  <span class="text-emerald-700 font-mono text-[7px] font-bold">(DIGITAL)</span>
+                }
+              </div>
             </td>
           </tr>
         </tbody>

@@ -2,6 +2,8 @@ import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signa
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WarehouseMovementsApiService } from '../../../features/warehouse-movements/services/warehouse-movements-api.service';
+import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
+import { BayRemisionSummary } from '../../../features/warehouse-movements/models/warehouse-movements.models';
 import { WarehouseLayoutService } from '../../../features/catalogs/services/warehouse-layout.service';
 import { PositionDetail } from '../../../features/catalogs/models/warehouse-catalog.models';
 
@@ -26,7 +28,34 @@ export interface BayOccupancyItem {
   category: BayCategory;
   trafficLight: 'GREEN' | 'AMBER' | 'RED';
   isRecommended: boolean;
+  storedRemisiones?: BayRemisionSummary[];
 }
+
+export interface WarehouseMapSectionDef {
+  code: string;
+  name: string;
+  category: string;
+  polygonPoints: string;
+  labelX: number;
+  labelY: number;
+  sublabelX: number;
+  sublabelY: number;
+}
+
+export const WAREHOUSE_MAP_SECTIONS: WarehouseMapSectionDef[] = [
+  { code: 'A', name: 'Almacén A — Materia Prima & Secos', category: 'Materia Prima / PT', polygonPoints: '265,125 588,125 588,365 265,365', labelX: 426, labelY: 235, sublabelX: 426, sublabelY: 260 },
+  { code: 'B', name: 'Almacén B — Almacenamiento General', category: 'Almacenamiento General', polygonPoints: '265,670 420,670 420,840 265,840', labelX: 342, labelY: 745, sublabelX: 342, sublabelY: 765 },
+  { code: 'C', name: 'Almacén C — Alta Rotación', category: 'Alta Rotación', polygonPoints: '430,670 588,670 588,840 430,840', labelX: 509, labelY: 745, sublabelX: 509, sublabelY: 765 },
+  { code: 'D', name: 'Almacén D — Insumos & Empaque', category: 'Insumos / Packaging', polygonPoints: '602,125 783,125 783,245 602,245', labelX: 692, labelY: 180, sublabelX: 692, sublabelY: 200 },
+  { code: 'E', name: 'Almacén E — Material No Conforme', category: 'Material No Conforme', polygonPoints: '602,255 783,255 783,365 602,365', labelX: 692, labelY: 305, sublabelX: 692, sublabelY: 325 },
+  { code: 'F', name: 'Almacén F — Tránsito & Reempaque', category: 'Tránsito / Reempaque', polygonPoints: '797,125 890,125 890,365 797,365', labelX: 843, labelY: 235, sublabelX: 843, sublabelY: 260 },
+  { code: 'G', name: 'Almacén G — Picking & Despacho', category: 'Picking / Despacho', polygonPoints: '897,125 973,125 973,365 897,365', labelX: 935, labelY: 235, sublabelX: 935, sublabelY: 260 },
+  { code: 'H', name: 'Almacén H — Devoluciones & Scrap', category: 'Devoluciones / Scrap', polygonPoints: '797,670 973,670 973,840 797,840', labelX: 885, labelY: 745, sublabelX: 885, sublabelY: 765 },
+  { code: 'I', name: 'Almacén I — Cross-Docking Rápido', category: 'Cross-Docking', polygonPoints: '265,375 588,375 588,660 265,660', labelX: 426, labelY: 505, sublabelX: 426, sublabelY: 530 },
+  { code: 'J', name: 'Almacén J — Cuarentena Calidad', category: 'Cuarentena / Calidad', polygonPoints: '897,375 973,375 973,660 897,660', labelX: 935, labelY: 505, sublabelX: 935, sublabelY: 530 },
+  { code: 'K', name: 'Almacén K — Carga Pesada & Tarimas', category: 'Carga Pesada', polygonPoints: '797,375 890,375 890,660 797,660', labelX: 843, labelY: 505, sublabelX: 843, sublabelY: 530 },
+  { code: 'L', name: 'Almacén L — Carga Masiva & Salidas', category: 'Carga Masiva', polygonPoints: '602,375 783,375 783,660 602,660', labelX: 692, labelY: 505, sublabelX: 692, sublabelY: 530 },
+];
 
 export interface WarehouseZoneGroup {
   id: string;
@@ -34,6 +63,12 @@ export interface WarehouseZoneGroup {
   name: string;
   zone: string;
   sectionName: string;
+  categoryLabel?: string;
+  polygonPoints?: string;
+  labelX?: number;
+  labelY?: number;
+  sublabelX?: number;
+  sublabelY?: number;
   
   // Posiciones Fijas (100% Base Nominal)
   fixedPositionsCount: number;
@@ -90,12 +125,15 @@ export interface BaySelectionResult {
 export class BayOccupancySelectorComponent implements OnInit {
   private readonly apiService = inject(WarehouseMovementsApiService);
   private readonly layoutService = inject(WarehouseLayoutService);
+  private readonly movementsService = inject(WarehouseMovementsService);
 
   @Input() branchId?: string;
   @Input() selectedLocationId?: string;
   @Input() selectedLocationCode?: string;
   @Input() allowAdminOverride: boolean = true;
-  @Input() dialogTitle: string = 'Selector Visual de Ocupación de Bahías (Estándar 22 Pallets)';
+  @Input() dialogTitle: string = 'Selector Visual de Ocupación de Bahías';
+  @Input() defaultCapacity: number = 22;
+  @Input() mode: 'destination' | 'origin' | 'all' = 'destination';
 
   @Output() locationSelected = new EventEmitter<BaySelectionResult>();
   @Output() closed = new EventEmitter<void>();
@@ -107,7 +145,11 @@ export class BayOccupancySelectorComponent implements OnInit {
   overrideReason = signal<string>('');
   showOverrideForm = signal<boolean>(false);
 
-  // ── ESTADOS DE NAVEGACIÓN Y DRILL-DOWN JERÁRQUICO ──
+  // ── ESTADOS DE NAVEGACIÓN Y VISTA (MAPA 2D vs TARJETAS vs CUADRÍCULA) ──
+  activeViewMode = signal<'map' | 'cards' | 'grid'>('map');
+  readonly mapSections = WAREHOUSE_MAP_SECTIONS;
+  hoveredMapZone = signal<WarehouseMapSectionDef | null>(null);
+
   selectedZoneId = signal<string | null>(null);
   statusFilter = signal<'ALL' | 'AVAILABLE' | 'OCCUPIED' | 'BLOCKED'>('ALL');
   categoryFilter = signal<'ALL' | 'FIXED' | 'TEMPORARY' | 'PRELOAD'>('ALL');
@@ -170,7 +212,7 @@ export class BayOccupancySelectorComponent implements OnInit {
       const fixedPositionsCount = fixedPositions.length;
       const fixedAvailableCount = fixedPositions.filter((p) => !p.isBlocked && p.currentStoredPallets === 0 && p.status === 'ACTIVE').length;
       const fixedOccupiedCount = fixedPositions.filter((p) => p.currentStoredPallets > 0).length;
-      const fixedCapacityPallets = fixedPositions.reduce((acc, p) => acc + (p.capacityPallets || 22), 0);
+      const fixedCapacityPallets = fixedPositions.reduce((acc, p) => acc + (p.capacityPallets || this.defaultCapacity), 0);
       const fixedOccupiedPallets = fixedPositions.reduce((acc, p) => acc + (p.currentStoredPallets || 0), 0);
       const fixedAvailablePallets = Math.max(0, fixedCapacityPallets - fixedOccupiedPallets);
       const nominalOccupancyPct = fixedCapacityPallets > 0
@@ -181,7 +223,7 @@ export class BayOccupancySelectorComponent implements OnInit {
       const tempPositionsCount = tempPositions.length;
       const tempAvailableCount = tempPositions.filter((p) => !p.isBlocked && p.currentStoredPallets === 0 && p.status === 'ACTIVE').length;
       const tempOccupiedCount = tempPositions.filter((p) => p.currentStoredPallets > 0).length;
-      const tempCapacityPallets = tempPositions.reduce((acc, p) => acc + (p.capacityPallets || 22), 0);
+      const tempCapacityPallets = tempPositions.reduce((acc, p) => acc + (p.capacityPallets || this.defaultCapacity), 0);
       const tempOccupiedPallets = tempPositions.reduce((acc, p) => acc + (p.currentStoredPallets || 0), 0);
       const overflowPct = fixedCapacityPallets > 0
         ? Math.round(((tempOccupiedPallets / fixedCapacityPallets) * 1000.0) / 10.0)
@@ -210,12 +252,23 @@ export class BayOccupancySelectorComponent implements OnInit {
       const hasReallocationOpportunity = tempOccupiedCount > 0 && fixedAvailableCount > 0;
       const reallocationCandidateCount = Math.min(tempOccupiedCount, fixedAvailableCount);
 
+      let zoneLetter = 'A';
+      const m = g.code.match(/([A-L])/i);
+      if (m && m[1]) zoneLetter = m[1].toUpperCase();
+      const secDef = WAREHOUSE_MAP_SECTIONS.find(s => s.code === zoneLetter);
+
       return {
         id: g.id,
-        code: g.code,
+        code: zoneLetter,
         name: g.name,
         zone: g.zone,
         sectionName: g.sectionName,
+        categoryLabel: secDef?.category || 'Almacenamiento',
+        polygonPoints: secDef?.polygonPoints,
+        labelX: secDef?.labelX,
+        labelY: secDef?.labelY,
+        sublabelX: secDef?.sublabelX,
+        sublabelY: secDef?.sublabelY,
         
         fixedPositionsCount,
         fixedAvailableCount,
@@ -251,6 +304,75 @@ export class BayOccupancySelectorComponent implements OnInit {
       };
     });
   });
+
+  // ── FILTRADO DE GRUPOS POR BÚSQUEDA ──
+  filteredZoneGroups = computed<WarehouseZoneGroup[]>(() => {
+    const list = this.zoneGroups();
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((g) => {
+      const matchName = g.name.toLowerCase().includes(q) || g.code.toLowerCase().includes(q) || `almacén ${g.code.toLowerCase()}`.includes(q);
+      const matchCat = g.categoryLabel?.toLowerCase().includes(q);
+      const matchPos = g.positions.some((p) => p.code.toLowerCase().includes(q) || (p.name && p.name.toLowerCase().includes(q)));
+      return matchName || matchCat || matchPos;
+    });
+  });
+
+  // ── RESULTADOS RÁPIDOS DE BÚSQUEDA DIRECTA POR POSICIÓN / NOMBRE ──
+  quickSearchResults = computed<BayOccupancyItem[]>(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    const list = this.bays();
+    const isOrigin = this.mode === 'origin';
+    return list
+      .filter((p) => {
+        if (isOrigin && p.currentStoredPallets === 0) return false;
+        const matchCode = p.code.toLowerCase().includes(q);
+        const matchName = p.name && p.name.toLowerCase().includes(q);
+        const matchSec = p.sectionName && p.sectionName.toLowerCase().includes(q);
+        const matchRem = p.storedRemisiones?.some((r) => r.remisionNo?.toLowerCase().includes(q) || r.productName?.toLowerCase().includes(q));
+        return matchCode || matchName || matchSec || matchRem;
+      })
+      .slice(0, 8);
+  });
+
+  // ── MÉTODOS DEL MAPA SVG 2D ──
+  getZoneGroupForCode(code: string): WarehouseZoneGroup | undefined {
+    const clean = code.toUpperCase().trim();
+    return this.zoneGroups().find(
+      (g) => g.code.toUpperCase() === clean ||
+             g.id.toUpperCase().endsWith(`-${clean.toLowerCase()}`) ||
+             g.name.toUpperCase().includes(`ALMACÉN ${clean}`) ||
+             g.name.toUpperCase().includes(`ALMACEN ${clean}`)
+    );
+  }
+
+  isSectionMatchingSearch(code: string): boolean {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return true;
+    const sec = this.mapSections.find((s) => s.code.toLowerCase() === code.toLowerCase());
+    const grp = this.getZoneGroupForCode(code);
+    if (!sec && !grp) return false;
+    const matchCode = code.toLowerCase().includes(q) || `almacén ${code.toLowerCase()}`.includes(q) || `almacen ${code.toLowerCase()}`.includes(q);
+    const matchName = sec?.name.toLowerCase().includes(q) || grp?.name.toLowerCase().includes(q);
+    const matchCat = sec?.category.toLowerCase().includes(q) || grp?.categoryLabel?.toLowerCase().includes(q);
+    const matchPos = grp?.positions.some((p) => p.code.toLowerCase().includes(q) || (p.name && p.name.toLowerCase().includes(q)));
+    return !!(matchCode || matchName || matchCat || matchPos);
+  }
+
+  openZoneFromMap(sec: WarehouseMapSectionDef): void {
+    const grp = this.getZoneGroupForCode(sec.code);
+    if (grp) {
+      this.openZone(grp);
+    } else {
+      this.selectedZoneId.set(`almacen-${sec.code.toLowerCase()}`);
+    }
+  }
+
+  quickSelectBay(bay: BayOccupancyItem): void {
+    this.selectBay(bay);
+    this.confirmSelection();
+  }
 
   // ── ALMACÉN / ZONA ACTIVA EN DETALLE ──
   activeZoneGroup = computed<WarehouseZoneGroup | null>(() => {
@@ -302,13 +424,13 @@ export class BayOccupancySelectorComponent implements OnInit {
       if (catFilter === 'PRELOAD' && p.category !== 'PRELOAD_STAGING') return false;
 
       // Filtro de Estado
-      if (filter === 'AVAILABLE' && (p.isBlocked || p.currentStoredPallets > 0 || p.status !== 'ACTIVE')) {
+      if (filter === 'AVAILABLE' && (p.isBlocked || p.status === 'BLOCKED' || (p.availableUnits != null && p.availableUnits <= 0))) {
         return false;
       }
       if (filter === 'OCCUPIED' && p.currentStoredPallets === 0) {
         return false;
       }
-      if (filter === 'BLOCKED' && !p.isBlocked && p.status === 'ACTIVE') {
+      if (filter === 'BLOCKED' && !p.isBlocked && p.status !== 'BLOCKED') {
         return false;
       }
 
@@ -386,8 +508,20 @@ export class BayOccupancySelectorComponent implements OnInit {
     }
 
     const zoneName = `Almacén ${zoneLetter}`;
-    const capacity = p.capacityTarimas || 22;
-    const current = p.currentTarimas || 0;
+    const live = this.movementsService.getBayLiveOccupancy(p.code);
+    const dynamicCap = (p as any).capacityUnits || p.capacityTarimas || (p as any).capacity;
+    const capacity = dynamicCap != null && dynamicCap > 0 ? dynamicCap : this.defaultCapacity;
+    const current = (live && live.totalPallets > 0) ? live.totalPallets : (p.currentTarimas || (live ? live.totalPallets : 0));
+    const storedRemisiones = (live && live.remisiones && live.remisiones.length > 0)
+      ? live.remisiones
+      : (current > 0 ? [{
+          receptionFolio: p.batchNumber || 'INV',
+          remisionNo: p.skuCode || 'Stock',
+          clientName: 'Cliente WMS',
+          palletsCount: current,
+          productName: p.skuDescription || 'Mercancía',
+          status: 'ALMACENADO',
+        }] : []);
     const available = Math.max(0, capacity - current);
     const occupancyPct = capacity > 0 ? Math.min(100, Math.round(((current / capacity) * 1000.0) / 10.0)) : 0;
 
@@ -395,7 +529,7 @@ export class BayOccupancySelectorComponent implements OnInit {
     let trafficLight: 'GREEN' | 'AMBER' | 'RED' = 'GREEN';
     if (isBlocked || occupancyPct >= 100) {
       trafficLight = 'RED';
-    } else if (occupancyPct > 70) {
+    } else if (occupancyPct > 0) {
       trafficLight = 'AMBER';
     }
 
@@ -450,11 +584,61 @@ export class BayOccupancySelectorComponent implements OnInit {
       currentStoredPallets: current,
       availableUnits: available,
       occupancyPercentage: occupancyPct,
-      status: isBlocked ? 'BLOCKED' : (current > 0 ? 'OCCUPIED' : 'ACTIVE'),
+      status: isBlocked ? 'BLOCKED' : (current >= capacity ? 'OCCUPIED' : (current > 0 ? 'ACTIVE' : 'ACTIVE')),
       isBlocked: isBlocked,
       category: category,
       trafficLight: trafficLight,
       isRecommended: false,
+      storedRemisiones,
+    };
+  }
+
+  private buildTopologyItem(
+    id: string,
+    code: string,
+    name: string,
+    zone: string,
+    sectionName: string,
+    aisle: string,
+    rack: string,
+    level: string,
+    position: string,
+    category: BayCategory,
+    capacity: number = this.defaultCapacity
+  ): BayOccupancyItem {
+    const live = this.movementsService.getBayLiveOccupancy(code);
+    const current = live ? live.totalPallets : 0;
+    const storedRemisiones = live ? live.remisiones : [];
+    const available = Math.max(0, capacity - current);
+    const occupancyPct = capacity > 0 ? Math.min(100, Math.round(((current / capacity) * 1000.0) / 10.0)) : 0;
+
+    let trafficLight: 'GREEN' | 'AMBER' | 'RED' = 'GREEN';
+    if (occupancyPct >= 100) {
+      trafficLight = 'RED';
+    } else if (occupancyPct > 0) {
+      trafficLight = 'AMBER';
+    }
+
+    return {
+      id,
+      code,
+      name,
+      zone,
+      sectionName,
+      aisle,
+      rack,
+      level,
+      position,
+      capacityPallets: capacity,
+      currentStoredPallets: current,
+      availableUnits: available,
+      occupancyPercentage: occupancyPct,
+      status: current >= capacity ? 'OCCUPIED' : (current > 0 ? 'ACTIVE' : 'ACTIVE'),
+      isBlocked: false,
+      category,
+      trafficLight,
+      isRecommended: false,
+      storedRemisiones,
     };
   }
 
@@ -473,86 +657,81 @@ export class BayOccupancySelectorComponent implements OnInit {
       { zone: 'G', name: 'Almacén G', fixed: 38,  temp: 50, preload: 4 },
       { zone: 'H', name: 'Almacén H', fixed: 86,  temp: 20, preload: 4 },
       { zone: 'I', name: 'Almacén I', fixed: 117, temp: 30, preload: 4 },
-      { zone: 'K', name: 'Almacén K', fixed: 22,  temp: 30, preload: 4 },
-      { zone: 'L', name: 'Almacén L', fixed: 181, temp: 30, preload: 4 },
-      { zone: 'M', name: 'Almacén M', fixed: 132, temp: 40, preload: 4 },
+      { zone: 'J', name: 'Almacén J', fixed: 22,  temp: 30, preload: 4 },
+      { zone: 'K', name: 'Almacén K', fixed: 181, temp: 30, preload: 4 },
+      { zone: 'L', name: 'Almacén L', fixed: 132, temp: 40, preload: 4 },
     ];
 
     const result: BayOccupancyItem[] = [];
+    const defaultCap = this.defaultCapacity;
 
     for (const wh of warehouses) {
       // 1. Fijas
       for (let i = 1; i <= wh.fixed; i++) {
         const numStr = String(i).padStart(3, '0');
-        result.push({
-          id: `fixed-${wh.zone}-${numStr}`,
-          code: `POS-${wh.zone}-${numStr}`,
-          name: `${wh.name} · Fija ${numStr}`,
-          zone: wh.zone,
-          sectionName: wh.name,
-          aisle: String(Math.floor((i - 1) / 30) + 1).padStart(2, '0'),
-          rack: String(Math.floor(((i - 1) % 30) / 3) + 1).padStart(2, '0'),
-          level: String(((i - 1) % 3) + 1),
-          position: numStr,
-          capacityPallets: 22,
-          currentStoredPallets: 0,
-          availableUnits: 22,
-          occupancyPercentage: 0,
-          status: 'ACTIVE',
-          isBlocked: false,
-          category: 'FIXED_STORAGE',
-          trafficLight: 'GREEN',
-          isRecommended: false,
-        });
+        const code = `POS-${wh.zone}-${numStr}`;
+        const aisle = String(Math.floor((i - 1) / 30) + 1).padStart(2, '0');
+        const rack = String(Math.floor(((i - 1) % 30) / 3) + 1).padStart(2, '0');
+        const level = String(((i - 1) % 3) + 1);
+        result.push(
+          this.buildTopologyItem(
+            `fixed-${wh.zone}-${numStr}`,
+            code,
+            `${wh.name} · Fija ${numStr}`,
+            wh.zone,
+            wh.name,
+            aisle,
+            rack,
+            level,
+            numStr,
+            'FIXED_STORAGE',
+            defaultCap
+          )
+        );
       }
 
       // 2. Temporales
       for (let i = 1; i <= wh.temp; i++) {
         const numStr = String(i).padStart(2, '0');
-        result.push({
-          id: `temp-${wh.zone}-${numStr}`,
-          code: `POS-${wh.zone}-T${numStr}`,
-          name: `${wh.name} · Temporal T${numStr}`,
-          zone: wh.zone,
-          sectionName: wh.name,
-          aisle: 'TMP',
-          rack: String(Math.floor((i - 1) / 5) + 1).padStart(2, '0'),
-          level: '1',
-          position: `T${numStr}`,
-          capacityPallets: 22,
-          currentStoredPallets: 0,
-          availableUnits: 22,
-          occupancyPercentage: 0,
-          status: 'ACTIVE',
-          isBlocked: false,
-          category: 'TEMPORARY_BUFFER',
-          trafficLight: 'GREEN',
-          isRecommended: false,
-        });
+        const code = `POS-${wh.zone}-T${numStr}`;
+        const aisle = 'TMP';
+        const rack = String(Math.floor((i - 1) / 5) + 1).padStart(2, '0');
+        const level = '1';
+        result.push(
+          this.buildTopologyItem(
+            `temp-${wh.zone}-${numStr}`,
+            code,
+            `${wh.name} · Temporal T${numStr}`,
+            wh.zone,
+            wh.name,
+            aisle,
+            rack,
+            level,
+            `T${numStr}`,
+            'TEMPORARY_BUFFER',
+            defaultCap
+          )
+        );
       }
 
       // 3. Precarga
       for (let i = 1; i <= wh.preload; i++) {
-        result.push({
-          id: `preload-${wh.zone}-0${i}`,
-          code: `POS-${wh.zone}-PRE0${i}`,
-          name: `${wh.name} · Precarga PRE-0${i}`,
-          zone: wh.zone,
-          sectionName: wh.name,
-          aisle: 'PRE',
-          rack: '01',
-          level: '1',
-          position: `PRE0${i}`,
-          capacityPallets: 22,
-          currentStoredPallets: 0,
-          availableUnits: 22,
-          occupancyPercentage: 0,
-          status: 'ACTIVE',
-          isBlocked: false,
-          category: 'PRELOAD_STAGING',
-          trafficLight: 'GREEN',
-          isRecommended: false,
-        });
+        const code = `POS-${wh.zone}-PRE0${i}`;
+        result.push(
+          this.buildTopologyItem(
+            `preload-${wh.zone}-0${i}`,
+            code,
+            `${wh.name} · Precarga PRE-0${i}`,
+            wh.zone,
+            wh.name,
+            'PRE',
+            '01',
+            '1',
+            `PRE0${i}`,
+            'PRELOAD_STAGING',
+            defaultCap
+          )
+        );
       }
     }
 
@@ -634,17 +813,37 @@ export class BayOccupancySelectorComponent implements OnInit {
   }
 
   selectBay(bay: BayOccupancyItem): void {
-    if (bay.isBlocked || bay.status !== 'ACTIVE') return;
+    if (bay.isBlocked || bay.status === 'BLOCKED') return;
     this.selectedBay.set(bay);
+
+    if (this.mode === 'origin') {
+      this.showOverrideForm.set(false);
+      return;
+    }
 
     const rec = this.recommendedBay();
     const isOverriding = rec ? rec.id !== bay.id : false;
-    this.showOverrideForm.set(isOverriding);
+    const isSaturated = bay.availableUnits != null && bay.availableUnits <= 0;
+    this.showOverrideForm.set(isOverriding || isSaturated);
   }
 
   confirmSelection(): void {
     const bay = this.selectedBay();
     if (!bay) return;
+
+    if (this.mode === 'origin') {
+      this.locationSelected.emit({
+        locationId: bay.id,
+        locationCode: bay.code,
+        isOverride: false,
+      });
+      return;
+    }
+
+    const isSaturated = bay.availableUnits != null && bay.availableUnits <= 0;
+    if (isSaturated && !this.allowAdminOverride) {
+      return;
+    }
 
     const rec = this.recommendedBay();
     const isOverride = rec ? rec.id !== bay.id : false;
@@ -652,8 +851,8 @@ export class BayOccupancySelectorComponent implements OnInit {
     this.locationSelected.emit({
       locationId: bay.id,
       locationCode: bay.code,
-      isOverride: isOverride,
-      overrideReason: isOverride ? this.overrideReason().trim() : undefined,
+      isOverride: isOverride || isSaturated,
+      overrideReason: (isOverride || isSaturated) ? this.overrideReason().trim() : undefined,
     });
   }
 

@@ -516,12 +516,32 @@
               @if (rec.status === 'COMPLETED') {
                 <button
                   type="button"
+                  (click)="openPrintPreview(rec)"
+                  class="btn-secondary-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                  title="Imprimir Documento F01 Oficial"
+                >
+                  <span class="material-symbols-outlined text-sm">print</span>
+                  <span>Imprimir F01</span>
+                </button>
+                <button
+                  type="button"
                   (click)="openReopenModal()"
                   class="px-3 py-1.5 text-xs font-black rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
-                  title="Reabrir recepción finalizada con autorización de supervisor para registrar pallets omitidos"
+                  title="Gestión de cambios con autorización de supervisor: Retarimado físico en andén, descarga complementaria de tarimas omitidas o corrección de ficha"
                 >
                   <span class="material-symbols-outlined text-sm font-bold">lock_open</span>
                   <span>Reabrir Recepción</span>
+                </button>
+              }
+              @if (rec.status === 'CANCELLED') {
+                <button
+                  type="button"
+                  (click)="openPrintPreview(rec)"
+                  class="btn-danger-outline text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm text-rose-600 dark:text-rose-400 border border-rose-500/40 hover:bg-rose-500/10 transition-all cursor-pointer"
+                  title="Imprimir Hoja de Cancelación Oficial"
+                >
+                  <span class="material-symbols-outlined text-sm">print</span>
+                  <span>Imprimir Cancelación</span>
                 </button>
               }
               @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
@@ -1708,17 +1728,42 @@
               </div>
             </div>
           } @else if (rec.status === 'CANCELLED') {
-            <!-- Banner de Auditoría de Cancelación -->
-            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2">
-              <div class="flex items-center gap-2 text-rose-400 font-bold text-xs">
-                <span class="material-symbols-outlined text-lg">cancel</span>
-                <span class="uppercase">FOLIO CANCELADO Y REVOCADO DE INVENTARIO</span>
+            <!-- Banner de Auditoría de Cancelación (Alto Contraste) -->
+            <div class="reception-cancelled-banner">
+              <div class="reception-cancelled-banner__top">
+                <div class="reception-cancelled-banner__content">
+                  <div class="reception-cancelled-banner__badge-icon">
+                    <span class="material-symbols-outlined">cancel</span>
+                  </div>
+                  <div class="reception-cancelled-banner__info">
+                    <div class="reception-cancelled-banner__title">
+                      <span>Folio Cancelado y Revocado de Inventario</span>
+                      <span class="reception-cancelled-banner__pill">Cancelado</span>
+                    </div>
+                    <p class="reception-cancelled-banner__desc">
+                      Rampa liberada y unidades revocadas del Kardex conforme a la auditoría de seguridad WMS.
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    (click)="openPrintPreview(rec)"
+                    class="btn-primary-gold text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-sm flex items-center gap-1.5 text-slate-900 cursor-pointer transition-all hover:scale-[1.02]"
+                  >
+                    <span class="material-symbols-outlined text-base">print</span>
+                    <span>Imprimir Hoja de Cancelación</span>
+                  </button>
+                </div>
               </div>
-              <p class="text-xs text-rose-300 font-medium">
-                Motivo: "{{ rec.cancellationReason || 'Cancelado por el administrador.' }}"
-              </p>
-              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-rose-500/20">
-                <span>Autorizado por: <strong class="text-slate-200">{{ rec.leaderAuthorizedBy || 'Admin' }}</strong></span>
+              <div class="reception-cancelled-banner__reason-box">
+                <span class="reception-cancelled-banner__reason-label">Motivo de Cancelación Oficial:</span>
+                <p class="reception-cancelled-banner__reason-text">
+                  "{{ rec.cancellationReason || 'Cancelado por el administrador.' }}"
+                </p>
+              </div>
+              <div class="reception-cancelled-banner__footer">
+                <span>Autorizado por: <strong>{{ rec.leaderAuthorizedBy || rec.cancelledBy || 'Administrador WMS' }}</strong></span>
                 <span>Fecha: {{ rec.cancelledAt || 'Registrado' }}</span>
               </div>
             </div>
@@ -2427,134 +2472,491 @@
     </div>
   }
 
-  <!-- Modal Reapertura de Recepción (Con Autorización de Supervisor / Administrador) -->
+  <!-- Modal Integral de Autorización Operativa: Retarimado Físico, Tarimas Faltantes y Corrección de Ficha -->
   @if (showReopenModal()) {
     <div class="modal-overlay p-2 sm:p-4" (click)="closeReopenModal()">
-      <div class="modal-card max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="modal-card max-w-xl w-full max-h-[88vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
         
-        <!-- Header del Modal -->
-        <div class="modal-header flex items-center justify-between border-b border-amber-500/20 bg-amber-500/5">
+        <!-- Header del Modal Homologado (Light Mode SDD) -->
+        <div class="modal-header flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
-              <span class="material-symbols-outlined text-xl">lock_open</span>
+            <div class="modal-header-icon-box modal-header-icon-box--gold">
+              <span class="material-symbols-outlined text-xl">
+                {{ reopenActionType() === 'PALLET_SWAP' ? 'pallet' : reopenActionType() === 'MISSING_PALLETS' ? 'lock_open' : reopenActionType() === 'UA_SWAP' ? 'barcode_scanner' : 'edit_document' }}
+              </span>
             </div>
             <div>
-              <h3 class="modal-header-title text-slate-950 dark:text-slate-100 font-black text-sm">
-                Reabrir Recepción #{{ selectedReception()?.folio }}
+              <h3 class="modal-header-title flex items-center gap-2">
+                <span>Autorización Operativa #{{ selectedReception()?.folio }}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                  {{ selectedReception()?.status }}
+                </span>
               </h3>
-              <p class="modal-header-subtitle text-[11px] text-slate-600 dark:text-slate-400">
-                Autorización para carga complementaria de pallets faltantes
+              <p class="modal-header-subtitle modal-header-subtitle--gold">
+                Control de cambios en andén: Retarimado físico, descarga complementaria, UAs de cliente o ficha
               </p>
             </div>
           </div>
-          <button (click)="closeReopenModal()" type="button" class="modal-close-icon-btn">
+          <button (click)="closeReopenModal()" type="button" class="modal-close-icon-btn" title="Cerrar modal">
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
         <!-- Body del Modal -->
-        <div class="modal-body space-y-3.5 text-xs p-5 overflow-y-auto">
-          <!-- Banner Informativo -->
-          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-amber-700 dark:text-amber-300">
-            <span class="material-symbols-outlined text-lg shrink-0 mt-0.5">info</span>
-            <div class="text-[11px] leading-relaxed">
-              <strong class="font-bold block text-xs mb-0.5">Reactivación de Proceso de Descarga</strong>
-              Al reabrir, el estado cambiará a <span class="font-bold underline">En Proceso</span> y la recepción reaparecerá en la terminal de montacargas para capturar los pallets omitidos.
+        <div class="modal-body space-y-3.5 text-xs">
+
+          <!-- 1. Selector Interactivo de las 4 Modalidades (Pill Nav SDD) -->
+          <div class="space-y-1.5">
+            <label class="modal-field-label">
+              Selecciona la Acción Operativa Requerida:
+            </label>
+            <div class="reopen-action-grid">
+              <!-- Opción A: Retarimado Físico / Pallet Swap -->
+              <button
+                type="button"
+                (click)="setReopenAction('PALLET_SWAP')"
+                class="reopen-action-btn"
+                [class.active]="reopenActionType() === 'PALLET_SWAP'"
+              >
+                <span class="material-symbols-outlined text-xl mb-0.5">pallet</span>
+                <span class="reopen-action-title">Cambio Físico Tarima</span>
+                <span class="reopen-action-sub">Retarimado / Trasvase</span>
+              </button>
+
+              <!-- Opción B: Tarimas Faltantes / Descarga Complementaria -->
+              <button
+                type="button"
+                (click)="setReopenAction('MISSING_PALLETS')"
+                class="reopen-action-btn"
+                [class.active]="reopenActionType() === 'MISSING_PALLETS'"
+              >
+                <span class="material-symbols-outlined text-xl mb-0.5">add_box</span>
+                <span class="reopen-action-title">Tarimas Faltantes</span>
+                <span class="reopen-action-sub">Descarga Adicional</span>
+              </button>
+
+              <!-- Opción C: Modificar Ficha de Caseta -->
+              <button
+                type="button"
+                (click)="setReopenAction('CASETA_DATA')"
+                class="reopen-action-btn"
+                [class.active]="reopenActionType() === 'CASETA_DATA'"
+              >
+                <span class="material-symbols-outlined text-xl mb-0.5">edit_document</span>
+                <span class="reopen-action-title">Modificar Ficha</span>
+                <span class="reopen-action-sub">Remisión / Placas</span>
+              </button>
+
+              <!-- Opción D: Cambio / Homologación de UAs del Cliente (Pistola RF) -->
+              <button
+                type="button"
+                (click)="setReopenAction('UA_SWAP')"
+                class="reopen-action-btn"
+                [class.active]="reopenActionType() === 'UA_SWAP'"
+              >
+                <span class="material-symbols-outlined text-xl mb-0.5">barcode_scanner</span>
+                <span class="reopen-action-title">UAs del Cliente</span>
+                <span class="reopen-action-sub">Pistoleo Rápido RF</span>
+              </button>
             </div>
           </div>
 
-          <!-- Resumen de la Recepción -->
-          <div class="modal-summary-box grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-subtle">
+          <!-- 2. Panel Específico según la Modalidad Elegida -->
+
+          <!-- CASO A: CAMBIO FÍSICO DE TARIMA / RETARIMADO -->
+          @if (reopenActionType() === 'PALLET_SWAP') {
+            <div class="reopen-panel-gold space-y-3">
+              <div class="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                <span class="material-symbols-outlined text-base text-amber-700">pallet</span>
+                <span>Transformación Física de Tarima en Andén (Retarimado)</span>
+              </div>
+
+              <!-- Comparativa Visual Origen vs Destino -->
+              <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs">
+                <!-- Origen -->
+                <div class="sm:col-span-2">
+                  <span class="text-[10px] text-slate-500 font-bold block mb-1">Tarima de Entrada (Origen):</span>
+                  <div class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-900 font-mono font-bold text-xs truncate border border-slate-200">
+                    {{ getPalletTypeLabel(selectedReception()?.selectedPalletType) }}
+                  </div>
+                </div>
+
+                <!-- Flecha -->
+                <div class="flex items-center justify-center text-amber-600 py-1 sm:py-0">
+                  <span class="material-symbols-outlined text-xl">arrow_forward</span>
+                </div>
+
+                <!-- Destino -->
+                <div class="sm:col-span-2">
+                  <span class="text-[10px] text-amber-800 font-bold block mb-1">Nueva Tarima Física (Destino):</span>
+                  <select
+                    [ngModel]="reopenTargetPalletType()"
+                    (ngModelChange)="reopenTargetPalletType.set($event)"
+                    class="fg-input w-full font-bold text-xs border-amber-300 focus:ring-amber-500 py-1.5"
+                  >
+                    @for (pt of palletTypes; track pt[0]) {
+                      <option [value]="pt[0]">{{ pt[1] }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+              <!-- Alcance del Retarimado (Todo el embarque o selección) -->
+              <div class="space-y-1.5 pt-0.5">
+                <label class="modal-field-label text-xs">
+                  Alcance del Cambio Físico:
+                </label>
+                <div class="flex items-center gap-4">
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                    <input
+                      type="radio"
+                      name="reopenSwapScope"
+                      value="ALL"
+                      [checked]="reopenSwapScope() === 'ALL'"
+                      (change)="reopenSwapScope.set('ALL')"
+                      class="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Todo el embarque (las {{ totalTarimas() }} tarimas descargadas)</span>
+                  </label>
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                    <input
+                      type="radio"
+                      name="reopenSwapScope"
+                      value="SELECTED"
+                      [checked]="reopenSwapScope() === 'SELECTED'"
+                      (change)="reopenSwapScope.set('SELECTED')"
+                      class="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Tarimas específicas</span>
+                  </label>
+                </div>
+
+                <!-- Selector de Tarimas si es SELECTED -->
+                @if (reopenSwapScope() === 'SELECTED') {
+                  <div class="mt-2 p-2.5 rounded-xl bg-white border border-slate-200 max-h-36 overflow-y-auto space-y-1.5">
+                    <span class="text-[10px] text-slate-500 font-bold block mb-1">Selecciona las tarimas retarimadas físicamente:</span>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      @for (p of palletStream(); track p.id) {
+                        <label class="inline-flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-amber-400 cursor-pointer text-[11px] text-slate-800 transition-colors">
+                          <input
+                            type="checkbox"
+                            [checked]="isPalletSelectedForSwap(p.id)"
+                            (change)="toggleReopenPalletSelection(p.id)"
+                            class="rounded text-amber-600 focus:ring-amber-500"
+                          />
+                          <span class="font-mono font-bold">{{ p.palletCode }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Motivo Rápido de Retarimado -->
+              <div class="space-y-1 pt-0.5">
+                <label class="modal-field-label text-xs">
+                  Causa Operativa del Retarimado:
+                </label>
+                <select
+                  [ngModel]="reopenSwapReasonQuick()"
+                  (ngModelChange)="reopenSwapReasonQuick.set($event)"
+                  class="fg-input w-full text-xs font-medium"
+                >
+                  @for (rs of palletSwapReasons; track rs.id) {
+                    <option [value]="rs.id">{{ rs.label }} — {{ rs.desc }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          <!-- CASO B: TARIMAS FALTANTES (DESCARGA COMPLEMENTARIA) -->
+          @if (reopenActionType() === 'MISSING_PALLETS') {
+            <div class="reopen-panel-gold space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                  <span class="material-symbols-outlined text-base text-amber-700">restore_page</span>
+                  <span>Descarga Complementaria en Bahía Asignada</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                  {{ reopenBayCapacity().bayCode }}
+                </span>
+              </div>
+
+              <!-- Tarjeta de Cupo de Bahía en Tiempo Real -->
+              <div class="grid grid-cols-3 gap-2 bg-white/90 p-2.5 rounded-lg border border-amber-300/70 text-center">
+                <div class="border-r border-amber-200 pr-1">
+                  <span class="text-[9.5px] uppercase font-bold text-slate-500 block">Descargadas</span>
+                  <span class="text-sm font-black font-mono text-slate-900">{{ reopenBayCapacity().currentThisRec }} Tarimas</span>
+                </div>
+                <div class="border-r border-amber-200 px-1">
+                  <span class="text-[9.5px] uppercase font-bold text-slate-500 block">Capacidad Bahía</span>
+                  <span class="text-sm font-black font-mono text-slate-900">{{ reopenBayCapacity().totalCapacity }}T Nominal</span>
+                </div>
+                <div class="pl-1">
+                  <span class="text-[9.5px] uppercase font-bold text-emerald-700 block">Cupo Disponible</span>
+                  <span class="text-sm font-black font-mono text-emerald-700">Hasta {{ reopenBayCapacity().availableCupo }}T</span>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-slate-600 leading-relaxed">
+                Al autorizar, la recepción cambiará de <strong class="text-slate-900">COMPLETADO</strong> a <strong class="underline text-amber-800">EN PROCESO</strong> en el <strong class="text-slate-900">Andén {{ selectedReception()?.checkIn?.rampNumber || 1 }}</strong>. Se reactivará el escáner del andén para capturar hasta <strong>{{ reopenBayCapacity().availableCupo }} tarimas faltantes</strong> para alcanzar la meta del cupo. Al finalizar, podrás cerrar nuevamente la recepción.
+              </p>
+            </div>
+          }
+
+          <!-- CASO C: MODIFICACIÓN DE FICHA DE CASETA -->
+          @if (reopenActionType() === 'CASETA_DATA') {
+            <div class="reopen-panel-blue space-y-2">
+              <div class="flex items-center gap-2 text-blue-900 font-bold text-xs">
+                <span class="material-symbols-outlined text-base text-blue-700">security</span>
+                <span>Desbloqueo de Ficha de Arribo &amp; Caseta</span>
+              </div>
+              <p class="text-[11px] text-slate-600 leading-relaxed">
+                Se habilitará de inmediato la ventana de <strong class="text-slate-900">Modificar Ficha</strong> para corregir No. de remisión/factura, placas de tracto y caja, línea transportista, chofer y sellos de seguridad. Todos los cambios quedarán respaldados en la bitácora de auditoría.
+              </p>
+            </div>
+          }
+
+          <!-- CASO D: CAMBIO / HOMOLOGACIÓN DE UAS DEL CLIENTE (PISTOLA RF) -->
+          @if (reopenActionType() === 'UA_SWAP') {
+            <div class="reopen-panel-uas space-y-2.5">
+              <div class="ua-scan-toolbar">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700 shrink-0">
+                    <span class="material-symbols-outlined text-lg">barcode_scanner</span>
+                  </div>
+                  <div>
+                    <strong class="text-xs font-bold text-slate-900 block leading-tight">
+                      Captura Rápida por Pistola RF · UAs del Cliente
+                    </strong>
+                    <span class="text-[10px] text-slate-500">
+                      Dispara a la etiqueta física; el cursor avanza automáticamente al siguiente renglón.
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span
+                    class="ua-scan-badge-progress"
+                    [class.ua-scan-badge-progress--active]="reopenModifiedUaCount() > 0"
+                  >
+                    <span class="material-symbols-outlined text-xs">
+                      {{ reopenModifiedUaCount() > 0 ? 'check_circle' : 'pending' }}
+                    </span>
+                    <span>{{ reopenModifiedUaCount() }} / {{ reopenUaSwapList().length }} Capturadas</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    (click)="reopenUaBulkOpen.set(!reopenUaBulkOpen())"
+                    class="btn-secondary-outline text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer"
+                    title="Pegar lista masiva desde Excel o correo"
+                  >
+                    <span class="material-symbols-outlined text-xs">content_paste</span>
+                    <span>{{ reopenUaBulkOpen() ? 'Ocultar Carga' : 'Pegar Lista Excel' }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bloque colapsable de carga masiva -->
+              @if (reopenUaBulkOpen()) {
+                <div class="ua-bulk-box space-y-2 animate-fade-in">
+                  <label class="block text-[10px] font-bold text-slate-700">
+                    Pega la columna de UAs del cliente (separadas por salto de línea o coma):
+                  </label>
+                  <textarea
+                    [ngModel]="reopenUaBulkText()"
+                    (ngModelChange)="reopenUaBulkText.set($event)"
+                    rows="3"
+                    placeholder="Ej.&#10;SSCC-00175010000000001&#10;SSCC-00175010000000002&#10;SSCC-00175010000000003..."
+                    class="fg-input font-mono text-xs w-full"
+                  ></textarea>
+                  <div class="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      (click)="reopenUaBulkOpen.set(false)"
+                      class="btn-ghost text-xs px-2.5 py-1 rounded-lg"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="applyBulkUaPaste()"
+                      class="btn-primary-gold text-xs px-3 py-1 rounded-lg"
+                    >
+                      Distribuir en Orden
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <!-- Tabla ergonómica de escaneo rápido con pistola -->
+              <div class="ua-scan-table-wrap">
+                <table class="ua-scan-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 45px;">#</th>
+                      <th>SKU / Cant</th>
+                      <th>UA Actual en WMS</th>
+                      <th>Nueva UA Cliente (Pistola RF)</th>
+                      <th style="width: 75px; text-align: center;">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of reopenUaSwapList(); track row.id; let i = $index) {
+                      <tr [class.row-modified]="row.newUa.trim().length > 0">
+                        <td class="font-mono font-bold text-slate-600">
+                          #{{ row.palletNumber }}
+                        </td>
+                        <td>
+                          <span class="font-mono font-bold text-slate-900 block text-[11px]">{{ row.productId }}</span>
+                          <span class="text-[10px] text-slate-500 font-medium">{{ row.pieces }} PZAS</span>
+                        </td>
+                        <td>
+                          <span class="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200 block truncate max-w-[125px]" [title]="row.currentUa">
+                            {{ row.currentUa }}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="relative flex items-center">
+                            <input
+                              type="text"
+                              id="ua-scan-input-{{ i }}"
+                              [ngModel]="row.newUa"
+                              (ngModelChange)="onUaInputChange(i, $event)"
+                              (keydown.enter)="onUaScanEnter(i, $event)"
+                              placeholder="Escanear nueva UA..."
+                              class="ua-input-rf"
+                              [class.modified]="row.newUa.trim().length > 0"
+                            />
+                            @if (row.newUa.trim().length > 0) {
+                              <button
+                                type="button"
+                                (click)="resetUaRow(i)"
+                                class="absolute right-1 text-slate-400 hover:text-rose-500 p-0.5"
+                                title="Limpiar y conservar UA original"
+                              >
+                                <span class="material-symbols-outlined text-xs">close</span>
+                              </button>
+                            }
+                          </div>
+                        </td>
+                        <td style="text-align: center;">
+                          @if (row.newUa.trim().length > 0) {
+                            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <span class="material-symbols-outlined text-[12px]">check</span>
+                              <span>Capturada</span>
+                            </span>
+                          } @else {
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-400 bg-slate-100 border border-slate-200">
+                              Sin cambio
+                            </span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- Resumen de Datos Clave del Folio (Modal Summary Box SDD) -->
+          <div class="modal-summary-box grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div>
-              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Cliente:</span>
-              <span class="modal-summary-val truncate block font-bold text-slate-900 dark:text-slate-100">{{ selectedReception()?.checkIn?.client }}</span>
+              <span class="modal-summary-label">Cliente:</span>
+              <span class="modal-summary-val truncate block" [title]="selectedReception()?.checkIn?.client">{{ selectedReception()?.checkIn?.client }}</span>
             </div>
             <div>
-              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Remisión / Factura:</span>
-              <span class="modal-summary-val font-mono font-bold text-slate-900 dark:text-slate-100">{{ selectedReception()?.checkIn?.docNumber || selectedReception()?.folio }}</span>
+              <span class="modal-summary-label">Remisión:</span>
+              <span class="modal-summary-val font-mono">{{ selectedReception()?.checkIn?.docNumber || selectedReception()?.folio }}</span>
             </div>
             <div>
-              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Tarimas Actuales:</span>
-              <span class="modal-summary-val font-bold text-amber-600 dark:text-amber-400">{{ totalTarimas() }} Tarimas registradas</span>
+              <span class="modal-summary-label">Tarimas Actuales:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ totalTarimas() }} UAs</span>
             </div>
             <div>
-              <span class="modal-summary-label text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Piezas Totales:</span>
-              <span class="modal-summary-val font-bold text-emerald-600 dark:text-emerald-400">{{ totalPiezas() }} Piezas</span>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ totalPiezas() }} PZAS</span>
             </div>
           </div>
 
           <!-- Mensaje de Error si aplica -->
           @if (reopenErrorMessage()) {
-            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+            <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 text-xs flex items-center gap-2">
               <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
               <span>{{ reopenErrorMessage() }}</span>
             </div>
           }
 
-          <!-- Motivo de reapertura obligatorio -->
+          <!-- Observaciones / Justificación de Auditoría Obligatoria -->
           <div class="space-y-1">
-            <label class="modal-field-label font-bold text-slate-800 dark:text-slate-200">
-              Motivo o Justificación Obligatoria de Reapertura <span class="text-rose-500 font-bold">*</span>
+            <label class="modal-field-label flex items-center justify-between">
+              <span>Motivo o Justificación de la Solicitud <span class="text-rose-500 font-bold">*</span></span>
+              <span class="text-[10px] font-normal text-slate-500">Registro para bitácora y auditoría SGC</span>
             </label>
             <textarea
               [ngModel]="reopenReason()"
               (ngModelChange)="reopenReason.set($event)"
               rows="2"
-              placeholder="Describe la justificación de la reapertura (ej. Se omitió 1 tarima física en andén por error operativo en descarga)..."
+              placeholder="Describe de forma general el motivo o justificación de esta acción operativa..."
               class="fg-input w-full text-xs font-medium"
             ></textarea>
           </div>
 
-          <!-- Credenciales del ADMIN / SUPERVISOR -->
-          <div class="pt-3 border-t border-subtle space-y-2.5">
-            <div class="modal-section-legend flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-slate-100">
-              <span class="material-symbols-outlined text-base text-amber-500">lock_person</span>
-              <span>Validación de Credenciales de Supervisor / Administrador</span>
+          <!-- Validación de Credenciales de Supervisor / Administrador -->
+          <div class="pt-2.5 border-t border-subtle space-y-2.5">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base text-amber-600">lock_person</span>
+              <span>Validación de Credenciales de Supervisor o Administrador</span>
             </div>
 
-            <div>
-              <label class="modal-field-label text-slate-700 dark:text-slate-300 font-semibold">Usuario / Correo Supervisor</label>
-              <div class="fg-input-icon-wrap">
-                <span class="material-symbols-outlined fg-input-icon-left">person</span>
-                <input
-                  type="text"
-                  [ngModel]="reopenAdminUser()"
-                  (ngModelChange)="reopenAdminUser.set($event)"
-                  placeholder="admin@4guard.com"
-                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
-                />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="modal-field-label">Usuario / Correo Supervisor o Admin <span class="text-rose-500 font-bold">*</span></label>
+                <div class="fg-input-icon-wrap">
+                  <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                  <input
+                    type="text"
+                    [ngModel]="reopenAdminUser()"
+                    (ngModelChange)="reopenAdminUser.set($event)"
+                    placeholder="supervisor@4guard.com"
+                    class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label class="modal-field-label text-slate-700 dark:text-slate-300 font-semibold">Contraseña de Supervisor / Admin <span class="text-rose-500 font-bold">*</span></label>
-              <div class="fg-input-icon-wrap">
-                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
-                <input
-                  [type]="showReopenPassword() ? 'text' : 'password'"
-                  [ngModel]="reopenAdminPassword()"
-                  (ngModelChange)="reopenAdminPassword.set($event)"
-                  (keyup.enter)="confirmReopenReception()"
-                  placeholder="Ingresa tu contraseña de autorización"
-                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
-                />
-                <button
-                  type="button"
-                  (click)="toggleShowReopenPassword()"
-                  class="fg-input-icon-right"
-                  title="Ver/Ocultar contraseña"
-                >
-                  <span class="material-symbols-outlined text-base">
-                    {{ showReopenPassword() ? 'visibility_off' : 'visibility' }}
-                  </span>
-                </button>
+              <div>
+                <label class="modal-field-label">Contraseña de Autorización <span class="text-rose-500 font-bold">*</span></label>
+                <div class="fg-input-icon-wrap">
+                  <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                  <input
+                    [type]="showReopenPassword() ? 'text' : 'password'"
+                    [ngModel]="reopenAdminPassword()"
+                    (ngModelChange)="reopenAdminPassword.set($event)"
+                    (keyup.enter)="confirmReopenReception()"
+                    placeholder="Contraseña de autorización"
+                    class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    (click)="toggleShowReopenPassword()"
+                    class="fg-input-icon-right"
+                    title="Ver/Ocultar contraseña"
+                  >
+                    <span class="material-symbols-outlined text-base">
+                      {{ showReopenPassword() ? 'visibility_off' : 'visibility' }}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Footer del Modal -->
-        <div class="modal-footer flex items-center justify-between p-4 border-t border-subtle bg-slate-50/50 dark:bg-slate-900/50">
+        <div class="modal-footer flex items-center justify-between">
           <button
             type="button"
             (click)="closeReopenModal()"
@@ -2566,10 +2968,14 @@
             type="button"
             (click)="confirmReopenReception()"
             [disabled]="isReopening()"
-            class="px-4 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-amber-500/25 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+            class="btn-primary-gold"
           >
-            <span class="material-symbols-outlined text-base">lock_open</span>
-            <span>{{ isReopening() ? 'Reabriendo...' : 'Confirmar Reapertura' }}</span>
+            <span class="material-symbols-outlined text-base">
+              {{ reopenActionType() === 'PALLET_SWAP' ? 'pallet' : reopenActionType() === 'MISSING_PALLETS' ? 'lock_open' : reopenActionType() === 'UA_SWAP' ? 'barcode_scanner' : 'edit_document' }}
+            </span>
+            <span>
+              {{ isReopening() ? 'Procesando...' : (reopenActionType() === 'PALLET_SWAP' ? 'Autorizar y Aplicar Retarimado' : reopenActionType() === 'MISSING_PALLETS' ? 'Autorizar y Reabrir Recepción' : reopenActionType() === 'UA_SWAP' ? 'Autorizar y Actualizar UAs' : 'Autorizar y Modificar Ficha') }}
+            </span>
           </button>
         </div>
 
@@ -2734,10 +3140,10 @@
       <div class="modal-card max-w-3xl w-full p-2.5 sm:p-3 space-y-2 max-h-[76vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
         
         <!-- Header en UNA SOLA FILA limpia sin salto -->
-        <div class="flex items-center justify-between gap-3 no-print border-b border-slate-200 dark:border-slate-800 pb-2 flex-shrink-0">
+        <div class="flex items-center justify-between gap-3 no-print border-b border-slate-300 dark:border-slate-800 pb-2 flex-shrink-0">
           <div class="flex items-center gap-2 min-w-0">
             <span class="material-symbols-outlined text-base shrink-0" [class.text-amber-500]="printType() === 'RECEPTION'" [class.text-rose-600]="printType() === 'CANCELLATION'">print</span>
-            <span class="font-black text-xs text-slate-800 dark:text-slate-100 uppercase tracking-wider truncate">
+            <span class="font-black text-xs text-slate-950 dark:text-slate-100 uppercase tracking-wider truncate">
               {{ printType() === 'RECEPTION' ? 'Pauta de Recepción' : 'Hoja de Cancelación' }}
             </span>
           </div>
@@ -2747,7 +3153,7 @@
               type="button"
               (click)="downloadDirectPdf()"
               [disabled]="isGeneratingPdf()"
-              class="btn-save text-xs px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all hover:scale-[1.02] whitespace-nowrap"
+              class="btn-primary-gold text-xs px-3.5 py-1.5 rounded-lg font-black flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all hover:scale-[1.02] whitespace-nowrap text-slate-950"
             >
               <span class="material-symbols-outlined text-sm">download</span>
               <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + (printType() === 'RECEPTION' ? 'Recepción #' : 'Cancelación #') + (selectedPrintReception()?.folio || 'Doc') + '.pdf)' }}</span>
@@ -2755,12 +3161,12 @@
             <button
               type="button"
               (click)="triggerBrowserPrint()"
-              class="btn-ghost text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 whitespace-nowrap"
+              class="btn-ghost text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 border border-slate-400 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-950 dark:text-slate-100 whitespace-nowrap"
             >
               <span class="material-symbols-outlined text-sm">print</span>
               <span>Imprimir</span>
             </button>
-            <button type="button" (click)="closePrintModal()" class="btn-ghost text-xs px-2.5 py-1.5 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">Cerrar</button>
+            <button type="button" (click)="closePrintModal()" class="btn-ghost text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">Cerrar</button>
           </div>
         </div>
 

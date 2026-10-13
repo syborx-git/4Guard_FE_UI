@@ -1324,8 +1324,8 @@
                     </div>
                   </td>
                   <td>
-                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'">
-                      {{ item.operationType || 'DESCARGA' }}
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'" class="whitespace-nowrap font-mono font-bold">
+                      {{ item.operationType || 'DESCARGA' }} #{{ item.generatedFolio || item.token }}
                     </span>
                   </td>
                   <td>
@@ -1358,7 +1358,12 @@
                     </span>
                   </td>
                   <td>
-                    @if (item.isReadyForExit) {
+                    @if (item.warehouseStatus === 'CANCELLED' || item.status === 'CANCELLED') {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-rose-100 text-rose-950 border border-rose-300">
+                        <span class="material-symbols-outlined text-sm text-rose-700">cancel</span>
+                        <span>Cancelado (Salida Autorizada)</span>
+                      </span>
+                    } @else if (item.isReadyForExit) {
                       <span class="cell-status-ready animate-pulse">
                         <span class="material-symbols-outlined text-sm text-emerald-800">verified</span>
                         <span>Autorizado / Listo Salida</span>
@@ -1396,11 +1401,11 @@
                         </button>
                       } @else {
                         <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-not-allowed select-none opacity-80"
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-not-allowed select-none opacity-80"
                           [title]="getWarehouseLockTooltip(item)"
                         >
                           <span class="material-symbols-outlined text-xs">lock</span>
-                          <span>{{ item.operacion === 'CARGA' || item.operationType === 'CARGA' ? 'En Carga' : 'En Descarga' }}</span>
+                          <span>{{ item.warehouseStatus === 'DISCHARGED' ? 'En Auditoría' : (item.operacion === 'CARGA' || item.operationType === 'CARGA' ? 'En Carga' : 'En Descarga') }}</span>
                         </span>
                       }
                     </div>
@@ -1878,18 +1883,19 @@
 ════════════════════════════════════════════════════════════════════════════ -->
 @if (showF01PrintModal() && currentPrintData()) {
   <div
-    class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-fade-in"
+    class="fixed top-16 inset-x-0 bottom-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 md:p-6 animate-fade-in"
     (click)="closeF01Print()"
   >
     <div
-      class="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col w-full max-w-[780px] max-h-[92vh] overflow-hidden text-slate-100 animate-scale-in"
+      class="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col w-full max-w-[760px] overflow-hidden text-slate-100 animate-scale-in"
+      style="max-height: min(75vh, 650px);"
       (click)="$event.stopPropagation()"
     >
       
       <!-- Top Action Bar (Document Inspector Toolbar) -->
-      <div class="px-4 py-3 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+      <div class="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
             <span class="material-symbols-outlined text-base">description</span>
           </div>
           <div class="min-w-0">
@@ -1932,7 +1938,7 @@
             (click)="closeF01Print()"
             class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer ml-1"
             aria-label="Cerrar visor F01"
-            title="Cerrar visor"
+            title="Cerrar visor (Esc)"
           >
             ✕
           </button>
