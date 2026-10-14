@@ -90,13 +90,50 @@ export class WarehouseLayoutService {
     });
   }
 
+  private readonly CLEAN_MODE_KEY = '4g_warehouse_clean_mode';
+  readonly isCleanMode = signal<boolean>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem('4g_warehouse_clean_mode') === 'true' : false
+  );
+
   loadAllPositions(sectionId?: string, status?: string, query?: string): void {
     if (!this.sessionStorageService.isLogged()) return;
     this._isLoadingAllPositions.set(true);
     this.repository.getAllPositions(sectionId, status, query).subscribe({
       next: (positions) => {
         this._isLoadingAllPositions.set(false);
-        this._allPositions.set(positions);
+        const sim = this.getSimulatedPositions();
+        const isClean = this.isCleanMode();
+
+        const processed = positions.map((pos) => {
+          // Si estamos en modo almacén limpio / ceros, arrancamos en 0
+          let base = isClean
+            ? {
+                ...pos,
+                currentTarimas: 0,
+                status: 'AVAILABLE' as PositionStatus,
+                skuDescription: 'Posición Disponible',
+                batchNumber: 'N/A',
+                blockReason: undefined,
+              }
+            : pos;
+
+          // Si tiene movimiento de recepción registrado, aplicarlo encima
+          const override = sim[pos.code.toUpperCase()];
+          if (override) {
+            return {
+              ...base,
+              currentTarimas: override.currentTarimas ?? base.currentTarimas,
+              skuDescription: override.skuDescription ?? base.skuDescription,
+              batchNumber: override.batchNumber ?? base.batchNumber,
+              status: (override.status as PositionStatus) ?? base.status,
+              lastMovement: override.lastMovement ?? base.lastMovement,
+              blockReason: override.blockReason ?? base.blockReason,
+            };
+          }
+          return base;
+        });
+
+        this._allPositions.set(processed);
       },
       error: (err) => {
         this._isLoadingAllPositions.set(false);
@@ -146,19 +183,163 @@ export class WarehouseLayoutService {
     });
   }
 
+  // ── SIMULADOR DE INVENTARIO INBOUND (CLIENT-SIDE) ──
+  private readonly SIM_STORAGE_KEY = '4g_simulated_bay_positions';
+
+  getSimulatedPositions(): Record<string, Partial<PositionDetail>> {
+    try {
+      const stored = localStorage.getItem(this.SIM_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  recordSimulatedInbound(
+    bayCode: string,
+    currentTarimas: number,
+    skuDesc?: string,
+    batchNumber?: string,
+    folio?: string
+  ): void {
+    if (!bayCode) return;
+    const cleanCode = bayCode.trim().toUpperCase();
+    const capacity = 22;
+    const tarimas = Number(currentTarimas);
+    const status: PositionStatus = tarimas >= capacity * 0.8 ? 'OCCUPIED' : (tarimas > 0 ? 'OCCUPIED' : 'AVAILABLE');
+
+    const currentSim = this.getSimulatedPositions();
+    currentSim[cleanCode] = {
+      code: cleanCode,
+      currentTarimas: tarimas,
+      capacityTarimas: capacity,
+      skuDescription: skuDesc || 'Mercancía General WMS',
+      batchNumber: batchNumber || 'LOT-2026-INBOUND',
+      status,
+      lastMovement: `Recepcionado vía ${folio || 'Inbound Express'} (${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`
+    };
+    try {
+      localStorage.setItem(this.SIM_STORAGE_KEY, JSON.stringify(currentSim));
+    } catch (e) {
+      console.warn('Could not persist to localStorage', e);
+    }
+
+    // Actualizar en cache de secciones
+    this._positionsCache.forEach((list) => {
+      const target = list.find(p => p.code.toUpperCase() === cleanCode);
+      if (target) {
+        target.currentTarimas = tarimas;
+        target.skuDescription = currentSim[cleanCode].skuDescription!;
+        target.batchNumber = currentSim[cleanCode].batchNumber!;
+        target.status = status;
+        target.lastMovement = currentSim[cleanCode].lastMovement!;
+      }
+    });
+
+    // Actualizar en _allPositions
+    const all = [...this._allPositions()];
+    const targetAll = all.find(p => p.code.toUpperCase() === cleanCode);
+    if (targetAll) {
+      targetAll.currentTarimas = tarimas;
+      targetAll.skuDescription = currentSim[cleanCode].skuDescription!;
+      targetAll.batchNumber = currentSim[cleanCode].batchNumber!;
+      targetAll.status = status;
+      targetAll.lastMovement = currentSim[cleanCode].lastMovement!;
+      this._allPositions.set(all);
+    }
+
+    this._positionsVersion.update(v => v + 1);
+  }
+
+  resetSimulatedPositions(): void {
+    try {
+      localStorage.removeItem(this.SIM_STORAGE_KEY);
+    } catch {}
+    this._positionsCache.clear();
+    this.loadTopology();
+    this.loadAllPositions();
+    this._positionsVersion.update(v => v + 1);
+  }
+
+  toggleCleanMode(): boolean {
+    const next = !this.isCleanMode();
+    this.setCleanMode(next);
+    return next;
+  }
+
+  setCleanMode(enabled: boolean): void {
+    try {
+      if (enabled) {
+        localStorage.setItem(this.CLEAN_MODE_KEY, 'true');
+      } else {
+        localStorage.removeItem(this.CLEAN_MODE_KEY);
+      }
+    } catch {}
+    this.isCleanMode.set(enabled);
+    this._positionsCache.clear();
+    this.loadTopology();
+    this.loadAllPositions();
+    this._positionsVersion.update(v => v + 1);
+  }
+
+  resetAllToZero(): void {
+    try {
+      localStorage.removeItem(this.SIM_STORAGE_KEY);
+      localStorage.setItem(this.CLEAN_MODE_KEY, 'true');
+    } catch {}
+    this.isCleanMode.set(true);
+    this._positionsCache.clear();
+    this.loadTopology();
+    this.loadAllPositions();
+    this._positionsVersion.update(v => v + 1);
+  }
+
   getPositionsForSection(sectionId: string): PositionDetail[] {
     this._positionsVersion();
 
+    let rawPositions: PositionDetail[] = [];
     if (this._positionsCache.has(sectionId)) {
-      return this._positionsCache.get(sectionId)!;
+      rawPositions = this._positionsCache.get(sectionId)!;
+    } else {
+      const sec = this._sections().find(s => s.id === sectionId || s.code === sectionId);
+      rawPositions = this._allPositions().filter((p) =>
+        p.sectionId === sectionId ||
+        (sec && (p.sectionName === sec.name || p.code.startsWith(`POS-${sec.code}-`)))
+      );
     }
 
-    const fromAll = this._allPositions().filter((p) => p.sectionId === sectionId);
-    if (fromAll.length > 0) {
-      return fromAll;
+    if (this.isCleanMode()) {
+      rawPositions = rawPositions.map(p => ({
+        ...p,
+        currentTarimas: 0,
+        status: 'AVAILABLE' as PositionStatus,
+        skuDescription: 'Posición Disponible',
+        batchNumber: 'N/A',
+        blockReason: undefined,
+      }));
     }
 
-    return [];
+    // Overlay de simulaciones activas
+    const sim = this.getSimulatedPositions();
+    if (Object.keys(sim).length > 0) {
+      return rawPositions.map(pos => {
+        const override = sim[pos.code.toUpperCase()];
+        if (override) {
+          return {
+            ...pos,
+            currentTarimas: override.currentTarimas ?? pos.currentTarimas,
+            skuDescription: override.skuDescription ?? pos.skuDescription,
+            batchNumber: override.batchNumber ?? pos.batchNumber,
+            status: (override.status as PositionStatus) ?? pos.status,
+            lastMovement: override.lastMovement ?? pos.lastMovement,
+            blockReason: override.blockReason ?? pos.blockReason,
+          };
+        }
+        return pos;
+      });
+    }
+
+    return rawPositions;
   }
 
   updatePositionStatus(
