@@ -141,9 +141,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['DAN-MILK-1L · Danone Entera'],
     notes: '181 Fijas · 40 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '',
-    labelPosition: { x: 0, y: 0 },
-    sublabelPosition: { x: 0, y: 0 }
+    polygonPoints: '588,166 692,145 694,328 694,378 588,378',
+    labelPosition: { x: 641, y: 245 },
+    sublabelPosition: { x: 641, y: 267 }
   },
   {
     id: 'sec-b',
@@ -192,9 +192,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['COFFEE-MATE ORIGINAL 12X640G N1MX'],
     notes: '132 Fijas · 35 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '',
-    labelPosition: { x: 0, y: 0 },
-    sublabelPosition: { x: 0, y: 0 }
+    polygonPoints: '650,378 702,378 702,520 650,520',
+    labelPosition: { x: 676, y: 440 },
+    sublabelPosition: { x: 676, y: 462 }
   },
   {
     id: 'sec-d',
@@ -209,9 +209,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '',
-    labelPosition: { x: 0, y: 0 },
-    sublabelPosition: { x: 0, y: 0 }
+    polygonPoints: '588,378 650,378 650,782 588,782',
+    labelPosition: { x: 619, y: 550 },
+    sublabelPosition: { x: 619, y: 572 }
   },
   {
     id: 'sec-j',
@@ -500,7 +500,13 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
   }
 
   private generateSeedPositionsForSection(sectionId: string): PositionDetail[] {
-    const section = SEED_SECTIONS.find(s => s.id === sectionId || s.code === sectionId) || SEED_SECTIONS[0];
+    const cleanCode = (sectionId || '').replace('SEC-ALM-', '').replace('sec-', '').trim().toUpperCase();
+    const section = SEED_SECTIONS.find(s =>
+      s.id === sectionId ||
+      s.code.toUpperCase() === sectionId.toUpperCase() ||
+      s.code.toUpperCase() === cleanCode ||
+      s.id.toLowerCase() === `sec-${cleanCode.toLowerCase()}`
+    ) || SEED_SECTIONS[0];
     const fixedCount = section.posFijas || 175;
     const tempCount = section.posTemp || 50;
     const preloadCount = section.posPreload || 4;
@@ -518,28 +524,45 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       let batchNumber = 'N/A';
       let blockReason: string | undefined = undefined;
 
-      // Nave F: Cuarentena QM con alertas críticas rojas
+      // 1. Posiciones Bloqueadas QM / Cuarentena (ROJO)
       if (zoneChar === 'F' && i <= 8) {
         status = 'BLOCKED';
         currentTarimas = 12;
         skuDesc = defaultSku;
         batchNumber = `LOT-2026-F${i.toString().padStart(2, '0')}`;
         blockReason = i % 2 === 0 ? 'Desviación de Embalaje / Cuarentena QM' : 'Dictamen de Auditoría Pendiente';
-      }
-      // Nave A, C, K, M: Ocupadas con alerta amarilla por saturación o libres
-      else if (['A', 'C', 'K', 'M'].includes(zoneChar) && i <= Math.min(fixedCount, 12)) {
-        status = 'OCCUPIED';
-        currentTarimas = 22; // 100% capacidad -> Alerta preventiva amarilla de saturación
-        skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}${i.toString().padStart(2, '0')}`;
-      }
-      // Alguna posición bloqueada esporádica (alerta roja)
-      else if (i === 5 && ['G', 'D', 'L'].includes(zoneChar)) {
+      } else if (i === 6 || (i % 23 === 0 && i < fixedCount - 5)) {
         status = 'BLOCKED';
-        currentTarimas = 0;
+        currentTarimas = 6;
         skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}05`;
-        blockReason = 'Caducidad Próxima / Bloqueo FSM';
+        batchNumber = `LOT-QM-${zoneChar}${posNum}`;
+        blockReason = 'Retención de Calidad / Cuarentena QM';
+      }
+      // 2. Posiciones Llenas / Alta Densidad 81% - 100% (AZUL ZAFIRO)
+      else if (i % 5 === 0 || i % 7 === 0) {
+        status = 'OCCUPIED';
+        currentTarimas = 22; // 100% Lleno
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
+      } else if (i % 9 === 0) {
+        status = 'OCCUPIED';
+        currentTarimas = 20; // 91% Lleno
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
+      }
+      // 3. Posiciones con Ocupación Media 31% - 80% (AMARILLO / ÁMBAR)
+      else if (i % 3 === 0 || i % 4 === 0) {
+        status = 'OCCUPIED';
+        currentTarimas = (i % 2 === 0) ? 14 : 11; // 50% - 64% Ocupación
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
+      }
+      // 4. Posiciones Libres / Baja Ocupación 0% - 30% (VERDE ESMERALDA)
+      else {
+        status = 'AVAILABLE';
+        currentTarimas = (i % 11 === 0) ? 4 : 0; // 0% - 18% Ocupación
+        skuDesc = (currentTarimas > 0) ? defaultSku : 'Sin Material Asignado';
+        batchNumber = (currentTarimas > 0) ? `LOT-2026-${zoneChar}${posNum}` : 'N/A';
       }
 
       list.push({
@@ -597,6 +620,23 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       });
     }
 
+    try {
+      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_simulated_bay_positions') : null;
+      if (stored) {
+        const overrides: Record<string, Partial<PositionDetail>> = JSON.parse(stored);
+        for (const item of list) {
+          const over = overrides[item.code.toUpperCase()];
+          if (over) {
+            item.currentTarimas = over.currentTarimas ?? item.currentTarimas;
+            item.skuDescription = over.skuDescription ?? item.skuDescription;
+            item.batchNumber = over.batchNumber ?? item.batchNumber;
+            item.status = (over.status as PositionStatus) ?? item.status;
+            item.lastMovement = over.lastMovement ?? item.lastMovement;
+          }
+        }
+      }
+    } catch {}
+
     return list;
   }
 
@@ -637,8 +677,8 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         mapByCode.set(b.code, {
           ...existing,
           id: b.id || existing.id,
-          status: b.status || existing.status,
-          currentTarimas: b.currentTarimas ?? existing.currentTarimas,
+          status: (b.currentTarimas && b.currentTarimas > 0) ? (b.status || existing.status) : existing.status,
+          currentTarimas: (b.currentTarimas !== undefined && b.currentTarimas !== null && b.currentTarimas > 0) ? b.currentTarimas : existing.currentTarimas,
           skuCode: b.skuCode || existing.skuCode,
           skuDescription: (b.skuDescription && b.skuDescription !== 'Sin Material Asignado') ? b.skuDescription : existing.skuDescription,
           batchNumber: b.batchNumber !== 'N/A' ? b.batchNumber : existing.batchNumber,
@@ -682,8 +722,8 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         mapByCode.set(b.code, {
           ...existing,
           id: b.id || existing.id,
-          status: b.status || existing.status,
-          currentTarimas: b.currentTarimas ?? existing.currentTarimas,
+          status: (b.currentTarimas && b.currentTarimas > 0) ? (b.status || existing.status) : existing.status,
+          currentTarimas: (b.currentTarimas !== undefined && b.currentTarimas !== null && b.currentTarimas > 0) ? b.currentTarimas : existing.currentTarimas,
           skuCode: b.skuCode || existing.skuCode,
           skuDescription: (b.skuDescription && b.skuDescription !== 'Sin Material Asignado') ? b.skuDescription : existing.skuDescription,
           batchNumber: b.batchNumber !== 'N/A' ? b.batchNumber : existing.batchNumber,

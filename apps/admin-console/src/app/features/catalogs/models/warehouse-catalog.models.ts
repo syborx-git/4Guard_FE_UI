@@ -23,6 +23,9 @@ export interface PositionDetail {
   batchNumber?: string;
   lastMovement?: string;
   blockReason?: string;
+  aisle?: string;
+  rack?: string;
+  level?: number;
 }
 
 export interface WarehouseSection {

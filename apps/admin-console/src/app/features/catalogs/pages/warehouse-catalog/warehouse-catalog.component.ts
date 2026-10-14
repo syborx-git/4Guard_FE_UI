@@ -68,6 +68,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
   protected readonly layoutService = inject(WarehouseLayoutService);
   private readonly ngZone = inject(NgZone);
+  protected readonly Math = Math;
 
   // ─── Sub-Pestañas & Vista ─────────────────────────────────────────────────
   protected readonly activeTab = signal<WarehouseSubTab>('topology');
@@ -100,6 +101,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly sectionSearchQuery    = signal<string>('');
   protected readonly sectionStatusFilter   = signal<'ALL' | 'OCCUPIED' | 'AVAILABLE' | 'BLOCKED'>('ALL');
   protected readonly sectionCategoryFilter = signal<'ALL' | 'FIXED' | 'TEMPORARY' | 'PRELOAD'>('ALL');
+  protected readonly selectedAisleFilter   = signal<string>('ALL');
   protected readonly isDetailPanelOpen     = computed(() => this.selectedSection() !== null);
 
   // ─── Zoom & Pan (Blueprint SVG) ──────────────────────────────────────────
@@ -107,6 +109,8 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   private panX = 0;
   private panY = 0;
   protected readonly panOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  protected readonly isTransitioning = signal<boolean>(false);
+  private transitionTimer?: any;
 
   private isPanning = false;
   private startX = 0;
@@ -125,6 +129,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   // ─── Capas del Croquis (Bahías y Conexión Topológica) ───────────────────
   protected readonly showBaysInBlueprint   = signal<boolean>(true);
   protected readonly showTransitRoutes     = signal<boolean>(true);
+  protected readonly isRadarCollapsed      = signal<boolean>(false);
   protected readonly hoveredSvgBay         = signal<SvgBayItem | null>(null);
   protected readonly activeHoveredCode     = signal<string | null>(null);
 
@@ -186,8 +191,19 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     const query     = this.sectionSearchQuery().trim().toLowerCase();
     const statusF   = this.sectionStatusFilter();
     const catF      = this.sectionCategoryFilter();
+    const aisleF    = this.selectedAisleFilter();
 
     return list.filter((pos) => {
+      // Filtro de Pasillo
+      if (aisleF !== 'ALL') {
+        const cleanAisle = aisleF.replace(/^P-/i, '').trim();
+        const matchesAisle = pos.aisle === aisleF ||
+          pos.aisle === cleanAisle ||
+          pos.code.includes(`-${cleanAisle}-`) ||
+          pos.code.includes(`-${aisleF}-`);
+        if (!matchesAisle) return false;
+      }
+
       // Filtro de Categoría
       if (catF === 'FIXED' && pos.category !== 'FIXED_STORAGE') return false;
       if (catF === 'TEMPORARY' && pos.category !== 'TEMPORARY_BUFFER') return false;
@@ -406,6 +422,25 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   });
 
   // ─── Computados: Red Topológica y Bahías SVG en Croquis ─────────────────
+  protected readonly currentSectionAisles = computed<Array<{ aisleCode: string; bayCount: number }>>(() => {
+    const sec = this.selectedSection();
+    if (!sec) return [];
+    const zone = this.zoneBayLayout().find(z => z.zoneCode === sec.code);
+    if (!zone) return [];
+    return zone.aisles.map(a => ({
+      aisleCode: a.aisleCode,
+      bayCount: a.slots.length
+    }));
+  });
+
+  protected selectAisle(aisleCode: string): void {
+    if (this.selectedAisleFilter() === aisleCode) {
+      this.selectedAisleFilter.set('ALL');
+    } else {
+      this.selectedAisleFilter.set(aisleCode);
+    }
+  }
+
   protected readonly sectionAisleRoutes = computed<SectionAisleRoute[]>(() =>
     this.zoneBayLayout().flatMap(zone =>
       zone.aisles.map(a => ({
@@ -501,6 +536,40 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
     return result;
   });
+
+  // ─── Mapa Térmico de Bahías (Estándar Internacional WMS) ────────────────
+  protected getBayHeatmapClass(bay: SvgBayItem): string {
+    // 1. Bloqueado QM / Cuarentena / Alerta Crítica -> ROJO
+    if (bay.status === 'BLOCKED' || bay.alertType === 'CRITICAL') {
+      return 'cad__bay-slot--heat-blocked';
+    }
+    // 2. Buffer Temporal -> MORADO
+    if (bay.category === 'TEMPORARY_BUFFER') {
+      return 'cad__bay-slot--heat-temp';
+    }
+    // 3. Precarga / Staging -> DORADO
+    if (bay.category === 'PRELOAD_STAGING') {
+      return 'cad__bay-slot--heat-preload';
+    }
+    // 4. Ocupación Proporcional (Estándar Logístico WMS)
+    const cap = bay.capacityTarimas || 22;
+    const curr = bay.currentTarimas || 0;
+    const ratio = cap > 0 ? (curr / cap) : 0;
+
+    if (curr === 0 || ratio === 0) {
+      // 0 Tarimas: Totalmente Vacío -> BLANCO TÉCNICO TRASLÚCIDO
+      return 'cad__bay-slot--heat-vacant';
+    } else if (ratio > 0.80) {
+      // 81% - 100%: Lleno / Alta Densidad -> AZUL ZAFIRO
+      return 'cad__bay-slot--heat-full';
+    } else if (ratio > 0.30) {
+      // 31% - 80%: Ocupación Media / Picking Activo -> AMARILLO / ÁMBAR
+      return 'cad__bay-slot--heat-medium';
+    } else {
+      // 1% - 30%: Libre con Baja Ocupación -> VERDE ESMERALDA
+      return 'cad__bay-slot--heat-empty';
+    }
+  }
 
   // ─── Control de Capas y Generador de Bahías ──────────────────────────────
   protected toggleBaysVisibility(): void {
@@ -667,9 +736,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const delta  = e.deltaY < 0 ? 0.1 : -0.1;
+      const delta  = e.deltaY < 0 ? 0.20 : -0.20;
       this.ngZone.run(() =>
-        this.zoomScale.update(s => Math.min(2.5, Math.max(0.5, +(s + delta).toFixed(2))))
+        this.zoomScale.update(s => Math.min(5.0, Math.max(0.4, +(s + delta).toFixed(2))))
       );
     };
 
@@ -686,13 +755,161 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     );
   }
 
-  // ─── Zoom controles ──────────────────────────────────────────────────────
-  protected zoomIn():   void { this.zoomScale.update(s => Math.min(2.5, +(s + 0.15).toFixed(2))); }
-  protected zoomOut():  void { this.zoomScale.update(s => Math.max(0.5, +(s - 0.15).toFixed(2))); }
-  protected resetView():void {
+  // ─── Zoom controles & Auto-Centrado Inteligente ─────────────────────────
+  protected zoomIn():   void { this.zoomScale.update(s => Math.min(5.0, +(s + 0.25).toFixed(2))); }
+  protected zoomOut():  void { this.zoomScale.update(s => Math.max(0.4, +(s - 0.25).toFixed(2))); }
+
+  protected setZoomLevel(scale: number): void {
+    this.isTransitioning.set(true);
+    if (this.transitionTimer) clearTimeout(this.transitionTimer);
+    this.zoomScale.set(scale);
+    this.transitionTimer = setTimeout(() => {
+      this.isTransitioning.set(false);
+    }, 450);
+  }
+
+  protected toggleRadar(): void {
+    this.isRadarCollapsed.update(v => !v);
+  }
+
+  protected getSectionOccupancyRate(sec: WarehouseSection): number {
+    const map: Record<string, number> = {
+      'A': 82, 'B': 65, 'C': 78, 'D': 91, 'E': 45, 'F': 88,
+      'G': 72, 'H': 60, 'I': 85, 'J': 68, 'K': 94, 'L': 79, 'M': 50,
+      'SEC-RAMP': 40, 'SEC-ALM': 25
+    };
+    return map[(sec.code || '').toUpperCase().trim()] || 70;
+  }
+
+  protected resetView(): void {
+    this.isTransitioning.set(true);
+    if (this.transitionTimer) clearTimeout(this.transitionTimer);
+
     this.zoomScale.set(1.0);
-    this.panX = 0; this.panY = 0;
+    this.panX = 0;
+    this.panY = 0;
     this.panOffset.set({ x: 0, y: 0 });
+
+    this.transitionTimer = setTimeout(() => {
+      this.isTransitioning.set(false);
+    }, 650);
+  }
+
+  protected getSectionBoundingBox(sec: WarehouseSection): { minX: number; maxX: number; minY: number; maxY: number; cx: number; cy: number; w: number; h: number } {
+    const pts = this.parsePolygon(sec.polygonPoints);
+    if (pts.length >= 3) {
+      const xs = pts.map(p => p[0]);
+      const ys = pts.map(p => p[1]);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      return {
+        minX,
+        maxX,
+        minY,
+        maxY,
+        cx: (minX + maxX) / 2,
+        cy: (minY + maxY) / 2,
+        w: Math.max(40, maxX - minX),
+        h: Math.max(40, maxY - minY)
+      };
+    }
+
+    // Coordenadas fijas de alta precisión de cada nave en el plano DXF (1000 x 888)
+    const code = (sec.code || '').toUpperCase().trim();
+    const fallbackBBoxes: Record<string, { cx: number; cy: number; w: number; h: number }> = {
+      'A': { cx: 844, cy: 536, w: 84,  h: 403 },
+      'B': { cx: 776, cy: 190, w: 169, h: 276 },
+      'C': { cx: 760, cy: 580, w: 100, h: 404 },
+      'D': { cx: 619, cy: 580, w: 62,  h: 262 },
+      'E': { cx: 384, cy: 751, w: 209, h: 122 },
+      'F': { cx: 654, cy: 580, w: 132, h: 404 },
+      'G': { cx: 127, cy: 263, w: 237, h: 258 },
+      'H': { cx: 227, cy: 70,  w: 74,  h: 125 },
+      'I': { cx: 439, cy: 453, w: 100, h: 474 },
+      'J': { cx: 317, cy: 483, w: 143, h: 414 },
+      'K': { cx: 640, cy: 262, w: 106, h: 233 },
+      'L': { cx: 538, cy: 474, w: 103, h: 616 },
+      'M': { cx: 676, cy: 449, w: 52,  h: 142 },
+      'SEC-RAMP': { cx: 680, cy: 818, w: 80, h: 73 },
+      'SEC-ALM':  { cx: 334, cy: 246, w: 109, h: 60 }
+    };
+
+    const fb = fallbackBBoxes[code] || {
+      cx: sec.labelPosition?.x || 500,
+      cy: sec.labelPosition?.y || 444,
+      w: 120,
+      h: 120
+    };
+
+    return {
+      minX: fb.cx - fb.w / 2,
+      maxX: fb.cx + fb.w / 2,
+      minY: fb.cy - fb.h / 2,
+      maxY: fb.cy + fb.h / 2,
+      cx: fb.cx,
+      cy: fb.cy,
+      w: fb.w,
+      h: fb.h
+    };
+  }
+
+  protected zoomToSection(section: WarehouseSection): void {
+    const bbox = this.getSectionBoundingBox(section);
+
+    const vpEl = this.blueprintContainerRef?.nativeElement.parentElement;
+    if (!vpEl) return;
+
+    const vpW = vpEl.clientWidth || 800;
+    const vpH = vpEl.clientHeight || 650;
+
+    // Relación de aspecto nativa del plano SVG (1000 x 888)
+    const SVG_VB_W = 1000;
+    const SVG_VB_H = 888;
+
+    const s_svg = Math.min(vpW / SVG_VB_W, vpH / SVG_VB_H);
+    const offsetX = (vpW - SVG_VB_W * s_svg) / 2;
+    const offsetY = (vpH - SVG_VB_H * s_svg) / 2;
+
+    const localX = offsetX + bbox.cx * s_svg;
+    const localY = offsetY + bbox.cy * s_svg;
+
+    // Escala dinámica especializada para apreciar naves, pasillos y bahías
+    const sizeInPxW = bbox.w * s_svg;
+    const sizeInPxH = bbox.h * s_svg;
+
+    const fitScaleW = (vpW * 0.65) / Math.max(30, sizeInPxW);
+    const fitScaleH = (vpH * 0.78) / Math.max(30, sizeInPxH);
+
+    let calculatedScale: number;
+    if (bbox.h > bbox.w * 2.2) {
+      // Nave vertical (ej: Sección A, Sección L) -> asegurar zoom nítido de pasillos y bahías
+      calculatedScale = Math.min(3.4, Math.max(2.25, fitScaleH * 1.25));
+    } else if (bbox.w > bbox.h * 1.8) {
+      // Nave horizontal (ej: Sección E)
+      calculatedScale = Math.min(3.4, Math.max(2.25, fitScaleW * 1.15));
+    } else {
+      calculatedScale = Math.min(3.6, Math.max(2.2, Math.min(fitScaleW, fitScaleH)));
+    }
+
+    const targetScale = +calculatedScale.toFixed(2);
+
+    const targetPanX = +(vpW / 2 - targetScale * localX).toFixed(1);
+    const targetPanY = +(vpH / 2 - targetScale * localY).toFixed(1);
+
+    this.isTransitioning.set(true);
+    if (this.transitionTimer) clearTimeout(this.transitionTimer);
+
+    this.panX = targetPanX;
+    this.panY = targetPanY;
+    this.panOffset.set({ x: targetPanX, y: targetPanY });
+    this.zoomScale.set(targetScale);
+    this.showBaysInBlueprint.set(true);
+
+    this.transitionTimer = setTimeout(() => {
+      this.isTransitioning.set(false);
+    }, 650);
   }
 
   // ─── Tooltip ─────────────────────────────────────────────────────────────
@@ -723,13 +940,27 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     this.selectedSection.set(section);
     this.sectionSearchQuery.set('');
     this.sectionStatusFilter.set('ALL');
+    this.selectedAisleFilter.set('ALL');
     this.inspectedPosition.set(null);
     this.layoutService.loadPositionsForSection(section.id);
+
+    // Zoom cinematográfico sincronizado tras el reflow del layout
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        this.zoomToSection(section);
+      }, 60);
+    });
   }
 
   protected closeSectionDetail(): void {
     this.selectedSection.set(null);
     this.inspectedPosition.set(null);
+    this.selectedAisleFilter.set('ALL');
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        this.resetView();
+      }, 40);
+    });
   }
 
   // ─── Inspector de Posición (Modal FSM) ────────────────────────────────────
@@ -974,6 +1205,103 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
           this.closeInspector();
         }
       });
+    }
+  }
+
+  // ─── SIMULADOR DE RECEPCIÓN INBOUND RÁPIDO ────────────────────────────────
+  protected readonly isSimulateModalOpen = signal<boolean>(false);
+  protected readonly simZone = signal<string>('A');
+  protected readonly simBayCode = signal<string>('POS-A-010');
+  protected readonly simTarimas = signal<number>(14);
+  protected readonly simSku = signal<string>('NESCAFE CLASICO 48x200g');
+  protected readonly simLot = signal<string>('LOT-2026-REC-01');
+  protected readonly simFolio = signal<string>('REC-2026-000042');
+  protected readonly hasSimulatedPositions = computed(() => {
+    this.layoutService.allPositions();
+    return Object.keys(this.layoutService.getSimulatedPositions()).length > 0;
+  });
+
+  protected openSimulateModal(defaultBay?: string, defaultZone?: string): void {
+    const sec = this.selectedSection();
+    if (defaultZone) {
+      this.simZone.set(defaultZone);
+    } else if (sec) {
+      this.simZone.set(this.extractZoneLetter(sec));
+    }
+    if (defaultBay) {
+      this.simBayCode.set(defaultBay);
+    } else {
+      this.simBayCode.set(`POS-${this.simZone()}-010`);
+    }
+    this.isSimulateModalOpen.set(true);
+  }
+
+  protected closeSimulateModal(): void {
+    this.isSimulateModalOpen.set(false);
+  }
+
+  protected onSimZoneChange(zone: string): void {
+    this.simZone.set(zone);
+    this.simBayCode.set(`POS-${zone}-010`);
+  }
+
+  protected executeSimulatedInbound(): void {
+    const bay = this.simBayCode().trim().toUpperCase();
+    const tarimas = Number(this.simTarimas()) || 14;
+    const sku = this.simSku().trim();
+    const lot = this.simLot().trim();
+    const folio = this.simFolio().trim();
+
+    this.layoutService.recordSimulatedInbound(bay, tarimas, sku, lot, folio);
+    this.closeSimulateModal();
+
+    const zoneMatch = bay.match(/POS-([A-Za-z]+)-/i);
+    const zoneLetter = zoneMatch ? zoneMatch[1].toUpperCase() : this.simZone();
+    const targetSec = this.sections().find(s =>
+      s.code.toUpperCase().includes(zoneLetter) ||
+      s.name.toUpperCase().includes(`ALMACÉN ${zoneLetter}`)
+    );
+
+    if (targetSec) {
+      if (!this.selectedSection() || this.selectedSection()?.id !== targetSec.id) {
+        this.openSectionDetail(targetSec);
+      } else {
+        this.layoutService.loadPositionsForSection(targetSec.id);
+      }
+    }
+
+    this.activeHoveredCode.set(bay);
+    setTimeout(() => {
+      const bayItem = this.svgBays().find(b => b.code.toUpperCase() === bay);
+      if (bayItem) {
+        this.onSvgBayClick(bayItem, new MouseEvent('click'));
+      }
+    }, 450);
+  }
+
+  protected readonly isCleanMode = this.layoutService.isCleanMode;
+
+  protected resetAllSimulations(): void {
+    this.layoutService.resetSimulatedPositions();
+    const cur = this.selectedSection();
+    if (cur) {
+      this.layoutService.loadPositionsForSection(cur.id);
+    }
+  }
+
+  protected toggleCleanMode(): void {
+    this.layoutService.toggleCleanMode();
+    const cur = this.selectedSection();
+    if (cur) {
+      this.layoutService.loadPositionsForSection(cur.id);
+    }
+  }
+
+  protected resetAllToZero(): void {
+    this.layoutService.resetAllToZero();
+    const cur = this.selectedSection();
+    if (cur) {
+      this.layoutService.loadPositionsForSection(cur.id);
     }
   }
 

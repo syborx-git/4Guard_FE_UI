@@ -35,6 +35,7 @@ import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../s
 import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
 import { QualityStateService } from '../../../quality/services/quality-state.service';
+import { WarehouseLayoutService } from '../../../catalogs/services/warehouse-layout.service';
 import { UnitOfMeasure } from '@4guard/shared-core';
 
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
@@ -64,6 +65,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly qualityState = inject(QualityStateService);
+  private readonly layoutService = inject(WarehouseLayoutService);
   private readonly smartNotification = inject(SmartNotificationService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
@@ -2253,6 +2255,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
       };
       this.selectedReception.set(updatedRec);
 
+      // Sincronizar de inmediato con el catálogo/croquis 2D
+      if (targetBay && !targetBay.startsWith('LOC-RAMP') && targetBay !== 'Buffer Temporal') {
+        const pCount = (currentRec.pallets || []).length || 14;
+        const pSku = currentRec.productName || this.altaForm.value.productName || 'Mercancía Asignada';
+        const pLot = currentRec.lotNumber || this.altaForm.value.lotNumber || 'LOT-2026';
+        this.layoutService.recordSimulatedInbound(targetBay, pCount, pSku, pLot, currentRec.folio);
+      }
+
       // Registrar explícitamente en la línea de tiempo de auditoría
       const auditAction = isReallocation ? 'BAHIA_REUBICADA' : 'BAHIA_MODIFICADA';
       const actionLabel = isReallocation 
@@ -2773,6 +2783,21 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.printType.set('RECEPTION');
           this.showPrintModal.set(true);
           this.movementsService.reloadReceptions();
+
+          // Sincronización con el Catálogo y Croquis 2D
+          const assignedBay = formVals.storageLocation || (formVals as any)?.storageLocationCode || this.selectedBayName();
+          if (assignedBay && !assignedBay.startsWith('LOC-RAMP') && assignedBay !== 'Buffer Temporal') {
+            const skuName = formVals.productName || rec.productName || 'Mercancía Recepcionada';
+            const lotNum = formVals.lotNumber || rec.lotNumber || 'LOT-2026';
+            this.layoutService.recordSimulatedInbound(
+              assignedBay,
+              enrichedPallets.length || 14,
+              skuName,
+              lotNum,
+              rec.folio
+            );
+          }
+
           this.toast.success(`Recepción #${rec.folio} autorizada y cerrada exitosamente. Guardada en la base de datos.`);
         },
         error: (err) => {
