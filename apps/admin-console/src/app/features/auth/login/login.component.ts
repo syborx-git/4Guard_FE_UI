@@ -328,6 +328,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     window.location.href = 'mailto:soporte@4guard.com?subject=Desbloqueo de Cuenta 4GUARD WMS';
   }
 
+
+
   ngOnDestroy(): void {
     this.clearLockCountdown();
   }

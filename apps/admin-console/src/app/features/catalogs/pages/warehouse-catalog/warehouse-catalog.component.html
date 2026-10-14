@@ -190,11 +190,116 @@
 
       <!-- Barra de Chips de Secciones -->
       <div class="wmap__sections-bar">
-        <div class="wmap__sections-label">
-          <span class="material-symbols-outlined">grid_view</span>
-          <span>Secciones:</span>
+        <div class="wmap__sections-header">
+          <div class="wmap__sections-label">
+            <span class="material-symbols-outlined text-[17px]">grid_view</span>
+            <span>SECCIONES DEL ALMACÉN</span>
+            <span class="wmap__sections-count">({{ sections().length }})</span>
+          </div>
+
+          <div class="wmap__actions-bar">
+            <button
+              type="button"
+              class="wmap__layer-toggle"
+              [class.wmap__layer-toggle--active]="showBaysInBlueprint()"
+              (click)="toggleBaysVisibility()"
+              title="Activar o desactivar visualización de bahías físicas en el plano"
+            >
+              <span class="material-symbols-outlined text-[16px]">inventory_2</span>
+              <span>Bahías {{ showBaysInBlueprint() ? 'Visibles' : 'Ocultas' }}</span>
+            </button>
+
+            <button
+              type="button"
+              class="wmap__layer-toggle"
+              [class.wmap__layer-toggle--active]="showTransitRoutes()"
+              (click)="toggleTransitVisibility()"
+              title="Mostrar u ocultar rutas de conexión y tránsito de montacargas"
+            >
+              <span class="material-symbols-outlined text-[16px]">alt_route</span>
+              <span>Rutas Conectadas</span>
+            </button>
+
+            <button
+              type="button"
+              class="wmap__gen-btn"
+              (click)="openBayGenerator()"
+              title="Generador paramétrico de bahías conectadas"
+            >
+              <span class="material-symbols-outlined text-[16px]">schema</span>
+              <span>+ Generar Bahías</span>
+            </button>
+
+
+            <!-- Botón Limpiar Almacén / Modo en Ceros -->
+            @if (isCleanMode()) {
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-lg border border-sky-400 bg-sky-950/60 text-sky-300 font-semibold text-xs flex items-center gap-1.5 shadow-sm hover:bg-sky-900/80 transition-all"
+                (click)="toggleCleanMode()"
+                title="Modo Ceros Activo: Solo se pintan los racks recepcionados. Clic para volver a datos demo"
+              >
+                <span class="material-symbols-outlined text-[15px]">cleaning_services</span>
+                <span>Almacén en Ceros (Activo)</span>
+              </button>
+
+              <button
+                type="button"
+                class="px-2.5 py-1.5 rounded-lg border border-red-500/30 bg-red-950/40 text-red-300 font-medium text-xs flex items-center gap-1 hover:bg-red-900/60 transition-all"
+                (click)="resetAllToZero()"
+                title="Borrar todas las recepciones y dejar absolutamente todos los racks en blanco"
+              >
+                <span class="material-symbols-outlined text-[14px]">delete_sweep</span>
+                <span>Vaciar Todo</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-lg border border-white/20 bg-slate-800/80 text-slate-200 font-semibold text-xs flex items-center gap-1.5 hover:border-sky-400 hover:text-sky-300 hover:bg-slate-800 transition-all"
+                (click)="resetAllToZero()"
+                title="Poner todos los racks en blanco (0 tarimas) para que se llenen conforme recepciones en vivo"
+              >
+                <span class="material-symbols-outlined text-[15px]">cleaning_services</span>
+                <span>🧹 Iniciar en Ceros (Modo Real)</span>
+              </button>
+            }
+
+            @if (hasSimulatedPositions()) {
+              <button
+                type="button"
+                class="wmap__reset-sim-btn"
+                (click)="resetAllSimulations()"
+                title="Restablecer bahías simuladas a valores originales"
+              >
+                <span class="material-symbols-outlined text-[15px]">restart_alt</span>
+                <span>Restablecer</span>
+              </button>
+            }
+
+            <div class="wmap__legend" aria-label="Simbología del mapa térmico">
+              <span class="wmap__legend-item" title="Bahía totalmente libre (0 tarimas)">
+                <span class="wmap__legend-dot wmap__legend-dot--vacant"></span>Vacío (0 T)
+              </span>
+              <span class="wmap__legend-item" title="Capacidad disponible (1% - 30%)">
+                <span class="wmap__legend-dot wmap__legend-dot--empty"></span>Baja (1-30%)
+              </span>
+              <span class="wmap__legend-item" title="Ocupación media operativa (31% - 80%)">
+                <span class="wmap__legend-dot wmap__legend-dot--medium"></span>Medio (31-80%)
+              </span>
+              <span class="wmap__legend-item" title="Capacidad completa / saturado (81% - 100%)">
+                <span class="wmap__legend-dot wmap__legend-dot--full"></span>Lleno (81-100%)
+              </span>
+              <span class="wmap__legend-item" title="Bloqueado por Control de Calidad / Cuarentena QM">
+                <span class="wmap__legend-dot wmap__legend-dot--blocked"></span>Bloqueado QM
+              </span>
+              <span class="wmap__legend-item" title="Buffer temporal de descarga">
+                <span class="wmap__legend-dot wmap__legend-dot--temp"></span>Buffer
+              </span>
+            </div>
+          </div>
         </div>
-        <div class="wmap__chips">
+
+        <div class="wmap__chips-track">
           @for (sec of sections(); track sec.id) {
             <button
               type="button"
@@ -213,11 +318,6 @@
             </button>
           }
         </div>
-        <div class="wmap__legend">
-          <span class="wmap__legend-item"><span class="wmap__legend-dot wmap__legend-dot--active"></span>Activo</span>
-          <span class="wmap__legend-item"><span class="wmap__legend-dot wmap__legend-dot--pending"></span>Pendiente</span>
-          <span class="wmap__legend-item"><span class="wmap__legend-dot wmap__legend-dot--selected"></span>Seleccionado</span>
-        </div>
       </div>
 
       <!-- Contenedor Principal del Mapa -->
@@ -225,13 +325,212 @@
 
         <!-- Viewport / Blueprint SVG -->
         <div class="wmap__viewport" (mousemove)="onPolygonMouseMove($event)">
+
+          <!-- Corner Reticles CAD Engineering Touch -->
+          <div class="cad__viewfinder cad__viewfinder--tl"></div>
+          <div class="cad__viewfinder cad__viewfinder--tr"></div>
+          <div class="cad__viewfinder cad__viewfinder--bl"></div>
+          <div class="cad__viewfinder cad__viewfinder--br"></div>
+
+          <!-- HUD Flotante Izquierdo: Radar de Naves y Ocupación en Vivo -->
+          <div
+            class="wmap__hud-left-panel"
+            [class.wmap__hud-left-panel--collapsed]="isRadarCollapsed()"
+            [class.wmap__hud-left-panel--active-sec]="selectedSection() !== null"
+          >
+            <div class="wmap__hud-lp-header">
+              <div class="wmap__hud-lp-title">
+                <span class="wmap__radar-pulse"></span>
+                @if (!isRadarCollapsed()) {
+                  <span class="wmap__hud-lp-text">Radar de Naves</span>
+                  <span class="wmap__hud-lp-tag">{{ sections().length }}</span>
+                }
+              </div>
+              <button
+                type="button"
+                class="wmap__hud-lp-toggle"
+                (click)="toggleRadar()"
+                [title]="isRadarCollapsed() ? 'Expandir Radar de Naves' : 'Minimizar Radar'"
+              >
+                <span class="material-symbols-outlined text-sm">
+                  {{ isRadarCollapsed() ? 'chevron_right' : 'chevron_left' }}
+                </span>
+              </button>
+            </div>
+
+            @if (!isRadarCollapsed()) {
+              <div class="wmap__hud-lp-list">
+                @for (sec of sections(); track sec.id) {
+                  <button
+                    type="button"
+                    class="wmap__hud-lp-item"
+                    [class.wmap__hud-lp-item--selected]="selectedSection()?.id === sec.id"
+                    (click)="openSectionDetail(sec)"
+                    [title]="'Centrar y ver detalle de ' + sec.name"
+                  >
+                    <div class="wmap__hud-lp-item-left">
+                      <span class="wmap__hud-lp-badge" [class.wmap__hud-lp-badge--active]="sec.status === 'LOADED'">
+                        {{ sec.code }}
+                      </span>
+                      <div class="wmap__hud-lp-item-info">
+                        <span class="wmap__hud-lp-item-name">{{ sec.name }}</span>
+                        <div class="wmap__hud-lp-progress-bar">
+                          <div
+                            class="wmap__hud-lp-progress-fill"
+                            [style.width.%]="getSectionOccupancyRate(sec)"
+                            [class.wmap__hud-lp-progress-fill--high]="getSectionOccupancyRate(sec) > 85"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="wmap__hud-lp-item-right">
+                      <span class="wmap__hud-lp-pct">{{ getSectionOccupancyRate(sec) }}%</span>
+                      <span class="wmap__hud-lp-sub">{{ sec.posFijas }} pos</span>
+                    </div>
+                  </button>
+                }
+              </div>
+
+              <div class="wmap__hud-lp-footer">
+                <span class="wmap__hud-lp-footer-dot"></span>
+                <span>1,702 Posiciones Totales · En Vivo</span>
+              </div>
+            }
+          </div>
+
+          <!-- HUD Flotante Derecho: Capas CAD & Telemetría (visible cuando NO hay nave seleccionada) -->
+          @if (!selectedSection()) {
+            <div class="wmap__hud-right-panel animate-fade-in">
+              <div class="wmap__hud-rp-header">
+                <div class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px] text-[#fbbf24]">layers</span>
+                  <span class="wmap__hud-rp-title">Capas CAD & Telemetría</span>
+                </div>
+                <span class="wmap__hud-rp-chip">DXF v2.4</span>
+              </div>
+
+              <!-- Atajos de Zoom Rápido -->
+              <div class="wmap__hud-rp-section">
+                <span class="wmap__hud-rp-label">Presets de Zoom</span>
+                <div class="wmap__hud-rp-presets">
+                  <button type="button" class="wmap__hud-rp-zoom-btn" (click)="setZoomLevel(0.85)">85%</button>
+                  <button type="button" class="wmap__hud-rp-zoom-btn" (click)="setZoomLevel(1.0)">100%</button>
+                  <button type="button" class="wmap__hud-rp-zoom-btn" (click)="setZoomLevel(1.5)">150%</button>
+                  <button type="button" class="wmap__hud-rp-zoom-btn" (click)="setZoomLevel(2.2)">220%</button>
+                  <button type="button" class="wmap__hud-rp-zoom-btn wmap__hud-rp-zoom-btn--fit" (click)="resetView()">
+                    <span class="material-symbols-outlined text-xs">fit_screen</span> Ajustar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Capas Activas -->
+              <div class="wmap__hud-rp-section">
+                <span class="wmap__hud-rp-label">Capas del Blueprint</span>
+                <div class="wmap__hud-rp-toggles">
+                  <button
+                    type="button"
+                    class="wmap__hud-rp-toggle-row"
+                    [class.is-active]="showBaysInBlueprint()"
+                    (click)="toggleBaysVisibility()"
+                  >
+                    <span class="material-symbols-outlined text-sm">grid_view</span>
+                    <span>Bahías & Racks</span>
+                    <span class="wmap__hud-rp-status-indicator"></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="wmap__hud-rp-toggle-row"
+                    [class.is-active]="showTransitRoutes()"
+                    (click)="toggleTransitVisibility()"
+                  >
+                    <span class="material-symbols-outlined text-sm">alt_route</span>
+                    <span>Rutas de Tráfico</span>
+                    <span class="wmap__hud-rp-status-indicator"></span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Ficha Técnica SCADA -->
+              <div class="wmap__hud-rp-section">
+                <span class="wmap__hud-rp-label">Ficha Técnica Planta</span>
+                <div class="wmap__hud-rp-specs">
+                  <div class="wmap__hud-rp-spec-item">
+                    <span>Superficie Total:</span>
+                    <strong>28,450 m²</strong>
+                  </div>
+                  <div class="wmap__hud-rp-spec-item">
+                    <span>Altura Libre:</span>
+                    <strong>12.50 m</strong>
+                  </div>
+                  <div class="wmap__hud-rp-spec-item">
+                    <span>Andenes / Docks:</span>
+                    <strong>14 Cortinas</strong>
+                  </div>
+                  <div class="wmap__hud-rp-spec-item">
+                    <span>Protección Incendio:</span>
+                    <strong>ESFR K-25</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Acción Generador Directo -->
+              <button
+                type="button"
+                class="wmap__hud-rp-action-btn"
+                (click)="openBayGenerator()"
+              >
+                <span class="material-symbols-outlined text-sm">schema</span>
+                <span>Generar Bahías Paramétricas</span>
+              </button>
+            </div>
+          }
+
+          <!-- HUD Flotante de Nave Seleccionada (Auto-Zoom & Control) -->
+          @if (selectedSection(); as activeSec) {
+            <div class="wmap__active-hud animate-fade-in">
+              <div class="wmap__hud-left">
+                <span class="wmap__hud-badge">{{ activeSec.code }}</span>
+                <div class="wmap__hud-info">
+                  <div class="wmap__hud-title-row">
+                    <span class="wmap__hud-name">{{ activeSec.name }}</span>
+                    <span class="wmap__hud-status-dot"></span>
+                  </div>
+                  <span class="wmap__hud-meta">
+                    {{ activeSec.category }} · {{ activeSec.posFijas }} Bahías · {{ activeSec.capacidadTarimas | number }} Tarimas
+                  </span>
+                </div>
+              </div>
+              <div class="wmap__hud-actions">
+                <button
+                  type="button"
+                  class="wmap__hud-btn"
+                  (click)="zoomToSection(activeSec)"
+                  title="Re-centrar la cámara en esta nave"
+                >
+                  <span class="material-symbols-outlined text-[15px]">center_focus_strong</span>
+                  <span>Centrar</span>
+                </button>
+                <button
+                  type="button"
+                  class="wmap__hud-btn wmap__hud-btn--reset"
+                  (click)="closeSectionDetail()"
+                  title="Volver a la vista general de todo el almacén"
+                >
+                  <span class="material-symbols-outlined text-[15px]">zoom_out_map</span>
+                  <span>Ver Almacén Completo</span>
+                </button>
+              </div>
+            </div>
+          }
+
           <div
             #blueprintContainer
             class="wmap__blueprint-pan"
+            [class.is-animating]="isTransitioning()"
             [style.cursor]="'grab'"
             [style.transform]="'translate(' + panOffset().x + 'px, ' + panOffset().y + 'px) scale(' + zoomScale() + ')'"
           >
-            <svg viewBox="0 0 1000 870" class="wmap__svg" aria-label="Plano de distribución del almacén">
+            <svg viewBox="0 0 1000 888" class="wmap__svg" aria-label="Plano de distribución del almacén">
               <defs>
                 <!-- Grid de fondo tipo papel milimetrado -->
                 <pattern id="bg-grid-cat" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -276,96 +575,48 @@
               </defs>
 
               <!-- Capa 0: Fondo de papel técnico -->
-              <rect width="1000" height="870" fill="#0a1018"/>
-              <rect width="1000" height="870" fill="url(#bg-grid-fine)"/>
-              <rect width="1000" height="870" fill="url(#bg-grid-cat)"/>
+              <rect width="1000" height="888" fill="#0a1018"/>
+              <rect width="1000" height="888" fill="url(#bg-grid-fine)"/>
+              <rect width="1000" height="888" fill="url(#bg-grid-cat)"/>
 
-              <!-- Capa 1: Perímetro del Edificio Industrial -->
-              <g class="cad__building-layer" filter="url(#building-shadow)">
-                <!-- Muro exterior principal del complejo -->
-                <polygon
-                  points="258,120 980,120 980,845 258,845"
-                  class="cad__building-wall"
-                />
-                <!-- Muro exterior ala oeste -->
-                <polygon
-                  points="258,120 600,120 600,845 258,845"
-                  class="cad__building-wall-inner"
-                />
-              </g>
+              <!-- Capa 1: Plano base fiel al DXF "#Layout Almacen principal.dxf" (muros, columnas, cortinas, rampas, oficinas y textos) -->
+              <image href="assets/layout_almacen_principal.svg" x="0" y="0" width="1000" height="887.27" preserveAspectRatio="none" class="cad__base-plan"/>
 
-              <!-- Capa 2: Dimensiones y Cotas Perimetrales -->
-              <g class="cad__dimensions-layer">
-                <!-- Cota horizontal superior -->
-                <line x1="258" y1="105" x2="980" y2="105" class="cad__dim-line"/>
-                <line x1="258" y1="100" x2="258" y2="110" class="cad__dim-tick"/>
-                <line x1="980" y1="100" x2="980" y2="110" class="cad__dim-tick"/>
-                <text x="619" y="100" class="cad__dim-text">144.4 m</text>
+              <!-- Capa 4.5: Pasillos de Interconexión de Baterías (Feeder Routes) -->
+              @if (showTransitRoutes()) {
+                <g class="cad__feeder-layer">
+                  @for (route of sectionAisleRoutes(); track route.aisleCode) {
+                    <!-- Eje central del pasillo de la batería de racks -->
+                    <line
+                      [attr.x1]="route.x1" [attr.y1]="route.y1"
+                      [attr.x2]="route.x2" [attr.y2]="route.y2"
+                      class="cad__feeder-lane"
+                      vector-effect="non-scaling-stroke"
+                      [class.cad__feeder-lane--selected]="selectedSection()?.code === route.sectionCode"
+                    />
+                    <!-- Enlace topológico al corredor principal de tráfico -->
+                    <line
+                      [attr.x1]="route.x2" [attr.y1]="route.y2"
+                      [attr.x2]="route.mainCorridorTarget.x" [attr.y2]="route.mainCorridorTarget.y"
+                      class="cad__feeder-junction"
+                      vector-effect="non-scaling-stroke"
+                    />
+                    <!-- Marcador visual del Pasillo (Aisle badge) -->
+                    <g class="cad__aisle-marker" [class.cad__aisle-marker--selected]="selectedSection()?.code === route.sectionCode">
+                      <rect [attr.x]="route.x1 - 10" [attr.y]="route.y1 - 11" width="20" height="9" rx="2" class="cad__aisle-marker-bg"/>
+                      <text [attr.x]="route.x1" [attr.y]="route.y1 - 4" class="cad__aisle-marker-text">{{ route.aisleCode.split('-').pop() }}</text>
+                    </g>
+                  }
+                </g>
+              }
 
-                <!-- Cota vertical derecha -->
-                <line x1="993" y1="120" x2="993" y2="845" class="cad__dim-line"/>
-                <line x1="988" y1="120" x2="998" y2="120" class="cad__dim-tick"/>
-                <line x1="988" y1="845" x2="998" y2="845" class="cad__dim-tick"/>
-                <text x="996" y="490" class="cad__dim-text cad__dim-text--vertical" transform="rotate(90, 996, 490)">145.0 m</text>
-              </g>
-
-              <!-- Capa 3: Rampas de Carga / Docks -->
-              <g class="cad__docks-layer">
-                <!-- Rampa 1 (Norte – Almacén A) -->
-                <rect x="900" y="125" width="40" height="30" rx="2" class="cad__dock"/>
-                <rect x="900" y="125" width="40" height="30" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="920" y="144" class="cad__dock-label">R1</text>
-
-                <!-- Rampa 2 (Este – Almacén A) -->
-                <rect x="942" y="330" width="35" height="30" rx="2" class="cad__dock"/>
-                <rect x="942" y="330" width="35" height="30" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="959" y="349" class="cad__dock-label">R2</text>
-
-                <!-- Rampa 3 (Este – Almacén I) -->
-                <rect x="942" y="420" width="35" height="30" rx="2" class="cad__dock"/>
-                <rect x="942" y="420" width="35" height="30" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="959" y="439" class="cad__dock-label">R3</text>
-
-                <!-- Rampa 4 (Sur – Almacén L) -->
-                <rect x="750" y="847" width="40" height="25" rx="2" class="cad__dock"/>
-                <rect x="750" y="847" width="40" height="25" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="770" y="863" class="cad__dock-label">R4</text>
-
-                <!-- Rampa 5 (Sur – Almacén L) -->
-                <rect x="680" y="847" width="40" height="25" rx="2" class="cad__dock"/>
-                <rect x="680" y="847" width="40" height="25" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="700" y="863" class="cad__dock-label">R5</text>
-
-                <!-- Rampas 6, 7, 8 (Suroeste – Almacén E) -->
-                <rect x="310" y="847" width="35" height="25" rx="2" class="cad__dock"/>
-                <rect x="310" y="847" width="35" height="25" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="327" y="863" class="cad__dock-label">R6</text>
-
-                <rect x="370" y="847" width="35" height="25" rx="2" class="cad__dock"/>
-                <rect x="370" y="847" width="35" height="25" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="387" y="863" class="cad__dock-label">R7</text>
-
-                <rect x="430" y="847" width="35" height="25" rx="2" class="cad__dock"/>
-                <rect x="430" y="847" width="35" height="25" fill="url(#hazard-stripe)" rx="2"/>
-                <text x="447" y="863" class="cad__dock-label">R8</text>
-              </g>
-
-              <!-- Capa 4: Carriles de Tráfico de Montacargas -->
-              <g class="cad__traffic-layer">
-                <!-- Pasillo central horizontal -->
-                <line x1="270" y1="370" x2="790" y2="370" class="cad__traffic-lane"/>
-                <!-- Pasillo central vertical -->
-                <line x1="595" y1="130" x2="595" y2="840" class="cad__traffic-lane"/>
-                <!-- Pasillo este vertical -->
-                <line x1="790" y1="130" x2="790" y2="840" class="cad__traffic-lane"/>
-                <!-- Pasillo sur -->
-                <line x1="270" y1="665" x2="595" y2="665" class="cad__traffic-lane"/>
-              </g>
-
-              <!-- Capa 5: Naves del Almacén (dinámicas del backend) -->
-              <g id="zonesLayerCat">
+              <!-- Capa 5: Naves del Almacén (13 Naves CAD) -->
+              <g id="zonesLayerCat" [class.zones-layer--focused]="selectedSection() !== null">
                 @for (sec of sections(); track sec.id) {
-                  <g class="cad__zone-group">
+                  @if (sec.polygonPoints) {
+                  <g class="cad__zone-group"
+                     [class.cad__zone-group--selected]="selectedSection()?.id === sec.id"
+                     [class.cad__zone-group--dimmed]="selectedSection() !== null && selectedSection()?.id !== sec.id">
                     <!-- Relleno de textura de racks (debajo del polígono interactivo) -->
                     <polygon
                       [attr.points]="sec.polygonPoints"
@@ -377,6 +628,7 @@
                     <polygon
                       [attr.points]="sec.polygonPoints"
                       class="wmap__poly"
+                      vector-effect="non-scaling-stroke"
                       [class.wmap__poly--active]="sec.status === 'LOADED'"
                       [class.wmap__poly--pending]="sec.status === 'PENDING'"
                       [class.wmap__poly--selected]="selectedSection()?.id === sec.id"
@@ -387,23 +639,42 @@
                       role="button"
                       [attr.aria-label]="sec.name"
                     />
-                    <!-- Etiqueta de Código de Nave -->
-                    <text [attr.x]="sec.labelPosition.x" [attr.y]="sec.labelPosition.y"
-                      class="wmap__poly-label" [class.wmap__poly-label--pending]="sec.status === 'PENDING'">
-                      {{ sec.code }}
-                    </text>
-                    <!-- Subetiqueta de Métricas -->
-                    <text [attr.x]="sec.sublabelPosition.x" [attr.y]="sec.sublabelPosition.y"
-                      class="wmap__poly-sub">
-                      @if (sec.status === 'LOADED') { {{ sec.posFijas }} Pos · {{ sec.capacidadTarimas | number }} T }
-                      @else { Pendiente }
-                    </text>
+                    <!-- Etiqueta de Código de Nave (Solo en vista general; en zoom/selección se despeja para ver pasillos y bahías limpios) -->
+                    @if (selectedSection()?.id !== sec.id) {
+                      <text [attr.x]="sec.labelPosition.x" [attr.y]="sec.labelPosition.y"
+                        class="wmap__poly-label" [class.wmap__poly-label--pending]="sec.status === 'PENDING'">
+                        {{ sec.code }}
+                      </text>
+                    }
                   </g>
+                  }
                 }
               </g>
 
+              <!-- Capa 5.5: Bahías Físicas y Racks Conectados dentro del Croquis -->
+              @if (showBaysInBlueprint()) {
+                <g class="cad__bays-layer">
+                  @for (bay of svgBays(); track bay.id) {
+                    <rect
+                      [attr.x]="bay.x"
+                      [attr.y]="bay.y"
+                      [attr.width]="bay.width"
+                      [attr.height]="bay.height"
+                      rx="1"
+                      class="cad__bay-slot"
+                      [ngClass]="getBayHeatmapClass(bay)"
+                      [class.cad__bay-slot--highlighted]="activeHoveredCode() === bay.code"
+                      [class.cad__bay-slot--selected]="inspectedPosition()?.id === bay.id || inspectedPosition()?.code === bay.code"
+                      (mouseenter)="onSvgBayMouseEnter($event, bay)"
+                      (mouseleave)="onSvgBayMouseLeave()"
+                      (click)="onSvgBayClick(bay, $event)"
+                    />
+                  }
+                </g>
+              }
+
               <!-- Capa 6: Rosa de los Vientos -->
-              <g class="cad__compass" transform="translate(80, 180)">
+              <g class="cad__compass" transform="translate(60, 520)">
                 <circle r="28" fill="rgba(0,0,0,0.45)" stroke="rgba(197,168,107,0.35)" stroke-width="1"/>
                 <circle r="22" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
                 <!-- Aguja Norte -->
@@ -420,25 +691,12 @@
                 <text x="-32" y="4" class="cad__compass-dir">O</text>
               </g>
 
-              <!-- Capa 7: Barra de Escala Métrica -->
-              <g class="cad__scale" transform="translate(40, 840)">
-                <line x1="0" y1="0" x2="120" y2="0" class="cad__scale-line"/>
-                <line x1="0" y1="-4" x2="0" y2="4" class="cad__scale-tick"/>
-                <line x1="40" y1="-3" x2="40" y2="3" class="cad__scale-tick"/>
-                <line x1="80" y1="-3" x2="80" y2="3" class="cad__scale-tick"/>
-                <line x1="120" y1="-4" x2="120" y2="4" class="cad__scale-tick"/>
-                <text x="0" y="14" class="cad__scale-text">0</text>
-                <text x="40" y="14" class="cad__scale-text">20m</text>
-                <text x="80" y="14" class="cad__scale-text">40m</text>
-                <text x="120" y="14" class="cad__scale-text">60m</text>
-              </g>
-
-              <!-- Capa 8: Cartela del Plano -->
-              <g class="cad__titleblock" transform="translate(40, 24)">
-                <rect width="180" height="42" rx="4" class="cad__titleblock-bg"/>
+              <!-- Capa 8: Cartela del Plano (datos del DXF) -->
+              <g class="cad__titleblock" transform="translate(40, 800)">
+                <rect width="200" height="42" rx="4" class="cad__titleblock-bg"/>
                 <text x="8" y="16" class="cad__titleblock-title">PLANO DE PLANTA</text>
-                <text x="8" y="30" class="cad__titleblock-sub">4GUARD WMS · Distribución Física</text>
-                <text x="8" y="38" class="cad__titleblock-rev">REV. 2026 · ESCALA 1:200</text>
+                <text x="8" y="30" class="cad__titleblock-sub">4GUARD WMS · Layout Almacén principal</text>
+                <text x="8" y="38" class="cad__titleblock-rev">Fuente: DXF · ver PDF_P-Texto</text>
               </g>
 
             </svg>
@@ -492,6 +750,62 @@
               }
               <div class="wmap__tt-footer">
                 <span class="material-symbols-outlined">touch_app</span> Clic para inspeccionar
+              </div>
+            </div>
+          }
+
+          <!-- Tooltip Reactivo de Bahía / Posición Física en Croquis -->
+          @if (isTooltipVisible() && hoveredSvgBay(); as bay) {
+            <div class="wmap__tooltip wmap__tooltip--bay"
+              [style.left.px]="tooltipCoords().x"
+              [style.top.px]="tooltipCoords().y">
+              <div class="wmap__tt-header">
+                <div class="flex items-center gap-1.5">
+                  <span class="wmap__detail-badge text-[10px] px-1.5 py-0.5">{{ bay.sectionCode }}</span>
+                  <h4 class="wmap__tt-name font-mono font-bold">{{ bay.code }}</h4>
+                </div>
+                <span class="wmap__status-badge text-[10px]" [class]="getStatusClass(bay.status)">
+                  {{ getStatusLabel(bay.status) }}
+                </span>
+              </div>
+              <div class="wmap__tt-rows">
+                <div class="wmap__tt-row">
+                  <span>Pasillo / Rack:</span>
+                  <strong class="font-mono">{{ bay.aisle }} · {{ bay.rack }}</strong>
+                </div>
+                <div class="wmap__tt-row">
+                  <span>Ocupación:</span>
+                  <strong class="wmap__tt-cyan">{{ bay.currentTarimas }}/{{ bay.capacityTarimas }} T</strong>
+                </div>
+                @if (bay.skuDescription && bay.skuDescription !== 'Sin Material Asignado') {
+                  <div class="wmap__tt-row">
+                    <span>Material:</span>
+                    <strong class="wmap__tt-sku" [title]="bay.skuDescription">{{ bay.skuDescription }}</strong>
+                  </div>
+                }
+                @if (bay.batchNumber && bay.batchNumber !== 'N/A') {
+                  <div class="wmap__tt-row">
+                    <span>Lote:</span>
+                    <strong class="font-mono text-amber-400">{{ bay.batchNumber }}</strong>
+                  </div>
+                }
+              </div>
+
+              <!-- Alerta Dinámica en Croquis -->
+              @if (bay.alertType === 'CRITICAL') {
+                <div class="px-2.5 py-1.5 mx-2 mb-2 bg-rose-500/20 border border-rose-500/40 rounded text-rose-300 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
+                  <span class="material-symbols-outlined text-[15px] text-rose-400">error</span>
+                  <span class="truncate">{{ bay.alertMessage || 'Alerta Crítica: Bloqueo QM / Sobrecupo' }}</span>
+                </div>
+              } @else if (bay.alertType === 'WARNING') {
+                <div class="px-2.5 py-1.5 mx-2 mb-2 bg-amber-500/20 border border-amber-500/40 rounded text-amber-300 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
+                  <span class="material-symbols-outlined text-[15px] text-amber-400">warning</span>
+                  <span class="truncate">{{ bay.alertMessage || 'Alerta Preventiva: Capacidad Crítica' }}</span>
+                </div>
+              }
+
+              <div class="wmap__tt-footer">
+                <span class="material-symbols-outlined text-[13px]">touch_app</span> Clic para inspeccionar y gestionar
               </div>
             </div>
           }
@@ -579,6 +893,36 @@
 
             <!-- Filtros Segmentados Limpios (Sin barras de desplazamiento toscas) -->
             <div class="wmap__filters-wrapper">
+              <!-- Desglose de Pasillos de la Nave (Partes de la Nave) -->
+              @if (currentSectionAisles().length > 0) {
+                <div class="wmap__aisles-bar">
+                  <span class="wmap__aisles-label">
+                    <span class="material-symbols-outlined text-[13px]">view_column</span>
+                    Pasillos:
+                  </span>
+                  <div class="wmap__aisles-chips">
+                    <button
+                      type="button"
+                      class="wmap__aisle-chip"
+                      [class.active]="selectedAisleFilter() === 'ALL'"
+                      (click)="selectAisle('ALL')"
+                    >
+                      Todos ({{ sectionMetrics()?.total || 0 }})
+                    </button>
+                    @for (aisle of currentSectionAisles(); track aisle.aisleCode) {
+                      <button
+                        type="button"
+                        class="wmap__aisle-chip"
+                        [class.active]="selectedAisleFilter() === aisle.aisleCode"
+                        (click)="selectAisle(aisle.aisleCode)"
+                      >
+                        {{ aisle.aisleCode }} ({{ aisle.bayCount }})
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+
               <div class="wmap__chips-row">
                 <button type="button" class="wmap__filter-chip" [class.active]="sectionCategoryFilter() === 'ALL'" (click)="sectionCategoryFilter.set('ALL')">
                   Todas ({{ sectionMetrics()?.total || 0 }})
@@ -621,11 +965,17 @@
                 <div class="wmap__pos-grid">
                   @for (pos of filteredSectionPositions(); track pos.id) {
                     <div
+                      [id]="'pos-card-' + pos.code"
                       class="wmap__pos-card"
                       [class.wmap__pos-card--occupied]="pos.status === 'OCCUPIED'"
                       [class.wmap__pos-card--available]="pos.status === 'AVAILABLE'"
                       [class.wmap__pos-card--blocked]="pos.status === 'BLOCKED'"
                       [class.wmap__pos-card--inspected]="inspectedPosition()?.id === pos.id"
+                      [class.wmap__pos-card--highlighted]="activeHoveredCode() === pos.code"
+                      [class.wmap__pos-card--alert-red]="getPosAlert(pos).type === 'CRITICAL'"
+                      [class.wmap__pos-card--alert-yellow]="getPosAlert(pos).type === 'WARNING'"
+                      (mouseenter)="onPosCardMouseEnter(pos)"
+                      (mouseleave)="onPosCardMouseLeave()"
                       (click)="inspectPosition(pos)"
                     >
                       <div class="wmap__pos-card-head">
@@ -639,6 +989,21 @@
                         </div>
                         <span class="wmap__status-badge" [class]="getStatusClass(pos.status)">{{ getStatusLabel(pos.status) }}</span>
                       </div>
+
+                      <!-- Alerta Dinámica en Tarjeta -->
+                      @if (getPosAlert(pos); as alert) {
+                        @if (alert.type === 'CRITICAL') {
+                          <div class="wmap__pos-card-alert wmap__pos-card-alert--red">
+                            <span class="material-symbols-outlined text-[13px]">error</span>
+                            <span class="truncate">{{ alert.message }}</span>
+                          </div>
+                        } @else if (alert.type === 'WARNING') {
+                          <div class="wmap__pos-card-alert wmap__pos-card-alert--yellow">
+                            <span class="material-symbols-outlined text-[13px]">warning</span>
+                            <span class="truncate">{{ alert.message }}</span>
+                          </div>
+                        }
+                      }
 
                       <div class="wmap__pos-card-material">
                         @if (pos.status === 'OCCUPIED' && pos.skuDescription) {
@@ -694,6 +1059,11 @@
               placeholder="Ej. POS-020, 43211385, LOTE-2026..."
               class="form-input"
             />
+            @if (searchBayCode()) {
+              <button type="button" class="form-input-clear" (click)="searchBayCode.set('')" title="Limpiar búsqueda">
+                <span class="material-symbols-outlined text-sm">close</span>
+              </button>
+            }
           </div>
         </div>
 
@@ -1197,6 +1567,336 @@
               <span>{{ isSavingNewPosition() ? 'Guardando...' : 'Dar de Alta Posición' }}</span>
             </button>
           </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       MODAL: GENERADOR PARAMÉTRICO DE BAHÍAS Y CONEXIÓN TOPOLÓGICA
+       ════════════════════════════════════════════════════════════════════════ -->
+  @if (isBayGeneratorOpen()) {
+    <div class="wmap__modal-backdrop" (click)="closeBayGenerator()">
+      <div class="wmap__modal wmap__modal--wide" (click)="$event.stopPropagation()">
+        <!-- Header -->
+        <div class="wmap__modal-header">
+          <div class="flex items-center gap-2">
+            <div class="wmap__header-badge wmap__header-badge--gold">
+              <span class="material-symbols-outlined text-[20px]">schema</span>
+            </div>
+            <div>
+              <h3 class="wmap__modal-title">Generador de Bahías y Conexión Topológica</h3>
+              <p class="wmap__modal-sub">Generación de racks conectados a la red de tránsito de montacargas</p>
+            </div>
+          </div>
+          <button type="button" class="wmap__modal-close" (click)="closeBayGenerator()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="wmap__modal-body space-y-4">
+          @if (generatorSuccessNotice()) {
+            <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">verified</span>
+              <span>{{ generatorSuccessNotice() }}</span>
+            </div>
+          }
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="form-group">
+              <label class="form-label">Nave / Zona de Destino</label>
+              <select class="form-select" [ngModel]="genSectionCode()" (ngModelChange)="genSectionCode.set($event)">
+                @for (sec of sections(); track sec.id) {
+                  <option [value]="sec.code">{{ sec.name }} ({{ sec.code }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tipo de Ubicación</label>
+              <select class="form-select" [ngModel]="genCategory()" (ngModelChange)="genCategory.set($event)">
+                <option value="FIXED_STORAGE">100% Fija Nominal (Almacenamiento Estándar)</option>
+                <option value="TEMPORARY_BUFFER">Buffer Temporal (Piso / Pulmón)</option>
+                <option value="PRELOAD_STAGING">Precarga / Docks de Salida</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="form-group">
+              <label class="form-label">Baterías / Pasillos</label>
+              <input
+                type="number"
+                min="1"
+                max="8"
+                class="form-input"
+                [ngModel]="genAislesCount()"
+                (ngModelChange)="genAislesCount.set($event)"
+              />
+              <span class="text-[11px] text-slate-400">Pasillos de montacargas</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Bahías por Pasillo</label>
+              <input
+                type="number"
+                min="2"
+                max="50"
+                class="form-input"
+                [ngModel]="genBaysPerAisle()"
+                (ngModelChange)="genBaysPerAisle.set($event)"
+              />
+              <span class="text-[11px] text-slate-400">Columnas de rack</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Niveles de Estiba</label>
+              <input
+                type="number"
+                min="1"
+                max="5"
+                class="form-input"
+                [ngModel]="genTiers()"
+                (ngModelChange)="genTiers.set($event)"
+              />
+              <span class="text-[11px] text-slate-400">N1..N5 alturas</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="form-group">
+              <label class="form-label">Capacidad por Bahía (Tarimas)</label>
+              <input
+                type="number"
+                min="1"
+                max="60"
+                class="form-input"
+                [ngModel]="genCapacity()"
+                (ngModelChange)="genCapacity.set($event)"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Total Posiciones Proyectadas</label>
+              <div class="h-10 px-3 bg-slate-900/60 border border-slate-700/60 rounded-md flex items-center justify-between">
+                <span class="font-mono font-bold text-amber-400">
+                  {{ genAislesCount() * genBaysPerAisle() * genTiers() }} Posiciones
+                </span>
+                <span class="text-xs text-slate-400">
+                  {{ (genAislesCount() * genBaysPerAisle() * genTiers() * genCapacity()) | number }} Tarimas Max
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-start gap-2.5">
+            <span class="material-symbols-outlined text-blue-400 text-[18px] shrink-0 mt-0.5">alt_route</span>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Las bahías generadas se interconectarán automáticamente a los carriles centrales de tránsito y a los muelles de carga R1–R8 según la topología geométrica de la Nave {{ genSectionCode() }}.
+            </p>
+          </div>
+
+          <!-- Actions -->
+          <div class="wmap__modal-actions pt-2">
+            <button type="button" class="wmap__action-btn wmap__action-btn--ghost" (click)="closeBayGenerator()">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="wmap__action-btn wmap__action-btn--green wmap__action-btn--full"
+              [disabled]="isGeneratingBays()"
+              (click)="submitGenerateBays()"
+            >
+              <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+              <span>{{ isGeneratingBays() ? 'Generando y Conectando...' : 'Generar Bahías y Conectar al Croquis' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL: SIMULADOR DE CARGA A INVENTARIO (INBOUND EXPRESS) ── -->
+  @if (isSimulateModalOpen()) {
+    <div class="modal-overlay animate-fade-in" (click)="closeSimulateModal()">
+      <div class="modal-card max-w-lg w-full flex flex-col overflow-hidden shadow-2xl" (click)="$event.stopPropagation()">
+        
+        <!-- Header -->
+        <div class="modal-header flex items-center justify-between px-6 py-4 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <span class="material-symbols-outlined text-[20px]">science</span>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white tracking-wide">Simulador de Recepción Inbound</h3>
+              <p class="text-xs text-slate-400">Carga inmediata de tarimas para probar el mapa térmico 2D</p>
+            </div>
+          </div>
+          <button type="button" class="wmap__icon-btn" (click)="closeSimulateModal()">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body p-6 space-y-4 bg-slate-950/95 text-sm">
+          <!-- Selector de Nave -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Nave / Almacén Destino
+            </label>
+            <div class="flex flex-wrap gap-1.5">
+              @for (sec of sections(); track sec.id) {
+                <button
+                  type="button"
+                  class="px-2.5 py-1 text-xs font-mono font-bold rounded border transition-all"
+                  [ngClass]="simZone() === sec.code
+                    ? 'bg-amber-500 text-black border-amber-400'
+                    : 'bg-slate-800 text-slate-300 border-white/10'"
+                  (click)="onSimZoneChange(sec.code)"
+                >
+                  {{ sec.code }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Código de Bahía -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Código de Bahía
+            </label>
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                class="w-full bg-slate-900 border border-white/15 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-amber-400 focus:outline-none"
+                [value]="simBayCode()"
+                (input)="simBayCode.set($any($event.target).value)"
+                placeholder="ej. POS-A-010"
+              />
+              <button
+                type="button"
+                class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 rounded-lg text-xs font-mono whitespace-nowrap"
+                (click)="simBayCode.set('POS-' + simZone() + '-010')"
+              >
+                Auto (Pos 10)
+              </button>
+            </div>
+          </div>
+
+          <!-- Tarimas a Cargar con Presets de Mapa Térmico -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Tarimas a Cargar (Capacidad Máx: 22)
+              </label>
+              <span class="text-xs font-mono font-bold text-amber-400">
+                {{ simTarimas() }} / 22 T ({{ Math.round((simTarimas() / 22) * 100) }}%)
+              </span>
+            </div>
+            
+            <input
+              type="range"
+              min="1"
+              max="22"
+              class="w-full accent-amber-400 cursor-pointer"
+              [value]="simTarimas()"
+              (input)="simTarimas.set(+$any($event.target).value)"
+            />
+
+            <!-- Presets del Estándar WMS -->
+            <div class="grid grid-cols-3 gap-2 mt-2">
+              <button
+                type="button"
+                class="p-2 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 text-center transition-all"
+                (click)="simTarimas.set(5)"
+              >
+                <div class="font-bold">5 Tarimas (23%)</div>
+                <div class="text-[10px] text-emerald-400/80">🟢 Verde (&lt;30%)</div>
+              </button>
+
+              <button
+                type="button"
+                class="p-2 rounded border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 text-center transition-all"
+                (click)="simTarimas.set(14)"
+              >
+                <div class="font-bold">14 Tarimas (64%)</div>
+                <div class="text-[10px] text-amber-400/80">🟡 Ámbar (31-80%)</div>
+              </button>
+
+              <button
+                type="button"
+                class="p-2 rounded border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-semibold hover:bg-blue-500/20 text-center transition-all"
+                (click)="simTarimas.set(22)"
+              >
+                <div class="font-bold">22 Tarimas (100%)</div>
+                <div class="text-[10px] text-blue-400/80">🔵 Azul Zafiro (Lleno)</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Producto SKU -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Producto / SKU
+            </label>
+            <input
+              type="text"
+              class="w-full bg-slate-900 border border-white/15 rounded-lg px-3 py-2 text-white text-sm focus:border-amber-400 focus:outline-none"
+              [value]="simSku()"
+              (input)="simSku.set($any($event.target).value)"
+              placeholder="ej. NESCAFE CLASICO 48x200g"
+            />
+          </div>
+
+          <!-- Lote y Folio -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Número de Lote
+              </label>
+              <input
+                type="text"
+                class="w-full bg-slate-900 border border-white/15 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-amber-400 focus:outline-none"
+                [value]="simLot()"
+                (input)="simLot.set($any($event.target).value)"
+                placeholder="LOT-2026-REC-01"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Folio Recepción
+              </label>
+              <input
+                type="text"
+                class="w-full bg-slate-900 border border-white/15 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-amber-400 focus:outline-none"
+                [value]="simFolio()"
+                (input)="simFolio.set($any($event.target).value)"
+                placeholder="REC-2026-000042"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer flex items-center justify-between px-6 py-4 border-t border-white/10 bg-slate-900/90">
+          <button
+            type="button"
+            class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+            (click)="closeSimulateModal()"
+          >
+            Cancelar
+          </button>
+          
+          <button
+            type="button"
+            class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+            (click)="executeSimulatedInbound()"
+          >
+            <span class="material-symbols-outlined text-[17px]">rocket_launch</span>
+            <span>Cargar Mercancía a Inventario</span>
+          </button>
         </div>
 
       </div>
