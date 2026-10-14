@@ -63,6 +63,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly auditEntries = signal<UserAuditLogDto[]>([]);
   protected readonly isLoadingAudit = signal<boolean>(false);
 
+  // ── Estado: KPIs Comprimidos (Estilo Recepción) ───────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ── Filtros del directorio (Señales Reactivas) ─────────────
   protected readonly filterText = signal('');
   protected readonly filterStatus = signal<UserStatus | ''>('');
@@ -128,27 +135,30 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly availableRoles = computed(() => {
     const dbRoles = this.roleService.roles();
     if (dbRoles && dbRoles.length > 0) {
-      return dbRoles.map(r => ({
-        id: r.id,
-        name: r.name,
-        label: this.getRoleLabel(r.name)
-      }));
+      return dbRoles
+        .filter(r => r.name !== 'VIGILANCIA')
+        .map(r => ({
+          id: r.id,
+          name: r.name,
+          label: this.getRoleLabel(r.name)
+        }));
     }
     // Fallback con catálogo completo de roles del sistema WMS
     return [
-      { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones (OPERATIONS_MANAGER)' },
-      { id: 'ADMIN', name: 'ADMIN', label: 'Administrador General (ADMIN)' },
-      { id: 'CEO', name: 'CEO', label: 'Director General (CEO)' },
-      { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones (OPERATIONS_SUPERVISOR)' },
-      { id: 'WAREHOUSE_MANAGER', name: 'WAREHOUSE_MANAGER', label: 'Gerente de Almacén (WAREHOUSE_MANAGER)' },
-      { id: 'DOCK_SUPERVISOR', name: 'DOCK_SUPERVISOR', label: 'Supervisor de Andén (DOCK_SUPERVISOR)' },
-      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno (SHIFT_LEADER)' },
-      { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control (CONTROL_DESK)' },
-      { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad (QM_INSPECTOR)' },
-      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén (WAREHOUSE_OPERATOR)' },
-      { id: 'MANEUVER_OPERATOR', name: 'MANEUVER_OPERATOR', label: 'Operador de Maniobras (MANEUVER_OPERATOR)' },
-      { id: 'AUDITOR', name: 'AUDITOR', label: 'Auditor (AUDITOR)' },
-      { id: 'CLIENT', name: 'CLIENT', label: 'Cliente 3PL (CLIENT)' },
+      { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones' },
+      { id: 'ADMIN', name: 'ADMIN', label: 'Administrador General' },
+      { id: 'CEO', name: 'CEO', label: 'Director General' },
+      { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones' },
+      { id: 'WAREHOUSE_MANAGER', name: 'WAREHOUSE_MANAGER', label: 'Gerente de Almacén' },
+      { id: 'DOCK_SUPERVISOR', name: 'DOCK_SUPERVISOR', label: 'Supervisor de Andén' },
+      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
+      { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control' },
+      { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
+      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén' },
+      { id: 'MANEUVER_OPERATOR', name: 'MANEUVER_OPERATOR', label: 'Operador de Maniobras' },
+      { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
+      { id: 'AUDITOR', name: 'AUDITOR', label: 'Auditor' },
+      { id: 'CLIENT', name: 'CLIENT', label: 'Cliente 3PL' },
     ];
   });
 
@@ -569,23 +579,47 @@ export class UsersListComponent implements OnInit, OnDestroy {
     if (!role) return '';
     const clean = role.replace('ROLE_', '').toUpperCase();
     const extendedLabels: Record<string, string> = {
-      'ADMIN': 'Administrador General (ADMIN)',
-      'OPERATIONS_MANAGER': 'Gerente de Operaciones (OPERATIONS_MANAGER)',
-      'WAREHOUSE_MANAGER': 'Gerente de Almacén (WAREHOUSE_MANAGER)',
-      'CEO': 'Director General (CEO)',
-      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones (OPERATIONS_SUPERVISOR)',
-      'DOCK_SUPERVISOR': 'Supervisor de Andén (DOCK_SUPERVISOR)',
-      'SHIFT_LEADER': 'Líder de Turno (SHIFT_LEADER)',
-      'CONTROL_DESK': 'Mesa de Control (CONTROL_DESK)',
-      'QM_INSPECTOR': 'Inspector de Calidad (QM_INSPECTOR)',
-      'WAREHOUSE_OPERATOR': 'Operario de Almacén (WAREHOUSE_OPERATOR)',
-      'MANEUVER_OPERATOR': 'Operador de Maniobras (MANEUVER_OPERATOR)',
-      'AUDITOR': 'Auditor (AUDITOR)',
-      'CLIENT': 'Cliente 3PL (CLIENT)',
+      'ADMIN': 'Administrador General',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'CEO': 'Director General',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'CONTROL_DESK': 'Mesa de Control',
+      'QM_INSPECTOR': 'Inspector de Calidad',
+      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'MANEUVER_OPERATOR': 'Operador de Maniobras',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'AUDITOR': 'Auditor',
+      'CLIENT': 'Cliente 3PL',
     };
     if (extendedLabels[clean]) return extendedLabels[clean];
     if (ROLE_LABELS[role as UserRole]) return ROLE_LABELS[role as UserRole];
     return role;
+  }
+
+  protected getRoleShortLabel(role: UserRole | string): string {
+    if (!role) return '';
+    const clean = role.replace('ROLE_', '').toUpperCase();
+    const shortLabels: Record<string, string> = {
+      'ADMIN': 'Administrador General',
+      'OPERATIONS_MANAGER': 'Gerente Operaciones',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'CEO': 'Director General',
+      'OPERATIONS_SUPERVISOR': 'Supervisor Operativo',
+      'DOCK_SUPERVISOR': 'Supervisor Andén',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'CONTROL_DESK': 'Mesa de Control',
+      'QM_INSPECTOR': 'Inspector Calidad',
+      'WAREHOUSE_OPERATOR': 'Operario Almacén',
+      'MANEUVER_OPERATOR': 'Operador Maniobras',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'AUDITOR': 'Auditor WMS',
+      'CLIENT': 'Cliente 3PL',
+    };
+    if (shortLabels[clean]) return shortLabels[clean];
+    return this.getRoleLabel(role);
   }
 
   protected getInitials(user: UserAdminItem): string {
@@ -594,6 +628,21 @@ export class UsersListComponent implements OnInit, OnDestroy {
     if (first && last) return (first + last).toUpperCase();
     if (user.username) return user.username.substring(0, 2).toUpperCase();
     return 'US';
+  }
+
+  protected getPreviewInitials(): string {
+    const first = (this.form.get('firstName')?.value || '').trim()[0] || '';
+    const last = (this.form.get('lastName')?.value || '').trim()[0] || '';
+    if (first && last) return (first + last).toUpperCase();
+    if (first) return first.toUpperCase();
+    return 'NU';
+  }
+
+  protected getPreviewBranchName(): string {
+    const branchId = this.form.get('branchId')?.value;
+    if (!branchId) return 'Acceso Corporativo';
+    const branch = this.availableBranches().find(b => b.id === branchId);
+    return branch ? branch.name : 'Sucursal Asignada';
   }
 
   protected getAvatarClass(role: UserRole | string): string {
@@ -613,6 +662,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
         return 'avatar--supervisor';
       case 'QM_INSPECTOR':
         return 'avatar--inspector';
+      case 'SECURITY_GUARD':
+        return 'avatar--security';
       default:
         return 'avatar--operator';
     }

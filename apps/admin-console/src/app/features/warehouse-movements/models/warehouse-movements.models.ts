@@ -110,13 +110,13 @@ export interface CheckInCasetaData {
   boxPlates: string;        // Placas Caja
   sealNumber: string;       // No. Sello
   sealNumbers?: string[];   // Lista de sellos agregados
-  economicNumber?: string;  // Número económico del vehículo / tracto
-  noEcoTractor?: string;
-  boxEconomicNumber?: string; // Número económico de la caja
-  noEcoCaja?: string;
+  noEcoTractor?: string;    // No. Económico Tracto
+  noEcoCaja?: string;       // No. Económico Caja
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte
+  driverSignature?: string; // Firma digital del chofer (Base64 data URL)
+  driverSignedAt?: string;
   observations?: string;    // Observaciones / Resumen Check List
   securityApproved?: boolean; // Visto bueno de seguridad patrimonial
   securityApprovedAt?: string;
@@ -133,7 +133,7 @@ export interface PatioUnitMonitor {
   carrierLine: string;
   tractorPlates: string;
   boxPlates: string;
-  economicNumber?: string;
+  noEcoTractor?: string;
   registeredAt: string;
   rampNumber?: number;
   rampAssignedAt?: string;
@@ -210,6 +210,7 @@ export interface ReceptionHeader {
   storageLocationCode?: string;
   piecesPerPallet: number;
   selectedPalletType: PalletType;
+  originalPalletType?: PalletType;
   observations?: string;
   pallets: ReceptionPalletItem[];
   lots?: ReceptionLot[];
@@ -221,6 +222,7 @@ export interface ReceptionHeader {
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  cancelledBy?: string;
   reopenedAt?: string;
   reopenedBy?: string;
   reopenReason?: string;
@@ -293,6 +295,22 @@ export interface LocationStockInfo {
   pallets: ReceptionPalletItem[];
 }
 
+export interface BayRemisionSummary {
+  receptionFolio: string;
+  remisionNo: string;
+  clientName: string;
+  palletsCount: number;
+  productName: string;
+  status: string;
+}
+
+export interface BayLiveOccupancy {
+  locationCode: string;
+  totalPallets: number;
+  totalPieces: number;
+  remisiones: BayRemisionSummary[];
+}
+
 export interface InventoryBatch {
   remisionNo: string;
   client: string;
@@ -315,9 +333,7 @@ export interface OutboundDispatch {
   sealNumber: string;        // No. Sello/Cincho (Obligatorio)
   carrierName: string;       // Transportista
   driverName: string;
-  economicNumber?: string;
   noEcoTractor?: string;
-  boxEconomicNumber?: string;
   noEcoCaja?: string;
   tractorPlates: string;
   boxPlates: string;
@@ -375,14 +391,14 @@ export interface WarehouseOutbound {
   forkliftOperator?: string;
   forkliftOperatorId?: string;
   driverName: string;
-  economicNumber?: string;
   noEcoTractor?: string;
-  boxEconomicNumber?: string;
   noEcoCaja?: string;
   tractorPlates: string;
   boxPlates: string;
   transportType: TransportType;
   sealNumber: string;
+  driverSignature?: string;
+  driverSignedAt?: string;
 
   // Mercancía
   remisionNo: string;

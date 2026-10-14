@@ -29,7 +29,11 @@
       <div class="op-notif__badge-content">
         <span class="op-notif__badge-text">
           @if (isSecurityContext()) {
-            @if (pendingRampAssignmentsCount() > 0 && pendingDriverPassesCount() > 0) {
+            @if (readyForExitCount() > 0 && pendingDriverPassesCount() > 0) {
+              {{ readyForExitCount() }} SALIDA · {{ pendingDriverPassesCount() }} ENTRADA
+            } @else if (readyForExitCount() > 0) {
+              {{ readyForExitCount() }} {{ readyForExitCount() === 1 ? 'LISTA SALIDA' : 'LISTAS SALIDA' }}
+            } @else if (pendingRampAssignmentsCount() > 0 && pendingDriverPassesCount() > 0) {
               {{ totalSecurityAlertsCount() }} EN ESPERA CASETA
             } @else if (pendingRampAssignmentsCount() > 0) {
               {{ pendingRampAssignmentsCount() }} {{ pendingRampAssignmentsCount() === 1 ? 'RAMPA ASIGNADA' : 'RAMPAS ASIGNADAS' }}
@@ -289,7 +293,7 @@
                     <div class="op-notif__details-row">
                       <span class="op-notif__carrier-name">🚚 {{ ob.carrierName || 'Transportista' }}</span>
                       <span class="op-notif__dot">·</span>
-                      <span class="op-notif__doc-tag">Placas: <strong>{{ ob.tractorPlates || ob.economicNumber || 'S/N' }}</strong></span>
+                      <span class="op-notif__doc-tag">Placas: <strong>{{ ob.tractorPlates || ob.noEcoTractor || 'S/N' }}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -357,6 +361,60 @@
                     class="op-notif__action-btn op-notif__action-btn--emerald"
                   >
                     <span>Dar Acceso</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Unidades en Planta Listas para Salida (Check-Out) -->
+            @for (pass of readyForExitPasses(); track (pass.token || pass.generatedFolio || pass.id)) {
+              <div class="op-notif__card op-notif__card--driver border-amber-500/40 bg-amber-950/15">
+                <div class="op-notif__card-header">
+                  <div class="op-notif__card-header-left">
+                    <span class="op-notif__pill op-notif__pill--gold">
+                      <span>🏁</span>
+                      <span>LISTO SALIDA</span>
+                    </span>
+                    <span class="op-notif__folio-chip font-mono">#{{ pass.token || pass.generatedFolio || pass.id }}</span>
+                  </div>
+                  <div class="op-notif__card-header-right">
+                    <span class="op-notif__status-badge font-mono text-emerald-400">
+                      ✓ MANIOBRA CONCLUIDA
+                    </span>
+                    <span class="op-notif__time">{{ pass.receptionTime || pass.horaEntrada || 'En patio' }}</span>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-body">
+                  <div class="op-notif__avatar-box op-notif__avatar-box--gold">
+                    <span class="material-symbols-outlined text-[20px] text-amber-300">local_shipping</span>
+                  </div>
+                  <div class="op-notif__info-box">
+                    <div class="op-notif__entity-title">{{ pass.driverName || 'Operador Transportista' }}</div>
+                    <div class="op-notif__details-row">
+                      <span class="op-notif__carrier-name">🚚 {{ pass.carrierLine || 'Transportista' }}</span>
+                      <span class="op-notif__dot">·</span>
+                      <span class="font-mono text-[11px]">Placas: <strong>{{ pass.tractorPlates || '-' }}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-notif__card-footer">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-amber-400 font-mono text-[11px] flex items-center gap-1 font-semibold">
+                      <span class="material-symbols-outlined text-[15px]">warehouse</span>
+                      <span>{{ pass.rampCode || 'Andén' }}</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="openReadyExitPass(pass)"
+                    class="op-notif__action-btn op-notif__action-btn--gold"
+                    title="Ir a Caseta para registrar la salida oficial y sellos de salida"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">logout</span>
+                    <span>Check-Out</span>
                     <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                   </button>
                 </div>

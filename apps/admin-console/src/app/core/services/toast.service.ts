@@ -80,13 +80,25 @@ export class ToastService {
     this.isMuted.set(muted);
   }
 
-  // ── Privado ──────────────────────────────────────────────
+  private lastSoundTime = 0;
 
   private show(type: ToastType, message: string, duration: number): void {
+    if (!message || !message.trim()) return;
+
+    // 1. Prevenir duplicidad de toasts idénticos en pantalla
+    const current = this.toasts();
+    if (current.some(t => t.message === message)) {
+      return;
+    }
+
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const toast: Toast = { id, type, message, duration };
 
-    this.toasts.update(list => [...list, toast]);
+    // 2. Control de saturación visual: máximo 3 toasts simultáneos en pantalla
+    this.toasts.update(list => {
+      const trimmed = list.length >= 3 ? list.slice(list.length - 2) : list;
+      return [...trimmed, toast];
+    });
 
     // Auto-dismiss tras duration ms
     setTimeout(() => this.dismiss(id), duration);
@@ -97,6 +109,13 @@ export class ToastService {
    */
   private async playSound(type: ToastType): Promise<void> {
     if (this.isMuted()) return;
+
+    // Prevenir solapamiento estridente de ráfagas acústicas simultáneas
+    const now = Date.now();
+    if (now - this.lastSoundTime < 600) {
+      return;
+    }
+    this.lastSoundTime = now;
 
     const ctx = this.getAudioContext();
     if (ctx) {

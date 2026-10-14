@@ -46,6 +46,14 @@ export const performanceRoutes: Routes = [
           ),
         title: '4GUARD WMS — Catálogo & Definición de Reglas de KPIs',
       },
+      {
+        path: 'reports-2026',
+        loadComponent: () =>
+          import('./pages/performance-reports-2026/performance-reports-2026.component').then(
+            (m) => m.PerformanceReports2026Component
+          ),
+        title: '4GUARD WMS — KPIs & Reportes Oficiales 2026',
+      },
       // Redirecciones limpias para compatibilidad
       { path: 'operations', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'timeline-audit', redirectTo: 'dashboard', pathMatch: 'full' },

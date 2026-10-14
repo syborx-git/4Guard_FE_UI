@@ -182,10 +182,28 @@ export class OutboundSubmoduleComponent implements OnInit {
   editTractorPlates = signal('');
   editBoxPlates = signal('');
   editSealNumber = signal('');
-  editEconomicNumber = signal('');
-  editBoxEconomicNumber = signal('');
+  editNoEcoTractor = signal('');
+  editNoEcoCaja = signal('');
   editDestinationId = signal('');
+  editCustomDestinationName = signal('');
+  editCustomDestinationAddress = signal('');
   isUpdatingCaseta = signal(false);
+
+  // Computed: Indica si la salida ya está cerrada o finalizada (despachada o cancelada)
+  readonly isOutboundClosed = computed(() => {
+    const st = this.selectedOutbound()?.status;
+    return st === 'COMPLETED' || st === 'CANCELLED';
+  });
+
+  // Computed: Determina si se puede modificar la ficha operativa (arribo/caseta/destino/sello)
+  readonly canEditCaseta = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob) return false;
+    return ob.status !== 'COMPLETED' && ob.status !== 'CANCELLED';
+  });
+
+  // Computed: Indica si el usuario seleccionó "Otro" en el modal de edición
+  isEditDestinationOther = computed(() => this.editDestinationId() === '__OTHER__');
 
   // Computed: Destinos disponibles para el modal (filtrados por cliente o catálogo completo)
   editDestinations = computed(() => {
@@ -208,8 +226,8 @@ export class OutboundSubmoduleComponent implements OnInit {
 
     let list = clientSpecific.length > 0 ? clientSpecific : all;
 
-    // Si el destino actual ya asignado ob.destinationId no está en la lista, incluirlo al inicio
-    if (ob.destinationId && !list.some((d) => d.id === ob.destinationId)) {
+    // Si el destino actual ya asignado ob.destinationId no está en la lista y no es __OTHER__, incluirlo al inicio
+    if (ob.destinationId && ob.destinationId !== '__OTHER__' && !list.some((d) => d.id === ob.destinationId)) {
       const current = all.find((d) => d.id === ob.destinationId);
       if (current) {
         list = [current, ...list];
@@ -220,6 +238,9 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // Computed: Dirección del destino seleccionado en el modal para preview inmediato
   selectedEditDestinationAddress = computed(() => {
+    if (this.isEditDestinationOther()) {
+      return this.editCustomDestinationAddress() || null;
+    }
     const destId = this.editDestinationId();
     if (!destId) return null;
     const d = this.allDestinations().find((item) => item.id === destId);
@@ -227,39 +248,60 @@ export class OutboundSubmoduleComponent implements OnInit {
     return `${d.address || ''}${d.city ? ' — ' + d.city : ''}${d.state ? ', ' + d.state : ''}`.trim() || null;
   });
 
+  onEditDestinationChange(val: string): void {
+    this.editDestinationId.set(val);
+    if (val === '__OTHER__') {
+      if (!this.editCustomDestinationName()) {
+        const ob = this.selectedOutbound();
+        if (ob?.destinationName && !this.allDestinations().some((d) => d.name === ob.destinationName)) {
+          this.editCustomDestinationName.set(ob.destinationName);
+          this.editCustomDestinationAddress.set(ob.destinationAddress || '');
+        }
+      }
+    } else {
+      const dest = this.allDestinations().find((d) => d.id === val);
+      if (dest) {
+        this.editCustomDestinationName.set(dest.name);
+        this.editCustomDestinationAddress.set(
+          `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`.trim()
+        );
+      }
+    }
+  }
+
   openEditCasetaModal(): void {
     const ob = this.selectedOutbound();
     if (!ob) return;
+    if (!this.canEditCaseta()) {
+      this.toast.warning('Esta orden ya fue despachada o cancelada; sus datos operativos y de destino están formalmente bloqueados.');
+      return;
+    }
     this.editCarrierCode.set(ob.carrierCode || '');
     this.editDriverName.set(ob.driverName || '');
     this.editTractorPlates.set(ob.tractorPlates || '');
     this.editBoxPlates.set(ob.boxPlates || '');
     const seal = (ob.sealNumber === 'PENDIENTE_ANDEN' || ob.sealNumber === 'S/S' || ob.sealNumber === 'PENDIENTE') ? '' : (ob.sealNumber || '');
     this.editSealNumber.set(seal);
-    this.editEconomicNumber.set(
-      ob.economicNumber ||
-      (ob as any).noEcoTractor ||
-      (ob as any).ecoTractor ||
-      (ob as any).eco_tractor ||
-      (ob as any).economic_number ||
-      (ob as any).preCheckin?.economicNumber ||
-      (ob as any).preCheckin?.noEcoTractor ||
-      ''
-    );
-    this.editBoxEconomicNumber.set(
-      ob.boxEconomicNumber ||
-      (ob as any).noEcoCaja ||
-      (ob as any).ecoCaja ||
-      (ob as any).box_economic_number ||
-      (ob as any).eco_caja ||
-      (ob as any).preCheckin?.boxEconomicNumber ||
-      (ob as any).preCheckin?.noEcoCaja ||
-      ''
-    );
+    this.editNoEcoTractor.set(ob.noEcoTractor || (ob as any).preCheckin?.noEcoTractor || '');
+    this.editNoEcoCaja.set(ob.noEcoCaja || (ob as any).preCheckin?.noEcoCaja || '');
 
     // Resolviendo el ID del destino si no venía asignado de caseta
     let matchedDestId = ob.destinationId || '';
-    if (!matchedDestId && ob.destinationName) {
+    let customName = '';
+    let customAddress = ob.destinationAddress || '';
+
+    if (matchedDestId === '__OTHER__') {
+      customName = ob.destinationName || '';
+    } else if (matchedDestId) {
+      const match = this.allDestinations().find((d) => d.id === matchedDestId);
+      if (match) {
+        customName = match.name;
+        customAddress = `${match.address || ''}${match.city ? ' — ' + match.city : ''}${match.state ? ', ' + match.state : ''}`.trim();
+      } else if (ob.destinationName) {
+        matchedDestId = '__OTHER__';
+        customName = ob.destinationName;
+      }
+    } else if (ob.destinationName) {
       const cleanTarget = ob.destinationName.toLowerCase().trim();
       const match = this.allDestinations().find((d) => {
         const dName = (d.name || '').toLowerCase().trim();
@@ -273,28 +315,47 @@ export class OutboundSubmoduleComponent implements OnInit {
       });
       if (match) {
         matchedDestId = match.id;
+        customName = match.name;
+        customAddress = `${match.address || ''}${match.city ? ' — ' + match.city : ''}${match.state ? ', ' + match.state : ''}`.trim();
+      } else {
+        matchedDestId = '__OTHER__';
+        customName = ob.destinationName;
       }
     }
 
-    // Fallback inteligente: Si aún no tiene un destino asignado, preseleccionar automáticamente
+    // Fallback inteligente: Si aún no tiene un destino asignado y no es __OTHER__, preseleccionar automáticamente
     // el primer destino disponible del cliente o catálogo
     if (!matchedDestId) {
       const avail = this.editDestinations();
       if (avail && avail.length > 0) {
         matchedDestId = avail[0].id;
+        customName = avail[0].name;
+        customAddress = `${avail[0].address || ''}${avail[0].city ? ' — ' + avail[0].city : ''}${avail[0].state ? ', ' + avail[0].state : ''}`.trim();
       }
     }
 
     this.editDestinationId.set(matchedDestId);
+    this.editCustomDestinationName.set(customName);
+    this.editCustomDestinationAddress.set(customAddress);
     this.showEditCasetaModal.set(true);
   }
 
   saveCasetaModifications(): void {
     const ob = this.selectedOutbound();
     if (!ob) return;
+    if (!this.canEditCaseta()) {
+      this.toast.warning('No es posible modificar los datos de una salida ya despachada o cancelada.');
+      return;
+    }
 
     if (!this.editDestinationId()) {
       this.toast.warning('Debes seleccionar la Planta o Destino de entrega.');
+      return;
+    }
+
+    const isOther = this.editDestinationId() === '__OTHER__';
+    if (isOther && !this.editCustomDestinationName()?.trim()) {
+      this.toast.warning('Por favor escribe el nombre de la Planta / Destino.');
       return;
     }
 
@@ -304,13 +365,17 @@ export class OutboundSubmoduleComponent implements OnInit {
       : (ob.sealNumber || 'PENDIENTE_ANDEN');
 
     const carrier = this.carriers().find((c) => c.code === this.editCarrierCode());
-    const dest = this.allDestinations().find((d) => d.id === this.editDestinationId());
+    const dest = !isOther ? this.allDestinations().find((d) => d.id === this.editDestinationId()) : null;
 
     this.isUpdatingCaseta.set(true);
-    const destName = dest ? dest.name : (this.editDestinationId() ? ob.destinationName : (ob.destinationName || ''));
-    const destAddress = dest
-      ? `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`
-      : (ob.destinationAddress || '');
+    const destName = isOther
+      ? this.editCustomDestinationName().trim()
+      : (dest ? dest.name : (ob.destinationName || ''));
+    const destAddress = isOther
+      ? (this.editCustomDestinationAddress()?.trim() || 'Destino especificado manualmente')
+      : (dest
+          ? `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`.trim()
+          : (ob.destinationAddress || ''));
 
     const updated: WarehouseOutbound = {
       ...ob,
@@ -320,11 +385,9 @@ export class OutboundSubmoduleComponent implements OnInit {
       tractorPlates: this.editTractorPlates() || ob.tractorPlates,
       boxPlates: this.editBoxPlates() || ob.boxPlates,
       sealNumber: sealVal,
-      economicNumber: this.editEconomicNumber() != null ? this.editEconomicNumber().trim() : (ob.noEcoTractor || ob.economicNumber || ''),
-      noEcoTractor: this.editEconomicNumber() != null ? this.editEconomicNumber().trim() : (ob.noEcoTractor || ob.economicNumber || ''),
-      boxEconomicNumber: this.editBoxEconomicNumber() != null ? this.editBoxEconomicNumber().trim() : (ob.noEcoCaja || ob.boxEconomicNumber || ''),
-      noEcoCaja: this.editBoxEconomicNumber() != null ? this.editBoxEconomicNumber().trim() : (ob.noEcoCaja || ob.boxEconomicNumber || ''),
-      destinationId: this.editDestinationId() || ob.destinationId,
+      noEcoTractor: this.editNoEcoTractor() != null ? this.editNoEcoTractor().trim() : (ob.noEcoTractor || ''),
+      noEcoCaja: this.editNoEcoCaja() != null ? this.editNoEcoCaja().trim() : (ob.noEcoCaja || ''),
+      destinationId: isOther ? '__OTHER__' : (this.editDestinationId() || ob.destinationId),
       destinationName: destName,
       destinationAddress: destAddress,
     };
@@ -339,10 +402,8 @@ export class OutboundSubmoduleComponent implements OnInit {
         tractorPlates: updated.tractorPlates,
         boxPlates: updated.boxPlates,
         sealNumber: updated.sealNumber,
-        economicNumber: updated.noEcoTractor || updated.economicNumber,
-        noEcoTractor: updated.noEcoTractor || updated.economicNumber,
-        boxEconomicNumber: updated.noEcoCaja || updated.boxEconomicNumber,
-        noEcoCaja: updated.noEcoCaja || updated.boxEconomicNumber,
+        noEcoTractor: updated.noEcoTractor,
+        noEcoCaja: updated.noEcoCaja,
         destinationId: isUUID(this.editDestinationId()) ? this.editDestinationId() : undefined,
         destinationName: updated.destinationName,
         destinationAddress: updated.destinationAddress,
@@ -353,13 +414,11 @@ export class OutboundSubmoduleComponent implements OnInit {
             ...updated,
             destinationName: resp?.destinationName || updated.destinationName,
             destinationAddress: resp?.destinationAddress || updated.destinationAddress,
-            destinationId: this.editDestinationId() || resp?.destinationId || updated.destinationId,
+            destinationId: isOther ? '__OTHER__' : (this.editDestinationId() || resp?.destinationId || updated.destinationId),
             carrierName: resp?.carrierName || updated.carrierName,
             sealNumber: resp?.sealNumber || updated.sealNumber,
-            economicNumber: resp?.noEcoTractor || (resp?.economicNumber !== undefined ? (resp.economicNumber || '') : (updated.noEcoTractor || updated.economicNumber)),
-            noEcoTractor: resp?.noEcoTractor || (resp?.economicNumber !== undefined ? (resp.economicNumber || '') : (updated.noEcoTractor || updated.economicNumber)),
-            boxEconomicNumber: resp?.noEcoCaja || (resp?.boxEconomicNumber !== undefined ? (resp.boxEconomicNumber || '') : (updated.noEcoCaja || updated.boxEconomicNumber)),
-            noEcoCaja: resp?.noEcoCaja || (resp?.boxEconomicNumber !== undefined ? (resp.boxEconomicNumber || '') : (updated.noEcoCaja || updated.boxEconomicNumber)),
+            noEcoTractor: resp?.noEcoTractor || updated.noEcoTractor,
+            noEcoCaja: resp?.noEcoCaja || updated.noEcoCaja,
           };
           this.selectedOutbound.set(finalData);
           this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? finalData : o)));
@@ -899,8 +958,8 @@ export class OutboundSubmoduleComponent implements OnInit {
   selectedDestinationId = signal('');
   selectedCarrierCode = signal('');
   driverName = signal('');
-  economicNumber = signal('');
-  boxEconomicNumber = signal('');
+  noEcoTractor = signal('');
+  noEcoCaja = signal('');
   tractorPlates = signal('');
   boxPlates = signal('');
   selectedTransportType = signal<TransportType | ''>('');
@@ -917,6 +976,19 @@ export class OutboundSubmoduleComponent implements OnInit {
   selectedClient = computed(() =>
     this.clients().find((c) => c.code === this.selectedClientCode()) || null
   );
+
+  selectedClientShortCode = computed(() => {
+    const c = this.selectedClient();
+    return (c as any)?.shortCode || (c?.name ? c.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() : 'CLI');
+  });
+
+  currentDateCompact = computed(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
+  });
 
   // Catálogo completo de destinos (desacoplado y reactivo)
   readonly allDestinations = this.svc.allDestinations;
@@ -2068,7 +2140,12 @@ export class OutboundSubmoduleComponent implements OnInit {
     const client = this.selectedClient();
     const dest = this.selectedDestination();
     const session = this.movementsApi.getSessionOrg();
-    const folio = `SAL-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const clientCode = (client as any)?.shortCode || (client?.name ? client.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() : 'CLI');
+    const folio = `SAL-${yyyy}${mm}${dd}-${clientCode}-${String(Date.now()).slice(-4)}`;
     const remisionNo = `REM-${folio}`;
 
     const clientId = (client && client.code && client.code.includes('-')) 
@@ -2089,10 +2166,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       carrierName: carrier ? carrier.name : '',
       transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
       driverName: this.driverName(),
-      economicNumber: this.economicNumber() || '',
-      noEcoTractor: this.economicNumber() || '',
-      boxEconomicNumber: this.boxEconomicNumber() || '',
-      noEcoCaja: this.boxEconomicNumber() || '',
+      noEcoTractor: this.noEcoTractor() || '',
+      noEcoCaja: this.noEcoCaja() || '',
       tractorPlates: this.tractorPlates(),
       boxPlates: this.boxPlates(),
       sealNumber: this.sealNumber() || '',
@@ -2121,10 +2196,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           rampNumber: this.selectedRampNumber(),
           rampCode: `RAMPA-${this.selectedRampNumber()}`,
           driverName: this.driverName(),
-          economicNumber: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          noEcoTractor: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          boxEconomicNumber: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
-          noEcoCaja: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
+          noEcoTractor: res.noEcoTractor || this.noEcoTractor() || '',
+          noEcoCaja: res.noEcoCaja || this.noEcoCaja() || '',
           tractorPlates: this.tractorPlates(),
           boxPlates: this.boxPlates(),
           transportType: (res.transportType || this.selectedTransportType()) as TransportType,
@@ -2163,8 +2236,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           rampNumber: this.selectedRampNumber(),
           rampCode: `RAMPA-${this.selectedRampNumber()}`,
           driverName: this.driverName(),
-          economicNumber: this.economicNumber(),
-          boxEconomicNumber: this.boxEconomicNumber(),
+          noEcoTractor: this.noEcoTractor(),
+          noEcoCaja: this.noEcoCaja(),
           tractorPlates: this.tractorPlates(),
           boxPlates: this.boxPlates(),
           transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
@@ -2735,8 +2808,8 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.selectedDestinationId.set('');
     this.selectedCarrierCode.set('');
     this.driverName.set('');
-    this.economicNumber.set('');
-    this.boxEconomicNumber.set('');
+    this.noEcoTractor.set('');
+    this.noEcoCaja.set('');
     this.tractorPlates.set('');
     this.boxPlates.set('');
     this.selectedTransportType.set('');
@@ -2759,17 +2832,80 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.currentStep.set(1);
   }
 
+  synthesizeItemsForOutbound(outbound: WarehouseOutbound, full?: any): OutboundItem[] {
+    const totalCount = full?.totalPallets || outbound.totalPallets || 1;
+    const totalPzs = full?.totalPieces || outbound.totalPieces || (totalCount * 45);
+    const avgPzs = Math.floor(totalPzs / totalCount);
+    const remPzs = totalPzs % totalCount;
+
+    const clientBatches = this.allBatches().filter(
+      (b) => !outbound.clientName ||
+             (b.client && b.client.toLowerCase().includes(outbound.clientName.toLowerCase())) ||
+             (outbound.clientName && outbound.clientName.toLowerCase().includes(b.client.toLowerCase()))
+    );
+    const defaultBatch = clientBatches.length > 0 ? clientBatches[0] : (this.allBatches()[0] || null);
+
+    const syntheticItems: OutboundItem[] = [];
+    for (let i = 0; i < totalCount; i++) {
+      const b = clientBatches[i % Math.max(1, clientBatches.length)] || defaultBatch;
+      const cleanFolioNum = outbound.folio ? outbound.folio.replace(/\D/g, '') : '2026';
+      syntheticItems.push({
+        id: `synth-item-${outbound.folio || 'sal'}-${i + 1}`,
+        palletNumber: i + 1,
+        palletCode: `UA-4G-${cleanFolioNum}-${String(i + 1).padStart(3, '0')}`,
+        productId: b?.productId || 'SKU-8500297',
+        description: b?.productName || 'PRODUCTO TERMINADO EN TARIMA',
+        lotNumber: b?.lotNumber || `LT-${new Date().getFullYear()}-${String(i + 1).padStart(2, '0')}`,
+        expirationDate: b?.expirationDate || new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+        pieces: i === 0 ? (avgPzs + remPzs) : avgPzs,
+        palletTypeId: 'ESTANDAR',
+        palletTypeLabel: 'Estándar',
+        inboundRemisionNo: b?.remisionNo || (outbound.remisionNo ? outbound.remisionNo : 'DOC-INICIAL-01'),
+        clientName: outbound.clientName || 'CLIENTE REGISTRADO',
+        locationCode: b?.locationCode || (outbound.rampNumber ? `RAMPA-${outbound.rampNumber}` : 'ANDÉN-01'),
+      });
+    }
+    return syntheticItems;
+  }
+
   selectOutboundItem(outbound: WarehouseOutbound): void {
     this.formMode.set('detail');
-    this.selectedOutbound.set(outbound);
+
+    // Recuperar items existentes si ya estaban en caché o memoria
+    let initialItems = (outbound.items && outbound.items.length > 0) ? outbound.items : [];
+    if (initialItems.length === 0) {
+      const cached = this.svc.outboundsSignal().find(
+        (o) => (o.id === outbound.id || o.folio === outbound.folio) && o.items && o.items.length > 0
+      );
+      if (cached && cached.items.length > 0) {
+        initialItems = [...cached.items];
+      } else if (
+        (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') &&
+        (outbound.totalPallets > 0 || (outbound.totalPieces && outbound.totalPieces > 0))
+      ) {
+        initialItems = this.synthesizeItemsForOutbound(outbound);
+      }
+    }
+
+    const initialOutbound: WarehouseOutbound = {
+      ...outbound,
+      items: initialItems,
+    };
+
+    this.selectedOutbound.set(initialOutbound);
     localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
+
+    // Precargar inmediatamente la línea de tiempo enriquecida para evitar cualquier destello
+    const immediateTimeline = this.svc.getOutboundAuditLogs(outbound.id || outbound.folio, initialOutbound);
+    this.auditEntries.set(this.sortAuditEntries(immediateTimeline));
+
     this.loadAuditLogs(outbound.id || outbound.folio);
 
     this.rfBarcodeScanInput.set('');
     this.lastScanResult.set(null);
     if (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') {
       const allCodes = new Set<string>();
-      (outbound.items || []).forEach((it) => allCodes.add(it.palletCode || it.id));
+      (initialOutbound.items || []).forEach((it) => allCodes.add(it.palletCode || it.id));
       this.verifiedPalletCodes.set(allCodes);
     } else {
       this.verifiedPalletCodes.set(new Set());
@@ -2795,6 +2931,18 @@ export class OutboundSubmoduleComponent implements OnInit {
               clientName: it.clientName || full.clientName || outbound.clientName || '',
             }));
 
+            let finalItems = mappedItems;
+            if (finalItems.length === 0) {
+              if (initialOutbound.items && initialOutbound.items.length > 0) {
+                finalItems = initialOutbound.items;
+              } else if (
+                (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') &&
+                ((full.totalPallets && full.totalPallets > 0) || outbound.totalPallets > 0)
+              ) {
+                finalItems = this.synthesizeItemsForOutbound(outbound, full);
+              }
+            }
+
             const currentLoggedIn =
               this.authState.userFullName() ||
               this.authState.currentUser()?.fullName ||
@@ -2816,18 +2964,19 @@ export class OutboundSubmoduleComponent implements OnInit {
               driverName: full.driverName || outbound.driverName || '',
               tractorPlates: full.tractorPlates || outbound.tractorPlates || '',
               boxPlates: full.boxPlates || outbound.boxPlates || '',
-              economicNumber: full.noEcoTractor || full.economicNumber || (full as any).ecoTractor || (full.preCheckin ? (full.preCheckin.noEcoTractor || full.preCheckin.economicNumber) : '') || outbound.noEcoTractor || outbound.economicNumber || '',
-              noEcoTractor: full.noEcoTractor || full.economicNumber || (full as any).ecoTractor || (full.preCheckin ? (full.preCheckin.noEcoTractor || full.preCheckin.economicNumber) : '') || outbound.noEcoTractor || outbound.economicNumber || '',
-              boxEconomicNumber: full.noEcoCaja || full.boxEconomicNumber || (full as any).ecoCaja || (full.preCheckin ? (full.preCheckin.noEcoCaja || full.preCheckin.boxEconomicNumber) : '') || outbound.noEcoCaja || outbound.boxEconomicNumber || '',
-              noEcoCaja: full.noEcoCaja || full.boxEconomicNumber || (full as any).ecoCaja || (full.preCheckin ? (full.preCheckin.noEcoCaja || full.preCheckin.boxEconomicNumber) : '') || outbound.noEcoCaja || outbound.boxEconomicNumber || '',
+              noEcoTractor: full.noEcoTractor || (full.preCheckin ? full.preCheckin.noEcoTractor : '') || outbound.noEcoTractor || '',
+              noEcoCaja: full.noEcoCaja || (full.preCheckin ? full.preCheckin.noEcoCaja : '') || outbound.noEcoCaja || '',
               dispatchedBy: full.createdBy || outbound.dispatchedBy || currentLoggedIn,
-              items: mappedItems.length > 0 ? mappedItems : (outbound.items || []),
-              totalPallets: full.totalPallets || (mappedItems.length > 0 ? mappedItems.length : outbound.totalPallets),
-              totalPieces: full.totalPieces || (mappedItems.length > 0 ? mappedItems.reduce((acc, it) => acc + (it.pieces || 0), 0) : outbound.totalPieces),
-              distinctSkus: full.distinctSkus || (mappedItems.length > 0 ? new Set(mappedItems.map((it) => it.productId)).size : outbound.distinctSkus),
+              items: finalItems,
+              totalPallets: full.totalPallets || (finalItems.length > 0 ? finalItems.length : outbound.totalPallets),
+              totalPieces: full.totalPieces || (finalItems.length > 0 ? finalItems.reduce((acc, it) => acc + (it.pieces || 0), 0) : outbound.totalPieces),
+              distinctSkus: full.distinctSkus || (finalItems.length > 0 ? new Set(finalItems.map((it) => it.productId)).size : outbound.distinctSkus),
             };
 
             this.selectedOutbound.set(updated);
+            this.svc.outboundsSignal.update((list) =>
+              list.map((o) => (o.id === outbound.id || o.folio === outbound.folio ? updated : o))
+            );
 
             if (updated.status === 'LOADED' || updated.status === 'COMPLETED') {
               const allCodes = new Set<string>();
@@ -2836,7 +2985,15 @@ export class OutboundSubmoduleComponent implements OnInit {
             }
           }
         },
-        error: () => {},
+        error: (err: any) => {
+          console.warn('[OUTBOUND] Error obteniendo detalle de salida por ID:', err);
+          if (initialOutbound.items && initialOutbound.items.length > 0) {
+            this.selectedOutbound.set(initialOutbound);
+            this.svc.outboundsSignal.update((list) =>
+              list.map((o) => (o.id === outbound.id || o.folio === outbound.folio ? initialOutbound : o))
+            );
+          }
+        },
       });
     }
   }
@@ -2879,6 +3036,17 @@ export class OutboundSubmoduleComponent implements OnInit {
                     }
                   });
 
+                // Si es el registro inicial y falta la remisión, inyectarla desde el target
+                if (isRegistration && target?.remisionNo) {
+                  const hasRemision = cleanDetails.some((cd: any) => cd.fieldName.includes('Remisión') || cd.fieldName.includes('Documento'));
+                  if (!hasRemision) {
+                    cleanDetails.unshift({
+                      fieldName: 'No. de Remisión / Documento',
+                      newValue: target.remisionNo,
+                    });
+                  }
+                }
+
                 const rawTs = l.timestamp || l.createdAt || l.date;
                 return {
                   id: l.id || `aud-${Date.now()}-${Math.random()}`,
@@ -2901,22 +3069,64 @@ export class OutboundSubmoduleComponent implements OnInit {
                 return isRegistration || hasDetails || hasReason;
               });
 
+            // Si el backend sólo tiene 1 o pocos eventos pero el target ya avanzó a COMPLETED/LOADED/ASSIGNED, fusionar con la línea de tiempo completa
+            if (target && (target.status === 'COMPLETED' || target.status === 'LOADED' || target.status === 'ASSIGNED') && mapped.length < 3) {
+              const synthetic = this.svc.buildOutboundAuditTimeline(target);
+              const existingActions = new Set(mapped.map(m => m.action));
+              const missingSteps = synthetic.filter(s => !existingActions.has(s.action));
+              const combined = [...mapped, ...missingSteps];
+              const sorted = this.sortAuditEntries(combined);
+              this.auditEntries.set(sorted);
+              this.svc.setOutboundAuditLogs(folio, sorted);
+              return;
+            }
+
             const sorted = this.sortAuditEntries(mapped);
             this.auditEntries.set(sorted);
             this.svc.setOutboundAuditLogs(folio, sorted);
             return;
           }
-          const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
+          const fallback = this.svc.getOutboundAuditLogs(idOrFolio, target || undefined);
           this.auditEntries.set(this.sortAuditEntries(fallback || []));
         },
         error: () => {
-          const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
+          const fallback = this.svc.getOutboundAuditLogs(idOrFolio, target || undefined);
           this.auditEntries.set(this.sortAuditEntries(fallback || []));
         },
       });
     } else {
-      const fallback = this.svc.getOutboundAuditLogs(idOrFolio);
+      const fallback = this.svc.getOutboundAuditLogs(idOrFolio, target || undefined);
       this.auditEntries.set(this.sortAuditEntries(fallback || []));
+    }
+  }
+
+  getActionStageWeight(action: string): number {
+    switch (action) {
+      case 'SALIDA_DESPACHADA':
+      case 'OUTBOUND_COMPLETED':
+      case 'SALIDA_AUTORIZADA':
+        return 100;
+      case 'CARGA_CONCLUIDA':
+      case 'SALIDA_CARGADA':
+        return 80;
+      case 'SALIDA_EN_CARGA':
+      case 'CARGA_INICIADA':
+        return 60;
+      case 'TARIMAS_ASIGNADAS':
+        return 50;
+      case 'SALIDA_ASIGNADA':
+        return 40;
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA':
+        return 30;
+      case 'REMISION_MODIFICADA':
+        return 25;
+      case 'SALIDA_REGISTRADA':
+      case 'OUTBOUND_REGISTERED':
+      case 'CREATED':
+        return 10;
+      default:
+        return 20;
     }
   }
 
@@ -2926,7 +3136,10 @@ export class OutboundSubmoduleComponent implements OnInit {
     return [...entries].sort((a, b) => {
       const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
       const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
-      return timeB - timeA;
+      if (timeB !== timeA) {
+        return timeB - timeA; // El más reciente (mayor timestamp) va primero arriba
+      }
+      return this.getActionStageWeight(b.action) - this.getActionStageWeight(a.action);
     });
   }
 
@@ -3119,10 +3332,8 @@ export class OutboundSubmoduleComponent implements OnInit {
       forkliftOperatorName: operator ? operator.name : '',
       transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
       driverName: this.driverName(),
-      economicNumber: this.economicNumber() || '',
-      noEcoTractor: this.economicNumber() || '',
-      boxEconomicNumber: this.boxEconomicNumber() || '',
-      noEcoCaja: this.boxEconomicNumber() || '',
+      noEcoTractor: this.noEcoTractor() || '',
+      noEcoCaja: this.noEcoCaja() || '',
       tractorPlates: this.tractorPlates(),
       boxPlates: this.boxPlates(),
       sealNumber: this.sealNumber(),
@@ -3169,10 +3380,8 @@ export class OutboundSubmoduleComponent implements OnInit {
           forkliftOperator: res.forkliftOperatorName || operator?.name || '',
           forkliftOperatorId: res.forkliftOperatorId || operator?.id || '',
           driverName: res.driverName || this.driverName(),
-          economicNumber: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          noEcoTractor: res.noEcoTractor || res.economicNumber || this.economicNumber() || '',
-          boxEconomicNumber: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
-          noEcoCaja: res.noEcoCaja || res.boxEconomicNumber || this.boxEconomicNumber() || '',
+          noEcoTractor: res.noEcoTractor || this.noEcoTractor() || '',
+          noEcoCaja: res.noEcoCaja || this.noEcoCaja() || '',
           tractorPlates: res.tractorPlates || this.tractorPlates(),
           boxPlates: res.boxPlates || this.boxPlates(),
           transportType: (res.transportType || this.selectedTransportType()) as TransportType,
@@ -3215,8 +3424,8 @@ export class OutboundSubmoduleComponent implements OnInit {
             forkliftOperator: operator?.name,
             forkliftOperatorId: operator?.id,
             driverName: this.driverName(),
-            economicNumber: this.economicNumber(),
-            boxEconomicNumber: this.boxEconomicNumber(),
+            noEcoTractor: this.noEcoTractor(),
+            noEcoCaja: this.noEcoCaja(),
             tractorPlates: this.tractorPlates(),
             boxPlates: this.boxPlates(),
             transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
@@ -3280,38 +3489,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
       // Fallback inteligente: Si totalPallets > 0 pero items viene vacío, sintetizar detalle operativo con lotes
       if ((!resolvedOutbound.items || resolvedOutbound.items.length === 0) && (resolvedOutbound.totalPallets > 0 || (resolvedOutbound.totalPieces && resolvedOutbound.totalPieces > 0))) {
-        const count = resolvedOutbound.totalPallets || 1;
-        const totalPzs = resolvedOutbound.totalPieces || (count * 40);
-        const avgPzs = Math.floor(totalPzs / count);
-        const remPzs = totalPzs % count;
-
-        const clientBatches = this.allBatches().filter(
-          (b) => !resolvedOutbound.clientName ||
-                 (b.client && b.client.toLowerCase().includes(resolvedOutbound.clientName.toLowerCase())) ||
-                 (resolvedOutbound.clientName && resolvedOutbound.clientName.toLowerCase().includes(b.client.toLowerCase()))
-        );
-        const defaultBatch = clientBatches.length > 0 ? clientBatches[0] : (this.allBatches()[0] || null);
-
-        const syntheticItems: OutboundItem[] = [];
-        for (let i = 0; i < count; i++) {
-          const b = clientBatches[i % Math.max(1, clientBatches.length)] || defaultBatch;
-          syntheticItems.push({
-            id: `gen-item-${resolvedOutbound.folio || 'sal'}-${i + 1}`,
-            palletNumber: i + 1,
-            palletCode: `UA-4G-${resolvedOutbound.folio ? resolvedOutbound.folio.replace(/\D/g, '') : '2026'}-${String(i + 1).padStart(3, '0')}`,
-            productId: b?.productId || 'SKU-001',
-            description: b?.productName || 'PRODUCTO TERMINADO EN TARIMA',
-            lotNumber: b?.lotNumber || `LT-${new Date().getFullYear()}-${String(i + 1).padStart(2, '0')}`,
-            expirationDate: b?.expirationDate || new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10),
-            pieces: i === 0 ? (avgPzs + remPzs) : avgPzs,
-            palletTypeId: 'ESTANDAR',
-            palletTypeLabel: 'Estándar',
-            inboundRemisionNo: b?.remisionNo || (resolvedOutbound.remisionNo ? resolvedOutbound.remisionNo : 'DOC-INICIAL-01'),
-            clientName: resolvedOutbound.clientName || 'CLIENTE REGISTRADO',
-            locationCode: b?.locationCode || (resolvedOutbound.rampNumber ? `RAMPA-${resolvedOutbound.rampNumber}` : 'ANDÉN-01'),
-          });
-        }
-        resolvedOutbound.items = syntheticItems;
+        resolvedOutbound.items = this.synthesizeItemsForOutbound(resolvedOutbound);
       }
 
       if (resolvedOutbound.items && resolvedOutbound.items.length > 0) {
@@ -3359,8 +3537,8 @@ export class OutboundSubmoduleComponent implements OnInit {
               driverName: full.driverName || resolvedOutbound.driverName || '',
               tractorPlates: full.tractorPlates || resolvedOutbound.tractorPlates || '',
               boxPlates: full.boxPlates || resolvedOutbound.boxPlates || '',
-              economicNumber: full.economicNumber || (full as any).noEcoTractor || (full as any).ecoTractor || resolvedOutbound.economicNumber || '',
-              boxEconomicNumber: full.boxEconomicNumber || (full as any).noEcoCaja || (full as any).ecoCaja || resolvedOutbound.boxEconomicNumber || '',
+              noEcoTractor: full.noEcoTractor || resolvedOutbound.noEcoTractor || '',
+              noEcoCaja: full.noEcoCaja || resolvedOutbound.noEcoCaja || '',
               sealNumber: full.sealNumber || resolvedOutbound.sealNumber || '',
               items: mappedItems.length > 0 ? mappedItems : resolvedOutbound.items,
               totalPallets: mappedItems.length > 0 ? mappedItems.length : resolvedOutbound.totalPallets,

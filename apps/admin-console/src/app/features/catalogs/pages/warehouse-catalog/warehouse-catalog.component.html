@@ -880,7 +880,7 @@
               <input
                 class="wmap__search-input"
                 type="text"
-                placeholder="Buscar posición (ej: POS-A-001, POS-A-T01), SKU..."
+                [placeholder]="'Buscar posición (ej: POS-' + (selectedSection()?.code || 'A') + '-001, POS-' + (selectedSection()?.code || 'A') + '-T01), SKU...'"
                 [value]="sectionSearchQuery()"
                 (input)="sectionSearchQuery.set($any($event.target).value)"
               />
@@ -1489,7 +1489,7 @@
               <input
                 type="text"
                 class="form-input font-mono uppercase"
-                placeholder="Ej. POS-A-176"
+                [placeholder]="'Ej. POS-' + (selectedSection()?.code || 'A') + '-176'"
                 [ngModel]="newPosCode()"
                 (ngModelChange)="newPosCode.set($event)"
               />

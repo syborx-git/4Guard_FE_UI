@@ -54,7 +54,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public readonly pendingOutboundsCount = this.movementsService.pendingOutboundsCount;
   public readonly hasNewUnseenOutbound = signal<boolean>(false);
 
-  // ── Caseta / Seguridad (Choferes QR + Rampas Asignadas) ──
+  // ── Caseta / Seguridad (Choferes QR + Rampas Asignadas + Unidades Listas Salida) ──
   public readonly pendingDriverPasses = this.smartNotification.pendingDriverPasses;
   public readonly pendingDriverPassesCount = this.smartNotification.pendingDriverPassesCount;
   public readonly hasNewUnseenDriverPass = this.smartNotification.hasNewDriverSubmission;
@@ -63,8 +63,11 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public readonly pendingRampAssignmentsCount = this.smartNotification.pendingRampAssignmentsCount;
   public readonly hasNewRampAssignment = this.smartNotification.hasNewRampAssignment;
 
+  public readonly readyForExitPasses = this.smartNotification.readyForExitPasses;
+  public readonly readyForExitCount = this.smartNotification.readyForExitCount;
+
   public readonly totalSecurityAlertsCount = computed(() =>
-    this.pendingDriverPassesCount() + this.pendingRampAssignmentsCount()
+    this.pendingDriverPassesCount() + this.pendingRampAssignmentsCount() + this.readyForExitCount()
   );
 
   // ── Calidad / Bloqueos QM ──
@@ -100,12 +103,14 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
     return (
-      (role.includes('SECURITY') ||
-       role.includes('VIGILAN') ||
-       role.includes('GUARD') ||
-       role.includes('CASETA')) &&
-      !role.includes('ADMIN') &&
-      !role.includes('MANAGER')
+      role.includes('SECURITY') ||
+      role.includes('VIGILAN') ||
+      role.includes('GUARD') ||
+      role.includes('CASETA') ||
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('CEO')
     ) || this.isCurrentlyOnSecurityPage();
   });
 
@@ -156,8 +161,8 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     if (this.isOutboundContext()) return this.pendingOutboundsCount();
     if (this.isReceivingContext()) return this.pendingReceptionsCount();
     
-    // Contexto General / Dashboard / Cambio de Almacén -> Suma de todas las operaciones pendientes (Pre-Recepciones + Pre-Salidas)
-    return this.pendingReceptionsCount() + this.pendingOutboundsCount();
+    // Contexto General / Dashboard / Cambio de Almacén -> Suma de todas las operaciones pendientes (Pre-Recepciones + Pre-Salidas + Caseta)
+    return this.pendingReceptionsCount() + this.pendingOutboundsCount() + this.totalSecurityAlertsCount();
   });
 
   public readonly hasNewArrivalBeacon = computed(() => {
@@ -272,6 +277,12 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   public dismissRamp(event: MouseEvent, folio: string): void {
     event.stopPropagation();
     this.smartNotification.dismissRampAssignment(folio);
+  }
+
+  public openReadyExitPass(pass: any): void {
+    this.closeDropdown();
+    const token = pass?.token || pass?.generatedFolio || pass?.id;
+    this.router.navigate(['/security'], { queryParams: { tab: 'IN_YARD', token } });
   }
 
   public goToSecurityModule(): void {

@@ -54,3 +54,9 @@ Thumbs.db
 # Build artifacts
 *.ngfactory.ts
 *.ngsummary.json
+
+# Confidential spreadsheets & templates
+*.xlsx
+*.xls
+src/assets/templates/
+

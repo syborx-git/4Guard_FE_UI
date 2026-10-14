@@ -75,114 +75,37 @@ export class WarehouseMovementsApiService {
     return this.getSessionOrg().organizationId;
   }
 
-  // ─── 0. CASETA DE SEGURIDAD Y PASES DIGITALES QR ────────────────────────────
-
-  private readonly localPassState = signal<any[]>(this.loadLocalPassesFromStorage());
-
-  private loadLocalPassesFromStorage(): any[] {
-    try {
-      const stored = localStorage.getItem('4g_local_passes');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private saveLocalPassesToStorage(passes: any[]): void {
-    try {
-      this.localPassState.set(passes);
-      localStorage.setItem('4g_local_passes', JSON.stringify(passes));
-    } catch {
-      // Ignore
-    }
-  }
+  // ─── 0. CASETA DE SEGURIDAD Y PASES DIGITALES QR (100% BASE DE DATOS) ─────
 
   generatePass(body: any): Observable<any> {
-    const fallbackToken = 'PASS-4G-' + Date.now();
-    const passObj = {
-      id: 'pass-' + Date.now(),
-      token: fallbackToken,
-      status: 'PENDING_DRIVER',
-      operationType: body.operationType || 'DESCARGA',
-      clientCode: body.clientCode || '',
-      clientName: body.clientName || '',
-      carrierLineCode: body.carrierLineCode || '',
-      carrierLine: body.carrierLine || '',
-      driverName: body.driverName || '',
-      nombreOperador: body.driverName || '',
-      tractorPlates: body.tractorPlates || '',
-      placasTracto: body.tractorPlates || '',
-      docNumber: body.docNumber || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/generate`, body).pipe(
-      map((res) => {
-        const pass = res?.data || passObj;
-        // Sincronizar en localStorage exclusivamente el token devuelto por el Backend
-        const currentList = this.loadLocalPassesFromStorage().filter(
-          p => p.token !== pass.token && p.token !== fallbackToken && !p.token?.startsWith('PASS-4G-')
-        );
-        currentList.unshift(pass);
-        this.saveLocalPassesToStorage(currentList);
-        return pass;
-      }),
-      catchError(() => {
-        const currentList = this.loadLocalPassesFromStorage().filter(p => p.token !== fallbackToken);
-        currentList.unshift(passObj);
-        this.saveLocalPassesToStorage(currentList);
-        return of(passObj);
-      })
+      map((res) => res?.data)
     );
   }
 
   getActivePasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
-    if (options?.branchId) params = params.set('branchId', options.branchId);
+    if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
+      params = params.set('branchId', options.branchId);
+    }
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/active`, { params }).pipe(
-      map((res) => this.mergePassLists(res?.data || [], this.loadLocalPassesFromStorage())),
-      catchError(() => of(this.loadLocalPassesFromStorage()))
+      map((res) => res?.data || []),
+      catchError(() => of([]))
     );
-  }
-
-  loadExitedPassTokens(): Set<string> {
-    try {
-      const stored = localStorage.getItem('4g_exited_passes');
-      return stored ? new Set(JSON.parse(stored)) : new Set<string>();
-    } catch {
-      return new Set<string>();
-    }
-  }
-
-  saveExitedPassTokens(set: Set<string>): void {
-    try {
-      localStorage.setItem('4g_exited_passes', JSON.stringify(Array.from(set)));
-    } catch {
-      // Ignore
-    }
   }
 
   getInYardPasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
-    if (options?.branchId) params = params.set('branchId', options.branchId);
-
-    const exitedSet = this.loadExitedPassTokens();
+    if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
+      params = params.set('branchId', options.branchId);
+    }
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
       timeout(8000),
-      map((res) => {
-        const list = res.data || [];
-        return list.filter((p: any) => {
-          const tok = (p.token || '').trim().toUpperCase();
-          const fol = (p.generatedFolio || '').trim().toUpperCase();
-          const id = (p.id || '').trim().toUpperCase();
-          return !exitedSet.has(tok) && !exitedSet.has(fol) && !exitedSet.has(id) && p.status !== 'COMPLETED_EXIT';
-        });
-      }),
+      map((res) => (res.data || []).filter((p: any) => p.status !== 'COMPLETED_EXIT')),
       catchError(() => of([]))
     );
   }
@@ -190,7 +113,9 @@ export class WarehouseMovementsApiService {
   getPassHistory(options?: { organizationId?: string; branchId?: string; search?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
-    if (options?.branchId) params = params.set('branchId', options.branchId);
+    if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
+      params = params.set('branchId', options.branchId);
+    }
     if (options?.search) params = params.set('search', options.search);
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
@@ -201,90 +126,18 @@ export class WarehouseMovementsApiService {
   }
 
   completePassCheckin(token: string, body: any): Observable<any> {
-    const cleanToken = (token || '').trim().toUpperCase();
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/complete`, body).pipe(
-      map((res) => {
-        const pass = res?.data;
-        const list = this.loadLocalPassesFromStorage().map(p => {
-          const pTok = (p.token || '').trim().toUpperCase();
-          const pId = (p.id || '').trim().toUpperCase();
-          if (pTok === cleanToken || pId === cleanToken) {
-            return {
-              ...p,
-              ...pass,
-              status: 'COMPLETED',
-              generatedFolio: pass?.generatedFolio || p.generatedFolio
-            };
-          }
-          return p;
-        });
-        this.saveLocalPassesToStorage(list);
-        return pass;
-      })
+      map((res) => res?.data)
     );
   }
 
   checkOutPass(token: string, body: any): Observable<any> {
-    const cleanToken = (token || '').trim().toUpperCase();
-    const exitedSet = this.loadExitedPassTokens();
-    if (cleanToken) exitedSet.add(cleanToken);
-    this.saveExitedPassTokens(exitedSet);
-
-    // Actualizar también en 4g_local_passes
-    const list = this.loadLocalPassesFromStorage().map(p => {
-      const pTok = (p.token || '').trim().toUpperCase();
-      const pId = (p.id || '').trim().toUpperCase();
-      const pFol = (p.generatedFolio || '').trim().toUpperCase();
-      if (pTok === cleanToken || pId === cleanToken || pFol === cleanToken) {
-        return { ...p, status: 'COMPLETED_EXIT', isReadyForExit: false, departureTime: body.departureTime };
-      }
-      return p;
-    });
-    this.saveLocalPassesToStorage(list);
-
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/passes/${token}/check-out`, body).pipe(
-      map((res) => {
-        if (res?.data?.generatedFolio) {
-          exitedSet.add(res.data.generatedFolio.trim().toUpperCase());
-          this.saveExitedPassTokens(exitedSet);
-        }
-        if (res?.data?.token) {
-          exitedSet.add(res.data.token.trim().toUpperCase());
-          this.saveExitedPassTokens(exitedSet);
-        }
-        return res.data;
-      })
+      map((res) => res?.data)
     );
-  }
-
-  private loadDeletedPassTokens(): Set<string> {
-    try {
-      const stored = localStorage.getItem('4g_deleted_passes');
-      return stored ? new Set(JSON.parse(stored)) : new Set<string>();
-    } catch {
-      return new Set<string>();
-    }
-  }
-
-  private saveDeletedPassTokens(set: Set<string>): void {
-    try {
-      localStorage.setItem('4g_deleted_passes', JSON.stringify(Array.from(set)));
-    } catch {
-      // Ignore
-    }
   }
 
   deletePass(passIdOrToken: string, secondaryToken?: string): Observable<void> {
-    const deletedSet = this.loadDeletedPassTokens();
-    if (passIdOrToken) deletedSet.add(passIdOrToken);
-    if (secondaryToken) deletedSet.add(secondaryToken);
-    this.saveDeletedPassTokens(deletedSet);
-
-    const filtered = this.loadLocalPassesFromStorage().filter(
-      p => p.id !== passIdOrToken && p.token !== passIdOrToken && (!secondaryToken || (p.id !== secondaryToken && p.token !== secondaryToken))
-    );
-    this.saveLocalPassesToStorage(filtered);
-
     return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${passIdOrToken}`).pipe(
       map(() => void 0),
       catchError(() => of(void 0))
@@ -292,98 +145,20 @@ export class WarehouseMovementsApiService {
   }
 
   getPublicPass(token: string): Observable<any> {
-    const localMatch = this.loadLocalPassesFromStorage().find(p => p.token === token);
-
     return this.http.get<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}`).pipe(
       timeout(15000),
       retry({ count: 2, delay: 2000 }),
-      map((res) => res?.data || localMatch),
-      catchError(() => of(localMatch))
+      map((res) => res?.data),
+      catchError(() => of(null))
     );
   }
 
   submitPublicDriverCheckin(token: string, body: any): Observable<any> {
-    const updatedPass = {
-      token: token,
-      status: 'SUBMITTED',
-      operationType: body.operationType || body.operacion || 'DESCARGA',
-      operacion: body.operationType || body.operacion || 'DESCARGA',
-      docNumber: body.docNumber || body.noCartaPorte || body.remision || '',
-      noCartaPorte: body.noCartaPorte || '',
-      remision: body.remision || '',
-      clientCode: body.clientCode || '',
-      clientName: body.clientName || '',
-      carrierLineCode: body.carrierLineCode || '',
-      carrierLine: body.carrierLine || '',
-      driverName: body.driverName || body.nombreOperador || '',
-      nombreOperador: body.driverName || body.nombreOperador || '',
-      driverLicense: body.driverLicense || '',
-      tractorPlates: body.tractorPlates || body.placasTracto || '',
-      placasTracto: body.tractorPlates || body.placasTracto || '',
-      noEcoTractor: body.noEcoTractor || '',
-      boxPlates: body.boxPlates || body.placasCaja || '',
-      placasCaja: body.boxPlates || body.placasCaja || '',
-      boxDimensions: body.boxDimensions || body.medidasCaja || '53 Pies',
-      medidasCaja: body.boxDimensions || body.medidasCaja || '53 Pies',
-      transportType: body.transportType || body.tipoTransporte || 'Caja Seca',
-      tipoTransporte: body.transportType || body.tipoTransporte || 'Caja Seca',
-      sealNumbers: body.sealNumbers || [],
-      observations: body.observations || '',
-      driverSignature: body.driverSignature || '',
-      checklistData: body.checklistData || '',
-      submittedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const currentList = this.loadLocalPassesFromStorage();
-    const existingIndex = currentList.findIndex(p => p.token === token);
-    if (existingIndex >= 0) {
-      currentList[existingIndex] = { ...currentList[existingIndex], ...updatedPass };
-    } else {
-      currentList.unshift(updatedPass);
-    }
-    this.saveLocalPassesToStorage(currentList);
-
     return this.http.post<ApiResponse<any>>(`${this.securityGateUrl}/public/passes/${token}/submit`, body).pipe(
       timeout(25000),
       retry({ count: 2, delay: 2500 }),
-      map((res) => res?.data || updatedPass),
-      catchError(() => of(updatedPass))
+      map((res) => res?.data)
     );
-  }
-
-  private mergePassLists(backendList: any[], localList: any[]): any[] {
-    const deletedSet = this.loadDeletedPassTokens();
-    const mapByToken = new Map<string, any>();
-
-    for (const b of backendList) {
-      if (b && b.token && !deletedSet.has(b.token) && !deletedSet.has(b.id)) {
-        mapByToken.set(b.token, b);
-      }
-    }
-    for (const l of localList) {
-      if (l && l.token && !deletedSet.has(l.token) && !deletedSet.has(l.id)) {
-        // Si ya hay pases sincronizados desde el backend, ignorar tokens temporales PASS-4G-
-        if (l.token.startsWith('PASS-4G-') && backendList.length > 0) {
-          continue;
-        }
-        const existing = mapByToken.get(l.token);
-        if (!existing) {
-          mapByToken.set(l.token, l);
-        } else {
-          mapByToken.set(l.token, {
-            ...existing,
-            ...l,
-            operationType: l.operationType || l.operacion || existing.operationType || existing.operacion || 'DESCARGA',
-            driverName: l.driverName || l.nombreOperador || existing.driverName || existing.nombreOperador || '',
-            nombreOperador: l.driverName || l.nombreOperador || existing.driverName || existing.nombreOperador || '',
-            tractorPlates: l.tractorPlates || l.placasTracto || existing.tractorPlates || existing.placasTracto || '',
-            status: (l.status === 'SUBMITTED' || existing.status === 'SUBMITTED') ? 'SUBMITTED' : (l.status || existing.status)
-          });
-        }
-      }
-    }
-    return Array.from(mapByToken.values());
   }
 
   // ─── 1. RECEPCIONES DE ALMACÉN (F01) ────────────────────────────────────────
@@ -708,6 +483,17 @@ export class WarehouseMovementsApiService {
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map((res) => res.data || []),
       catchError(() => of([]))
+    );
+  }
+
+  updatePositionCapacity(positionId: string, payload: { code?: string; capacityTarimas: number }): Observable<any> {
+    const url = `${this.baseUrl}/api/v1/warehouse-map/positions/${positionId}`;
+    return this.http.put<ApiResponse<any>>(url, payload).pipe(
+      map((res) => res.data),
+      catchError((err) => {
+        console.error('Error al persistir capacidad de posición en backend:', err);
+        return of(null);
+      })
     );
   }
 

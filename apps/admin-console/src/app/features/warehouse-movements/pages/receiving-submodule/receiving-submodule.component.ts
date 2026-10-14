@@ -40,6 +40,19 @@ import { UnitOfMeasure } from '@4guard/shared-core';
 
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 
+export interface ShelfLifeEvaluation {
+  remainingDays: number;
+  totalDays: number | null;
+  totalMonths: number | null;
+  remainingPct: number | null;
+  thresholdRequired: number; // 75 o 50
+  isCompliant: boolean;
+  isExpired: boolean;
+  category: '< 24m' | '≥ 24m' | 'ESTIMADO';
+  badgeText: string;
+  badgeDetail: string;
+}
+
 @Component({
   selector: 'fg-receiving-submodule',
   standalone: true,
@@ -134,16 +147,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
     driverName: ['', [Validators.required]],
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
-    economicNumber: [''],
-    boxEconomicNumber: [''],
+    noEcoTractor: [''],
+    noEcoCaja: [''],
   });
 
   openEditCasetaModal(): void {
     const rec = this.selectedReception();
     if (!rec) return;
 
-    if (rec.status !== 'REGISTERED') {
-      this.toast.warning('La Ficha de Caseta solo puede modificarse en estado inicial (antes de asignar andén/montacarguista o finalizar).');
+    if (rec.status !== 'REGISTERED' && !this.allowCasetaEditAuthorized()) {
+      this.openReopenModal('CASETA_DATA');
+      this.toast.info('Para modificar datos de la ficha en este estado se requiere validación de supervisor.');
       return;
     }
 
@@ -174,8 +188,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       driverName: rec.checkIn.driverName || '',
       tractorPlates: rec.checkIn.tractorPlates || '',
       boxPlates: rec.checkIn.boxPlates || '',
-      economicNumber: rec.checkIn.economicNumber || rec.checkIn.noEcoTractor || (rec as any).economicNumber || (rec as any).noEcoTractor || '',
-      boxEconomicNumber: rec.checkIn.boxEconomicNumber || rec.checkIn.noEcoCaja || (rec as any).boxEconomicNumber || (rec as any).noEcoCaja || '',
+      noEcoTractor: rec.checkIn.noEcoTractor || (rec as any).noEcoTractor || '',
+      noEcoCaja: rec.checkIn.noEcoCaja || (rec as any).noEcoCaja || '',
     });
     const seals = rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0
       ? [...rec.checkIn.sealNumbers]
@@ -251,10 +265,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       driverName: val.driverName || currentRec.checkIn.driverName,
       tractorPlates: (val.tractorPlates || currentRec.checkIn.tractorPlates).toUpperCase(),
       boxPlates: (val.boxPlates || currentRec.checkIn.boxPlates).toUpperCase(),
-      economicNumber: (val.economicNumber || (val as any).noEcoTractor || currentRec.checkIn.noEcoTractor || currentRec.checkIn.economicNumber || '').trim(),
-      noEcoTractor: (val.economicNumber || (val as any).noEcoTractor || currentRec.checkIn.noEcoTractor || currentRec.checkIn.economicNumber || '').trim(),
-      boxEconomicNumber: (val.boxEconomicNumber || (val as any).noEcoCaja || currentRec.checkIn.noEcoCaja || currentRec.checkIn.boxEconomicNumber || '').trim(),
-      noEcoCaja: (val.boxEconomicNumber || (val as any).noEcoCaja || currentRec.checkIn.noEcoCaja || currentRec.checkIn.boxEconomicNumber || '').trim(),
+      noEcoTractor: (val.noEcoTractor || currentRec.checkIn.noEcoTractor || '').trim(),
+      noEcoCaja: (val.noEcoCaja || currentRec.checkIn.noEcoCaja || '').trim(),
       clientCode: val.clientCode || currentRec.checkIn.clientCode,
       client: val.client || currentRec.checkIn.client,
       rampNumber: currentRampNumber,
@@ -269,8 +281,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
       { fieldName: 'Operador / Chofer', oldValue: currentRec.checkIn?.driverName, newValue: updatedCheckIn.driverName },
       { fieldName: 'Placas del Tracto', oldValue: currentRec.checkIn?.tractorPlates, newValue: updatedCheckIn.tractorPlates },
       { fieldName: 'Placas de la Caja', oldValue: currentRec.checkIn?.boxPlates, newValue: updatedCheckIn.boxPlates },
-      { fieldName: 'No. Eco Tracto', oldValue: currentRec.checkIn?.noEcoTractor || currentRec.checkIn?.economicNumber, newValue: updatedCheckIn.noEcoTractor },
-      { fieldName: 'No. Eco Caja', oldValue: currentRec.checkIn?.noEcoCaja || currentRec.checkIn?.boxEconomicNumber, newValue: updatedCheckIn.noEcoCaja },
+      { fieldName: 'No. Eco Tracto', oldValue: currentRec.checkIn?.noEcoTractor, newValue: updatedCheckIn.noEcoTractor },
+      { fieldName: 'No. Eco Caja', oldValue: currentRec.checkIn?.noEcoCaja, newValue: updatedCheckIn.noEcoCaja },
       { fieldName: 'Sellos de Seguridad', oldValue: currentRec.checkIn?.sealNumber, newValue: updatedCheckIn.sealNumber },
     ].filter(d => d.oldValue !== d.newValue);
 
@@ -411,15 +423,76 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Modal Reapertura con Autorización de Supervisor / Administrador
   showReopenModal = signal(false);
+  reopenActionType = signal<'PALLET_SWAP' | 'MISSING_PALLETS' | 'CASETA_DATA' | 'UA_SWAP'>('PALLET_SWAP');
+  reopenTargetPalletType = signal<PalletType>('TARIMA_CHEP_NACIONAL');
+  reopenSwapScope = signal<'ALL' | 'SELECTED'>('ALL');
+  reopenSelectedPalletIds = signal<string[]>([]);
+  reopenSwapReasonQuick = signal<string>('ESTANDAR_PLANTA');
   reopenReason = signal('');
   reopenAdminUser = signal('');
   reopenAdminPassword = signal('');
   reopenErrorMessage = signal<string | null>(null);
   showReopenPassword = signal(false);
   isReopening = signal(false);
+  allowCasetaEditAuthorized = signal(false);
+
+  // Estados específicos para Cambio / Homologación Rápida de UAs del Cliente (Pistola RF)
+  reopenUaSwapList = signal<Array<{
+    id: string;
+    palletNumber: number;
+    currentUa: string;
+    newUa: string;
+    productId: string;
+    pieces: number;
+    isModified: boolean;
+  }>>([]);
+  reopenUaBulkOpen = signal(false);
+  reopenUaBulkText = signal('');
+
+  reopenModifiedUaCount = computed(() => {
+    return this.reopenUaSwapList().filter((item) => item.newUa.trim().length > 0).length;
+  });
+
+  reopenBayCapacity = computed(() => {
+    const rec = this.selectedReception();
+    if (!rec) return { bayCode: 'N/A', totalCapacity: 22, currentThisRec: 0, otherPallets: 0, availableCupo: 22 };
+    const bayCode = rec.storageLocation || (rec as any).storageLocationCode || 'POS-A-001';
+    const live = this.movementsService.getBayLiveOccupancy(bayCode);
+    const thisRecPallets = rec.pallets?.length || 0;
+    const totalStoredInBay = live ? live.totalPallets : thisRecPallets;
+    const otherPallets = Math.max(0, totalStoredInBay - thisRecPallets);
+    const totalCapacity = 22;
+    const availableCupo = Math.max(0, totalCapacity - totalStoredInBay);
+    return {
+      bayCode,
+      totalCapacity,
+      currentThisRec: thisRecPallets,
+      otherPallets,
+      availableCupo,
+    };
+  });
+
+  readonly palletSwapReasons = [
+    { id: 'ESTANDAR_PLANTA', label: 'Estándar Obligatorio de Planta / Racks', desc: 'Retarimado físico obligatorio para ingresar a racks de almacenaje.' },
+    { id: 'POOL_CHEP', label: 'Circuito de Tarimas CHEP / PECO', desc: 'Sustitución de tarima transportista por tarima pool CHEP.' },
+    { id: 'INOCUIDAD_PLASTICA', label: 'Inocuidad / Tarima Plástica Sanitaria', desc: 'Exigencia de grado alimenticio / área limpia sin madera.' },
+    { id: 'TARIMA_DANADA', label: 'Tarima Original Dañada / Rota', desc: 'Sustitución por daño o astillado durante la maniobra de descarga.' },
+    { id: 'SOLICITUD_CLIENTE', label: 'Instrucción Especial del Cliente', desc: 'Requisito específico del propietario de la mercancía.' },
+    { id: 'OTRO', label: 'Otro Motivo Operativo', desc: 'Justificación documentada por supervisión.' },
+  ];
 
   toggleShowReopenPassword(): void {
     this.showReopenPassword.update((v) => !v);
+  }
+
+  toggleReopenPalletSelection(palletId: string): void {
+    this.reopenSelectedPalletIds.update((ids) =>
+      ids.includes(palletId) ? ids.filter((id) => id !== palletId) : [...ids, palletId]
+    );
+  }
+
+  isPalletSelectedForSwap(palletId: string): boolean {
+    return this.reopenSelectedPalletIds().includes(palletId);
   }
 
   // Modal Cambio de Remisión con Autorización de Rango Superior
@@ -578,8 +651,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
     sealNumber: [''],
-    economicNumber: [''],
-    boxEconomicNumber: [''],
+    noEcoTractor: [''],
+    noEcoCaja: [''],
     securityApproved: [true],
   });
 
@@ -599,8 +672,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
   sealList = signal<string[]>([]);
   tempSealInput = signal('');
 
-  // Catálogos para Autorización Excepcional de Gerencia de Operaciones (< 9 meses / 270 días)
+  // Catálogos para Autorización Excepcional de Vida Útil Remanente (Protocolo MRP & Planeación de Demanda)
   readonly STANDARD_OPS_MANAGERS = [
+    'Equipo MRP / Planeación de la Demanda',
+    'Fábrica Receptora (Control de Calidad)',
     'Ing. Carlos Mendoza (Gerente de Operaciones)',
     'Lic. Sofia Morales (Subgerente de Operaciones)',
     'Mtro. Roberto Garza (Director de Operaciones WMS)',
@@ -608,11 +683,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
   ];
 
   readonly STANDARD_OPS_REASONS = [
-    'Rotación rápida acordada con cliente',
-    'Promoción / Venta especial de salida inmediata',
+    'Autorizado por MRP previo a embarque (Evaluación de riesgo aprobada)',
+    'Acuerdo con Planeación de la Demanda y Fábrica Receptora (Absorción de costo convenida)',
+    'Uso y consumo inmediato en producción / Maquila rápida',
+    'Rotación rápida acordada con cliente / Salida programada',
     'Desabasto crítico de insumos / Urgencia operativa',
-    'Autorización corporativa de Gerencia de Operaciones',
-    'Acuerdo comercial con proveedor / Saldo de temporada',
+    'Convenio comercial especial con proveedor por caducidad corta',
     'Otro motivo operativo (especificar en justificación)',
   ];
 
@@ -1099,13 +1175,11 @@ export class ReceivingSubmoduleComponent implements OnInit {
           if (!mapped.checkIn?.rampNumber && rec.checkIn?.rampNumber) {
             mapped.checkIn.rampNumber = rec.checkIn.rampNumber;
           }
-          if (rec.checkIn?.noEcoTractor || rec.checkIn?.economicNumber) {
-            mapped.checkIn.noEcoTractor = rec.checkIn.noEcoTractor || rec.checkIn.economicNumber;
-            mapped.checkIn.economicNumber = rec.checkIn.noEcoTractor || rec.checkIn.economicNumber;
+          if (rec.checkIn?.noEcoTractor) {
+            mapped.checkIn.noEcoTractor = rec.checkIn.noEcoTractor;
           }
-          if (rec.checkIn?.noEcoCaja || rec.checkIn?.boxEconomicNumber) {
-            mapped.checkIn.noEcoCaja = rec.checkIn.noEcoCaja || rec.checkIn.boxEconomicNumber;
-            mapped.checkIn.boxEconomicNumber = rec.checkIn.noEcoCaja || rec.checkIn.boxEconomicNumber;
+          if (rec.checkIn?.noEcoCaja) {
+            mapped.checkIn.noEcoCaja = rec.checkIn.noEcoCaja;
           }
           if (mapped.pallets && Array.isArray(mapped.pallets)) {
             for (const p of mapped.pallets) {
@@ -1320,8 +1394,104 @@ export class ReceivingSubmoduleComponent implements OnInit {
     return this.palletStream().filter((p) => p.lotNumber === lotNum).length;
   }
 
-  // Regla estándar: ≥ 9 meses (270 días)
-  isShelfLifeCompliant(days: number | null): boolean {
+  // ── GESTIÓN DE VIDA ÚTIL REMANENTE (REGLA CORPORATIVA MRP / PLANEACIÓN) ──
+  // < 24 meses vida total -> al menos 75% vida restante
+  // >= 24 meses vida total -> al menos 50% vida restante
+  // Excepciones: requieren autorización previa con evaluación de riesgo MRP / Fábrica
+  evaluateShelfLife(expDateStr?: string | null, elabDateStr?: string | null): ShelfLifeEvaluation | null {
+    if (!expDateStr) return null;
+    const expDate = new Date(expDateStr + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const remainingDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const isExpired = remainingDays < 0;
+
+    if (isExpired) {
+      return {
+        remainingDays,
+        totalDays: null,
+        totalMonths: null,
+        remainingPct: 0,
+        thresholdRequired: 75,
+        isCompliant: false,
+        isExpired: true,
+        category: '< 24m',
+        badgeText: `Vencido (${Math.abs(remainingDays)}d)`,
+        badgeDetail: `El lote venció hace ${Math.abs(remainingDays)} días. No apto para recibo.`,
+      };
+    }
+
+    if (elabDateStr) {
+      const elabDate = new Date(elabDateStr + 'T00:00:00Z');
+      if (!isNaN(elabDate.getTime()) && expDate.getTime() > elabDate.getTime()) {
+        const totalDays = Math.max(1, Math.floor((expDate.getTime() - elabDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const totalMonths = Math.round((totalDays / 30.4375) * 10) / 10;
+        const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / totalDays) * 1000) / 10)));
+        const isLongLife = totalMonths >= 24;
+        const thresholdRequired = isLongLife ? 50 : 75;
+        const category: '< 24m' | '≥ 24m' = isLongLife ? '≥ 24m' : '< 24m';
+        const isCompliant = remainingPct >= thresholdRequired;
+
+        return {
+          remainingDays,
+          totalDays,
+          totalMonths,
+          remainingPct,
+          thresholdRequired,
+          isCompliant,
+          isExpired: false,
+          category,
+          badgeText: `${remainingPct}% vida (${category})`,
+          badgeDetail: `${remainingPct}% restante de ${totalMonths}m totales (Mín: ${thresholdRequired}%)`,
+        };
+      }
+    }
+
+    // Si no hay fecha de elaboración, se calcula sobre base estándar prudencial de 24 meses (730 días)
+    const estimatedTotalDays = 730;
+    const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / estimatedTotalDays) * 1000) / 10)));
+    const thresholdRequired = 75;
+    const isCompliant = remainingPct >= thresholdRequired;
+
+    return {
+      remainingDays,
+      totalDays: estimatedTotalDays,
+      totalMonths: 24,
+      remainingPct,
+      thresholdRequired,
+      isCompliant,
+      isExpired: false,
+      category: 'ESTIMADO',
+      badgeText: `${remainingDays}d (${remainingPct}% est.)`,
+      badgeDetail: `${remainingDays} días restantes (~${remainingPct}% vida estimada)`,
+    };
+  }
+
+  getShelfLifeEval(lot?: ReceptionLot | null): ShelfLifeEvaluation | null {
+    const target = lot || this.getActiveLot();
+    if (!target || !target.expirationDate) return null;
+    return this.evaluateShelfLife(target.expirationDate, target.elaborationDate);
+  }
+
+  getActiveLotShelfLifeEval(): ShelfLifeEvaluation | null {
+    const lot = this.getActiveLot();
+    return this.getShelfLifeEval(lot);
+  }
+
+  getNewLotShelfLifeEval(): ShelfLifeEvaluation | null {
+    const exp = this.newLotForm.get('expirationDate')?.value;
+    const elab = this.newLotForm.get('elaborationDate')?.value;
+    return this.evaluateShelfLife(exp, elab);
+  }
+
+  isShelfLifeCompliant(days: number | null, lot?: ReceptionLot): boolean {
+    const target = lot || this.getActiveLot();
+    if (target && target.expirationDate) {
+      const evalRes = this.evaluateShelfLife(target.expirationDate, target.elaborationDate);
+      if (evalRes) return evalRes.isCompliant;
+    }
     return days != null && days >= 270;
   }
 
@@ -1330,16 +1500,16 @@ export class ReceivingSubmoduleComponent implements OnInit {
     return Boolean(lot.requiresOpsAuthorization && lot.authorizedByOpsManager && lot.opsManagerReason);
   }
 
-  // Verifica si en el modal newLotForm la fecha ingresada tiene < 9 meses
+  // Verifica si en el modal newLotForm la fecha ingresada requiere autorización MRP (< 75% o < 50%)
   isNewLotShelfLifeShort(): boolean {
-    const exp = this.newLotForm.get('expirationDate')?.value;
-    const days = this.calculateShelfLifeDays(exp);
-    return days != null && days < 270;
+    const evalRes = this.getNewLotShelfLifeEval();
+    if (!evalRes) return false;
+    return !evalRes.isCompliant;
   }
 
   getNewLotShelfLifeDays(): number | null {
-    const exp = this.newLotForm.get('expirationDate')?.value;
-    return this.calculateShelfLifeDays(exp);
+    const evalRes = this.getNewLotShelfLifeEval();
+    return evalRes ? evalRes.remainingDays : null;
   }
 
   onQuickOpsReasonChange(event: Event): void {
@@ -1408,27 +1578,27 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    // 🔒 REGLA DE VIDA ÚTIL: ESTÁNDAR 9 MESES (270 DÍAS) & AUTORIZACIÓN GERENCIAL SI ES MENOR
+    // 🔒 REGLA DE VIDA ÚTIL: MATRIZ DINÁMICA MRP (<24m: 75% | ≥24m: 50%)
     let requiresOpsAuth = false;
     if (exp) {
-      const diffDays = this.calculateShelfLifeDays(exp);
-      if (diffDays != null) {
-        if (diffDays < 0) {
-          this.toast.error(`🛑 Fecha de caducidad inválida: El lote ya está vencido (hace ${Math.abs(diffDays)} días). No se permite el ingreso de mercancía caducada.`);
+      const evalRes = this.evaluateShelfLife(exp, elab);
+      if (evalRes) {
+        if (evalRes.isExpired) {
+          this.toast.error(`🛑 Fecha de caducidad inválida: El lote ya está vencido (hace ${Math.abs(evalRes.remainingDays)} días). No se permite el ingreso de mercancía caducada.`);
           return;
         }
-        if (diffDays < 270) {
+        if (!evalRes.isCompliant) {
           requiresOpsAuth = true;
           if (!opsAuth) {
-            this.toast.error(`🛑 Candado de Calidad: Debes seleccionar o ingresar el Usuario/Gerente de Operaciones que autoriza.`);
+            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con ${evalRes.remainingPct}% de vida restante (requiere ≥ ${evalRes.thresholdRequired}% para material ${evalRes.category}). Debes ingresar el Usuario o Autorizador MRP / Planeación.`);
             return;
           }
           if (!opsPassword) {
-            this.toast.error(`🛑 Candado de Calidad: Ingresa la contraseña o PIN de autorización de Gerencia de Operaciones.`);
+            this.toast.error(`🛑 Candado de Calidad: Ingresa la contraseña o PIN de autorización de la excepción.`);
             return;
           }
           if (!opsReason) {
-            this.toast.error(`🛑 Candado de Calidad: Debes ingresar el motivo o justificación formal de la excepción.`);
+            this.toast.error(`🛑 Candado de Calidad: Debes ingresar el motivo formal de excepción acordado con MRP / Fábrica.`);
             return;
           }
         }
@@ -1886,19 +2056,19 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL (9 MESES / 270 DÍAS & AUTORIZACIÓN GERENCIAL)
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL: MATRIZ DINÁMICA MRP (<24m -> 75% | ≥24m -> 50%)
     if (exp) {
-      const diffDays = this.calculateShelfLifeDays(exp);
-      if (diffDays != null) {
-        if (diffDays < 0) {
-          this.toast.error(`🛑 Fecha de caducidad inválida: El lote está vencido (hace ${Math.abs(diffDays)} días). No se permite la descarga física.`);
+      const evalRes = this.evaluateShelfLife(exp, elab);
+      if (evalRes) {
+        if (evalRes.isExpired) {
+          this.toast.error(`🛑 Fecha de caducidad inválida: El lote está vencido (hace ${Math.abs(evalRes.remainingDays)} días). No se permite la descarga física.`);
           return false;
         }
-        if (diffDays < 270) {
+        if (!evalRes.isCompliant) {
           const activeLot = this.getActiveLot();
           const isAuthorized = activeLot && activeLot.requiresOpsAuthorization && activeLot.authorizedByOpsManager && activeLot.opsManagerReason;
           if (!isAuthorized) {
-            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con sólo ${diffDays} días restantes (< 9 meses / 270 días). Para asignar andén y continuar con la descarga se requiere la Autorización y Motivo formal por parte del Gerente de Operaciones.`);
+            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con ${evalRes.remainingPct}% de vida restante (< ${evalRes.thresholdRequired}% requerido para material ${evalRes.category}). Para continuar se requiere la Autorización Excepcional de MRP / Planeación.`);
             this.openEditActiveLotModal();
             return false;
           }
@@ -2286,6 +2456,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
       });
       this.loadAuditLogs(updatedRec.folio);
 
+      const live = this.movementsService.getBayLiveOccupancy(targetBay);
+      if (live && live.remisiones.length > 0) {
+        const otherRemisiones = live.remisiones.filter((r) => r.receptionFolio !== currentRec?.folio);
+        if (otherRemisiones.length > 0) {
+          const otherCount = otherRemisiones.reduce((acc, r) => acc + r.palletsCount, 0);
+          this.toast.info(`📦 Bahía Compartida: ${targetBay} almacena ${otherCount} tarimas de ${otherRemisiones.length} remisión(es) previa(s). Capacidad restante actualizada.`);
+        }
+      }
+
       // Sincronizar inmediatamente al Backend en tiempo real si el registro ya existe
       if (currentRec.id && isUuid(currentRec.id)) {
         this.movementsApi
@@ -2492,14 +2671,186 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }
   }
 
-  // ── REAPERTURA EXTRAORDINARIA DE RECEPCIÓN ──
-  openReopenModal(): void {
+  // ── REAPERTURA Y RETARIMADO EXTRAORDINARIO DE RECEPCIÓN ──
+  openReopenModal(initialAction: 'PALLET_SWAP' | 'MISSING_PALLETS' | 'CASETA_DATA' | 'UA_SWAP' = 'PALLET_SWAP'): void {
+    const rec = this.selectedReception();
+    this.reopenActionType.set(initialAction);
+    const currentPType = rec?.selectedPalletType || 'MADERA_ESTANDAR';
+    const defaultTarget = currentPType === 'TARIMA_CHEP_NACIONAL' ? 'MADERA_ESTANDAR' : 'TARIMA_CHEP_NACIONAL';
+    this.reopenTargetPalletType.set(defaultTarget as PalletType);
+    this.reopenSwapScope.set('ALL');
+    this.reopenSelectedPalletIds.set([]);
+    this.reopenSwapReasonQuick.set('ESTANDAR_PLANTA');
     this.reopenReason.set('');
     this.reopenAdminUser.set('');
     this.reopenAdminPassword.set('');
     this.reopenErrorMessage.set(null);
     this.showReopenPassword.set(false);
+    this.initReopenUaSwapList();
     this.showReopenModal.set(true);
+  }
+
+  setReopenAction(action: 'PALLET_SWAP' | 'MISSING_PALLETS' | 'CASETA_DATA' | 'UA_SWAP'): void {
+    this.reopenActionType.set(action);
+    if (action === 'UA_SWAP') {
+      if (this.reopenUaSwapList().length === 0) {
+        this.initReopenUaSwapList();
+      }
+      setTimeout(() => {
+        const first = document.getElementById('ua-scan-input-0') as HTMLInputElement;
+        if (first) {
+          first.focus();
+        }
+      }, 100);
+    }
+  }
+
+  initReopenUaSwapList(): void {
+    const pallets = this.selectedReception()?.pallets || this.palletStream() || [];
+    const items = pallets.map((p, idx) => ({
+      id: p.id,
+      palletNumber: p.palletNumber || (idx + 1),
+      currentUa: p.palletCode,
+      newUa: '',
+      productId: p.productId || 'SKU',
+      pieces: p.pieces || 0,
+      isModified: false,
+    }));
+    this.reopenUaSwapList.set(items);
+    this.reopenUaBulkOpen.set(false);
+    this.reopenUaBulkText.set('');
+  }
+
+  // Feedback acústico para terminales y pistolas RF
+  playBeepSuccess(): void {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.09);
+    } catch (_) {}
+  }
+
+  playBeepError(): void {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } catch (_) {}
+  }
+
+  // Manejo de disparo láser de pistola con auto-avance al siguiente campo
+  onUaScanEnter(index: number, event: Event): void {
+    event.preventDefault();
+    const list = [...this.reopenUaSwapList()];
+    const item = list[index];
+    if (!item) return;
+
+    const rawVal = (item.newUa || '').trim().toUpperCase();
+    if (!rawVal) {
+      this.playBeepError();
+      this.toast.warning(`La Tarima #${item.palletNumber} requiere un código UA válido.`);
+      return;
+    }
+
+    // Validación de duplicados en el lote
+    const isDup = list.some((other, oIdx) => oIdx !== index && other.newUa.trim().toUpperCase() === rawVal);
+    if (isDup) {
+      this.playBeepError();
+      this.toast.error(`🛑 La UA (${rawVal}) ya fue capturada en otra tarima de este embarque.`);
+      return;
+    }
+
+    item.newUa = rawVal;
+    item.isModified = rawVal !== item.currentUa;
+    list[index] = item;
+    this.reopenUaSwapList.set(list);
+    this.playBeepSuccess();
+
+    // Auto-avance del cursor a la siguiente tarima
+    setTimeout(() => {
+      const nextInput = document.getElementById(`ua-scan-input-${index + 1}`) as HTMLInputElement;
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      } else {
+        this.toast.success('🎯 ¡Todas las UAs capturadas! Ingresa las credenciales de autorización.');
+      }
+    }, 50);
+  }
+
+  onUaInputChange(index: number, val: string): void {
+    this.reopenUaSwapList.update((list) => {
+      const copy = [...list];
+      if (copy[index]) {
+        const upper = (val || '').trim().toUpperCase();
+        copy[index] = {
+          ...copy[index],
+          newUa: upper,
+          isModified: upper.length > 0 && upper !== copy[index].currentUa,
+        };
+      }
+      return copy;
+    });
+  }
+
+  resetUaRow(index: number): void {
+    this.reopenUaSwapList.update((list) => {
+      const copy = [...list];
+      if (copy[index]) {
+        copy[index] = {
+          ...copy[index],
+          newUa: '',
+          isModified: false,
+        };
+      }
+      return copy;
+    });
+  }
+
+  applyBulkUaPaste(): void {
+    const raw = this.reopenUaBulkText().trim();
+    if (!raw) {
+      this.toast.warning('Pega al menos una UA para distribuir.');
+      return;
+    }
+
+    const lines = raw.split(/[\r\n,;\t]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
+    if (lines.length === 0) return;
+
+    const list = [...this.reopenUaSwapList()];
+    let appliedCount = 0;
+    lines.forEach((ua, idx) => {
+      if (idx < list.length) {
+        list[idx] = {
+          ...list[idx],
+          newUa: ua,
+          isModified: ua !== list[idx].currentUa,
+        };
+        appliedCount++;
+      }
+    });
+
+    this.reopenUaSwapList.set(list);
+    this.reopenUaBulkText.set('');
+    this.reopenUaBulkOpen.set(false);
+    this.playBeepSuccess();
+    this.toast.success(`⚡ Se distribuyeron ${appliedCount} UAs desde la lista del cliente.`);
   }
 
   closeReopenModal(): void {
@@ -2508,78 +2859,146 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   confirmReopenReception(): void {
     this.reopenErrorMessage.set(null);
-    const reason = this.reopenReason().trim();
+    const action = this.reopenActionType();
+    const reasonText = this.reopenReason().trim();
     const user = this.reopenAdminUser().trim();
     const pass = this.reopenAdminPassword().trim();
     const current = this.selectedReception();
 
     if (!current) return;
 
-    if (!reason) {
-      this.reopenErrorMessage.set('El motivo o justificación de reapertura es obligatorio.');
-      return;
-    }
     if (!user || !pass) {
       this.reopenErrorMessage.set('Ingresa usuario y contraseña de Administrador / Supervisor.');
       return;
     }
 
-    this.isReopening.set(true);
-
     const adminLabel = user.toLowerCase().includes('admin')
       ? 'Gerencia Operativa (Administrador)'
       : `${user} (Supervisor Autorizado)`;
 
-    if (current.id && isUuid(current.id) && pass) {
-      this.movementsApi
-        .reopenReception(current.id, {
-          adminUsername: user,
-          adminPassword: pass,
-          reason,
-        })
-        .subscribe({
-          next: () => {
-            this.isReopening.set(false);
-            this.showReopenModal.set(false);
+    let fullReason = reasonText;
+    if (action === 'PALLET_SWAP') {
+      const quickMatch = this.palletSwapReasons.find((r) => r.id === this.reopenSwapReasonQuick());
+      const prefix = quickMatch ? `[${quickMatch.label}]` : '[Retarimado Físico en Andén]';
+      fullReason = reasonText ? `${prefix} ${reasonText}` : prefix;
+    } else if (action === 'UA_SWAP') {
+      const prefix = '[Homologación de UAs del Cliente]';
+      fullReason = reasonText ? `${prefix} ${reasonText}` : prefix;
+    } else if (!fullReason) {
+      this.reopenErrorMessage.set('El motivo o justificación de la acción es obligatorio.');
+      return;
+    }
 
-            const reopened = this.movementsService.reopenReception(
-              current.folio,
-              reason,
-              adminLabel
-            );
+    this.isReopening.set(true);
 
-            if (reopened) {
-              this.selectReception(reopened);
-              this.loadAuditLogs(reopened.id || reopened.folio);
-              this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Ya puedes cargar pallets adicionales.`);
+    if (action === 'PALLET_SWAP') {
+      const targetType = this.reopenTargetPalletType();
+      const scope = this.reopenSwapScope();
+      const selectedIds = this.reopenSelectedPalletIds();
 
-              this.smartNotification.dispatch({
-                category: 'RECEIVING',
-                title: '🔓 Recepción Reabierta para Captura',
-                message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${reason}. Habilitada para captura de pallets faltantes.`,
-                referenceFolio: reopened.folio,
-                route: '/movements/receiving',
-                targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
-                targetRoutes: ['/movements/receiving'],
-                severity: 'WARNING',
-                data: reopened,
-              });
-            }
-          },
-          error: (err: any) => {
-            this.isReopening.set(false);
-            const msg =
-              err.error?.message ||
-              err.message ||
-              'Error al validar credenciales o reabrir la recepción en el servidor.';
-            this.reopenErrorMessage.set(msg);
-          },
+      if (scope === 'SELECTED' && selectedIds.length === 0) {
+        this.isReopening.set(false);
+        this.reopenErrorMessage.set('Debes seleccionar al menos una tarima física para el retarimado.');
+        return;
+      }
+
+      const updated = this.movementsService.swapReceptionPalletType(
+        current.folio,
+        targetType,
+        scope,
+        selectedIds,
+        fullReason,
+        adminLabel
+      );
+
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+
+      if (updated) {
+        this.selectReception(updated);
+        this.palletStream.set(updated.pallets ? [...updated.pallets] : []);
+        this.loadAuditLogs(updated.id || updated.folio);
+        const targetLabel = this.getPalletTypeLabel(targetType);
+        this.toast.success(`🪵 Retarimado registrado: ahora se encuentra en ${targetLabel}. UAs actualizadas.`);
+
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🪵 Cambio Físico de Tarima (Retarimado)',
+          message: `Recepción #${updated.folio}: Retarimado a ${targetLabel} por ${adminLabel}. Motivo: ${fullReason}.`,
+          referenceFolio: updated.folio,
+          route: '/movements/receiving',
+          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR'],
+          targetRoutes: ['/movements/receiving'],
+          severity: 'INFO',
+          data: updated,
         });
-    } else {
+      } else {
+        this.toast.error('No se pudo procesar el cambio de tarima.');
+      }
+    } else if (action === 'UA_SWAP') {
+      const items = this.reopenUaSwapList();
+      const modifiedItems = items.filter((it) => it.newUa.trim().length > 0);
+
+      if (modifiedItems.length === 0) {
+        this.isReopening.set(false);
+        this.reopenErrorMessage.set('Debes pistolear o ingresar al menos una nueva UA del cliente.');
+        return;
+      }
+
+      // Validar duplicados entre las UAs resultantes (usando la nueva si fue capturada, o la actual si quedó sin cambio)
+      const usedUas = new Set<string>();
+      for (const it of items) {
+        const u = (it.newUa.trim() || it.currentUa).toUpperCase();
+        if (usedUas.has(u)) {
+          this.isReopening.set(false);
+          this.reopenErrorMessage.set(`🛑 La UA (${u}) está repetida. Cada tarima debe tener un código único.`);
+          return;
+        }
+        usedUas.add(u);
+      }
+
+      const mappings = items.map((it) => ({
+        palletId: it.id,
+        oldUa: it.currentUa,
+        newUa: it.newUa.trim() ? it.newUa.trim().toUpperCase() : it.currentUa,
+      }));
+
+      const updated = this.movementsService.updateReceptionPalletUas(
+        current.folio,
+        mappings,
+        fullReason,
+        adminLabel
+      );
+
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+
+      if (updated) {
+        this.selectReception(updated);
+        this.palletStream.set(updated.pallets ? [...updated.pallets] : []);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.toast.success(`🎯 Se homologaron ${modifiedItems.length} UAs del cliente exitosamente.`);
+
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🎯 UAs de Cliente Homologadas',
+          message: `Recepción #${updated.folio}: ${modifiedItems.length} UAs actualizadas por ${adminLabel}. Motivo: ${fullReason}.`,
+          referenceFolio: updated.folio,
+          route: '/movements/receiving',
+          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR'],
+          targetRoutes: ['/movements/receiving'],
+          severity: 'INFO',
+          data: updated,
+        });
+      } else {
+        this.toast.error('No se pudo procesar la homologación de UAs.');
+      }
+    } else if (action === 'MISSING_PALLETS') {
       const reopened = this.movementsService.reopenReception(
         current.folio,
-        reason,
-        adminLabel
+        fullReason,
+        adminLabel,
+        'MISSING_PALLETS'
       );
 
       this.isReopening.set(false);
@@ -2587,13 +3006,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
       if (reopened) {
         this.selectReception(reopened);
+        this.palletStream.set(reopened.pallets ? [...reopened.pallets] : []);
         this.loadAuditLogs(reopened.id || reopened.folio);
-        this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Ya puedes cargar pallets adicionales.`);
+        this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Andén y escaneo habilitados para tarimas adicionales.`);
 
         this.smartNotification.dispatch({
           category: 'RECEIVING',
-          title: '🔓 Recepción Reabierta para Captura',
-          message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${reason}. Habilitada para captura de pallets faltantes.`,
+          title: '🔓 Recepción Reabierta para Captura Complementaria',
+          message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${fullReason}. Habilitada para captura de pallets omitidos.`,
           referenceFolio: reopened.folio,
           route: '/movements/receiving',
           targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
@@ -2604,6 +3024,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
       } else {
         this.toast.error('No se pudo procesar la reapertura de la recepción.');
       }
+    } else if (action === 'CASETA_DATA') {
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+      this.allowCasetaEditAuthorized.set(true);
+      this.toast.info(`🔑 Autorización concedida para modificar la Ficha de Caseta de la recepción #${current.folio}.`);
+      this.openEditCasetaModal();
     }
   }
 
@@ -3264,8 +3690,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
       };
     });
 
+    const assignedRampNum = rec.checkIn?.rampNumber ?? (rec as any).rampNumber ?? formVals.rampNumber ?? this.checkInForm.value.rampNumber ?? null;
+    const assignedRampCode = rec.checkIn?.rampCode ?? (rec as any).rampCode ?? this.checkInForm.value.rampCode ?? (assignedRampNum ? `LOC-RAMP-${String(assignedRampNum).padStart(2, '0')}` : null);
+
     const recToPrint: ReceptionHeader = {
       ...rec,
+      checkIn: {
+        ...(rec.checkIn || {}),
+        rampNumber: assignedRampNum,
+        rampCode: assignedRampCode || rec.checkIn?.rampCode,
+      },
+      leaderAuthorizedBy: rec.leaderAuthorizedBy || rec.cancelledBy || this.authState.userFullName() || '',
+      cancelledBy: rec.cancelledBy || rec.leaderAuthorizedBy || this.authState.userFullName() || '',
       lotNumber: rec.lotNumber || formVals.lotNumber || (enrichedPallets.length > 0 ? enrichedPallets[0].lotNumber : 'N/A'),
       expirationDate: rec.expirationDate || formVals.expirationDate || (enrichedPallets.length > 0 ? enrichedPallets[0].expirationDate : 'N/A'),
       productId: rec.productId || formVals.productId || (enrichedPallets.length > 0 ? enrichedPallets[0].productId : ''),

@@ -32,8 +32,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   protected readonly submitSuccess = signal<boolean>(false);
   protected readonly submitError = signal<string | null>(null);
 
-  protected readonly organizationId = signal<string>('00000000-0000-0000-0000-000000000001');
-  protected readonly branchId = signal<string>('00000000-0000-0000-0000-000000000001');
+  protected readonly organizationId = signal<string>('a53f0907-9fa5-4bdf-87db-2eb5e7683935');
+  protected readonly branchId = signal<string>('b73f0907-9fa5-4bdf-87db-2eb5e7683936');
 
   protected readonly sealList = signal<string[]>([]);
   protected readonly tempSealInput = signal<string>('');
@@ -320,9 +320,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.isLoadingPass.set(true);
     this.passError.set(null);
 
-    // Decodificar Token Inteligente incrustado en el QR si está disponible
+    // Decodificar Token Inteligente incrustado en el QR si está disponible en URL
     this.tryDecodeSmartToken(tokenStr);
-    this.tryLoadLocalPass(tokenStr);
 
     this.api.getPublicPass(tokenStr).subscribe({
       next: (pass: any) => {
@@ -333,24 +332,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       },
       error: () => {
         this.isLoadingPass.set(false);
-        this.tryLoadLocalPass(tokenStr);
       }
     });
-  }
-
-  private tryLoadLocalPass(tokenStr: string): void {
-    try {
-      const localStr = localStorage.getItem('4g_local_passes');
-      if (localStr) {
-        const passes: any[] = JSON.parse(localStr);
-        const found = passes.find(p => p.token === tokenStr || p.id === tokenStr);
-        if (found) {
-          this.applyPassDataToForm(found);
-        }
-      }
-    } catch {
-      // Ignorar fallback
-    }
   }
 
   private tryDecodeSmartToken(tokenStr: string): void {
@@ -393,8 +376,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     if (pass.driverPhone || pass.telefonoChofer) this.checkInForm.patchValue({ driverPhone: pass.driverPhone || pass.telefonoChofer });
     if (pass.tractorPlates || pass.placasTracto) this.checkInForm.patchValue({ placasTracto: pass.tractorPlates || pass.placasTracto });
     if (pass.boxPlates || pass.placasCaja) this.checkInForm.patchValue({ placasCaja: pass.boxPlates || pass.placasCaja });
-    if (pass.noEcoTractor || pass.economicNumber) this.checkInForm.patchValue({ noEcoTractor: pass.noEcoTractor || pass.economicNumber });
-    if (pass.noEcoCaja || pass.boxEconomicNumber) this.checkInForm.patchValue({ noEcoCaja: pass.noEcoCaja || pass.boxEconomicNumber });
+    if (pass.noEcoTractor) this.checkInForm.patchValue({ noEcoTractor: pass.noEcoTractor });
+    if (pass.noEcoCaja) this.checkInForm.patchValue({ noEcoCaja: pass.noEcoCaja });
     
     const doc = pass.docNumber || pass.noCartaPorte || pass.remision;
     if (doc) {
@@ -694,10 +677,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       driverPhone: f.driverPhone,
       tractorPlates: (f.placasTracto || '').toUpperCase(),
       noEcoTractor: f.noEcoTractor,
-      economicNumber: f.noEcoTractor,
       boxPlates: (f.placasCaja || '').toUpperCase(),
       noEcoCaja: f.noEcoCaja,
-      boxEconomicNumber: f.noEcoCaja,
       boxDimensions: f.medidasCaja,
       transportType: f.tipoTransporte,
       sealNumbers: seals,
@@ -712,59 +693,14 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.api.submitPublicDriverCheckin(tokenToSend, payload).subscribe({
       next: () => {
         this.isSubmitting.set(false);
-        this.savePassToLocalStorage(tokenToSend, payload);
         this.submitSuccess.set(true);
         this.movementsService.reloadReceptions();
       },
-      error: () => {
-        // Fallback resiliente: Si el backend en Render da 0 Unknown Error o falla por CORS/Cold start,
-        // guardamos el registro localmente para que la caseta lo reciba de inmediato sin bloquear al chofer.
-        this.savePassToLocalStorage(tokenToSend, payload);
+      error: (err) => {
         this.isSubmitting.set(false);
-        this.submitSuccess.set(true);
+        const msg = err?.error?.message || err?.message || 'Error al transmitir su registro a Caseta de Vigilancia. Por favor intente nuevamente.';
+        this.submitError.set(msg);
       }
     });
-  }
-
-  private savePassToLocalStorage(tokenStr: string, payload: any): void {
-    try {
-      const existingStr = localStorage.getItem('4g_local_passes');
-      let passes: any[] = existingStr ? JSON.parse(existingStr) : [];
-      const passObj = {
-        id: 'pass-loc-' + Date.now(),
-        token: tokenStr,
-        status: 'SUBMITTED',
-        operationType: payload.operationType,
-        docNumber: payload.docNumber,
-        noCartaPorte: payload.noCartaPorte,
-        remision: payload.remision,
-        clientCode: payload.clientCode,
-        clientName: payload.clientName,
-        carrierLineCode: payload.carrierLineCode,
-        carrierLine: payload.carrierLine,
-        driverName: payload.driverName,
-        driverLicense: payload.driverLicense,
-        driverPhone: payload.driverPhone,
-        tractorPlates: payload.tractorPlates,
-        noEcoTractor: payload.noEcoTractor,
-        economicNumber: payload.economicNumber || payload.noEcoTractor,
-        boxPlates: payload.boxPlates,
-        noEcoCaja: payload.noEcoCaja,
-        boxEconomicNumber: payload.boxEconomicNumber || payload.noEcoCaja,
-        boxDimensions: payload.boxDimensions,
-        transportType: payload.transportType,
-        sealNumbers: payload.sealNumbers,
-        observations: payload.observations,
-        driverSignature: payload.driverSignature,
-        checklistData: payload.checklistData,
-        submittedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      passes = passes.filter(p => p.token !== tokenStr);
-      passes.unshift(passObj);
-      localStorage.setItem('4g_local_passes', JSON.stringify(passes));
-    } catch {
-      // Storage error fallback
-    }
   }
 }
