@@ -557,49 +557,65 @@
 
 .wmap__sections-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.85rem;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  padding: 0.85rem 1.25rem;
+  padding: 1rem 1.25rem;
   box-shadow: var(--shadow-card);
+}
+
+.wmap__sections-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border-card);
 }
 
 .wmap__sections-label {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   font-family: var(--font-mono);
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-gold);
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.wmap__chips {
+.wmap__sections-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.wmap__chips-track {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  flex: 1;
+  width: 100%;
 }
 
 .wmap__chip {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 8px;
+  padding: 0.38rem 0.8rem;
+  border-radius: 9999px;
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid var(--border-card);
   color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: 0.78rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
 :host-context(.theme-dark) .wmap__chip {
@@ -610,23 +626,37 @@
   background: var(--gold-bg);
   border-color: var(--gold-border);
   color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
 .wmap__chip-code {
   font-family: var(--font-mono);
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--text-primary);
 }
 
 .wmap__chip-pos {
   font-size: 0.7rem;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .wmap__chip--selected {
   background: var(--gold-bg) !important;
   border-color: var(--gold) !important;
   color: var(--text-gold) !important;
-  box-shadow: 0 0 0 2px var(--gold-border);
+  box-shadow: 0 0 0 2px var(--gold-border), 0 2px 8px rgba(197, 168, 107, 0.25);
+  transform: translateY(-1px);
+}
+
+.wmap__chip--selected .wmap__chip-code {
+  color: var(--text-gold);
+}
+
+.wmap__chip--selected .wmap__chip-pos {
+  color: var(--text-gold);
+  opacity: 0.85;
 }
 
 .wmap__chip--pending {
@@ -638,6 +668,108 @@
   font-size: 0.68rem;
   color: var(--c-warning);
   font-style: italic;
+}
+
+.wmap__actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.wmap__layer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-secondary);
+  font-size: 0.73rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.wmap__layer-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.wmap__layer-toggle--active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.wmap__gen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.2), rgba(197, 168, 107, 0.08));
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.wmap__gen-btn:hover {
+  background: var(--gold);
+  color: #0b1118;
+  border-color: var(--gold);
+  box-shadow: 0 3px 10px rgba(197, 168, 107, 0.35);
+}
+
+.wmap__sim-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.wmap__sim-btn:hover {
+  background: #f59e0b;
+  color: #0b1118;
+  border-color: #fbbf24;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.wmap__reset-sim-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.wmap__reset-sim-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
 }
 
 .wmap__legend {
@@ -662,6 +794,12 @@
 .wmap__legend-dot--active   { background: var(--c-success); }
 .wmap__legend-dot--pending  { background: var(--c-warning); }
 .wmap__legend-dot--selected { background: var(--gold); }
+.wmap__legend-dot--vacant   { background: #ffffff; border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+.wmap__legend-dot--empty    { background: #10b981; box-shadow: 0 0 5px rgba(16, 185, 129, 0.6); }
+.wmap__legend-dot--medium   { background: #f59e0b; box-shadow: 0 0 5px rgba(245, 158, 11, 0.6); }
+.wmap__legend-dot--full     { background: #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.6); }
+.wmap__legend-dot--blocked  { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.6); }
+.wmap__legend-dot--temp     { background: #a855f7; box-shadow: 0 0 5px rgba(168, 85, 247, 0.6); }
 
 /* ─── Contenedor Principal (Plano + Drawer) ─────────────────── */
 
@@ -675,9 +813,9 @@
 .wmap__viewport {
   position: relative;
   flex: 1;
-  min-height: 600px;
-  max-height: 720px;
-  background: #0a1018;
+  min-height: 620px;
+  max-height: 780px;
+  background: #080e18;
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: var(--radius-card);
   overflow: hidden;
@@ -685,20 +823,22 @@
 }
 
 .wmap__blueprint-pan {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
   transition: transform 60ms linear;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.wmap__blueprint-pan.is-animating {
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .wmap__svg {
   width: 100%;
   height: 100%;
-  min-width: 800px;
-  min-height: 600px;
   display: block;
 }
 
@@ -759,9 +899,275 @@
 /* ─── CAD: Carriles de Tráfico ──────────────────────────── */
 
 .cad__traffic-lane {
-  stroke: rgba(99, 102, 241, 0.12);
+  stroke: rgba(99, 102, 241, 0.25);
   stroke-width: 1.5;
-  stroke-dasharray: 10, 8;
+  stroke-dasharray: 8, 6;
+}
+
+.cad__traffic-lane--main {
+  stroke: rgba(234, 195, 73, 0.45);
+  stroke-width: 2;
+  stroke-dasharray: 10, 6;
+}
+
+.cad__feeder-lane {
+  stroke: rgba(148, 163, 184, 0.3);
+  stroke-width: 0.8;
+  stroke-dasharray: 4, 4;
+}
+
+.cad__feeder-junction {
+  stroke: rgba(234, 195, 73, 0.45);
+  stroke-width: 1.2;
+  stroke-dasharray: 5, 4;
+}
+
+.cad__feeder-lane--selected {
+  stroke: rgba(197, 168, 107, 0.45) !important;
+  stroke-width: 1px !important;
+  stroke-dasharray: 4, 3 !important;
+  vector-effect: non-scaling-stroke !important;
+  filter: none !important;
+}
+
+.cad__aisle-marker {
+  pointer-events: none;
+  opacity: 0.82;
+  transition: all 0.3s ease;
+}
+
+.cad__aisle-marker-bg {
+  fill: #0c1421;
+  stroke: rgba(197, 168, 107, 0.45);
+  stroke-width: 0.6;
+}
+
+.cad__aisle-marker-text {
+  font-family: var(--font-mono);
+  font-size: 6px;
+  font-weight: 800;
+  fill: #fbbf24;
+  text-anchor: middle;
+}
+
+.cad__aisle-marker--selected {
+  opacity: 1;
+}
+
+.cad__aisle-marker--selected .cad__aisle-marker-bg {
+  stroke: rgba(197, 168, 107, 0.65);
+  fill: #141c2c;
+  filter: none;
+}
+
+.cad__aisle-marker--selected .cad__aisle-marker-text {
+  fill: #fbbf24;
+  font-weight: 800;
+}
+
+/* ─── CAD: Bahías Físicas Individuales y Racks ──────────── */
+
+.cad__bays-layer {
+  cursor: pointer;
+}
+
+.cad__bay-slot {
+  fill: rgba(16, 185, 129, 0.25);
+  stroke: rgba(16, 185, 129, 0.7);
+  stroke-width: 0.6;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.cad__bay-slot:hover {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
+}
+
+/* ⬜ Blanco Técnico Translúcido: Bahía Vacía (0 tarimas, libre para recibir) */
+.cad__bay-slot--heat-vacant {
+  fill: rgba(255, 255, 255, 0.05) !important;
+  stroke: rgba(255, 255, 255, 0.32) !important;
+  stroke-width: 0.6px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-vacant:hover {
+  fill: rgba(255, 255, 255, 0.28) !important;
+  stroke: #ffffff !important;
+  stroke-width: 1.4px !important;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.85)) !important;
+}
+
+/* 🟢 Verde Esmeralda: Libre / Baja Ocupación (1% - 30%) */
+.cad__bay-slot--heat-empty {
+  fill: rgba(16, 185, 129, 0.22) !important;
+  stroke: rgba(16, 185, 129, 0.8) !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-empty:hover {
+  fill: rgba(16, 185, 129, 0.45) !important;
+  stroke: #34d399 !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.8)) !important;
+}
+
+/* 🟡 Amarillo / Ámbar: Ocupación Media (31% - 80%) */
+.cad__bay-slot--heat-medium {
+  fill: rgba(245, 158, 11, 0.3) !important;
+  stroke: rgba(245, 158, 11, 0.85) !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-medium:hover {
+  fill: rgba(245, 158, 11, 0.55) !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.85)) !important;
+}
+
+/* 🔵 Azul Zafiro: Lleno / Máxima Capacidad (81% - 100%) - Estándar WMS */
+.cad__bay-slot--heat-full {
+  fill: rgba(59, 130, 246, 0.38) !important;
+  stroke: rgba(96, 165, 250, 0.9) !important;
+  stroke-width: 0.8px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-full:hover {
+  fill: rgba(59, 130, 246, 0.6) !important;
+  stroke: #93c5fd !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 5px rgba(96, 165, 250, 0.9)) !important;
+}
+
+/* 🔴 Rojo Carmesí: Bloqueado QM / Cuarentena / Alerta Crítica */
+.cad__bay-slot--heat-blocked {
+  fill: rgba(239, 68, 68, 0.65) !important;
+  stroke: #ef4444 !important;
+  stroke-width: 1.2px !important;
+  vector-effect: non-scaling-stroke;
+  animation: cad-pulse-red 2.2s infinite ease-in-out;
+}
+.cad__bay-slot--heat-blocked:hover {
+  fill: rgba(239, 68, 68, 0.85) !important;
+  stroke: #ff7878 !important;
+  stroke-width: 1.8px !important;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9)) !important;
+}
+
+/* 🟣 Púrpura / Morado: Buffer Temporal */
+.cad__bay-slot--heat-temp {
+  fill: rgba(168, 85, 247, 0.32) !important;
+  stroke: #c084fc !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-temp:hover {
+  fill: rgba(168, 85, 247, 0.55) !important;
+  stroke: #e9d5ff !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(192, 132, 252, 0.8)) !important;
+}
+
+/* 🟠 Dorado / Ámbar Cobre: Precarga / Staging */
+.cad__bay-slot--heat-preload {
+  fill: rgba(245, 158, 11, 0.35) !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-preload:hover {
+  fill: rgba(245, 158, 11, 0.6) !important;
+  stroke: #fef08a !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8)) !important;
+}
+
+/* Clases legacy compatibles */
+.cad__bay-slot--avail {
+  fill: rgba(16, 185, 129, 0.22);
+  stroke: rgba(16, 185, 129, 0.75);
+}
+
+.cad__bay-slot--occ {
+  fill: rgba(59, 130, 246, 0.45);
+  stroke: #60a5fa;
+}
+
+.cad__bay-slot--block {
+  fill: rgba(239, 68, 68, 0.45);
+  stroke: #f87171;
+}
+
+.cad__bay-slot--temp {
+  fill: rgba(168, 85, 247, 0.35);
+  stroke: #c084fc;
+}
+
+.cad__bay-slot--preload {
+  fill: rgba(245, 158, 11, 0.4);
+  stroke: #fbbf24;
+}
+
+.cad__bay-slot--selected {
+  stroke: var(--gold) !important;
+  stroke-width: 2 !important;
+  filter: drop-shadow(0 0 6px rgba(197, 168, 107, 0.9));
+}
+
+.cad__bay-slot--highlighted {
+  stroke: #ffffff !important;
+  stroke-width: 2.2 !important;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 10px rgba(197, 168, 107, 0.8)) !important;
+  cursor: pointer;
+}
+
+.cad__bay-slot--alert-red {
+  fill: rgba(239, 68, 68, 0.75) !important;
+  stroke: #ef4444 !important;
+  stroke-width: 1.4 !important;
+  animation: cad-pulse-red 2s infinite ease-in-out;
+}
+
+.cad__bay-slot--alert-yellow {
+  fill: rgba(245, 158, 11, 0.75) !important;
+  stroke: #f59e0b !important;
+  stroke-width: 1.4 !important;
+  animation: cad-pulse-yellow 2s infinite ease-in-out;
+}
+
+@keyframes cad-pulse-red {
+  0%, 100% {
+    fill-opacity: 0.7;
+    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.5));
+  }
+  50% {
+    fill-opacity: 1;
+    stroke: #ff6b6b;
+    filter: drop-shadow(0 0 7px rgba(239, 68, 68, 0.95));
+  }
+}
+
+@keyframes cad-pulse-yellow {
+  0%, 100% {
+    fill-opacity: 0.7;
+    filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.5));
+  }
+  50% {
+    fill-opacity: 1;
+    stroke: #fde047;
+    filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.95));
+  }
+}
+
+.wmap__tooltip--bay {
+  border-color: var(--gold-border);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(197, 168, 107, 0.15);
+}
+
+.wmap__modal--wide {
+  max-width: 580px;
 }
 
 /* ─── CAD: Textura de Racks ─────────────────────────────── */
@@ -842,54 +1248,92 @@
 /* ─── Polígonos SVG (Naves del Almacén) ─────────────────── */
 
 .wmap__poly {
-  fill: rgba(15, 23, 42, 0.55);
-  stroke: rgba(148, 163, 184, 0.35);
-  stroke-width: 1.5;
+  fill: rgba(15, 23, 42, 0.1);
+  stroke: rgba(226, 232, 240, 0.35);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
   transition: fill 200ms ease, stroke 200ms ease, stroke-width 200ms ease, filter 200ms ease;
   cursor: pointer;
 }
 
 .wmap__poly--active {
-  fill: rgba(16, 185, 129, 0.18);
-  stroke: rgba(16, 185, 129, 0.75);
-  stroke-width: 2.2;
+  fill: rgba(16, 185, 129, 0.06);
+  stroke: rgba(16, 185, 129, 0.5);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
 }
 
 .wmap__poly--active:hover {
-  fill: rgba(16, 185, 129, 0.35);
+  fill: rgba(16, 185, 129, 0.16);
   stroke: #10b981;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6));
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.4));
 }
 
 .wmap__poly--pending {
-  fill: rgba(245, 158, 11, 0.08);
-  stroke: rgba(245, 158, 11, 0.5);
-  stroke-dasharray: 6, 4;
+  fill: rgba(245, 158, 11, 0.04);
+  stroke: rgba(245, 158, 11, 0.35);
+  stroke-width: 1.2px;
+  stroke-dasharray: 5, 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .wmap__poly--pending:hover {
-  fill: rgba(245, 158, 11, 0.22);
+  fill: rgba(245, 158, 11, 0.15);
   stroke: #f59e0b;
-  stroke-width: 2.5;
+  stroke-width: 1.5px;
+}
+
+.cad__zone-group {
+  transition: opacity 0.35s ease, filter 0.35s ease;
+}
+
+.cad__zone-group--dimmed {
+  opacity: 0.18;
+  filter: grayscale(40%);
+}
+
+.cad__zone-group--selected {
+  opacity: 1 !important;
+}
+
+.cad__zone-group--selected .wmap__poly {
+  fill: transparent !important;
+  stroke: rgba(212, 175, 55, 0.7) !important;
+  stroke-width: 1.3px !important;
+  vector-effect: non-scaling-stroke !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 2px rgba(197, 168, 107, 0.35)) !important;
+}
+
+.cad__zone-group--selected .wmap__poly-label,
+.cad__zone-group--selected .wmap__poly-sub {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .wmap__poly--selected {
-  fill: rgba(197, 168, 107, 0.35) !important;
-  stroke: #ffd700 !important;
-  stroke-width: 3.5px !important;
-  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.8));
+  fill: transparent !important;
+  stroke: rgba(212, 175, 55, 0.7) !important;
+  stroke-width: 1.3px !important;
+  vector-effect: non-scaling-stroke !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 2px rgba(197, 168, 107, 0.35));
 }
 
 .wmap__poly-label {
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   fill: #ffffff;
   pointer-events: none;
   text-anchor: middle;
   letter-spacing: 0.5px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
+  transition: opacity 0.2s ease;
 }
 
 .wmap__poly-label--pending {
@@ -897,16 +1341,192 @@
 }
 
 .wmap__poly-sub {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  fill: rgba(226, 232, 240, 0.95);
-  pointer-events: none;
-  text-anchor: middle;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
+  display: none !important;
 }
 
 /* Barra de Zoom Flotante */
+/* ─── HUD Flotante de Nave Seleccionada ───────────────────────── */
+.wmap__active-hud {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1.15rem;
+  background: rgba(12, 20, 33, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(197, 168, 107, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(197, 168, 107, 0.12);
+  pointer-events: auto;
+}
+
+.wmap__hud-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.wmap__hud-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #ffd700, #b8860b);
+  color: #0b111a;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(184, 134, 11, 0.4);
+}
+
+.wmap__hud-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.wmap__hud-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wmap__hud-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wmap__hud-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  flex-shrink: 0;
+}
+
+.wmap__hud-meta {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wmap__hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.wmap__hud-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wmap__hud-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.wmap__hud-btn--reset {
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.25), rgba(184, 134, 11, 0.35));
+  border-color: rgba(255, 215, 0, 0.5);
+  color: #ffd700;
+  box-shadow: 0 2px 10px rgba(197, 168, 107, 0.2);
+}
+
+.wmap__hud-btn--reset:hover {
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.4), rgba(184, 134, 11, 0.55));
+  border-color: #ffd700;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 215, 0, 0.35);
+}
+
+/* ─── Desglose de Pasillos en Drawer ─────────────────────────── */
+.wmap__aisles-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.65rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.wmap__aisles-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wmap__aisles-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.wmap__aisle-chip {
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(226, 232, 240, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.wmap__aisle-chip:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+.wmap__aisle-chip.active {
+  background: rgba(197, 168, 107, 0.22);
+  border-color: #ffd700;
+  color: #ffd700;
+  font-weight: 800;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.25);
+}
 .wmap__zoom-bar {
   position: absolute;
   bottom: 1.25rem;
@@ -956,22 +1576,516 @@
   margin: 0 2px;
 }
 
+/* ─── CAD Viewfinder Reticles (Ingeniería Aeroespacial / Digital Twin) ──── */
+.cad__viewfinder {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  z-index: 8;
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.cad__viewfinder--tl {
+  top: 10px;
+  left: 10px;
+  border-top: 2px solid #fbbf24;
+  border-left: 2px solid #fbbf24;
+}
+.cad__viewfinder--tr {
+  top: 10px;
+  right: 10px;
+  border-top: 2px solid #fbbf24;
+  border-right: 2px solid #fbbf24;
+}
+.cad__viewfinder--bl {
+  bottom: 10px;
+  left: 10px;
+  border-bottom: 2px solid #fbbf24;
+  border-left: 2px solid #fbbf24;
+}
+.cad__viewfinder--br {
+  bottom: 10px;
+  right: 10px;
+  border-bottom: 2px solid #fbbf24;
+  border-right: 2px solid #fbbf24;
+}
+
+/* ─── HUD Flotante Izquierdo: Radar Topológico & Ocupación en Vivo ───────── */
+.wmap__hud-left-panel {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  bottom: 3.5rem;
+  width: 228px;
+  z-index: 22;
+  background: rgba(10, 16, 26, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(197, 168, 107, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wmap__hud-left-panel--active-sec {
+  top: 4.8rem !important;
+}
+
+.wmap__hud-left-panel--collapsed {
+  width: 44px;
+  height: 44px;
+  bottom: auto;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.wmap__hud-left-panel--collapsed .wmap__hud-lp-header {
+  padding: 0;
+  height: 100%;
+  justify-content: center;
+  border-bottom: none;
+}
+
+.wmap__hud-lp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(197, 168, 107, 0.15);
+  flex-shrink: 0;
+}
+
+.wmap__hud-lp-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.wmap__radar-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: radar-pulse-anim 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes radar-pulse-anim {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 12px #10b981; }
+}
+
+.wmap__hud-lp-text {
+  font-family: var(--font-display, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #f1f5f9;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.wmap__hud-lp-tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(197, 168, 107, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.wmap__hud-lp-toggle {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.wmap__hud-lp-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.wmap__hud-lp-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.wmap__hud-lp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.38rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.wmap__hud-lp-item:hover {
+  background: rgba(197, 168, 107, 0.1);
+  border-color: rgba(197, 168, 107, 0.25);
+  transform: translateX(2px);
+}
+
+.wmap__hud-lp-item--selected {
+  background: rgba(251, 191, 36, 0.12) !important;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+}
+
+.wmap__hud-lp-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.wmap__hud-lp-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wmap__hud-lp-badge--active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.wmap__hud-lp-item--selected .wmap__hud-lp-badge {
+  background: #fbbf24;
+  color: #0b111a;
+  border-color: #fbbf24;
+}
+
+.wmap__hud-lp-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.wmap__hud-lp-item-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wmap__hud-lp-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.wmap__hud-lp-progress-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.wmap__hud-lp-progress-fill--high {
+  background: #fbbf24;
+}
+
+.wmap__hud-lp-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  margin-left: 0.4rem;
+  flex-shrink: 0;
+}
+
+.wmap__hud-lp-pct {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.wmap__hud-lp-sub {
+  font-size: 9px;
+  color: #64748b;
+}
+
+.wmap__hud-lp-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: var(--font-mono, monospace);
+  flex-shrink: 0;
+}
+
+.wmap__hud-lp-footer-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+/* ─── HUD Flotante Derecho: Telemetría & Capas CAD ──────────────────────── */
+.wmap__hud-right-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 242px;
+  z-index: 22;
+  background: rgba(10, 16, 26, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(197, 168, 107, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.4);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100% - 5rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.wmap__hud-rp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(197, 168, 107, 0.18);
+}
+
+.wmap__hud-rp-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #f1f5f9;
+  text-transform: uppercase;
+}
+
+.wmap__hud-rp-chip {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(197, 168, 107, 0.15);
+  border: 1px solid rgba(197, 168, 107, 0.3);
+  color: #fbbf24;
+}
+
+.wmap__hud-rp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wmap__hud-rp-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #64748b;
+}
+
+.wmap__hud-rp-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) 1.25fr;
+  gap: 4px;
+}
+
+.wmap__hud-rp-zoom-btn {
+  padding: 4px 2px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #cbd5e1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+
+.wmap__hud-rp-zoom-btn:hover {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+.wmap__hud-rp-zoom-btn--fit {
+  background: rgba(197, 168, 107, 0.12);
+  border-color: rgba(197, 168, 107, 0.25);
+  color: #fbbf24;
+}
+
+.wmap__hud-rp-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.wmap__hud-rp-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wmap__hud-rp-toggle-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+}
+
+.wmap__hud-rp-toggle-row.is-active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.wmap__hud-rp-status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.wmap__hud-rp-toggle-row.is-active .wmap__hud-rp-status-indicator {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.wmap__hud-rp-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wmap__hud-rp-spec-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.wmap__hud-rp-spec-item strong {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.wmap__hud-rp-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.2), rgba(184, 134, 11, 0.3));
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.wmap__hud-rp-action-btn:hover {
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.35), rgba(184, 134, 11, 0.45));
+  border-color: #fbbf24;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.25);
+  transform: translateY(-1px);
+}
+
+/* ─── Ayuda de Pan Centrada ─────────────────────────────────────────────── */
 .wmap__pan-hint {
   position: absolute;
   bottom: 1.25rem;
-  left: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--bg-card);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border-card);
+  background: rgba(10, 16, 26, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 99px;
-  padding: 5px 12px;
+  padding: 5px 14px;
   font-size: 0.72rem;
-  color: var(--text-secondary);
+  color: #94a3b8;
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  white-space: nowrap;
 }
 
 /* Tooltip Reactivo */
@@ -1418,6 +2532,47 @@
   box-shadow: 0 0 0 2px var(--gold-border) !important;
 }
 
+.wmap__pos-card--highlighted {
+  border-color: #ffffff !important;
+  background: rgba(197, 168, 107, 0.16) !important;
+  box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  transform: translateY(-2px) scale(1.02);
+  z-index: 5;
+}
+
+.wmap__pos-card--alert-red {
+  border-left: 3.5px solid #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.wmap__pos-card--alert-yellow {
+  border-left: 3.5px solid #f59e0b !important;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.wmap__pos-card-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.wmap__pos-card-alert--red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.wmap__pos-card-alert--yellow {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
 .wmap__pos-card-head {
   display: flex;
   align-items: center;
@@ -1521,13 +2676,20 @@
 
 .bays-filter-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1.5fr 1.1fr 1fr 1fr auto;
   gap: 1rem;
+  align-items: flex-end;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  padding: 1.25rem;
+  padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 1280px) {
+  .bays-filter-bar {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
 }
 
 /* Form inputs & selects homologados */
@@ -1539,10 +2701,11 @@
 
 .form-label {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .form-label--required::after {
@@ -1570,13 +2733,33 @@
   pointer-events: none;
 }
 
+.form-input-clear {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: 4px;
+  transition: all 120ms ease;
+}
+
+.form-input-clear:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .form-input {
   width: 100%;
-  height: 40px;
+  height: 42px;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--radius-input);
-  padding: 0 12px 0 38px;
+  padding: 0 32px 0 38px;
   font-size: 0.84rem;
   font-family: var(--font-body);
   color: var(--text-primary);
@@ -1592,7 +2775,7 @@
 
 .form-select {
   width: 100%;
-  height: 40px;
+  height: 42px;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--radius-input);
@@ -1637,7 +2820,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: var(--shadow-card);
 }
 

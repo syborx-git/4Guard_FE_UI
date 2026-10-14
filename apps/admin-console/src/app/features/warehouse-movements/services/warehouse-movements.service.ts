@@ -462,6 +462,26 @@ export class WarehouseMovementsService {
       },
       error: () => {},
     });
+
+    // Iniciar auto-polling continuo para sincronizar al instante entre Caseta y Gerencia / Almacén
+    this.startAutoPolling();
+  }
+
+  private pollingIntervalId: any = null;
+
+  public startAutoPolling(): void {
+    if (this.pollingIntervalId || typeof window === 'undefined') return;
+    this.pollingIntervalId = setInterval(() => {
+      this.reloadReceptions();
+      this.reloadOutbounds();
+    }, 5000);
+  }
+
+  public stopAutoPolling(): void {
+    if (this.pollingIntervalId) {
+      clearInterval(this.pollingIntervalId);
+      this.pollingIntervalId = null;
+    }
   }
 
   public reloadCarriers(): void {
