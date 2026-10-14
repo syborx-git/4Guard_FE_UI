@@ -85,7 +85,7 @@ export type TransportType = 'CAMION' | 'TORTON' | 'TRAILER';
 
 export interface WarehouseOutbound {
   id: string;                          // Identificador interno único
-  folio: string;                       // Folio oficial: 'SAL-YYYY-XXXXXX'
+  folio: string;                       // Folio oficial: 'SAL-YYYYMMDD-[CLIENT]-[NNNN]' (ej. 'SAL-20261013-MNE-0001')
   status: OutboundStatus;
 
   // ── Cliente / Destino (Snapshot) ──

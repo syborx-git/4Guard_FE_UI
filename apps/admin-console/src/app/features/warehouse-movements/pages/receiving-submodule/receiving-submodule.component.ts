@@ -39,6 +39,19 @@ import { UnitOfMeasure } from '@4guard/shared-core';
 
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
 
+export interface ShelfLifeEvaluation {
+  remainingDays: number;
+  totalDays: number | null;
+  totalMonths: number | null;
+  remainingPct: number | null;
+  thresholdRequired: number; // 75 o 50
+  isCompliant: boolean;
+  isExpired: boolean;
+  category: '< 24m' | '≥ 24m' | 'ESTIMADO';
+  badgeText: string;
+  badgeDetail: string;
+}
+
 @Component({
   selector: 'fg-receiving-submodule',
   standalone: true,
@@ -657,8 +670,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
   sealList = signal<string[]>([]);
   tempSealInput = signal('');
 
-  // Catálogos para Autorización Excepcional de Gerencia de Operaciones (< 9 meses / 270 días)
+  // Catálogos para Autorización Excepcional de Vida Útil Remanente (Protocolo MRP & Planeación de Demanda)
   readonly STANDARD_OPS_MANAGERS = [
+    'Equipo MRP / Planeación de la Demanda',
+    'Fábrica Receptora (Control de Calidad)',
     'Ing. Carlos Mendoza (Gerente de Operaciones)',
     'Lic. Sofia Morales (Subgerente de Operaciones)',
     'Mtro. Roberto Garza (Director de Operaciones WMS)',
@@ -666,11 +681,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
   ];
 
   readonly STANDARD_OPS_REASONS = [
-    'Rotación rápida acordada con cliente',
-    'Promoción / Venta especial de salida inmediata',
+    'Autorizado por MRP previo a embarque (Evaluación de riesgo aprobada)',
+    'Acuerdo con Planeación de la Demanda y Fábrica Receptora (Absorción de costo convenida)',
+    'Uso y consumo inmediato en producción / Maquila rápida',
+    'Rotación rápida acordada con cliente / Salida programada',
     'Desabasto crítico de insumos / Urgencia operativa',
-    'Autorización corporativa de Gerencia de Operaciones',
-    'Acuerdo comercial con proveedor / Saldo de temporada',
+    'Convenio comercial especial con proveedor por caducidad corta',
     'Otro motivo operativo (especificar en justificación)',
   ];
 
@@ -1376,8 +1392,104 @@ export class ReceivingSubmoduleComponent implements OnInit {
     return this.palletStream().filter((p) => p.lotNumber === lotNum).length;
   }
 
-  // Regla estándar: ≥ 9 meses (270 días)
-  isShelfLifeCompliant(days: number | null): boolean {
+  // ── GESTIÓN DE VIDA ÚTIL REMANENTE (REGLA CORPORATIVA MRP / PLANEACIÓN) ──
+  // < 24 meses vida total -> al menos 75% vida restante
+  // >= 24 meses vida total -> al menos 50% vida restante
+  // Excepciones: requieren autorización previa con evaluación de riesgo MRP / Fábrica
+  evaluateShelfLife(expDateStr?: string | null, elabDateStr?: string | null): ShelfLifeEvaluation | null {
+    if (!expDateStr) return null;
+    const expDate = new Date(expDateStr + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const remainingDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const isExpired = remainingDays < 0;
+
+    if (isExpired) {
+      return {
+        remainingDays,
+        totalDays: null,
+        totalMonths: null,
+        remainingPct: 0,
+        thresholdRequired: 75,
+        isCompliant: false,
+        isExpired: true,
+        category: '< 24m',
+        badgeText: `Vencido (${Math.abs(remainingDays)}d)`,
+        badgeDetail: `El lote venció hace ${Math.abs(remainingDays)} días. No apto para recibo.`,
+      };
+    }
+
+    if (elabDateStr) {
+      const elabDate = new Date(elabDateStr + 'T00:00:00Z');
+      if (!isNaN(elabDate.getTime()) && expDate.getTime() > elabDate.getTime()) {
+        const totalDays = Math.max(1, Math.floor((expDate.getTime() - elabDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const totalMonths = Math.round((totalDays / 30.4375) * 10) / 10;
+        const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / totalDays) * 1000) / 10)));
+        const isLongLife = totalMonths >= 24;
+        const thresholdRequired = isLongLife ? 50 : 75;
+        const category: '< 24m' | '≥ 24m' = isLongLife ? '≥ 24m' : '< 24m';
+        const isCompliant = remainingPct >= thresholdRequired;
+
+        return {
+          remainingDays,
+          totalDays,
+          totalMonths,
+          remainingPct,
+          thresholdRequired,
+          isCompliant,
+          isExpired: false,
+          category,
+          badgeText: `${remainingPct}% vida (${category})`,
+          badgeDetail: `${remainingPct}% restante de ${totalMonths}m totales (Mín: ${thresholdRequired}%)`,
+        };
+      }
+    }
+
+    // Si no hay fecha de elaboración, se calcula sobre base estándar prudencial de 24 meses (730 días)
+    const estimatedTotalDays = 730;
+    const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / estimatedTotalDays) * 1000) / 10)));
+    const thresholdRequired = 75;
+    const isCompliant = remainingPct >= thresholdRequired;
+
+    return {
+      remainingDays,
+      totalDays: estimatedTotalDays,
+      totalMonths: 24,
+      remainingPct,
+      thresholdRequired,
+      isCompliant,
+      isExpired: false,
+      category: 'ESTIMADO',
+      badgeText: `${remainingDays}d (${remainingPct}% est.)`,
+      badgeDetail: `${remainingDays} días restantes (~${remainingPct}% vida estimada)`,
+    };
+  }
+
+  getShelfLifeEval(lot?: ReceptionLot | null): ShelfLifeEvaluation | null {
+    const target = lot || this.getActiveLot();
+    if (!target || !target.expirationDate) return null;
+    return this.evaluateShelfLife(target.expirationDate, target.elaborationDate);
+  }
+
+  getActiveLotShelfLifeEval(): ShelfLifeEvaluation | null {
+    const lot = this.getActiveLot();
+    return this.getShelfLifeEval(lot);
+  }
+
+  getNewLotShelfLifeEval(): ShelfLifeEvaluation | null {
+    const exp = this.newLotForm.get('expirationDate')?.value;
+    const elab = this.newLotForm.get('elaborationDate')?.value;
+    return this.evaluateShelfLife(exp, elab);
+  }
+
+  isShelfLifeCompliant(days: number | null, lot?: ReceptionLot): boolean {
+    const target = lot || this.getActiveLot();
+    if (target && target.expirationDate) {
+      const evalRes = this.evaluateShelfLife(target.expirationDate, target.elaborationDate);
+      if (evalRes) return evalRes.isCompliant;
+    }
     return days != null && days >= 270;
   }
 
@@ -1386,16 +1498,16 @@ export class ReceivingSubmoduleComponent implements OnInit {
     return Boolean(lot.requiresOpsAuthorization && lot.authorizedByOpsManager && lot.opsManagerReason);
   }
 
-  // Verifica si en el modal newLotForm la fecha ingresada tiene < 9 meses
+  // Verifica si en el modal newLotForm la fecha ingresada requiere autorización MRP (< 75% o < 50%)
   isNewLotShelfLifeShort(): boolean {
-    const exp = this.newLotForm.get('expirationDate')?.value;
-    const days = this.calculateShelfLifeDays(exp);
-    return days != null && days < 270;
+    const evalRes = this.getNewLotShelfLifeEval();
+    if (!evalRes) return false;
+    return !evalRes.isCompliant;
   }
 
   getNewLotShelfLifeDays(): number | null {
-    const exp = this.newLotForm.get('expirationDate')?.value;
-    return this.calculateShelfLifeDays(exp);
+    const evalRes = this.getNewLotShelfLifeEval();
+    return evalRes ? evalRes.remainingDays : null;
   }
 
   onQuickOpsReasonChange(event: Event): void {
@@ -1464,27 +1576,27 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    // 🔒 REGLA DE VIDA ÚTIL: ESTÁNDAR 9 MESES (270 DÍAS) & AUTORIZACIÓN GERENCIAL SI ES MENOR
+    // 🔒 REGLA DE VIDA ÚTIL: MATRIZ DINÁMICA MRP (<24m: 75% | ≥24m: 50%)
     let requiresOpsAuth = false;
     if (exp) {
-      const diffDays = this.calculateShelfLifeDays(exp);
-      if (diffDays != null) {
-        if (diffDays < 0) {
-          this.toast.error(`🛑 Fecha de caducidad inválida: El lote ya está vencido (hace ${Math.abs(diffDays)} días). No se permite el ingreso de mercancía caducada.`);
+      const evalRes = this.evaluateShelfLife(exp, elab);
+      if (evalRes) {
+        if (evalRes.isExpired) {
+          this.toast.error(`🛑 Fecha de caducidad inválida: El lote ya está vencido (hace ${Math.abs(evalRes.remainingDays)} días). No se permite el ingreso de mercancía caducada.`);
           return;
         }
-        if (diffDays < 270) {
+        if (!evalRes.isCompliant) {
           requiresOpsAuth = true;
           if (!opsAuth) {
-            this.toast.error(`🛑 Candado de Calidad: Debes seleccionar o ingresar el Usuario/Gerente de Operaciones que autoriza.`);
+            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con ${evalRes.remainingPct}% de vida restante (requiere ≥ ${evalRes.thresholdRequired}% para material ${evalRes.category}). Debes ingresar el Usuario o Autorizador MRP / Planeación.`);
             return;
           }
           if (!opsPassword) {
-            this.toast.error(`🛑 Candado de Calidad: Ingresa la contraseña o PIN de autorización de Gerencia de Operaciones.`);
+            this.toast.error(`🛑 Candado de Calidad: Ingresa la contraseña o PIN de autorización de la excepción.`);
             return;
           }
           if (!opsReason) {
-            this.toast.error(`🛑 Candado de Calidad: Debes ingresar el motivo o justificación formal de la excepción.`);
+            this.toast.error(`🛑 Candado de Calidad: Debes ingresar el motivo formal de excepción acordado con MRP / Fábrica.`);
             return;
           }
         }
@@ -1942,19 +2054,19 @@ export class ReceivingSubmoduleComponent implements OnInit {
       }
     }
 
-    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL (9 MESES / 270 DÍAS & AUTORIZACIÓN GERENCIAL)
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL: MATRIZ DINÁMICA MRP (<24m -> 75% | ≥24m -> 50%)
     if (exp) {
-      const diffDays = this.calculateShelfLifeDays(exp);
-      if (diffDays != null) {
-        if (diffDays < 0) {
-          this.toast.error(`🛑 Fecha de caducidad inválida: El lote está vencido (hace ${Math.abs(diffDays)} días). No se permite la descarga física.`);
+      const evalRes = this.evaluateShelfLife(exp, elab);
+      if (evalRes) {
+        if (evalRes.isExpired) {
+          this.toast.error(`🛑 Fecha de caducidad inválida: El lote está vencido (hace ${Math.abs(evalRes.remainingDays)} días). No se permite la descarga física.`);
           return false;
         }
-        if (diffDays < 270) {
+        if (!evalRes.isCompliant) {
           const activeLot = this.getActiveLot();
           const isAuthorized = activeLot && activeLot.requiresOpsAuthorization && activeLot.authorizedByOpsManager && activeLot.opsManagerReason;
           if (!isAuthorized) {
-            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con sólo ${diffDays} días restantes (< 9 meses / 270 días). Para asignar andén y continuar con la descarga se requiere la Autorización y Motivo formal por parte del Gerente de Operaciones.`);
+            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con ${evalRes.remainingPct}% de vida restante (< ${evalRes.thresholdRequired}% requerido para material ${evalRes.category}). Para continuar se requiere la Autorización Excepcional de MRP / Planeación.`);
             this.openEditActiveLotModal();
             return false;
           }

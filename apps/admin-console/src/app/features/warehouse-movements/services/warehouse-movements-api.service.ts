@@ -486,6 +486,17 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  updatePositionCapacity(positionId: string, payload: { code?: string; capacityTarimas: number }): Observable<any> {
+    const url = `${this.baseUrl}/api/v1/warehouse-map/positions/${positionId}`;
+    return this.http.put<ApiResponse<any>>(url, payload).pipe(
+      map((res) => res.data),
+      catchError((err) => {
+        console.error('Error al persistir capacidad de posición en backend:', err);
+        return of(null);
+      })
+    );
+  }
+
   getProductSkus(clientId?: string): Observable<any[]> {
     let url = `${this.baseUrl}/api/v1/product-skus`;
     if (clientId) url += `?clientId=${clientId}`;

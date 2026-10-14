@@ -1800,13 +1800,21 @@
               </div>
 
               <!-- Destino / Planta -->
-              <div class="logistics-command-cell cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para asignar o cambiar Planta / Destino">
+              <div
+                class="logistics-command-cell"
+                [class.cursor-pointer]="canEditCaseta()"
+                [class.group]="canEditCaseta()"
+                (click)="canEditCaseta() ? openEditCasetaModal() : null"
+                [title]="canEditCaseta() ? 'Clic para asignar o cambiar Planta / Destino' : 'Destino fijado (Salida despachada)'"
+              >
                 <span class="logistics-command-label flex items-center justify-between">
                   <span class="flex items-center gap-1">
                     <span class="material-symbols-outlined">pin_drop</span>
                     Planta / Destino
                   </span>
-                  <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
+                  @if (canEditCaseta()) {
+                    <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
+                  }
                 </span>
                 @if (selectedOutbound()!.destinationName) {
                   <span class="logistics-command-value truncate text-slate-900 dark:text-white" [title]="selectedOutbound()!.destinationName + (selectedOutbound()!.destinationAddress ? ' — ' + selectedOutbound()!.destinationAddress : '')">
@@ -1862,13 +1870,21 @@
               </div>
 
               <!-- Sellos / Cinchos de Seguridad (4 cols) -->
-              <div class="logistics-command-cell lg:col-span-4 cursor-pointer group" (click)="openEditCasetaModal()" title="Clic para capturar o actualizar número de sello">
+              <div
+                class="logistics-command-cell lg:col-span-4"
+                [class.cursor-pointer]="canEditCaseta()"
+                [class.group]="canEditCaseta()"
+                (click)="canEditCaseta() ? openEditCasetaModal() : null"
+                [title]="canEditCaseta() ? 'Clic para capturar o actualizar número de sello' : 'Sello oficial fijado (Salida despachada)'"
+              >
                 <span class="logistics-command-label flex items-center justify-between">
                   <span class="flex items-center gap-1">
                     <span class="material-symbols-outlined">lock</span>
                     Número de Sello o Cincho
                   </span>
-                  <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
+                  @if (canEditCaseta()) {
+                    <span class="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity text-amber-600">edit</span>
+                  }
                 </span>
                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                   @if (selectedOutbound()!.sealNumber && selectedOutbound()!.sealNumber !== 'PENDIENTE_ANDEN' && selectedOutbound()!.sealNumber !== 'S/S' && selectedOutbound()!.sealNumber !== 'PENDIENTE') {
@@ -1880,7 +1896,9 @@
                     <span class="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 flex items-center gap-1 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors animate-pulse">
                       <span class="material-symbols-outlined text-xs">lock_open</span>
                       <span>Sello Pendiente (Obligatorio)</span>
-                      <span class="text-[10px] underline ml-1 font-extrabold">+ Asignar Sello</span>
+                      @if (canEditCaseta()) {
+                        <span class="text-[10px] underline ml-1 font-extrabold">+ Asignar Sello</span>
+                      }
                     </span>
                   }
                 </div>
@@ -2485,18 +2503,30 @@
                 </div>
                 <div class="space-y-1">
                   <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 tracking-tight">
-                    Sin Tarimas Asignadas al Despacho
+                    @if (selectedOutbound()!.status === 'COMPLETED' || selectedOutbound()!.status === 'LOADED') {
+                      Cargando Manifiesto de Tarimas Despachadas...
+                    } @else {
+                      Sin Tarimas Asignadas al Despacho
+                    }
                   </h4>
-                  <p class="text-xs text-slate-800 dark:text-slate-200 max-w-lg mx-auto leading-relaxed font-medium">
-                    Selecciona los productos y tarimas (UAs) desde el botón principal superior
-                    <strong class="text-amber-800 dark:text-amber-400 font-bold">"1. Seleccionar Tarimas (FEFO)"</strong>
-                    en la barra de control para armar el manifiesto de salida.
-                  </p>
+                  @if (selectedOutbound()!.status === 'COMPLETED' || selectedOutbound()!.status === 'LOADED') {
+                    <p class="text-xs text-slate-800 dark:text-slate-200 max-w-lg mx-auto leading-relaxed font-medium">
+                      Esta orden de salida cuenta con <strong class="text-emerald-700 dark:text-emerald-400 font-bold">{{ selectedOutbound()!.totalPallets || 0 }} tarima(s)</strong> despachadas y <strong class="text-emerald-700 dark:text-emerald-400 font-bold">{{ (selectedOutbound()!.totalPieces || 0) | number }} piezas</strong> autorizadas.
+                    </p>
+                  } @else {
+                    <p class="text-xs text-slate-800 dark:text-slate-200 max-w-lg mx-auto leading-relaxed font-medium">
+                      Selecciona los productos y tarimas (UAs) desde el botón principal superior
+                      <strong class="text-amber-800 dark:text-amber-400 font-bold">"1. Seleccionar Tarimas (FEFO)"</strong>
+                      en la barra de control para armar el manifiesto de salida.
+                    </p>
+                  }
                 </div>
-                <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[11px] font-bold text-amber-900 dark:text-amber-300 mt-1">
-                  <span class="material-symbols-outlined text-xs text-amber-600">tune</span>
-                  <span>Asignación inteligente por caducidad (FEFO) y escáner de código de barras</span>
-                </div>
+                @if (selectedOutbound()!.status !== 'COMPLETED' && selectedOutbound()!.status !== 'LOADED') {
+                  <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[11px] font-bold text-amber-900 dark:text-amber-300 mt-1">
+                    <span class="material-symbols-outlined text-xs text-amber-600">tune</span>
+                    <span>Asignación inteligente por caducidad (FEFO) y escáner de código de barras</span>
+                  </div>
+                }
               </div>
             } @else {
               <!-- Tabla de Tarimas Asignadas (SDD Luxury) -->
@@ -2640,7 +2670,11 @@
                                   <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
                                   <span class="carriers-tl-diff__arrow text-muted mx-1.5 font-bold">➔</span>
                                 }
-                                <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                                @if (d.fieldName.includes('Remisión') || d.fieldName.includes('Documento') || d.fieldName === 'remisionNo') {
+                                  <span class="px-2 py-0.5 rounded-md bg-gold/15 text-gold border border-gold/30 font-mono font-bold text-[11px] ml-0.5 tracking-wide">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                                } @else {
+                                  <span class="carriers-tl-diff__new text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                                }
                               </div>
                             }
                           </div>
@@ -2829,7 +2863,7 @@
           <div class="confirm-notice-box">
             <span class="material-symbols-outlined confirm-notice-icon">lock</span>
             <p class="confirm-notice-text">
-              Esta acción descontará las <strong>{{ totalSelectedPallets() }} tarima(s)</strong> seleccionadas del inventario en tiempo real y generará el folio oficial de salida <span class="font-mono font-bold">SAL-2026-XXXX</span>.
+              Esta acción descontará las <strong>{{ totalSelectedPallets() }} tarima(s)</strong> seleccionadas del inventario en tiempo real y generará el folio oficial de salida <span class="font-mono font-bold">SAL-{{ currentDateCompact() }}-{{ selectedClientShortCode() }}-XXXX</span>.
             </p>
           </div>
 
@@ -3178,7 +3212,7 @@
               </div>
               <select
                 [ngModel]="editDestinationId()"
-                (ngModelChange)="editDestinationId.set($event)"
+                (ngModelChange)="onEditDestinationChange($event)"
                 class="fg-input font-bold"
               >
                 <option value="">-- Selecciona Planta / Destino --</option>
@@ -3188,8 +3222,41 @@
                 @if (editDestinations().length === 0) {
                   <option value="" disabled>-- Sin destinos disponibles para este cliente --</option>
                 }
+                <option value="__OTHER__">✨ Otro (Especificar destino manualmente...)</option>
               </select>
-              @if (selectedEditDestinationAddress()) {
+
+              @if (isEditDestinationOther()) {
+                <div class="mt-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5 animate-fadeIn">
+                  <div class="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                    <span class="material-symbols-outlined text-sm text-amber-600 dark:text-amber-400">edit_location</span>
+                    <span>Especificar Planta / Destino Manualmente</span>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Nombre de la Planta o Destino <span class="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [ngModel]="editCustomDestinationName()"
+                      (ngModelChange)="editCustomDestinationName.set($event)"
+                      class="fg-input font-bold w-full"
+                      placeholder="Ej. Centro de Distribución Toluca, Planta Monterrey, etc."
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Dirección o Referencia de Entrega (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      [ngModel]="editCustomDestinationAddress()"
+                      (ngModelChange)="editCustomDestinationAddress.set($event)"
+                      class="fg-input text-xs w-full"
+                      placeholder="Ej. Carr. Toluca-Naucalpan Km 5.5, Parque Industrial Toluca 2000"
+                    />
+                  </div>
+                </div>
+              } @else if (selectedEditDestinationAddress()) {
                 <div class="mt-1.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-medium flex items-start gap-1.5">
                   <span class="material-symbols-outlined text-xs text-amber-600 shrink-0 mt-0.5">location_on</span>
                   <span><strong>Dirección de entrega:</strong> {{ selectedEditDestinationAddress() }}</span>

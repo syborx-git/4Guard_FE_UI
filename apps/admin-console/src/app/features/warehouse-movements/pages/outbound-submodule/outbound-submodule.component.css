@@ -6704,8 +6704,35 @@ input[type="number"] {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 0.875rem !important;
-  overflow: hidden !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #94a3b8 transparent !important;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  position: relative !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  display: block !important;
+}
+
+.outbound-dispatched-table-wrapper::-webkit-scrollbar {
+  height: 8px !important;
+}
+
+.outbound-dispatched-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 9999px !important;
+}
+
+.outbound-dispatched-table-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8 !important;
+  border-radius: 9999px !important;
+  border: 2px solid #f1f5f9 !important;
+}
+
+.outbound-dispatched-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important;
 }
 
 :host-context(.dark) .outbound-dispatched-table-wrapper,
@@ -6715,11 +6742,28 @@ input[type="number"] {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
+:host-context(.dark) .outbound-dispatched-table-wrapper::-webkit-scrollbar-track,
+:host-context(.theme-dark) .outbound-dispatched-table-wrapper::-webkit-scrollbar-track {
+  background: #1e293b !important;
+}
+
+:host-context(.dark) .outbound-dispatched-table-wrapper::-webkit-scrollbar-thumb,
+:host-context(.theme-dark) .outbound-dispatched-table-wrapper::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+  border-color: #1e293b !important;
+}
+
+:host-context(.dark) .outbound-dispatched-table-wrapper::-webkit-scrollbar-thumb:hover,
+:host-context(.theme-dark) .outbound-dispatched-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important;
+}
+
 .outbound-dispatched-table {
   width: 100% !important;
-  min-width: 820px !important;
+  min-width: 1100px !important;
   border-collapse: collapse !important;
   font-size: 0.76rem !important;
+  table-layout: auto !important;
 }
 
 .outbound-dispatched-table thead {

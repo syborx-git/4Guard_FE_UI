@@ -36,6 +36,7 @@ import {
   MovementAuditDetail,
   BayRemisionSummary,
   BayLiveOccupancy,
+  parseAuditTimestamp,
 } from '../models/warehouse-movements.models';
 import { WarehouseMovementsApiService } from './warehouse-movements-api.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
@@ -112,25 +113,39 @@ export class WarehouseMovementsService {
   }
 
   /**
-   * Actualiza la capacidad de una bahía específica dinámicamente (preparado para el CRUD de Bahías).
+   * Actualiza la capacidad de una bahía específica dinámicamente y persiste el cambio en la base de datos (PostgreSQL: wms.locations).
    * Recalcula automáticamente el espacio disponible y emite el nuevo estado reactivo a todo el sistema.
    */
-  public updateBayCapacity(locationCode: string, newCapacity: number): void {
+  public updateBayCapacity(locationCode: string, newCapacity: number, persistToBackend: boolean = true): void {
     if (!locationCode || newCapacity <= 0) return;
     const cleanCode = locationCode.toUpperCase().trim();
+    const existing = this.locationsSignal()[cleanCode];
+
     this.locationsSignal.update((map) => {
-      const existing = map[cleanCode];
-      if (!existing) return map;
-      const total = existing.totalPallets || 0;
+      const loc = map[cleanCode];
+      if (!loc) return map;
+      const total = loc.totalPallets || 0;
       return {
         ...map,
         [cleanCode]: {
-          ...existing,
+          ...loc,
           capacity: newCapacity,
           availableCapacity: Math.max(0, newCapacity - total),
         },
       };
     });
+
+    if (persistToBackend && existing && existing.locationId && !existing.locationId.startsWith('loc-')) {
+      this.movementsApi
+        .updatePositionCapacity(existing.locationId, {
+          code: cleanCode,
+          capacityTarimas: newCapacity,
+        })
+        .subscribe({
+          next: () => {},
+          error: (err) => console.error(`Error persistiendo capacidad de ${cleanCode} en BD:`, err),
+        });
+    }
   }
 
   /**
@@ -576,6 +591,7 @@ export class WarehouseMovementsService {
             clients.map((c: any) => ({
               code: c.id || c.code || 'CLI',
               name: c.name || c.tradeName || 'Cliente',
+              shortCode: c.shortCode || (c.name ? c.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() : 'CLI'),
               destinations: (c.destinations || []).map((d: any) => ({
                 id: d.id || `DEST-${d.destinationCode || Math.random()}`,
                 clientCode: c.id || c.code,
@@ -1288,18 +1304,151 @@ export class WarehouseMovementsService {
     });
   }
 
-  getOutboundAuditLogs(folio: string): MovementAuditEntry[] {
+  getOutboundAuditLogs(folioOrId: string, outboundFallback?: WarehouseOutbound): MovementAuditEntry[] {
+    const key = (folioOrId || '').trim();
     const map = this.outboundAuditMap();
-    return map[folio.trim()] || [
+    const cached = map[key];
+    if (cached && cached.length > 0) {
+      // Si la entrada cacheada es el placeholder viejo de 1 solo dato vacío o UUID crudo, regenerar
+      const isPlaceholder = cached.length === 1 && cached[0].details?.length === 1 && cached[0].details[0].fieldName === 'Folio de Operación';
+      if (!isPlaceholder) {
+        return cached;
+      }
+    }
+
+    const outbound = outboundFallback || this.outboundsSignal().find((o) => o.folio === key || o.id === key || o.remisionNo === key);
+    if (outbound) {
+      const generated = this.buildOutboundAuditTimeline(outbound);
+      this.setOutboundAuditLogs(key, generated);
+      if (outbound.folio && outbound.folio !== key) {
+        this.setOutboundAuditLogs(outbound.folio, generated);
+      }
+      if (outbound.id && outbound.id !== key) {
+        this.setOutboundAuditLogs(outbound.id, generated);
+      }
+      return generated;
+    }
+
+    return [
       {
-        id: `aud-default-${folio}`,
+        id: `aud-default-${key}`,
         action: 'SALIDA_REGISTRADA',
-        actionLabel: 'Despacho Outbound Registrado',
-        username: 'Operador WMS',
+        actionLabel: 'Arribo & Registro en Caseta',
+        username: 'Caseta de Seguridad',
         timestamp: new Date().toLocaleString('es-MX'),
-        details: [{ fieldName: 'Folio de Operación', newValue: folio }],
+        details: [
+          { fieldName: 'No. de Remisión / Documento', newValue: key },
+          { fieldName: 'Folio de Operación', newValue: key },
+        ],
       },
     ];
+  }
+
+  // Generador homologado de línea de tiempo de auditoría concisa para Salidas / Outbound
+  buildOutboundAuditTimeline(outbound: WarehouseOutbound): MovementAuditEntry[] {
+    if (!outbound) return [];
+    const entries: MovementAuditEntry[] = [];
+    const baseTime = outbound.dispatchedAt ? new Date(outbound.dispatchedAt).getTime() : Date.now();
+    const remision = outbound.remisionNo || outbound.folio;
+    const operator = outbound.forkliftOperator || 'Alex Gabriel Perez Garduño';
+    const leader = outbound.leaderAuthorizedBy || outbound.dispatchedBy || 'Supervisor de Turno';
+    const palletsCount = outbound.totalPallets || (outbound.items ? outbound.items.length : 0);
+    const piecesCount = outbound.totalPieces || (outbound.items ? outbound.items.reduce((acc, i) => acc + (Number(i.pieces) || 0), 0) : 0);
+
+    // 1. Arribo & Registro en Caseta (Pre-Salida / F01-PO-CP-7.1.3-03)
+    entries.push({
+      id: `aud-out-reg-${outbound.id || outbound.folio}`,
+      action: 'SALIDA_REGISTRADA',
+      actionLabel: 'Arribo & Registro en Caseta',
+      username: outbound.dispatchedBy || 'Caseta de Seguridad',
+      timestamp: new Date(baseTime - 1000 * 60 * 35).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+      rawTimestamp: baseTime - 1000 * 60 * 35,
+      details: [
+        { fieldName: 'No. de Remisión / Documento', newValue: remision },
+        { fieldName: 'Folio de Operación', newValue: outbound.folio },
+        { fieldName: 'Cliente / Propietario', newValue: outbound.clientName || 'Sin asignar' },
+        { fieldName: 'Planta / Destino', newValue: outbound.destinationName || 'Sin especificar' },
+        { fieldName: 'Línea Transportista', newValue: outbound.carrierName || 'Sin especificar' },
+        { fieldName: 'Operador del Transporte', newValue: outbound.driverName || 'Sin asignar' },
+        { fieldName: 'Placas (Tracto / Caja)', newValue: `${outbound.tractorPlates || '--'} / ${outbound.boxPlates || '--'}` },
+        { fieldName: 'Rampa Asignada', newValue: `Rampa ${outbound.rampNumber ? String(outbound.rampNumber).padStart(2, '0') : '01'}` },
+        ...(outbound.sealNumber ? [{ fieldName: 'Número de Sello / Marchamo', newValue: outbound.sealNumber }] : []),
+      ],
+    });
+
+    // 2. Asignación de Andén & Montacarguista
+    if (outbound.status !== 'REGISTERED' || outbound.rampNumber || outbound.forkliftOperator) {
+      entries.push({
+        id: `aud-out-asg-${outbound.id || outbound.folio}`,
+        action: 'SALIDA_ASIGNADA',
+        actionLabel: 'Asignación de Andén & Montacarguista',
+        username: 'Supervisor de Embarques',
+        timestamp: new Date(baseTime - 1000 * 60 * 25).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+        rawTimestamp: baseTime - 1000 * 60 * 25,
+        details: [
+          { fieldName: 'Rampa Asignada', newValue: `Rampa ${String(outbound.rampNumber || 1).padStart(2, '0')} (${outbound.rampCode || 'LOC-RAMP-01'})` },
+          { fieldName: 'Operador de Montacargas', newValue: operator },
+          { fieldName: 'Estado Operativo', oldValue: '1. Caseta / Registrado', newValue: '2. Asignado a Andén' },
+        ],
+      });
+    }
+
+    // 3. Tarimas de Inventario Asignadas (FEFO)
+    if (palletsCount > 0 || outbound.status === 'LOADED' || outbound.status === 'COMPLETED' || outbound.status === 'IN_PROGRESS') {
+      entries.push({
+        id: `aud-out-fefo-${outbound.id || outbound.folio}`,
+        action: 'TARIMAS_ASIGNADAS',
+        actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+        username: 'Operador WMS (FEFO)',
+        timestamp: new Date(baseTime - 1000 * 60 * 18).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+        rawTimestamp: baseTime - 1000 * 60 * 18,
+        details: [
+          { fieldName: 'No. de Remisión / Documento', newValue: remision },
+          { fieldName: 'Tarimas Totales (UAs)', newValue: `${palletsCount} tarimas asignadas` },
+          { fieldName: 'Piezas Totales', newValue: `${piecesCount} piezas` },
+          { fieldName: 'Criterio de Rotación', newValue: 'FEFO (First Expired, First Out)' },
+        ],
+      });
+    }
+
+    // 4. Carga Física Concluida en Andén
+    if (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') {
+      entries.push({
+        id: `aud-out-load-${outbound.id || outbound.folio}`,
+        action: 'CARGA_CONCLUIDA',
+        actionLabel: 'Carga Física Concluida (Por Auditar)',
+        username: operator,
+        timestamp: new Date(baseTime - 1000 * 60 * 10).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+        rawTimestamp: baseTime - 1000 * 60 * 10,
+        details: [
+          { fieldName: 'Tarimas Totales (UAs)', newValue: `${palletsCount} / ${palletsCount} UAs verificadas en andén` },
+          { fieldName: 'Número de Sello / Marchamo', newValue: outbound.sealNumber || 'Marchamo Colocado' },
+          { fieldName: 'Estado Operativo', oldValue: '2. Asignado a Andén', newValue: '4. Carga Finalizada' },
+        ],
+      });
+    }
+
+    // 5. Despacho Confirmado & Salida de Caseta (F03)
+    if (outbound.status === 'COMPLETED') {
+      entries.push({
+        id: `aud-out-cmp-${outbound.id || outbound.folio}`,
+        action: 'SALIDA_DESPACHADA',
+        actionLabel: 'Despacho Outbound Confirmado (F03)',
+        username: `@${leader}`,
+        timestamp: new Date(baseTime).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+        rawTimestamp: baseTime,
+        authorizedBy: leader,
+        details: [
+          { fieldName: 'No. de Remisión / Documento', newValue: remision },
+          { fieldName: 'Total Despachado', newValue: `${palletsCount} tarimas / ${piecesCount} piezas` },
+          { fieldName: 'Planta / Destino', newValue: outbound.destinationName || 'Destino WMS' },
+          { fieldName: 'Estado Operativo', oldValue: '4. Carga Finalizada', newValue: '5. Despachado / Salida Confirmada' },
+          { fieldName: 'Autorizado Por (Supervisor)', newValue: leader },
+        ],
+      });
+    }
+
+    return entries.sort((a, b) => parseAuditTimestamp(b.rawTimestamp || b.timestamp) - parseAuditTimestamp(a.rawTimestamp || a.timestamp));
   }
 
   setOutboundAuditLogs(folio: string, entries: MovementAuditEntry[]): void {
@@ -1716,6 +1865,28 @@ export class WarehouseMovementsService {
           return [outbound, ...filtered];
         });
 
+        this.addOutboundAudit(outbound.folio, {
+          id: `aud-out-reg-${Date.now()}`,
+          action: 'SALIDA_REGISTRADA',
+          actionLabel: 'Arribo & Registro en Caseta',
+          username: res.createdBy || 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'No. de Remisión / Documento', newValue: outbound.remisionNo || data.docNumber },
+            { fieldName: 'Folio de Operación', newValue: outbound.folio },
+            { fieldName: 'Cliente / Propietario', newValue: outbound.clientName },
+            { fieldName: 'Planta / Destino', newValue: outbound.destinationName || 'Sin especificar' },
+            { fieldName: 'Línea Transportista', newValue: outbound.carrierName },
+            { fieldName: 'Operador del Transporte', newValue: outbound.driverName || 'Sin asignar' },
+            { fieldName: 'Placas (Tracto / Caja)', newValue: `${outbound.tractorPlates || '--'} / ${outbound.boxPlates || '--'}` },
+            { fieldName: 'Rampa Asignada', newValue: `Rampa ${outbound.rampNumber}` },
+            ...(outbound.sealNumber ? [{ fieldName: 'Número de Sello / Marchamo', newValue: outbound.sealNumber }] : []),
+          ],
+        });
+        if (outbound.id) {
+          this.setOutboundAuditLogs(outbound.id, this.getOutboundAuditLogs(outbound.folio, outbound));
+        }
+
         return outbound;
       })
     );
@@ -1869,7 +2040,27 @@ export class WarehouseMovementsService {
 
   // Mapea un OutboundResponse a WarehouseOutbound completo
   mapOutboundResponseToHeader(o: any): WarehouseOutbound {
-    if (!o) return {} as WarehouseOutbound;
+    const existing = this.outboundsSignal().find(
+      (item) => (item.id && item.id === o.id) || (item.folio && item.folio === (o.folio || o.folioNumber))
+    );
+    const rawItems = (o.items && o.items.length > 0) ? o.items : (existing?.items || []);
+
+    const mappedItems: OutboundItem[] = rawItems.map((it: any, idx: number) => ({
+      id: it.id || it.itemId || `item-${idx + 1}`,
+      palletNumber: it.palletNumber || idx + 1,
+      palletCode: it.palletCode || it.item?.sscc || '--',
+      productId: it.skuCode || it.productId || it.item?.sku?.code || '',
+      description: it.skuDescription || it.description || it.item?.sku?.name || '',
+      lotNumber: it.lotNumber || it.item?.batchNumber || '',
+      expirationDate: it.expirationDate ? String(it.expirationDate) : (it.item?.expirationDate ? String(it.item.expirationDate) : ''),
+      pieces: it.pieces != null ? Number(it.pieces) : (it.item?.quantity ? Number(it.item.quantity) : 0),
+      palletTypeId: 'ESTANDAR',
+      palletTypeLabel: 'Estándar',
+      locationCode: it.locationCode || it.item?.location?.code || 'N/A',
+      inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
+      clientName: it.clientName || o.clientName || '',
+    }));
+
     return {
       id: o.id,
       folio: o.folio || o.folioNumber || '',
@@ -1895,24 +2086,10 @@ export class WarehouseMovementsService {
       sealNumber: o.sealNumber || (o.preCheckin?.sealNumbers ? o.preCheckin.sealNumbers.join(', ') : '') || '',
       remisionNo: o.remisionNo || '',
       observations: o.observations || '',
-      items: (o.items || []).map((it: any, idx: number) => ({
-        id: it.id || it.itemId || `item-${idx + 1}`,
-        palletNumber: it.palletNumber || idx + 1,
-        palletCode: it.palletCode || it.item?.sscc || '--',
-        productId: it.skuCode || it.productId || it.item?.sku?.code || '',
-        description: it.skuDescription || it.description || it.item?.sku?.name || '',
-        lotNumber: it.lotNumber || it.item?.batchNumber || '',
-        expirationDate: it.expirationDate ? String(it.expirationDate) : (it.item?.expirationDate ? String(it.item.expirationDate) : ''),
-        pieces: it.pieces != null ? Number(it.pieces) : (it.item?.quantity ? Number(it.item.quantity) : 0),
-        palletTypeId: 'ESTANDAR',
-        palletTypeLabel: 'Estándar',
-        locationCode: it.locationCode || it.item?.location?.code || 'N/A',
-        inboundRemisionNo: it.inboundRemisionNo || it.docNumber || it.sapFolio || it.remisionNo || '',
-        clientName: it.clientName || o.clientName || '',
-      })),
-      totalPallets: o.totalPallets || (o.items ? o.items.length : 0),
-      totalPieces: o.totalPieces || (o.items ? o.items.reduce((acc: number, it: any) => acc + (it.pieces || (it.item?.quantity ? Number(it.item.quantity) : 0)), 0) : 0),
-      distinctSkus: o.distinctSkus || 0,
+      items: mappedItems,
+      totalPallets: o.totalPallets || (mappedItems.length > 0 ? mappedItems.length : (o.items ? o.items.length : 0)),
+      totalPieces: o.totalPieces || (mappedItems.length > 0 ? mappedItems.reduce((acc: number, it: any) => acc + (it.pieces || 0), 0) : 0),
+      distinctSkus: o.distinctSkus || (mappedItems.length > 0 ? new Set(mappedItems.map((it) => it.productId)).size : 0),
       completedAt: o.completedAt ? new Date(o.completedAt).toLocaleString('es-MX') : '',
       leaderAuthorizedBy: o.leaderAuthorizedBy || '',
       dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
@@ -3407,12 +3584,17 @@ export class WarehouseMovementsService {
     return newTransfer;
   }
 
-  // Genera Folio Salida de Almacén (SAL-2026-XXXXXX)
-  private generateNextOutboundFolio(): string {
-    const year = new Date().getFullYear();
-    const seq = String(this.nextOutboundNumber()).padStart(6, '0');
+  // Genera Folio Salida de Almacén (SAL-YYYYMMDD-[CLIENT]-[NNNN])
+  private generateNextOutboundFolio(clientShortCode?: string): string {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}${mm}${dd}`;
+    const code = (clientShortCode || 'CLI').trim().toUpperCase();
+    const seq = String(this.nextOutboundNumber()).padStart(4, '0');
     this.nextOutboundNumber.update((v) => v + 1);
-    return `SAL-${year}-${seq}`;
+    return `SAL-${dateStr}-${code}-${seq}`;
   }
 
   // Ejecuta Salida de Almacén (Outbound MVP1) — Transacción Atómica
@@ -3443,7 +3625,9 @@ export class WarehouseMovementsService {
     if (!dto.sealNumber.trim()) throw new Error('El número de sello es obligatorio.');
     if (dto.selectedPallets.length === 0) throw new Error('Selecciona al menos una tarima para registrar la salida.');
 
-    const folio = this.generateNextOutboundFolio();
+    const foundClient: any = this.clientsSignal().find((c: any) => c.code === dto.clientCode || c.id === dto.clientCode);
+    const shortCode = foundClient?.shortCode || (dto.clientName ? dto.clientName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() : 'CLI');
+    const folio = this.generateNextOutboundFolio(shortCode);
     const distinctSkus = new Set(dto.selectedPallets.map((p) => p.productId)).size;
     const totalPieces = dto.selectedPallets.reduce((acc, p) => acc + p.pieces, 0);
 

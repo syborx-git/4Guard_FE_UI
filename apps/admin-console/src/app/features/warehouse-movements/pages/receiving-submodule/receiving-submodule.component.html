@@ -850,22 +850,22 @@
                             <span class="material-symbols-outlined text-xs opacity-60">event</span>
                             <span>{{ lt.expirationDate || 'Sin caducidad' }}</span>
                           </div>
-                          @if (getLotShelfLifeDays(lt); as d) {
-                            @if (isShelfLifeCompliant(d)) {
-                              <span class="text-[9.5px] font-bold font-mono px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20">
-                                {{ d }}d (≥9m)
+                          @if (getShelfLifeEval(lt); as evalRes) {
+                            @if (evalRes.isCompliant) {
+                              <span class="text-[9.5px] font-bold font-mono px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20" [title]="evalRes.badgeDetail">
+                                {{ evalRes.badgeText }}
                               </span>
                             } @else if (lt.requiresOpsAuthorization && lt.authorizedByOpsManager) {
                               <span
                                 class="text-[9.5px] font-bold font-mono px-1.5 py-0.5 rounded text-amber-800 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 flex items-center gap-0.5"
-                                [title]="'Autorizado por: ' + lt.authorizedByOpsManager + ' • Motivo: ' + (lt.opsManagerReason || 'N/A')"
+                                [title]="'Autorizado por: ' + lt.authorizedByOpsManager + ' • Motivo: ' + (lt.opsManagerReason || 'N/A') + ' • ' + evalRes.badgeDetail"
                               >
                                 <span class="material-symbols-outlined text-[11px]">verified_user</span>
-                                <span>{{ d }}d • Aut. Ops</span>
+                                <span>{{ evalRes.remainingPct != null ? evalRes.remainingPct + '%' : evalRes.remainingDays + 'd' }} • Aut. MRP</span>
                               </span>
                             } @else {
-                              <span class="text-[9.5px] font-bold font-mono px-1.5 py-0.5 rounded text-rose-700 dark:text-rose-300 bg-rose-500/10 border border-rose-500/20">
-                                {{ d }}d (&lt;9m)
+                              <span class="text-[9.5px] font-bold font-mono px-1.5 py-0.5 rounded text-rose-700 dark:text-rose-300 bg-rose-500/10 border border-rose-500/20" [title]="evalRes.badgeDetail">
+                                {{ evalRes.remainingPct != null ? evalRes.remainingPct + '%' : evalRes.remainingDays + 'd' }} (&lt;{{ evalRes.thresholdRequired }}%)
                               </span>
                             }
                           }
@@ -898,11 +898,11 @@
                             </span>
                           </div>
                         }
-                        @if (getActiveLotShelfLifeDays(); as days) {
-                          @if (isShelfLifeCompliant(days)) {
+                        @if (getActiveLotShelfLifeEval(); as evalRes) {
+                          @if (evalRes.isCompliant) {
                             <span class="lot-active-badge-shelf">
                               <span class="material-symbols-outlined text-[12px]">verified</span>
-                              <span>{{ days }} días vida útil (Conforme ≥ 9 meses)</span>
+                              <span>{{ evalRes.badgeDetail }} (Conforme ≥ {{ evalRes.thresholdRequired }}% · {{ evalRes.category }})</span>
                             </span>
                           } @else if (activeLot.requiresOpsAuthorization && activeLot.authorizedByOpsManager) {
                             <span
@@ -910,12 +910,12 @@
                               [title]="'Autorizado por: ' + activeLot.authorizedByOpsManager + ' | Motivo: ' + (activeLot.opsManagerReason || 'N/A')"
                             >
                               <span class="material-symbols-outlined text-[12px]">verified_user</span>
-                              <span>{{ days }} días (&lt;9m) • Autorizado por Gerente Ops</span>
+                              <span>{{ evalRes.badgeDetail }} • Excepción Autorizada por MRP / Planeación</span>
                             </span>
                           } @else {
                             <span class="lot-active-badge-shelf lot-active-badge-shelf--warning">
                               <span class="material-symbols-outlined text-[12px]">warning</span>
-                              <span>{{ days }} días vida útil (Requiere Autorización Gerencial &lt; 9 meses)</span>
+                              <span>{{ evalRes.badgeDetail }} (Requiere Autorización Excepcional MRP &lt; {{ evalRes.thresholdRequired }}%)</span>
                             </span>
                           }
                         }
@@ -3652,7 +3652,7 @@
               </div>
             </div>
 
-            <!-- Credenciales de Autorización de Gerencia de Operaciones (< 9 Meses) -->
+            <!-- Credenciales de Autorización Excepcional MRP / Planeación de Demanda -->
             @if (isNewLotShelfLifeShort()) {
               <div class="pt-3 border-t border-subtle space-y-3 animate-fade-in">
                 <!-- Tarjeta Telemetría de Alerta de Caducidad Homologada -->
@@ -3662,16 +3662,16 @@
                       <div class="ops-auth-icon-badge">
                         <span class="material-symbols-outlined text-base">schedule</span>
                       </div>
-                      <span class="ops-auth-title">Lote con Caducidad Menor a 9 Meses</span>
+                      <span class="ops-auth-title">Situación Excepcional de Vida Útil Remanente</span>
                     </div>
-                    @if (getNewLotShelfLifeDays(); as d) {
+                    @if (getNewLotShelfLifeEval(); as evalRes) {
                       <span class="ops-auth-pill">
-                        {{ d }} días vida útil (&lt; 9 meses)
+                        {{ evalRes.badgeDetail }} (&lt; {{ evalRes.thresholdRequired }}% req.)
                       </span>
                     }
                   </div>
                   <p class="ops-auth-desc">
-                    Para habilitar el ingreso de este lote con vida útil corta se requiere validación formal de credenciales de Gerencia de Operaciones.
+                    El material no cumple el umbral estándar de aceptación (≥ 75% si vida &lt; 24m o ≥ 50% si vida ≥ 24m). Para habilitar el ingreso se requiere validación formal previa con <strong>MRP, Planeación de la Demanda y Fábrica Receptora</strong> con evaluación de riesgo y convenio de absorción de costo ante caduco.
                   </p>
                 </div>
 
@@ -3679,20 +3679,20 @@
                 <div class="modal-ops-credentials-panel p-3.5 space-y-3">
                   <div class="modal-section-legend--ops">
                     <span class="material-symbols-outlined">verified_user</span>
-                    <span>Validación de Credenciales de Gerencia de Operaciones</span>
+                    <span>Validación de Credenciales de Autorización MRP / Planeación</span>
                   </div>
 
-                  <!-- Usuario / Gerente de Operaciones -->
+                  <!-- Usuario / Responsable Autorizador -->
                   <div class="space-y-1">
                     <label class="modal-field-label">
-                      Usuario / Correo Gerente de Operaciones <span class="text-rose-500 font-bold">*</span>
+                      Usuario / Responsable Autorizador (MRP / Planeación / Gerencia) <span class="text-rose-500 font-bold">*</span>
                     </label>
                     <div class="fg-input-icon-wrap">
                       <span class="material-symbols-outlined fg-input-icon-left">person</span>
                       <input
                         type="text"
                         formControlName="authorizedByOpsManager"
-                        placeholder="gerente.operaciones@4guard.com o Carlos Mendoza"
+                        placeholder="Equipo MRP, Planeación o Gerente de Operaciones"
                         class="fg-input fg-input-with-icon-left w-full text-xs font-mono font-bold"
                       />
                     </div>
