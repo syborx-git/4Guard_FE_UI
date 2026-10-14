@@ -28,9 +28,9 @@
             <span class="users-header__eyebrow-sep">·</span>
             <span>Seguridad y Control</span>
           </div>
-          <h1 class="users-header__title">Control de Usuarios y Seguridad</h1>
+          <h1 class="users-header__title">Gestión de Usuarios WMS</h1>
           <p class="users-header__subtitle">
-            Administra los accesos, roles, permisos y la auditoría de operarios y supervisores del WMS
+            Administra los accesos, roles, perfiles operativos y auditoría de colaboradores del WMS
           </p>
         </div>
       </div>
@@ -42,79 +42,129 @@
         (click)="startNewUser()"
         aria-label="Registrar nuevo usuario">
         <span class="material-symbols-outlined">person_add</span>
-        Nuevo usuario
+        + Alta de Usuario
       </button>
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="users-kpi-grid" aria-label="Indicadores de usuarios">
-
-      <!-- Total -->
-      <div class="users-kpi-card users-kpi-card--total">
-        <div class="users-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">group</span>
-        </div>
-        <div class="users-kpi-card__body">
-          @if (isLoadingUsers()) {
-            <div class="users-kpi-card__skeleton"></div>
-          } @else {
-            <span class="users-kpi-card__value">{{ totalUsers() }}</span>
-          }
-          <span class="users-kpi-card__label">Total Usuarios</span>
-        </div>
-        <div class="users-kpi-card__bar users-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas de Usuarios (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Usuarios" class="users-kpi-section">
+      <div class="users-kpi-header">
+        <span class="users-kpi-header__title">
+          <span class="material-symbols-outlined users-kpi-header__icon">analytics</span>
+          <span>Métricas de Personal WMS</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="users-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activos -->
-      <div class="users-kpi-card users-kpi-card--active">
-        <div class="users-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="users-kpi-card__body">
-          @if (isLoadingUsers()) {
-            <div class="users-kpi-card__skeleton"></div>
-          } @else {
-            <span class="users-kpi-card__value">{{ kpiActive() }}</span>
-          }
-          <span class="users-kpi-card__label">Activos</span>
-        </div>
-        <div class="users-kpi-card__bar users-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="users-kpi-summary-bar animate-fade-in">
+          <div class="users-kpi-summary-items">
+            <div class="users-kpi-summary-item">
+              <span class="users-kpi-summary-dot users-kpi-summary-dot--total"></span>
+              <span class="users-kpi-summary-label">Total:</span>
+              <strong class="users-kpi-summary-value">{{ totalUsers() }}</strong>
+            </div>
 
-      <!-- Inactivos -->
-      <div class="users-kpi-card users-kpi-card--inactive">
-        <div class="users-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="users-kpi-card__body">
-          @if (isLoadingUsers()) {
-            <div class="users-kpi-card__skeleton"></div>
-          } @else {
-            <span class="users-kpi-card__value">{{ kpiInactive() }}</span>
-          }
-          <span class="users-kpi-card__label">Inactivos / Suspendidos</span>
-        </div>
-        <div class="users-kpi-card__bar users-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="users-kpi-summary-item">
+              <span class="users-kpi-summary-dot users-kpi-summary-dot--active"></span>
+              <span class="users-kpi-summary-label">Activos:</span>
+              <strong class="users-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiActive() }}</strong>
+            </div>
 
-      <!-- Admins y Supervisores -->
-      <div class="users-kpi-card users-kpi-card--supervisors">
-        <div class="users-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">admin_panel_settings</span>
-        </div>
-        <div class="users-kpi-card__body">
-          @if (isLoadingUsers()) {
-            <div class="users-kpi-card__skeleton"></div>
-          } @else {
-            <span class="users-kpi-card__value">{{ kpiAdminSupervisors() }}</span>
-          }
-          <span class="users-kpi-card__label">Administradores y Supervisores</span>
-        </div>
-        <div class="users-kpi-card__bar users-kpi-card__bar--supervisors"></div>
-      </div>
+            <div class="users-kpi-summary-item">
+              <span class="users-kpi-summary-dot users-kpi-summary-dot--inactive"></span>
+              <span class="users-kpi-summary-label">Inactivos / Suspendidos:</span>
+              <strong class="users-kpi-summary-value text-slate-500">{{ kpiInactive() }}</strong>
+            </div>
 
-    </div>
+            <div class="users-kpi-summary-item">
+              <span class="users-kpi-summary-dot users-kpi-summary-dot--supervisors"></span>
+              <span class="users-kpi-summary-label">Admins y Supervisores:</span>
+              <strong class="users-kpi-summary-value text-blue-600 dark:text-blue-400">{{ kpiAdminSupervisors() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="users-kpi-grid animate-fade-in" aria-label="Indicadores de usuarios">
+
+          <!-- Total -->
+          <div class="users-kpi-card users-kpi-card--total">
+            <div class="users-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">group</span>
+            </div>
+            <div class="users-kpi-card__body">
+              @if (isLoadingUsers()) {
+                <div class="users-kpi-card__skeleton"></div>
+              } @else {
+                <span class="users-kpi-card__value">{{ totalUsers() }}</span>
+              }
+              <span class="users-kpi-card__label">Total Usuarios</span>
+            </div>
+            <div class="users-kpi-card__bar users-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="users-kpi-card users-kpi-card--active">
+            <div class="users-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="users-kpi-card__body">
+              @if (isLoadingUsers()) {
+                <div class="users-kpi-card__skeleton"></div>
+              } @else {
+                <span class="users-kpi-card__value">{{ kpiActive() }}</span>
+              }
+              <span class="users-kpi-card__label">Activos</span>
+            </div>
+            <div class="users-kpi-card__bar users-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Inactivos -->
+          <div class="users-kpi-card users-kpi-card--inactive">
+            <div class="users-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="users-kpi-card__body">
+              @if (isLoadingUsers()) {
+                <div class="users-kpi-card__skeleton"></div>
+              } @else {
+                <span class="users-kpi-card__value">{{ kpiInactive() }}</span>
+              }
+              <span class="users-kpi-card__label">Inactivos / Suspendidos</span>
+            </div>
+            <div class="users-kpi-card__bar users-kpi-card__bar--inactive"></div>
+          </div>
+
+          <!-- Admins y Supervisores -->
+          <div class="users-kpi-card users-kpi-card--supervisors">
+            <div class="users-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">admin_panel_settings</span>
+            </div>
+            <div class="users-kpi-card__body">
+              @if (isLoadingUsers()) {
+                <div class="users-kpi-card__skeleton"></div>
+              } @else {
+                <span class="users-kpi-card__value">{{ kpiAdminSupervisors() }}</span>
+              }
+              <span class="users-kpi-card__label">Administradores y Supervisores</span>
+            </div>
+            <div class="users-kpi-card__bar users-kpi-card__bar--supervisors"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════
@@ -260,26 +310,40 @@
                 {{ getInitials(user) }}
               </div>
 
-              <!-- Info -->
+              <!-- Info Compacta en 3 filas fluidas -->
               <div class="user-item__body">
-                <div class="user-item__name">{{ user.firstName }} {{ user.lastName }}</div>
-                <div class="user-item__username">&#64;{{ user.username }}</div>
-                <div class="user-item__meta">
-                  <span class="user-item__email">{{ user.email }}</span>
-                  <span class="user-role-badge user-role-badge--{{ user.role.toLowerCase() }}">
-                    {{ getRoleLabel(user.role) }}
+                <!-- Fila 1: Nombre + Status Pill -->
+                <div class="user-item__row-top">
+                  <span class="user-item__name" [title]="user.firstName + ' ' + user.lastName">
+                    {{ user.firstName }} {{ user.lastName }}
+                  </span>
+                  <span
+                    class="user-status-pill user-status-pill--{{ user.status.toLowerCase() }}"
+                    [attr.aria-label]="'Estado: ' + user.status">
+                    <span class="user-status-pill__dot"></span>
+                    {{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
                   </span>
                 </div>
-              </div>
 
-              <!-- Estado -->
-              <div class="user-item__status-col">
-                <span
-                  class="user-status-badge user-status-badge--{{ user.status.toLowerCase() }}"
-                  [attr.aria-label]="'Estado: ' + user.status">
-                  {{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
-                </span>
-                <span class="user-item__branch">{{ user.branchName || 'Corporativo' }}</span>
+                <!-- Fila 2: Username oro mono + Email -->
+                <div class="user-item__row-mid">
+                  <span class="user-item__username">&#64;{{ user.username }}</span>
+                  <span class="user-item__dot-sep">•</span>
+                  <span class="user-item__email" [title]="user.email">{{ user.email }}</span>
+                </div>
+
+                <!-- Fila 3: Chip de Rol Compacto + Sucursal con icono -->
+                <div class="user-item__row-bottom">
+                  <span
+                    class="user-role-badge user-role-badge--{{ user.role.toLowerCase() }}"
+                    [title]="getRoleLabel(user.role)">
+                    {{ getRoleShortLabel(user.role) }}
+                  </span>
+                  <span class="user-item__branch" [title]="user.branchName || 'Acceso Corporativo'">
+                    <span class="material-symbols-outlined user-item__branch-icon">location_on</span>
+                    <span>{{ user.branchName ? (user.branchName.replace('CENTRO DE DISTRIBUCION ', 'CEDIS ')) : 'Corporativo' }}</span>
+                  </span>
+                </div>
               </div>
 
             </li>
@@ -312,16 +376,17 @@
             <div class="users-form-header__left">
               <div class="users-form-header__breadcrumb">
                 <span class="material-symbols-outlined">group</span>
-                Usuarios
+                <span>Directorio</span>
                 <span class="material-symbols-outlined users-form-header__chevron">chevron_right</span>
                 <strong>
-                  @if (formMode() === 'new') { Nuevo usuario }
-                  @else { {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }} }
+                  @if (formMode() === 'new') { Alta de Usuario }
+                  @else { Ficha de Usuario: {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }} }
                 </strong>
               </div>
               @if (formMode() === 'edit' && selectedUser()) {
                 <span
-                  class="user-status-badge user-status-badge--{{ selectedUser()!.status.toLowerCase() }}">
+                  class="user-status-pill user-status-pill--{{ selectedUser()!.status.toLowerCase() }}">
+                  <span class="user-status-pill__dot"></span>
                   {{ selectedUser()!.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
                 </span>
               }
@@ -354,6 +419,41 @@
             </div>
           }
 
+          <!-- Live Preview Card para Alta de Usuario -->
+          @if (formMode() === 'new') {
+            <div class="user-preview-card">
+              <div class="user-avatar user-preview-card__avatar {{ getAvatarClass(form.get('role')?.value) }}">
+                {{ getPreviewInitials() }}
+              </div>
+              <div class="user-preview-card__content">
+                <div class="user-preview-card__top">
+                  <span class="user-preview-card__name">
+                    {{ (form.get('firstName')?.value || form.get('lastName')?.value) ? (form.get('firstName')?.value + ' ' + form.get('lastName')?.value) : 'Nuevo Colaborador' }}
+                  </span>
+                  <span class="user-status-pill user-status-pill--active">
+                    <span class="user-status-pill__dot"></span>
+                    Nuevo Registro
+                  </span>
+                </div>
+                <div class="user-preview-card__mid">
+                  <span class="user-item__username">&#64;{{ form.get('username')?.value || 'usuario' }}</span>
+                  <span class="user-item__dot-sep">•</span>
+                  <span class="user-item__email">{{ form.get('email')?.value || 'correo@4guard.com' }}</span>
+                </div>
+                <div class="user-preview-card__bottom">
+                  <span class="user-role-badge user-role-badge--preview">
+                    <span class="material-symbols-outlined text-[13px]">shield_person</span>
+                    {{ getRoleShortLabel(form.get('role')?.value) }}
+                  </span>
+                  <span class="user-item__branch">
+                    <span class="material-symbols-outlined user-item__branch-icon">location_on</span>
+                    {{ getPreviewBranchName() }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          }
+
           <!-- ════════════════════════════════════════════════════════
                FORMULARIO
                ════════════════════════════════════════════════════ -->
@@ -368,7 +468,7 @@
             <fieldset class="users-form-section">
               <legend class="users-form-section__legend">
                 <span class="material-symbols-outlined">badge</span>
-                Información Personal & Cuenta
+                1. Datos de Identidad y Acceso
               </legend>
 
               <div class="users-form-grid users-form-grid--2">
@@ -447,8 +547,8 @@
             <!-- SECCIÓN 2 — Rol & Asignación WMS ──────────────────── -->
             <fieldset class="users-form-section">
               <legend class="users-form-section__legend">
-                <span class="material-symbols-outlined">admin_panel_settings</span>
-                Rol & Asignación WMS
+                <span class="material-symbols-outlined">shield_person</span>
+                2. Perfil Operativo y Sucursal
               </legend>
 
               <div class="users-form-grid users-form-grid--2">
@@ -641,8 +741,8 @@
                     <span class="material-symbols-outlined animate-spin">progress_activity</span>
                     Guardando...
                   } @else {
-                    <span class="material-symbols-outlined">save</span>
-                    Guardar Cambios
+                    <span class="material-symbols-outlined">{{ formMode() === 'new' ? 'person_add' : 'save' }}</span>
+                    {{ formMode() === 'new' ? 'Registrar Usuario' : 'Guardar Cambios' }}
                   }
                 </button>
               </div>

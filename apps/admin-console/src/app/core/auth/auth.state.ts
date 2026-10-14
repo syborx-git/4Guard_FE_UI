@@ -229,7 +229,7 @@ export class AuthState {
     const role = this.role();
     if (!role) return false;
 
-    // Super Administradores, Administradores, Gerentes y Directores tienen acceso completo
+    // Super Administradores, Administradores, Gerentes y Supervisores de Operaciones tienen acceso completo
     if (
       role === 'SUPER_ADMIN' ||
       role === 'ROLE_SUPER_ADMIN' ||
@@ -244,27 +244,52 @@ export class AuthState {
       role === 'OPERATIONS_SUPERVISOR' ||
       role === 'ROLE_OPERATIONS_SUPERVISOR' ||
       role === 'WAREHOUSE_SUPERVISOR' ||
-      role === 'ROLE_WAREHOUSE_SUPERVISOR' ||
-      role === 'SHIFT_LEADER' ||
-      role === 'ROLE_SHIFT_LEADER'
+      role === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
       return true;
     }
 
-    // Guardia de seguridad / Vigilancia -> Acceso EXCLUSIVO a Caseta (security)
     const normRole = (role || '').toUpperCase();
+
+    // 1. Guardia de Seguridad: acceso EXCLUSIVO a Caseta (security) y Dashboard
     if (
       normRole === 'SECURITY_GUARD' ||
       normRole === 'ROLE_SECURITY_GUARD' ||
-      normRole === 'VIGILANCIA' ||
-      normRole === 'ROLE_VIGILANCIA' ||
       normRole === 'GUARD' ||
       normRole === 'ROLE_GUARD' ||
       normRole.includes('GUARD') ||
-      normRole.includes('VIGILAN') ||
       normRole.includes('CASETA')
     ) {
-      return module === 'security';
+      return module === 'security' || module === 'dashboard';
+    }
+
+    // 2. Control de Calidad: acceso EXCLUSIVO a Calidad (quality) y Dashboard
+    if (
+      normRole === 'QM_INSPECTOR' ||
+      normRole === 'ROLE_QM_INSPECTOR' ||
+      normRole.includes('QUALITY') ||
+      normRole.includes('INSPECTOR')
+    ) {
+      return module === 'quality' || module === 'dashboard';
+    }
+
+    // 3. Mesa de Control y Líder de Turno: Dashboard + Recepción + Almacén/Topología + Inventarios
+    if (
+      normRole === 'CONTROL_DESK' ||
+      normRole === 'ROLE_CONTROL_DESK' ||
+      normRole === 'SHIFT_LEADER' ||
+      normRole === 'ROLE_SHIFT_LEADER'
+    ) {
+      return (
+        module === 'dashboard' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
+        module === 'catalogs' ||
+        module === 'layout' ||
+        module === 'inventory' ||
+        module === 'inventory-query'
+      );
     }
 
     const permissions = this.permissions();
