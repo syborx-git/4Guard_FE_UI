@@ -1341,25 +1341,23 @@
     <div class="rf-modal-backdrop" (click)="closeCheckoutModal()">
       <div class="rf-modal-card rf-modal-card--checkout" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         
-        <!-- Encabezado Ejecutivo del Modal -->
-        <div class="rf-modal-header">
-          <div class="flex items-center gap-3">
+        <!-- Encabezado Compacto del Modal para Tableta -->
+        <div class="rf-modal-header py-2.5">
+          <div class="flex items-center gap-2.5">
             <div class="checkout-icon-badge">
               <span class="material-symbols-outlined text-amber-400">verified_user</span>
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <span class="badge-status-linked">COTEJO OFICIAL DE SALIDA</span>
+                <span class="badge-status-linked">COTEJO DE SALIDA</span>
                 <span class="badge-op-tag" [class.badge-op-carga]="selectedVeh.operationType === 'OUTBOUND'" [class.badge-op-descarga]="selectedVeh.operationType !== 'OUTBOUND'">
                   <span class="material-symbols-outlined text-xs">
                     {{ selectedVeh.operationType === 'OUTBOUND' ? 'upload' : 'download' }}
                   </span>
                   {{ selectedVeh.operationType === 'OUTBOUND' ? 'CARGA' : 'DESCARGA' }}
                 </span>
+                <span class="font-mono text-amber-400 font-black text-sm tracking-wide">{{ selectedVeh.tractorPlates }}</span>
               </div>
-              <h3 class="rf-modal-title mt-0.5">
-                Salida de Unidad · <span class="font-mono text-amber-400 font-black">{{ selectedVeh.tractorPlates }}</span>
-              </h3>
             </div>
           </div>
           <button type="button" class="btn-modal-close" (click)="closeCheckoutModal()" title="Cerrar modal">
@@ -1367,9 +1365,9 @@
           </button>
         </div>
 
-        <div class="rf-modal-body space-y-4">
+        <div class="rf-modal-body space-y-2.5">
           
-          <!-- Matriz Ejecutiva de Datos del Transporte -->
+          <!-- Matriz Compacta de Datos del Transporte (4 Columnas responsivas) -->
           <div class="checkout-summary-grid">
             <div class="checkout-tile">
               <span class="tile-label">FOLIO WMS</span>
@@ -1377,7 +1375,7 @@
             </div>
             <div class="checkout-tile">
               <span class="tile-label">OPERADOR</span>
-              <strong class="tile-val">{{ selectedVeh.driverName }}</strong>
+              <strong class="tile-val truncate" [title]="selectedVeh.driverName">{{ selectedVeh.driverName }}</strong>
             </div>
             <div class="checkout-tile">
               <span class="tile-label">TRANSPORTISTA</span>
@@ -1388,43 +1386,37 @@
               <span class="tile-val font-mono font-bold">{{ selectedVeh.boxPlates }}</span>
             </div>
             <div class="checkout-tile col-span-2">
-              <span class="tile-label">SELLOS DE ENTRADA REGISTRADOS</span>
-              <span class="tile-val font-mono text-xs text-slate-300">
+              <span class="tile-label">SELLOS DE ENTRADA</span>
+              <span class="tile-val font-mono text-xs text-slate-300 truncate" [title]="selectedVeh.sealNumbers.join(', ')">
                 {{ selectedVeh.sealNumbers.length > 0 ? selectedVeh.sealNumbers.join(', ') : 'SIN SELLOS REGISTRADOS' }}
               </span>
             </div>
           </div>
 
-          <!-- Banner Informativo Específico de Operación -->
+          <!-- Banner Informativo Específico de Operación (Compacto) -->
           @if (selectedVeh.operationType === 'OUTBOUND') {
             <div class="checkout-alert-box checkout-alert-box--carga">
-              <div class="alert-box-icon">
-                <span class="material-symbols-outlined text-amber-400">shield_lock</span>
-              </div>
-              <div class="alert-box-content">
-                <strong>Operación de CARGA (Embarque):</strong>
-                <p>El chofer ingresó con caja vacía. Capture el <strong>Sello Fiscal / Oficial</strong> colocado y autorizado por Andén antes de abrir la pluma.</p>
+              <span class="material-symbols-outlined text-amber-400 text-base flex-shrink-0">shield_lock</span>
+              <div class="alert-box-content text-xs leading-tight">
+                <strong>Operación de CARGA:</strong> Chofer ingresó vacío. Capture el <strong>Sello Fiscal</strong> colocado en Andén.
               </div>
             </div>
           } @else {
             <div class="checkout-alert-box checkout-alert-box--descarga">
-              <div class="alert-box-icon">
-                <span class="material-symbols-outlined text-emerald-400">check_circle</span>
-              </div>
-              <div class="alert-box-content">
-                <strong>Operación de DESCARGA (Recepción):</strong>
-                <p>Verifique que la caja esté vacía o coincida con el acta de recepción de almacén antes de autorizar la salida.</p>
+              <span class="material-symbols-outlined text-emerald-400 text-base flex-shrink-0">check_circle</span>
+              <div class="alert-box-content text-xs leading-tight">
+                <strong>Operación de DESCARGA:</strong> Verifique caja vacía o conforme a recepción antes de autorizar salida.
               </div>
             </div>
           }
 
-          <!-- Formulario de Entrada: Cotejo de Sellos y Observaciones -->
+          <!-- Formulario de Entrada Compacto: Cotejo de Sellos y Observaciones -->
           <div class="checkout-input-group">
             <label class="checkout-field-label" for="checkoutSeal">
               <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-sm text-amber-400">pin</span>
+                <span class="material-symbols-outlined text-xs text-amber-400">pin</span>
                 <span>
-                  {{ selectedVeh.operationType === 'OUTBOUND' ? 'Sello Oficial Colocado en Andén de Salida' : 'Cotejo de Sello Físico en Caseta' }}
+                  {{ selectedVeh.operationType === 'OUTBOUND' ? 'Sello Oficial de Salida' : 'Cotejo de Sello en Caseta' }}
                 </span>
                 <span class="text-amber-500 font-bold">*</span>
               </div>
@@ -1446,8 +1438,8 @@
           <div class="checkout-input-group">
             <label class="checkout-field-label" for="checkoutObs">
               <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-sm text-slate-400">edit_note</span>
-                <span>Observaciones del Oficial de Caseta (Opcional)</span>
+                <span class="material-symbols-outlined text-xs text-slate-400">edit_note</span>
+                <span>Observaciones (Opcional)</span>
               </div>
             </label>
             <input
@@ -1460,7 +1452,7 @@
           </div>
         </div>
 
-        <div class="rf-modal-footer">
+        <div class="rf-modal-footer pt-3">
           <button type="button" (click)="closeCheckoutModal()" class="btn-checkout-cancel">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
             <span>Cancelar</span>
@@ -1470,8 +1462,8 @@
             (click)="confirmCheckout()"
             [disabled]="!checkoutSealInput().trim()"
             class="btn-checkout-confirm">
-            <span class="material-symbols-outlined">door_open</span>
-            <span>AUTORIZAR SALIDA &amp; REGISTRAR</span>
+            <span class="material-symbols-outlined text-base">door_open</span>
+            <span>AUTORIZAR SALIDA</span>
           </button>
         </div>
       </div>

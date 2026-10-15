@@ -2279,80 +2279,80 @@
   cursor: not-allowed;
 }
 
-/* ── Modal de Cotejo de Salida Ejecutivo ───────────────────────── */
+/* ── Modal de Cotejo de Salida Ejecutivo (Optimizado para Tableta) ───────── */
 .rf-modal-card--checkout {
-  max-width: 580px;
+  max-width: 500px;
   background: linear-gradient(150deg, rgba(23, 30, 43, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
   border: 1px solid rgba(245, 158, 11, 0.35) !important;
-  border-top: 4px solid #f59e0b !important;
-  box-shadow: 0 25px 65px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(245, 158, 11, 0.12) !important;
-  border-radius: 18px;
+  border-top: 3px solid #f59e0b !important;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 20px rgba(245, 158, 11, 0.12) !important;
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem;
+  gap: 0.65rem;
 }
 
 .checkout-icon-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.85rem;
-  height: 2.85rem;
-  border-radius: 12px;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 8px;
   background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(245, 158, 11, 0.4);
   flex-shrink: 0;
 }
 
 .checkout-icon-badge span {
-  font-size: 1.65rem;
+  font-size: 1.25rem;
 }
 
-/* Grilla de Resumen de Salida */
+/* Grilla Compacta de Resumen de Salida */
 .checkout-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.65rem;
+  gap: 0.45rem;
   background: rgba(10, 15, 26, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.95rem;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
 }
 
 .checkout-tile {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.1rem;
   overflow: hidden;
 }
 
 .tile-label {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #94a3b8;
 }
 
 .tile-val {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   color: #f8fafc;
   font-weight: 700;
+  line-height: 1.2;
 }
 
-/* Banners Informativos de Carga / Descarga */
+/* Banners Informativos Compactos */
 .checkout-alert-box {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .checkout-alert-box strong {
-  display: block;
-  font-size: 0.8rem;
-  margin-bottom: 0.15rem;
+  font-size: 0.73rem;
 }
 
 .checkout-alert-box p {
@@ -2361,14 +2361,14 @@
 }
 
 .checkout-alert-box--carga {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   color: #fbbf24;
 }
 
 .checkout-alert-box--descarga {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
 }
 
@@ -2376,11 +2376,11 @@
 .checkout-input-group {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .checkout-field-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #e2e8f0;
 }
@@ -2394,36 +2394,35 @@
 .rf-checkout-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.75rem 5.5rem 0.75rem 0.95rem;
-  border-radius: 10px;
+  padding: 0.55rem 5rem 0.55rem 0.85rem;
+  border-radius: 8px;
   border: 1.5px solid rgba(245, 158, 11, 0.4);
   background: rgba(15, 23, 42, 0.85);
   color: #f8fafc;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   outline: none;
   transition: all 180ms ease;
-  min-height: 48px;
+  min-height: 40px;
 }
 
 .rf-checkout-input:focus {
   border-color: #f59e0b;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
   background: rgba(15, 23, 42, 1);
 }
 
 .input-badge-required {
   position: absolute;
-  right: 0.75rem;
-  font-size: 0.65rem;
+  right: 0.55rem;
+  font-size: 0.6rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  padding: 0.2rem 0.5rem;
-  border-radius: 5px;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #fca5a5;
   pointer-events: none;
-  transition: all 180ms ease;
 }
 
 .input-badge-ok {
@@ -2435,14 +2434,14 @@
 .rf-checkout-input-obs {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.65rem 0.85rem;
-  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(15, 23, 42, 0.65);
   color: #f1f5f9;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   outline: none;
-  min-height: 42px;
+  min-height: 38px;
   transition: border-color 160ms ease;
 }
 
@@ -2455,17 +2454,17 @@
 .btn-checkout-cancel {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.7rem 1.25rem;
-  border-radius: 10px;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #cbd5e1;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   cursor: pointer;
   transition: all 160ms ease;
-  min-height: 46px;
+  min-height: 40px;
 }
 
 .btn-checkout-cancel:hover {
@@ -2478,24 +2477,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  padding: 0.75rem 1.65rem;
-  border-radius: 10px;
+  gap: 0.45rem;
+  padding: 0.55rem 1.35rem;
+  border-radius: 8px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border: 1px solid rgba(16, 185, 129, 0.5);
   color: #ffffff;
-  font-weight: 900;
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
   transition: all 180ms ease;
-  min-height: 46px;
+  min-height: 40px;
 }
 
 .btn-checkout-confirm:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
   filter: brightness(1.08);
 }
 
