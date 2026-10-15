@@ -92,52 +92,101 @@
     </div>
   }
 
-  <!-- ── 2. Cuadrícula de Métricas KPI Rápidas ─────────────────────── -->
-  <div class="security-kpi-grid">
-    <div class="security-kpi-card security-kpi-card--primary">
-      <div class="security-kpi-card__icon">
-        <span class="material-symbols-outlined">directions_car</span>
+  <!-- ── 2. Métricas Operativas KPI (Con Modo Compacto / Expandido) ──── -->
+  <section class="security-kpi-section" aria-label="Métricas de Caseta">
+    <div class="security-kpi-toggle-row">
+      <div class="security-kpi-section-title">
+        <span class="material-symbols-outlined text-base text-[#c5a86b]">analytics</span>
+        <span>Métricas Operativas del Turno</span>
       </div>
-      <div class="security-kpi-card__info">
-        <span class="security-kpi-card__label">EN PATIO TOTAL</span>
-        <strong class="security-kpi-card__value">{{ yardCount() }}</strong>
-        <span class="security-kpi-card__sub">Vehículos en estancia</span>
-      </div>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="btn-kpi-toggle"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar métricas para maximizar espacio de trabajo'">
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
     </div>
 
-    <div class="security-kpi-card security-kpi-card--warning">
-      <div class="security-kpi-card__icon">
-        <span class="material-symbols-outlined">qr_code_scanner</span>
+    @if (isKpiCollapsed()) {
+      <!-- Barra Compacta Resumida (Homologada a Consola Admin) -->
+      <div class="security-kpi-summary-bar animate-fade-in" role="status">
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-blue-500"></span>
+          <span class="security-kpi-summary-label">En Patio:</span>
+          <span class="security-kpi-summary-value">{{ yardCount() }}</span>
+        </div>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-[#c5a86b]"></span>
+          <span class="security-kpi-summary-label">QR Espera:</span>
+          <span class="security-kpi-summary-value">{{ pendingPassesCount() }}</span>
+        </div>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-sky-500"></span>
+          <span class="security-kpi-summary-label">En Andén:</span>
+          <span class="security-kpi-summary-value">{{ atRampCount() }}</span>
+        </div>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-emerald-500"></span>
+          <span class="security-kpi-summary-label">Listos Salida:</span>
+          <span class="security-kpi-summary-value">{{ readyDepartureCount() }}</span>
+        </div>
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-purple-500"></span>
+          <span class="security-kpi-summary-label">Egresados:</span>
+          <span class="security-kpi-summary-value">{{ historyCount() }}</span>
+        </div>
       </div>
-      <div class="security-kpi-card__info">
-        <span class="security-kpi-card__label">SOLICITUDES QR</span>
-        <strong class="security-kpi-card__value">{{ pendingPassesCount() }}</strong>
-        <span class="security-kpi-card__sub">Choferes en espera</span>
-      </div>
-    </div>
+    } @else {
+      <!-- Cuadrícula Completa de KPIs (4 Tarjetas) -->
+      <div class="security-kpi-grid animate-fade-in">
+        <div class="security-kpi-card security-kpi-card--primary">
+          <div class="security-kpi-card__icon">
+            <span class="material-symbols-outlined">directions_car</span>
+          </div>
+          <div class="security-kpi-card__info">
+            <span class="security-kpi-card__label">EN PATIO TOTAL</span>
+            <strong class="security-kpi-card__value">{{ yardCount() }}</strong>
+            <span class="security-kpi-card__sub">Vehículos en estancia</span>
+          </div>
+        </div>
 
-    <div class="security-kpi-card security-kpi-card--info">
-      <div class="security-kpi-card__icon">
-        <span class="material-symbols-outlined">dock</span>
-      </div>
-      <div class="security-kpi-card__info">
-        <span class="security-kpi-card__label">EN ANDÉN / RAMPA</span>
-        <strong class="security-kpi-card__value">{{ atRampCount() }}</strong>
-        <span class="security-kpi-card__sub">En carga / descarga</span>
-      </div>
-    </div>
+        <div class="security-kpi-card security-kpi-card--warning">
+          <div class="security-kpi-card__icon">
+            <span class="material-symbols-outlined">qr_code_scanner</span>
+          </div>
+          <div class="security-kpi-card__info">
+            <span class="security-kpi-card__label">SOLICITUDES QR</span>
+            <strong class="security-kpi-card__value">{{ pendingPassesCount() }}</strong>
+            <span class="security-kpi-card__sub">Choferes en espera</span>
+          </div>
+        </div>
 
-    <div class="security-kpi-card security-kpi-card--success">
-      <div class="security-kpi-card__icon">
-        <span class="material-symbols-outlined">verified</span>
+        <div class="security-kpi-card security-kpi-card--info">
+          <div class="security-kpi-card__icon">
+            <span class="material-symbols-outlined">dock</span>
+          </div>
+          <div class="security-kpi-card__info">
+            <span class="security-kpi-card__label">EN ANDÉN / RAMPA</span>
+            <strong class="security-kpi-card__value">{{ atRampCount() }}</strong>
+            <span class="security-kpi-card__sub">En carga / descarga</span>
+          </div>
+        </div>
+
+        <div class="security-kpi-card security-kpi-card--success">
+          <div class="security-kpi-card__icon">
+            <span class="material-symbols-outlined">verified</span>
+          </div>
+          <div class="security-kpi-card__info">
+            <span class="security-kpi-card__label">LISTOS PARA SALIDA</span>
+            <strong class="security-kpi-card__value">{{ readyDepartureCount() }}</strong>
+            <span class="security-kpi-card__sub">Autorizados por almacén</span>
+          </div>
+        </div>
       </div>
-      <div class="security-kpi-card__info">
-        <span class="security-kpi-card__label">LISTOS PARA SALIDA</span>
-        <strong class="security-kpi-card__value">{{ readyDepartureCount() }}</strong>
-        <span class="security-kpi-card__sub">Autorizados por almacén</span>
-      </div>
-    </div>
-  </div>
+    }
+  </section>
 
   <!-- ── 3. Contenido Principal según Pestaña ─────────────────────── -->
   <div class="security-content-area">
@@ -924,13 +973,17 @@
         </div>
 
         <div class="checkout-instructions-bar">
-          <span class="material-symbols-outlined text-amber-600 text-xl">info</span>
-          <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">
-            Selecciona un transporte con estatus <strong>Descarga/Carga Concluida</strong> para cotejar los sellos de salida colocados por el líder de almacén.
-          </p>
+          <div class="instruction-icon">
+            <span class="material-symbols-outlined">info</span>
+          </div>
+          <div class="instruction-copy">
+            <p>
+              Selecciona un transporte con estatus <strong>Descarga / Carga Concluida</strong> para cotejar los sellos de salida colocados por el líder de almacén.
+            </p>
+          </div>
         </div>
 
-        <div class="yard-vehicles-grid mt-4">
+        <div class="yard-vehicles-grid">
           @for (vehicle of readyForExitVehicles(); track vehicle.id) {
             <div class="yard-vehicle-card yard-vehicle-card--ready">
               <div class="yard-vehicle-card__header">

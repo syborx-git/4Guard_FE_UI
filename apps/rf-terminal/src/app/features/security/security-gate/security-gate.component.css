@@ -268,7 +268,101 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* ── 2. KPI Cards Grid ────────────────────────────────────────── */
+/* ── 2. KPI Metrics Section & Toggle ──────────────────────────── */
+.security-kpi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.security-kpi-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+}
+
+.security-kpi-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.btn-kpi-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-gold);
+  background: rgba(197, 168, 107, 0.08);
+  border: 1px solid rgba(197, 168, 107, 0.28);
+  cursor: pointer;
+  transition: all 160ms ease;
+  min-height: 32px;
+}
+
+.btn-kpi-toggle:hover {
+  background: rgba(197, 168, 107, 0.18);
+  border-color: var(--gold);
+}
+
+/* Barra Compacta Resumida de KPIs (Homologada a Consola Admin) */
+.security-kpi-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-card);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
+}
+
+:host-context(.theme-dark) .security-kpi-summary-bar,
+:host-context(.dark) .security-kpi-summary-bar,
+:host-context([data-theme='dark']) .security-kpi-summary-bar {
+  background: rgba(17, 26, 38, 0.94);
+  border-color: rgba(208, 175, 103, 0.20);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.security-kpi-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.security-kpi-summary-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.security-kpi-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.security-kpi-summary-value {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
 .security-kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1212,7 +1306,8 @@
 .yard-vehicles-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
 @media (min-width: 768px) {
@@ -1386,11 +1481,64 @@
 .checkout-instructions-bar {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.85rem;
   background: rgba(197, 168, 107, 0.08);
   border: 1px solid var(--gold-border);
-  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--gold);
+  padding: 0.95rem 1.25rem;
+  border-radius: 12px;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+:host-context(.theme-dark) .checkout-instructions-bar,
+:host-context(.dark) .checkout-instructions-bar,
+:host-context([data-theme='dark']) .checkout-instructions-bar {
+  background: rgba(208, 175, 103, 0.07);
+  border-color: rgba(208, 175, 103, 0.25);
+  border-left-color: var(--gold);
+}
+
+.checkout-instructions-bar .instruction-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
+  background: rgba(197, 168, 107, 0.18);
+  color: var(--gold-light);
+  flex-shrink: 0;
+}
+
+.checkout-instructions-bar .instruction-icon .material-symbols-outlined {
+  font-size: 22px;
+  color: #d97706;
+}
+
+:host-context(.theme-dark) .checkout-instructions-bar .instruction-icon .material-symbols-outlined,
+:host-context(.dark) .checkout-instructions-bar .instruction-icon .material-symbols-outlined,
+:host-context([data-theme='dark']) .checkout-instructions-bar .instruction-icon .material-symbols-outlined {
+  color: #fbbf24;
+}
+
+.checkout-instructions-bar .instruction-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkout-instructions-bar p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.checkout-instructions-bar strong {
+  color: var(--text-gold);
+  font-weight: 800;
 }
 
 

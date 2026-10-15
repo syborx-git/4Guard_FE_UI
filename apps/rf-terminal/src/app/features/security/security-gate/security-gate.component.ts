@@ -455,6 +455,29 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly checkoutObservations = signal('');
   protected readonly checkoutNotes = signal('');
 
+  // ─── Control de Colapso de Métricas KPI (Homologado a Consola Admin) ─────────
+  protected readonly isKpiCollapsed = signal<boolean>(this.loadStorageBool('4g_security_rf_kpis_collapsed', false));
+
+  protected toggleKpiCollapse(): void {
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('4g_security_rf_kpis_collapsed', String(next));
+      }
+    } catch {}
+    this.audioService.playSuccess();
+  }
+
+  private loadStorageBool(key: string, defaultValue: boolean): boolean {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const val = localStorage.getItem(key);
+        if (val !== null) return val === 'true';
+      }
+    } catch {}
+    return defaultValue;
+  }
 
   // ─── Computed Metrics & Lists ───────────────────────────────────────────────
   protected readonly yardCount = computed(() => this.yardVehicles().length);
