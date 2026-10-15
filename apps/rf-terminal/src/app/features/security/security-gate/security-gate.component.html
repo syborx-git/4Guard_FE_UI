@@ -69,6 +69,15 @@
           <span class="material-symbols-outlined">logout</span>
           <span>3. Salida / Check-Out ({{ readyDepartureCount() }})</span>
         </button>
+
+        <button
+          type="button"
+          (click)="setTab('HISTORY')"
+          [class.tab-active]="activeTab() === 'HISTORY'"
+          class="security-tab-btn">
+          <span class="material-symbols-outlined">history</span>
+          <span>4. Historial &amp; Auditoría ({{ historyCount() }})</span>
+        </button>
       </nav>
     </div>
   </header>
@@ -329,7 +338,7 @@
                 <label class="form-label" for="rampNumber">Andén / Rampa *</label>
                 <select id="rampNumber" formControlName="rampNumber" class="rf-input font-bold text-amber-600 dark:text-amber-400">
                   <option value="">-- Seleccionar Rampa --</option>
-                  @for (rm of rampOptions; track rm.num) {
+                  @for (rm of rampOptions(); track rm.num) {
                     <option [value]="rm.num" [disabled]="!rm.available">
                       {{ rm.label }} {{ rm.available ? '(Disponible)' : '(Ocupada: ' + rm.occupiedBy + ')' }}
                     </option>
@@ -919,8 +928,8 @@
         </div>
 
         <div class="yard-vehicles-grid mt-4">
-          @for (vehicle of filteredVehicles(); track vehicle.id) {
-            <div class="yard-vehicle-card" [class.yard-vehicle-card--ready]="vehicle.status === 'DISCHARGE_FINISHED'">
+          @for (vehicle of readyForExitVehicles(); track vehicle.id) {
+            <div class="yard-vehicle-card yard-vehicle-card--ready">
               <div class="yard-vehicle-card__header">
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-emerald-600">check_circle</span>
@@ -943,7 +952,13 @@
                   <span class="info-val truncate">{{ vehicle.carrierName }}</span>
                 </div>
                 <div class="vehicle-info-line">
-                  <span class="info-label">Sellos Salida:</span>
+                  <span class="info-label">Operación:</span>
+                  <span class="info-val font-bold text-xs">
+                    {{ vehicle.operationType === 'INBOUND' ? 'DESCARGA (Recepción)' : 'CARGA (Embarque)' }}
+                  </span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Sellos:</span>
                   <span class="info-val font-mono font-bold text-amber-800 dark:text-amber-300">
                     {{ vehicle.sealNumbers.join(', ') }}
                   </span>
@@ -969,8 +984,101 @@
             </div>
           } @empty {
             <div class="empty-yard-state">
-              <span class="material-symbols-outlined text-4xl text-muted">check_circle</span>
-              <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">No hay transportes pendientes de salida en este momento.</p>
+              <span class="material-symbols-outlined text-4xl text-muted">lock_clock</span>
+              <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">
+                No hay transportes con maniobra concluida listos para salida en este momento.
+              </p>
+              <p class="text-xs text-muted mt-0.5">
+                Almacén debe autorizar y concluir la recepción en andén antes de que Caseta pueda dar Check-Out físico.
+              </p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════════════
+         PESTAÑA 4: HISTORIAL & AUDITORÍA DE EGRESOS
+    ══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'HISTORY') {
+      <div class="security-panel-card animate-fade-in">
+        <div class="panel-header">
+          <div class="panel-header__title-wrap">
+            <span class="material-symbols-outlined panel-header__icon">history</span>
+            <div>
+              <h2 class="panel-header__title">Historial &amp; Auditoría de Salidas</h2>
+              <p class="panel-header__subtitle">Registro oficial de unidades egresadas, tiempos de estancia y boletas F01 emitidas.</p>
+            </div>
+          </div>
+          <span class="badge-gold">AUDITORÍA CASETA</span>
+        </div>
+
+        <div class="yard-vehicles-grid mt-4">
+          @for (vehicle of filteredHistory(); track vehicle.id) {
+            <div class="yard-vehicle-card yard-vehicle-card--history">
+              <div class="yard-vehicle-card__header">
+                <div class="flex items-center gap-2">
+                  <span class="badge-op-type" [ngClass]="vehicle.operationType === 'INBOUND' ? 'badge-op--inbound' : 'badge-op--outbound'">
+                    {{ vehicle.operationType === 'INBOUND' ? 'DESCARGA' : 'CARGA' }}
+                  </span>
+                  <span class="font-mono font-black text-sm text-slate-950 dark:text-white">{{ vehicle.tractorPlates }}</span>
+                  <span class="text-xs text-muted font-mono">/ Caja: {{ vehicle.boxPlates }}</span>
+                </div>
+                <span class="badge-status badge-status--COMPLETED_EXIT">Egresado</span>
+              </div>
+
+              <div class="yard-vehicle-card__body">
+                <div class="vehicle-info-line">
+                  <span class="info-label">Folio WMS:</span>
+                  <strong class="info-val font-mono text-amber-700 dark:text-amber-400">{{ vehicle.entryFolio }}</strong>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Chofer:</span>
+                  <strong class="info-val">{{ vehicle.driverName }}</strong>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Línea:</span>
+                  <span class="info-val truncate">{{ vehicle.carrierName }}</span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Entrada:</span>
+                  <span class="info-val font-mono text-xs">{{ formatTimeStringFromDate(vehicle.entryTime) }}</span>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Salida:</span>
+                  <strong class="info-val font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                    {{ vehicle.departureTime ? formatTimeStringFromDate(vehicle.departureTime) : '--:--' }}
+                  </strong>
+                </div>
+                <div class="vehicle-info-line">
+                  <span class="info-label">Sellos Salida:</span>
+                  <span class="info-val font-mono text-xs font-bold text-amber-800 dark:text-amber-300">
+                    {{ vehicle.exitSealNumbers?.join(', ') || vehicle.sealNumbers.join(', ') }}
+                  </span>
+                </div>
+                @if (vehicle.exitObservations) {
+                  <div class="vehicle-info-line">
+                    <span class="info-label">Obs Salida:</span>
+                    <span class="info-val text-xs text-slate-600 dark:text-slate-400 italic">{{ vehicle.exitObservations }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="yard-vehicle-card__actions">
+                <button
+                  type="button"
+                  (click)="openPrintModalForVehicle(vehicle)"
+                  class="btn-action-sm btn-action-sm--gold w-full"
+                  title="Reimprimir o Descargar Formato F01 Oficial">
+                  <span class="material-symbols-outlined text-sm">print</span>
+                  <span>Reimprimir Formato F01</span>
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-yard-state">
+              <span class="material-symbols-outlined text-4xl text-muted">history</span>
+              <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">No se han registrado egresos aún el día de hoy.</p>
             </div>
           }
         </div>
@@ -1054,12 +1162,22 @@
             <div><strong>Chofer:</strong> {{ selectedVeh.driverName }}</div>
             <div><strong>Transportista:</strong> {{ selectedVeh.carrierName }}</div>
             <div><strong>Placas Caja:</strong> {{ selectedVeh.boxPlates }}</div>
+            <div><strong>Operación:</strong> {{ selectedVeh.operationType === 'INBOUND' ? 'DESCARGA (Recepción)' : 'CARGA (Embarque)' }}</div>
             <div><strong>Sellos Registrados:</strong> {{ selectedVeh.sealNumbers.join(', ') }}</div>
           </div>
 
+          @if (selectedVeh.operationType === 'OUTBOUND') {
+            <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-600 text-base">lock</span>
+              <span><strong>Operación de CARGA:</strong> El chofer ingresó vacío. Capture el número de <strong>Sello Oficial</strong> colocado en el Andén de Salida tras concluir la estiba.</span>
+            </div>
+          }
+
           <div class="form-field">
             <label class="form-label" for="checkoutSeal">
-              <span>Captura o Escanea el Número de Sello Físico en Puerta *</span>
+              <span>
+                {{ selectedVeh.operationType === 'OUTBOUND' ? 'Sello Oficial Colocado en Andén de Salida *' : 'Cotejo de Sello Físico en Puerta *' }}
+              </span>
             </label>
             <input
               id="checkoutSeal"
@@ -1068,6 +1186,17 @@
               (ngModelChange)="checkoutSealInput.set($event)"
               placeholder="SL-XXXXX"
               class="rf-input font-mono uppercase font-black text-lg text-amber-700 dark:text-amber-400" />
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="checkoutObs">Observaciones de Salida (Opcional)</label>
+            <input
+              id="checkoutObs"
+              type="text"
+              [ngModel]="checkoutObservations()"
+              (ngModelChange)="checkoutObservations.set($event)"
+              placeholder="Ej: Salida en orden con chofer, sellos intactos"
+              class="rf-input text-xs" />
           </div>
         </div>
 
@@ -1106,7 +1235,7 @@
           <p class="text-xs text-muted">Selecciona un andén disponible para iniciar maniobra:</p>
 
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            @for (ramp of rampOptions; track ramp.num) {
+            @for (ramp of rampOptions(); track ramp.num) {
               <button
                 type="button"
                 [disabled]="!ramp.available"

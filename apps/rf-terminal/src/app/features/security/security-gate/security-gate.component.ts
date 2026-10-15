@@ -63,13 +63,19 @@ export interface YardVehicle {
   documentNumber: string;
   clientName?: string;
   rampNumber?: number;
+  rampCode?: string;
   sealNumbers: string[];
+  exitSealNumbers?: string[];
   entryTime: Date;
   departureTime?: Date;
   status: 'WAITING_RAMP' | 'AT_RAMP' | 'DISCHARGE_FINISHED' | 'AUTHORIZED_DEPARTURE' | 'COMPLETED_EXIT';
+  warehouseStatus?: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  isReadyForExit?: boolean;
   photoUrl?: string;
   checklistData?: any;
   observations?: string;
+  exitObservations?: string;
+  guardNotes?: string;
 }
 
 @Component({
@@ -102,6 +108,17 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
         this.notifService.clearRequestedPassToLoad();
       }
     });
+
+    // Conexión con Sesión Activa: Auto-asignar el nombre del guardia autenticado
+    effect(() => {
+      const user = this.authState.user();
+      if (user?.fullName) {
+        const currentVal = this.checkInForm.get('responsableVigilanciaNombre')?.value;
+        if (!currentVal || currentVal === 'Guardia de Turno - Caseta Principal') {
+          this.checkInForm.patchValue({ responsableVigilanciaNombre: user.fullName });
+        }
+      }
+    }, { allowSignalWrites: true });
   }
 
   // ─── Pestaña Activa ──────────────────────────────────────────────────────────
@@ -155,20 +172,21 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     'Otra Medida'
   ]);
 
-  protected readonly rampOptions = [
-    { num: 1, label: 'Rampa 01', available: true },
-    { num: 2, label: 'Rampa 02', available: true },
+  // Conexión con Módulo de Andenes / Rampas (Reactivo)
+  protected readonly rampOptions = signal([
+    { num: 1, label: 'Rampa 01', available: true, occupiedBy: undefined as string | undefined },
+    { num: 2, label: 'Rampa 02', available: true, occupiedBy: undefined as string | undefined },
     { num: 3, label: 'Rampa 03', available: false, occupiedBy: '72-AB-9K' },
-    { num: 4, label: 'Rampa 04', available: true },
-    { num: 5, label: 'Rampa 05', available: true },
-    { num: 6, label: 'Rampa 06', available: true },
+    { num: 4, label: 'Rampa 04', available: true, occupiedBy: undefined as string | undefined },
+    { num: 5, label: 'Rampa 05', available: true, occupiedBy: undefined as string | undefined },
+    { num: 6, label: 'Rampa 06', available: true, occupiedBy: undefined as string | undefined },
     { num: 7, label: 'Rampa 07', available: false, occupiedBy: '33-KZ-4R' },
-    { num: 8, label: 'Rampa 08', available: true },
-    { num: 9, label: 'Rampa 09', available: true },
-    { num: 10, label: 'Rampa 10', available: true },
-    { num: 11, label: 'Rampa 11', available: true },
-    { num: 12, label: 'Rampa 12', available: true },
-  ];
+    { num: 8, label: 'Rampa 08', available: true, occupiedBy: undefined as string | undefined },
+    { num: 9, label: 'Rampa 09', available: true, occupiedBy: undefined as string | undefined },
+    { num: 10, label: 'Rampa 10', available: true, occupiedBy: undefined as string | undefined },
+    { num: 11, label: 'Rampa 11', available: true, occupiedBy: undefined as string | undefined },
+    { num: 12, label: 'Rampa 12', available: true, occupiedBy: undefined as string | undefined },
+  ]);
 
   // ─── Control de Sellos ─────────────────────────────────────────────────────
   protected readonly sealList = signal<string[]>([]);
@@ -340,6 +358,8 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       sealNumbers: ['SL-99412', 'SL-99413'],
       entryTime: new Date(Date.now() - 42 * 60000),
       status: 'AT_RAMP',
+      isReadyForExit: false,
+      warehouseStatus: 'IN_PROGRESS',
       checklistData: {
         eppZapatos: 'SI', eppChaleco: 'SI', eppCofia: 'SI', eppCubrebocas: 'SI',
         revInteriorCaja: 'SI', revDanosCaja: 'NO', revDanosPuertas: 'NO', revOloresExtranos: 'NO', revIndiciosPlagas: 'NO'
@@ -363,6 +383,8 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       sealNumbers: ['SL-88120'],
       entryTime: new Date(Date.now() - 18 * 60000),
       status: 'WAITING_RAMP',
+      isReadyForExit: false,
+      warehouseStatus: 'IN_PROGRESS',
       checklistData: {
         eppZapatos: 'SI', eppChaleco: 'SI', eppCofia: 'NO', eppCubrebocas: 'SI',
         revInteriorCaja: 'SI', revDanosCaja: 'NO', revDanosPuertas: 'NO', revOloresExtranos: 'NO', revIndiciosPlagas: 'NO'
@@ -384,9 +406,11 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       documentNumber: 'CP-2026-00412',
       clientName: 'Costco México',
       rampNumber: 7,
-      sealNumbers: ['SL-77301'],
+      sealNumbers: ['PENDIENTE_ANDEN'],
       entryTime: new Date(Date.now() - 110 * 60000),
       status: 'DISCHARGE_FINISHED',
+      isReadyForExit: true,
+      warehouseStatus: 'COMPLETED',
       checklistData: {
         eppZapatos: 'SI', eppChaleco: 'SI', eppCofia: 'SI', eppCubrebocas: 'SI',
         revInteriorCaja: 'SI', revDanosCaja: 'NO', revDanosPuertas: 'NO', revOloresExtranos: 'NO', revIndiciosPlagas: 'NO'
@@ -394,9 +418,40 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     },
   ]);
 
+  // ─── Historial & Auditoría de Egresos Oficiales (Salidas Concluidas) ────────
+  protected readonly historyVehicles = signal<YardVehicle[]>([
+    {
+      id: 'veh-hist-001',
+      entryFolio: 'REC-2026-000088',
+      token: 'PASS-20260929-0071',
+      driverName: 'Miguel Ángel Valenzuela',
+      driverPhone: '55-8812-4400',
+      carrierName: 'Transportes Tresguerras',
+      tractorPlates: '90-TR-1A',
+      boxPlates: '12-BB-8K',
+      ecoNumber: 'TG-104',
+      boxDimensions: '53 Pies',
+      transportType: 'Caja Seca',
+      operationType: 'INBOUND',
+      documentNumber: 'REM-77192',
+      clientName: 'Amazon México',
+      rampNumber: 2,
+      sealNumbers: ['SL-33419'],
+      exitSealNumbers: ['SL-33419'],
+      entryTime: new Date(Date.now() - 240 * 60000),
+      departureTime: new Date(Date.now() - 95 * 60000),
+      status: 'COMPLETED_EXIT',
+      isReadyForExit: true,
+      warehouseStatus: 'COMPLETED',
+      exitObservations: 'Salida en orden con sello cotejado sin violación',
+      guardNotes: 'Maniobra de descarga completada sin daños reportados'
+    }
+  ]);
+
   // ─── Modal de Validación de Salida (Check-out) ───────────────────────────────
   protected readonly selectedVehicleForCheckout = signal<YardVehicle | null>(null);
   protected readonly checkoutSealInput = signal('');
+  protected readonly checkoutObservations = signal('');
   protected readonly checkoutNotes = signal('');
 
   // ─── Modal de Asignación Rápida de Rampa ────────────────────────────────────
@@ -406,8 +461,25 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly yardCount = computed(() => this.yardVehicles().length);
   protected readonly waitingCount = computed(() => this.yardVehicles().filter((v) => v.status === 'WAITING_RAMP').length);
   protected readonly atRampCount = computed(() => this.yardVehicles().filter((v) => v.status === 'AT_RAMP').length);
-  protected readonly readyDepartureCount = computed(() => this.yardVehicles().filter((v) => v.status === 'DISCHARGE_FINISHED').length);
+  protected readonly readyDepartureCount = computed(() => this.yardVehicles().filter((v) => v.status === 'DISCHARGE_FINISHED' || v.isReadyForExit).length);
   protected readonly pendingPassesCount = computed(() => this.activePasses().length);
+  protected readonly historyCount = computed(() => this.historyVehicles().length);
+
+  protected readonly readyForExitVehicles = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    const list = this.yardVehicles().filter(v => v.status === 'DISCHARGE_FINISHED' || v.isReadyForExit);
+    if (!q) return list;
+    return list.filter(
+      (v) =>
+        v.entryFolio.toLowerCase().includes(q) ||
+        v.driverName.toLowerCase().includes(q) ||
+        v.carrierName.toLowerCase().includes(q) ||
+        v.tractorPlates.toLowerCase().includes(q) ||
+        v.boxPlates.toLowerCase().includes(q) ||
+        (v.documentNumber && v.documentNumber.toLowerCase().includes(q)) ||
+        v.sealNumbers.some((s) => s.toLowerCase().includes(q))
+    );
+  });
 
   protected readonly filteredVehicles = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -422,6 +494,23 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       list = list.filter(v => v.status === 'DISCHARGE_FINISHED');
     }
 
+    if (!q) return list;
+
+    return list.filter(
+      (v) =>
+        v.entryFolio.toLowerCase().includes(q) ||
+        v.driverName.toLowerCase().includes(q) ||
+        v.carrierName.toLowerCase().includes(q) ||
+        v.tractorPlates.toLowerCase().includes(q) ||
+        v.boxPlates.toLowerCase().includes(q) ||
+        (v.documentNumber && v.documentNumber.toLowerCase().includes(q)) ||
+        v.sealNumbers.some((s) => s.toLowerCase().includes(q))
+    );
+  });
+
+  protected readonly filteredHistory = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    const list = this.historyVehicles();
     if (!q) return list;
 
     return list.filter(
@@ -736,6 +825,18 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       this.activePasses.update(list => list.filter(p => p.token !== loadedTok));
     }
 
+    // Conexión con Módulo de Rampas / Andenes: Ocupar la rampa seleccionada
+    if (val.rampNumber) {
+      const assignedRampNum = Number(val.rampNumber);
+      this.rampOptions.update((ramps) =>
+        ramps.map((r) =>
+          r.num === assignedRampNum
+            ? { ...r, available: false, occupiedBy: val.placasTracto?.trim().toUpperCase() }
+            : r
+        )
+      );
+    }
+
     // Agregar al patio
     this.yardVehicles.update((list) => [newVehicle, ...list]);
     this.audioService.playSuccess();
@@ -877,6 +978,20 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     const vehicle = this.selectedVehicleForRamp();
     if (!vehicle) return;
 
+    const prevRamp = vehicle.rampNumber;
+    // Conexión con Rampas / Andenes: Liberar previa y ocupar nueva
+    this.rampOptions.update((ramps) =>
+      ramps.map((r) => {
+        if (prevRamp && r.num === prevRamp) {
+          return { ...r, available: true, occupiedBy: undefined };
+        }
+        if (r.num === rampNumber) {
+          return { ...r, available: false, occupiedBy: vehicle.tractorPlates };
+        }
+        return r;
+      })
+    );
+
     this.yardVehicles.update((list) =>
       list.map((v) => (v.id === vehicle.id ? { ...v, rampNumber, status: 'AT_RAMP' } : v))
     );
@@ -888,8 +1003,28 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
   // ─── Modal de Check-out (Salida & Cotejo de Sellos) ──────────────────────────
   protected openCheckoutModal(vehicle: YardVehicle): void {
+    // REGLA ESTIPULADA DE CONEXIÓN CON ALMACÉN:
+    // La unidad NO puede salir de caseta si aún se encuentra en maniobra activa en almacén
+    if (!vehicle.isReadyForExit && vehicle.status !== 'DISCHARGE_FINISHED' && vehicle.status !== 'AUTHORIZED_DEPARTURE') {
+      this.audioService.playWarning();
+      this.showAlert(
+        'warning',
+        '⚠️ Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que Almacén autorice y finalice la recepción antes del Check-Out.'
+      );
+      return;
+    }
+
     this.selectedVehicleForCheckout.set(vehicle);
-    this.checkoutSealInput.set(vehicle.sealNumbers[0] || '');
+
+    // Si es CARGA: los sellos son los colocados en andén de salida (no los de entrada)
+    if (vehicle.operationType === 'OUTBOUND') {
+      this.checkoutSealInput.set('');
+    } else {
+      const firstValidSeal = vehicle.sealNumbers.find(s => s !== 'PENDIENTE_ANDEN') || '';
+      this.checkoutSealInput.set(firstValidSeal);
+    }
+
+    this.checkoutObservations.set('');
     this.checkoutNotes.set('');
     this.audioService.playSuccess();
   }
@@ -903,6 +1038,17 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     if (!vehicle) return;
 
     const inputSeal = this.checkoutSealInput().trim().toUpperCase();
+
+    // Regla de Negocio en CARGA: Es obligatorio capturar el sello oficial colocado en andén
+    if (vehicle.operationType === 'OUTBOUND' && (!inputSeal || inputSeal === 'PENDIENTE_ANDEN')) {
+      this.audioService.playWarning();
+      this.showAlert(
+        'warning',
+        '⚠️ En operaciones de CARGA es obligatorio capturar el Sello Oficial colocado en Andén de Salida antes del egreso.'
+      );
+      return;
+    }
+
     if (!inputSeal) {
       this.audioService.playWarning();
       this.showAlert('warning', 'Debe capturar o escanear el número de sello de salida para cotejo.');
@@ -913,14 +1059,26 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     const exitTime = new Date();
     vehicle.departureTime = exitTime;
     vehicle.status = 'COMPLETED_EXIT';
+    vehicle.exitSealNumbers = [inputSeal];
+    vehicle.exitObservations = this.checkoutObservations().trim() || 'Salida en orden y autorizada por caseta';
+    vehicle.guardNotes = this.checkoutNotes().trim();
 
-    // 2. Si se capturó un sello de salida diferente, agregar a la lista de sellos cotejados
+    // 2. Si se capturó un sello de salida diferente o nuevo, registrarlo
     if (!vehicle.sealNumbers.includes(inputSeal)) {
-      vehicle.sealNumbers = [inputSeal, ...vehicle.sealNumbers];
+      vehicle.sealNumbers = [inputSeal, ...vehicle.sealNumbers.filter(s => s !== 'PENDIENTE_ANDEN')];
     }
 
-    // 3. Remover de vehículos activos en patio y cerrar modal de checkout
+    // 3. Conexión con Módulo de Rampas / Andenes: Liberar automáticamente la rampa asignada
+    if (vehicle.rampNumber) {
+      const freeRampNum = vehicle.rampNumber;
+      this.rampOptions.update((ramps) =>
+        ramps.map((r) => (r.num === freeRampNum ? { ...r, available: true, occupiedBy: undefined } : r))
+      );
+    }
+
+    // 4. Conexión con Historial & Auditoría: Mover de Patio a Historial
     this.yardVehicles.update((list) => list.filter((v) => v.id !== vehicle.id));
+    this.historyVehicles.update((hist) => [{ ...vehicle }, ...hist]);
     this.selectedVehicleForCheckout.set(null);
     this.audioService.playSuccess();
 
@@ -928,16 +1086,16 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       navigator.vibrate([50, 80, 50]);
     }
 
-    // 4. Preparar datos oficiales del F01 con la hora de salida exacta registrada
+    // 5. Preparar datos oficiales del F01 con la hora de salida exacta registrada
     this.preparePrintDataFromVehicle(vehicle);
 
-    // 5. Desplegar automáticamente el Formato Oficial F01 con la hora de salida para descarga/impresión inmediata
+    // 6. Desplegar automáticamente el Formato Oficial F01 con la hora de salida para descarga/impresión inmediata
     this.showF01PrintModal.set(true);
 
     const formattedExit = this.formatTimeStringFromDate(exitTime);
     this.showAlert(
       'success',
-      `🚪 Salida autorizada para ${vehicle.tractorPlates} a las ${formattedExit}. Formato F01 generado con hora de salida oficial.`
+      `🚪 Salida autorizada para ${vehicle.tractorPlates} a las ${formattedExit}. Rampa 0${vehicle.rampNumber || 1} liberada. Formato F01 oficial generado.`
     );
   }
 
