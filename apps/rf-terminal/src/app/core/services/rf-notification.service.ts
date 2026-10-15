@@ -25,10 +25,14 @@ export interface DriverPassNotification {
   tractorPlates: string;
   boxPlates?: string;
   ecoNumber?: string;
+  boxDimensions?: string;
+  transportType?: string;
   operationType: 'INBOUND' | 'OUTBOUND';
   documentNumber: string;
   clientName?: string;
   rampNumber?: number | string;
+  sealNumbers?: string[];
+  checklistData?: any;
   status: 'SUBMITTED' | 'PENDING_DRIVER';
   submittedAt: Date;
   time: string;
@@ -227,9 +231,13 @@ export class RfNotificationService {
           tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
           boxPlates: p.boxPlates || p.placasCaja,
           ecoNumber: p.ecoNumber || p.noEcoTractor,
+          boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
+          transportType: p.transportType || p.tipoTransporte || p.vehicleType,
           operationType: p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
           documentNumber: p.documentNumber || p.remision || p.noCartaPorte || 'S/N',
           clientName: p.clientName || p.client,
+          sealNumbers: p.sealNumbers || [],
+          checklistData: p.checklistData,
           status: 'SUBMITTED',
           submittedAt: new Date(),
           time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -383,10 +391,14 @@ export class RfNotificationService {
             tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
             boxPlates: p.boxPlates || p.placasCaja,
             ecoNumber: p.noEcoTractor || p.ecoNumber,
+            boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
+            transportType: p.transportType || p.tipoTransporte || p.vehicleType,
             operationType: p.operationType === 'CARGA' || p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
             documentNumber: p.remision || p.noCartaPorte || p.documentNumber || 'S/N',
             clientName: p.client || p.clientName || 'Cliente',
             rampNumber: p.rampNumber,
+            sealNumbers: p.sealNumbers || [],
+            checklistData: p.checklistData,
             status: 'SUBMITTED',
             submittedAt: new Date(p.submittedAt || p.createdAt || Date.now()),
             time: new Date(p.submittedAt || p.createdAt || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -457,9 +469,13 @@ export class RfNotificationService {
             tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
             boxPlates: p.boxPlates,
             ecoNumber: p.ecoNumber,
+            boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
+            transportType: p.transportType || p.tipoTransporte || p.vehicleType,
             operationType: p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
             documentNumber: p.documentNumber || p.remision || 'S/N',
             clientName: p.clientName || p.client,
+            sealNumbers: p.sealNumbers || [],
+            checklistData: p.checklistData,
             status: 'SUBMITTED',
             submittedAt: new Date(),
             time: 'En espera'

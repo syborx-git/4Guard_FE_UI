@@ -154,9 +154,14 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   ]);
 
   protected readonly transportTypesList = signal<string[]>([
-    'Camioneta',
+    'Caja Seca',
+    'Caja Refrigerada',
+    'Plataforma',
     'Tortón',
     'Tráiler',
+    'Camioneta',
+    'Rabón',
+    'Full / Doble Remolque',
     'Otro (Especificar)'
   ]);
 
@@ -171,6 +176,11 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     'N/A - Plataforma',
     'Otra Medida'
   ]);
+
+  protected readonly isCustomTransportType = signal<boolean>(false);
+  protected readonly customTransportInput = signal<string>('');
+  protected readonly isCustomBoxDimension = signal<boolean>(false);
+  protected readonly customBoxDimensionInput = signal<string>('');
 
   // Conexión con Módulo de Andenes / Rampas (Reactivo)
   protected readonly rampOptions = signal([
@@ -576,9 +586,13 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
           tractorPlates: p.tractorPlates,
           boxPlates: p.boxPlates,
           ecoNumber: p.ecoNumber,
+          boxDimensions: p.boxDimensions,
+          transportType: p.transportType,
           operationType: p.operationType,
           documentNumber: p.documentNumber,
           clientName: p.clientName,
+          sealNumbers: p.sealNumbers,
+          checklistData: p.checklistData,
           status: 'SUBMITTED',
           submittedAt: p.submittedAt,
           time: new Date(p.submittedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -690,12 +704,116 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     this.audioService.playSuccess();
   }
 
+  // ─── Normalización y Gestión Dinámica de Tipos de Transporte y Medidas ──────
+  protected normalizeTransportType(rawType?: string | null): string {
+    if (!rawType || !rawType.trim()) return 'Caja Seca';
+    const clean = rawType.trim();
+    const upper = clean.toUpperCase();
+
+    // 1. Mapeos de alias logísticos y telemetría
+    if (upper === 'REEFER' || upper.includes('REFRIGERAD') || upper.includes('TERMO')) {
+      return 'Caja Refrigerada';
+    }
+    if (upper === 'DRY_VAN' || upper === 'DRY VAN' || upper.includes('SECA') || upper.includes('CAJA SECA')) {
+      return 'Caja Seca';
+    }
+    if (upper === 'FLATBED' || upper.includes('PLATAFORMA')) {
+      return 'Plataforma';
+    }
+    if (upper === 'TORTON' || upper === 'TORTÓN' || upper.includes('TORTON') || upper.includes('TORTÓN')) {
+      return 'Tortón';
+    }
+    if (upper === 'TRAILER' || upper === 'TRÁILER' || upper.includes('TRAILER') || upper.includes('TRÁILER') || upper.includes('TRACTO')) {
+      return 'Tráiler';
+    }
+    if (upper === 'CAMIONETA' || upper.includes('PICKUP') || upper.includes('VAN')) {
+      return 'Camioneta';
+    }
+    if (upper === 'RABON' || upper === 'RABÓN' || upper.includes('RABON') || upper.includes('RABÓN')) {
+      return 'Rabón';
+    }
+    if (upper.includes('FULL') || upper.includes('DOBLE')) {
+      return 'Full / Doble Remolque';
+    }
+
+    // 2. Coincidencia case-insensitive con el catálogo
+    const exact = this.transportTypesList().find(t => t.toLowerCase() === clean.toLowerCase());
+    if (exact) return exact;
+
+    // 3. Registro dinámico para no romper el <select> si llega un tipo personalizado no catalogado
+    this.transportTypesList.update(list => [
+      ...list.filter(x => x !== 'Otro (Especificar)'),
+      clean,
+      'Otro (Especificar)'
+    ]);
+    return clean;
+  }
+
+  protected normalizeBoxDimensions(rawDim?: string | null): string {
+    if (!rawDim || !rawDim.trim()) return '53 Pies';
+    const clean = rawDim.trim();
+    const upper = clean.toUpperCase();
+
+    if (upper.includes('53')) return '53 Pies';
+    if (upper.includes('48')) return '48 Pies';
+    if (upper.includes('40')) return '40 Pies';
+    if (upper.includes('20')) return '20 Pies';
+    if (upper.includes('3.5')) return '3.5 Toneladas';
+    if (upper.includes('PLATAFORMA')) return 'N/A - Plataforma';
+
+    const match = this.boxDimensionsList().find(d => d.toLowerCase() === clean.toLowerCase());
+    if (match) return match;
+
+    this.boxDimensionsList.update(list => [
+      ...list.filter(x => x !== 'Otra Medida'),
+      clean,
+      'Otra Medida'
+    ]);
+    return clean;
+  }
+
+  protected onTransportTypeSelect(val: string): void {
+    if (val === 'Otro (Especificar)') {
+      this.isCustomTransportType.set(true);
+      this.checkInForm.patchValue({ tipoTransporte: this.customTransportInput() || 'Otro' });
+    } else {
+      this.isCustomTransportType.set(false);
+      this.checkInForm.patchValue({ tipoTransporte: val });
+    }
+  }
+
+  protected onCustomTransportInput(val: string): void {
+    this.customTransportInput.set(val);
+    this.checkInForm.patchValue({ tipoTransporte: val });
+  }
+
+  protected onBoxDimensionSelect(val: string): void {
+    if (val === 'Otra Medida') {
+      this.isCustomBoxDimension.set(true);
+      this.checkInForm.patchValue({ medidasCaja: this.customBoxDimensionInput() || 'Personalizada' });
+    } else {
+      this.isCustomBoxDimension.set(false);
+      this.checkInForm.patchValue({ medidasCaja: val });
+    }
+  }
+
+  protected onCustomBoxDimensionInput(val: string): void {
+    this.customBoxDimensionInput.set(val);
+    this.checkInForm.patchValue({ medidasCaja: val });
+  }
+
   // ─── Carga Rápida 1-Tap desde Solicitud de Chofer (ADR-017) ─────────────────
   protected loadPassIntoForm(pass: DriverSubmittedPass): void {
     this.activeLoadedToken.set(pass.token);
 
     const isCarga = pass.operationType === 'OUTBOUND';
     const opValue = isCarga ? 'CARGA' : 'DESCARGA';
+
+    const rawTransport = (pass as any).transportType || (pass as any).tipoTransporte || (pass as any).vehicleType;
+    const resolvedTransport = this.normalizeTransportType(rawTransport);
+
+    const rawBoxDim = (pass as any).boxDimensions || (pass as any).medidasCaja || (pass as any).boxSize;
+    const resolvedBoxDim = this.normalizeBoxDimensions(rawBoxDim);
 
     this.checkInForm.patchValue({
       operacion: opValue,
@@ -705,12 +823,28 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       placasTracto: pass.tractorPlates,
       placasCaja: pass.boxPlates,
       noEcoTractor: pass.ecoNumber || 'ECO-01',
-      tipoTransporte: pass.transportType || 'Caja Seca',
-      medidasCaja: pass.boxDimensions || '53 Pies',
+      tipoTransporte: resolvedTransport,
+      medidasCaja: resolvedBoxDim,
       client: pass.clientName || 'Walmart Logistics',
       transportistaNombre: pass.driverName,
       transportistaFirma: true,
     });
+
+    if (resolvedTransport === 'Otro (Especificar)') {
+      this.isCustomTransportType.set(true);
+      this.customTransportInput.set(rawTransport || '');
+    } else {
+      this.isCustomTransportType.set(false);
+      this.customTransportInput.set('');
+    }
+
+    if (resolvedBoxDim === 'Otra Medida') {
+      this.isCustomBoxDimension.set(true);
+      this.customBoxDimensionInput.set(rawBoxDim || '');
+    } else {
+      this.isCustomBoxDimension.set(false);
+      this.customBoxDimensionInput.set('');
+    }
 
     if (isCarga) {
       this.checkInForm.patchValue({ noCartaPorte: pass.documentNumber, remision: '' });
@@ -744,6 +878,10 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
   protected clearLoadedPass(): void {
     this.activeLoadedToken.set(null);
+    this.isCustomTransportType.set(false);
+    this.customTransportInput.set('');
+    this.isCustomBoxDimension.set(false);
+    this.customBoxDimensionInput.set('');
     this.checkInForm.reset({
       controlNumber: 'F01-PO-CP-7.1.3-03',
       revisionNumber: '01',
@@ -828,8 +966,12 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       tractorPlates: val.placasTracto?.trim().toUpperCase() || '',
       boxPlates: val.placasCaja?.trim().toUpperCase() || '',
       ecoNumber: val.noEcoTractor?.trim() || undefined,
-      boxDimensions: val.medidasCaja || '53 Pies',
-      transportType: val.tipoTransporte || 'Caja Seca',
+      boxDimensions: (this.isCustomBoxDimension() && this.customBoxDimensionInput().trim())
+        ? this.customBoxDimensionInput().trim()
+        : (val.medidasCaja || '53 Pies'),
+      transportType: (this.isCustomTransportType() && this.customTransportInput().trim())
+        ? this.customTransportInput().trim()
+        : (val.tipoTransporte || 'Caja Seca'),
       operationType: isOutbound ? 'OUTBOUND' : 'INBOUND',
       documentNumber: isOutbound ? val.noCartaPorte : val.remision,
       clientName: val.client === 'OTRO' ? val.clientNameCustom : val.client,

@@ -437,11 +437,25 @@
               <!-- Tipo de Transporte -->
               <div class="form-field">
                 <label class="form-label" for="tipoTransporte">Tipo de Unidad *</label>
-                <select id="tipoTransporte" formControlName="tipoTransporte" class="rf-input">
+                <select
+                  id="tipoTransporte"
+                  formControlName="tipoTransporte"
+                  (change)="onTransportTypeSelect($any($event.target).value)"
+                  class="rf-input">
+                  <option value="" disabled [selected]="!checkInForm.get('tipoTransporte')?.value">-- Seleccionar Tipo --</option>
                   @for (t of transportTypesList(); track t) {
-                    <option [value]="t">{{ t }}</option>
+                    <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
                   }
                 </select>
+                @if (isCustomTransportType()) {
+                  <input
+                    type="text"
+                    [ngModel]="customTransportInput()"
+                    (ngModelChange)="onCustomTransportInput($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique el tipo de transporte..."
+                    class="rf-input mt-2 border-amber-500 font-bold" />
+                }
               </div>
 
               <!-- Placas Tracto -->
@@ -480,11 +494,25 @@
               <!-- Medidas Caja -->
               <div class="form-field">
                 <label class="form-label" for="medidasCaja">Medidas Caja / Capacidad *</label>
-                <select id="medidasCaja" formControlName="medidasCaja" class="rf-input">
+                <select
+                  id="medidasCaja"
+                  formControlName="medidasCaja"
+                  (change)="onBoxDimensionSelect($any($event.target).value)"
+                  class="rf-input">
+                  <option value="" disabled [selected]="!checkInForm.get('medidasCaja')?.value">-- Seleccionar Medida --</option>
                   @for (d of boxDimensionsList(); track d) {
-                    <option [value]="d">{{ d }}</option>
+                    <option [value]="d" [selected]="checkInForm.get('medidasCaja')?.value === d">{{ d }}</option>
                   }
                 </select>
+                @if (isCustomBoxDimension()) {
+                  <input
+                    type="text"
+                    [ngModel]="customBoxDimensionInput()"
+                    (ngModelChange)="onCustomBoxDimensionInput($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique las medidas / capacidad..."
+                    class="rf-input mt-2 border-amber-500 font-bold" />
+                }
               </div>
 
               <!-- Sellos de Seguridad Fiscales -->
