@@ -529,6 +529,10 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       docCartaPorteObsControl?.setValue('');
       docRemisionControl?.setValue('NO');
       docRemisionObsControl?.setValue('N/A - Operación de Carga/Embarque');
+      
+      // Regla de Negocio: En CARGA la unidad ingresa vacía; los sellos se aplican al salir en andén
+      this.sealList.set(['PENDIENTE_ANDEN']);
+      this.tempSealInput.set('');
     } else {
       remisionControl?.setValidators([Validators.required]);
       cartaPorteControl?.clearValidators();
@@ -536,6 +540,11 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       docRemisionObsControl?.setValue('');
       docCartaPorteControl?.setValue('NO');
       docCartaPorteObsControl?.setValue('N/A - Operación de Descarga/Recepción');
+      
+      // Si venía de CARGA, limpiar el sello provisional PENDIENTE_ANDEN
+      if (this.sealList().some(s => s === 'PENDIENTE_ANDEN')) {
+        this.sealList.set([]);
+      }
     }
 
     remisionControl?.updateValueAndValidity();
@@ -544,6 +553,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
   // ─── Gestión de Sellos Fiscales (Tags) ─────────────────────────────────────
   protected addSeal(): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga (Se asignan en andén de salida)
+    }
     const seal = this.tempSealInput().trim().toUpperCase();
     if (seal && !this.sealList().includes(seal)) {
       this.sealList.update(list => [...list, seal]);
@@ -553,6 +565,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   }
 
   protected removeSeal(index: number): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga
+    }
     this.sealList.update(list => list.filter((_, i) => i !== index));
     this.audioService.playWarning();
   }
@@ -588,12 +603,14 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
     if (isCarga) {
       this.checkInForm.patchValue({ noCartaPorte: pass.documentNumber, remision: '' });
+      this.sealList.set(['PENDIENTE_ANDEN']);
     } else {
       this.checkInForm.patchValue({ remision: pass.documentNumber, noCartaPorte: '' });
-    }
-
-    if (pass.sealNumbers && pass.sealNumbers.length > 0) {
-      this.sealList.set([...pass.sealNumbers]);
+      if (pass.sealNumbers && pass.sealNumbers.length > 0) {
+        this.sealList.set([...pass.sealNumbers]);
+      } else {
+        this.sealList.set([]);
+      }
     }
 
     // Si viene checklist previo del chofer
@@ -647,19 +664,48 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
   // ─── Registro de Entrada (Check-In) ─────────────────────────────────────────
   protected submitCheckIn(): void {
-    if (this.checkInForm.invalid) {
-      this.checkInForm.markAllAsTouched();
-      this.audioService.playWarning();
-      this.showAlert('warning', 'Por favor completa los campos requeridos marcados con (*).');
-      return;
+    if (this.tempSealInput().trim() && this.checkInForm.get('operacion')?.value === 'DESCARGA') {
+      this.addSeal();
     }
 
     const val = this.checkInForm.value;
     const isOutbound = val.operacion === 'CARGA';
+
+    // Validación de Campos Obligatorios homologada con Admin Console
+    const missing: string[] = [];
+    if (!val.fecha) missing.push('Fecha');
+    if (isOutbound && (!val.noCartaPorte || !val.noCartaPorte.trim())) {
+      missing.push('Número de Carta Porte (Obligatorio en Carga)');
+    }
+    if (!isOutbound && (!val.remision || !val.remision.trim())) {
+      missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
+    }
+    if (!val.client || !val.client.trim()) missing.push('Cliente Destinatario');
+    if (!val.carrierLine || !val.carrierLine.trim()) missing.push('Línea Transportista');
+    if (!val.nombreOperador || !val.nombreOperador.trim()) missing.push('Nombre del Operador / Chofer');
+    if (!val.placasTracto || !val.placasTracto.trim()) missing.push('Placas del Tracto');
+    if (!val.noEcoTractor || !val.noEcoTractor.trim()) missing.push('No. Económico Tracto');
+    if (!val.placasCaja || !val.placasCaja.trim()) missing.push('Placas de la Caja');
+    if (!val.rampNumber) missing.push('Andén / Rampa');
+
+    // Regla de Negocio: En DESCARGA es obligatorio registrar al menos 1 sello/cincho físico de llegada. En CARGA no.
+    if (!isOutbound && this.sealList().length === 0) {
+      missing.push('Al menos 1 Sello de Seguridad / Cincho (Obligatorio en Descarga)');
+    }
+
+    if (missing.length > 0 || this.checkInForm.invalid) {
+      this.checkInForm.markAllAsTouched();
+      this.audioService.playWarning();
+      this.showAlert('warning', `⚠️ Faltan campos obligatorios: ${missing.join(', ')}`);
+      return;
+    }
+
     const prefix = isOutbound ? 'SAL' : 'REC';
     const generatedFolio = `${prefix}-2026-${String(Date.now()).slice(-6)}`;
 
-    const seals = this.sealList().length > 0 ? this.sealList() : ['SL-00000'];
+    const seals = this.sealList().length > 0
+      ? this.sealList()
+      : (isOutbound ? ['PENDIENTE_ANDEN'] : ['SL-00000']);
     const rampNum = val.rampNumber ? Number(val.rampNumber) : 1;
 
     const newVehicle: YardVehicle = {
