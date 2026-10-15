@@ -1366,9 +1366,9 @@
           </button>
         </div>
 
-        <div class="rf-modal-body space-y-3.5 pt-1">
+        <div class="rf-modal-body checkout-modal-body">
           
-          <!-- Matriz Compacta de Datos del Transporte con Mayor Espaciado -->
+          <!-- Fila 1: Matriz de Datos del Transporte -->
           <div class="checkout-summary-grid">
             <div class="checkout-tile">
               <span class="tile-label">FOLIO WMS</span>
@@ -1394,24 +1394,24 @@
             </div>
           </div>
 
-          <!-- Banner Informativo Específico de Operación con Buen Aire -->
+          <!-- Fila 2: Banner Informativo Específico de Operación con Margen Generoso -->
           @if (selectedVeh.operationType === 'OUTBOUND') {
             <div class="checkout-alert-box checkout-alert-box--carga">
               <span class="material-symbols-outlined text-amber-400 text-base flex-shrink-0">shield_lock</span>
-              <div class="alert-box-content text-xs">
+              <div class="alert-box-content text-xs leading-relaxed">
                 <strong>Operación de CARGA:</strong> Chofer ingresó vacío. Capture el <strong>Sello Fiscal</strong> colocado en Andén.
               </div>
             </div>
           } @else {
             <div class="checkout-alert-box checkout-alert-box--descarga">
               <span class="material-symbols-outlined text-emerald-400 text-base flex-shrink-0">check_circle</span>
-              <div class="alert-box-content text-xs">
+              <div class="alert-box-content text-xs leading-relaxed">
                 <strong>Operación de DESCARGA:</strong> Verifique caja vacía o conforme a recepción antes de autorizar salida.
               </div>
             </div>
           }
 
-          <!-- Formulario de Entrada: Etiquetas con Íconos Espaciados -->
+          <!-- Fila 3: Campo de Sello Oficial con Separación Adecuada -->
           <div class="checkout-input-group">
             <label class="checkout-field-label" for="checkoutSeal">
               <span class="material-symbols-outlined text-sm text-amber-400">pin</span>
@@ -1420,7 +1420,7 @@
               </span>
               <span class="text-amber-500 font-bold ml-0.5">*</span>
             </label>
-            <div class="input-with-icon mt-1">
+            <div class="input-with-icon">
               <input
                 id="checkoutSeal"
                 type="text"
@@ -1434,19 +1434,23 @@
             </div>
           </div>
 
+          <!-- Fila 4: Campo de Observaciones con Separación Adecuada -->
           <div class="checkout-input-group">
             <label class="checkout-field-label" for="checkoutObs">
               <span class="material-symbols-outlined text-sm text-slate-400">edit_note</span>
               <span>Observaciones de Salida (Opcional)</span>
             </label>
-            <input
-              id="checkoutObs"
-              type="text"
-              [ngModel]="checkoutObservations()"
-              (ngModelChange)="checkoutObservations.set($event)"
-              placeholder="Ej: Salida en orden con chofer, sellos e inspección conforme"
-              class="rf-checkout-input-obs mt-1" />
+            <div class="input-with-icon">
+              <input
+                id="checkoutObs"
+                type="text"
+                [ngModel]="checkoutObservations()"
+                (ngModelChange)="checkoutObservations.set($event)"
+                placeholder="Ej: Salida en orden con chofer, sellos e inspección conforme"
+                class="rf-checkout-input-obs" />
+            </div>
           </div>
+
         </div>
 
         <div class="rf-modal-footer pt-3 mt-1">
