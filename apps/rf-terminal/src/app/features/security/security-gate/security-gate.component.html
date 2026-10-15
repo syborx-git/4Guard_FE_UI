@@ -1339,70 +1339,137 @@
   <!-- ── 5. Modal Táctil de Liberación y Cotejo de Salida ─────────── -->
   @if (selectedVehicleForCheckout(); as selectedVeh) {
     <div class="rf-modal-backdrop" (click)="closeCheckoutModal()">
-      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="rf-modal-card rf-modal-card--checkout" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Encabezado Ejecutivo del Modal -->
         <div class="rf-modal-header">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-2xl text-amber-600">verified</span>
-            <h3 class="rf-modal-title">Cotejo de Salida · {{ selectedVeh.tractorPlates }}</h3>
+          <div class="flex items-center gap-3">
+            <div class="checkout-icon-badge">
+              <span class="material-symbols-outlined text-amber-400">verified_user</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge-status-linked">COTEJO OFICIAL DE SALIDA</span>
+                <span class="badge-op-tag" [class.badge-op-carga]="selectedVeh.operationType === 'OUTBOUND'" [class.badge-op-descarga]="selectedVeh.operationType !== 'OUTBOUND'">
+                  <span class="material-symbols-outlined text-xs">
+                    {{ selectedVeh.operationType === 'OUTBOUND' ? 'upload' : 'download' }}
+                  </span>
+                  {{ selectedVeh.operationType === 'OUTBOUND' ? 'CARGA' : 'DESCARGA' }}
+                </span>
+              </div>
+              <h3 class="rf-modal-title mt-0.5">
+                Salida de Unidad · <span class="font-mono text-amber-400 font-black">{{ selectedVeh.tractorPlates }}</span>
+              </h3>
+            </div>
           </div>
-          <button type="button" class="btn-modal-close" (click)="closeCheckoutModal()">
+          <button type="button" class="btn-modal-close" (click)="closeCheckoutModal()" title="Cerrar modal">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        <div class="rf-modal-body space-y-3">
-          <div class="modal-info-box">
-            <div><strong>Folio:</strong> {{ selectedVeh.entryFolio }}</div>
-            <div><strong>Chofer:</strong> {{ selectedVeh.driverName }}</div>
-            <div><strong>Transportista:</strong> {{ selectedVeh.carrierName }}</div>
-            <div><strong>Placas Caja:</strong> {{ selectedVeh.boxPlates }}</div>
-            <div><strong>Operación:</strong> {{ selectedVeh.operationType === 'INBOUND' ? 'DESCARGA (Recepción)' : 'CARGA (Embarque)' }}</div>
-            <div><strong>Sellos Registrados:</strong> {{ selectedVeh.sealNumbers.join(', ') }}</div>
+        <div class="rf-modal-body space-y-4">
+          
+          <!-- Matriz Ejecutiva de Datos del Transporte -->
+          <div class="checkout-summary-grid">
+            <div class="checkout-tile">
+              <span class="tile-label">FOLIO WMS</span>
+              <strong class="tile-val font-mono text-amber-400">{{ selectedVeh.entryFolio }}</strong>
+            </div>
+            <div class="checkout-tile">
+              <span class="tile-label">OPERADOR</span>
+              <strong class="tile-val">{{ selectedVeh.driverName }}</strong>
+            </div>
+            <div class="checkout-tile">
+              <span class="tile-label">TRANSPORTISTA</span>
+              <span class="tile-val truncate" [title]="selectedVeh.carrierName">{{ selectedVeh.carrierName }}</span>
+            </div>
+            <div class="checkout-tile">
+              <span class="tile-label">PLACAS CAJA</span>
+              <span class="tile-val font-mono font-bold">{{ selectedVeh.boxPlates }}</span>
+            </div>
+            <div class="checkout-tile col-span-2">
+              <span class="tile-label">SELLOS DE ENTRADA REGISTRADOS</span>
+              <span class="tile-val font-mono text-xs text-slate-300">
+                {{ selectedVeh.sealNumbers.length > 0 ? selectedVeh.sealNumbers.join(', ') : 'SIN SELLOS REGISTRADOS' }}
+              </span>
+            </div>
           </div>
 
+          <!-- Banner Informativo Específico de Operación -->
           @if (selectedVeh.operationType === 'OUTBOUND') {
-            <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
-              <span class="material-symbols-outlined text-amber-600 text-base">lock</span>
-              <span><strong>Operación de CARGA:</strong> El chofer ingresó vacío. Capture el número de <strong>Sello Oficial</strong> colocado en el Andén de Salida tras concluir la estiba.</span>
+            <div class="checkout-alert-box checkout-alert-box--carga">
+              <div class="alert-box-icon">
+                <span class="material-symbols-outlined text-amber-400">shield_lock</span>
+              </div>
+              <div class="alert-box-content">
+                <strong>Operación de CARGA (Embarque):</strong>
+                <p>El chofer ingresó con caja vacía. Capture el <strong>Sello Fiscal / Oficial</strong> colocado y autorizado por Andén antes de abrir la pluma.</p>
+              </div>
+            </div>
+          } @else {
+            <div class="checkout-alert-box checkout-alert-box--descarga">
+              <div class="alert-box-icon">
+                <span class="material-symbols-outlined text-emerald-400">check_circle</span>
+              </div>
+              <div class="alert-box-content">
+                <strong>Operación de DESCARGA (Recepción):</strong>
+                <p>Verifique que la caja esté vacía o coincida con el acta de recepción de almacén antes de autorizar la salida.</p>
+              </div>
             </div>
           }
 
-          <div class="form-field">
-            <label class="form-label" for="checkoutSeal">
-              <span>
-                {{ selectedVeh.operationType === 'OUTBOUND' ? 'Sello Oficial Colocado en Andén de Salida *' : 'Cotejo de Sello Físico en Puerta *' }}
-              </span>
+          <!-- Formulario de Entrada: Cotejo de Sellos y Observaciones -->
+          <div class="checkout-input-group">
+            <label class="checkout-field-label" for="checkoutSeal">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-amber-400">pin</span>
+                <span>
+                  {{ selectedVeh.operationType === 'OUTBOUND' ? 'Sello Oficial Colocado en Andén de Salida' : 'Cotejo de Sello Físico en Caseta' }}
+                </span>
+                <span class="text-amber-500 font-bold">*</span>
+              </div>
             </label>
-            <input
-              id="checkoutSeal"
-              type="text"
-              [ngModel]="checkoutSealInput()"
-              (ngModelChange)="checkoutSealInput.set($event)"
-              placeholder="SL-XXXXX"
-              class="rf-input font-mono uppercase font-black text-lg text-amber-700 dark:text-amber-400" />
+            <div class="input-with-icon">
+              <input
+                id="checkoutSeal"
+                type="text"
+                [ngModel]="checkoutSealInput()"
+                (ngModelChange)="checkoutSealInput.set($event)"
+                placeholder="Ej: SL-88120 ó SIN_SELLO"
+                class="rf-checkout-input font-mono uppercase font-black tracking-wider" />
+              <span class="input-badge-required" [class.input-badge-ok]="checkoutSealInput().trim().length > 0">
+                {{ checkoutSealInput().trim().length > 0 ? 'LISTO' : 'REQUERIDO' }}
+              </span>
+            </div>
           </div>
 
-          <div class="form-field">
-            <label class="form-label" for="checkoutObs">Observaciones de Salida (Opcional)</label>
+          <div class="checkout-input-group">
+            <label class="checkout-field-label" for="checkoutObs">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-slate-400">edit_note</span>
+                <span>Observaciones del Oficial de Caseta (Opcional)</span>
+              </div>
+            </label>
             <input
               id="checkoutObs"
               type="text"
               [ngModel]="checkoutObservations()"
               (ngModelChange)="checkoutObservations.set($event)"
-              placeholder="Ej: Salida en orden con chofer, sellos intactos"
-              class="rf-input text-xs" />
+              placeholder="Ej: Salida en orden con chofer, sellos e inspección conforme"
+              class="rf-checkout-input-obs" />
           </div>
         </div>
 
         <div class="rf-modal-footer">
-          <button type="button" (click)="closeCheckoutModal()" class="btn-modal-cancel">
+          <button type="button" (click)="closeCheckoutModal()" class="btn-checkout-cancel">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
             <span>Cancelar</span>
           </button>
           <button
             type="button"
             (click)="confirmCheckout()"
             [disabled]="!checkoutSealInput().trim()"
-            class="btn-modal-confirm">
+            class="btn-checkout-confirm">
             <span class="material-symbols-outlined">door_open</span>
             <span>AUTORIZAR SALIDA &amp; REGISTRAR</span>
           </button>

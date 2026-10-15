@@ -2279,17 +2279,231 @@
   cursor: not-allowed;
 }
 
-.modal-info-box {
-  background: var(--bg-card);
-  border: 1.5px solid var(--border-card);
-  border-radius: 14px;
-  padding: 1rem;
-  font-size: 0.82rem;
-  color: var(--text-primary);
+/* ── Modal de Cotejo de Salida Ejecutivo ───────────────────────── */
+.rf-modal-card--checkout {
+  max-width: 580px;
+  background: linear-gradient(150deg, rgba(23, 30, 43, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  border-top: 4px solid #f59e0b !important;
+  box-shadow: 0 25px 65px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(245, 158, 11, 0.12) !important;
+  border-radius: 18px;
+}
+
+.checkout-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  flex-shrink: 0;
+}
+
+.checkout-icon-badge span {
+  font-size: 1.65rem;
+}
+
+/* Grilla de Resumen de Salida */
+.checkout-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+  background: rgba(10, 15, 26, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.95rem;
+}
+
+.checkout-tile {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  gap: 0.2rem;
+  overflow: hidden;
+}
+
+.tile-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.tile-val {
+  font-size: 0.82rem;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+/* Banners Informativos de Carga / Descarga */
+.checkout-alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.checkout-alert-box strong {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 0.15rem;
+}
+
+.checkout-alert-box p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.checkout-alert-box--carga {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.checkout-alert-box--descarga {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+/* Grupos de Inputs */
+.checkout-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.checkout-field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rf-checkout-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 5.5rem 0.75rem 0.95rem;
+  border-radius: 10px;
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  font-size: 1.05rem;
+  outline: none;
+  transition: all 180ms ease;
+  min-height: 48px;
+}
+
+.rf-checkout-input:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+  background: rgba(15, 23, 42, 1);
+}
+
+.input-badge-required {
+  position: absolute;
+  right: 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  pointer-events: none;
+  transition: all 180ms ease;
+}
+
+.input-badge-ok {
+  background: rgba(16, 185, 129, 0.2) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #34d399 !important;
+}
+
+.rf-checkout-input-obs {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.65);
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  outline: none;
+  min-height: 42px;
+  transition: border-color 160ms ease;
+}
+
+.rf-checkout-input-obs:focus {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+/* Botones de Acción del Modal */
+.btn-checkout-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.25rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 160ms ease;
+  min-height: 46px;
+}
+
+.btn-checkout-cancel:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.btn-checkout-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.75rem 1.65rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  transition: all 180ms ease;
+  min-height: 46px;
+}
+
+.btn-checkout-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
+  filter: brightness(1.08);
+}
+
+.btn-checkout-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  box-shadow: none;
 }
 
 /* ── Botones de Asignación de Rampa ────────────────────────────── */
