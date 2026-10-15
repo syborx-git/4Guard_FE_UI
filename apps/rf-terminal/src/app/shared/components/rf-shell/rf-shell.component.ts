@@ -16,6 +16,7 @@ import { AudioFeedbackService } from '../../../core/services/audio-feedback.serv
 
 import { OfflineBannerComponent } from '../offline-banner/offline-banner.component';
 import { ToastContainerComponent } from '../toast-container/toast-container.component';
+import { RfNotificationsComponent } from '../rf-notifications/rf-notifications.component';
 import { ToastService } from '@4guard/shared-core';
 
 interface NavItem {
@@ -35,7 +36,8 @@ interface NavItem {
     RouterLinkActive,
     FormsModule,
     OfflineBannerComponent,
-    ToastContainerComponent
+    ToastContainerComponent,
+    RfNotificationsComponent
   ],
   templateUrl: './rf-shell.component.html',
   styleUrl: './rf-shell.component.css',

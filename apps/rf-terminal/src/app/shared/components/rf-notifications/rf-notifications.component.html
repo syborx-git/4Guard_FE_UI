@@ -1,0 +1,254 @@
+<!-- ================================================================
+     RF Notifications — Centro Táctil de Solicitudes y Pre-Recepciones
+     ================================================================ -->
+<div class="rf-notif" (click)="$event.stopPropagation()">
+
+  <!-- ── 1. Botón / Pill Superior en Barra de Navegación ────────── -->
+  <button
+    type="button"
+    class="rf-notif__badge"
+    [class.rf-notif__badge--pulse]="hasNewArrivalBeacon()"
+    [class.rf-notif__badge--active]="isOpen()"
+    (click)="toggleDropdown($event)"
+    [attr.aria-expanded]="isOpen()"
+    aria-haspopup="dialog"
+    title="Notificaciones Operativas de Almacén">
+    
+    <div class="rf-notif__badge-icon-box">
+      <span class="material-symbols-outlined rf-notif__icon" [class.animate-pulse]="hasNewArrivalBeacon()">
+        {{ pendingReceptionsCount() > 0 && pendingRampAssignmentsCount() > 0 ? 'sync_alt' : (pendingRampAssignmentsCount() > 0 ? 'dock' : 'move_to_inbox') }}
+      </span>
+    </div>
+
+    <div class="rf-notif__badge-content">
+      <span class="rf-notif__badge-text">
+        @if (pendingReceptionsCount() > 0 && pendingRampAssignmentsCount() > 0) {
+          {{ pendingReceptionsCount() }} REC · {{ pendingRampAssignmentsCount() }} RAMPA
+        } @else if (pendingReceptionsCount() > 0) {
+          {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'PRE-RECEPCIÓN' : 'PRE-RECEPCIONES' }}
+        } @else if (pendingRampAssignmentsCount() > 0) {
+          {{ pendingRampAssignmentsCount() }} {{ pendingRampAssignmentsCount() === 1 ? 'RAMPA ASIGNADA' : 'RAMPAS ASIGNADAS' }}
+        } @else {
+          SOLICITUDES
+        }
+      </span>
+    </div>
+
+    <!-- Baliza Luminosa Pulsante en Vivo -->
+    @if (hasNewArrivalBeacon()) {
+      <span class="rf-notif__beacon" aria-hidden="true">
+        <span class="rf-notif__beacon-ping"></span>
+      </span>
+    }
+  </button>
+
+  <!-- ── 2. Modal Dropdown Flotante Táctil de Notificaciones ───── -->
+  @if (isOpen()) {
+    <div class="rf-notif__dropdown animate-fade-up" role="dialog" aria-modal="true" aria-label="Notificaciones de Almacén">
+      
+      <!-- Header del Dropdown -->
+      <div class="rf-notif__header">
+        <div class="rf-notif__header-left">
+          <div class="rf-notif__icon-wrap">
+            <span class="material-symbols-outlined">move_to_inbox</span>
+          </div>
+          <div class="rf-notif__header-text">
+            <h3 class="rf-notif__title">Solicitudes de Almacén</h3>
+            <p class="rf-notif__subtitle">Pre-recepciones de caseta y asignación de andenes en vivo</p>
+          </div>
+        </div>
+
+        <div class="rf-notif__header-right">
+          <!-- Live Indicator -->
+          <span class="rf-notif__live-pill">
+            <span class="rf-notif__live-dot"></span>
+            <span>EN VIVO</span>
+          </span>
+
+          <!-- Mute / Unmute Button -->
+          <button
+            type="button"
+            class="rf-notif__icon-btn"
+            [class.rf-notif__icon-btn--muted]="isSoundMuted()"
+            (click)="toggleMute()"
+            [title]="isSoundMuted() ? 'Activar sonido amigable de llegada' : 'Silenciar sonido de llegada'"
+            [attr.aria-label]="isSoundMuted() ? 'Activar sonido' : 'Silenciar sonido'">
+            <span class="material-symbols-outlined text-[18px]">
+              {{ isSoundMuted() ? 'volume_off' : 'volume_up' }}
+            </span>
+          </button>
+
+          <!-- Close Button -->
+          <button
+            type="button"
+            class="rf-notif__close-btn"
+            (click)="closeDropdown()"
+            aria-label="Cerrar notificaciones"
+            title="Cerrar ventana">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Utilidades: Probador de Sonido y Simulación -->
+      <div class="rf-notif__toolbar">
+        <button
+          type="button"
+          class="rf-notif__tool-btn rf-notif__tool-btn--sound"
+          (click)="playTestSound()"
+          title="Escuchar la triada acústica armónica de nueva recepción (D5 -> F#5 -> A5)">
+          <span class="material-symbols-outlined text-[16px]">music_note</span>
+          <span>Probar Sonido Amigable</span>
+        </button>
+
+        <button
+          type="button"
+          class="rf-notif__tool-btn rf-notif__tool-btn--sim"
+          (click)="simulateArrival()"
+          title="Simular el arribo de un nuevo camión en Caseta">
+          <span class="material-symbols-outlined text-[16px]">add_alert</span>
+          <span>Simular Llegada</span>
+        </button>
+      </div>
+
+      <!-- Barra de Filtros de Pestaña -->
+      <div class="rf-notif__tabs-bar">
+        <button
+          type="button"
+          class="rf-notif__tab"
+          [class.rf-notif__tab--active]="activeTab() === 'ALL'"
+          (click)="setActiveTab('ALL')">
+          <span>Todas</span>
+          <span class="rf-notif__tab-count font-mono">({{ totalVisibleCount() }})</span>
+        </button>
+        <button
+          type="button"
+          class="rf-notif__tab"
+          [class.rf-notif__tab--active]="activeTab() === 'RECEIVING'"
+          (click)="setActiveTab('RECEIVING')">
+          <span>📥 Recepciones</span>
+          <span class="rf-notif__tab-count font-mono">({{ pendingReceptionsCount() }})</span>
+        </button>
+        <button
+          type="button"
+          class="rf-notif__tab"
+          [class.rf-notif__tab--active]="activeTab() === 'RAMP'"
+          (click)="setActiveTab('RAMP')">
+          <span>🏢 Andenes</span>
+          <span class="rf-notif__tab-count font-mono">({{ pendingRampAssignmentsCount() }})</span>
+        </button>
+      </div>
+
+      <!-- Banner de Alerta en Vivo si hay unidad recién arribada -->
+      @if (hasNewArrivalBeacon() && pendingReceptionsCount() > 0) {
+        <div class="rf-notif__arrival-banner">
+          <span class="material-symbols-outlined arrival-icon animate-bounce">local_shipping</span>
+          <div class="arrival-text">
+            <div class="arrival-title">¡Nueva unidad en Caseta lista para descarga!</div>
+            <div class="arrival-desc">Verifique folio y proceda con la maniobra en andén.</div>
+          </div>
+        </div>
+      }
+
+      <!-- Lista de Notificaciones y Solicitudes Operativas -->
+      <div class="rf-notif__list">
+        @if (filteredNotifications().length === 0) {
+          <div class="rf-notif__empty">
+            <span class="material-symbols-outlined empty-icon">task_alt</span>
+            <div class="empty-title">Sin solicitudes pendientes</div>
+            <div class="empty-desc">Todas las recepciones y andenes han sido atendidos.</div>
+          </div>
+        }
+
+        @for (notif of filteredNotifications(); track notif.id) {
+          <div class="rf-notif__card" [class.rf-notif__card--ramp]="notif.category === 'RAMP'">
+            <!-- Card Header -->
+            <div class="rf-notif__card-header">
+              <div class="rf-notif__card-header-left">
+                @if (notif.category === 'RECEIVING') {
+                  <span class="rf-notif__pill rf-notif__pill--amber">
+                    <span>📥</span>
+                    <span>RECEPCIÓN</span>
+                  </span>
+                } @else if (notif.category === 'RAMP') {
+                  <span class="rf-notif__pill rf-notif__pill--emerald">
+                    <span>🏢</span>
+                    <span>ANDÉN</span>
+                  </span>
+                }
+                <span class="rf-notif__folio-chip font-mono">#{{ notif.folio }}</span>
+              </div>
+
+              <div class="rf-notif__card-header-right">
+                <span class="rf-notif__ramp-badge" [class.rf-notif__ramp-badge--emerald]="notif.category === 'RAMP'">
+                  {{ notif.rampNumber ? 'Rampa ' + notif.rampNumber : 'Por Asignar' }}
+                </span>
+                <span class="rf-notif__time font-mono">{{ notif.time }}</span>
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="rf-notif__card-body">
+              <div class="rf-notif__avatar-box" [class.rf-notif__avatar-box--emerald]="notif.category === 'RAMP'">
+                <span class="material-symbols-outlined">
+                  {{ notif.category === 'RAMP' ? 'dock' : 'inventory_2' }}
+                </span>
+              </div>
+              <div class="rf-notif__info-box">
+                <div class="rf-notif__client-title">{{ notif.client }}</div>
+                <div class="rf-notif__details-row">
+                  <span class="rf-notif__carrier-text">🚚 {{ notif.carrier }}</span>
+                  @if (notif.docNumber) {
+                    <span class="rf-notif__dot">·</span>
+                    <span class="rf-notif__doc-tag font-mono">Doc: <strong>{{ notif.docNumber }}</strong></span>
+                  }
+                  @if (notif.pieces) {
+                    <span class="rf-notif__dot">·</span>
+                    <span class="rf-notif__pieces-tag font-mono">{{ notif.pieces }} pzas</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Footer con Acción Táctil -->
+            <div class="rf-notif__card-footer">
+              <span class="rf-notif__driver-tag">
+                <span class="material-symbols-outlined text-[15px]">person</span>
+                <span>{{ notif.driverName || 'Operador transportista' }}</span>
+              </span>
+
+              <button
+                type="button"
+                class="rf-notif__action-btn"
+                [class.rf-notif__action-btn--emerald]="notif.category === 'RAMP'"
+                (click)="attendNotification(notif)">
+                <span>{{ notif.category === 'RAMP' ? 'Ver Andén' : 'Atender Folio' }}</span>
+                <span class="material-symbols-outlined text-[15px]">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Footer con Navegación Rápida -->
+      <div class="rf-notif__footer">
+        <button
+          type="button"
+          class="rf-notif__footer-btn"
+          (click)="goToCockpit()">
+          <span class="material-symbols-outlined text-[16px]">forklift</span>
+          <span>Ir al Cockpit</span>
+        </button>
+        <button
+          type="button"
+          class="rf-notif__footer-btn"
+          (click)="goToReceiving()">
+          <span class="material-symbols-outlined text-[16px]">barcode_scanner</span>
+          <span>Escaneo Recepción</span>
+        </button>
+      </div>
+
+    </div>
+  }
+
+</div>
