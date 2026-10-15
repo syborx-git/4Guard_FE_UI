@@ -792,6 +792,140 @@
   font-size: 0.75rem;
 }
 
+/* ── Encabezado y Tarjeta de Sellos para Maniobra de CARGA ─────────────── */
+.seal-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+.seal-field-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.seal-field-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+}
+
+.seal-field-status-badge--locked {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.seal-field-status-badge--required {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.seal-lock-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.15rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(30, 26, 18, 0.75) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.38);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(245, 158, 11, 0.25);
+  transition: all 200ms ease;
+}
+
+:host-context(.theme-dark) .seal-lock-card,
+:host-context(.dark) .seal-lock-card,
+:host-context([data-theme='dark']) .seal-lock-card {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.90) 100%);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.seal-lock-card__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  flex: 1;
+}
+
+.seal-lock-card__icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.20);
+  border: 1.5px solid rgba(245, 158, 11, 0.50);
+  color: #f59e0b;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.22);
+  flex-shrink: 0;
+}
+
+.seal-lock-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 0.02em;
+}
+
+.seal-lock-card__desc {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-top: 0.25rem;
+}
+
+.seal-lock-card__desc strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.seal-lock-card__pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.seal-lock-chip-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.22);
+  border: 1.5px dashed rgba(245, 158, 11, 0.60);
+  color: #f59e0b;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.seal-lock-pill-sub {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ══════════════════════════════════════════════════════════════
    TABLA OFICIAL DE CHECKLIST F01 CON OBSERVACIONES MANUALES
 ══════════════════════════════════════════════════════════════ */

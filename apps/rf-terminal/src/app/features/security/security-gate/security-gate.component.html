@@ -444,32 +444,42 @@
 
               <!-- Sellos de Seguridad Fiscales -->
               <div class="form-field sm:col-span-4">
-                <label class="form-label flex items-center justify-between">
-                  <span>
-                    Sellos / Cinchos de Seguridad
-                    @if (checkInForm.get('operacion')?.value === 'CARGA') {
-                      <span class="text-amber-600 dark:text-amber-400 font-medium ml-1 text-xs font-sans">(Bloqueado — Se asignan en andén de salida)</span>
-                    } @else {
-                      <span class="text-rose-500 font-bold ml-0.5">* (Obligatorio en Descarga)</span>
-                    }
-                  </span>
+                <div class="seal-field-header">
+                  <span class="seal-field-title">Sellos / Cinchos de Seguridad</span>
                   @if (checkInForm.get('operacion')?.value === 'CARGA') {
-                    <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono text-[10px] font-bold border border-amber-500/40">
-                      PENDIENTE_ANDEN
+                    <span class="seal-field-status-badge seal-field-status-badge--locked">
+                      <span class="material-symbols-outlined text-xs">lock</span>
+                      <span>Bloqueado al ingreso</span>
+                    </span>
+                  } @else {
+                    <span class="seal-field-status-badge seal-field-status-badge--required">
+                      <span>* Obligatorio en Descarga</span>
                     </span>
                   }
-                </label>
+                </div>
 
                 @if (checkInForm.get('operacion')?.value === 'CARGA') {
-                  <div class="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3 animate-fade-in">
-                    <div class="flex items-center gap-2.5">
-                      <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">lock</span>
+                  <div class="seal-lock-card animate-fade-in">
+                    <div class="seal-lock-card__left">
+                      <div class="seal-lock-card__icon-box">
+                        <span class="material-symbols-outlined text-xl">lock</span>
+                      </div>
                       <div>
-                        <span class="font-bold text-xs">🔒 No requiere captura de sellos en Caseta para maniobra de CARGA</span>
-                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <div class="seal-lock-card__title">
+                          <span>No requiere captura de sellos en Caseta para maniobra de CARGA</span>
+                        </div>
+                        <p class="seal-lock-card__desc">
                           La unidad ingresa vacía. Los sellos de seguridad oficiales serán colocados y registrados en el <strong>Andén de Salida / Embarque</strong> al concluir la estiba física de la mercancía.
                         </p>
                       </div>
+                    </div>
+
+                    <div class="seal-lock-card__pill">
+                      <span class="seal-lock-chip-pending">
+                        <span class="material-symbols-outlined text-sm">schedule</span>
+                        <span>PENDIENTE_ANDEN</span>
+                      </span>
+                      <span class="seal-lock-pill-sub">Cotejo al Egresar</span>
                     </div>
                   </div>
                 } @else {
