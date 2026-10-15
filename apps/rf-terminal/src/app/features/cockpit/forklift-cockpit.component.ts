@@ -32,6 +32,19 @@ import {
 } from '../../core/services/forklift-mission.service';
 import { AudioFeedbackService } from '../../core/services/audio-feedback.service';
 
+export interface ShelfLifeEvaluation {
+  remainingDays: number;
+  totalDays: number;
+  totalMonths: number;
+  remainingPct: number;
+  thresholdRequired: number;
+  isCompliant: boolean;
+  isExpired: boolean;
+  category: '< 24m' | '≥ 24m' | 'ESTIMADO';
+  badgeText: string;
+  badgeDetail: string;
+}
+
 @Component({
   selector: 'fg-forklift-cockpit',
   standalone: true,
@@ -83,7 +96,15 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly selectedPalletForEdit = signal<InboundPalletItem | null>(null);
   protected readonly newCustomLotInput = signal('');
   protected readonly newCustomPiecesInput = signal(48);
+  protected readonly newCustomExpirationInput = signal('');
+  protected readonly newCustomElaborationInput = signal('');
   protected readonly lotSwapReasonInput = signal('Embarque Mixto / Multi-Lote de Proveedor');
+
+  protected readonly customLotShelfLifeEval = computed<ShelfLifeEvaluation | null>(() => {
+    const exp = this.newCustomExpirationInput();
+    const elab = this.newCustomElaborationInput();
+    return this.evaluateShelfLife(exp, elab);
+  });
 
   // ─── Datos Computados ─────────────────────────────────────────────────────
   protected readonly activeMission = this.missionService.activeMission;
@@ -374,10 +395,15 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
       this.selectedPalletForEdit.set(pallet);
       this.newCustomLotInput.set(pallet.lotNumber);
       this.newCustomPiecesInput.set(pallet.pieces);
+      this.newCustomExpirationInput.set(pallet.expirationDate || '');
+      this.newCustomElaborationInput.set(pallet.elaborationDate || '');
     } else {
       this.selectedPalletForEdit.set(null);
       this.newCustomLotInput.set('');
       this.newCustomPiecesInput.set(current.defaultPiecesPerPallet || 48);
+      const activeLotItem = current.availableLots?.find(l => l.lotNumber === (current.activeScanningLot || current.lotNumber));
+      this.newCustomExpirationInput.set(activeLotItem?.expirationDate || '');
+      this.newCustomElaborationInput.set(activeLotItem?.elaborationDate || '');
     }
 
     this.lotSwapReasonInput.set('Embarque Mixto / Multi-Lote de Proveedor');
@@ -390,21 +416,105 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.selectedPalletForEdit.set(null);
   }
 
+  evaluateShelfLife(expirationDateStr: string, elaborationDateStr?: string): ShelfLifeEvaluation | null {
+    if (!expirationDateStr) return null;
+    const expDate = new Date(expirationDateStr + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const remainingMs = expDate.getTime() - today.getTime();
+    const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+
+    if (remainingDays < 0) {
+      return {
+        remainingDays,
+        totalDays: 0,
+        totalMonths: 0,
+        remainingPct: 0,
+        thresholdRequired: 75,
+        isCompliant: false,
+        isExpired: true,
+        category: '< 24m',
+        badgeText: `Vencido (${Math.abs(remainingDays)}d)`,
+        badgeDetail: `El lote venció hace ${Math.abs(remainingDays)} días. No apto para recibo en andén.`,
+      };
+    }
+
+    if (elaborationDateStr) {
+      const elabDate = new Date(elaborationDateStr + 'T00:00:00Z');
+      if (!isNaN(elabDate.getTime()) && expDate.getTime() > elabDate.getTime()) {
+        const totalDays = Math.max(1, Math.floor((expDate.getTime() - elabDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const totalMonths = Math.round((totalDays / 30.4375) * 10) / 10;
+        const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / totalDays) * 1000) / 10)));
+        const isLongLife = totalMonths >= 24;
+        const thresholdRequired = isLongLife ? 50 : 75;
+        const category: '< 24m' | '≥ 24m' = isLongLife ? '≥ 24m' : '< 24m';
+        const isCompliant = remainingPct >= thresholdRequired;
+
+        return {
+          remainingDays,
+          totalDays,
+          totalMonths,
+          remainingPct,
+          thresholdRequired,
+          isCompliant,
+          isExpired: false,
+          category,
+          badgeText: `${remainingPct}% vida (${category})`,
+          badgeDetail: `${remainingPct}% restante de ${totalMonths}m totales (Mín: ${thresholdRequired}%)`,
+        };
+      }
+    }
+
+    const estimatedTotalDays = 730;
+    const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / estimatedTotalDays) * 1000) / 10)));
+    const thresholdRequired = 75;
+    const isCompliant = remainingPct >= thresholdRequired;
+
+    return {
+      remainingDays,
+      totalDays: estimatedTotalDays,
+      totalMonths: 24,
+      remainingPct,
+      thresholdRequired,
+      isCompliant,
+      isExpired: false,
+      category: 'ESTIMADO',
+      badgeText: `${remainingDays}d (~${remainingPct}% est.)`,
+      badgeDetail: `${remainingDays} días restantes (~${remainingPct}% vida estimada)`,
+    };
+  }
+
   confirmCustomLot(): void {
     const current = this.activeMission();
     const lot = this.newCustomLotInput().trim().toUpperCase();
     const pzas = Number(this.newCustomPiecesInput()) || 48;
     const reason = this.lotSwapReasonInput();
+    const exp = this.newCustomExpirationInput();
+    const elab = this.newCustomElaborationInput();
 
     if (!current || !lot) return;
+
+    const shelfLife = this.customLotShelfLifeEval();
+    if (shelfLife?.isExpired) {
+      this.toast.error(`🛑 Fecha de caducidad inválida: El lote está vencido (hace ${Math.abs(shelfLife.remainingDays)} días). No se permite el recibo.`);
+      this.audioService.playError();
+      return;
+    }
+
+    if (shelfLife && !shelfLife.isCompliant) {
+      this.toast.warning(`⚠️ Excepción MRP: El lote cuenta con ${shelfLife.remainingPct}% de vida útil (< ${shelfLife.thresholdRequired}% requerida). Se registrará con motivo: "${reason}".`);
+    }
 
     const palletToEdit = this.selectedPalletForEdit();
     if (palletToEdit) {
       // Editar tarima ya escaneada
-      this.missionService.swapPalletLot(current.id, palletToEdit.id, lot, pzas, reason);
+      this.missionService.swapPalletLot(current.id, palletToEdit.id, lot, pzas, reason, exp, elab, shelfLife || undefined);
     } else {
       // Agregar como nuevo lote activo para las siguientes tarimas
-      this.missionService.addCustomLot(current.id, lot, reason);
+      this.missionService.addCustomLot(current.id, lot, reason, exp, elab, shelfLife || undefined);
       this.missionService.setCurrentPendingPieces(current.id, pzas);
     }
 

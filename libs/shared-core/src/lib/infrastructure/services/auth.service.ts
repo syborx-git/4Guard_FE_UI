@@ -65,27 +65,33 @@ export class AuthService {
     let fullName = 'Carlos Herrera';
     
     const email = credentials.email.toLowerCase();
-    if (email.includes('manager')) {
-      role = UserRole.WAREHOUSE_MANAGER;
-      fullName = 'Sofía Ramírez';
-    } else if (email.includes('dock')) {
-      role = UserRole.DOCK_SUPERVISOR;
-      fullName = 'Miguel Torres';
-    } else if (email.includes('qm')) {
+    if (email.includes('director') || email.includes('admin') || email.includes('ceo')) {
+      role = UserRole.ADMIN;
+      fullName = 'Ing. Carlos Herrera (Director General)';
+    } else if (email.includes('manager') || email.includes('gerente')) {
+      role = UserRole.OPERATIONS_MANAGER;
+      fullName = 'Ing. Roberto Garza (Gerente Operaciones)';
+    } else if (email.includes('coord')) {
+      role = UserRole.OPERATIONS_COORDINATOR;
+      fullName = 'Lic. Fernando Lozano (Coordinador Operaciones)';
+    } else if (email.includes('super') || email.includes('sup')) {
+      role = UserRole.OPERATIONS_SUPERVISOR;
+      fullName = 'Ing. Héctor Salinas (Supervisor Operaciones)';
+    } else if (email.includes('control') || email.includes('mesa')) {
+      role = UserRole.CONTROL_DESK;
+      fullName = 'Lic. Patricia Gómez (Mesa de Control)';
+    } else if (email.includes('lider') || email.includes('shift')) {
+      role = UserRole.SHIFT_LEADER;
+      fullName = 'Ricardo Peña (Líder de Turno)';
+    } else if (email.includes('qm') || email.includes('calidad')) {
       role = UserRole.QM_INSPECTOR;
-      fullName = 'Ana López';
-    } else if (email.includes('op')) {
-      role = UserRole.WAREHOUSE_OPERATOR;
-      fullName = 'Roberto Sánchez';
-    } else if (email.includes('security') || email.includes('guard') || email.includes('vigilancia')) {
+      fullName = 'Dra. Elena Ramos (Inspector de Calidad)';
+    } else if (email.includes('security') || email.includes('guard') || email.includes('caseta')) {
       role = UserRole.SECURITY_GUARD;
-      fullName = 'Carlos Mendoza (Vigilancia)';
-    } else if (email.includes('auditor')) {
-      role = UserRole.AUDITOR;
-      fullName = 'David Salazar';
-    } else if (email.includes('client')) {
-      role = UserRole.CLIENT;
-      fullName = 'Representante Nestlé';
+      fullName = 'Carlos Mendoza (Guardia Caseta)';
+    } else {
+      role = UserRole.WAREHOUSE_OPERATOR;
+      fullName = 'Roberto Sánchez (Montacarguista)';
     }
 
     const dummyUser: User = {
@@ -206,14 +212,15 @@ export class AuthService {
    */
   switchRoleForTesting(role: UserRole, customName?: string): void {
     const roleNames: Record<UserRole, string> = {
-      [UserRole.WAREHOUSE_OPERATOR]: 'Roberto Sánchez',
-      [UserRole.SECURITY_GUARD]:     'Carlos Mendoza',
-      [UserRole.QM_INSPECTOR]:        'Dra. Elena Ramos',
-      [UserRole.DOCK_SUPERVISOR]:    'Miguel Torres',
-      [UserRole.WAREHOUSE_MANAGER]:  'Sofía Ramírez',
-      [UserRole.AUDITOR]:            'Lic. David Morales',
-      [UserRole.ADMIN]:              'Ing. Carlos Herrera',
-      [UserRole.CLIENT]:             'Representante Nestlé',
+      [UserRole.ADMIN]:                  'Ing. Carlos Herrera (Director General)',
+      [UserRole.OPERATIONS_MANAGER]:     'Ing. Roberto Garza (Gerente Operaciones)',
+      [UserRole.OPERATIONS_COORDINATOR]: 'Lic. Fernando Lozano (Coordinador Operaciones)',
+      [UserRole.OPERATIONS_SUPERVISOR]:  'Ing. Héctor Salinas (Supervisor Operaciones)',
+      [UserRole.CONTROL_DESK]:           'Lic. Patricia Gómez (Mesa de Control)',
+      [UserRole.SHIFT_LEADER]:           'Ricardo Peña (Líder de Turno)',
+      [UserRole.WAREHOUSE_OPERATOR]:     'Roberto Sánchez (Montacarguista)',
+      [UserRole.QM_INSPECTOR]:           'Dra. Elena Ramos (Inspector de Calidad)',
+      [UserRole.SECURITY_GUARD]:         'Carlos Mendoza (Guardia de Seguridad)',
     };
 
     const updatedUser: User = {

@@ -104,12 +104,14 @@
 
   <!-- ── 3. Bottom Industrial Navigation Bar ───────────────────── -->
   <nav class="rf-shell__nav" role="navigation" aria-label="Navegación principal RF">
-    @for (item of navItems; track item.path) {
+    @for (item of navItems(); track item.path) {
       <a
         [routerLink]="item.path"
         routerLinkActive="rf-shell__nav-item--active"
+        #rla="routerLinkActive"
         class="rf-shell__nav-item"
-        [attr.aria-label]="item.label">
+        [attr.aria-label]="item.label"
+        [attr.aria-current]="rla.isActive ? 'page' : null">
         <span class="material-symbols-outlined rf-shell__nav-icon" aria-hidden="true">{{ item.icon }}</span>
         <span class="rf-shell__nav-label">{{ item.label }}</span>
         @if (item.badge) {

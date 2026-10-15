@@ -10,7 +10,7 @@ import { Component, inject, signal, computed, OnInit, OnDestroy, HostListener } 
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthState, SyncState } from '@4guard/shared-core';
+import { AuthState, SyncState, UserRole } from '@4guard/shared-core';
 import { RfThemeService } from '../../../core/services/rf-theme.service';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 
@@ -114,8 +114,8 @@ export class RfShellComponent implements OnInit, OnDestroy {
   protected readonly showScanModal = signal(false);
   protected readonly simulatedBarcode = signal('SSCC-175012345000000018');
 
-  // ─── Navegación Inferior (Accesos Rápidos de Piso Unificados) ───────────────
-  protected readonly navItems: NavItem[] = [
+  // ─── Catálogo Maestro de Accesos de Piso ─────────────────────────────────────
+  private readonly allNavItems: NavItem[] = [
     { path: '/menu',      icon: 'grid_view',     label: 'Menú'       },
     { path: '/cockpit',   icon: 'forklift',      label: 'Cockpit'    },
     { path: '/counting',  icon: 'checklist_rtl', label: 'Conteo'     },
@@ -123,6 +123,35 @@ export class RfShellComponent implements OnInit, OnDestroy {
     { path: '/security',  icon: 'local_police',  label: 'Seguridad'  },
     { path: '/sync',      icon: 'sync',          label: 'Sync'       },
   ];
+
+  // ─── Navegación Inferior Dinámica según Perfil RBAC ──────────────────────────
+  protected readonly navItems = computed<NavItem[]>(() => {
+    const role = this.authState.role();
+    if (!role) return this.allNavItems;
+
+    // Regla 1: Guardia de Seguridad -> Solo Menú, Caseta/Seguridad y Sync
+    if (role === UserRole.SECURITY_GUARD) {
+      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/security' || item.path === '/sync');
+    }
+
+    // Regla 2: Calidad QM -> Solo Menú, Calidad, Conteo y Sync
+    if (role === UserRole.QM_INSPECTOR) {
+      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/quality' || item.path === '/counting' || item.path === '/sync');
+    }
+
+    // Regla 3: Montacarguista (M) -> Menú, Cockpit, Conteo y Sync (sin Caseta ni Calidad)
+    if (role === UserRole.WAREHOUSE_OPERATOR) {
+      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/cockpit' || item.path === '/counting' || item.path === '/sync');
+    }
+
+    // Regla 4: Líder de Turno (LT) -> Menú, Cockpit, Conteo y Sync
+    if (role === UserRole.SHIFT_LEADER) {
+      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/cockpit' || item.path === '/counting' || item.path === '/sync');
+    }
+
+    // Mesa de Control (MC), Supervisor (SO), Coordinador (CO), Gerente (GO) y Director General (DG): Supervisión completa
+    return this.allNavItems;
+  });
 
   ngOnInit(): void {
     // Actualizar reloj en tiempo real cada segundo

@@ -47,24 +47,33 @@ export class LoginService {
     let role = UserRole.ADMIN;
     let fullName = 'Carlos Herrera';
 
-    if (email.includes('manager')) {
-      role = UserRole.WAREHOUSE_MANAGER;
-      fullName = 'Sofía Ramírez';
-    } else if (email.includes('dock')) {
-      role = UserRole.DOCK_SUPERVISOR;
-      fullName = 'Miguel Torres';
-    } else if (email.includes('qm')) {
+    if (email.includes('director') || email.includes('admin') || email.includes('ceo')) {
+      role = UserRole.ADMIN;
+      fullName = 'Ing. Carlos Herrera (Director General)';
+    } else if (email.includes('manager') || email.includes('gerente')) {
+      role = UserRole.OPERATIONS_MANAGER;
+      fullName = 'Ing. Roberto Garza (Gerente Operaciones)';
+    } else if (email.includes('coord')) {
+      role = UserRole.OPERATIONS_COORDINATOR;
+      fullName = 'Lic. Fernando Lozano (Coordinador Operaciones)';
+    } else if (email.includes('super') || email.includes('sup')) {
+      role = UserRole.OPERATIONS_SUPERVISOR;
+      fullName = 'Ing. Héctor Salinas (Supervisor Operaciones)';
+    } else if (email.includes('control') || email.includes('mesa')) {
+      role = UserRole.CONTROL_DESK;
+      fullName = 'Lic. Patricia Gómez (Mesa de Control)';
+    } else if (email.includes('lider') || email.includes('shift')) {
+      role = UserRole.SHIFT_LEADER;
+      fullName = 'Ricardo Peña (Líder de Turno)';
+    } else if (email.includes('qm') || email.includes('calidad')) {
       role = UserRole.QM_INSPECTOR;
-      fullName = 'Ana López';
-    } else if (email.includes('op')) {
+      fullName = 'Dra. Elena Ramos (Inspector de Calidad)';
+    } else if (email.includes('security') || email.includes('guard') || email.includes('caseta')) {
+      role = UserRole.SECURITY_GUARD;
+      fullName = 'Carlos Mendoza (Guardia Caseta)';
+    } else {
       role = UserRole.WAREHOUSE_OPERATOR;
-      fullName = 'Roberto Sánchez';
-    } else if (email.includes('auditor')) {
-      role = UserRole.AUDITOR;
-      fullName = 'David Salazar';
-    } else if (email.includes('client')) {
-      role = UserRole.CLIENT;
-      fullName = 'Representante Nestlé';
+      fullName = 'Roberto Sánchez (Montacarguista)';
     }
 
     // Asignar sucursal según el correo electrónico para simular la base de datos

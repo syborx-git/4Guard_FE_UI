@@ -1,69 +1,77 @@
 /**
  * @file role.enum.ts
- * @description Definición de los 7 roles del sistema RBAC de 4GUARD WMS.
- * Estos roles controlan el acceso a funcionalidades en ambas aplicaciones.
+ * @description Definición canónica de roles del sistema RBAC de 4GUARD WMS
+ * homologada con el Organigrama Oficial:
+ * - DG: Director General (ADMIN / CEO)
+ * - GO: Gerente de Operaciones (OPERATIONS_MANAGER)
+ * - CO: Coordinador de Operaciones (OPERATIONS_COORDINATOR)
+ * - SO: Supervisor de Operaciones (OPERATIONS_SUPERVISOR)
+ * - MC: Mesa de Control (CONTROL_DESK)
+ * - LT: Líder de Turno (SHIFT_LEADER)
+ * - M:  Montacarguista (WAREHOUSE_OPERATOR)
+ * - Roles Transversales: Inspector de Calidad (QM_INSPECTOR) y Guardia de Seguridad (SECURITY_GUARD)
  */
 
-/**
- * Roles del sistema 4GUARD WMS.
- * Mapeados exactamente a los valores del Backend (Spring Security).
- */
 export enum UserRole {
-  /** Administrador del sistema: acceso total a admin-console */
+  /** DG: Director General / Administrador General del sistema: acceso total */
   ADMIN = 'ROLE_ADMIN',
 
-  /** Gerente de almacén: gestión operacional completa */
-  WAREHOUSE_MANAGER = 'ROLE_WAREHOUSE_MANAGER',
+  /** GO: Gerente de Operaciones: gestión estratégica y operativa */
+  OPERATIONS_MANAGER = 'ROLE_OPERATIONS_MANAGER',
 
-  /** Supervisor de andén: supervisión de recepciones y despachos */
-  DOCK_SUPERVISOR = 'ROLE_DOCK_SUPERVISOR',
+  /** CO: Coordinador de Operaciones: enlace táctico entre gerencia y supervisión */
+  OPERATIONS_COORDINATOR = 'ROLE_OPERATIONS_COORDINATOR',
 
-  /** Operario de almacén: operaciones en rf-terminal (picking, putaway) */
+  /** SO: Supervisor de Operaciones: supervisión en piso, andenes y patio */
+  OPERATIONS_SUPERVISOR = 'ROLE_OPERATIONS_SUPERVISOR',
+
+  /** MC: Mesa de Control: planeación y autorización de recepciones/despachos/lotes */
+  CONTROL_DESK = 'ROLE_CONTROL_DESK',
+
+  /** LT: Líder de Turno: supervisión táctica de cuadrillas de montacargas */
+  SHIFT_LEADER = 'ROLE_SHIFT_LEADER',
+
+  /** M: Montacarguista: ejecución física en rf-terminal (cockpit, putaway, picking) */
   WAREHOUSE_OPERATOR = 'ROLE_WAREHOUSE_OPERATOR',
 
-  /** Inspector de calidad: acceso a módulo QM y gestión de cuarentenas */
+  /** QM: Inspector de Calidad: acceso a módulo QM, dictámenes y cuarentenas */
   QM_INSPECTOR = 'ROLE_QM_INSPECTOR',
 
-  /** Auditor: acceso de solo lectura para auditoría e informes */
-  AUDITOR = 'ROLE_AUDITOR',
-
-  /** Cliente 3PL: portal de consulta del estado de su inventario */
-  CLIENT = 'ROLE_CLIENT',
-
-  /** Guardia de seguridad / Vigilancia: acceso exclusivo a Caseta de Seguridad */
+  /** SEC: Guardia de Seguridad / Vigilancia: acceso a Caseta de Vigilancia y checklist F01 */
   SECURITY_GUARD = 'ROLE_SECURITY_GUARD',
 }
 
 /**
- * Etiquetas legibles para cada rol.
+ * Etiquetas legibles para cada rol oficial del sistema.
  */
 export const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.ADMIN]:               'Administrador',
-  [UserRole.WAREHOUSE_MANAGER]:   'Gerente de Almacén',
-  [UserRole.DOCK_SUPERVISOR]:     'Supervisor de Andén',
-  [UserRole.WAREHOUSE_OPERATOR]:  'Operario de Almacén',
-  [UserRole.QM_INSPECTOR]:        'Inspector de Calidad',
-  [UserRole.AUDITOR]:             'Auditor',
-  [UserRole.CLIENT]:              'Cliente 3PL',
-  [UserRole.SECURITY_GUARD]:      'Guardia de Seguridad (Caseta)',
+  [UserRole.ADMIN]:                  'Director General (Admin)',
+  [UserRole.OPERATIONS_MANAGER]:     'Gerente de Operaciones',
+  [UserRole.OPERATIONS_COORDINATOR]: 'Coordinador de Operaciones',
+  [UserRole.OPERATIONS_SUPERVISOR]:  'Supervisor de Operaciones',
+  [UserRole.CONTROL_DESK]:           'Mesa de Control',
+  [UserRole.SHIFT_LEADER]:           'Líder de Turno',
+  [UserRole.WAREHOUSE_OPERATOR]:     'Montacarguista',
+  [UserRole.QM_INSPECTOR]:           'Inspector de Calidad',
+  [UserRole.SECURITY_GUARD]:         'Guardia de Seguridad (Caseta)',
 };
 
 /**
  * Permisos agrupados por módulo funcional.
- * Cada entrada define qué roles tienen acceso a ese módulo.
+ * Cada entrada define qué roles oficiales tienen acceso a ese módulo.
  */
 export const MODULE_PERMISSIONS: Record<string, UserRole[]> = {
-  'admin':      [UserRole.ADMIN],
-  'layout':     [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER],
-  'dashboard':  [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.AUDITOR, UserRole.CLIENT],
-  'inventory':  [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.AUDITOR, UserRole.CLIENT],
-  'receiving':  [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.WAREHOUSE_OPERATOR],
-  'putaway':    [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.WAREHOUSE_OPERATOR],
-  'picking':    [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.WAREHOUSE_OPERATOR],
-  'quality':    [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.QM_INSPECTOR],
-  'shipping':   [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.WAREHOUSE_OPERATOR],
-  'counting':   [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.WAREHOUSE_OPERATOR, UserRole.AUDITOR],
-  'security':   [UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.DOCK_SUPERVISOR, UserRole.SECURITY_GUARD],
+  'admin':      [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER],
+  'layout':     [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.CONTROL_DESK],
+  'dashboard':  [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK],
+  'inventory':  [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK, UserRole.SHIFT_LEADER],
+  'receiving':  [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR],
+  'putaway':    [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR],
+  'picking':    [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR],
+  'quality':    [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.QM_INSPECTOR],
+  'shipping':   [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR],
+  'counting':   [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR, UserRole.QM_INSPECTOR],
+  'security':   [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_SUPERVISOR, UserRole.SECURITY_GUARD],
 };
 
 /**

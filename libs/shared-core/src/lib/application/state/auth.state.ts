@@ -144,12 +144,13 @@ export class AuthState {
   private redirectAfterLogin(user: User): void {
     const roleRoutes: Partial<Record<UserRole, string>> = {
       [UserRole.ADMIN]: '/dashboard',
-      [UserRole.WAREHOUSE_MANAGER]: '/dashboard',
-      [UserRole.DOCK_SUPERVISOR]: '/receiving',
-      [UserRole.WAREHOUSE_OPERATOR]: '/picking',
+      [UserRole.OPERATIONS_MANAGER]: '/dashboard',
+      [UserRole.OPERATIONS_COORDINATOR]: '/dashboard',
+      [UserRole.OPERATIONS_SUPERVISOR]: '/receiving',
+      [UserRole.CONTROL_DESK]: '/receiving',
+      [UserRole.SHIFT_LEADER]: '/receiving',
+      [UserRole.WAREHOUSE_OPERATOR]: '/cockpit',
       [UserRole.QM_INSPECTOR]: '/quality',
-      [UserRole.AUDITOR]: '/dashboard',
-      [UserRole.CLIENT]: '/dashboard',
       [UserRole.SECURITY_GUARD]: '/security',
     };
 
