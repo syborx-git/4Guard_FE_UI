@@ -11,7 +11,7 @@
  * - Semáforo SLA en Patio (<45m verde, 45-90m ámbar, >90m rojo) y Check-out con cotejo de sellos.
  */
 
-import { Component, inject, signal, computed, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -19,6 +19,7 @@ import { AuthState } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 import { ImageCompressorService } from '../../../core/services/image-compressor.service';
 import { PrintService } from '../../../core/services/print.service';
+import { RfNotificationService } from '../../../core/services/rf-notification.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
@@ -91,8 +92,20 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly audioService = inject(AudioFeedbackService);
   protected readonly compressor = inject(ImageCompressorService);
   protected readonly printService = inject(PrintService);
+  protected readonly notifService = inject(RfNotificationService);
 
   @ViewChild('cameraInput') cameraInput!: ElementRef<HTMLInputElement>;
+
+  constructor() {
+    effect(() => {
+      const pass = this.notifService.requestedPassToLoad();
+      if (pass) {
+        this.activeTab.set('REGISTRATION');
+        this.loadPassIntoForm(pass);
+        this.notifService.clearRequestedPassToLoad();
+      }
+    });
+  }
 
   // ─── Pestaña Activa ──────────────────────────────────────────────────────────
   protected readonly activeTab = signal<SecurityTab>('REGISTRATION');
@@ -431,13 +444,61 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    // Sincronizar pestaña solicitada desde el menú táctil
+    // Sincronizar pestaña solicitada desde el menú táctil y carga por token
     this.route.queryParamMap.subscribe((params) => {
       const tabParam = params.get('tab');
       if (tabParam === 'REGISTRATION' || tabParam === 'IN_YARD' || tabParam === 'CHECKOUT' || tabParam === 'HISTORY') {
         this.activeTab.set(tabParam as SecurityTab);
       }
+      const token = params.get('token');
+      if (token) {
+        const found = this.activePasses().find(p => p.token === token);
+        if (found) {
+          this.activeTab.set('REGISTRATION');
+          this.loadPassIntoForm(found);
+        }
+      }
     });
+
+    // Sincronizar pases QR enviados por choferes con el Centro de Notificaciones
+    for (const p of this.activePasses()) {
+      if (p.status === 'SUBMITTED') {
+        this.notifService.addSubmittedDriverPass({
+          id: p.id,
+          token: p.token,
+          carrierName: p.carrierName,
+          driverName: p.driverName,
+          driverPhone: p.driverPhone,
+          tractorPlates: p.tractorPlates,
+          boxPlates: p.boxPlates,
+          ecoNumber: p.ecoNumber,
+          operationType: p.operationType,
+          documentNumber: p.documentNumber,
+          clientName: p.clientName,
+          status: 'SUBMITTED',
+          submittedAt: p.submittedAt,
+          time: new Date(p.submittedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        });
+      }
+    }
+
+    // Sincronizar unidades con maniobra concluida listas para salida
+    for (const v of this.yardVehicles()) {
+      if (v.status === 'DISCHARGE_FINISHED') {
+        this.notifService.addReadyExitPass({
+          id: v.id,
+          folio: v.entryFolio,
+          token: v.token,
+          driverName: v.driverName,
+          carrierName: v.carrierName,
+          tractorPlates: v.tractorPlates,
+          rampCode: v.rampNumber ? `Rampa ${v.rampNumber}` : 'Andén',
+          rampNumber: v.rampNumber,
+          time: new Date(v.entryTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+          isReadyForExit: true
+        });
+      }
+    }
 
     // Sincronizar validaciones bimodal
     this.checkInForm.get('operacion')?.valueChanges.subscribe((op) => {

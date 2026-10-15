@@ -1,13 +1,15 @@
 /**
  * @file rf-notifications.component.ts
- * @description Widget de Notificaciones Operativas en Tiempo Real para la Terminal RF.
- * Diseñado conforme al estándar Synexia Dual-Theme (Linen/Gold en Light Mode, Obsidian/Gold en Dark Mode).
+ * @description Widget Compacto de Notificaciones Operativas en Tiempo Real para la Terminal RF.
+ * Homologado con el flujo de Caseta de Seguridad (ADR-017, ADR-018) y Almacén.
  * 
- * Incluye:
- * - Badge / Pill en Header con indicador de conteo en cola y baliza pulsante en tiempo real.
- * - Menú Desplegable Flotante Táctil (touch-first, min 56px de interacción / ADR-012).
- * - Sonido Amigable (Web Audio API Triada Mayor) con botón de prueba interactiva y toggle de silencio.
- * - Tarjetas de Pre-Recepción Inbound y Asignación de Andenes con botón de atención inmediata.
+ * Flujo de Caseta (/security):
+ * - Choferes QR: Pases enviados desde celular (F01) listos con acción 1-tap "Cargar en Caseta".
+ * - Salidas (Check-Out): Unidades con maniobra concluida listas para registro de salida.
+ * - Rampas: Andenes asignados por almacén para dar acceso al transportista.
+ * 
+ * Flujo de Almacén (/cockpit, /receiving):
+ * - Pre-Recepciones: Unidades registradas en caseta listas para descarga física.
  */
 
 import {
@@ -22,11 +24,13 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   RfNotificationService,
-  RfOperationalNotification,
-  RfNotificationCategory
+  DriverPassNotification,
+  ReadyExitPassNotification,
+  RampAlertNotification,
+  ReceptionAlertNotification
 } from '../../../core/services/rf-notification.service';
 
-export type RfNotificationTab = 'ALL' | 'RECEIVING' | 'RAMP' | 'OUTBOUND';
+export type SecurityNotifTab = 'ALL' | 'QR_PASSES' | 'EXITS' | 'RAMPS';
 
 @Component({
   selector: 'fg-rf-notifications',
@@ -42,34 +46,25 @@ export class RfNotificationsComponent {
 
   // ── Estado de apertura del dropdown ──
   public readonly isOpen = signal<boolean>(false);
-  public readonly activeTab = signal<RfNotificationTab>('ALL');
+  public readonly selectedTab = signal<SecurityNotifTab>('ALL');
 
-  // ── Señales Reactivas del Servicio ──
-  public readonly notifications = this.notifService.notifications;
-  public readonly unreadCount = this.notifService.unreadCount;
-  public readonly pendingReceptions = this.notifService.pendingReceptions;
-  public readonly pendingReceptionsCount = this.notifService.pendingReceptionsCount;
+  // ── Señales del Servicio ──
+  public readonly isSecurityContext = this.notifService.isSecurityContext;
+  public readonly pendingDriverPasses = this.notifService.pendingDriverPasses;
+  public readonly pendingDriverPassesCount = this.notifService.pendingDriverPassesCount;
+
   public readonly pendingRampAssignments = this.notifService.pendingRampAssignments;
   public readonly pendingRampAssignmentsCount = this.notifService.pendingRampAssignmentsCount;
+
+  public readonly readyForExitPasses = this.notifService.readyForExitPasses;
+  public readonly readyForExitCount = this.notifService.readyForExitCount;
+
+  public readonly pendingReceptions = this.notifService.pendingReceptions;
+  public readonly pendingReceptionsCount = this.notifService.pendingReceptionsCount;
+
   public readonly totalVisibleCount = this.notifService.totalVisibleCount;
   public readonly hasNewArrivalBeacon = this.notifService.hasNewArrivalBeacon;
   public readonly isSoundMuted = this.notifService.isSoundMuted;
-
-  // ── Filtrado dinámico por pestaña seleccionada ──
-  public readonly filteredNotifications = computed(() => {
-    const tab = this.activeTab();
-    const list = this.notifications();
-    if (tab === 'RECEIVING') {
-      return list.filter(n => n.category === 'RECEIVING');
-    }
-    if (tab === 'RAMP') {
-      return list.filter(n => n.category === 'RAMP');
-    }
-    if (tab === 'OUTBOUND') {
-      return list.filter(n => n.category === 'OUTBOUND');
-    }
-    return list;
-  });
 
   // ── Control de Apertura / Cierre ──
   public toggleDropdown(event: MouseEvent): void {
@@ -81,14 +76,48 @@ export class RfNotificationsComponent {
     this.isOpen.set(false);
   }
 
-  public setActiveTab(tab: RfNotificationTab): void {
-    this.activeTab.set(tab);
+  public setTab(tab: SecurityNotifTab): void {
+    this.selectedTab.set(tab);
   }
 
-  // ── Acciones de Atención Inmediata ──
-  public attendNotification(notif: RfOperationalNotification): void {
+  // ── Acciones de Caseta de Seguridad (ADR-017 / ADR-018) ──
+
+  /**
+   * Carga 1-Tap de datos del Chofer en el Formulario Oficial F01
+   */
+  public loadDriverPassIntoGate(pass: DriverPassNotification): void {
     this.closeDropdown();
-    this.notifService.attendNotification(notif);
+    this.notifService.requestLoadDriverPass(pass);
+    this.router.navigate(['/security'], { queryParams: { tab: 'REGISTRATION', token: pass.token } });
+  }
+
+  /**
+   * Lleva a la pestaña de Salidas en Caseta para registrar la salida oficial y sellos
+   */
+  public openCheckout(pass: ReadyExitPassNotification): void {
+    this.closeDropdown();
+    this.notifService.dismissExitPass(pass.folio);
+    this.router.navigate(['/security'], { queryParams: { tab: 'IN_YARD', token: pass.token || pass.folio } });
+  }
+
+  /**
+   * Da acceso a la rampa asignada
+   */
+  public openRampAccess(ramp: RampAlertNotification): void {
+    this.closeDropdown();
+    this.notifService.dismissRamp(ramp.folio);
+    this.router.navigate(['/security'], { queryParams: { tab: 'IN_YARD', folio: ramp.folio } });
+  }
+
+  // ── Acciones de Almacén / Montacarguista ──
+  public openReceptionInCockpit(rec: ReceptionAlertNotification): void {
+    this.closeDropdown();
+    this.router.navigate(['/cockpit'], { queryParams: { folio: rec.folio } });
+  }
+
+  public goToSecurityModule(): void {
+    this.closeDropdown();
+    this.router.navigate(['/security']);
   }
 
   public goToCockpit(): void {
@@ -96,22 +125,8 @@ export class RfNotificationsComponent {
     this.router.navigate(['/cockpit']);
   }
 
-  public goToReceiving(): void {
-    this.closeDropdown();
-    this.router.navigate(['/receiving/scan']);
-  }
-
-  // ── Audio Feedback Amigable ──
-  public playTestSound(): void {
-    this.notifService.playFriendlyArrivalChime();
-  }
-
   public toggleMute(): void {
     this.notifService.toggleSound();
-  }
-
-  public simulateArrival(): void {
-    this.notifService.simulateIncomingReception();
   }
 
   // ── Cierre al hacer clic fuera del widget ──

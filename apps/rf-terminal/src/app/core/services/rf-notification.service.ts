@@ -1,38 +1,72 @@
 /**
  * @file rf-notification.service.ts
  * @description Motor de Notificaciones Operativas en Tiempo Real para la Terminal RF.
- * Sincroniza solicitudes de recepción de Caseta, asignaciones de andenes/rampas,
- * y emite alertas acústicas amigables basadas en Web Audio API (Triada Mayor D5 -> F#5 -> A5).
- * 
- * Sincronización multi-pestaña con BroadcastChannel y Storage Events para recibir
- * eventos en vivo emitidos desde la Consola de Administración (Admin Console).
+ * Conforme a ADR-012, ADR-017 y ADR-018:
+ * - Filtra por contexto y rol activo: Caseta (Choferes QR, Rampas, Salidas) vs Almacén (Pre-Recepciones).
+ * - Sincronizado con API Backend (/api/v1/security-gate/passes/active e in-yard), BroadcastChannel y Storage Events.
+ * - Emite alertas acústicas amigables basadas en Web Audio API (Tríada Mayor D5 -> F#5 -> A5 + D6).
+ * - Provee puente de carga 1-Tap hacia el Formulario Oficial F01 de Caseta (requestedPassToLoad).
  */
 
 import { Injectable, inject, signal, computed, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { filter } from 'rxjs/operators';
+import { AuthState } from '@4guard/shared-core';
 import { AudioFeedbackService } from './audio-feedback.service';
 
-export type RfNotificationCategory = 'RECEIVING' | 'RAMP' | 'OUTBOUND' | 'QUALITY';
-
-export interface RfOperationalNotification {
+export interface DriverPassNotification {
   id: string;
-  category: RfNotificationCategory;
-  title: string;
-  message: string;
+  token: string;
+  carrierName: string;
+  driverName: string;
+  driverPhone?: string;
+  tractorPlates: string;
+  boxPlates?: string;
+  ecoNumber?: string;
+  operationType: 'INBOUND' | 'OUTBOUND';
+  documentNumber: string;
+  clientName?: string;
+  rampNumber?: number | string;
+  status: 'SUBMITTED' | 'PENDING_DRIVER';
+  submittedAt: Date;
+  time: string;
+}
+
+export interface ReadyExitPassNotification {
+  id: string;
+  folio: string;
+  token?: string;
+  driverName: string;
+  carrierName: string;
+  tractorPlates: string;
+  rampCode?: string;
+  rampNumber?: number | string;
+  time: string;
+  isReadyForExit: boolean;
+}
+
+export interface RampAlertNotification {
+  id: string;
+  folio: string;
+  rampNumber: number | string;
+  client: string;
+  driverName: string;
+  tractorPlates: string;
+  time: string;
+}
+
+export interface ReceptionAlertNotification {
+  id: string;
   folio: string;
   client: string;
   carrier: string;
   rampNumber?: number | string;
   docNumber?: string;
   driverName?: string;
-  tractorPlates?: string;
-  timestamp: Date;
   time: string;
   pieces?: number;
-  isRead: boolean;
-  actionRoute: string;
-  actionParams?: Record<string, any>;
 }
 
 @Injectable({
@@ -40,90 +74,80 @@ export interface RfOperationalNotification {
 })
 export class RfNotificationService {
   private readonly audioFeedback = inject(AudioFeedbackService);
+  private readonly authState = inject(AuthState);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
   private readonly platformId = inject(PLATFORM_ID);
 
   private broadcastChannel: BroadcastChannel | null = null;
   private beaconTimeoutId: any = null;
+  private pollIntervalId: any = null;
+
+  private readonly notifiedTokens = new Set<string>();
+
+  // ── URL Activa para Contexto Reactivo ──
+  public readonly currentUrl = signal<string>(this.router.url);
 
   // ── Preferencia de Silencio / Sonido ──
   public readonly isSoundMuted = signal<boolean>(false);
 
-  // ── Historial Reactivo de Notificaciones Operativas ──
-  private readonly _notifications = signal<RfOperationalNotification[]>([
-    {
-      id: 'notif-inb-081',
-      category: 'RECEIVING',
-      title: 'Nueva Pre-Recepción en Caseta',
-      message: 'Unidad de Nestlé México arribó a Caseta con 48 tarimas listas para descarga.',
-      folio: 'REC-2026-081',
-      client: 'Nestlé México S.A. de C.V.',
-      carrier: 'Transportes Castores',
-      rampNumber: 3,
-      docNumber: 'REM-88102',
-      driverName: 'Armando Salazar',
-      tractorPlates: '88-AA-1Z',
-      timestamp: new Date(Date.now() - 4 * 60000),
-      time: '14:22',
-      pieces: 1152,
-      isRead: false,
-      actionRoute: '/cockpit',
-      actionParams: { folio: 'MIS-INB-2026-081' }
-    },
-    {
-      id: 'notif-ramp-05',
-      category: 'RAMP',
-      title: 'Andén Rampa 05 Asignado',
-      message: 'Mesa de Control asignó Rampa 05 para descarga de Aceite Sintético.',
-      folio: 'REC-2026-084',
-      client: 'Cervecería Cuauhtémoc Moctezuma',
-      carrier: 'Fletes y Transportes Monterrey',
-      rampNumber: 5,
-      docNumber: 'REM-99214',
-      driverName: 'Raúl Morales Téllez',
-      tractorPlates: '42-BB-3X',
-      timestamp: new Date(Date.now() - 11 * 60000),
-      time: '14:15',
-      pieces: 840,
-      isRead: false,
-      actionRoute: '/cockpit',
-      actionParams: { rampa: 5 }
-    }
-  ]);
+  // ── Puente 1-Tap hacia el Formulario Oficial F01 de Caseta ──
+  public readonly requestedPassToLoad = signal<any | null>(null);
 
-  public readonly notifications = this._notifications.asReadonly();
+  // ── 1. Cola de Pases QR de Choferes (status === 'SUBMITTED') ──
+  public readonly pendingDriverPasses = signal<DriverPassNotification[]>([]);
+  public readonly pendingDriverPassesCount = computed(() => this.pendingDriverPasses().length);
 
-  // ── Señales Computadas por Categoría ──
-  public readonly pendingReceptions = computed(() =>
-    this._notifications().filter(n => n.category === 'RECEIVING')
-  );
-  public readonly pendingReceptionsCount = computed(() => this.pendingReceptions().length);
-
-  public readonly pendingRampAssignments = computed(() =>
-    this._notifications().filter(n => n.category === 'RAMP')
-  );
+  // ── 2. Cola de Rampas Asignadas por Almacén ──
+  public readonly pendingRampAssignments = signal<RampAlertNotification[]>([]);
   public readonly pendingRampAssignmentsCount = computed(() => this.pendingRampAssignments().length);
 
-  public readonly pendingOutbounds = computed(() =>
-    this._notifications().filter(n => n.category === 'OUTBOUND')
-  );
-  public readonly pendingOutboundsCount = computed(() => this.pendingOutbounds().length);
+  // ── 3. Cola de Unidades en Patio Listas para Salida (Check-Out) ──
+  public readonly readyForExitPasses = signal<ReadyExitPassNotification[]>([]);
+  public readonly readyForExitCount = computed(() => this.readyForExitPasses().length);
 
-  public readonly totalVisibleCount = computed(() =>
-    this.pendingReceptionsCount() + this.pendingRampAssignmentsCount() + this.pendingOutboundsCount()
-  );
+  // ── 4. Cola de Pre-Recepciones en Almacén (Inbound para Montacarguista) ──
+  public readonly pendingReceptions = signal<ReceptionAlertNotification[]>([]);
+  public readonly pendingReceptionsCount = computed(() => this.pendingReceptions().length);
 
-  public readonly unreadCount = computed(() =>
-    this._notifications().filter(n => !n.isRead).length
-  );
+  // ── Baliza Luminosa Pulsante en Vivo ──
+  public readonly hasNewArrivalBeacon = signal<boolean>(false);
 
-  // ── Baliza de Notificación en Vivo (Pulsing Glow Beacon) ──
-  public readonly hasNewArrivalBeacon = signal<boolean>(true);
-  public readonly latestArrival = signal<RfOperationalNotification | null>(null);
+  // ── Contexto Operativo Reactivo ──
+  public readonly isSecurityContext = computed(() => {
+    const url = this.currentUrl();
+    const role = (this.authState.role() || '').toUpperCase();
+    return (
+      url.startsWith('/security') ||
+      role.includes('SECURITY') ||
+      role.includes('VIGILAN') ||
+      role.includes('GUARD') ||
+      role.includes('CASETA')
+    );
+  });
+
+  public readonly totalVisibleCount = computed(() => {
+    if (this.isSecurityContext()) {
+      return this.pendingDriverPassesCount() + this.pendingRampAssignmentsCount() + this.readyForExitCount();
+    }
+    return this.pendingReceptionsCount();
+  });
 
   constructor() {
     this.initSoundPreference();
+    this.initRouteTracking();
     this.initCrossTabSync();
+    this.loadInitialPasses();
+    this.startBackgroundSync();
+  }
+
+  private initRouteTracking(): void {
+    this.currentUrl.set(this.router.url);
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd)
+    ).subscribe((e) => {
+      this.currentUrl.set(e.urlAfterRedirects || e.url);
+    });
   }
 
   private initSoundPreference(): void {
@@ -147,11 +171,22 @@ export class RfNotificationService {
     }
   }
 
+  public playFriendlyArrivalChime(): void {
+    this.audioFeedback.playFriendlyArrivalChime(1.0);
+  }
+
+  // ── Puente de Carga 1-Tap hacia Caseta ──
+  public requestLoadDriverPass(pass: any): void {
+    this.requestedPassToLoad.set(pass);
+    this.hasNewArrivalBeacon.set(false);
+  }
+
+  public clearRequestedPassToLoad(): void {
+    this.requestedPassToLoad.set(null);
+  }
+
   /**
-   * Sincronización multi-ventana y multi-dispositivo en tiempo real:
-   * 1. BroadcastChannel ('4guard_wms_events')
-   * 2. Eventos de localStorage ('4g_last_notification')
-   * 3. CustomEvent en window ('4g:new-reception')
+   * Sincronización multi-ventana en tiempo real mediante BroadcastChannel y Storage
    */
   private initCrossTabSync(): void {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -160,7 +195,7 @@ export class RfNotificationService {
       if ('BroadcastChannel' in window) {
         this.broadcastChannel = new BroadcastChannel('4guard_wms_events');
         this.broadcastChannel.onmessage = (event) => {
-          this.handleIncomingEvent(event.data);
+          this.handleIncomingBroadcast(event.data);
         };
       }
     } catch (_) {}
@@ -169,197 +204,268 @@ export class RfNotificationService {
       if (e.key === '4g_last_notification' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          this.handleIncomingEvent(parsed);
+          this.handleIncomingBroadcast(parsed);
         } catch (_) {}
       }
     });
-
-    window.addEventListener('4g:new-reception', (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail) {
-        this.notifyNewReception(customEvent.detail);
-      }
-    });
   }
 
-  private handleIncomingEvent(data: any): void {
+  private handleIncomingBroadcast(data: any): void {
     if (!data) return;
     const notif = data.notification || data;
 
-    if (notif.category === 'RECEIVING' || data.type === 'NEW_RECEPTION') {
-      this.notifyNewReception({
-        folio: notif.referenceFolio || notif.folio || `REC-${Date.now().toString().slice(-4)}`,
-        client: notif.data?.checkIn?.client || notif.client || notif.title || 'Cliente General',
-        carrier: notif.data?.checkIn?.carrierLine || notif.carrier || 'Transportista',
-        rampNumber: notif.data?.checkIn?.rampNumber || notif.rampNumber,
-        docNumber: notif.data?.checkIn?.docNumber || notif.docNumber,
-        driverName: notif.data?.checkIn?.driverName || notif.driverName || 'Operador Transportista',
-        tractorPlates: notif.data?.checkIn?.tractorPlates || notif.tractorPlates
-      });
-    } else if (notif.category === 'SECURITY' && (notif.title?.includes('Rampa') || notif.data?.rampNumber)) {
-      this.notifyRampAssigned({
-        folio: notif.referenceFolio || notif.folio || `FOL-${Date.now().toString().slice(-4)}`,
-        rampNumber: notif.data?.rampNumber || notif.rampNumber || '01',
-        client: notif.data?.client || notif.client || 'Cliente',
-        driverName: notif.data?.driverName || notif.driverName || 'Chofer'
+    // Chofer QR completado
+    if (notif.category === 'SECURITY' && (notif.title?.includes('Chofer') || notif.data?.status === 'SUBMITTED')) {
+      const p = notif.data;
+      if (p) {
+        this.addSubmittedDriverPass({
+          id: p.id || notif.id,
+          token: p.token || notif.referenceFolio || 'PASS-QR',
+          carrierName: p.carrierName || p.carrierLine || 'Transportista',
+          driverName: p.driverName || p.nombreOperador || 'Operador',
+          driverPhone: p.driverPhone,
+          tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+          boxPlates: p.boxPlates || p.placasCaja,
+          ecoNumber: p.ecoNumber || p.noEcoTractor,
+          operationType: p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
+          documentNumber: p.documentNumber || p.remision || p.noCartaPorte || 'S/N',
+          clientName: p.clientName || p.client,
+          status: 'SUBMITTED',
+          submittedAt: new Date(),
+          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        });
+      }
+    }
+
+    // Rampa asignada
+    if (notif.category === 'SECURITY' && notif.title?.includes('Rampa') && notif.data) {
+      const d = notif.data;
+      const rampNum = d.checkIn?.rampNumber || d.rampNumber;
+      if (rampNum) {
+        this.addRampAssignment({
+          id: notif.id,
+          folio: String(d.folio || notif.referenceFolio || 'S/F'),
+          rampNumber: rampNum,
+          client: d.checkIn?.client || d.client || 'Cliente',
+          driverName: d.checkIn?.driverName || d.driverName || 'Chofer',
+          tractorPlates: d.checkIn?.tractorPlates || d.tractorPlates || 'S/P',
+          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        });
+      }
+    }
+
+    // Unidad lista para salida
+    if (notif.category === 'SECURITY' && (notif.title?.includes('Salida') || notif.data?.isReadyForExit)) {
+      const p = notif.data;
+      if (p) {
+        this.addReadyExitPass({
+          id: p.id || notif.id,
+          folio: p.token || p.generatedFolio || notif.referenceFolio || 'S/F',
+          token: p.token,
+          driverName: p.driverName || 'Chofer',
+          carrierName: p.carrierLine || p.carrierName || 'Transportista',
+          tractorPlates: p.tractorPlates || 'S/P',
+          rampCode: p.rampCode || `Rampa ${p.rampNumber || ''}`,
+          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+          isReadyForExit: true
+        });
+      }
+    }
+
+    // Recepción arribada
+    if (notif.category === 'RECEIVING') {
+      const d = notif.data;
+      this.addReceptionAlert({
+        id: notif.id,
+        folio: notif.referenceFolio || d?.folio || 'REC-S/F',
+        client: d?.checkIn?.client || d?.client || notif.title,
+        carrier: d?.checkIn?.carrierLine || d?.carrier || 'Transportista',
+        rampNumber: d?.checkIn?.rampNumber || d?.rampNumber,
+        docNumber: d?.checkIn?.docNumber || d?.docNumber,
+        driverName: d?.checkIn?.driverName || d?.driverName,
+        time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        pieces: d?.totalPieces || 48
       });
     }
   }
 
-  /**
-   * Dispara una nueva Notificación de Recepción Inbound con Chime Armónico Amigable
-   */
-  public notifyNewReception(data: {
-    folio: string;
-    client: string;
-    carrier: string;
-    rampNumber?: number | string;
-    docNumber?: string;
-    driverName?: string;
-    tractorPlates?: string;
-    pieces?: number;
-  }): RfOperationalNotification {
-    const id = `rec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  // ── Inserción de Eventos con Alerta Acústica Amigable ──
+  public addSubmittedDriverPass(pass: DriverPassNotification): void {
+    if (this.notifiedTokens.has(pass.token)) return;
+    this.notifiedTokens.add(pass.token);
 
-    const newNotif: RfOperationalNotification = {
-      id,
-      category: 'RECEIVING',
-      title: '🚚 Nueva Solicitud de Recepción en Caseta',
-      message: `Folio #${data.folio} (${data.client}) arribó con transportista ${data.carrier}. Lista para descarga.`,
-      folio: data.folio,
-      client: data.client,
-      carrier: data.carrier,
-      rampNumber: data.rampNumber || 'Por Asignar',
-      docNumber: data.docNumber || 'S/N',
-      driverName: data.driverName || 'Operador Transportista',
-      tractorPlates: data.tractorPlates || 'S/P',
-      timestamp: new Date(),
-      time: timeStr,
-      pieces: data.pieces || 48,
-      isRead: false,
-      actionRoute: '/cockpit',
-      actionParams: { folio: data.folio }
-    };
-
-    // Agregar a la cola
-    this._notifications.update(list => [newNotif, ...list.filter(n => n.folio !== data.folio)]);
-    this.latestArrival.set(newNotif);
+    this.pendingDriverPasses.update(list => [pass, ...list.filter(p => p.token !== pass.token)]);
     this.triggerBeacon();
-
-    // Reproducir sonido amigable
-    if (!this.isSoundMuted()) {
-      this.playFriendlyArrivalChime();
-    }
-
-    return newNotif;
-  }
-
-  /**
-   * Notificación de Asignación de Rampa
-   */
-  public notifyRampAssigned(data: {
-    folio: string;
-    rampNumber: number | string;
-    client: string;
-    driverName?: string;
-  }): void {
-    const id = `ramp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-
-    const newNotif: RfOperationalNotification = {
-      id,
-      category: 'RAMP',
-      title: `🏢 Rampa ${data.rampNumber} Asignada`,
-      message: `Andén listo para maniobra de ${data.client} (Operador: ${data.driverName || 'Chofer'}).`,
-      folio: data.folio,
-      client: data.client,
-      carrier: 'Línea Transportista',
-      rampNumber: data.rampNumber,
-      driverName: data.driverName || 'Operador',
-      timestamp: new Date(),
-      time: timeStr,
-      isRead: false,
-      actionRoute: '/cockpit',
-      actionParams: { rampa: data.rampNumber }
-    };
-
-    this._notifications.update(list => [newNotif, ...list.filter(n => n.id !== id)]);
-    this.triggerBeacon();
-
     if (!this.isSoundMuted()) {
       this.playFriendlyArrivalChime();
     }
   }
 
-  /**
-   * Dispara el destello de la baliza luminosa durante 12 segundos
-   */
+  public addRampAssignment(ramp: RampAlertNotification): void {
+    this.pendingRampAssignments.update(list => [ramp, ...list.filter(r => r.folio !== ramp.folio)]);
+    this.triggerBeacon();
+    if (!this.isSoundMuted()) {
+      this.playFriendlyArrivalChime();
+    }
+  }
+
+  public addReadyExitPass(exitPass: ReadyExitPassNotification): void {
+    const key = exitPass.folio;
+    if (this.notifiedTokens.has(key)) return;
+    this.notifiedTokens.add(key);
+
+    this.readyForExitPasses.update(list => [exitPass, ...list.filter(p => p.folio !== key)]);
+    this.triggerBeacon();
+    if (!this.isSoundMuted()) {
+      this.playFriendlyArrivalChime();
+    }
+  }
+
+  public addReceptionAlert(rec: ReceptionAlertNotification): void {
+    this.pendingReceptions.update(list => [rec, ...list.filter(r => r.folio !== rec.folio)]);
+    this.triggerBeacon();
+    if (!this.isSoundMuted()) {
+      this.playFriendlyArrivalChime();
+    }
+  }
+
+  public dismissRamp(folio: string): void {
+    this.pendingRampAssignments.update(list => list.filter(r => r.folio !== folio));
+  }
+
+  public dismissDriverPass(token: string): void {
+    this.pendingDriverPasses.update(list => list.filter(p => p.token !== token));
+  }
+
+  public dismissExitPass(folio: string): void {
+    this.readyForExitPasses.update(list => list.filter(p => p.folio !== folio));
+  }
+
   private triggerBeacon(): void {
     this.hasNewArrivalBeacon.set(true);
-    if (this.beaconTimeoutId) {
-      clearTimeout(this.beaconTimeoutId);
-    }
+    if (this.beaconTimeoutId) clearTimeout(this.beaconTimeoutId);
     this.beaconTimeoutId = setTimeout(() => {
       this.hasNewArrivalBeacon.set(false);
     }, 12000);
   }
 
   /**
-   * Reproduce el tono acústico armónico amigable D5 -> F#5 -> A5 + D6
+   * Carga inicial y sondeo periódico contra la base de datos a través de los endpoints REST
    */
-  public playFriendlyArrivalChime(): void {
-    this.audioFeedback.playFriendlyArrivalChime(1.0);
+  private loadInitialPasses(): void {
+    this.fetchActivePassesFromBackend();
+    this.fetchInYardPassesFromBackend();
   }
 
-  /**
-   * Marca una notificación como atendida/leída
-   */
-  public markAsRead(id: string): void {
-    this._notifications.update(list =>
-      list.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+  private startBackgroundSync(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.pollIntervalId = setInterval(() => {
+      this.fetchActivePassesFromBackend();
+      this.fetchInYardPassesFromBackend();
+    }, 15000);
   }
 
-  /**
-   * Descarta / Atiende una solicitud y navega al flujo de descarga
-   */
-  public attendNotification(notif: RfOperationalNotification): void {
-    this.markAsRead(notif.id);
-    this.hasNewArrivalBeacon.set(false);
-    if (notif.actionRoute) {
-      this.router.navigate([notif.actionRoute], { queryParams: notif.actionParams });
-    }
-  }
+  private fetchActivePassesFromBackend(): void {
+    const orgId = (this.authState.user() as any)?.organizationId || '44444444-4444-4444-4444-444444444444';
+    const params = new HttpParams().set('organizationId', orgId);
 
-  public clearAll(): void {
-    this._notifications.set([]);
-    this.hasNewArrivalBeacon.set(false);
-  }
+    this.http.get<any>(`/api/v1/security-gate/passes/active`, { params }).subscribe({
+      next: (res) => {
+        const rawList = res?.data || res || [];
+        if (Array.isArray(rawList)) {
+          const submittedOnly = rawList.filter((p: any) => p && p.status === 'SUBMITTED');
+          const mapped: DriverPassNotification[] = submittedOnly.map((p: any) => ({
+            id: p.id || p.token,
+            token: p.token,
+            carrierName: p.carrierLine || p.carrierName || 'Transportista',
+            driverName: p.driverName || p.nombreOperador || 'Operador',
+            driverPhone: p.driverPhone,
+            tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+            boxPlates: p.boxPlates || p.placasCaja,
+            ecoNumber: p.noEcoTractor || p.ecoNumber,
+            operationType: p.operationType === 'CARGA' || p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
+            documentNumber: p.remision || p.noCartaPorte || p.documentNumber || 'S/N',
+            clientName: p.client || p.clientName || 'Cliente',
+            rampNumber: p.rampNumber,
+            status: 'SUBMITTED',
+            submittedAt: new Date(p.submittedAt || p.createdAt || Date.now()),
+            time: new Date(p.submittedAt || p.createdAt || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+          }));
 
-  /**
-   * Generador de Prueba Rápida / Simulación de Llegada
-   * Permite al usuario u operador escuchar el chime amigable y comprobar la tarjeta en vivo.
-   */
-  public simulateIncomingReception(): void {
-    const randomFolioNum = Math.floor(100 + Math.random() * 900);
-    const clients = [
-      { client: 'Nestlé México Planta Toluca', carrier: 'Transportes Castores', ramp: 4 },
-      { client: 'Heineken / Cervecería Cuauhtémoc', carrier: 'Fletes y Remolques del Norte', ramp: 2 },
-      { client: 'Unilever Alimentos', carrier: 'Transportes Monclova S.A.', ramp: 6 },
-      { client: 'Procter & Gamble México', carrier: 'Líneas Internacionales Laredo', ramp: 1 }
-    ];
-    const pick = clients[Math.floor(Math.random() * clients.length)];
-
-    this.notifyNewReception({
-      folio: `REC-2026-${randomFolioNum}`,
-      client: pick.client,
-      carrier: pick.carrier,
-      rampNumber: pick.ramp,
-      docNumber: `REM-${Math.floor(10000 + Math.random() * 90000)}`,
-      driverName: 'Carlos M. Hernández',
-      tractorPlates: '99-ZX-4T',
-      pieces: 1200
+          // Comparar si hay nuevos para sonar el chime
+          if (mapped.length > this.pendingDriverPasses().length && this.pendingDriverPasses().length > 0) {
+            if (!this.isSoundMuted()) this.playFriendlyArrivalChime();
+            this.triggerBeacon();
+          }
+          this.pendingDriverPasses.set(mapped);
+        }
+      },
+      error: () => {
+        // En caso de que el backend esté offline, leer de localStorage de la caseta
+        this.loadPassesFromStorageFallback();
+      }
     });
+  }
+
+  private fetchInYardPassesFromBackend(): void {
+    const orgId = (this.authState.user() as any)?.organizationId || '44444444-4444-4444-4444-444444444444';
+    const params = new HttpParams().set('organizationId', orgId);
+
+    this.http.get<any>(`/api/v1/security-gate/passes/in-yard`, { params }).subscribe({
+      next: (res) => {
+        const rawList = res?.data || res || [];
+        if (Array.isArray(rawList)) {
+          const readyList = rawList.filter((p: any) => p && (p.isReadyForExit || p.status === 'DISCHARGE_FINISHED'));
+          const mapped: ReadyExitPassNotification[] = readyList.map((p: any) => ({
+            id: p.id || p.token,
+            folio: p.token || p.generatedFolio || 'S/F',
+            token: p.token,
+            driverName: p.driverName || 'Operador',
+            carrierName: p.carrierLine || p.carrierName || 'Transportista',
+            tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+            rampCode: p.rampCode || (p.rampNumber ? `Rampa ${p.rampNumber}` : 'Andén'),
+            rampNumber: p.rampNumber,
+            time: new Date(p.entryTime || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            isReadyForExit: true
+          }));
+
+          if (mapped.length > this.readyForExitPasses().length && this.readyForExitPasses().length > 0) {
+            if (!this.isSoundMuted()) this.playFriendlyArrivalChime();
+            this.triggerBeacon();
+          }
+          this.readyForExitPasses.set(mapped);
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private loadPassesFromStorageFallback(): void {
+    try {
+      if (typeof window === 'undefined') return;
+      const rawActive = localStorage.getItem('4g_security_active_passes');
+      if (rawActive) {
+        const parsed = JSON.parse(rawActive);
+        if (Array.isArray(parsed)) {
+          const submitted = parsed.filter((p: any) => p && p.status === 'SUBMITTED');
+          this.pendingDriverPasses.set(submitted.map((p: any) => ({
+            id: p.id || p.token,
+            token: p.token,
+            carrierName: p.carrierName || p.carrierLine || 'Transportista',
+            driverName: p.driverName || p.nombreOperador || 'Operador',
+            driverPhone: p.driverPhone,
+            tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+            boxPlates: p.boxPlates,
+            ecoNumber: p.ecoNumber,
+            operationType: p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
+            documentNumber: p.documentNumber || p.remision || 'S/N',
+            clientName: p.clientName || p.client,
+            status: 'SUBMITTED',
+            submittedAt: new Date(),
+            time: 'En espera'
+          })));
+        }
+      }
+    } catch (_) {}
   }
 }
