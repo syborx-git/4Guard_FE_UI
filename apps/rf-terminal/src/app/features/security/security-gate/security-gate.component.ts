@@ -14,7 +14,7 @@
 import { Component, inject, signal, computed, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthState } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 import { ImageCompressorService } from '../../../core/services/image-compressor.service';
@@ -86,6 +86,7 @@ export interface YardVehicle {
 export class SecurityGateRfComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   protected readonly authState = inject(AuthState);
   protected readonly audioService = inject(AudioFeedbackService);
   protected readonly compressor = inject(ImageCompressorService);
@@ -430,6 +431,14 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    // Sincronizar pestaña solicitada desde el menú táctil
+    this.route.queryParamMap.subscribe((params) => {
+      const tabParam = params.get('tab');
+      if (tabParam === 'REGISTRATION' || tabParam === 'IN_YARD' || tabParam === 'CHECKOUT' || tabParam === 'HISTORY') {
+        this.activeTab.set(tabParam as SecurityTab);
+      }
+    });
+
     // Sincronizar validaciones bimodal
     this.checkInForm.get('operacion')?.valueChanges.subscribe((op) => {
       this.updateBimodalValidators(op);

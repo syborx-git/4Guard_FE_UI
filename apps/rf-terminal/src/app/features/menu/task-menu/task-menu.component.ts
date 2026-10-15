@@ -75,8 +75,8 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
     role: UserRole.SECURITY_GUARD,
     roleLabel: 'Guardia de Seguridad (Caseta)',
     terminalBadge: 'Caseta de Seguridad & Vigilancia',
-    terminalTitle: 'Control de Accesos & Patio',
-    terminalDesc: 'Registro de ingresos y salidas de transporte, validación de sellos y emisión de checklist F01.',
+    terminalTitle: 'Centro de Mando de Caseta y Patio',
+    terminalDesc: 'Registro expedito de ingresos y salidas de transporte, inspección visual de sellos y control de patio.',
     priorityTag: 'Control Perimetral Activo',
     leaseTag: 'Caseta Principal Norte',
     activeTask: {
@@ -88,10 +88,10 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       elapsedMinutes: 2,
       icon: 'local_police',
       actionLabel: 'CONTINUAR INSPECCIÓN F01',
-      route: '/security',
+      route: '/security?tab=REGISTRATION',
       bannerTheme: 'security',
     },
-    allowedModuleIds: ['mod-security'],
+    allowedModuleIds: ['mod-sec-entry', 'mod-sec-yard', 'mod-sec-checkout', 'mod-sec-qr'],
   },
 
   [UserRole.QM_INSPECTOR]: {
@@ -294,6 +294,47 @@ export class TaskMenuComponent {
       actionLabel: 'Acceso Caseta',
       route: '/security',
     },
+    // Submódulos Tácticos Especializados para Guardia de Caseta
+    {
+      id: 'mod-sec-entry',
+      icon: 'input',
+      title: 'Registrar Entrada F01',
+      description: 'Nuevo ingreso de tractocamión o caja, captura bimodal (descarga/embarque), cotejo de sellos y checklist F01.',
+      badgeText: 'Ingreso Inmediato',
+      badgeType: 'amber',
+      actionLabel: 'Nueva Entrada',
+      route: '/security?tab=REGISTRATION',
+    },
+    {
+      id: 'mod-sec-yard',
+      icon: 'rv_hookup',
+      title: 'Patio & Andenes Activos',
+      description: 'Monitoreo de tiempos de estancia en patio, semáforo SLA de permanencia y asignación de rampas en vivo.',
+      badgeText: '4 en Patio (1 Alerta)',
+      badgeType: 'gold',
+      actionLabel: 'Monitorear Patio',
+      route: '/security?tab=IN_YARD',
+    },
+    {
+      id: 'mod-sec-checkout',
+      icon: 'output',
+      title: 'Salida & Check-Out',
+      description: 'Cotejo final de sellos de seguridad, validación de documentación y liberación oficial de transporte.',
+      badgeText: '1 Listo para Salida',
+      badgeType: 'emerald',
+      actionLabel: 'Autorizar Salida',
+      route: '/security?tab=CHECKOUT',
+    },
+    {
+      id: 'mod-sec-qr',
+      icon: 'qr_code_scanner',
+      title: 'Pase Digital QR Chofer',
+      description: 'Carga instantánea de pre-check-in digital completado por el chofer para agilizar la entrada sin capturas repetidas.',
+      badgeText: '2 Pases Pendientes',
+      badgeType: 'sky',
+      actionLabel: 'Escanear Pase',
+      route: '/security?tab=REGISTRATION',
+    },
     {
       id: 'mod-quality',
       icon: 'verified_user',
@@ -375,7 +416,7 @@ export class TaskMenuComponent {
     if (navigator.vibrate) {
       navigator.vibrate(30);
     }
-    this.router.navigate([route]);
+    this.router.navigateByUrl(route);
   }
 
   /** Reanudar directamente la tarea activa */
