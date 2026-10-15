@@ -90,11 +90,8 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   protected readonly authState = inject(AuthState);
   protected readonly audioService = inject(AudioFeedbackService);
-  protected readonly compressor = inject(ImageCompressorService);
   protected readonly printService = inject(PrintService);
   protected readonly notifService = inject(RfNotificationService);
-
-  @ViewChild('cameraInput') cameraInput!: ElementRef<HTMLInputElement>;
 
   constructor() {
     effect(() => {
@@ -318,10 +315,6 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       }
     }
   ]);
-
-  // ─── Evidencia Fotográfica Comprimida (Canvas API) ───────────────────────────
-  protected readonly sealPhotoPreview = signal<string | null>(null);
-  protected readonly isCompressingPhoto = signal(false);
 
   // ─── Estado de Notificación / Toast Local ───────────────────────────────────
   protected readonly alertMessage = signal<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null);
@@ -649,38 +642,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       medidasCaja: '53 Pies'
     });
     this.sealList.set([]);
-    this.sealPhotoPreview.set(null);
     this.showAlert('warning', 'Formulario limpiado para captura manual.');
-  }
-
-  // ─── Captura y Compresión de Foto de Sellos ─────────────────────────────────
-  protected triggerCamera(): void {
-    this.cameraInput?.nativeElement?.click();
-  }
-
-  protected async onPhotoSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-
-    const file = input.files[0];
-    this.isCompressingPhoto.set(true);
-
-    try {
-      const compressedDataUrl = await this.compressor.compressPhoto(file, 1024, 0.75);
-      this.sealPhotoPreview.set(compressedDataUrl);
-      this.audioService.playSuccess();
-      this.showAlert('success', '📷 Foto de sellos capturada y comprimida exitosamente.');
-    } catch {
-      this.audioService.playWarning();
-      this.showAlert('error', 'Error al procesar la fotografía.');
-    } finally {
-      this.isCompressingPhoto.set(false);
-      input.value = '';
-    }
-  }
-
-  protected removePhoto(): void {
-    this.sealPhotoPreview.set(null);
   }
 
   // ─── Registro de Entrada (Check-In) ─────────────────────────────────────────
@@ -719,7 +681,6 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       sealNumbers: seals,
       entryTime: new Date(),
       status: 'AT_RAMP',
-      photoUrl: this.sealPhotoPreview() || undefined,
       checklistData: { ...val }
     };
 

@@ -792,54 +792,6 @@
   font-size: 0.75rem;
 }
 
-.btn-camera-box {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border-radius: 10px;
-  background: var(--input-bg);
-  border: 1.5px dashed var(--gold-border);
-  color: var(--text-primary);
-  cursor: pointer;
-  min-height: 46px;
-}
-
-.photo-preview-small {
-  position: relative;
-  display: inline-block;
-  width: 48px;
-  height: 48px;
-}
-
-.photo-img-thumb {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1.5px solid var(--gold);
-}
-
-.btn-del-thumb {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #ef4444;
-  color: #ffffff;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-}
-
 /* ══════════════════════════════════════════════════════════════
    TABLA OFICIAL DE CHECKLIST F01 CON OBSERVACIONES MANUALES
 ══════════════════════════════════════════════════════════════ */

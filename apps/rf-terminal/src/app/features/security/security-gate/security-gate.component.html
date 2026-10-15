@@ -434,7 +434,7 @@
               </div>
 
               <!-- Sellos de Seguridad Fiscales -->
-              <div class="form-field sm:col-span-3">
+              <div class="form-field sm:col-span-4">
                 <label class="form-label">
                   Sellos / Cinchos de Seguridad
                   <span class="text-rose-500 font-bold">*</span>
@@ -462,35 +462,6 @@
                         <button type="button" (click)="removeSeal(i)" class="seal-chip-del">✕</button>
                       </span>
                     }
-                  </div>
-                }
-              </div>
-
-              <!-- Captura Fotográfica de Sellos -->
-              <div class="form-field sm:col-span-1">
-                <label class="form-label">Evidencia Fotográfica</label>
-                <input
-                  #cameraInput
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  (change)="onPhotoSelected($event)"
-                  class="hidden" />
-
-                @if (!sealPhotoPreview()) {
-                  <button
-                    type="button"
-                    (click)="triggerCamera()"
-                    [disabled]="isCompressingPhoto()"
-                    class="btn-camera-box"
-                    title="Tomar foto con la cámara">
-                    <span class="material-symbols-outlined text-xl text-amber-500">photo_camera</span>
-                    <span class="text-xs font-bold">Tomar Foto</span>
-                  </button>
-                } @else {
-                  <div class="photo-preview-small">
-                    <img [src]="sealPhotoPreview()" alt="Foto Sellos" class="photo-img-thumb" />
-                    <button type="button" (click)="removePhoto()" class="btn-del-thumb" title="Eliminar foto">✕</button>
                   </div>
                 }
               </div>
