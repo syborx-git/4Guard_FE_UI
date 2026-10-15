@@ -179,14 +179,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Catálogos Flexibles de Tipos de Transporte y Medidas ──
   protected readonly transportTypesList = signal<string[]>([
-    'Caja Seca',
-    'Caja Refrigerada',
-    'Plataforma',
+    'Camioneta',
     'Tortón',
     'Tráiler',
-    'Camioneta',
-    'Rabón',
-    'Full / Doble Remolque',
     'Otro (Especificar)'
   ]);
 

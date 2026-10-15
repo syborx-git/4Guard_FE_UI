@@ -154,14 +154,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   ]);
 
   protected readonly transportTypesList = signal<string[]>([
-    'Caja Seca',
-    'Caja Refrigerada',
-    'Plataforma',
+    'Camioneta',
     'Tortón',
     'Tráiler',
-    'Camioneta',
-    'Rabón',
-    'Full / Doble Remolque',
     'Otro (Especificar)'
   ]);
 
@@ -232,12 +227,12 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
     driverPhone: [''],
-    tipoTransporte: ['Caja Seca', Validators.required],
+    tipoTransporte: ['', Validators.required],
     tipoTransporteCustom: [''],
     placasTracto: ['', Validators.required],
     noEcoTractor: ['', Validators.required],
     placasCaja: ['', Validators.required],
-    medidasCaja: ['53 Pies', Validators.required],
+    medidasCaja: ['', Validators.required],
     medidasCajaCustom: [''],
 
     // 3. Revisión del Transporte — EPP (Observaciones vacías por defecto)
@@ -287,7 +282,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '45-TR-2M',
       ecoNumber: 'TC-402',
       boxDimensions: '53 Pies',
-      transportType: 'Caja Seca',
+      transportType: 'Tráiler',
       operationType: 'INBOUND',
       documentNumber: 'REM-884120',
       clientName: 'Walmart Logistics',
@@ -309,7 +304,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '90-QQ-1L',
       ecoNumber: 'TUM-88',
       boxDimensions: '48 Pies',
-      transportType: 'Caja Refrigerada',
+      transportType: 'Tortón',
       operationType: 'INBOUND',
       documentNumber: 'REM-991204',
       clientName: 'Soriana Cedis',
@@ -331,7 +326,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '66-PL-9A',
       ecoNumber: 'AEF-19',
       boxDimensions: '53 Pies',
-      transportType: 'Caja Seca',
+      transportType: 'Tráiler',
       operationType: 'OUTBOUND',
       documentNumber: 'CP-2026-00412',
       clientName: 'Costco México',
@@ -361,7 +356,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '45-TR-2M',
       ecoNumber: 'TC-402',
       boxDimensions: '53 Pies',
-      transportType: 'Caja Seca',
+      transportType: 'Tráiler',
       operationType: 'INBOUND',
       documentNumber: 'REM-884120',
       clientName: 'Walmart Logistics',
@@ -387,7 +382,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '90-QQ-1L',
       ecoNumber: 'TUM-88',
       boxDimensions: '48 Pies',
-      transportType: 'Caja Refrigerada',
+      transportType: 'Tortón',
       operationType: 'INBOUND',
       documentNumber: 'REM-991204',
       clientName: 'Soriana Cedis',
@@ -412,7 +407,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '66-PL-9A',
       ecoNumber: 'AEF-19',
       boxDimensions: '53 Pies',
-      transportType: 'Caja Seca',
+      transportType: 'Tráiler',
       operationType: 'OUTBOUND',
       documentNumber: 'CP-2026-00412',
       clientName: 'Costco México',
@@ -442,7 +437,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       boxPlates: '12-BB-8K',
       ecoNumber: 'TG-104',
       boxDimensions: '53 Pies',
-      transportType: 'Caja Seca',
+      transportType: 'Tráiler',
       operationType: 'INBOUND',
       documentNumber: 'REM-77192',
       clientName: 'Amazon México',
@@ -706,47 +701,27 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
   // ─── Normalización y Gestión Dinámica de Tipos de Transporte y Medidas ──────
   protected normalizeTransportType(rawType?: string | null): string {
-    if (!rawType || !rawType.trim()) return 'Caja Seca';
+    if (!rawType || !rawType.trim()) return '';
     const clean = rawType.trim();
     const upper = clean.toUpperCase();
 
-    // 1. Mapeos de alias logísticos y telemetría
-    if (upper === 'REEFER' || upper.includes('REFRIGERAD') || upper.includes('TERMO')) {
-      return 'Caja Refrigerada';
-    }
-    if (upper === 'DRY_VAN' || upper === 'DRY VAN' || upper.includes('SECA') || upper.includes('CAJA SECA')) {
-      return 'Caja Seca';
-    }
-    if (upper === 'FLATBED' || upper.includes('PLATAFORMA')) {
-      return 'Plataforma';
-    }
-    if (upper === 'TORTON' || upper === 'TORTÓN' || upper.includes('TORTON') || upper.includes('TORTÓN')) {
-      return 'Tortón';
-    }
-    if (upper === 'TRAILER' || upper === 'TRÁILER' || upper.includes('TRAILER') || upper.includes('TRÁILER') || upper.includes('TRACTO')) {
-      return 'Tráiler';
-    }
+    // Mapeos oficiales a las 4 opciones autorizadas
     if (upper === 'CAMIONETA' || upper.includes('PICKUP') || upper.includes('VAN')) {
       return 'Camioneta';
     }
-    if (upper === 'RABON' || upper === 'RABÓN' || upper.includes('RABON') || upper.includes('RABÓN')) {
-      return 'Rabón';
+    if (upper === 'TORTON' || upper === 'TORTÓN' || upper.includes('TORTON') || upper.includes('TORTÓN') || upper.includes('RABON') || upper.includes('RABÓN')) {
+      return 'Tortón';
     }
-    if (upper.includes('FULL') || upper.includes('DOBLE')) {
-      return 'Full / Doble Remolque';
+    if (upper === 'TRAILER' || upper === 'TRÁILER' || upper.includes('TRAILER') || upper.includes('TRÁILER') || upper.includes('TRACTO') || upper.includes('SECA') || upper.includes('REFRIGERAD') || upper.includes('REEFER') || upper.includes('PLATAFORMA') || upper.includes('FULL') || upper.includes('DOBLE')) {
+      return 'Tráiler';
     }
 
-    // 2. Coincidencia case-insensitive con el catálogo
+    // Coincidencia con catálogo
     const exact = this.transportTypesList().find(t => t.toLowerCase() === clean.toLowerCase());
     if (exact) return exact;
 
-    // 3. Registro dinámico para no romper el <select> si llega un tipo personalizado no catalogado
-    this.transportTypesList.update(list => [
-      ...list.filter(x => x !== 'Otro (Especificar)'),
-      clean,
-      'Otro (Especificar)'
-    ]);
-    return clean;
+    // Cualquier otra opción no estándar se cataloga como 'Otro (Especificar)'
+    return 'Otro (Especificar)';
   }
 
   protected normalizeBoxDimensions(rawDim?: string | null): string {
@@ -904,8 +879,8 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       revIndiciosPlagas: 'NO',
       responsableVigilanciaNombre: 'Guardia de Turno - Caseta Principal',
       responsableVigilanciaFirma: true,
-      tipoTransporte: 'Caja Seca',
-      medidasCaja: '53 Pies'
+      tipoTransporte: '',
+      medidasCaja: ''
     });
     this.sealList.set([]);
     this.showAlert('warning', 'Formulario limpiado para captura manual.');
@@ -968,10 +943,10 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       ecoNumber: val.noEcoTractor?.trim() || undefined,
       boxDimensions: (this.isCustomBoxDimension() && this.customBoxDimensionInput().trim())
         ? this.customBoxDimensionInput().trim()
-        : (val.medidasCaja || '53 Pies'),
+        : (val.medidasCaja || ''),
       transportType: (this.isCustomTransportType() && this.customTransportInput().trim())
         ? this.customTransportInput().trim()
-        : (val.tipoTransporte || 'Caja Seca'),
+        : (val.tipoTransporte || ''),
       operationType: isOutbound ? 'OUTBOUND' : 'INBOUND',
       documentNumber: isOutbound ? val.noCartaPorte : val.remision,
       clientName: val.client === 'OTRO' ? val.clientNameCustom : val.client,
@@ -1054,9 +1029,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       placasTracto: vehicle.tractorPlates,
       noEcoTractor: vehicle.ecoNumber || 'ECO-01',
       placasCaja: vehicle.boxPlates,
-      medidasCaja: vehicle.boxDimensions || '53 Pies',
+      medidasCaja: vehicle.boxDimensions || '',
       noSello: vehicle.sealNumbers.join(', '),
-      tipoTransporte: vehicle.transportType || 'Caja Seca',
+      tipoTransporte: vehicle.transportType || '',
 
       eppZapatos: chk.eppZapatos || 'SI',
       eppZapatosObs: chk.eppZapatosObs || '',

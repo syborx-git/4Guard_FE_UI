@@ -213,7 +213,7 @@ export interface TransportChecklistPrintData {
             <td class="f01-lbl">No. Sello(s):</td>
             <td class="f01-val font-mono font-bold text-highlight">{{ data.noSello || '-' }}</td>
             <td class="f01-lbl">Tipo Unidad:</td>
-            <td class="f01-val font-semibold">{{ data.tipoTransporte || 'Caja Seca' }}</td>
+            <td class="f01-val font-semibold">{{ data.tipoTransporte || '-' }}</td>
           </tr>
         </tbody>
       </table>
