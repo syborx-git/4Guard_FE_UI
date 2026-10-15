@@ -926,79 +926,132 @@
           </div>
         </div>
 
-        <!-- Buscador Reactivo -->
-        <div class="search-bar-row mt-3">
+        <!-- Barra Superior: Buscador Reactivo + Toggle de Vista Compacta/Tarjetas -->
+        <div class="yard-toolbar-row mt-3">
           <div class="search-input-wrap">
             <span class="material-symbols-outlined search-icon">search</span>
             <input
               type="search"
               [ngModel]="searchQuery()"
               (ngModelChange)="searchQuery.set($event)"
-              placeholder="Buscar por placa, chofer, folio, remisión..."
+              placeholder="Buscar por placa, chofer, folio WMS, remisión..."
               class="rf-search-input" />
+          </div>
+
+          <!-- Selector de Modo de Vista (Tarjetas / Compacto) -->
+          <div class="yard-view-toggle" role="group" aria-label="Modo de Vista">
+            <button
+              type="button"
+              class="view-toggle-btn"
+              [class.view-toggle-btn--active]="yardViewMode() === 'CARDS'"
+              (click)="yardViewMode.set('CARDS')"
+              title="Vista en Tarjetas Ejecutivas">
+              <span class="material-symbols-outlined">grid_view</span>
+              <span class="hidden sm:inline">Tarjetas</span>
+            </button>
+            <button
+              type="button"
+              class="view-toggle-btn"
+              [class.view-toggle-btn--active]="yardViewMode() === 'COMPACT'"
+              (click)="yardViewMode.set('COMPACT')"
+              title="Vista Compacta">
+              <span class="material-symbols-outlined">view_agenda</span>
+              <span class="hidden sm:inline">Compacto</span>
+            </button>
           </div>
         </div>
 
-        <!-- Lista de Tarjetas de Vehículos -->
-        <div class="yard-vehicles-grid mt-3">
+        <!-- Lista de Vehículos en Patio (Modo Dinámico: CARDS vs COMPACT) -->
+        <div class="yard-vehicles-grid mt-3" [class.yard-vehicles-grid--compact]="yardViewMode() === 'COMPACT'">
           @for (vehicle of filteredVehicles(); track vehicle.id) {
-            <div class="yard-vehicle-card" [class.yard-vehicle-card--waiting]="vehicle.status === 'WAITING_RAMP'">
+            <div class="yard-vehicle-card" [class.yard-vehicle-card--waiting]="vehicle.status === 'WAITING_RAMP'" [class.yard-vehicle-card--ready]="vehicle.status === 'DISCHARGE_FINISHED' || vehicle.isReadyForExit">
+              
+              <!-- Cabecera de la Tarjeta -->
               <div class="yard-vehicle-card__header">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="badge-op-type" [ngClass]="vehicle.operationType === 'INBOUND' ? 'badge-op--inbound' : 'badge-op--outbound'">
+                    <span class="material-symbols-outlined text-xs">
+                      {{ vehicle.operationType === 'INBOUND' ? 'download' : 'upload' }}
+                    </span>
                     {{ vehicle.operationType === 'INBOUND' ? 'DESCARGA' : 'CARGA' }}
                   </span>
-                  <span class="font-mono font-black text-sm text-slate-950 dark:text-white">{{ vehicle.tractorPlates }}</span>
-                  <span class="text-xs text-muted font-mono">/ Caja: {{ vehicle.boxPlates }}</span>
+                  
+                  <div class="vehicle-plates-tag">
+                    <span class="plate-tracto">{{ vehicle.tractorPlates }}</span>
+                    <span class="plate-divider">/</span>
+                    <span class="plate-box">{{ vehicle.boxPlates }}</span>
+                  </div>
                 </div>
-                <span class="badge-status" [ngClass]="'badge-status--' + vehicle.status">
-                  {{ getStatusLabel(vehicle.status) }}
-                </span>
+
+                <div class="flex items-center gap-2">
+                  <span class="badge-status" [ngClass]="'badge-status--' + vehicle.status">
+                    {{ getStatusLabel(vehicle.status) }}
+                  </span>
+                </div>
               </div>
 
+              <!-- Cuerpo de la Tarjeta: Bloques Estructurados de Información -->
               <div class="yard-vehicle-card__body">
-                <div class="vehicle-info-line">
-                  <span class="info-label">Folio WMS:</span>
-                  <strong class="info-val font-mono text-amber-700 dark:text-amber-400">{{ vehicle.entryFolio }}</strong>
+                
+                <!-- Fila 1: Folio y Operador -->
+                <div class="info-block-row">
+                  <div class="info-item">
+                    <span class="info-label">FOLIO WMS</span>
+                    <strong class="info-val font-mono text-amber-500 font-bold tracking-wide">{{ vehicle.entryFolio }}</strong>
+                  </div>
+                  <div class="info-item text-right">
+                    <span class="info-label">OPERADOR</span>
+                    <strong class="info-val truncate block max-w-[180px]">{{ vehicle.driverName }}</strong>
+                  </div>
                 </div>
-                <div class="vehicle-info-line">
-                  <span class="info-label">Chofer:</span>
-                  <strong class="info-val">{{ vehicle.driverName }}</strong>
+
+                <!-- Fila 2: Transportista y Documento -->
+                <div class="info-block-row">
+                  <div class="info-item">
+                    <span class="info-label">LÍNEA TRANSPORTISTA</span>
+                    <span class="info-val truncate block max-w-[220px]" [title]="vehicle.carrierName">{{ vehicle.carrierName }}</span>
+                  </div>
+                  <div class="info-item text-right">
+                    <span class="info-label">DOCUMENTO</span>
+                    <span class="info-val font-mono text-xs font-semibold">{{ vehicle.documentNumber }}</span>
+                  </div>
                 </div>
-                <div class="vehicle-info-line">
-                  <span class="info-label">Línea:</span>
-                  <span class="info-val truncate">{{ vehicle.carrierName }}</span>
+
+                <!-- Fila 3: Sellos y Tiempo en Patio -->
+                <div class="info-block-row">
+                  <div class="info-item">
+                    <span class="info-label">SELLOS DE SEGURIDAD</span>
+                    <span class="info-val font-mono text-xs text-slate-300 font-semibold truncate block max-w-[200px]" [title]="vehicle.sealNumbers.join(', ')">
+                      {{ vehicle.sealNumbers.length > 0 ? vehicle.sealNumbers.join(', ') : 'SIN SELLOS' }}
+                    </span>
+                  </div>
+                  <div class="info-item text-right">
+                    <span class="info-label">ESTANCIA EN PATIO</span>
+                    <span class="info-val font-mono font-bold" [ngClass]="formatStayDuration(vehicle.entryTime).slaClass">
+                      ⏱ {{ formatStayDuration(vehicle.entryTime).text }}
+                    </span>
+                  </div>
                 </div>
-                <div class="vehicle-info-line">
-                  <span class="info-label">Doc:</span>
-                  <span class="info-val font-mono text-xs font-bold">{{ vehicle.documentNumber }}</span>
-                </div>
-                <div class="vehicle-info-line">
-                  <span class="info-label">Sellos:</span>
-                  <span class="info-val font-mono text-xs font-bold text-amber-800 dark:text-amber-300">
-                    {{ vehicle.sealNumbers.join(', ') }}
-                  </span>
-                </div>
-                <div class="vehicle-info-line">
-                  <span class="info-label">Estancia:</span>
-                  <span class="info-val font-mono font-bold" [ngClass]="formatStayDuration(vehicle.entryTime).slaClass">
-                    ⏱ {{ formatStayDuration(vehicle.entryTime).text }}
-                  </span>
-                </div>
-                <div class="vehicle-info-line">
-                  <span class="info-label">Rampa:</span>
+
+                <!-- Fila 4: Asignación de Rampa (Andén) -->
+                <div class="ramp-status-banner">
+                  <span class="info-label text-xs uppercase tracking-wider font-bold">ANDÉN / RAMPA</span>
                   @if (hasRampAssigned(vehicle)) {
-                    <span class="badge-ramp animate-pulse" title="Rampa asignada en almacén. Notificar verbalmente al transportista.">
-                      🔔 {{ formatRampDisplay(vehicle) }}
+                    <span class="badge-ramp-active" title="Rampa asignada en almacén">
+                      <span class="material-symbols-outlined text-sm text-amber-400 animate-bounce">notifications_active</span>
+                      <span>{{ formatRampDisplay(vehicle) }}</span>
                     </span>
                   } @else {
-                    <span class="badge-ramp-pending" title="En espera de asignación de rampa en almacén">
-                      ⏳ Por Asignar (Almacén)
+                    <span class="badge-ramp-waiting" title="En espera de asignación de rampa en almacén">
+                      <span class="material-symbols-outlined text-sm text-amber-400/70">hourglass_top</span>
+                      <span>Por Asignar (Almacén)</span>
                     </span>
                   }
                 </div>
+
               </div>
 
+              <!-- Acciones de la Tarjeta -->
               <div class="yard-vehicle-card__actions grid grid-cols-2 gap-2">
                 <!-- Botón de Descarga / Ver Formato F01 Oficial -->
                 <button
@@ -1023,7 +1076,7 @@
                   <button
                     type="button"
                     disabled
-                    class="btn-action-sm btn-action-sm--muted"
+                    class="btn-action-sm btn-action-sm--disabled"
                     [title]="'La maniobra se encuentra en proceso en almacén (' + (vehicle.operationType === 'OUTBOUND' ? 'Carga' : 'Descarga') + '). El guardia no puede dar salida hasta autorización de almacén.'">
                     <span class="material-symbols-outlined text-xs">lock</span>
                     <span>{{ vehicle.operationType === 'OUTBOUND' ? 'En Carga' : 'En Descarga' }}</span>

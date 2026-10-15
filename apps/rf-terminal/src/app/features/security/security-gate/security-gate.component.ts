@@ -127,6 +127,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   // ─── Búsqueda & Filtro en Patio / Salida ─────────────────────────────────────
   protected readonly searchQuery = signal('');
   protected readonly yardFilter = signal<'ALL' | 'WAITING' | 'AT_RAMP' | 'READY'>('ALL');
+  protected readonly yardViewMode = signal<'CARDS' | 'COMPACT'>('CARDS');
 
   // ─── Token y Datos de Pase Vinculado Activo ──────────────────────────────────
   protected readonly activeLoadedToken = signal<string | null>(null);
