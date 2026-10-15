@@ -128,8 +128,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly searchQuery = signal('');
   protected readonly yardFilter = signal<'ALL' | 'WAITING' | 'AT_RAMP' | 'READY'>('ALL');
 
-  // ─── Token de Pase Vinculado Activo ──────────────────────────────────────────
+  // ─── Token y Datos de Pase Vinculado Activo ──────────────────────────────────
   protected readonly activeLoadedToken = signal<string | null>(null);
+  protected readonly activeLoadedPass = signal<DriverSubmittedPass | null>(null);
 
   // ─── Catálogos Oficiales ───────────────────────────────────────────────────
   protected readonly carrierLinesList = signal<string[]>([
@@ -780,6 +781,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   // ─── Carga Rápida 1-Tap desde Solicitud de Chofer (ADR-017) ─────────────────
   protected loadPassIntoForm(pass: DriverSubmittedPass): void {
     this.activeLoadedToken.set(pass.token);
+    this.activeLoadedPass.set(pass);
 
     const isCarga = pass.operationType === 'OUTBOUND';
     const opValue = isCarga ? 'CARGA' : 'DESCARGA';
@@ -853,6 +855,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
   protected clearLoadedPass(): void {
     this.activeLoadedToken.set(null);
+    this.activeLoadedPass.set(null);
     this.isCustomTransportType.set(false);
     this.customTransportInput.set('');
     this.isCustomBoxDimension.set(false);

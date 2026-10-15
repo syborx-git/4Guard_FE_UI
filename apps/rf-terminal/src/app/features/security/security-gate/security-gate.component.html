@@ -263,20 +263,77 @@
           }
         </div>
 
-        <!-- ── BANNER DE PASE VINCULADO ── -->
+        <!-- ── BANNER EJECUTIVO DE PASE VINCULADO (TELEMETRÍA F01) ── -->
         @if (activeLoadedToken(); as tok) {
-          <div class="loaded-token-banner animate-fade-in">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-amber-500 font-bold">bolt</span>
-              <div>
-                <strong class="text-sm text-slate-900 dark:text-amber-300">Pase Chofer Vinculado: {{ tok }}</strong>
-                <span class="text-xs text-muted block">Datos precargados del Formato F01 móvil. Verifica sellos, inspección y asigna rampa.</span>
+          <div class="loaded-token-card animate-fade-in">
+            <div class="loaded-token-header">
+              <div class="loaded-badge-pulse">
+                <span class="material-symbols-outlined text-amber-400 font-bold">bolt</span>
+              </div>
+              <div class="loaded-title-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge-status-linked">SOLICITUD MÓVIL VINCULADA</span>
+                  <span class="token-code-tag">{{ tok }}</span>
+                  @if (activeLoadedPass(); as pass) {
+                    <span class="badge-op-tag" [class.badge-op-carga]="pass.operationType === 'OUTBOUND'" [class.badge-op-descarga]="pass.operationType !== 'OUTBOUND'">
+                      <span class="material-symbols-outlined text-xs">
+                        {{ pass.operationType === 'OUTBOUND' ? 'upload' : 'download' }}
+                      </span>
+                      {{ pass.operationType === 'OUTBOUND' ? 'CARGA' : 'DESCARGA' }}
+                    </span>
+                  }
+                </div>
+                <p class="loaded-subtitle">
+                  Datos precargados del Formato F01 móvil. Verifica sellos, inspección física y autoriza el acceso a patio.
+                </p>
+              </div>
+
+              <div class="loaded-actions">
+                <button type="button" (click)="clearLoadedPass()" class="btn-unlink-pass" title="Desvincular solicitud y capturar manualmente">
+                  <span class="material-symbols-outlined text-base">link_off</span>
+                  <span>Desvincular</span>
+                </button>
               </div>
             </div>
-            <button type="button" (click)="clearLoadedPass()" class="btn-clear-token" title="Limpiar y capturar manualmente">
-              <span class="material-symbols-outlined text-sm">close</span>
-              <span>Desvincular</span>
-            </button>
+
+            <!-- Chips de Telemetría Precargada -->
+            @if (activeLoadedPass(); as pass) {
+              <div class="loaded-telemetry-grid">
+                <div class="telemetry-pill">
+                  <span class="material-symbols-outlined pill-icon">person</span>
+                  <div class="pill-data">
+                    <span class="pill-label">Operador</span>
+                    <strong class="pill-val">{{ pass.driverName }}</strong>
+                  </div>
+                </div>
+
+                <div class="telemetry-pill">
+                  <span class="material-symbols-outlined pill-icon">local_shipping</span>
+                  <div class="pill-data">
+                    <span class="pill-label">Línea Transportista</span>
+                    <strong class="pill-val">{{ pass.carrierName }}</strong>
+                  </div>
+                </div>
+
+                <div class="telemetry-pill">
+                  <span class="material-symbols-outlined pill-icon">pin</span>
+                  <div class="pill-data">
+                    <span class="pill-label">Placas Tracto / Caja</span>
+                    <strong class="pill-val">{{ pass.tractorPlates }} &bull; {{ pass.boxPlates }}</strong>
+                  </div>
+                </div>
+
+                @if (pass.ecoNumber) {
+                  <div class="telemetry-pill">
+                    <span class="material-symbols-outlined pill-icon">badge</span>
+                    <div class="pill-data">
+                      <span class="pill-label">No. Económico</span>
+                      <strong class="pill-val">{{ pass.ecoNumber }}</strong>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
           </div>
         }
 
