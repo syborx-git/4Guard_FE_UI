@@ -214,7 +214,8 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     clientNameCustom: [''],
     horaEntrada: [this.getCurrentTimeString(), Validators.required],
     horaSalida: [''],
-    rampNumber: ['', Validators.required],
+    rampCode: [''],
+    rampNumber: [null as number | null],
 
     // 2. Datos del Transporte
     carrierLine: ['', Validators.required],
@@ -454,8 +455,6 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly checkoutObservations = signal('');
   protected readonly checkoutNotes = signal('');
 
-  // ─── Modal de Asignación Rápida de Rampa ────────────────────────────────────
-  protected readonly selectedVehicleForRamp = signal<YardVehicle | null>(null);
 
   // ─── Computed Metrics & Lists ───────────────────────────────────────────────
   protected readonly yardCount = computed(() => this.yardVehicles().length);
@@ -775,7 +774,6 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     if (!val.placasTracto || !val.placasTracto.trim()) missing.push('Placas del Tracto');
     if (!val.noEcoTractor || !val.noEcoTractor.trim()) missing.push('No. Económico Tracto');
     if (!val.placasCaja || !val.placasCaja.trim()) missing.push('Placas de la Caja');
-    if (!val.rampNumber) missing.push('Andén / Rampa');
 
     // Regla de Negocio: En DESCARGA es obligatorio registrar al menos 1 sello/cincho físico de llegada. En CARGA no.
     if (!isOutbound && this.sealList().length === 0) {
@@ -795,7 +793,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     const seals = this.sealList().length > 0
       ? this.sealList()
       : (isOutbound ? ['PENDIENTE_ANDEN'] : ['SL-00000']);
-    const rampNum = val.rampNumber ? Number(val.rampNumber) : 1;
+    const rampNum = val.rampNumber ? Number(val.rampNumber) : undefined;
 
     const newVehicle: YardVehicle = {
       id: `veh-${Date.now()}`,
@@ -815,7 +813,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       rampNumber: rampNum,
       sealNumbers: seals,
       entryTime: new Date(),
-      status: 'AT_RAMP',
+      status: rampNum ? 'AT_RAMP' : 'WAITING_RAMP',
+      isReadyForExit: false,
+      warehouseStatus: 'IN_PROGRESS',
       checklistData: { ...val }
     };
 
@@ -825,19 +825,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       this.activePasses.update(list => list.filter(p => p.token !== loadedTok));
     }
 
-    // Conexión con Módulo de Rampas / Andenes: Ocupar la rampa seleccionada
-    if (val.rampNumber) {
-      const assignedRampNum = Number(val.rampNumber);
-      this.rampOptions.update((ramps) =>
-        ramps.map((r) =>
-          r.num === assignedRampNum
-            ? { ...r, available: false, occupiedBy: val.placasTracto?.trim().toUpperCase() }
-            : r
-        )
-      );
-    }
-
-    // Agregar al patio
+    // Agregar al patio en espera de asignación de andén por Almacén
     this.yardVehicles.update((list) => [newVehicle, ...list]);
     this.audioService.playSuccess();
 
@@ -850,12 +838,25 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
     this.showAlert(
       'success',
-      `✅ Arribo autorizado con Folio ${generatedFolio}. Rampa 0${rampNum} asignada. Pluma abierta.`
+      `✅ Arribo autorizado con Folio ${generatedFolio}. Ingreso a patio registrado (Pendiente de asignación de rampa por Almacén). Pluma abierta.`
     );
 
     // Reset de formulario
     this.activeLoadedToken.set(null);
     this.clearLoadedPass();
+  }
+
+  // ─── Helpers de Rampa Homologados con Admin Console ─────────────────────────
+  protected hasRampAssigned(item: YardVehicle): boolean {
+    return item.rampNumber != null && Number(item.rampNumber) > 0;
+  }
+
+  protected formatRampDisplay(item: YardVehicle): string {
+    if (item.rampNumber != null && Number(item.rampNumber) > 0) {
+      const num = Number(item.rampNumber);
+      return `Andén R-${num < 10 ? '0' + num : num}`;
+    }
+    return 'Por Asignar en Almacén';
   }
 
   // ─── Generación & Descarga PDF del Formato Oficial F01 ──────────────────────
@@ -964,42 +965,6 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     this.audioService.playSuccess();
   }
 
-  // ─── Modal & Asignación Rápida de Rampa ────────────────────────────────────
-  protected openRampModal(vehicle: YardVehicle): void {
-    this.selectedVehicleForRamp.set(vehicle);
-    this.audioService.playSuccess();
-  }
-
-  protected closeRampModal(): void {
-    this.selectedVehicleForRamp.set(null);
-  }
-
-  protected selectRampQuick(rampNumber: number): void {
-    const vehicle = this.selectedVehicleForRamp();
-    if (!vehicle) return;
-
-    const prevRamp = vehicle.rampNumber;
-    // Conexión con Rampas / Andenes: Liberar previa y ocupar nueva
-    this.rampOptions.update((ramps) =>
-      ramps.map((r) => {
-        if (prevRamp && r.num === prevRamp) {
-          return { ...r, available: true, occupiedBy: undefined };
-        }
-        if (r.num === rampNumber) {
-          return { ...r, available: false, occupiedBy: vehicle.tractorPlates };
-        }
-        return r;
-      })
-    );
-
-    this.yardVehicles.update((list) =>
-      list.map((v) => (v.id === vehicle.id ? { ...v, rampNumber, status: 'AT_RAMP' } : v))
-    );
-
-    this.closeRampModal();
-    this.audioService.playSuccess();
-    this.showAlert('success', `Rampa 0${rampNumber} asignada al tracto ${vehicle.tractorPlates}.`);
-  }
 
   // ─── Modal de Check-out (Salida & Cotejo de Sellos) ──────────────────────────
   protected openCheckoutModal(vehicle: YardVehicle): void {

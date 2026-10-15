@@ -926,6 +926,49 @@
   letter-spacing: 0.05em;
 }
 
+/* ── Badge de Rampa Bloqueada en Caseta (Asignación exclusiva por Almacén) ── */
+.security-ramp-locked-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1.5px dashed rgba(245, 158, 11, 0.45);
+  color: var(--text-secondary);
+  font-size: 0.80rem;
+  font-weight: 700;
+  min-height: 46px;
+  box-sizing: border-box;
+}
+
+:host-context(.theme-dark) .security-ramp-locked-badge,
+:host-context(.dark) .security-ramp-locked-badge,
+:host-context([data-theme='dark']) .security-ramp-locked-badge {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+.badge-ramp-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px dashed rgba(245, 158, 11, 0.45);
+  color: #f59e0b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.btn-action-sm--muted {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
 /* ══════════════════════════════════════════════════════════════
    TABLA OFICIAL DE CHECKLIST F01 CON OBSERVACIONES MANUALES
 ══════════════════════════════════════════════════════════════ */

@@ -333,17 +333,13 @@
                 <input id="horaEntrada" type="time" formControlName="horaEntrada" class="rf-input font-mono" />
               </div>
 
-              <!-- Rampa / Andén -->
+              <!-- Rampa / Andén (Asignación exclusiva por Almacén) -->
               <div class="form-field">
-                <label class="form-label" for="rampNumber">Andén / Rampa *</label>
-                <select id="rampNumber" formControlName="rampNumber" class="rf-input font-bold text-amber-600 dark:text-amber-400">
-                  <option value="">-- Seleccionar Rampa --</option>
-                  @for (rm of rampOptions(); track rm.num) {
-                    <option [value]="rm.num" [disabled]="!rm.available">
-                      {{ rm.label }} {{ rm.available ? '(Disponible)' : '(Ocupada: ' + rm.occupiedBy + ')' }}
-                    </option>
-                  }
-                </select>
+                <label class="form-label">Andén / Rampa</label>
+                <div class="security-ramp-locked-badge" title="La rampa es asignada automáticamente por el personal de Recepción / Almacén">
+                  <span class="material-symbols-outlined text-sm text-amber-500">lock_clock</span>
+                  <span class="truncate text-xs font-bold text-slate-700 dark:text-slate-300">Pendiente de asignación por Almacén</span>
+                </div>
               </div>
             </div>
           </div>
@@ -855,12 +851,18 @@
                     ⏱ {{ formatStayDuration(vehicle.entryTime).text }}
                   </span>
                 </div>
-                @if (vehicle.rampNumber) {
-                  <div class="vehicle-info-line">
-                    <span class="info-label">Rampa:</span>
-                    <span class="info-val badge-ramp">RAMPA 0{{ vehicle.rampNumber }}</span>
-                  </div>
-                }
+                <div class="vehicle-info-line">
+                  <span class="info-label">Rampa:</span>
+                  @if (hasRampAssigned(vehicle)) {
+                    <span class="badge-ramp animate-pulse" title="Rampa asignada en almacén. Notificar verbalmente al transportista.">
+                      🔔 {{ formatRampDisplay(vehicle) }}
+                    </span>
+                  } @else {
+                    <span class="badge-ramp-pending" title="En espera de asignación de rampa en almacén">
+                      ⏳ Por Asignar (Almacén)
+                    </span>
+                  }
+                </div>
               </div>
 
               <div class="yard-vehicle-card__actions grid grid-cols-2 gap-2">
@@ -874,32 +876,23 @@
                   <span>Formato F01</span>
                 </button>
 
-                @if (vehicle.status === 'WAITING_RAMP') {
-                  <button
-                    type="button"
-                    (click)="openRampModal(vehicle)"
-                    class="btn-action-sm btn-action-sm--gold"
-                    title="Asignar Rampa rápida">
-                    <span class="material-symbols-outlined text-sm">dock</span>
-                    <span>Asignar Rampa</span>
-                  </button>
-                } @else if (vehicle.status === 'DISCHARGE_FINISHED') {
+                @if (vehicle.isReadyForExit || vehicle.status === 'DISCHARGE_FINISHED' || vehicle.status === 'AUTHORIZED_DEPARTURE') {
                   <button
                     type="button"
                     (click)="openCheckoutModal(vehicle)"
                     class="btn-action-sm btn-action-sm--green"
-                    title="Proceder a Salida">
+                    title="Proceder a Salida y Cotejo de Sellos">
                     <span class="material-symbols-outlined text-sm">exit_to_app</span>
                     <span>Validar Salida</span>
                   </button>
                 } @else {
                   <button
                     type="button"
-                    (click)="openRampModal(vehicle)"
-                    class="btn-action-sm btn-action-sm--outline"
-                    title="Reasignar rampa">
-                    <span class="material-symbols-outlined text-sm">sync_alt</span>
-                    <span>Cambiar Rampa</span>
+                    disabled
+                    class="btn-action-sm btn-action-sm--muted"
+                    [title]="'La maniobra se encuentra en proceso en almacén (' + (vehicle.operationType === 'OUTBOUND' ? 'Carga' : 'Descarga') + '). El guardia no puede dar salida hasta autorización de almacén.'">
+                    <span class="material-symbols-outlined text-xs">lock</span>
+                    <span>{{ vehicle.operationType === 'OUTBOUND' ? 'En Carga' : 'En Descarga' }}</span>
                   </button>
                 }
               </div>
@@ -1227,46 +1220,5 @@
     </div>
   }
 
-  <!-- ── 6. Modal de Asignación Rápida de Rampa ───────────────────── -->
-  @if (selectedVehicleForRamp(); as vehicleToRamp) {
-    <div class="rf-modal-backdrop" (click)="closeRampModal()">
-      <div class="rf-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
-        <div class="rf-modal-header">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-2xl text-amber-600">dock</span>
-            <h3 class="rf-modal-title">Asignar Rampa a {{ vehicleToRamp.tractorPlates }}</h3>
-          </div>
-          <button type="button" class="btn-modal-close" (click)="closeRampModal()">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <div class="rf-modal-body space-y-3">
-          <p class="text-xs text-muted">Selecciona un andén disponible para iniciar maniobra:</p>
-
-          <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            @for (ramp of rampOptions(); track ramp.num) {
-              <button
-                type="button"
-                [disabled]="!ramp.available"
-                (click)="selectRampQuick(ramp.num)"
-                class="ramp-selector-btn"
-                [class.ramp-selector-btn--occupied]="!ramp.available">
-                <span class="material-symbols-outlined text-lg">{{ ramp.available ? 'dock' : 'block' }}</span>
-                <span class="font-bold text-xs">{{ ramp.label }}</span>
-                <span class="text-[10px] opacity-75">{{ ramp.available ? 'Libre' : 'Ocupada' }}</span>
-              </button>
-            }
-          </div>
-        </div>
-
-        <div class="rf-modal-footer">
-          <button type="button" (click)="closeRampModal()" class="btn-modal-cancel">
-            <span>Cancelar</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  }
 
 </div>
