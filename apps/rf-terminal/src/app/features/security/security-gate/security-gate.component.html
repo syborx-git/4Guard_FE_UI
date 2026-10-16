@@ -1426,7 +1426,7 @@
                 type="text"
                 [ngModel]="checkoutSealInput()"
                 (ngModelChange)="checkoutSealInput.set($event)"
-                placeholder="Ej: SL-88120 ó SIN_SELLO"
+                placeholder="Ej: SL-88120 ó Sin Sello"
                 class="rf-checkout-input font-mono uppercase font-black tracking-wider" />
               <span class="input-badge-required" [class.input-badge-ok]="checkoutSealInput().trim().length > 0">
                 {{ checkoutSealInput().trim().length > 0 ? 'LISTO' : 'REQUERIDO' }}
