@@ -6,8 +6,8 @@
   "scripts": {
     "start:admin": "ng serve admin-console --configuration development --host 0.0.0.0 --disable-host-check --allowed-hosts all --proxy-config proxy.conf.js",
     "start:admin:dev": "ng serve admin-console --configuration develop --host 0.0.0.0 --disable-host-check --allowed-hosts all --proxy-config proxy.conf.js",
-    "start:rf": "ng serve rf-terminal --configuration development",
-    "start:rf:dev": "ng serve rf-terminal --configuration develop",
+    "start:rf": "ng serve rf-terminal --configuration development --proxy-config proxy.conf.js",
+    "start:rf:dev": "ng serve rf-terminal --configuration develop --proxy-config proxy.conf.js",
     "build:admin": "ng build admin-console --configuration production",
     "build:admin:dev": "ng build admin-console --configuration develop",
     "build:rf": "ng build rf-terminal --configuration production",

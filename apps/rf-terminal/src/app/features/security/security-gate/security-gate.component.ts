@@ -20,10 +20,12 @@ import { AudioFeedbackService } from '../../../core/services/audio-feedback.serv
 import { ImageCompressorService } from '../../../core/services/image-compressor.service';
 import { PrintService } from '../../../core/services/print.service';
 import { RfNotificationService } from '../../../core/services/rf-notification.service';
+import { SecurityGateApiService, SecurityGatePass } from '../../../core/services/security-gate-api.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
 } from '../print-transport-checklist-layout/print-transport-checklist-layout.component';
+import { IncomingPassCardComponent } from '../incoming-pass-card/incoming-pass-card.component';
 
 export type SecurityTab = 'REGISTRATION' | 'IN_YARD' | 'CHECKOUT' | 'HISTORY';
 
@@ -85,7 +87,8 @@ export interface YardVehicle {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    PrintTransportChecklistLayoutComponent
+    PrintTransportChecklistLayoutComponent,
+    IncomingPassCardComponent
   ],
   templateUrl: './security-gate.component.html',
   styleUrl: './security-gate.component.css',
@@ -98,6 +101,9 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly audioService = inject(AudioFeedbackService);
   protected readonly printService = inject(PrintService);
   protected readonly notifService = inject(RfNotificationService);
+  protected readonly apiService = inject(SecurityGateApiService);
+
+  protected readonly isLoadingData = signal(false);
 
   constructor() {
     effect(() => {
@@ -133,25 +139,20 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly activeLoadedToken = signal<string | null>(null);
   protected readonly activeLoadedPass = signal<DriverSubmittedPass | null>(null);
 
-  // ─── Catálogos Oficiales ───────────────────────────────────────────────────
+  // ─── Catálogos Oficiales (Sincronizados con Base de Datos PostgreSQL) ────────
   protected readonly carrierLinesList = signal<string[]>([
-    'Transportes Castores S.A. de C.V.',
-    'TUM Logística Internacional',
-    'Auto Express Frontera',
-    'Transportes Tresguerras',
-    'Fletes México',
-    'Beto Logistics',
+    'TRANSPORTADORA TERRESTRES DIAZ S.A. DE C.V.',
+    'TRANSPORTES EBEN EZER S.A. DE C.V.',
+    'TRANSPORTADORA GOLA S.A. DE C.V.',
+    'TRANSPORTES MONCHO S.A. DE C.V.',
+    'TUM TRANSPORTES UNIDOS MEXICANOS DIVISION DEL NORTE S.A. DE C.V.',
     'Otro (Especificar)'
   ]);
 
   protected readonly clientsList = signal<string[]>([
-    'Walmart Logistics',
-    'Soriana Cedis',
-    'Costco México',
-    'Chedraui Logística',
-    'Amazon México',
-    'Mercado Libre',
-    'OXXO Cedis',
+    'MARCAS NESTLE S.A. DE C.V.',
+    'NESTLE MEXICO S.A. DE C.V.',
+    'QUALAMEX S.A. DE C.V.',
     'Otro (Especificar)'
   ]);
 
@@ -272,189 +273,59 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     transportistaFirma: [false, Validators.requiredTrue]
   });
 
-  // ─── Bandeja en Vivo de Solicitudes de Choferes (ADR-017) ────────────────────
-  protected readonly activePasses = signal<DriverSubmittedPass[]>([
-    {
-      id: 'pass-001',
-      token: 'PASS-20260929-0104',
-      carrierName: 'Transportes Castores S.A. de C.V.',
-      driverName: 'Juan Carlos Mendoza',
-      driverPhone: '55-4812-9011',
-      tractorPlates: '72-AB-9K',
-      boxPlates: '45-TR-2M',
-      ecoNumber: 'TC-402',
-      boxDimensions: '53 Pies',
-      transportType: 'Tráiler',
-      operationType: 'INBOUND',
-      documentNumber: 'REM-884120',
-      clientName: 'Walmart Logistics',
-      sealNumbers: ['SL-99412', 'SL-99413'],
-      status: 'SUBMITTED',
-      submittedAt: new Date(Date.now() - 3 * 60000),
-      checklistData: {
-        epp: { zapatos: 'SI', chaleco: 'SI', cofia: 'SI', cubrebocas: 'SI' },
-        caja: { interior: 'SI', danos: 'NO', puertas: 'NO', olores: 'NO', plagas: 'NO' }
-      }
-    },
-    {
-      id: 'pass-002',
-      token: 'PASS-20260929-0105',
-      carrierName: 'TUM Logística Internacional',
-      driverName: 'Ernesto Beltrán',
-      driverPhone: '81-1902-3344',
-      tractorPlates: '11-XY-8P',
-      boxPlates: '90-QQ-1L',
-      ecoNumber: 'TUM-88',
-      boxDimensions: '48 Pies',
-      transportType: 'Tortón',
-      operationType: 'INBOUND',
-      documentNumber: 'REM-991204',
-      clientName: 'Soriana Cedis',
-      sealNumbers: ['SL-88120'],
-      status: 'SUBMITTED',
-      submittedAt: new Date(Date.now() - 8 * 60000),
-      checklistData: {
-        epp: { zapatos: 'SI', chaleco: 'SI', cofia: 'NO', cubrebocas: 'SI' },
-        caja: { interior: 'SI', danos: 'NO', puertas: 'NO', olores: 'NO', plagas: 'NO' }
-      }
-    },
-    {
-      id: 'pass-003',
-      token: 'PASS-20260929-0108',
-      carrierName: 'Auto Express Frontera',
-      driverName: 'Roberto Fuentes',
-      driverPhone: '66-4190-2211',
-      tractorPlates: '33-KZ-4R',
-      boxPlates: '66-PL-9A',
-      ecoNumber: 'AEF-19',
-      boxDimensions: '53 Pies',
-      transportType: 'Tráiler',
-      operationType: 'OUTBOUND',
-      documentNumber: 'CP-2026-00412',
-      clientName: 'Costco México',
-      sealNumbers: ['SL-77301'],
-      status: 'SUBMITTED',
-      submittedAt: new Date(Date.now() - 14 * 60000),
-      checklistData: {
-        epp: { zapatos: 'SI', chaleco: 'SI', cofia: 'SI', cubrebocas: 'SI' },
-        caja: { interior: 'SI', danos: 'NO', puertas: 'NO', olores: 'NO', plagas: 'NO' }
+  // ─── Bandeja en Vivo de Solicitudes de Choferes (100% Base de Datos / API / Tiempo Real) ────
+  protected readonly activePasses = signal<DriverSubmittedPass[]>([]);
+
+  /**
+   * Vista consolidada de solicitudes de choferes:
+   * Fusiona los pases activos del backend con las notificaciones recibidas en tiempo real
+   * (vía BroadcastChannel, Storage y Polling de RfNotificationService).
+   */
+  protected readonly displayActivePasses = computed<DriverSubmittedPass[]>(() => {
+    const fromBackend = this.activePasses();
+    const fromNotifs = this.notifService.pendingDriverPasses().map(p => ({
+      id: p.id || p.token,
+      token: p.token,
+      carrierName: p.carrierName,
+      driverName: p.driverName,
+      driverPhone: p.driverPhone,
+      tractorPlates: p.tractorPlates,
+      boxPlates: p.boxPlates || '',
+      ecoNumber: p.ecoNumber,
+      boxDimensions: p.boxDimensions,
+      transportType: p.transportType,
+      operationType: p.operationType,
+      documentNumber: p.documentNumber,
+      clientName: p.clientName,
+      sealNumbers: p.sealNumbers || [],
+      status: 'SUBMITTED' as const,
+      submittedAt: p.submittedAt instanceof Date ? p.submittedAt : new Date(p.submittedAt || Date.now()),
+      checklistData: p.checklistData
+    }));
+
+    const map = new Map<string, DriverSubmittedPass>();
+    // Prioridad 1: pases de backend
+    for (const pass of fromBackend) {
+      if (pass.token) map.set(pass.token, pass);
+    }
+    // Prioridad 2: incorporar o enriquecer con notificaciones en vivo
+    for (const notifPass of fromNotifs) {
+      if (notifPass.token && !map.has(notifPass.token)) {
+        map.set(notifPass.token, notifPass);
       }
     }
-  ]);
+
+    return Array.from(map.values());
+  });
 
   // ─── Estado de Notificación / Toast Local ───────────────────────────────────
   protected readonly alertMessage = signal<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null);
 
-  // ─── Vehículos en Patio (Persistencia / Mock Reactivo) ──────────────────────
-  protected readonly yardVehicles = signal<YardVehicle[]>([
-    {
-      id: 'veh-001',
-      entryFolio: 'REC-2026-000104',
-      token: 'PASS-20260929-0099',
-      driverName: 'Juan Carlos Mendoza',
-      driverPhone: '55-4812-9011',
-      carrierName: 'Transportes Castores S.A. de C.V.',
-      tractorPlates: '72-AB-9K',
-      boxPlates: '45-TR-2M',
-      ecoNumber: 'TC-402',
-      boxDimensions: '53 Pies',
-      transportType: 'Tráiler',
-      operationType: 'INBOUND',
-      documentNumber: 'REM-884120',
-      clientName: 'Walmart Logistics',
-      rampNumber: 3,
-      sealNumbers: ['SL-99412', 'SL-99413'],
-      entryTime: new Date(Date.now() - 42 * 60000),
-      status: 'AT_RAMP',
-      isReadyForExit: false,
-      warehouseStatus: 'IN_PROGRESS',
-      checklistData: {
-        eppZapatos: 'SI', eppChaleco: 'SI', eppCofia: 'SI', eppCubrebocas: 'SI',
-        revInteriorCaja: 'SI', revDanosCaja: 'NO', revDanosPuertas: 'NO', revOloresExtranos: 'NO', revIndiciosPlagas: 'NO'
-      }
-    },
-    {
-      id: 'veh-002',
-      entryFolio: 'REC-2026-000105',
-      token: 'PASS-20260929-0098',
-      driverName: 'Ernesto Beltrán',
-      driverPhone: '81-1902-3344',
-      carrierName: 'TUM Logística Internacional',
-      tractorPlates: '11-XY-8P',
-      boxPlates: '90-QQ-1L',
-      ecoNumber: 'TUM-88',
-      boxDimensions: '48 Pies',
-      transportType: 'Tortón',
-      operationType: 'INBOUND',
-      documentNumber: 'REM-991204',
-      clientName: 'Soriana Cedis',
-      sealNumbers: ['SL-88120'],
-      entryTime: new Date(Date.now() - 18 * 60000),
-      status: 'WAITING_RAMP',
-      isReadyForExit: false,
-      warehouseStatus: 'IN_PROGRESS',
-      checklistData: {
-        eppZapatos: 'SI', eppChaleco: 'SI', eppCofia: 'NO', eppCubrebocas: 'SI',
-        revInteriorCaja: 'SI', revDanosCaja: 'NO', revDanosPuertas: 'NO', revOloresExtranos: 'NO', revIndiciosPlagas: 'NO'
-      }
-    },
-    {
-      id: 'veh-003',
-      entryFolio: 'SAL-2026-000099',
-      token: 'PASS-20260929-0092',
-      driverName: 'Roberto Fuentes',
-      driverPhone: '66-4190-2211',
-      carrierName: 'Auto Express Frontera',
-      tractorPlates: '33-KZ-4R',
-      boxPlates: '66-PL-9A',
-      ecoNumber: 'AEF-19',
-      boxDimensions: '53 Pies',
-      transportType: 'Tráiler',
-      operationType: 'OUTBOUND',
-      documentNumber: 'CP-2026-00412',
-      clientName: 'Costco México',
-      rampNumber: 7,
-      sealNumbers: ['PENDIENTE_ANDEN'],
-      entryTime: new Date(Date.now() - 110 * 60000),
-      status: 'DISCHARGE_FINISHED',
-      isReadyForExit: true,
-      warehouseStatus: 'COMPLETED',
-      checklistData: {
-        eppZapatos: 'SI', eppChaleco: 'SI', eppCofia: 'SI', eppCubrebocas: 'SI',
-        revInteriorCaja: 'SI', revDanosCaja: 'NO', revDanosPuertas: 'NO', revOloresExtranos: 'NO', revIndiciosPlagas: 'NO'
-      }
-    },
-  ]);
+  // ─── Vehículos en Patio (100% Base de Datos / Spring Boot) ─────────────────
+  protected readonly yardVehicles = signal<YardVehicle[]>([]);
 
-  // ─── Historial & Auditoría de Egresos Oficiales (Salidas Concluidas) ────────
-  protected readonly historyVehicles = signal<YardVehicle[]>([
-    {
-      id: 'veh-hist-001',
-      entryFolio: 'REC-2026-000088',
-      token: 'PASS-20260929-0071',
-      driverName: 'Miguel Ángel Valenzuela',
-      driverPhone: '55-8812-4400',
-      carrierName: 'Transportes Tresguerras',
-      tractorPlates: '90-TR-1A',
-      boxPlates: '12-BB-8K',
-      ecoNumber: 'TG-104',
-      boxDimensions: '53 Pies',
-      transportType: 'Tráiler',
-      operationType: 'INBOUND',
-      documentNumber: 'REM-77192',
-      clientName: 'Amazon México',
-      rampNumber: 2,
-      sealNumbers: ['SL-33419'],
-      exitSealNumbers: ['SL-33419'],
-      entryTime: new Date(Date.now() - 240 * 60000),
-      departureTime: new Date(Date.now() - 95 * 60000),
-      status: 'COMPLETED_EXIT',
-      isReadyForExit: true,
-      warehouseStatus: 'COMPLETED',
-      exitObservations: 'Salida en orden con sello cotejado sin violación',
-      guardNotes: 'Maniobra de descarga completada sin daños reportados'
-    }
-  ]);
+  // ─── Historial & Auditoría de Egresos Oficiales (100% Base de Datos) ───────
+  protected readonly historyVehicles = signal<YardVehicle[]>([]);
 
   // ─── Modal de Validación de Salida (Check-out) ───────────────────────────────
   protected readonly selectedVehicleForCheckout = signal<YardVehicle | null>(null);
@@ -491,7 +362,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly waitingCount = computed(() => this.yardVehicles().filter((v) => v.status === 'WAITING_RAMP').length);
   protected readonly atRampCount = computed(() => this.yardVehicles().filter((v) => v.status === 'AT_RAMP').length);
   protected readonly readyDepartureCount = computed(() => this.yardVehicles().filter((v) => v.status === 'DISCHARGE_FINISHED' || v.isReadyForExit).length);
-  protected readonly pendingPassesCount = computed(() => this.activePasses().length);
+  protected readonly pendingPassesCount = computed(() => this.displayActivePasses().length);
   protected readonly historyCount = computed(() => this.historyVehicles().length);
 
   protected readonly readyForExitVehicles = computed(() => {
@@ -554,6 +425,8 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     );
   });
 
+  private pollTimer?: any;
+
   ngOnInit(): void {
     // Sincronizar pestaña solicitada desde el menú táctil y carga por token
     this.route.queryParamMap.subscribe((params) => {
@@ -571,49 +444,13 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Sincronizar pases QR enviados por choferes con el Centro de Notificaciones
-    for (const p of this.activePasses()) {
-      if (p.status === 'SUBMITTED') {
-        this.notifService.addSubmittedDriverPass({
-          id: p.id,
-          token: p.token,
-          carrierName: p.carrierName,
-          driverName: p.driverName,
-          driverPhone: p.driverPhone,
-          tractorPlates: p.tractorPlates,
-          boxPlates: p.boxPlates,
-          ecoNumber: p.ecoNumber,
-          boxDimensions: p.boxDimensions,
-          transportType: p.transportType,
-          operationType: p.operationType,
-          documentNumber: p.documentNumber,
-          clientName: p.clientName,
-          sealNumbers: p.sealNumbers,
-          checklistData: p.checklistData,
-          status: 'SUBMITTED',
-          submittedAt: p.submittedAt,
-          time: new Date(p.submittedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-        });
-      }
-    }
+    // Carga inicial 100% real desde el Backend / BD
+    this.loadBackendData();
 
-    // Sincronizar unidades con maniobra concluida listas para salida
-    for (const v of this.yardVehicles()) {
-      if (v.status === 'DISCHARGE_FINISHED') {
-        this.notifService.addReadyExitPass({
-          id: v.id,
-          folio: v.entryFolio,
-          token: v.token,
-          driverName: v.driverName,
-          carrierName: v.carrierName,
-          tractorPlates: v.tractorPlates,
-          rampCode: v.rampNumber ? `Rampa ${v.rampNumber}` : 'Andén',
-          rampNumber: v.rampNumber,
-          time: new Date(v.entryTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-          isReadyForExit: true
-        });
-      }
-    }
+    // Sincronización periódica en vivo con la Base de Datos y Consola Admin (cada 4s)
+    this.pollTimer = setInterval(() => {
+      this.loadBackendData(false);
+    }, 4000);
 
     // Sincronizar validaciones bimodal
     this.checkInForm.get('operacion')?.valueChanges.subscribe((op) => {
@@ -621,7 +458,179 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+  }
+
+  // ─── Carga de Datos desde el Backend Spring Boot / PostgreSQL ─────────────
+  protected loadBackendData(showLoading = true): void {
+    if (showLoading) this.isLoadingData.set(true);
+
+    // 1. Pases Activos (Choferes en espera o con auto-registro enviado)
+    this.apiService.getActivePasses().subscribe({
+      next: (passes) => {
+        const mapped = passes.map(p => this.mapToDriverSubmittedPass(p));
+        this.activePasses.set(mapped);
+        
+        // Sincronizar con el centro de notificaciones
+        for (const p of mapped) {
+          if (p.status === 'SUBMITTED') {
+            this.notifService.addSubmittedDriverPass({
+              id: p.id,
+              token: p.token,
+              carrierName: p.carrierName,
+              driverName: p.driverName,
+              driverPhone: p.driverPhone,
+              tractorPlates: p.tractorPlates,
+              boxPlates: p.boxPlates,
+              ecoNumber: p.ecoNumber,
+              boxDimensions: p.boxDimensions,
+              transportType: p.transportType,
+              operationType: p.operationType,
+              documentNumber: p.documentNumber,
+              clientName: p.clientName,
+              sealNumbers: p.sealNumbers,
+              checklistData: p.checklistData,
+              status: 'SUBMITTED',
+              submittedAt: p.submittedAt,
+              time: new Date(p.submittedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+        }
+
+        // Si hay un token en URL y no se ha cargado en form
+        const urlToken = this.route.snapshot.queryParamMap.get('token');
+        if (urlToken && !this.activeLoadedToken()) {
+          const pass = mapped.find(p => p.token === urlToken);
+          if (pass) {
+            this.activeTab.set('REGISTRATION');
+            this.loadPassIntoForm(pass);
+          }
+        }
+      },
+      error: () => {}
+    });
+
+    // 2. Unidades en Patio / Andenes
+    this.apiService.getInYardPasses().subscribe({
+      next: (passes) => {
+        const mapped = passes.map(p => this.mapToYardVehicle(p));
+        this.yardVehicles.set(mapped);
+
+        for (const v of mapped) {
+          if (v.status === 'DISCHARGE_FINISHED' || v.isReadyForExit) {
+            this.notifService.addReadyExitPass({
+              id: v.id,
+              folio: v.entryFolio,
+              token: v.token,
+              driverName: v.driverName,
+              carrierName: v.carrierName,
+              tractorPlates: v.tractorPlates,
+              rampCode: v.rampNumber ? `Rampa ${v.rampNumber}` : 'Andén',
+              rampNumber: v.rampNumber,
+              time: new Date(v.entryTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+              isReadyForExit: true
+            });
+          }
+        }
+
+        if (showLoading) this.isLoadingData.set(false);
+      },
+      error: () => {
+        if (showLoading) this.isLoadingData.set(false);
+      }
+    });
+
+    // 3. Historial de Caseta
+    this.apiService.getHistoryPasses().subscribe({
+      next: (passes) => {
+        const mapped = passes.map(p => this.mapToYardVehicle(p));
+        this.historyVehicles.set(mapped);
+      },
+      error: () => {}
+    });
+
+    // 4. Catálogos Oficiales de Caseta (Clientes, Transportistas, Tipos, Medidas)
+    this.apiService.getPublicCatalogs().subscribe({
+      next: (cats) => {
+        if (cats.clients && cats.clients.length > 0) {
+          const uniqueClients = Array.from(new Set([...cats.clients, 'Otro (Especificar)']));
+          this.clientsList.set(uniqueClients);
+        }
+        if (cats.carrierLines && cats.carrierLines.length > 0) {
+          const uniqueCarriers = Array.from(new Set([...cats.carrierLines, 'Otro (Especificar)']));
+          this.carrierLinesList.set(uniqueCarriers);
+        }
+        if (cats.transportTypes && cats.transportTypes.length > 0) {
+          this.transportTypesList.set(cats.transportTypes);
+        }
+        if (cats.boxDimensions && cats.boxDimensions.length > 0) {
+          this.boxDimensionsList.set(cats.boxDimensions);
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private mapToDriverSubmittedPass(p: any): DriverSubmittedPass {
+    const doc = p.remision || p.docNumber || p.noCartaPorte || p.documentNumber || '';
+    return {
+      id: p.id || p.token,
+      token: p.token,
+      carrierName: p.carrierLine || p.carrierName || 'Transportista',
+      driverName: p.driverName || p.nombreOperador || 'Operador',
+      driverPhone: p.driverPhone,
+      tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+      boxPlates: p.boxPlates || p.placasCaja || '',
+      ecoNumber: p.noEcoTractor || p.ecoNumber,
+      boxDimensions: p.boxDimensions || p.medidasCaja,
+      transportType: p.transportType || p.tipoTransporte,
+      operationType: (p.operationType === 'CARGA' || p.operationType === 'OUTBOUND') ? 'OUTBOUND' : 'INBOUND',
+      documentNumber: doc,
+      clientName: p.clientName || p.client || 'Cliente',
+      sealNumbers: p.sealNumbers || [],
+      status: (p.status as any) || 'SUBMITTED',
+      submittedAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+      checklistData: typeof p.checklistData === 'string' ? JSON.parse(p.checklistData) : (p.checklistData || {})
+    };
+  }
+
+  private mapToYardVehicle(p: SecurityGatePass): YardVehicle {
+    return {
+      id: p.id || p.token,
+      entryFolio: p.generatedFolio || p.token || 'S/F',
+      token: p.token,
+      driverName: p.driverName || 'Operador',
+      driverPhone: p.driverPhone,
+      carrierName: p.carrierLine || p.carrierName || 'Transportista',
+      tractorPlates: p.tractorPlates || 'S/P',
+      boxPlates: p.boxPlates || '',
+      ecoNumber: p.noEcoTractor || p.ecoNumber,
+      boxDimensions: p.boxDimensions,
+      transportType: p.transportType,
+      operationType: (p.operationType === 'CARGA' || p.operationType === 'OUTBOUND') ? 'OUTBOUND' : 'INBOUND',
+      documentNumber: p.docNumber || '',
+      clientName: p.clientName,
+      rampNumber: p.rampNumber,
+      rampCode: p.rampCode,
+      sealNumbers: p.sealNumbers || [],
+      exitSealNumbers: p.exitSealNumbers || [],
+      entryTime: p.processedAt ? new Date(p.processedAt) : (p.createdAt ? new Date(p.createdAt) : new Date()),
+      departureTime: p.exitedAt ? new Date(p.exitedAt) : undefined,
+      status: p.status === 'COMPLETED'
+        ? (p.exitedAt ? 'COMPLETED_EXIT' : (p.isReadyForExit ? 'DISCHARGE_FINISHED' : (p.rampNumber ? 'AT_RAMP' : 'WAITING_RAMP')))
+        : (p.rampNumber ? 'AT_RAMP' : 'WAITING_RAMP'),
+      warehouseStatus: p.warehouseStatus || 'IN_PROGRESS',
+      isReadyForExit: !!p.isReadyForExit,
+      photoUrl: undefined,
+      checklistData: typeof p.checklistData === 'string' ? JSON.parse(p.checklistData) : (p.checklistData || {}),
+      observations: p.observations || '',
+      exitObservations: p.exitObservations || '',
+      guardNotes: p.guardNotes || ''
+    };
+  }
 
   // ─── Cambiar Criterio de Checklist F01 (SI / NO) ───────────────────────────
   protected setCriterion(field: string, value: 'SI' | 'NO'): void {
@@ -749,6 +758,36 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     return clean;
   }
 
+  protected normalizeCarrierLine(rawCarrier?: string | null): string {
+    if (!rawCarrier || !rawCarrier.trim()) return '';
+    const clean = rawCarrier.trim();
+    const match = this.carrierLinesList().find(c => c.toLowerCase() === clean.toLowerCase());
+    if (match) return match;
+
+    // Si viene una línea nueva registrada por el chofer, incorporarla dinámicamente al catálogo
+    this.carrierLinesList.update(list => [
+      ...list.filter(x => x !== 'Otro (Especificar)'),
+      clean,
+      'Otro (Especificar)'
+    ]);
+    return clean;
+  }
+
+  protected normalizeClient(rawClient?: string | null): string {
+    if (!rawClient || !rawClient.trim()) return '';
+    const clean = rawClient.trim();
+    const match = this.clientsList().find(c => c.toLowerCase() === clean.toLowerCase());
+    if (match) return match;
+
+    // Si viene un cliente nuevo registrado por el chofer, incorporarlo dinámicamente al catálogo
+    this.clientsList.update(list => [
+      ...list.filter(x => x !== 'Otro (Especificar)'),
+      clean,
+      'Otro (Especificar)'
+    ]);
+    return clean;
+  }
+
   protected onTransportTypeSelect(val: string): void {
     if (val === 'Otro (Especificar)') {
       this.isCustomTransportType.set(true);
@@ -793,9 +832,14 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     const rawBoxDim = (pass as any).boxDimensions || (pass as any).medidasCaja || (pass as any).boxSize;
     const resolvedBoxDim = this.normalizeBoxDimensions(rawBoxDim);
 
+    const resolvedCarrier = this.normalizeCarrierLine(pass.carrierName);
+    const resolvedClient = this.normalizeClient(pass.clientName);
+
+    const docNum = (pass.documentNumber && pass.documentNumber !== 'S/N' && pass.documentNumber !== 'S/D') ? pass.documentNumber : '';
+
     this.checkInForm.patchValue({
       operacion: opValue,
-      carrierLine: pass.carrierName,
+      carrierLine: resolvedCarrier,
       nombreOperador: pass.driverName,
       driverPhone: pass.driverPhone || '',
       placasTracto: pass.tractorPlates,
@@ -803,7 +847,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       noEcoTractor: pass.ecoNumber || 'ECO-01',
       tipoTransporte: resolvedTransport,
       medidasCaja: resolvedBoxDim,
-      client: pass.clientName || 'Walmart Logistics',
+      client: resolvedClient,
       transportistaNombre: pass.driverName,
       transportistaFirma: true,
     });
@@ -825,10 +869,10 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     }
 
     if (isCarga) {
-      this.checkInForm.patchValue({ noCartaPorte: pass.documentNumber, remision: '' });
+      this.checkInForm.patchValue({ noCartaPorte: docNum, remision: '' });
       this.sealList.set(['PENDIENTE_ANDEN']);
     } else {
-      this.checkInForm.patchValue({ remision: pass.documentNumber, noCartaPorte: '' });
+      this.checkInForm.patchValue({ remision: docNum, noCartaPorte: '' });
       if (pass.sealNumbers && pass.sealNumbers.length > 0) {
         this.sealList.set([...pass.sealNumbers]);
       } else {
@@ -927,67 +971,91 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const prefix = isOutbound ? 'SAL' : 'REC';
-    const generatedFolio = `${prefix}-2026-${String(Date.now()).slice(-6)}`;
-
     const seals = this.sealList().length > 0
       ? this.sealList()
       : (isOutbound ? ['PENDIENTE_ANDEN'] : ['SL-00000']);
     const rampNum = val.rampNumber ? Number(val.rampNumber) : undefined;
+    const clientSelected = val.client === 'OTRO' ? val.clientNameCustom : val.client;
 
-    const newVehicle: YardVehicle = {
-      id: `veh-${Date.now()}`,
-      entryFolio: generatedFolio,
-      token: this.activeLoadedToken() || undefined,
-      driverName: val.nombreOperador?.trim() || '',
-      driverPhone: val.driverPhone?.trim() || undefined,
-      carrierName: val.carrierLine?.trim() || '',
-      tractorPlates: val.placasTracto?.trim().toUpperCase() || '',
-      boxPlates: val.placasCaja?.trim().toUpperCase() || '',
-      ecoNumber: val.noEcoTractor?.trim() || undefined,
+    const completionPayload = {
+      operationType: isOutbound ? 'CARGA' : 'DESCARGA',
+      rampNumber: rampNum,
+      rampCode: rampNum ? `R-${rampNum < 10 ? '0' + rampNum : rampNum}` : undefined,
+      clientName: clientSelected,
+      carrierLine: val.carrierLine?.trim(),
+      driverName: val.nombreOperador?.trim(),
+      driverPhone: val.driverPhone?.trim(),
+      tractorPlates: val.placasTracto?.trim().toUpperCase(),
+      noEcoTractor: val.noEcoTractor?.trim(),
+      boxPlates: val.placasCaja?.trim().toUpperCase(),
       boxDimensions: (this.isCustomBoxDimension() && this.customBoxDimensionInput().trim())
         ? this.customBoxDimensionInput().trim()
         : (val.medidasCaja || ''),
       transportType: (this.isCustomTransportType() && this.customTransportInput().trim())
         ? this.customTransportInput().trim()
         : (val.tipoTransporte || ''),
-      operationType: isOutbound ? 'OUTBOUND' : 'INBOUND',
-      documentNumber: isOutbound ? val.noCartaPorte : val.remision,
-      clientName: val.client === 'OTRO' ? val.clientNameCustom : val.client,
-      rampNumber: rampNum,
+      docNumber: isOutbound ? val.noCartaPorte : val.remision,
       sealNumbers: seals,
-      entryTime: new Date(),
-      status: rampNum ? 'AT_RAMP' : 'WAITING_RAMP',
-      isReadyForExit: false,
-      warehouseStatus: 'IN_PROGRESS',
-      checklistData: { ...val }
+      observations: val.docRemisionObs || val.docCartaPorteObs || '',
+      guardNotes: val.responsableVigilanciaNombre || 'Guardia de Turno'
     };
 
-    // Remover de solicitudes activas si venía de un pase
-    const loadedTok = this.activeLoadedToken();
-    if (loadedTok) {
-      this.activePasses.update(list => list.filter(p => p.token !== loadedTok));
+    const token = this.activeLoadedToken();
+    const handleSuccess = (savedPass: SecurityGatePass) => {
+      this.audioService.playSuccess();
+      if (navigator.vibrate) {
+        navigator.vibrate([40, 60, 40]);
+      }
+
+      const vehicle = this.mapToYardVehicle(savedPass);
+      this.preparePrintDataFromVehicle(vehicle);
+
+      this.showAlert(
+        'success',
+        `✅ Arribo autorizado con Folio ${savedPass.generatedFolio || vehicle.entryFolio}. Registrado en Base de Datos. Pluma abierta.`
+      );
+
+      this.activeLoadedToken.set(null);
+      this.clearLoadedPass();
+      this.loadBackendData(false);
+      this.activeTab.set('IN_YARD');
+    };
+
+    if (token) {
+      // Chofer ya tenía pase digital QR generado
+      this.apiService.completeCheckin(token, completionPayload).subscribe({
+        next: handleSuccess,
+        error: (err) => {
+          this.audioService.playWarning();
+          this.showAlert('error', `Error al autorizar ingreso en servidor: ${err?.error?.message || err?.message || 'Verifica la conexión'}`);
+        }
+      });
+    } else {
+      // Registro en caseta sin pase previo: crear pase oficial en BD y luego completarlo
+      this.apiService.generatePass({
+        operationType: isOutbound ? 'CARGA' : 'DESCARGA',
+        clientName: clientSelected,
+        carrierLine: val.carrierLine?.trim(),
+        driverName: val.nombreOperador?.trim(),
+        driverPhone: val.driverPhone?.trim(),
+        tractorPlates: val.placasTracto?.trim().toUpperCase(),
+        docNumber: isOutbound ? val.noCartaPorte : val.remision
+      }).subscribe({
+        next: (generatedPass) => {
+          this.apiService.completeCheckin(generatedPass.token, completionPayload).subscribe({
+            next: handleSuccess,
+            error: (err) => {
+              this.audioService.playWarning();
+              this.showAlert('error', `Error al completar el check-in: ${err?.error?.message || err?.message || 'Verifica la conexión'}`);
+            }
+          });
+        },
+        error: (err) => {
+          this.audioService.playWarning();
+          this.showAlert('error', `Error al generar pase en caseta: ${err?.error?.message || err?.message || 'Verifica la conexión'}`);
+        }
+      });
     }
-
-    // Agregar al patio en espera de asignación de andén por Almacén
-    this.yardVehicles.update((list) => [newVehicle, ...list]);
-    this.audioService.playSuccess();
-
-    if (navigator.vibrate) {
-      navigator.vibrate([40, 60, 40]);
-    }
-
-    // Preparar datos para imprimir/descargar F01
-    this.preparePrintDataFromVehicle(newVehicle);
-
-    this.showAlert(
-      'success',
-      `✅ Arribo autorizado con Folio ${generatedFolio}. Ingreso a patio registrado (Pendiente de asignación de rampa por Almacén). Pluma abierta.`
-    );
-
-    // Reset de formulario
-    this.activeLoadedToken.set(null);
-    this.clearLoadedPass();
   }
 
   // ─── Helpers de Rampa Homologados con Admin Console ─────────────────────────
@@ -1166,46 +1234,67 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
 
     // 1. Estampar la fecha y hora oficial de salida física
     const exitTime = new Date();
-    vehicle.departureTime = exitTime;
-    vehicle.status = 'COMPLETED_EXIT';
-    vehicle.exitSealNumbers = [inputSeal];
-    vehicle.exitObservations = this.checkoutObservations().trim() || 'Salida en orden y autorizada por caseta';
-    vehicle.guardNotes = this.checkoutNotes().trim();
+    const formattedExitTime = this.formatTimeStringFromDate(exitTime);
+    const observations = this.checkoutObservations().trim() || 'Salida en orden y autorizada por caseta';
+    const notes = this.checkoutNotes().trim();
 
-    // 2. Si se capturó un sello de salida diferente o nuevo, registrarlo
-    if (!vehicle.sealNumbers.includes(inputSeal)) {
-      vehicle.sealNumbers = [inputSeal, ...vehicle.sealNumbers.filter(s => s !== 'PENDIENTE_ANDEN')];
-    }
+    const checkoutBody = {
+      departureTime: formattedExitTime,
+      exitObservations: observations,
+      exitSealNumbers: [inputSeal],
+      guardNotes: notes
+    };
 
-    // 3. Conexión con Módulo de Rampas / Andenes: Liberar automáticamente la rampa asignada
-    if (vehicle.rampNumber) {
-      const freeRampNum = vehicle.rampNumber;
-      this.rampOptions.update((ramps) =>
-        ramps.map((r) => (r.num === freeRampNum ? { ...r, available: true, occupiedBy: undefined } : r))
+    const token = vehicle.token;
+    const executeLocalCheckout = () => {
+      vehicle.departureTime = exitTime;
+      vehicle.status = 'COMPLETED_EXIT';
+      vehicle.exitSealNumbers = [inputSeal];
+      vehicle.exitObservations = observations;
+      vehicle.guardNotes = notes;
+
+      if (!vehicle.sealNumbers.includes(inputSeal)) {
+        vehicle.sealNumbers = [inputSeal, ...vehicle.sealNumbers.filter(s => s !== 'PENDIENTE_ANDEN')];
+      }
+
+      if (vehicle.rampNumber) {
+        const freeRampNum = vehicle.rampNumber;
+        this.rampOptions.update((ramps) =>
+          ramps.map((r) => (r.num === freeRampNum ? { ...r, available: true, occupiedBy: undefined } : r))
+        );
+      }
+
+      this.selectedVehicleForCheckout.set(null);
+      this.audioService.playSuccess();
+
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 80, 50]);
+      }
+
+      this.preparePrintDataFromVehicle(vehicle);
+      this.showF01PrintModal.set(true);
+
+      this.showAlert(
+        'success',
+        `🚪 Salida autorizada para ${vehicle.tractorPlates} a las ${formattedExitTime}. Registrado en Base de Datos. Formato F01 oficial generado.`
       );
+
+      this.loadBackendData(false);
+    };
+
+    if (token) {
+      this.apiService.checkOut(token, checkoutBody).subscribe({
+        next: () => {
+          executeLocalCheckout();
+        },
+        error: (err) => {
+          this.audioService.playWarning();
+          this.showAlert('error', `Error al registrar salida en servidor: ${err?.error?.message || err?.message || 'Verifica la conexión'}`);
+        }
+      });
+    } else {
+      executeLocalCheckout();
     }
-
-    // 4. Conexión con Historial & Auditoría: Mover de Patio a Historial
-    this.yardVehicles.update((list) => list.filter((v) => v.id !== vehicle.id));
-    this.historyVehicles.update((hist) => [{ ...vehicle }, ...hist]);
-    this.selectedVehicleForCheckout.set(null);
-    this.audioService.playSuccess();
-
-    if (navigator.vibrate) {
-      navigator.vibrate([50, 80, 50]);
-    }
-
-    // 5. Preparar datos oficiales del F01 con la hora de salida exacta registrada
-    this.preparePrintDataFromVehicle(vehicle);
-
-    // 6. Desplegar automáticamente el Formato Oficial F01 con la hora de salida para descarga/impresión inmediata
-    this.showF01PrintModal.set(true);
-
-    const formattedExit = this.formatTimeStringFromDate(exitTime);
-    this.showAlert(
-      'success',
-      `🚪 Salida autorizada para ${vehicle.tractorPlates} a las ${formattedExit}. Rampa 0${vehicle.rampNumber || 1} liberada. Formato F01 oficial generado.`
-    );
   }
 
   // ─── Helpers Ergonómicos y de Fechas ───────────────────────────────────────
@@ -1268,6 +1357,57 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+  }
+
+  // ─── Modal de Confirmación para Rechazar / Eliminar Solicitud de Chofer ────
+  protected readonly passToReject = signal<DriverSubmittedPass | null>(null);
+  protected readonly isRejectingPass = signal<boolean>(false);
+
+  protected openRejectPassModal(pass: DriverSubmittedPass, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.passToReject.set(pass);
+  }
+
+  protected closeRejectPassModal(): void {
+    if (this.isRejectingPass()) return;
+    this.passToReject.set(null);
+  }
+
+  protected confirmRejectPass(): void {
+    const pass = this.passToReject();
+    if (!pass) return;
+
+    this.isRejectingPass.set(true);
+
+    const finishDismissal = () => {
+      // 1. Quitar de notificaciones reactivas (y persistir en descartados)
+      this.notifService.dismissDriverPass(pass.token);
+
+      // 2. Quitar del listado local de pases activos
+      this.activePasses.update(list => list.filter(p => p.token !== pass.token && p.id !== pass.id));
+
+      // 3. Si estaba cargado en el formulario, limpiar la vinculación
+      if (this.activeLoadedToken() === pass.token) {
+        this.clearLoadedPass();
+      }
+
+      this.isRejectingPass.set(false);
+      this.passToReject.set(null);
+      this.audioService.playSuccess();
+      this.showAlert('warning', `Solicitud de chofer #${pass.token} (${pass.driverName}) ha sido rechazada y eliminada de la caseta.`);
+    };
+
+    // Si el ID parece UUID válido del backend, enviar delete al backend
+    if (pass.id && pass.id.length === 36 && !pass.id.startsWith('PASS-')) {
+      this.apiService.deletePass(pass.id).subscribe({
+        next: () => finishDismissal(),
+        error: () => finishDismissal()
+      });
+    } else {
+      finishDismissal();
+    }
   }
 
   protected getCurrentTimeString(): string {

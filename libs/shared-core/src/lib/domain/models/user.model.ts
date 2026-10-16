@@ -23,6 +23,9 @@ export interface User {
   /** Rol asignado en el sistema RBAC */
   role: UserRole;
 
+  /** ID de la organización */
+  organizationId?: string;
+
   /** ID de la sucursal/almacén al que pertenece */
   branchId: string;
 
@@ -31,6 +34,12 @@ export interface User {
 
   /** Indica si la cuenta está activa */
   active: boolean;
+
+  /** Username institucional (opcional si usa email) */
+  username?: string;
+
+  /** Organización o Corporativo */
+  organizationName?: string;
 
   /** Fecha de creación del usuario (ISO 8601) */
   createdAt: string;

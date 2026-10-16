@@ -52,14 +52,17 @@ export class WarehouseLayoutSyncService {
   ): void {
     if (!bayCode) return;
     const cleanCode = bayCode.trim().toUpperCase().replace(/\s+/g, '-');
-    const capacity = DEFAULT_BAY_CAPACITY;
+    const currentSim = this.getSimulatedBays();
+    const existing = currentSim[cleanCode];
+    const capacity = (existing?.capacityTarimas && existing.capacityTarimas > 0)
+      ? existing.capacityTarimas
+      : DEFAULT_BAY_CAPACITY;
     const tarimas = Math.max(0, Number(tarimasCount) || 1);
     const status: 'AVAILABLE' | 'OCCUPIED' | 'BLOCKED' =
       tarimas >= capacity * 0.8 ? 'OCCUPIED' : (tarimas > 0 ? 'OCCUPIED' : 'AVAILABLE');
     const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
     const op = operatorName || 'Montacarguista';
 
-    const currentSim = this.getSimulatedBays();
     currentSim[cleanCode] = {
       code: cleanCode,
       currentTarimas: tarimas,

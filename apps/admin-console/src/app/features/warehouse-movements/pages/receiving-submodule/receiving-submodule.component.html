@@ -3773,11 +3773,11 @@
     </div>
   }
 
-  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS (22 PALLETS) -->
+  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS -->
   @if (showBaySelectorModal()) {
     <fg-bay-occupancy-selector
       [selectedLocationCode]="isReallocatingMode() ? reallocatingSourceBay() : altaForm.value.storageLocation"
-      [dialogTitle]="isReallocatingMode() ? 'Reubicación de Buffer Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías (Estándar 22 Pallets)'"
+      [dialogTitle]="isReallocatingMode() ? 'Reubicación de Buffer Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías'"
       (locationSelected)="onBaySelected($event)"
       (closed)="closeBaySelectorModal()"
     ></fg-bay-occupancy-selector>

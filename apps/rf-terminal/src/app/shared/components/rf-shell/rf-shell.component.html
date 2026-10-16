@@ -27,24 +27,27 @@
         </div>
       </div>
 
-      <!-- Zone Lease Badge -->
+      <!-- Zone / Módulo Badge (Caseta 4GUARD) -->
       <div 
         class="lease-badge" 
-        [class.lease-badge--warning]="isLeaseWarning()"
         [title]="leaseBadgeTooltip()">
         <span class="material-symbols-outlined lease-icon">{{ leaseIcon() }}</span>
         <span class="lease-text">{{ activeZoneName() }}</span>
-        <span class="lease-timer">{{ leaseMinutesLeft() }}m</span>
       </div>
 
-      <!-- Network / Sync Badge -->
-      @if (syncState.hasPending()) {
+      <!-- Network / Sync Badge (Detección Real de Conexión) -->
+      @if (!isOnline()) {
+        <div class="net-badge net-badge--offline" title="Dispositivo sin conexión a internet o red local">
+          <span class="material-symbols-outlined net-icon text-rose-400">wifi_off</span>
+          <span class="net-text text-rose-300">Sin Red</span>
+        </div>
+      } @else if (syncState.hasPending()) {
         <div class="net-badge net-badge--pending" routerLink="/sync" title="Operaciones pendientes de sincronización">
           <span class="pulse-dot"></span>
           <span>{{ syncState.pendingCount() }} pend.</span>
         </div>
       } @else {
-        <div class="net-badge net-badge--online" title="Conexión en línea con servidor central">
+        <div class="net-badge net-badge--online" title="Conexión en línea activa y verificada con el servidor central">
           <span class="material-symbols-outlined net-icon">wifi</span>
           <span class="net-text">En Línea</span>
         </div>
@@ -56,15 +59,6 @@
       <!-- Centro de Notificaciones Operativas en Tiempo Real (Pre-Recepciones y Andenes) -->
       <fg-rf-notifications />
 
-      <!-- Fast Scan Simulator Trigger -->
-      <button 
-        type="button" 
-        class="action-btn action-btn--scan" 
-        (click)="openScanSimulator()"
-        title="Simulador de Escáner Láser">
-        <span class="material-symbols-outlined">barcode_scanner</span>
-        <span class="action-btn__label">Simular</span>
-      </button>
 
       <!-- Theme Switcher (Dark/Light) -->
       <button 
@@ -230,15 +224,17 @@
           </div>
           <div class="profile-meta-item">
             <span class="meta-label">Dispositivo:</span>
-            <strong class="meta-value font-mono">📱 Zebra TC52 (T-04)</strong>
+            <strong class="meta-value font-mono">💻 {{ deviceInfo() }}</strong>
           </div>
           <div class="profile-meta-item">
-            <span class="meta-label">Zona Asignada:</span>
-            <strong class="meta-value font-mono meta-value--highlight">🔒 {{ activeZoneName() }} ({{ leaseMinutesLeft() }}m)</strong>
+            <span class="meta-label">Ubicación / Módulo:</span>
+            <strong class="meta-value font-mono meta-value--highlight">🔒 {{ activeZoneName() }}</strong>
           </div>
           <div class="profile-meta-item">
             <span class="meta-label">Estado de Red:</span>
-            <strong class="meta-value meta-value--highlight">📶 En Línea / Sincronizado</strong>
+            <strong class="meta-value" [class.meta-value--highlight]="isOnline()">
+              {{ isOnline() ? '📶 En Línea (Tiempo Real)' : '📵 Sin Conexión' }}
+            </strong>
           </div>
         </div>
 

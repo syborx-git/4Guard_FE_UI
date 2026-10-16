@@ -1488,7 +1488,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const session = this.movementsService.movementsApi.getSessionOrg();
     const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&${orgQuery}`);
+    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&view=pass&${orgQuery}`);
     this.showQrModal.set(true);
   }
 

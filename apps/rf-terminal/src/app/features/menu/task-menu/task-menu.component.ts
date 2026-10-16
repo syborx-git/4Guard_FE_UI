@@ -327,12 +327,12 @@ export class TaskMenuComponent {
     },
     {
       id: 'mod-sec-qr',
-      icon: 'qr_code_scanner',
-      title: 'Pase Digital QR Chofer',
-      description: 'Carga instantánea de pre-check-in digital completado por el chofer para agilizar la entrada sin capturas repetidas.',
-      badgeText: '2 Pases Pendientes',
+      icon: 'how_to_reg',
+      title: 'Control de Caseta & Registro',
+      description: 'Bandeja de solicitudes de acceso enviadas por choferes, inspección F01 y autorización directa a patio.',
+      badgeText: 'Pases en Espera',
       badgeType: 'sky',
-      actionLabel: 'Escanear Pase',
+      actionLabel: 'Ver Solicitudes',
       route: '/security?tab=REGISTRATION',
     },
     {
@@ -367,19 +367,6 @@ export class TaskMenuComponent {
     },
   ];
 
-  // ─── Roles Disponibles para el Simulador Demo (Organigrama Oficial) ─────────
-  protected readonly demoRoles = [
-    { role: UserRole.WAREHOUSE_OPERATOR,    label: 'Montacarguista', icon: 'forklift' },
-    { role: UserRole.SHIFT_LEADER,           label: 'Líder de Turno', icon: 'groups' },
-    { role: UserRole.CONTROL_DESK,          label: 'Mesa de Control', icon: 'desktop_windows' },
-    { role: UserRole.OPERATIONS_SUPERVISOR, label: 'Supervisor Operativo', icon: 'manage_accounts' },
-    { role: UserRole.OPERATIONS_COORDINATOR,label: 'Coordinador Operaciones', icon: 'hub' },
-    { role: UserRole.OPERATIONS_MANAGER,    label: 'Gerente Operaciones', icon: 'shield_person' },
-    { role: UserRole.ADMIN,                 label: 'Director General', icon: 'shield' },
-    { role: UserRole.QM_INSPECTOR,           label: 'Calidad QM', icon: 'verified_user' },
-    { role: UserRole.SECURITY_GUARD,        label: 'Seguridad Caseta', icon: 'local_police' },
-  ];
-
   // ─── Perfil y Tareas Derivadas del Rol Activo ───────────────────────────────
   protected readonly currentRole = computed<UserRole>(() => {
     return this.authState.role() ?? UserRole.WAREHOUSE_OPERATOR;
@@ -400,15 +387,6 @@ export class TaskMenuComponent {
   });
 
   // ─── Métodos de Interacción ─────────────────────────────────────────────────
-
-  /** Cambiar rol en vivo para pruebas del selector dinámico */
-  protected switchDemoRole(role: UserRole): void {
-    this.authState.switchRoleForTesting(role);
-    this.audioService.playSuccess();
-    if (navigator.vibrate) {
-      navigator.vibrate(25);
-    }
-  }
 
   /** Navegación táctil con feedback sonoro y háptico */
   protected navigate(route: string): void {

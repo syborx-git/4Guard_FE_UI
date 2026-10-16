@@ -457,11 +457,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const rec = this.selectedReception();
     if (!rec) return { bayCode: 'N/A', totalCapacity: 22, currentThisRec: 0, otherPallets: 0, availableCupo: 22 };
     const bayCode = rec.storageLocation || (rec as any).storageLocationCode || 'POS-A-001';
+    const clean = bayCode.trim().toUpperCase();
     const live = this.movementsService.getBayLiveOccupancy(bayCode);
     const thisRecPallets = rec.pallets?.length || 0;
     const totalStoredInBay = live ? live.totalPallets : thisRecPallets;
     const otherPallets = Math.max(0, totalStoredInBay - thisRecPallets);
-    const totalCapacity = 22;
+
+    const locMap = this.movementsService.locations();
+    const loc = locMap[clean] || 
+                (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
+                (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
+    const totalCapacity = this.movementsService.resolveBayCapacity(loc);
     const availableCupo = Math.max(0, totalCapacity - totalStoredInBay);
     return {
       bayCode,

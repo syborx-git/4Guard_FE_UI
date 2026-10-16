@@ -60,24 +60,30 @@ export class AuthState {
 
     const normalized = String(rawRole).trim().toUpperCase();
     const labels: Record<string, string> = {
-      'ROLE_ADMIN': 'Administrador',
-      'ADMIN': 'Administrador',
-      'ROLE_WAREHOUSE_MANAGER': 'Gerente de Almacén',
-      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
-      'ROLE_DOCK_SUPERVISOR': 'Supervisor de Andén',
-      'DOCK_SUPERVISOR': 'Supervisor de Andén',
-      'ROLE_WAREHOUSE_OPERATOR': 'Operario de Almacén',
-      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'ROLE_ADMIN': 'Director General (Admin)',
+      'ADMIN': 'Director General (Admin)',
+      'ROLE_OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'ROLE_OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'ROLE_OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'ROLE_CONTROL_DESK': 'Mesa de Control',
+      'CONTROL_DESK': 'Mesa de Control',
+      'ROLE_SHIFT_LEADER': 'Líder de Turno',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'ROLE_WAREHOUSE_OPERATOR': 'Montacarguista',
+      'WAREHOUSE_OPERATOR': 'Montacarguista',
       'ROLE_QM_INSPECTOR': 'Inspector de Calidad',
       'QM_INSPECTOR': 'Inspector de Calidad',
-      'ROLE_AUDITOR': 'Auditor de Inventarios',
-      'AUDITOR': 'Auditor de Inventarios',
-      'ROLE_CLIENT': 'Cliente 3PL',
-      'CLIENT': 'Cliente 3PL',
       'ROLE_SECURITY_GUARD': 'Guardia de Seguridad',
       'SECURITY_GUARD': 'Guardia de Seguridad',
       'ROLE_FORKLIFT_OPERATOR': 'Montacarguista',
       'FORKLIFT_OPERATOR': 'Montacarguista',
+      'ROLE_AUDITOR': 'Auditor de Inventarios',
+      'AUDITOR': 'Auditor de Inventarios',
+      'ROLE_CLIENT': 'Cliente 3PL',
+      'CLIENT': 'Cliente 3PL',
     };
 
     return labels[normalized] ?? 'Operario de Almacén';
@@ -141,20 +147,8 @@ export class AuthState {
 
   // ─── Helpers privados ─────────────────────────────────────────────────────
 
-  private redirectAfterLogin(user: User): void {
-    const roleRoutes: Partial<Record<UserRole, string>> = {
-      [UserRole.ADMIN]: '/dashboard',
-      [UserRole.OPERATIONS_MANAGER]: '/dashboard',
-      [UserRole.OPERATIONS_COORDINATOR]: '/dashboard',
-      [UserRole.OPERATIONS_SUPERVISOR]: '/receiving',
-      [UserRole.CONTROL_DESK]: '/receiving',
-      [UserRole.SHIFT_LEADER]: '/receiving',
-      [UserRole.WAREHOUSE_OPERATOR]: '/cockpit',
-      [UserRole.QM_INSPECTOR]: '/quality',
-      [UserRole.SECURITY_GUARD]: '/security',
-    };
-
-    const route = roleRoutes[user.role] ?? '/dashboard';
-    this.router.navigate([route]);
+  private redirectAfterLogin(_user: User): void {
+    // Redirección estándar inicial siempre al Menú de Operaciones
+    this.router.navigate(['/menu']);
   }
 }

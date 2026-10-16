@@ -221,6 +221,12 @@
   cursor: pointer;
 }
 
+.net-badge--offline {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
 .net-icon {
   font-size: 1rem;
 }

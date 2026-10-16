@@ -82,78 +82,68 @@ export class RfShellComponent implements OnInit, OnDestroy {
   protected readonly showProfileMenu = signal(false);
   protected readonly showLogoutConfirmModal = signal(false);
 
+  // ─── Estado de Conectividad en Tiempo Real ───────────────────────────────
+  protected readonly isOnline = signal<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  private readonly handleOnline = () => this.isOnline.set(true);
+  private readonly handleOffline = () => this.isOnline.set(false);
+
   // ─── Datos Computados del Perfil ──────────────────────────────────────────
   protected readonly displayUserName = computed(() => {
-    return this.authState.userFullName() || this.authState.user()?.fullName || 'Roberto Sánchez';
+    return this.authState.userFullName() || this.authState.user()?.fullName || 'Usuario 4GUARD';
   });
 
   protected readonly displayUserInitials = computed(() => {
     const initials = this.authState.userInitials();
-    return initials || 'RS';
+    return initials || '4G';
   });
 
   protected readonly displayRole = computed(() => {
-    return this.authState.roleLabel() || 'Operario de Almacén';
+    return this.authState.roleLabel() || 'Operador de Almacén';
   });
 
   protected readonly displayUsername = computed(() => {
     const u = this.authState.user();
-    if (!u) return 'roberto.sanchez';
-    return u.email ? u.email.split('@')[0] : 'roberto.sanchez';
+    if (!u) return 'usuario';
+    return (u as any)?.username || (u.email ? u.email.split('@')[0] : 'usuario');
   });
 
   protected readonly displayBranch = computed(() => {
     const u = this.authState.user();
-    return u?.branchName || this.authState.branchId() || 'CEDIS Central Monterrey';
+    return u?.branchName || (u as any)?.organizationName || '4GUARD LOGISTICS CORP';
+  });
+
+  protected readonly deviceInfo = computed(() => {
+    const ua = navigator.userAgent;
+    if (/Android/i.test(ua)) return 'Terminal Móvil Android (RF)';
+    if (/iPhone|iPad/i.test(ua)) return 'Dispositivo Móvil iOS';
+    if (/Windows/i.test(ua)) return 'Estación de Trabajo (Windows)';
+    return 'Terminal RF Web';
   });
 
   protected readonly currentUrl = signal<string>(this.router.url);
 
-  // ─── Estado del Zone Lease / Área Asignada por Rol y Módulo (HU-155) ─────────
+  // ─── Área / Módulo Asignado (Caseta 4GUARD / Módulo Activo) ───────────────
   protected readonly activeZoneName = computed(() => {
     const url = this.currentUrl();
-    if (url.includes('/security')) return 'Caseta Norte';
-    if (url.includes('/quality')) return 'Lab QM 01';
-    if (url.includes('/cockpit')) return 'Pasillo 04';
-    if (url.includes('/counting')) return 'Bahía P04';
-
-    const role = this.authState.role();
-    if (role === UserRole.SECURITY_GUARD) return 'Caseta Norte';
-    if (role === UserRole.QM_INSPECTOR) return 'Lab QM 01';
-    if (role === UserRole.CONTROL_DESK) return 'Mesa Control';
-    return 'Pasillo 04';
+    if (url.includes('/security')) return 'Caseta 4GUARD';
+    if (url.includes('/quality')) return 'Control Calidad QM';
+    if (url.includes('/cockpit')) return 'Cockpit Montacargas';
+    if (url.includes('/counting')) return 'Conteo Físico';
+    return 'Caseta 4GUARD';
   });
 
   protected readonly leaseIcon = computed(() => {
     const url = this.currentUrl();
     if (url.includes('/security')) return 'shield';
     if (url.includes('/quality')) return 'verified_user';
-    if (url.includes('/cockpit')) return 'lock_clock';
-    if (url.includes('/counting')) return 'inventory_2';
-
-    const role = this.authState.role();
-    if (role === UserRole.SECURITY_GUARD) return 'shield';
-    if (role === UserRole.QM_INSPECTOR) return 'verified_user';
-    if (role === UserRole.CONTROL_DESK) return 'traffic';
-    return 'lock_clock';
+    if (url.includes('/cockpit')) return 'forklift';
+    if (url.includes('/counting')) return 'checklist_rtl';
+    return 'shield';
   });
 
   protected readonly leaseBadgeTooltip = computed(() => {
-    const url = this.currentUrl();
-    if (url.includes('/security')) return 'Control de Caseta Asignada (Caseta Principal Norte)';
-    if (url.includes('/quality')) return 'Estación de Muestreo Activa (Laboratorio QM 01)';
-    if (url.includes('/cockpit')) return 'Arrendamiento de Pasillo Activo (Zone Lease HU-155)';
-    if (url.includes('/counting')) return 'Bahía de Auditoría Ciega (P04-R02)';
-
-    const role = this.authState.role();
-    if (role === UserRole.SECURITY_GUARD) return 'Turno de Caseta Asignada (Caseta Principal Norte)';
-    if (role === UserRole.QM_INSPECTOR) return 'Estación de Muestreo Activa (Laboratorio QM 01)';
-    if (role === UserRole.CONTROL_DESK) return 'Torre de Control Central (Patio & Andenes)';
-    return 'Arrendamiento de Pasillo Activo (Zone Lease HU-155)';
+    return `Módulo Activo: ${this.activeZoneName()}`;
   });
-
-  protected readonly leaseMinutesLeft = signal(28);
-  protected readonly isLeaseWarning = computed(() => this.leaseMinutesLeft() <= 5);
 
   // ─── Modal Simulador de Escaneo ──────────────────────────────────────────────
   protected readonly showScanModal = signal(false);
@@ -209,22 +199,21 @@ export class RfShellComponent implements OnInit, OnDestroy {
       this.currentTime.set(new Date());
     }, 1000);
 
-    // ── Notificaciones de Inicio de Sesión & Solicitudes Asignadas ──
+    // Escuchar eventos reales de conexión y desconexión de red
+    window.addEventListener('online', this.handleOnline);
+    window.addEventListener('offline', this.handleOffline);
+
+    // Bienvenida contextual al operador activo
     setTimeout(() => {
       const userName = this.displayUserName();
       const roleName = this.displayRole();
-      this.toast.info(
-        `Bienvenido, ${userName} (${roleName}). Tienes solicitudes de inventario asignadas y listas para operar.`,
-        'SESIÓN INICIADA'
-      );
+      if (this.authState.isAuthenticated()) {
+        this.toast.info(
+          `Sesión activa: ${userName} (${roleName}).`,
+          'SISTEMA WMS'
+        );
+      }
     }, 500);
-
-    setTimeout(() => {
-      this.toast.success(
-        'Zone Lease asignado: Pasillo 04 (Zona A) — 28 min de concesión exclusiva para maniobras.',
-        'PASILLO ASIGNADO'
-      );
-    }, 1400);
 
     if (this.syncState.hasPending()) {
       setTimeout(() => {
@@ -240,6 +229,8 @@ export class RfShellComponent implements OnInit, OnDestroy {
     if (this.clockIntervalId) {
       clearInterval(this.clockIntervalId);
     }
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
   }
 
   // ─── Control de Scroll del Banner Superior ───────────────────────────────

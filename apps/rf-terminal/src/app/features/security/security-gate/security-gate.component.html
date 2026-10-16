@@ -119,7 +119,7 @@
         </div>
         <div class="security-kpi-summary-item">
           <span class="security-kpi-summary-dot bg-[#c5a86b]"></span>
-          <span class="security-kpi-summary-label">QR Espera:</span>
+          <span class="security-kpi-summary-label">En Espera:</span>
           <span class="security-kpi-summary-value">{{ pendingPassesCount() }}</span>
         </div>
         <div class="security-kpi-summary-item">
@@ -154,10 +154,10 @@
 
         <div class="security-kpi-card security-kpi-card--warning">
           <div class="security-kpi-card__icon">
-            <span class="material-symbols-outlined">qr_code_scanner</span>
+            <span class="material-symbols-outlined">inbox</span>
           </div>
           <div class="security-kpi-card__info">
-            <span class="security-kpi-card__label">SOLICITUDES QR</span>
+            <span class="security-kpi-card__label">SOLICITUDES EN ESPERA</span>
             <strong class="security-kpi-card__value">{{ pendingPassesCount() }}</strong>
             <span class="security-kpi-card__sub">Choferes en espera</span>
           </div>
@@ -202,57 +202,21 @@
           <div class="incoming-passes-header">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-amber-500 font-bold animate-pulse">move_to_inbox</span>
-              <h3 class="incoming-passes-title">Solicitudes Entrantes de Choferes (Auto-Registro QR)</h3>
+              <h3 class="incoming-passes-title">Solicitudes Entrantes de Choferes</h3>
               <span class="badge-count">{{ pendingPassesCount() }}</span>
             </div>
-            <span class="text-xs text-muted">Toca una tarjeta para auto-completar el formulario F01</span>
+            <span class="text-xs text-muted">Toca una solicitud para cargar automáticamente los datos en el Formato F01</span>
           </div>
 
-          @if (activePasses().length > 0) {
+          @if (displayActivePasses().length > 0) {
             <div class="incoming-passes-carousel">
-              @for (pass of activePasses(); track pass.id) {
-                <div
-                  class="incoming-pass-card"
-                  [class.incoming-pass-card--active]="activeLoadedToken() === pass.token"
-                  (click)="loadPassIntoForm(pass)">
-                  <div class="pass-card-top">
-                    <span class="badge-op-type" [ngClass]="pass.operationType === 'INBOUND' ? 'badge-op--inbound' : 'badge-op--outbound'">
-                      {{ pass.operationType === 'INBOUND' ? '📥 DESCARGA (Inbound)' : '📤 CARGA (Outbound)' }}
-                    </span>
-                    <span class="pass-time-ago font-mono">
-                      ⏱ {{ formatStayDuration(pass.submittedAt).text }}
-                    </span>
-                  </div>
-
-                  <div class="pass-carrier-name">{{ pass.carrierName }}</div>
-                  
-                  <div class="pass-driver-row">
-                    <span class="material-symbols-outlined text-xs">person</span>
-                    <span>{{ pass.driverName }}</span>
-                    @if (pass.driverPhone) {
-                      <span class="text-muted font-mono text-[10px]">· Tel: {{ pass.driverPhone }}</span>
-                    }
-                  </div>
-
-                  <div class="pass-plates-row">
-                    <span class="plate-pill">Tracto: {{ pass.tractorPlates }}</span>
-                    <span class="plate-pill">Caja: {{ pass.boxPlates }}</span>
-                  </div>
-
-                  <div class="pass-footer-action">
-                    @if (activeLoadedToken() === pass.token) {
-                      <span class="badge-loaded">
-                        <span class="material-symbols-outlined text-sm">check_circle</span>
-                        <span>Cargado en Formulario F01</span>
-                      </span>
-                    } @else {
-                      <button type="button" class="btn-1tap-load">
-                        <span class="material-symbols-outlined text-sm">touch_app</span>
-                        <span>1-Tap: Cargar en Formulario</span>
-                      </button>
-                    }
-                  </div>
-                </div>
+              @for (pass of displayActivePasses(); track pass.token) {
+                <rf-incoming-pass-card
+                  [pass]="pass"
+                  [isLoaded]="activeLoadedToken() === pass.token"
+                  (selectPass)="loadPassIntoForm($event)"
+                  (rejectPass)="openRejectPassModal($event, $event)">
+                </rf-incoming-pass-card>
               }
             </div>
           } @else {
@@ -268,7 +232,7 @@
           <div class="loaded-token-card animate-fade-in">
             <div class="loaded-token-header">
               <div class="loaded-badge-pulse">
-                <span class="material-symbols-outlined text-amber-400 font-bold">bolt</span>
+                <span class="material-symbols-outlined font-bold">verified_user</span>
               </div>
               <div class="loaded-title-wrap">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -1494,5 +1458,83 @@
     </div>
   }
 
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL DE CONFIRMACIÓN: RECHAZAR / DESCARTAR SOLICITUD DE CHOFER
+  ══════════════════════════════════════════════════════════════ -->
+  @if (passToReject(); as pass) {
+    <div class="rf-modal-backdrop animate-fade-in" (click)="closeRejectPassModal()">
+      <div class="rf-modal-content max-w-md" (click)="$event.stopPropagation()">
+        
+        <div class="rf-modal-header bg-rose-500/10 border-b border-rose-500/20">
+          <div class="flex items-center gap-2 text-rose-500 font-black">
+            <span class="material-symbols-outlined text-2xl">warning</span>
+            <span class="text-base uppercase tracking-wider">Confirmar Rechazo de Solicitud</span>
+          </div>
+          <button type="button" (click)="closeRejectPassModal()" class="text-slate-400 hover:text-white">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body p-4 space-y-3">
+          <p class="text-sm text-slate-300">
+            ¿Deseas rechazar y eliminar esta solicitud entrante?
+          </p>
+
+          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/60 space-y-1.5 text-xs">
+            <div class="flex justify-between">
+              <span class="text-muted">Pase Folio:</span>
+              <strong class="font-mono text-amber-400">#{{ pass.token }}</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-muted">Chofer:</span>
+              <strong class="text-slate-200">{{ pass.driverName }}</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-muted">Línea:</span>
+              <strong class="text-slate-200">{{ pass.carrierName }}</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-muted">Placas:</span>
+              <strong class="font-mono text-slate-200">{{ pass.tractorPlates }} / {{ pass.boxPlates || 'S/C' }}</strong>
+            </div>
+            @if (pass.documentNumber) {
+              <div class="flex justify-between">
+                <span class="text-muted">Documento:</span>
+                <strong class="font-mono text-emerald-400">{{ pass.documentNumber }}</strong>
+              </div>
+            }
+          </div>
+
+          <p class="text-[11px] text-rose-400/90 leading-relaxed">
+            ⚠️ Al confirmar, el pase será eliminado de la bandeja de Caseta y descartado del registro en espera.
+          </p>
+        </div>
+
+        <div class="rf-modal-footer flex items-center justify-end gap-2 p-3 border-t border-slate-800">
+          <button 
+            type="button" 
+            (click)="closeRejectPassModal()" 
+            [disabled]="isRejectingPass()"
+            class="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all">
+            Cancelar
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmRejectPass()" 
+            [disabled]="isRejectingPass()"
+            class="px-4 py-2 text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-500 rounded-lg flex items-center gap-1.5 shadow-md shadow-rose-900/40 transition-all">
+            @if (isRejectingPass()) {
+              <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
+              <span>Eliminando...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete_forever</span>
+              <span>Sí, Rechazar y Eliminar</span>
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
 
 </div>

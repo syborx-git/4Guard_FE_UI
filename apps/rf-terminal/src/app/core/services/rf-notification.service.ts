@@ -139,10 +139,24 @@ export class RfNotificationService {
 
   constructor() {
     this.initSoundPreference();
+    this.initDismissedTokens();
     this.initRouteTracking();
     this.initCrossTabSync();
     this.loadInitialPasses();
     this.startBackgroundSync();
+  }
+
+  private initDismissedTokens(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const stored = localStorage.getItem('4g_dismissed_driver_passes');
+      if (stored) {
+        const list: string[] = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          for (const t of list) this.dismissedTokens.add(t);
+        }
+      }
+    } catch (_) {}
   }
 
   private initRouteTracking(): void {
@@ -220,29 +234,34 @@ export class RfNotificationService {
 
     // Chofer QR completado
     if (notif.category === 'SECURITY' && (notif.title?.includes('Chofer') || notif.data?.status === 'SUBMITTED')) {
-      const p = notif.data;
-      if (p) {
-        this.addSubmittedDriverPass({
-          id: p.id || notif.id,
-          token: p.token || notif.referenceFolio || 'PASS-QR',
-          carrierName: p.carrierName || p.carrierLine || 'Transportista',
-          driverName: p.driverName || p.nombreOperador || 'Operador',
-          driverPhone: p.driverPhone,
-          tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
-          boxPlates: p.boxPlates || p.placasCaja,
-          ecoNumber: p.ecoNumber || p.noEcoTractor,
-          boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
-          transportType: p.transportType || p.tipoTransporte || p.vehicleType,
-          operationType: p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
-          documentNumber: p.documentNumber || p.remision || p.noCartaPorte || 'S/N',
-          clientName: p.clientName || p.client,
-          sealNumbers: p.sealNumbers || [],
-          checklistData: p.checklistData,
-          status: 'SUBMITTED',
-          submittedAt: new Date(),
-          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-        });
-      }
+      const p = notif.data || {};
+      const token = p.token || notif.referenceFolio || 'PASS-QR';
+      if (this.dismissedTokens.has(token)) return;
+
+      const carrier = p.carrierLine || p.carrierName || notif.referenceLine || 'Transportista';
+      const client = p.clientName || p.client || notif.referenceClient || 'Cliente';
+      const doc = p.remision || p.docNumber || p.noCartaPorte || p.documentNumber || '';
+
+      this.addSubmittedDriverPass({
+        id: p.id || notif.id,
+        token: token,
+        carrierName: carrier,
+        driverName: p.driverName || p.nombreOperador || 'Operador',
+        driverPhone: p.driverPhone,
+        tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+        boxPlates: p.boxPlates || p.placasCaja || '',
+        ecoNumber: p.ecoNumber || p.noEcoTractor,
+        boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
+        transportType: p.transportType || p.tipoTransporte || p.vehicleType,
+        operationType: (p.operationType === 'CARGA' || p.operationType === 'OUTBOUND') ? 'OUTBOUND' : 'INBOUND',
+        documentNumber: doc,
+        clientName: client,
+        sealNumbers: p.sealNumbers || [],
+        checklistData: p.checklistData,
+        status: 'SUBMITTED',
+        submittedAt: new Date(),
+        time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+      });
     }
 
     // Rampa asignada
@@ -299,6 +318,7 @@ export class RfNotificationService {
 
   // ── Inserción de Eventos con Alerta Acústica Amigable ──
   public addSubmittedDriverPass(pass: DriverPassNotification): void {
+    if (this.dismissedTokens.has(pass.token)) return;
     if (this.notifiedTokens.has(pass.token)) return;
     this.notifiedTokens.add(pass.token);
 
@@ -341,8 +361,22 @@ export class RfNotificationService {
     this.pendingRampAssignments.update(list => list.filter(r => r.folio !== folio));
   }
 
+  private readonly dismissedTokens = new Set<string>();
+
   public dismissDriverPass(token: string): void {
+    if (!token) return;
+    this.dismissedTokens.add(token);
     this.pendingDriverPasses.update(list => list.filter(p => p.token !== token));
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('4g_dismissed_driver_passes');
+        const list: string[] = stored ? JSON.parse(stored) : [];
+        if (!list.includes(token)) {
+          list.push(token);
+          localStorage.setItem('4g_dismissed_driver_passes', JSON.stringify(list));
+        }
+      }
+    } catch {}
   }
 
   public dismissExitPass(folio: string): void {
@@ -370,39 +404,62 @@ export class RfNotificationService {
     this.pollIntervalId = setInterval(() => {
       this.fetchActivePassesFromBackend();
       this.fetchInYardPassesFromBackend();
-    }, 15000);
+    }, 4000);
+  }
+
+  private getOrgId(): string {
+    const user = this.authState.user() as any;
+    if (user?.organizationId && user.organizationId.length === 36 && user.organizationId !== '44444444-4444-4444-4444-444444444444') {
+      return user.organizationId;
+    }
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session.organizationId && session.organizationId.length === 36) return session.organizationId;
+      }
+      const authUserStr = localStorage.getItem('auth_user') || localStorage.getItem('user');
+      if (authUserStr) {
+        const u = JSON.parse(authUserStr);
+        if (u.organizationId && u.organizationId.length === 36) return u.organizationId;
+      }
+    } catch {}
+    return 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
   }
 
   private fetchActivePassesFromBackend(): void {
-    const orgId = (this.authState.user() as any)?.organizationId || '44444444-4444-4444-4444-444444444444';
+    const orgId = this.getOrgId();
     const params = new HttpParams().set('organizationId', orgId);
 
     this.http.get<any>(`/api/v1/security-gate/passes/active`, { params }).subscribe({
       next: (res) => {
         const rawList = res?.data || res || [];
         if (Array.isArray(rawList)) {
-          const submittedOnly = rawList.filter((p: any) => p && p.status === 'SUBMITTED');
-          const mapped: DriverPassNotification[] = submittedOnly.map((p: any) => ({
-            id: p.id || p.token,
-            token: p.token,
-            carrierName: p.carrierLine || p.carrierName || 'Transportista',
-            driverName: p.driverName || p.nombreOperador || 'Operador',
-            driverPhone: p.driverPhone,
-            tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
-            boxPlates: p.boxPlates || p.placasCaja,
-            ecoNumber: p.noEcoTractor || p.ecoNumber,
-            boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
-            transportType: p.transportType || p.tipoTransporte || p.vehicleType,
-            operationType: p.operationType === 'CARGA' || p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
-            documentNumber: p.remision || p.noCartaPorte || p.documentNumber || 'S/N',
-            clientName: p.client || p.clientName || 'Cliente',
-            rampNumber: p.rampNumber,
-            sealNumbers: p.sealNumbers || [],
-            checklistData: p.checklistData,
-            status: 'SUBMITTED',
-            submittedAt: new Date(p.submittedAt || p.createdAt || Date.now()),
-            time: new Date(p.submittedAt || p.createdAt || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-          }));
+          const submittedOnly = rawList.filter((p: any) => p && p.status === 'SUBMITTED' && !this.dismissedTokens.has(p.token));
+          const mapped: DriverPassNotification[] = submittedOnly.map((p: any) => {
+            const doc = p.remision || p.docNumber || p.noCartaPorte || p.documentNumber || '';
+            return {
+              id: p.id || p.token,
+              token: p.token,
+              carrierName: p.carrierLine || p.carrierName || 'Transportista',
+              driverName: p.driverName || p.nombreOperador || 'Operador',
+              driverPhone: p.driverPhone,
+              tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
+              boxPlates: p.boxPlates || p.placasCaja,
+              ecoNumber: p.noEcoTractor || p.ecoNumber,
+              boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
+              transportType: p.transportType || p.tipoTransporte || p.vehicleType,
+              operationType: p.operationType === 'CARGA' || p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
+              documentNumber: doc,
+              clientName: p.client || p.clientName || 'Cliente',
+              rampNumber: p.rampNumber,
+              sealNumbers: p.sealNumbers || [],
+              checklistData: p.checklistData,
+              status: 'SUBMITTED',
+              submittedAt: new Date(p.submittedAt || p.createdAt || Date.now()),
+              time: new Date(p.submittedAt || p.createdAt || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+            };
+          });
 
           // Comparar si hay nuevos para sonar el chime
           if (mapped.length > this.pendingDriverPasses().length && this.pendingDriverPasses().length > 0) {
@@ -420,7 +477,7 @@ export class RfNotificationService {
   }
 
   private fetchInYardPassesFromBackend(): void {
-    const orgId = (this.authState.user() as any)?.organizationId || '44444444-4444-4444-4444-444444444444';
+    const orgId = this.getOrgId();
     const params = new HttpParams().set('organizationId', orgId);
 
     this.http.get<any>(`/api/v1/security-gate/passes/in-yard`, { params }).subscribe({
@@ -459,25 +516,25 @@ export class RfNotificationService {
       if (rawActive) {
         const parsed = JSON.parse(rawActive);
         if (Array.isArray(parsed)) {
-          const submitted = parsed.filter((p: any) => p && p.status === 'SUBMITTED');
+          const submitted = parsed.filter((p: any) => p && p.status === 'SUBMITTED' && !this.dismissedTokens.has(p.token));
           this.pendingDriverPasses.set(submitted.map((p: any) => ({
             id: p.id || p.token,
             token: p.token,
-            carrierName: p.carrierName || p.carrierLine || 'Transportista',
-            driverName: p.driverName || p.nombreOperador || 'Operador',
+            carrierName: p.carrierLine || p.carrierName || 'Transportista',
+            driverName: p.nombreOperador || p.driverName || 'Operador',
             driverPhone: p.driverPhone,
-            tractorPlates: p.tractorPlates || p.placasTracto || 'S/P',
-            boxPlates: p.boxPlates,
-            ecoNumber: p.ecoNumber,
-            boxDimensions: p.boxDimensions || p.medidasCaja || p.boxSize,
-            transportType: p.transportType || p.tipoTransporte || p.vehicleType,
-            operationType: p.operationType === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
-            documentNumber: p.documentNumber || p.remision || 'S/N',
-            clientName: p.clientName || p.client,
+            tractorPlates: p.placasTracto || p.tractorPlates || 'S/P',
+            boxPlates: p.placasCaja || p.boxPlates || '',
+            ecoNumber: p.noEcoTractor || p.ecoNumber,
+            boxDimensions: p.medidasCaja || p.boxDimensions || p.boxSize,
+            transportType: p.tipoTransporte || p.transportType || p.vehicleType,
+            operationType: (p.operacion === 'CARGA' || p.operationType === 'CARGA' || p.operationType === 'OUTBOUND') ? 'OUTBOUND' : 'INBOUND',
+            documentNumber: p.remision || p.noCartaPorte || p.documentNumber || p.docNumber || '',
+            clientName: p.clientName || p.client || 'Cliente',
             sealNumbers: p.sealNumbers || [],
             checklistData: p.checklistData,
             status: 'SUBMITTED',
-            submittedAt: new Date(),
+            submittedAt: new Date(p.submittedAt || Date.now()),
             time: 'En espera'
           })));
         }
