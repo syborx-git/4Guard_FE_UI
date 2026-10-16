@@ -94,6 +94,22 @@
 }
 
 /* ── 1. Sección Superior: Terminal Card & Hero Banner ─────────── */
+.rf-dashboard-top-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  align-items: stretch;
+}
+
+@media (min-width: 1024px) {
+  .rf-dashboard-top-section {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
 .rf-terminal-info-card {
   background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   border: 1.5px solid rgba(197, 168, 107, 0.32);
