@@ -31,8 +31,8 @@
       <div 
         class="lease-badge" 
         [class.lease-badge--warning]="isLeaseWarning()"
-        title="Arrendamiento de Pasillo Activo (Zone Lease HU-155)">
-        <span class="material-symbols-outlined lease-icon">lock_clock</span>
+        [title]="leaseBadgeTooltip()">
+        <span class="material-symbols-outlined lease-icon">{{ leaseIcon() }}</span>
         <span class="lease-text">{{ activeZoneName() }}</span>
         <span class="lease-timer">{{ leaseMinutesLeft() }}m</span>
       </div>

@@ -107,8 +107,31 @@ export class RfShellComponent implements OnInit, OnDestroy {
     return u?.branchName || this.authState.branchId() || 'CEDIS Central Monterrey';
   });
 
-  // ─── Estado del Zone Lease (HU-155) ──────────────────────────────────────────
-  protected readonly activeZoneName = signal('Pasillo 04');
+  // ─── Estado del Zone Lease / Área Asignada por Rol (HU-155) ───────────────────
+  protected readonly activeZoneName = computed(() => {
+    const role = this.authState.role();
+    if (role === UserRole.SECURITY_GUARD) return 'Caseta Norte';
+    if (role === UserRole.QM_INSPECTOR) return 'Lab QM 01';
+    if (role === UserRole.CONTROL_DESK) return 'Mesa Control';
+    return 'Pasillo 04';
+  });
+
+  protected readonly leaseIcon = computed(() => {
+    const role = this.authState.role();
+    if (role === UserRole.SECURITY_GUARD) return 'shield';
+    if (role === UserRole.QM_INSPECTOR) return 'verified_user';
+    if (role === UserRole.CONTROL_DESK) return 'traffic';
+    return 'lock_clock';
+  });
+
+  protected readonly leaseBadgeTooltip = computed(() => {
+    const role = this.authState.role();
+    if (role === UserRole.SECURITY_GUARD) return 'Turno de Caseta Asignada (Caseta Principal Norte)';
+    if (role === UserRole.QM_INSPECTOR) return 'Estación de Muestreo Activa (Laboratorio QM 01)';
+    if (role === UserRole.CONTROL_DESK) return 'Torre de Control Central (Patio & Andenes)';
+    return 'Arrendamiento de Pasillo Activo (Zone Lease HU-155)';
+  });
+
   protected readonly leaseMinutesLeft = signal(28);
   protected readonly isLeaseWarning = computed(() => this.leaseMinutesLeft() <= 5);
 
