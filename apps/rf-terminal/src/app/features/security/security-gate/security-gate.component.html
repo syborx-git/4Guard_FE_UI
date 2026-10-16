@@ -607,7 +607,7 @@
                     <div class="seal-lock-card__pill">
                       <span class="seal-lock-chip-pending">
                         <span class="material-symbols-outlined text-sm">schedule</span>
-                        <span>PENDIENTE_ANDEN</span>
+                        <span>Pendiente en Andén</span>
                       </span>
                       <span class="seal-lock-pill-sub">Cotejo al Egresar</span>
                     </div>
@@ -985,7 +985,7 @@
 
                 <div class="flex items-center gap-2">
                   <span class="badge-status" [ngClass]="'badge-status--' + vehicle.status">
-                    {{ getStatusLabel(vehicle.status) }}
+                    {{ getStatusLabel(vehicle.status, vehicle.operationType) }}
                   </span>
                 </div>
               </div>
@@ -1021,9 +1021,16 @@
                 <div class="info-block-row">
                   <div class="info-item">
                     <span class="info-label">SELLOS DE SEGURIDAD</span>
-                    <span class="info-val font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold truncate block max-w-[200px]" [title]="vehicle.sealNumbers.join(', ')">
-                      {{ vehicle.sealNumbers.length > 0 ? vehicle.sealNumbers.join(', ') : 'SIN SELLOS' }}
-                    </span>
+                    @if (isSealPendingDock(vehicle.sealNumbers)) {
+                      <span class="seal-chip-pending" title="Unidad vacía para CARGA: los sellos oficiales se colocan y cotejan al concluir estiba en andén">
+                        <span class="material-symbols-outlined text-xs">schedule</span>
+                        <span>Pendiente en andén</span>
+                      </span>
+                    } @else {
+                      <span class="info-val font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold truncate block max-w-[200px]" [title]="formatSealDisplay(vehicle.sealNumbers)">
+                        {{ formatSealDisplay(vehicle.sealNumbers) }}
+                      </span>
+                    }
                   </div>
                   <div class="info-item text-right">
                     <span class="info-label">ESTANCIA EN PATIO</span>
@@ -1153,9 +1160,16 @@
                 </div>
                 <div class="vehicle-info-line">
                   <span class="info-label">Sellos:</span>
-                  <span class="info-val font-mono font-bold text-amber-800 dark:text-amber-300">
-                    {{ vehicle.sealNumbers.join(', ') }}
-                  </span>
+                  @if (isSealPendingDock(vehicle.sealNumbers)) {
+                    <span class="seal-chip-pending">
+                      <span class="material-symbols-outlined text-xs">schedule</span>
+                      <span>Pendiente en andén</span>
+                    </span>
+                  } @else {
+                    <span class="info-val font-mono font-bold text-amber-800 dark:text-amber-300">
+                      {{ formatSealDisplay(vehicle.sealNumbers) }}
+                    </span>
+                  }
                 </div>
               </div>
 
@@ -1247,7 +1261,7 @@
                 <div class="vehicle-info-line">
                   <span class="info-label">Sellos Salida:</span>
                   <span class="info-val font-mono text-xs font-bold text-amber-800 dark:text-amber-300">
-                    {{ vehicle.exitSealNumbers?.join(', ') || vehicle.sealNumbers.join(', ') }}
+                    {{ formatSealDisplay(vehicle.exitSealNumbers || vehicle.sealNumbers) }}
                   </span>
                 </div>
                 @if (vehicle.exitObservations) {
@@ -1388,9 +1402,18 @@
             </div>
             <div class="checkout-tile col-span-2">
               <span class="tile-label">SELLOS DE ENTRADA REGISTRADOS</span>
-              <span class="tile-val font-mono text-xs text-slate-300 truncate" [title]="selectedVeh.sealNumbers.join(', ')">
-                {{ selectedVeh.sealNumbers.length > 0 ? selectedVeh.sealNumbers.join(', ') : 'SIN SELLOS REGISTRADOS' }}
-              </span>
+              @if (isSealPendingDock(selectedVeh.sealNumbers) || selectedVeh.operationType === 'OUTBOUND') {
+                <div class="mt-0.5">
+                  <span class="seal-chip-pending" title="Ingreso vacío para carga">
+                    <span class="material-symbols-outlined text-xs">schedule</span>
+                    <span>Ingreso vacío · Sello colocado en andén</span>
+                  </span>
+                </div>
+              } @else {
+                <span class="tile-val font-mono text-xs text-slate-700 dark:text-slate-300 truncate" [title]="formatSealDisplay(selectedVeh.sealNumbers)">
+                  {{ formatSealDisplay(selectedVeh.sealNumbers) }}
+                </span>
+              }
             </div>
           </div>
 

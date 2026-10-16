@@ -1034,7 +1034,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       noEcoTractor: vehicle.ecoNumber || 'ECO-01',
       placasCaja: vehicle.boxPlates,
       medidasCaja: vehicle.boxDimensions || '',
-      noSello: vehicle.sealNumbers.join(', '),
+      noSello: this.formatSealDisplay(vehicle.exitSealNumbers || vehicle.sealNumbers),
       tipoTransporte: vehicle.transportType || '',
 
       eppZapatos: chk.eppZapatos || 'SI',
@@ -1228,14 +1228,31 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     return { text: `${hrs}h ${remMins}m`, slaClass };
   }
 
-  protected getStatusLabel(status: YardVehicle['status']): string {
+  protected isSealPendingDock(seals?: string[] | null): boolean {
+    if (!seals || seals.length === 0) return false;
+    return seals.some((s) => s === 'PENDIENTE_ANDEN') && !seals.some((s) => s && s !== 'PENDIENTE_ANDEN');
+  }
+
+  protected formatSealDisplay(seals?: string[] | null): string {
+    if (!seals || seals.length === 0) return 'Sin sellos';
+    const valid = seals.filter((s) => s && s !== 'PENDIENTE_ANDEN' && s !== 'SIN_SELLOS' && s !== 'SIN_SELLO');
+    if (valid.length > 0) {
+      return valid.join(', ');
+    }
+    if (seals.some((s) => s === 'PENDIENTE_ANDEN')) {
+      return 'Pendiente en andén';
+    }
+    return 'Sin sellos';
+  }
+
+  protected getStatusLabel(status: YardVehicle['status'], opType?: 'INBOUND' | 'OUTBOUND'): string {
     switch (status) {
       case 'WAITING_RAMP':
         return 'En Espera de Rampa';
       case 'AT_RAMP':
         return 'En Andén / Maniobra';
       case 'DISCHARGE_FINISHED':
-        return 'Descarga Finalizada';
+        return opType === 'OUTBOUND' ? 'Carga Finalizada' : 'Descarga Finalizada';
       case 'AUTHORIZED_DEPARTURE':
         return 'Salida Autorizada';
       case 'COMPLETED_EXIT':

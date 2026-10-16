@@ -107,8 +107,16 @@ export class RfShellComponent implements OnInit, OnDestroy {
     return u?.branchName || this.authState.branchId() || 'CEDIS Central Monterrey';
   });
 
-  // ─── Estado del Zone Lease / Área Asignada por Rol (HU-155) ───────────────────
+  protected readonly currentUrl = signal<string>(this.router.url);
+
+  // ─── Estado del Zone Lease / Área Asignada por Rol y Módulo (HU-155) ─────────
   protected readonly activeZoneName = computed(() => {
+    const url = this.currentUrl();
+    if (url.includes('/security')) return 'Caseta Norte';
+    if (url.includes('/quality')) return 'Lab QM 01';
+    if (url.includes('/cockpit')) return 'Pasillo 04';
+    if (url.includes('/counting')) return 'Bahía P04';
+
     const role = this.authState.role();
     if (role === UserRole.SECURITY_GUARD) return 'Caseta Norte';
     if (role === UserRole.QM_INSPECTOR) return 'Lab QM 01';
@@ -117,6 +125,12 @@ export class RfShellComponent implements OnInit, OnDestroy {
   });
 
   protected readonly leaseIcon = computed(() => {
+    const url = this.currentUrl();
+    if (url.includes('/security')) return 'shield';
+    if (url.includes('/quality')) return 'verified_user';
+    if (url.includes('/cockpit')) return 'lock_clock';
+    if (url.includes('/counting')) return 'inventory_2';
+
     const role = this.authState.role();
     if (role === UserRole.SECURITY_GUARD) return 'shield';
     if (role === UserRole.QM_INSPECTOR) return 'verified_user';
@@ -125,6 +139,12 @@ export class RfShellComponent implements OnInit, OnDestroy {
   });
 
   protected readonly leaseBadgeTooltip = computed(() => {
+    const url = this.currentUrl();
+    if (url.includes('/security')) return 'Control de Caseta Asignada (Caseta Principal Norte)';
+    if (url.includes('/quality')) return 'Estación de Muestreo Activa (Laboratorio QM 01)';
+    if (url.includes('/cockpit')) return 'Arrendamiento de Pasillo Activo (Zone Lease HU-155)';
+    if (url.includes('/counting')) return 'Bahía de Auditoría Ciega (P04-R02)';
+
     const role = this.authState.role();
     if (role === UserRole.SECURITY_GUARD) return 'Turno de Caseta Asignada (Caseta Principal Norte)';
     if (role === UserRole.QM_INSPECTOR) return 'Estación de Muestreo Activa (Laboratorio QM 01)';
@@ -179,6 +199,11 @@ export class RfShellComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    // Sincronizar URL activa para contexto dinámico del header
+    this.router.events.subscribe(() => {
+      this.currentUrl.set(this.router.url);
+    });
+
     // Actualizar reloj en tiempo real cada segundo
     this.clockIntervalId = setInterval(() => {
       this.currentTime.set(new Date());
