@@ -997,7 +997,7 @@
                 <div class="info-block-row">
                   <div class="info-item">
                     <span class="info-label">FOLIO WMS</span>
-                    <strong class="info-val font-mono text-amber-500 font-bold tracking-wide">{{ vehicle.entryFolio }}</strong>
+                    <strong class="info-val font-mono text-amber-700 dark:text-amber-400 font-bold tracking-wide">{{ vehicle.entryFolio }}</strong>
                   </div>
                   <div class="info-item text-right">
                     <span class="info-label">OPERADOR</span>
@@ -1021,7 +1021,7 @@
                 <div class="info-block-row">
                   <div class="info-item">
                     <span class="info-label">SELLOS DE SEGURIDAD</span>
-                    <span class="info-val font-mono text-xs text-slate-300 font-semibold truncate block max-w-[200px]" [title]="vehicle.sealNumbers.join(', ')">
+                    <span class="info-val font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold truncate block max-w-[200px]" [title]="vehicle.sealNumbers.join(', ')">
                       {{ vehicle.sealNumbers.length > 0 ? vehicle.sealNumbers.join(', ') : 'SIN SELLOS' }}
                     </span>
                   </div>
