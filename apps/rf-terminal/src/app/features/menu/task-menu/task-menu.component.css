@@ -95,8 +95,8 @@
 
 /* ── 1. Sección Superior: Terminal Card & Hero Banner ─────────── */
 .rf-dashboard-top-section {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
   width: 100%;
   margin-bottom: 0.5rem;
@@ -105,8 +105,17 @@
 
 @media (min-width: 1024px) {
   .rf-dashboard-top-section {
+    display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 1.25rem;
+  }
+
+  .rf-terminal-info-card {
+    grid-column: span 4 / span 4;
+  }
+
+  .rf-hero-task-banner {
+    grid-column: span 8 / span 8;
   }
 }
 
