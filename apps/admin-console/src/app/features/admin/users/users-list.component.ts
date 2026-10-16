@@ -143,22 +143,17 @@ export class UsersListComponent implements OnInit, OnDestroy {
           label: this.getRoleLabel(r.name)
         }));
     }
-    // Fallback con catálogo completo de roles del sistema WMS
+    // Fallback con catálogo oficial de roles del sistema WMS (Organigrama Oficial)
     return [
+      { id: 'ADMIN', name: 'ADMIN', label: 'Director General (Admin)' },
       { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones' },
-      { id: 'ADMIN', name: 'ADMIN', label: 'Administrador General' },
-      { id: 'CEO', name: 'CEO', label: 'Director General' },
+      { id: 'OPERATIONS_COORDINATOR', name: 'OPERATIONS_COORDINATOR', label: 'Coordinador de Operaciones' },
       { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones' },
-      { id: 'WAREHOUSE_MANAGER', name: 'WAREHOUSE_MANAGER', label: 'Gerente de Almacén' },
-      { id: 'DOCK_SUPERVISOR', name: 'DOCK_SUPERVISOR', label: 'Supervisor de Andén' },
-      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
       { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control' },
+      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
+      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Montacarguista' },
       { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
-      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén' },
-      { id: 'MANEUVER_OPERATOR', name: 'MANEUVER_OPERATOR', label: 'Operador de Maniobras' },
-      { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
-      { id: 'AUDITOR', name: 'AUDITOR', label: 'Auditor' },
-      { id: 'CLIENT', name: 'CLIENT', label: 'Cliente 3PL' },
+      { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad (Caseta)' },
     ];
   });
 

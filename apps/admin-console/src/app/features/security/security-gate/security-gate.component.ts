@@ -179,6 +179,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   // ── Catálogos Flexibles de Tipos de Transporte y Medidas ──
   protected readonly transportTypesList = signal<string[]>([
+    'Camioneta',
     'Tortón',
     'Tráiler',
     'Otro (Especificar)'
@@ -902,11 +903,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       next: (data) => {
         if (data) {
           if (data.transportTypes && data.transportTypes.length > 0) {
-            const allowed = ['Tortón', 'Tráiler', 'Otro (Especificar)'];
-            const filtered = data.transportTypes.filter((t: string) => allowed.includes(t));
-            this.transportTypesList.set(filtered.length > 0 ? filtered : allowed);
-          } else {
-            this.transportTypesList.set(['Tortón', 'Tráiler', 'Otro (Especificar)']);
+            this.transportTypesList.set(data.transportTypes);
           }
           if (data.boxDimensions && data.boxDimensions.length > 0) {
             this.boxDimensionsList.set(data.boxDimensions);
@@ -1491,7 +1488,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const session = this.movementsService.movementsApi.getSessionOrg();
     const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&${orgQuery}`);
+    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&view=pass&${orgQuery}`);
     this.showQrModal.set(true);
   }
 

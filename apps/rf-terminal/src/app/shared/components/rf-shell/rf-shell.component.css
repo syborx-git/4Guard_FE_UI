@@ -221,6 +221,12 @@
   cursor: pointer;
 }
 
+.net-badge--offline {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
 .net-icon {
   font-size: 1rem;
 }
@@ -246,17 +252,20 @@
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  height: 38px;
-  padding: 0 0.75rem;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 0.85rem;
   background: var(--bg-card);
   border: 1px solid var(--border-card-strong);
   color: var(--text-primary);
-  border-radius: 10px;
-  font-size: 0.78rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
   transition: all 180ms ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .action-btn:hover {
@@ -266,6 +275,11 @@
   transform: translateY(-1px);
 }
 
+.action-btn:active {
+  transform: scale(0.96);
+  filter: brightness(0.95);
+}
+
 .action-btn--scan {
   background: var(--gold-bg);
   border-color: var(--gold-border);
@@ -273,7 +287,8 @@
 }
 
 .action-btn--theme {
-  width: 38px;
+  width: 44px;
+  min-width: 44px;
   padding: 0;
 }
 
@@ -356,19 +371,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 0.4rem 0.25rem;
+  gap: 3px;
+  padding: 0.5rem 0.35rem;
   text-decoration: none;
   color: var(--text-secondary);
   border-radius: 12px;
   border: 1px solid transparent;
   transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 50px;
+  min-height: 56px; /* Cumplimiento ADR-012 Touch Target con guantes */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .rf-shell__nav-item:hover {
   color: var(--text-primary);
   background: var(--bg-card-hover);
+}
+
+.rf-shell__nav-item:active {
+  transform: scale(0.96);
+  filter: brightness(0.94);
 }
 
 /* Active Item Estilo SDD Oficial */

@@ -22,13 +22,13 @@
   <!-- Mode tabs -->
   <div class="rf-login__tabs" role="tablist">
     <button
-      id="tab-scan"
+      id="tab-credentials"
       role="tab"
       class="rf-tab"
-      [class.rf-tab--active]="mode() === 'scan'"
-      (click)="switchMode('scan')"
-      [attr.aria-selected]="mode() === 'scan'">
-      📷 Escaneo QR / RFID
+      [class.rf-tab--active]="mode() === 'credentials'"
+      (click)="switchMode('credentials')"
+      [attr.aria-selected]="mode() === 'credentials'">
+      👤 Credenciales WMS
     </button>
     <button
       id="tab-pin"
@@ -37,9 +37,81 @@
       [class.rf-tab--active]="mode() === 'pin'"
       (click)="switchMode('pin')"
       [attr.aria-selected]="mode() === 'pin'">
-      🔢 PIN
+      🔢 PIN Rápido
+    </button>
+    <button
+      id="tab-scan"
+      role="tab"
+      class="rf-tab"
+      [class.rf-tab--active]="mode() === 'scan'"
+      (click)="switchMode('scan')"
+      [attr.aria-selected]="mode() === 'scan'">
+      📷 Escaneo QR
     </button>
   </div>
+
+  <!-- ═══ MODO CREDENCIALES WMS (USUARIO Y CONTRASEÑA OFICIAL) ═══ -->
+  @if (mode() === 'credentials') {
+    <div class="rf-credentials-panel" role="tabpanel" aria-labelledby="tab-credentials">
+      <form [formGroup]="loginForm" (ngSubmit)="submitCredentials()" class="rf-form">
+        <div class="rf-input-group">
+          <label for="username" class="rf-label">Usuario o Correo Institucional</label>
+          <div class="rf-input-wrap">
+            <span class="material-symbols-outlined input-icon">badge</span>
+            <input
+              id="username"
+              type="text"
+              formControlName="identifier"
+              placeholder="Ej: operator@4guard.mx, guard@4guard.mx"
+              class="rf-text-input"
+              autocomplete="username" />
+          </div>
+        </div>
+
+        <div class="rf-input-group">
+          <label for="password" class="rf-label">Contraseña</label>
+          <div class="rf-input-wrap">
+            <span class="material-symbols-outlined input-icon">lock</span>
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Contraseña del WMS"
+              class="rf-text-input"
+              autocomplete="current-password" />
+            <button
+              type="button"
+              class="pwd-toggle-btn"
+              (click)="toggleShowPassword()"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Ver contraseña'">
+              <span class="material-symbols-outlined">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </div>
+
+        @if (error()) {
+          <div class="pin-error" role="alert" aria-live="assertive">
+            <span aria-hidden="true">⚠</span> {{ error() }}
+          </div>
+        }
+
+        <button
+          id="btn-login-credentials"
+          type="submit"
+          class="rf-confirm-btn"
+          [disabled]="loginForm.invalid || isLoading()"
+          aria-label="Iniciar Sesión en el Terminal">
+          @if (isLoading()) {
+            <span class="btn-spin" aria-hidden="true">⟳</span>
+            Verificando credenciales…
+          } @else {
+            <span class="material-symbols-outlined">login</span>
+            Ingresar al Terminal
+          }
+        </button>
+      </form>
+    </div>
+  }
 
   <!-- ═══ MODO ESCANEO ═══════════════════════════════════════ -->
   @if (mode() === 'scan') {
@@ -50,7 +122,7 @@
         id="scan-trigger-btn"
         class="rf-scan-btn"
         [class.rf-scan-btn--scanning]="isScanning()"
-        (click)="simulateScan()"
+        (click)="triggerScan()"
         [disabled]="isScanning()"
         aria-label="Activar cámara para escanear QR o RFID">
         @if (!isScanning()) {
@@ -63,10 +135,6 @@
           <span class="rf-scan-btn__sub">Mantén tu credencial frente al lector</span>
         }
       </button>
-
-      <p class="rf-scan-demo">
-        <span aria-hidden="true">ℹ</span> Demo: haz clic para simular lectura exitosa
-      </p>
     </div>
   }
 
@@ -116,10 +184,6 @@
           ✓ Ingresar
         }
       </button>
-
-      <p class="rf-pin-hint">
-        Demo: 1234 (Operario) · 5678 (Supervisor) · 0000 (QM)
-      </p>
     </div>
   }
 

@@ -191,7 +191,7 @@ export interface TransportChecklistPrintData {
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">No. Eco Tracto:</td>
             <td class="border border-slate-900 px-2 py-0.5 font-mono font-bold">{{ data.noEcoTractor || '-' }}</td>
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Tipo Transp.:</td>
-            <td class="border border-slate-900 px-2 py-0.5 font-semibold">{{ data.tipoTransporte || 'Caja Seca' }}</td>
+            <td class="border border-slate-900 px-2 py-0.5 font-semibold">{{ data.tipoTransporte || '-' }}</td>
           </tr>
           <tr>
             <td class="border border-slate-900 px-2 py-0.5 font-bold bg-slate-100">Placas Caja:</td>

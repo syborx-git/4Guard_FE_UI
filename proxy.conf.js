@@ -6,9 +6,6 @@ const PROXY_CONFIG = {
     "secure": false,
     "changeOrigin": true,
     "logLevel": "info",
-    "headers": {
-      "Origin": "http://localhost:4200"
-    },
     "onError": (err, req, res) => {
       if (res && res.writeHead && !res.headersSent) {
         res.writeHead(502, { 'Content-Type': 'application/json' });

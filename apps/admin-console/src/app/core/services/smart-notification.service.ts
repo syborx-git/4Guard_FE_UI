@@ -215,6 +215,19 @@ export class SmartNotificationService {
       }
     }
 
+    // Notificar a otras pestañas/dispositivos (ej. Terminal RF en tablet montacarguista)
+    try {
+      if (typeof window !== 'undefined') {
+        const payload = JSON.stringify({ type: 'NOTIFICATION', notification });
+        localStorage.setItem('4g_last_notification', payload);
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('4guard_wms_events');
+          bc.postMessage({ type: 'NOTIFICATION', notification });
+          bc.close();
+        }
+      }
+    } catch (_) {}
+
     // Verificar si aplica al usuario logueado en este momento
     if (this.isRelevantForCurrentUser(notification)) {
       this.latestNotification.set(notification);

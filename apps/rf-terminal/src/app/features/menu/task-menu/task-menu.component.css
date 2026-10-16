@@ -12,97 +12,55 @@
 .rf-menu-workspace {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding: 1rem 1.25rem 0.5rem;
+  padding: 1.25rem 1.5rem 1rem;
   box-sizing: border-box;
   font-family: var(--font-body);
   color: var(--text-primary);
 }
 
-/* ── 0. Barra de Simulación / Conmutador de Roles RBAC ─────────── */
-.rf-role-switcher-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0.85rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.rf-role-switcher-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.role-switcher-label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.role-pills-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: nowrap;
-}
-
-.role-pill-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
-  background: var(--bg-card-subtle);
-  border: 1px solid var(--border-card);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.18s ease;
-}
-
-.role-pill-btn:hover {
-  background: var(--border-card);
-  color: var(--text-primary);
-}
-
-.role-pill-btn--active {
-  background: linear-gradient(135deg, #c5a86b 0%, #b3924f 100%) !important;
-  color: #172033 !important;
-  border-color: #e0c87a !important;
-  font-weight: 900;
-  box-shadow: 0 2px 8px rgba(197, 168, 107, 0.35);
-}
-
-:host-context(.theme-dark) .role-pill-btn--active,
-:host-context(.dark) .role-pill-btn--active,
-:host-context([data-theme='dark']) .role-pill-btn--active {
-  background: linear-gradient(135deg, #d0af67 0%, #b89547 100%) !important;
-  color: #0b1119 !important;
-  box-shadow: 0 2px 8px rgba(208, 175, 103, 0.3);
-}
 
 /* ── 1. Sección Superior: Terminal Card & Hero Banner ─────────── */
+.rf-dashboard-top-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  align-items: stretch;
+}
+
+@media (min-width: 1024px) {
+  .rf-dashboard-top-section {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  .rf-terminal-info-card {
+    grid-column: span 4 / span 4;
+  }
+
+  .rf-hero-task-banner {
+    grid-column: span 8 / span 8;
+  }
+}
+
 .rf-terminal-info-card {
   background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   border: 1.5px solid rgba(197, 168, 107, 0.32);
   border-top: 3.5px solid var(--gold);
   border-radius: 18px;
-  padding: 1.25rem 1.5rem;
+  padding: 1.45rem 1.65rem;
   box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 1.15rem;
+  min-height: 165px;
   position: relative;
   overflow: hidden;
   transition: all 200ms ease;
@@ -143,7 +101,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.65rem;
 }
 
 .terminal-badge__dot {
@@ -160,27 +118,27 @@
   font-size: 1.55rem;
   font-weight: 800;
   color: var(--text-primary);
-  line-height: 1.15;
+  line-height: 1.25;
   margin: 0;
   letter-spacing: -0.025em;
 }
 
 .terminal-desc {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
-  line-height: 1.35;
-  margin: 0.35rem 0 0;
+  line-height: 1.45;
+  margin: 0.55rem 0 0;
   font-weight: 500;
 }
 
 .terminal-footer {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding-top: 0.85rem;
-  margin-top: 0.85rem;
+  gap: 0.65rem;
+  padding-top: 0.95rem;
+  margin-top: auto;
   border-top: 1px solid var(--border-card);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-family: var(--font-mono);
   font-weight: 700;
 }

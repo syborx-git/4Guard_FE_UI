@@ -166,7 +166,53 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.token.set('PASS-LOCAL-' + Date.now().toString().slice(-4));
         this.isLoadingPass.set(false);
       }
+
+      // Parámetro para visualizar directamente el pase QR (ej. ?view=pass o ?preview=true)
+      const qView = (params['view'] || params['preview'] || params['mode'] || '').toLowerCase();
+      if (qView === 'pass' || qView === 'true' || qView === '1' || qView === 'qr') {
+        this.populateDemoPassIfEmpty();
+        this.submitSuccess.set(true);
+      }
     });
+  }
+
+  protected switchToFormView(): void {
+    this.submitSuccess.set(false);
+  }
+
+  protected switchToPassView(): void {
+    this.populateDemoPassIfEmpty();
+    this.submitSuccess.set(true);
+  }
+
+  protected populateDemoPassIfEmpty(): void {
+    const f = this.checkInForm.value;
+    if (!f.nombreOperador || !f.placasTracto) {
+      this.checkInForm.patchValue({
+        operacion: f.operacion || 'DESCARGA',
+        remision: f.remision || 'REM-2024-8849',
+        noCartaPorte: f.noCartaPorte || '',
+        clientName: f.clientName || 'MARCAS NESTLE S.A. DE C.V.',
+        clientCode: f.clientCode || '87c07cb2-61c3-4006-a88c-265bd1eee2df',
+        carrierLine: f.carrierLine || 'TRANSPORTE GOLA',
+        carrierLineCode: f.carrierLineCode || 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af',
+        nombreOperador: f.nombreOperador || 'JUAN CARLOS MARTÍNEZ RÍOS',
+        driverPhone: f.driverPhone || '8119283746',
+        placasTracto: f.placasTracto || '78-AK-9P',
+        noEcoTractor: f.noEcoTractor || 'ECO-104',
+        placasCaja: f.placasCaja || '12-TR-4M',
+        noEcoCaja: f.noEcoCaja || 'BOX-22',
+        medidasCaja: f.medidasCaja || '53 Pies',
+        tipoTransporte: f.tipoTransporte || 'Tráiler',
+        declaracionVerdad: true
+      });
+      if (this.sealList().length === 0) {
+        this.sealList.set(['SEAL-90421', 'SEAL-90422']);
+      }
+      if (!this.token() || this.token().startsWith('PASS-LOCAL')) {
+        this.token.set('PASS-4G-' + Math.floor(100000 + Math.random() * 900000));
+      }
+    }
   }
 
   protected loadCatalogs(): void {
@@ -328,6 +374,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.isLoadingPass.set(false);
         if (pass) {
           this.applyPassDataToForm(pass);
+          const st = String(pass.status || '').toUpperCase();
+          if (st === 'SUBMITTED' || st === 'ACTIVE' || st === 'IN_YARD' || st === 'IN_DOCK' || st === 'CALL_TO_DOCK' || st === 'COMPLETED' || pass.submittedAt) {
+            this.submitSuccess.set(true);
+          }
         }
       },
       error: () => {
@@ -702,5 +752,27 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.submitError.set(msg);
       }
     });
+  }
+
+  protected getQrCodeUrl(): string {
+    const val = this.token() || 'PASS-4G-OFICIAL';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=2&ecc=H&data=${encodeURIComponent(val)}`;
+  }
+
+  protected sharePassViaWhatsApp(): void {
+    const f = this.checkInForm.value;
+    const token = this.token();
+    const op = f.operacion || 'DESCARGA';
+    const text = `*4GUARD WMS — Pase Digital de Acceso*\n` +
+      `*Pase Folio:* ${token}\n` +
+      `*Operación:* ${op}\n` +
+      `*Chofer:* ${f.nombreOperador}\n` +
+      `*Transportista:* ${f.carrierLine}\n` +
+      `*Placas Tracto:* ${f.placasTracto || '-'}\n` +
+      `*Placas Caja:* ${f.placasCaja || '-'}\n` +
+      `*Documento:* ${op === 'CARGA' ? (f.noCartaPorte || '-') : (f.remision || '-')}\n\n` +
+      `Presenta este pase QR en la caseta de vigilancia para acceso inmediato.`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   }
 }
