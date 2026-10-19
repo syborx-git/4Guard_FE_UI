@@ -5,6 +5,7 @@ import {
   inject,
   signal,
   computed,
+  effect,
   ElementRef,
   HostListener,
   PLATFORM_ID
@@ -174,6 +175,15 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
   });
 
   private autoCloseTimeoutId: any = null;
+
+  constructor() {
+    effect(() => {
+      if (this.smartNotification.isDropdownOpenRequested()) {
+        this.isOpen.set(true);
+        this.smartNotification.clearDropdownOpenRequest();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.currentUrl.set(this.router.url);

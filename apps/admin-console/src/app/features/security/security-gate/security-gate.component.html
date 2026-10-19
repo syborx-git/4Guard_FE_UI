@@ -35,17 +35,30 @@
 
     <!-- Acciones de Cabecera y Badges de Control (Acomodados al borde izquierdo) -->
     <div class="flex items-center gap-2.5 flex-wrap">
-      <!-- Generador de Pase QR para Chofer -->
+      <!-- Imprimir Cartel Oficial QR para Entrada (Formato F01 Tamaño Carta) -->
+      <button
+        type="button"
+        (click)="openPosterPrintModal()"
+        class="btn-primary-gold flex items-center gap-1.5 shadow-sm"
+        style="background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); border-color: rgba(234, 195, 73, 0.45); color: #f8fafc;"
+        aria-label="Imprimir Cartel QR de Entrada"
+        title="Imprimir cartel oficial tamaño Carta con código QR para colocar en la entrada de caseta"
+      >
+        <span class="material-symbols-outlined text-base text-amber-400">print</span>
+        <span>Imprimir Cartel QR</span>
+      </button>
+
+      <!-- Ver Código QR Rápido / Configuración de Túnel -->
       <button
         type="button"
         (click)="openQrModal()"
         [disabled]="isGeneratingPass()"
-        class="btn-primary-gold"
-        aria-label="Ver o Generar Pase QR Chofer"
-        title="Genera un código QR institucional o enlace móvil para que el transportista complete el Check List de Transporte desde su smartphone"
+        class="btn-secondary-outline"
+        aria-label="Ver Código QR o Configurar Túnel"
+        title="Ver código QR rápido y verificar URL pública o túnel Ngrok"
       >
         <span class="material-symbols-outlined text-base">qr_code_scanner</span>
-        <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Ver / Generar Código QR' }}</span>
+        <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Ver QR / Configurar Túnel' }}</span>
       </button>
 
       <!-- Refrescar Datos -->
@@ -1167,9 +1180,9 @@
             <div class="flex items-center gap-2.5">
               <span class="material-symbols-outlined text-amber-500 text-xl">verified_user</span>
               <div class="flex flex-col">
-                <span class="form-floating-footer__title">Autorización de Acceso F01</span>
+                <span class="form-floating-footer__title">Autorización y Envío de Formato F01</span>
                 <span class="form-floating-footer__subtitle font-mono">
-                  {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Listo para registrar en WMS y asignar rampa' }}
+                  {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Listo para enviar a Operaciones (Asignación de Rampa)' }}
                 </span>
               </div>
             </div>
@@ -1187,8 +1200,8 @@
                 [disabled]="isSaving()"
                 class="btn-primary-gold px-6 py-2.5 text-sm shadow-md hover:shadow-lg transition-all"
               >
-                <span class="material-symbols-outlined text-base">login</span>
-                <span>{{ isSaving() ? 'Registrando en WMS...' : 'Autorizar Ingreso y Asignar Rampa' }}</span>
+                <span class="material-symbols-outlined text-base">forward_to_inbox</span>
+                <span>{{ isSaving() ? 'Enviando a Operaciones...' : 'Mandar Información Corroborada a Operaciones' }}</span>
               </button>
             </div>
           </div>
@@ -1633,6 +1646,17 @@
           </button>
         </div>
 
+        <!-- Acceso directo al Cartel de Entrada -->
+        <button
+          type="button"
+          (click)="openPosterPrintModal()"
+          class="w-full py-1.5 px-2 text-[11px] font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          title="Ver o imprimir el cartel oficial en hoja tamaño Carta"
+        >
+          <span class="material-symbols-outlined text-sm">print</span>
+          <span>Imprimir Cartel en Hoja Completa (Carta)</span>
+        </button>
+
         <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-800">
           <button
             type="button"
@@ -1964,3 +1988,91 @@
     </div>
   </div>
 }
+
+<!-- ══════════════════════════════════════════════════════════════════════════════
+     MODAL VISOR DE IMPRESIÓN — CARTEL OFICIAL QR TAMAÑO CARTA HORIZONTAL (F01-PO-CP-7.1.3-03-QR)
+     ══════════════════════════════════════════════════════════════════════════════ -->
+@if (showPosterModal()) {
+  <div 
+    class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain animate-fade-in cursor-pointer"
+    (click)="closePosterPrintModal()"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Contenedor Modal de Alta Definición (Landscape Optimizado) -->
+    <div 
+      class="w-full max-w-[1180px] bg-slate-900 border border-slate-700/60 rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.7)] flex flex-col my-auto cursor-default shrink-0"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Top Bar / Acciones de Impresión -->
+      <div class="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-800 gap-3 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-amber-400 text-base">print</span>
+          </div>
+          <div class="min-w-0">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wide truncate">
+              Cartel Oficial de Entrada — Formato Horizontal (Carta Paisaje 11" × 8.5")
+            </h3>
+            <p class="text-[10px] text-slate-400 truncate mt-0.5">
+              Formato Apaisado F01-PO-CP-7.1.3-03-QR • Listo para enmicar en Caseta de Vigilancia (Clic fuera para cerrar)
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            (click)="printPoster()"
+            class="btn-primary-gold text-[11px] px-3.5 py-1.5 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Imprimir Cartel</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="downloadPosterPdf()"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-sm">download</span>
+            <span>Descargar PDF</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="closePosterPrintModal()"
+            class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer ml-1"
+            aria-label="Cerrar visor Cartel"
+            title="Cerrar y volver a Caseta (Esc)"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Lienzo con el Cartel Centrado en Hoja Carta Horizontal -->
+      <div class="flex-1 overflow-auto overscroll-contain bg-[#0b0f1a] p-4 sm:p-8 flex justify-center items-center min-h-[400px]">
+        <div id="gate-qr-poster-target" class="flex justify-center items-center">
+          <fg-print-gate-qr-poster-layout [data]="posterPrintData()"></fg-print-gate-qr-poster-layout>
+        </div>
+      </div>
+
+      <!-- Footer Info Bar -->
+      <div class="px-4 py-2 bg-slate-900 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Vigencia: <strong>{{ posterPrintData().periodLabel }}</strong> • Sucursal: <strong>{{ posterPrintData().branchName }}</strong></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-[9px] text-slate-400">Presione <strong>✕</strong> o haga clic fuera para volver a Caseta</span>
+          <span class="font-mono text-slate-500 text-[9px]">4GUARD WMS • SEGURIDAD PATRIMONIAL</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+

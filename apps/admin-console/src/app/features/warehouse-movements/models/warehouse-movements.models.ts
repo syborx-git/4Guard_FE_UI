@@ -89,6 +89,48 @@ export interface ForkliftOperatorItem {
   shift?: string;
 }
 
+export const STANDARD_FORKLIFT_OPERATORS: ForkliftOperatorItem[] = [
+  { id: '852584b7-37c7-4a5f-b4dc-c7b6097a9c51', code: 'MC-001', name: 'Hector Villalva Ayala', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX' },
+  { id: 'b51345cb-bc76-4b3c-8386-d7595c14a83a', code: 'MC-002', name: 'Alex Gabriel Perez Garduño', jobTitle: 'Operador Especialista', shift: 'Turno Matutino CDMX' },
+  { id: '401954d5-dcc8-48bb-8a17-48a68d31580b', code: 'MC-003', name: 'Alfredo Ramirez Gonzalez', jobTitle: 'Operador de Andén', shift: 'Turno Matutino CDMX' },
+  { id: '721954d5-ecc8-48bb-8a17-48a68d31580c', code: 'MC-004', name: 'Carlos Mendez Morales', jobTitle: 'Montacarguista Senior', shift: 'Turno Nocturno' }
+];
+
+export interface SupplierItem {
+  id?: string;
+  code: string;
+  name: string;
+}
+
+export const STANDARD_SUPPLIERS: SupplierItem[] = [
+  { id: 'c083251b-e210-494e-80f3-38814eaba992', code: 'PROV-001', name: 'NESTLE MEXICO S.A. DE C.V.' },
+  { id: '87c07cb2-61c3-4006-a88c-265bd1eee2df', code: 'PROV-002', name: 'MARCAS NESTLE S.A. DE C.V.' },
+  { id: '45d07cb2-61c3-4006-a88c-265bd1eee2e0', code: 'PROV-003', name: 'OWENS AMERICA S.A. DE C.V.' },
+  { id: 'edc885c6-0216-405a-84cc-841f47f30f48', code: 'PROV-004', name: 'QUALAMEX S.A. DE C.V.' },
+  { id: '76c885c6-0216-405a-84cc-841f47f30f49', code: 'PROV-005', name: 'TETRA PAK MEXICO S.A. DE C.V.' },
+  { id: '88c885c6-0216-405a-84cc-841f47f30f50', code: 'PROV-006', name: 'ENVASES UNIVERSALES DE MEXICO' },
+  { id: '99c885c6-0216-405a-84cc-841f47f30f51', code: 'PROV-007', name: 'ALPLA MEXICO S.A. DE C.V.' },
+  { id: '11c885c6-0216-405a-84cc-841f47f30f52', code: 'PROV-008', name: 'PROVEEDOR GENERAL / DIRECTO' }
+];
+
+export interface ProductSkuItem {
+  id: string;
+  code: string;
+  name: string;
+  defaultPieces: number;
+}
+
+export const STANDARD_PRODUCTS: ProductSkuItem[] = [
+  { id: 'prod-001', code: '8500297', name: 'NESCAFE CLASICO FCO 200G', defaultPieces: 48 },
+  { id: 'prod-002', code: '8500300', name: 'LECHE CONDENSADA LA LECHERA 384G', defaultPieces: 60 },
+  { id: 'prod-003', code: '8500412', name: 'CHOCOLATE CARLOS V 20G C/24', defaultPieces: 72 },
+  { id: 'prod-004', code: '8500550', name: 'ALIMENTO INFANTIL GERBER PERA 113G', defaultPieces: 96 },
+  { id: 'prod-005', code: '8500620', name: 'CEREAL CORN FLAKES NESTLE 530G', defaultPieces: 36 },
+  { id: 'prod-006', code: '8500715', name: 'AGUA EMBOTELLADA PUREZA VITAL 1L', defaultPieces: 80 },
+  { id: 'prod-007', code: '8500890', name: 'PURINA DOG CHOW ADULTOS 15KG', defaultPieces: 25 },
+  { id: 'prod-008', code: '4321', name: 'INSUMO GENERAL / PRODUCTO ESTANDAR', defaultPieces: 50 },
+];
+
 export interface CheckInCasetaData {
   carrierLineCode?: string; // Código Línea Transportadora (ej. TR-01)
   carrierLine: string;      // Línea Transportadora Descripción
