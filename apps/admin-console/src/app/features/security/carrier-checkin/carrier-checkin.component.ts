@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { WarehouseMovementsApiService } from '../../warehouse-movements/services/warehouse-movements-api.service';
-import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
+
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'fg-carrier-checkin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './carrier-checkin.component.html',
   styleUrl: './carrier-checkin.component.css'
 })
@@ -16,7 +17,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(WarehouseMovementsApiService);
-  private readonly movementsService = inject(WarehouseMovementsService);
 
   @ViewChild('signatureCanvas') signatureCanvasRef?: ElementRef<HTMLCanvasElement>;
 
@@ -162,16 +162,21 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.token.set(qToken.trim().toUpperCase());
         this.loadPassData(this.token());
       } else {
-        // Modo directo / QR local
-        this.token.set('PASS-LOCAL-' + Date.now().toString().slice(-4));
+        // Generar folio oficial para el nuevo registro de auto-ingreso
+        const randomFolio = Math.floor(100000 + Math.random() * 900000);
+        const autoToken = 'PASS-4G-' + randomFolio;
+        this.token.set(autoToken);
         this.isLoadingPass.set(false);
-      }
 
-      // Parámetro para visualizar directamente el pase QR (ej. ?view=pass o ?preview=true)
-      const qView = (params['view'] || params['preview'] || params['mode'] || '').toLowerCase();
-      if (qView === 'pass' || qView === 'true' || qView === '1' || qView === 'qr') {
-        this.populateDemoPassIfEmpty();
-        this.submitSuccess.set(true);
+        // Notificar de inmediato a Caseta que un chofer abrió el formulario ("QR esperando captura")
+        this.api.submitPublicDriverCheckin(autoToken, {
+          status: 'PENDING_DRIVER',
+          organizationId: this.organizationId(),
+          branchId: this.branchId(),
+          operationType: 'DESCARGA',
+          driverName: '',
+          nombreOperador: ''
+        }).subscribe({ error: () => {} });
       }
     });
   }
@@ -181,38 +186,11 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   }
 
   protected switchToPassView(): void {
-    this.populateDemoPassIfEmpty();
     this.submitSuccess.set(true);
   }
 
   protected populateDemoPassIfEmpty(): void {
-    const f = this.checkInForm.value;
-    if (!f.nombreOperador || !f.placasTracto) {
-      this.checkInForm.patchValue({
-        operacion: f.operacion || 'DESCARGA',
-        remision: f.remision || 'REM-2024-8849',
-        noCartaPorte: f.noCartaPorte || '',
-        clientName: f.clientName || 'MARCAS NESTLE S.A. DE C.V.',
-        clientCode: f.clientCode || '87c07cb2-61c3-4006-a88c-265bd1eee2df',
-        carrierLine: f.carrierLine || 'TRANSPORTE GOLA',
-        carrierLineCode: f.carrierLineCode || 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af',
-        nombreOperador: f.nombreOperador || 'JUAN CARLOS MARTÍNEZ RÍOS',
-        driverPhone: f.driverPhone || '8119283746',
-        placasTracto: f.placasTracto || '78-AK-9P',
-        noEcoTractor: f.noEcoTractor || 'ECO-104',
-        placasCaja: f.placasCaja || '12-TR-4M',
-        noEcoCaja: f.noEcoCaja || 'BOX-22',
-        medidasCaja: f.medidasCaja || '53 Pies',
-        tipoTransporte: f.tipoTransporte || 'Tráiler',
-        declaracionVerdad: true
-      });
-      if (this.sealList().length === 0) {
-        this.sealList.set(['SEAL-90421', 'SEAL-90422']);
-      }
-      if (!this.token() || this.token().startsWith('PASS-LOCAL')) {
-        this.token.set('PASS-4G-' + Math.floor(100000 + Math.random() * 900000));
-      }
-    }
+    // No-op: los datos deben ser capturados limpiamente por el operador
   }
 
   protected loadCatalogs(): void {
@@ -734,7 +712,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       sealNumbers: seals,
       observations: f.observaciones || 'Registro completado por chofer vía smartphone',
       driverSignature: sigData || 'FIRMA_DIGITAL_AUTORIZADA_CHOFER',
-      checklistData: null
+      checklistData: null,
+      status: 'SUBMITTED'
     };
 
     const tokenToSend = this.token() || 'PASS-DEMO';
@@ -744,7 +723,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       next: () => {
         this.isSubmitting.set(false);
         this.submitSuccess.set(true);
-        this.movementsService.reloadReceptions();
       },
       error: (err) => {
         this.isSubmitting.set(false);

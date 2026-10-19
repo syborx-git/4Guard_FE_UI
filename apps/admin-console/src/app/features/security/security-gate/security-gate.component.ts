@@ -16,7 +16,16 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } 
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
-import { CheckInCasetaData, RampItem, STANDARD_WAREHOUSE_RAMPS, STANDARD_CLIENTS, STANDARD_CARRIERS, ReturnDetectionResponse } from '../../warehouse-movements/models/warehouse-movements.models';
+import {
+  CheckInCasetaData,
+  RampItem,
+  CarrierLineItem,
+  ClientItem,
+  STANDARD_WAREHOUSE_RAMPS,
+  STANDARD_CLIENTS,
+  STANDARD_CARRIERS,
+  ReturnDetectionResponse,
+} from '../../warehouse-movements/models/warehouse-movements.models';
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
@@ -24,6 +33,10 @@ import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
 } from '../../warehouse-movements/components/print-layouts/print-transport-checklist-layout.component';
+import {
+  PrintGateQrPosterLayoutComponent,
+  GateQrPosterPrintData
+} from '../components/print-gate-qr-poster-layout/print-gate-qr-poster-layout.component';
 import { AuthState } from '../../../core/auth/auth.state';
 import { environment } from '../../../../environments/environment';
 
@@ -38,7 +51,8 @@ export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
     FormsModule,
     RouterLink,
     QrSimulatorCardComponent,
-    PrintTransportChecklistLayoutComponent
+    PrintTransportChecklistLayoutComponent,
+    PrintGateQrPosterLayoutComponent
   ],
   templateUrl: './security-gate.component.html',
   styleUrl: './security-gate.component.css',
@@ -154,8 +168,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly activeTab = signal<SecurityGateTab>('REGISTRATION');
 
   // ── Catálogos desde WarehouseMovementsService ──────────────────────────────
-  protected readonly carrierLines      = this.movementsService.carrierLines;
-  protected readonly clients           = this.movementsService.clients;
+  protected readonly carrierLines      = computed<CarrierLineItem[]>(() => {
+    const list = this.movementsService.carrierLines();
+    return list && list.length > 0 ? list : STANDARD_CARRIERS;
+  });
+  protected readonly clients           = computed<ClientItem[]>(() => {
+    const list = this.movementsService.clients();
+    return list && list.length > 0 ? list : STANDARD_CLIENTS;
+  });
   protected readonly ramps             = this.movementsService.ramps;
   protected readonly forkliftOperators = this.movementsService.forkliftOperators;
   protected readonly rampOccupancy     = this.movementsService.rampOccupancyStatus;
@@ -404,15 +424,83 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly copyNotice         = signal<string | null>(null);
   protected readonly passActionNotice   = signal<string | null>(null);
 
+
   // ── Configuración Dinámica de Túnel (ngrok / móvil) ──
-  protected readonly tunnelUrl          = signal<string>('');
-  protected readonly tunnelInputUrl     = signal<string>('');
+  protected readonly tunnelUrl          = signal<string>('https://faster-treadmill-oppose.ngrok-free.dev');
+  protected readonly tunnelInputUrl     = signal<string>('https://faster-treadmill-oppose.ngrok-free.dev');
   protected readonly isLocalhost        = computed(() => {
     if (typeof window !== 'undefined' && window.location && window.location.origin) {
       return window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1');
     }
     return false;
   });
+
+  // ── Cartel Oficial QR para Entrada (Impresión Tamaño Carta) ──
+  protected readonly showPosterModal = signal<boolean>(false);
+
+  protected getCurrentPeriodLabel(): string {
+    const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const now = new Date();
+    return `${months[now.getMonth()]} ${now.getFullYear()}`;
+  }
+
+  protected getCurrentPeriodCode(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${now.getFullYear()}-${month}`;
+  }
+
+  protected getFixedPortalUrl(): string {
+    const baseUrl = this.getPublicBaseUrl();
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const branch = session.branchId || 'BR-TOL-01';
+    const org = session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const isNgrok = baseUrl.includes('ngrok');
+    const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
+    // URL optimizada y compacta para escaneo instantáneo
+    return `${baseUrl}/carrier-checkin?org=${org}&branch=${branch}${skipParam}`;
+  }
+
+  protected getPosterQrDataUrl(): string {
+    const url = this.getFixedPortalUrl();
+    // 500x500 px, margen 2 y ecc=Q para escaneo ultra rápido y nítido
+    return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=2&ecc=Q&data=${encodeURIComponent(url)}`;
+  }
+
+  protected readonly posterPrintData = computed<GateQrPosterPrintData>(() => {
+    return {
+      title: 'AUTO-REGISTRO DE TRANSPORTE Y VIGILANCIA',
+      branchName: 'TOLUCA',
+      branchCode: 'BR-TOL-01',
+      periodLabel: this.getCurrentPeriodLabel(),
+      targetUrl: this.getFixedPortalUrl(),
+      qrDataUrl: this.getPosterQrDataUrl(),
+      emergencyPhone: '722-442-4827'
+    };
+  });
+
+  protected openPosterPrintModal(): void {
+    this.showPosterModal.set(true);
+  }
+
+  protected closePosterPrintModal(): void {
+    this.showPosterModal.set(false);
+  }
+
+  @HostListener('window:keydown.escape')
+  protected onEscapePressed(): void {
+    if (this.showPosterModal()) {
+      this.closePosterPrintModal();
+    }
+  }
+
+  protected printPoster(): void {
+    this.printService.printElement('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}`);
+  }
+
+  protected downloadPosterPdf(): void {
+    this.printService.downloadPdf('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}.pdf`);
+  }
 
   // ── Check-Out (Salida de Planta) ──
   protected readonly showCheckOutModal       = signal<boolean>(false);
@@ -595,23 +683,35 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      
-      const playTone = (freq: number, start: number, dur: number) => {
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const playTone = (freq: number, start: number, dur: number, vol = 0.35, type: OscillatorType = 'triangle') => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'sine';
+        osc.type = type;
         osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(ctx.currentTime + start);
         osc.stop(ctx.currentTime + start + dur);
       };
 
-      // Tono de campana de caseta: D5 (587.33Hz) -> A5 (880Hz)
-      playTone(587.33, 0, 0.25);
-      playTone(880, 0.18, 0.4);
+      // 🔔 Secuencia Sonora de Timbre / Caseta de Vigilancia "Rin-Rin"
+      // Repique 1 (campanilla 1): E5 (659Hz) -> G5 (784Hz) -> E5 -> G5
+      playTone(659.25, 0.00, 0.14, 0.35, 'triangle');
+      playTone(783.99, 0.12, 0.16, 0.40, 'sine');
+      playTone(659.25, 0.26, 0.14, 0.35, 'triangle');
+      playTone(783.99, 0.38, 0.22, 0.45, 'sine');
+
+      // Breve pausa y Repique 2 (campanilla 2 con aviso mayor y resonancia de campana)
+      playTone(659.25, 0.65, 0.14, 0.35, 'triangle');
+      playTone(783.99, 0.77, 0.16, 0.40, 'sine');
+      playTone(659.25, 0.91, 0.14, 0.35, 'triangle');
+      playTone(1046.50, 1.05, 0.50, 0.50, 'sine'); // C6 Campana resonante final
     } catch {
       // AudioContext fallback silencioso
     }
@@ -784,19 +884,30 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected getPublicBaseUrl(): string {
-    // 1. Prioridad: URL del túnel activa (ngrok u override local/storage)
+    // 1. En Producción / Netlify (cualquier host público que no sea localhost):
+    // Usar automáticamente el dominio público de la app sin requerir ngrok ni configuración manual
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      const origin = window.location.origin;
+      const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+      if (!isLocal) {
+        return origin;
+      }
+    }
+
+    // 2. En Desarrollo Local (localhost):
+    // Priorizar el túnel de ngrok activo para permitir pruebas desde dispositivos móviles
     const localTunnel = this.tunnelUrl();
     if (localTunnel && localTunnel.trim()) {
       return this.cleanTunnelUrl(localTunnel);
     }
 
-    // 2. Prioridad: URL pública configurada en environment
+    // 3. Fallback: URL pública configurada en environment
     const envUrl = (environment as any).publicAppUrl;
     if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
       return this.cleanTunnelUrl(envUrl);
     }
 
-    // 3. Fallback: window.location.origin (Netlify / producción o túnel directo)
+    // 4. Fallback final local
     if (typeof window !== 'undefined' && window.location && window.location.origin) {
       return window.location.origin;
     }
@@ -804,7 +915,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected getEncodedQrDataUrl(): string {
-    const targetUrl = this.qrModalUrl() || `${this.getPublicBaseUrl()}/carrier-checkin`;
+    let targetUrl = this.qrModalUrl() || `${this.getPublicBaseUrl()}/carrier-checkin`;
+    if (targetUrl.includes('ngrok') && !targetUrl.includes('ngrok-skip-browser-warning')) {
+      const sep = targetUrl.includes('?') ? '&' : '?';
+      targetUrl = `${targetUrl}${sep}ngrok-skip-browser-warning=true`;
+    }
     return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&ecc=H&data=${encodeURIComponent(targetUrl)}`;
   }
 
@@ -845,7 +960,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (this.activeTab() === 'HISTORY') {
         this.reloadHistoryPasses(true);
       }
-    }, 8000);
+    }, 5000);
 
     // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
     this.checkInForm.get('remision')?.valueChanges.pipe(
@@ -1134,6 +1249,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (p && p.status === 'SUBMITTED' && p.token && !this.notifiedSubmittedTokens.has(p.token)) {
         this.notifiedSubmittedTokens.add(p.token);
         this.playCheckinChime();
+        this.smartNotification.openDropdown();
+
         const chofer = p.driverName || p.nombreOperador || 'Transportista';
         const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
         this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
@@ -1328,6 +1445,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         matchedClientCode = foundClient.code;
         matchedClientName = foundClient.name;
         matchedClientCustom = '';
+        if (!this.clients().some(c => c.code === foundClient.code)) {
+          this.movementsService.addClient({ code: foundClient.code, name: foundClient.name });
+        }
       } else {
         matchedClientCode = 'OTRO';
         matchedClientName = rawClientName || rawClientCode;
@@ -1376,6 +1496,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         matchedCarrierCode = foundCarrier.code;
         matchedCarrierName = foundCarrier.name;
         matchedCarrierCustom = '';
+        if (!this.carrierLines().some(c => c.code === foundCarrier.code)) {
+          this.movementsService.addCarrierLine({ code: foundCarrier.code, name: foundCarrier.name });
+        }
       } else {
         matchedCarrierCode = 'OTRO';
         matchedCarrierName = rawCarrierName || rawCarrierCode;
@@ -2003,227 +2126,87 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       observations: inspectionObservations,
     };
 
-    if (this.activeToken()) {
-      // Flujo con Pase Digital QR / Pre-registro de chofer: Se completa atómicamente en el Backend
-      const op = formVal.operacion || 'DESCARGA';
-      const completePayload = {
-        operationType: op,
-        clientCode: formVal.clientCode || 'CLI-001',
-        clientName: formVal.client || 'Cliente General',
-        carrierLineCode: formVal.carrierLineCode || 'LINEA-01',
-        carrierLine: formVal.carrierLine || 'Transportista General',
-        rampNumber: (rNum != null && rNum > 0) ? rNum : 0,
-        rampCode: rCode || undefined,
-        driverName: formVal.nombreOperador || formVal.transportistaNombre || 'Operador Transportista',
-        driverPhone: formVal.driverPhone || '',
-        tractorPlates: (formVal.placasTracto || 'S/P').toUpperCase().trim(),
-        boxPlates: (formVal.placasCaja || 'S/P').toUpperCase().trim(),
-        noEcoTractor: formVal.noEcoTractor || 'S/N',
-        noEcoCaja: formVal.noEcoCaja || '',
-        transportType: formVal.tipoTransporte || 'Caja Seca',
-        boxDimensions: formVal.medidasCaja || '53 Pies',
-        docNumber: op === 'CARGA' 
-          ? (formVal.noCartaPorte || formVal.remision || 'CP-' + this.activeToken()) 
-          : (formVal.remision || formVal.noCartaPorte || 'REM-' + this.activeToken()),
-        docDate: formVal.fecha || this.getCurrentDateString(),
-        receptionTime: formVal.horaEntrada || this.getCurrentTimeString(),
-        sealNumbers: seals.length > 0 ? seals : ['SEAL-4G-001'],
-        observations: inspectionObservations,
-        guardNotes: formVal.guardNotes || ''
-      };
+    const op = formVal.operacion || 'DESCARGA';
+    const currentPassToken = this.activeToken();
 
-      this.movementsService.movementsApi.completePassCheckin(this.activeToken()!, completePayload).subscribe({
-        next: (passRes) => {
+    if (op === 'CARGA') {
+      this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
+        next: (outbound) => {
           this.isSaving.set(false);
-          const folio = passRes?.generatedFolio || passRes?.folio || this.activeToken() || 'OK';
-          this.createdFolio.set(folio);
+          this.createdFolio.set(outbound.folio);
           this.assignedRampLabel.set(rDisplay);
+
+          if (currentPassToken) {
+            this.movementsService.movementsApi.deletePass(currentPassToken).subscribe();
+          }
 
           const printSnapshot = {
             ...formVal,
             sealNumbers: [...seals],
             checklistData: inspectionObservations,
-            generatedFolio: folio,
-            folio: folio,
+            generatedFolio: outbound.folio,
+            folio: outbound.folio,
             rampCode: rDisplay,
-            driverSignature: passRes?.driverSignature || this.activeDriverSignature() || undefined,
-            driverSignedAt: passRes?.driverSignedAt ? String(passRes.driverSignedAt) : (this.activeDriverSignedAt() || undefined)
+            driverSignature: this.activeDriverSignature() || undefined,
+            driverSignedAt: this.activeDriverSignedAt() || undefined
           };
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
 
           // Notificación flotante del sistema y scroll al menú superior
-          const opLabel = op === 'CARGA' ? 'Carga / Salida' : 'Recepción / Descarga';
-          this.toast.success(`¡${opLabel} autorizada con éxito! Folio #${folio} (Rampa: ${rDisplay})`, 4500);
+          this.toast.success(`¡Carga / Salida corroborada y enviada a Operaciones! Folio #${outbound.folio}`, 4500);
           this.scrollToTop();
 
           this.reloadAllData();
-          this.movementsService.reloadReceptions();
           this.movementsService.reloadOutbounds();
         },
         error: (err) => {
-          const msg = err?.error?.message || err?.message || 'Error al completar el pase en el servidor';
-
-          // Manejo resiliente: Si el pase ya fue procesado y completado previamente
-          if (msg.includes('ya fue completado') || msg.includes('COMPLETED')) {
-            this.isSaving.set(false);
-            const matchFolio = msg.match(/folio:\s*([A-Za-z0-9-]+)/i);
-            const resolvedFolio = matchFolio ? matchFolio[1] : (this.activeToken() || 'OK');
-            this.createdFolio.set(resolvedFolio);
-            this.assignedRampLabel.set(rDisplay);
-            this.resetForm();
-            this.toast.success(`Pase procesado exitosamente. Folio #${resolvedFolio} (Rampa: ${rDisplay})`, 4500);
-            this.scrollToTop();
-            this.reloadAllData();
-            return;
-          }
-
-          // Fallback resiliente: Si el pase no fue encontrado en BD (token local o pre-registro directo), registrar en WMS
-          if (msg.includes('no encontrado') || msg.includes('not found') || err?.status === 404 || this.activeToken()?.startsWith('PASS-LOCAL')) {
-            const currentPassToken = this.activeToken();
-            if (op === 'CARGA') {
-              this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
-                next: (outbound) => {
-                  this.isSaving.set(false);
-                  this.createdFolio.set(outbound.folio);
-                  this.assignedRampLabel.set(rDisplay);
-                  if (currentPassToken) {
-                    this.movementsService.movementsApi.deletePass(currentPassToken);
-                  }
-                  const printSnapshot = {
-                    ...formVal,
-                    sealNumbers: [...seals],
-                    checklistData: inspectionObservations,
-                    generatedFolio: outbound.folio,
-                    folio: outbound.folio,
-                    rampCode: rDisplay
-                  };
-                  this.lastCompletedPrintItem.set(printSnapshot);
-                  this.resetForm();
-                  this.toast.success(`¡Carga / Salida autorizada con éxito! Folio #${outbound.folio} (Rampa: ${rDisplay})`, 4500);
-                  this.scrollToTop();
-                  this.reloadAllData();
-                  this.movementsService.reloadOutbounds();
-                },
-                error: (directErr) => {
-                  this.isSaving.set(false);
-                  const dMsg = directErr?.error?.message || directErr?.message || msg;
-                  this.errorMessage.set(dMsg);
-                  this.toast.error(dMsg, 4500);
-                  this.scrollToTop();
-                }
-              });
-            } else {
-              this.movementsService.createCheckInBackend(checkInData).subscribe({
-                next: (header) => {
-                  this.isSaving.set(false);
-                  this.createdFolio.set(header.folio);
-                  this.assignedRampLabel.set(rDisplay);
-                  if (currentPassToken) {
-                    this.movementsService.movementsApi.deletePass(currentPassToken);
-                  }
-                  const printSnapshot = {
-                    ...formVal,
-                    sealNumbers: [...seals],
-                    checklistData: inspectionObservations,
-                    generatedFolio: header.folio,
-                    folio: header.folio,
-                    rampCode: rDisplay
-                  };
-                  this.lastCompletedPrintItem.set(printSnapshot);
-                  this.resetForm();
-                  this.toast.success(`¡Recepción / Descarga autorizada con éxito! Folio #${header.folio} (Rampa: ${rDisplay})`, 4500);
-                  this.scrollToTop();
-                  this.reloadAllData();
-                  this.movementsService.reloadReceptions();
-                },
-                error: (directErr) => {
-                  this.isSaving.set(false);
-                  const dMsg = directErr?.error?.message || directErr?.message || msg;
-                  this.errorMessage.set(dMsg);
-                  this.toast.error(dMsg, 4500);
-                  this.scrollToTop();
-                }
-              });
-            }
-            return;
-          }
-
           this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al enviar la información a Operaciones';
           this.errorMessage.set(msg);
           this.toast.error(msg, 4500);
           this.scrollToTop();
         }
       });
     } else {
-      // Flujo de Registro Directo en Caseta (sin pase QR previo)
-      if (formVal.operacion === 'CARGA') {
-        this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
-          next: (outbound) => {
-            this.isSaving.set(false);
-            this.createdFolio.set(outbound.folio);
-            this.assignedRampLabel.set(rDisplay);
+      this.movementsService.createCheckInBackend(checkInData).subscribe({
+        next: (header) => {
+          this.isSaving.set(false);
+          this.createdFolio.set(header.folio);
+          this.assignedRampLabel.set(rDisplay);
 
-            const printSnapshot = {
-              ...formVal,
-              sealNumbers: [...seals],
-              checklistData: inspectionObservations,
-              generatedFolio: outbound.folio,
-              folio: outbound.folio,
-              rampCode: rDisplay
-            };
-            this.lastCompletedPrintItem.set(printSnapshot);
-            this.resetForm();
-
-            // Notificación flotante del sistema y scroll al menú superior
-            this.toast.success(`¡Carga / Salida autorizada con éxito! Folio #${outbound.folio} (Rampa: ${rDisplay})`, 4500);
-            this.scrollToTop();
-
-            this.reloadAllData();
-            this.movementsService.reloadOutbounds();
-          },
-          error: (err) => {
-            this.isSaving.set(false);
-            const msg = err?.error?.message || err?.message || 'Error al registrar la salida / carga en el servidor';
-            this.errorMessage.set(msg);
-            this.toast.error(msg, 4500);
-            this.scrollToTop();
+          if (currentPassToken) {
+            this.movementsService.movementsApi.deletePass(currentPassToken).subscribe();
           }
-        });
-      } else {
-        this.movementsService.createCheckInBackend(checkInData).subscribe({
-          next: (header) => {
-            this.isSaving.set(false);
-            this.createdFolio.set(header.folio);
-            this.assignedRampLabel.set(rDisplay);
 
-            const printSnapshot = {
-              ...formVal,
-              sealNumbers: [...seals],
-              checklistData: inspectionObservations,
-              generatedFolio: header.folio,
-              folio: header.folio,
-              rampCode: rDisplay
-            };
-            this.lastCompletedPrintItem.set(printSnapshot);
-            this.resetForm();
+          const printSnapshot = {
+            ...formVal,
+            sealNumbers: [...seals],
+            checklistData: inspectionObservations,
+            generatedFolio: header.folio,
+            folio: header.folio,
+            rampCode: rDisplay,
+            driverSignature: this.activeDriverSignature() || undefined,
+            driverSignedAt: this.activeDriverSignedAt() || undefined
+          };
+          this.lastCompletedPrintItem.set(printSnapshot);
+          this.resetForm();
 
-            // Notificación flotante del sistema y scroll al menú superior
-            this.toast.success(`¡Recepción / Descarga autorizada con éxito! Folio #${header.folio} (Rampa: ${rDisplay})`, 4500);
-            this.scrollToTop();
+          // Notificación flotante del sistema y scroll al menú superior
+          this.toast.success(`¡Información corroborada y enviada a Operaciones! Folio #${header.folio}`, 4500);
+          this.scrollToTop();
 
-            this.reloadAllData();
-            this.movementsService.reloadReceptions();
-          },
-          error: (err) => {
-            this.isSaving.set(false);
-            const msg = err?.error?.message || err?.message || 'Error al registrar el check-in en el servidor';
-            this.errorMessage.set(msg);
-            this.toast.error(msg, 4500);
-            this.scrollToTop();
-          }
-        });
-      }
+          this.reloadAllData();
+          this.movementsService.reloadReceptions();
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al enviar la información a Operaciones';
+          this.errorMessage.set(msg);
+          this.toast.error(msg, 4500);
+          this.scrollToTop();
+        }
+      });
     }
   }
 

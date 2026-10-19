@@ -343,6 +343,6 @@ export const adminRoutes: Routes = [
     ],
   },
 
-  // Catch-all: redirigir a login (el authGuard en '/' llevará al dashboard si hay sesión activa)
-  { path: '**', redirectTo: 'login' },
+  // Catch-all: redirigir a '' (donde authGuard redirige móviles sin sesión a carrier-checkin y escritorio a login)
+  { path: '**', redirectTo: '' },
 ];

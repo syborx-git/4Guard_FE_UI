@@ -25,6 +25,9 @@ import {
   RampOccupancyStatus,
   STANDARD_WAREHOUSE_RAMPS,
   ForkliftOperatorItem,
+  STANDARD_FORKLIFT_OPERATORS,
+  SupplierItem,
+  STANDARD_SUPPLIERS,
   TRANSFER_REASONS,
   WarehouseOutbound,
   OutboundItem,
@@ -67,8 +70,8 @@ export class WarehouseMovementsService {
   private readonly carrierLinesSignal = signal<CarrierLineItem[]>(STANDARD_CARRIERS);
   private readonly clientsSignal = signal<ClientItem[]>(STANDARD_CLIENTS);
   private readonly rampsSignal = signal<RampItem[]>(STANDARD_WAREHOUSE_RAMPS);
-  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>([]);
-  private readonly suppliersSignal = signal<{ code: string; name: string }[]>([]);
+  private readonly forkliftOperatorsSignal = signal<ForkliftOperatorItem[]>(STANDARD_FORKLIFT_OPERATORS);
+  private readonly suppliersSignal = signal<SupplierItem[]>(STANDARD_SUPPLIERS);
 
   readonly carrierLines = this.carrierLinesSignal.asReadonly();
   readonly clients = this.clientsSignal.asReadonly();
@@ -81,6 +84,10 @@ export class WarehouseMovementsService {
 
   addCarrierLine(item: CarrierLineItem): void {
     this.carrierLinesSignal.update((list) => [...list, item]);
+  }
+
+  addClient(item: ClientItem): void {
+    this.clientsSignal.update((list) => [...list, item]);
   }
 
   addRamp(item: RampItem): void {
@@ -201,6 +208,7 @@ export class WarehouseMovementsService {
   readonly locations = this.locationsSignal.asReadonly();
   readonly inventoryBatches = this.inventoryBatchesSignal.asReadonly();
   readonly globalMaxPalletNumber = this.globalMaxPalletNumberSignal.asReadonly();
+
 
   // KPIs de Salidas de Almacén (Outbound)
   readonly kpiTotalOutbounds = computed(() => this.outboundsSignal().length);
@@ -554,6 +562,63 @@ export class WarehouseMovementsService {
         }
       }
     } catch (_) {}
+
+    // 1. Cargar datos cacheados de LocalStorage inmediatamente para reactividad instantánea
+    try {
+      const cachedReceptions = this.movementsApi.getLocalReceptions();
+      if (cachedReceptions && cachedReceptions.length > 0) {
+        const mapped = cachedReceptions.map((r: any) => this.mapReceptionResponseToHeader(r));
+        this.receptionsSignal.set(mapped);
+      }
+      const cachedOutbounds = this.movementsApi.getLocalOutbounds();
+      if (cachedOutbounds && cachedOutbounds.length > 0) {
+        const mapped = cachedOutbounds.map((o: any) => this.mapOutboundResponseToHeader(o));
+        this.outboundsSignal.set(mapped);
+      }
+    } catch (_) {}
+
+    // 2. Escuchar sincronización reactiva entre pestañas de navegador (BroadcastChannel + Storage Event)
+    if (typeof window !== 'undefined') {
+      if ('BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('4guard_wms_events');
+          bc.onmessage = (event) => {
+            const { type, data } = event.data || {};
+            if (type === 'NEW_RECEPTION' && data) {
+              const header = this.mapReceptionResponseToHeader(data);
+              this.receptionsSignal.update((list) => [
+                header,
+                ...list.filter((r) => r.folio !== header.folio && r.id !== header.id)
+              ]);
+              this.latestArrivedReception.set(header);
+            } else if (type === 'NEW_OUTBOUND' && data) {
+              const out = this.mapOutboundResponseToHeader(data);
+              this.outboundsSignal.update((list) => [
+                out,
+                ...list.filter((o) => o.folio !== out.folio && o.id !== out.id)
+              ]);
+            }
+          };
+        } catch (_) {}
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === '4g_warehouse_receptions_cache' && e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            const headers = parsed.map((r: any) => this.mapReceptionResponseToHeader(r));
+            this.receptionsSignal.set(headers);
+          } catch (_) {}
+        } else if (e.key === '4g_warehouse_outbounds_cache' && e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            const headers = parsed.map((o: any) => this.mapOutboundResponseToHeader(o));
+            this.outboundsSignal.set(headers);
+          } catch (_) {}
+        }
+      });
+    }
+
     this.loadInitialBackendData();
   }
 
@@ -728,16 +793,22 @@ export class WarehouseMovementsService {
   public reloadCarriers(): void {
     this.movementsApi.getCarriers().subscribe({
       next: (carriers: any) => {
-        if (carriers) {
+        if (carriers && carriers.length > 0) {
           this.carrierLinesSignal.set(
             carriers.map((c: any) => ({
               code: c.id || c.code || c.taxId || 'TR',
               name: c.tradeName && c.tradeName !== c.name ? `${c.tradeName} (${c.name})` : (c.name || c.tradeName || 'Transportista'),
             }))
           );
+        } else if (this.carrierLinesSignal().length === 0) {
+          this.carrierLinesSignal.set(STANDARD_CARRIERS);
         }
       },
-      error: () => {},
+      error: () => {
+        if (this.carrierLinesSignal().length === 0) {
+          this.carrierLinesSignal.set(STANDARD_CARRIERS);
+        }
+      },
     });
   }
 
@@ -752,9 +823,15 @@ export class WarehouseMovementsService {
               name: s.commercialName || s.legalName || s.tradeName || s.name || s.businessName || 'Proveedor',
             }))
           );
+        } else if (this.suppliersSignal().length === 0) {
+          this.suppliersSignal.set(STANDARD_SUPPLIERS);
         }
       },
-      error: () => {},
+      error: () => {
+        if (this.suppliersSignal().length === 0) {
+          this.suppliersSignal.set(STANDARD_SUPPLIERS);
+        }
+      },
     });
   }
 
@@ -855,6 +932,18 @@ export class WarehouseMovementsService {
           }
         }
 
+        // Combinar con recepciones en memoria y locales para NUNCA borrarlas si el backend remoto responde vacío
+        const currentList = this.receptionsSignal();
+        for (const r of currentList) {
+          const idKey = (r.id || r.folio || '').trim();
+          const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
+          if (idKey && !seenIds.has(idKey) && (!docKey || !seenDocs.has(docKey))) {
+            seenIds.add(idKey);
+            if (docKey) seenDocs.add(docKey);
+            unique.push(r);
+          }
+        }
+
         const previousKnown = this.knownReceptionFolios;
         const newKnown = new Set<string>();
         let newlyArrived: ReceptionHeader | null = null;
@@ -935,9 +1024,24 @@ export class WarehouseMovementsService {
   public reloadOutbounds(): void {
     this.movementsApi.getOutbounds().subscribe({
       next: (outbounds: any) => {
-        this.outboundsSignal.set(
-          (outbounds || []).map((o: any) => this.mapOutboundResponseToHeader(o))
-        );
+        const mapped = (outbounds || []).map((o: any) => this.mapOutboundResponseToHeader(o));
+        const unique: WarehouseOutbound[] = [];
+        const seen = new Set<string>();
+        for (const o of mapped) {
+          const key = (o.folio || o.id || '').trim();
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            unique.push(o);
+          }
+        }
+        for (const o of this.outboundsSignal()) {
+          const key = (o.folio || o.id || '').trim();
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            unique.push(o);
+          }
+        }
+        this.outboundsSignal.set(unique);
       },
       error: () => {},
     });
@@ -1763,7 +1867,40 @@ export class WarehouseMovementsService {
           ],
         });
 
+        this.latestArrivedReception.set(header);
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🚚 Nueva Pre-Recepción en Caseta',
+          message: `Folio #${header.folio} (${header.checkIn?.client || 'Cliente'}) en espera de descarga.`,
+          referenceFolio: header.folio,
+          route: '/warehouse-movements/receiving',
+          queryParams: { folio: header.folio },
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoutes: ['/warehouse-movements', '/receiving'],
+          severity: 'INFO',
+          data: header
+        });
+
         return header;
+      }),
+      catchError((err) => {
+        console.warn('Backend createCheckIn fallback to local pre-reception:', err);
+        const generatedFolio = data.docNumber ? `REC-${data.docNumber}` : `REC-4G-${Date.now().toString().slice(-6)}`;
+        const localHeader = this.saveCheckIn(data, generatedFolio);
+        this.latestArrivedReception.set(localHeader);
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🚚 Nueva Pre-Recepción en Caseta',
+          message: `Folio #${localHeader.folio} (${localHeader.checkIn?.client || 'Cliente'}) en espera de descarga.`,
+          referenceFolio: localHeader.folio,
+          route: '/warehouse-movements/receiving',
+          queryParams: { folio: localHeader.folio },
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoutes: ['/warehouse-movements', '/receiving'],
+          severity: 'INFO',
+          data: localHeader
+        });
+        return of(localHeader);
       })
     );
   }
@@ -1907,7 +2044,70 @@ export class WarehouseMovementsService {
           this.setOutboundAuditLogs(outbound.id, this.getOutboundAuditLogs(outbound.folio, outbound));
         }
 
+        this.smartNotification.dispatch({
+          category: 'OUTBOUND',
+          title: '🚚 Nueva Pre-Salida en Caseta',
+          message: `Folio #${outbound.folio} (${outbound.clientName || 'Cliente'}) en espera de carga.`,
+          referenceFolio: outbound.folio,
+          route: '/warehouse-movements/outbound',
+          queryParams: { folio: outbound.folio },
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoutes: ['/warehouse-movements', '/outbound'],
+          severity: 'INFO',
+          data: outbound
+        });
+
         return outbound;
+      }),
+      catchError((err) => {
+        console.warn('Backend createOutbound fallback to local outbound:', err);
+        const generatedFolio = data.docNumber ? `OUT-${data.docNumber}` : `OUT-4G-${Date.now().toString().slice(-6)}`;
+        const localOutbound: WarehouseOutbound = {
+          id: `out-${Date.now()}`,
+          folio: generatedFolio,
+          status: 'REGISTERED',
+          clientCode: data.clientCode || 'CLI-001',
+          clientName: data.client || 'Cliente General',
+          destinationId: '',
+          destinationName: '',
+          destinationAddress: '',
+          carrierCode: data.carrierLineCode || 'LINEA-01',
+          carrierName: data.carrierLine || 'Transportista General',
+          rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
+          rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
+          driverName: data.driverName,
+          noEcoTractor: data.noEcoTractor || (data as any).ecoTractor || '',
+          noEcoCaja: data.noEcoCaja || (data as any).ecoCaja || '',
+          tractorPlates: data.tractorPlates,
+          boxPlates: data.boxPlates,
+          transportType: (data.transportType || 'TRAILER') as TransportType,
+          sealNumber: seals.join(', '),
+          remisionNo: data.docNumber,
+          observations: data.observations || '',
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+        this.outboundsSignal.update((list) => [localOutbound, ...list.filter(o => o.folio !== localOutbound.folio)]);
+
+        this.smartNotification.dispatch({
+          category: 'OUTBOUND',
+          title: '🚚 Nueva Pre-Salida en Caseta',
+          message: `Folio #${localOutbound.folio} (${localOutbound.clientName || 'Cliente'}) en espera de carga.`,
+          referenceFolio: localOutbound.folio,
+          route: '/warehouse-movements/outbound',
+          queryParams: { folio: localOutbound.folio },
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoutes: ['/warehouse-movements', '/outbound'],
+          severity: 'INFO',
+          data: localOutbound
+        });
+
+        return of(localOutbound);
       })
     );
   }

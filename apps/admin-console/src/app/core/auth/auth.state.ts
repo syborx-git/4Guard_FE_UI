@@ -226,30 +226,32 @@ export class AuthState {
    * Verifica si el usuario actual tiene acceso a un módulo específico (Compatibilidad).
    */
   canAccessModule(module: string): boolean {
-    const role = this.role();
-    if (!role) return false;
+    const rawRole = this.role();
+    if (!rawRole) return false;
+
+    const normRole = String(rawRole).trim().toUpperCase();
 
     // Super Administradores, Administradores, Gerentes y Supervisores de Operaciones tienen acceso completo
     if (
-      role === 'SUPER_ADMIN' ||
-      role === 'ROLE_SUPER_ADMIN' ||
-      role === 'ROLE_ADMIN' ||
-      role === 'ADMIN' ||
-      role === 'OPERATIONS_MANAGER' ||
-      role === 'ROLE_OPERATIONS_MANAGER' ||
-      role === 'CEO' ||
-      role === 'ROLE_CEO' ||
-      role === 'WAREHOUSE_MANAGER' ||
-      role === 'ROLE_WAREHOUSE_MANAGER' ||
-      role === 'OPERATIONS_SUPERVISOR' ||
-      role === 'ROLE_OPERATIONS_SUPERVISOR' ||
-      role === 'WAREHOUSE_SUPERVISOR' ||
-      role === 'ROLE_WAREHOUSE_SUPERVISOR'
+      normRole === 'SUPER_ADMIN' ||
+      normRole === 'ROLE_SUPER_ADMIN' ||
+      normRole === 'ROLE_ADMIN' ||
+      normRole === 'ADMIN' ||
+      normRole === 'OPERATIONS_MANAGER' ||
+      normRole === 'ROLE_OPERATIONS_MANAGER' ||
+      normRole === 'OPERATIONS_COORDINATOR' ||
+      normRole === 'ROLE_OPERATIONS_COORDINATOR' ||
+      normRole === 'CEO' ||
+      normRole === 'ROLE_CEO' ||
+      normRole === 'WAREHOUSE_MANAGER' ||
+      normRole === 'ROLE_WAREHOUSE_MANAGER' ||
+      normRole === 'OPERATIONS_SUPERVISOR' ||
+      normRole === 'ROLE_OPERATIONS_SUPERVISOR' ||
+      normRole === 'WAREHOUSE_SUPERVISOR' ||
+      normRole === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
       return true;
     }
-
-    const normRole = (role || '').toUpperCase();
 
     // 1. Guardia de Seguridad: acceso EXCLUSIVO a Caseta (security) y Dashboard
     if (
@@ -336,13 +338,13 @@ export class AuthState {
         // NOTA: La validación definitiva de RLS y permisos se ejecuta en el backend.
         // El frontend solo controla la visibilidad de la opción de menú y la ruta.
         return (
-          role === 'OPERATIONS_SUPERVISOR' ||
-          role === 'OPERATIONS_MANAGER' ||
-          role === 'SHIFT_LEADER' ||
-          role === 'ROLE_ADMIN' ||
-          role === 'ADMIN' ||
-          role === 'ROLE_WAREHOUSE_MANAGER' ||
-          role === 'WAREHOUSE_MANAGER'
+          normRole === 'OPERATIONS_SUPERVISOR' ||
+          normRole === 'OPERATIONS_MANAGER' ||
+          normRole === 'SHIFT_LEADER' ||
+          normRole === 'ROLE_ADMIN' ||
+          normRole === 'ADMIN' ||
+          normRole === 'ROLE_WAREHOUSE_MANAGER' ||
+          normRole === 'WAREHOUSE_MANAGER'
         );
       default:
         return false;
