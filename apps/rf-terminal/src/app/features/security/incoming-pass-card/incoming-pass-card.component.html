@@ -25,16 +25,6 @@
         <span>{{ formattedStay }}</span>
       </span>
     </div>
-
-    <!-- Botón de Rechazo / Eliminar solicitud -->
-    <button
-      type="button"
-      class="rf-pass-card__btn-reject"
-      title="Rechazar y descartar solicitud de acceso"
-      (click)="onReject($event)"
-      aria-label="Rechazar solicitud">
-      <span class="material-symbols-outlined">delete_sweep</span>
-    </button>
   </header>
 
   <!-- 2. Identidad del Transporte y Operador -->
@@ -98,13 +88,23 @@
         <span>Rechazar</span>
       </button>
     } @else {
-      <button
-        type="button"
-        class="rf-pass-card__btn-load-action"
-        (click)="onActionClick($event)">
-        <span class="material-symbols-outlined text-[16px]">touch_app</span>
-        <span>Cargar a Formulario F01</span>
-      </button>
+      <div class="rf-pass-card__action-group">
+        <button
+          type="button"
+          class="rf-pass-card__btn-load-action"
+          (click)="onActionClick($event)">
+          <span class="material-symbols-outlined text-[16px]">touch_app</span>
+          <span>Cargar F01</span>
+        </button>
+        <button
+          type="button"
+          class="rf-pass-card__btn-cancel-load"
+          (click)="onReject($event)"
+          title="Rechazar y descartar solicitud">
+          <span class="material-symbols-outlined text-[14px]">delete</span>
+          <span>Rechazar</span>
+        </button>
+      </div>
     }
   </footer>
 </article>

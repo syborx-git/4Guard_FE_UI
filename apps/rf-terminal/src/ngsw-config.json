@@ -16,7 +16,19 @@
       }
     },
     {
-      "name": "assets",
+      "name": "assets-critical",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/sounds/**",
+          "/assets/icons/**",
+          "/assets/rf-design-tokens.css"
+        ]
+      }
+    },
+    {
+      "name": "assets-lazy",
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
@@ -29,8 +41,23 @@
   ],
   "dataGroups": [
     {
+      "name": "api-security-gate",
+      "urls": [
+        "/api/security-gate/**",
+        "/api/access-passes/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 500,
+        "maxAge": "10m",
+        "timeout": "3s"
+      }
+    },
+    {
       "name": "api-inventory",
-      "urls": ["/api/inventory/**"],
+      "urls": [
+        "/api/inventory/**"
+      ],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 500,
@@ -39,13 +66,36 @@
       }
     },
     {
-      "name": "api-locations",
-      "urls": ["/api/locations/**"],
+      "name": "api-catalogs",
+      "urls": [
+        "/api/locations/**",
+        "/api/catalogs/**",
+        "/assets/data/**"
+      ],
       "cacheConfig": {
         "strategy": "performance",
-        "maxSize": 200,
-        "maxAge": "1h"
+        "maxSize": 300,
+        "maxAge": "24h",
+        "timeout": "3s"
+      }
+    },
+    {
+      "name": "google-fonts",
+      "urls": [
+        "https://fonts.googleapis.com/**",
+        "https://fonts.gstatic.com/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 50,
+        "maxAge": "365d"
       }
     }
+  ],
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/api/**",
+    "!/assets/**"
   ]
 }

@@ -16,8 +16,28 @@ import { WarehouseLayoutSyncService } from './warehouse-layout-sync.service';
 
 export type MovementType = 'INBOUND_UNLOAD' | 'INTERNAL_PUTAWAY' | 'OUTBOUND_DISPATCH';
 export type MissionPriority = 'URGENT' | 'HIGH' | 'NORMAL';
-export type MissionStatus = 'QUEUED' | 'ACTIVE_PICK' | 'ACTIVE_DROP' | 'DISCHARGED' | 'COMPLETED' | 'POSTPONED' | 'INCIDENT_HOLD';
+export type MissionStatus = 'QUEUED' | 'ACTIVE_PICK' | 'ACTIVE_DROP' | 'PARTIAL_DISCHARGED' | 'DISCHARGED' | 'COMPLETED' | 'POSTPONED' | 'INCIDENT_HOLD';
 export type CockpitFilter = 'ALL' | 'INBOUND' | 'INTERNAL' | 'OUTBOUND' | 'URGENT';
+
+/**
+ * Información de Turno Operativo y Horario Asignado
+ */
+export interface ShiftScheduleInfo {
+  id: string;
+  code: string;
+  name: string;
+  startTime: string; // ej: "12:00"
+  endTime: string;   // ej: "20:00"
+  warningThresholdMinutes: number; // 15 minutos preventivos
+}
+
+export interface LotBreakdownItem {
+  lotNumber: string;
+  palletCount: number;
+  totalPieces: number;
+  isPrimary?: boolean;
+  expirationDate?: string;
+}
 
 /**
  * Lote Autorizado / Habilitado por Mesa de Control para la Remisión
@@ -92,6 +112,11 @@ export interface ForkliftMission {
   photoEvidenceUrl?: string;
   completedAt?: string;
   // ── Dominio Inbound Dinámico (Mesa Control define Producto + Lotes; Montacargas escanea tarimas) ──
+  totalExpectedPallets?: number;
+  partialDischargedAt?: string;
+  partialDischargeReason?: string;
+  handoverNotes?: string;
+  assignedOperatorName?: string;
   defaultPiecesPerPallet?: number;
   availableLots?: AuthorizedLotItem[];
   activeScanningLot?: string;
@@ -139,11 +164,13 @@ const INITIAL_MISSIONS: ForkliftMission[] = [
     arrivalTime: '14:22',
     notes: 'Mesa de Control autorizó Lote LOT-2026-X99 y Lote LOT-2026-Y02. El montacarguista escanea las tarimas físicas conforme salen del camión.',
     defaultPiecesPerPallet: 48,
+    totalExpectedPallets: 24,
     activeScanningLot: 'LOT-2026-X99',
     currentPendingPieces: 48,
     availableLots: [
       { lotNumber: 'LOT-2026-X99', expirationDate: '2027-12-31', isPrimary: true },
       { lotNumber: 'LOT-2026-Y02', expirationDate: '2028-06-30', isPrimary: false },
+      { lotNumber: 'LOT-2026-Z05', expirationDate: '2028-09-15', isPrimary: false },
     ],
     pallets: [], // Se llena dinámicamente conforme el operador escanea
   },
@@ -206,15 +233,15 @@ const INITIAL_MISSIONS: ForkliftMission[] = [
     folio: 'MIS-INB-2026-082',
     type: 'INBOUND_UNLOAD',
     typeLabel: 'Descarga Inbound',
-    priority: 'NORMAL',
-    priorityLabel: 'Normal',
-    status: 'QUEUED',
-    statusLabel: 'En Cola FIFO',
+    priority: 'HIGH',
+    priorityLabel: 'Relevo de Turno',
+    status: 'PARTIAL_DISCHARGED',
+    statusLabel: 'Descarga Parcial (8 de 24 Tarimas listas)',
     originLocation: 'Rampa 04 (Andén Sur - Tráiler R-10)',
     originBarcode: 'RAMPA-04',
     destinationLocation: 'Buffer 01 (Zona de Descarga / Pre-clasificación)',
     destBarcode: 'LOC-BUFFER-01',
-    ssccBarcode: 'SSCC-175012345000000031',
+    ssccBarcode: 'SSCC-175012345000000009',
     sku: 'SKU-552011',
     productName: 'Líquido Refrigerante Anticongelante 50/50',
     lotNumber: 'LOT-2026-M04',
@@ -230,14 +257,28 @@ const INITIAL_MISSIONS: ForkliftMission[] = [
     assignedZoneLease: 'Pasillo 04',
     slaCountdownMinutes: 25,
     arrivalTime: '14:35',
-    notes: 'Embarque de producto químico refrigerante.',
+    totalExpectedPallets: 24,
+    partialDischargedAt: '19:48',
+    partialDischargeReason: 'Fin de turno vespertino (corte para relevo)',
+    handoverNotes: 'Tráiler acoplado en Rampa 04. 8 tarimas descargadas en Buffer 01 (5 de Lote M04, 3 de Lote N01). Faltan 16 tarimas.',
+    notes: 'Descarga parcial por fin de turno. Reanudable por montacarguista entrante.',
     defaultPiecesPerPallet: 40,
     activeScanningLot: 'LOT-2026-M04',
     currentPendingPieces: 40,
     availableLots: [
       { lotNumber: 'LOT-2026-M04', expirationDate: '2028-11-30', isPrimary: true },
+      { lotNumber: 'LOT-2026-N01', expirationDate: '2028-12-15', isPrimary: false },
     ],
-    pallets: [],
+    pallets: [
+      { id: 'pal-p-1', palletNumber: 1, ssccBarcode: 'SSCC-175012345000000001', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:15' },
+      { id: 'pal-p-2', palletNumber: 2, ssccBarcode: 'SSCC-175012345000000002', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:19' },
+      { id: 'pal-p-3', palletNumber: 3, ssccBarcode: 'SSCC-175012345000000003', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:24' },
+      { id: 'pal-p-4', palletNumber: 4, ssccBarcode: 'SSCC-175012345000000004', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-N01', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:28' },
+      { id: 'pal-p-5', palletNumber: 5, ssccBarcode: 'SSCC-175012345000000005', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:33' },
+      { id: 'pal-p-6', palletNumber: 6, ssccBarcode: 'SSCC-175012345000000006', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-N01', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:38' },
+      { id: 'pal-p-7', palletNumber: 7, ssccBarcode: 'SSCC-175012345000000007', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-N01', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:42' },
+      { id: 'pal-p-8', palletNumber: 8, ssccBarcode: 'SSCC-175012345000000008', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:46' },
+    ],
   },
   {
     id: 'mis-005',
@@ -278,6 +319,7 @@ export class ForkliftMissionService {
 
   private eventSource: EventSource | null = null;
   private sseReconnectTimer: any = null;
+  private sseFailureCount = 0;
 
   // ─── Estado Reactivo Principal ─────────────────────────────────────────────
   private readonly rawMissions = signal<ForkliftMission[]>(INITIAL_MISSIONS);
@@ -322,16 +364,22 @@ export class ForkliftMissionService {
         } catch {}
       });
 
+      this.eventSource.onopen = () => {
+        this.sseFailureCount = 0;
+      };
+
       this.eventSource.onerror = () => {
         if (this.eventSource) {
           this.eventSource.close();
           this.eventSource = null;
         }
+        this.sseFailureCount++;
+        const reconnectDelay = this.sseFailureCount >= 3 ? 60000 : 10000;
         if (!this.sseReconnectTimer) {
           this.sseReconnectTimer = setTimeout(() => {
             this.sseReconnectTimer = null;
             this.initRealtimeQualityAlertStream();
-          }, 10000);
+          }, reconnectDelay);
         }
       };
     } catch {
@@ -483,6 +531,68 @@ export class ForkliftMissionService {
 
   /** Historial de completadas */
   readonly historyMissions = computed(() => this.completedMissions());
+
+  // ─── Turnos y Horarios Operativos (Regla de Fin de Turno & Relevo) ───────────
+  readonly currentShift = signal<ShiftScheduleInfo>({
+    id: 'shift-vesp',
+    code: 'TRN-VES-02',
+    name: 'Turno Vespertino Almacén',
+    startTime: '12:00',
+    endTime: '20:00',
+    warningThresholdMinutes: 15,
+  });
+
+  /** Minutos restantes del turno (Inicia en 14 min para activar alerta preventiva < 15 min) */
+  readonly shiftMinutesRemaining = signal<number>(14);
+
+  /** Estado reactivo del turno y si está dentro de la ventana crítica de fin de turno */
+  readonly shiftStatus = computed(() => {
+    const shift = this.currentShift();
+    const remaining = this.shiftMinutesRemaining();
+    return {
+      ...shift,
+      remainingMinutes: remaining,
+      isNearShiftEnd: remaining > 0 && remaining <= shift.warningThresholdMinutes,
+      isShiftEnded: remaining <= 0,
+    };
+  });
+
+  /** Ajustar manualmente o simular minutos restantes de turno para pruebas */
+  setMockShiftRemaining(minutes: number): void {
+    this.shiftMinutesRemaining.set(minutes);
+    if (minutes <= 15) {
+      this.toast.warning(`⚠️ Aviso de Turno: Quedan ${minutes} min de jornada. Revisa tus descargas en andén.`);
+      this.audioService.playWarning();
+    }
+  }
+
+  /**
+   * Obtener desglose consolidado de tarimas y piezas por cada lote de la misión
+   */
+  getLotBreakdown(mission: ForkliftMission): LotBreakdownItem[] {
+    const pallets = mission.pallets || [];
+    const map = new Map<string, { count: number; pieces: number }>();
+
+    for (const p of pallets) {
+      const lot = p.lotNumber || 'SIN-LOTE';
+      const existing = map.get(lot) || { count: 0, pieces: 0 };
+      existing.count += 1;
+      existing.pieces += p.pieces || 0;
+      map.set(lot, existing);
+    }
+
+    const available = mission.availableLots || [];
+    return Array.from(map.entries()).map(([lotNumber, data]) => {
+      const match = available.find((l) => l.lotNumber === lotNumber);
+      return {
+        lotNumber,
+        palletCount: data.count,
+        totalPieces: data.pieces,
+        isPrimary: match?.isPrimary,
+        expirationDate: match?.expirationDate,
+      };
+    });
+  }
 
   // ─── Acciones Operativas del Montacarguista ─────────────────────────────────
 
@@ -944,6 +1054,105 @@ export class ForkliftMissionService {
     } else {
       this.activeMissionId.set(null);
     }
+  }
+
+  /**
+   * Registrar Descarga Parcial (Corte de maniobra por fin de turno o relevo)
+   * Guarda las tarimas ya descargadas en buffer y deja la remisión pausada.
+   */
+  recordPartialDischarge(missionId: string, handoverNotes?: string): void {
+    const list = this.rawMissions();
+    const target = list.find((m) => m.id === missionId);
+    if (!target) return;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const currentPallets = target.pallets || [];
+    const expected = target.totalExpectedPallets || 24;
+
+    const partialMission: ForkliftMission = {
+      ...target,
+      status: 'PARTIAL_DISCHARGED',
+      statusLabel: `Descarga Parcial (${currentPallets.length} de ${expected} Tarimas listas)`,
+      partialDischargedAt: timeStr,
+      partialDischargeReason: 'Fin de turno operativo / Relevo de montacarguista',
+      handoverNotes: handoverNotes || `Pausada a las ${timeStr}. ${currentPallets.length} tarimas en buffer. Pendientes por descargar.`,
+      notes: `${target.notes || ''} [Corte parcial a las ${timeStr}: ${currentPallets.length} tarimas bajadas al andén]`,
+    };
+
+    // Sincronizar en Layout de Almacén
+    const targetBay = target.destBarcode || target.destinationLocation;
+    if (targetBay && currentPallets.length > 0) {
+      this.layoutSync.recordMovement(
+        targetBay,
+        currentPallets.length,
+        target.productName,
+        target.activeScanningLot || target.lotNumber,
+        target.folio,
+        target.assignedVehicle || 'Montacargas'
+      );
+    }
+
+    // Mantener la misión en la lista pero con estatus PARTIAL_DISCHARGED
+    const updatedList = list.map((m) => (m.id === missionId ? partialMission : m));
+    this.rawMissions.set(updatedList);
+
+    // Si la misión activa era esta, pasar a la siguiente disponible o dejar null
+    const otherActives = updatedList.filter((m) => m.id !== missionId && m.status !== 'PARTIAL_DISCHARGED');
+    if (otherActives.length > 0) {
+      this.activeMissionId.set(otherActives[0].id);
+      this.rawMissions.update((q) =>
+        q.map((m) => (m.id === otherActives[0].id ? { ...m, status: 'ACTIVE_PICK', statusLabel: 'En Descarga Activa / Pick' } : m))
+      );
+    } else {
+      this.activeMissionId.set(null);
+    }
+
+    const feedback: ScanFeedback = {
+      success: true,
+      message: `⏸️ Descarga Parcial registrada [${partialMission.folio}]. ${currentPallets.length} tarimas guardadas en buffer. Notificado a Mesa de Control para relevo.`,
+      phase: 'DISCHARGE_FINISHED',
+    };
+    this.lastScanFeedback.set(feedback);
+    this.toast.warning(`Descarga parcial registrada: ${currentPallets.length} tarimas guardadas. Notificado a Mesa de Control.`);
+    this.audioService.playWarning();
+  }
+
+  /**
+   * Reanudar una descarga parcial (cuando un montacarguista toma el relevo o le reabren la remisión)
+   */
+  resumePartialDischarge(missionId: string): void {
+    const list = this.rawMissions();
+    const target = list.find((m) => m.id === missionId);
+    if (!target) return;
+
+    const currentPallets = target.pallets || [];
+    const nextPalletNum = currentPallets.length + 1;
+    const nextSscc = `SSCC-1750123450000000${String(nextPalletNum).padStart(2, '0')}`;
+
+    const resumedMission: ForkliftMission = {
+      ...target,
+      status: 'ACTIVE_PICK',
+      statusLabel: `En Descarga Activa (Continuando Tarima #${nextPalletNum})`,
+      ssccBarcode: nextSscc,
+      priority: 'URGENT',
+      priorityLabel: 'Reanudada • Prioridad 4G',
+      notes: `${target.notes || ''} [Reanudada por operador a las ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}]`,
+    };
+
+    const remaining = list.filter((m) => m.id !== missionId);
+    this.rawMissions.set([resumedMission, ...remaining]);
+    this.activeMissionId.set(missionId);
+
+    const feedback: ScanFeedback = {
+      success: true,
+      message: `¡Descarga reanudada! ${currentPallets.length} tarimas previas conservadas. Escanea la Tarima #${nextPalletNum}.`,
+      phase: 'PICK_VALIDATED',
+    };
+    this.lastScanFeedback.set(feedback);
+    this.toast.success(`¡Remisión reanudada! Continúa con la tarima #${nextPalletNum}.`);
+    this.audioService.playSuccess();
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
   }
 
   /** Posponer la misión actual al final de la cola */

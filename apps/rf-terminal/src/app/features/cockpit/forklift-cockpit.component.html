@@ -118,6 +118,38 @@
     </button>
   </nav>
 
+  <!-- ── 2.5 BANNER PREVENTIVO DE FIN DE TURNO (REGLA DE HORARIOS - AVISO 15 MIN) ── -->
+  @if (isShiftEndingSoon()) {
+    <div class="shift-warning-banner" role="alert">
+      <div class="shift-banner-content">
+        <div class="shift-banner-icon-wrap">
+          <span class="material-symbols-outlined text-2xl text-amber-500 animate-pulse">timer</span>
+        </div>
+        <div class="shift-banner-text">
+          <div class="shift-banner-title">
+            <span class="font-black text-amber-500">AVISO DE RELEVO:</span>
+            <span>{{ shiftStatus().name }}</span>
+            <span class="shift-time-badge">Finaliza {{ shiftStatus().endTime }} ({{ shiftStatus().remainingMinutes }} min restantes)</span>
+          </div>
+          <p class="shift-banner-desc">
+            Si no alcanzas a concluir la descarga completa del tráiler antes del cambio de turno, realiza un corte de <strong>Descarga Parcial</strong> para transferir la rampa al siguiente operador.
+          </p>
+        </div>
+      </div>
+
+      @if (activeMission()?.type === 'INBOUND_UNLOAD' && inboundScannedCount() > 0) {
+        <button
+          type="button"
+          (click)="openPartialDischargeModal()"
+          class="btn-shift-partial-action"
+          title="Realizar corte de descarga parcial por cambio de turno">
+          <span class="material-symbols-outlined text-xl">pause_circle</span>
+          <span>Registrar Descarga Parcial</span>
+        </button>
+      }
+    </div>
+  }
+
   <!-- ── 3. HERO: TARJETA EJECUTIVA DE MISIÓN ACTIVA (FOCO INMEDIATO Y COMPACTO) ── -->
   @if (activeMission(); as mission) {
     <section
@@ -223,7 +255,7 @@
             <div class="lots-top-bar">
               <span class="lots-bar-label">
                 <span class="material-symbols-outlined text-xs text-amber-500">fact_check</span>
-                <span>Lotes Habilitados:</span>
+                <span>Lotes Habilitados (Toca para cambiar):</span>
               </span>
               <span class="lots-counter-badge">
                 <strong>{{ inboundScannedCount() }}</strong> Tarimas / {{ inboundTotalPieces() }} pzs
@@ -236,9 +268,11 @@
                   type="button"
                   (click)="selectScanningLot(lot.lotNumber)"
                   class="lot-chip-compact"
-                  [class.lot-chip-compact--active]="activeScanningLot() === lot.lotNumber">
+                  [class.lot-chip-compact--active]="activeScanningLot() === lot.lotNumber"
+                  [title]="'Seleccionar lote ' + lot.lotNumber + ' para la siguiente tarima'">
                   <span class="chip-dot"></span>
                   <span>{{ lot.lotNumber }}</span>
+                  <span class="chip-lot-count">({{ getPalletCountForLot(lot.lotNumber) }})</span>
                   @if (lot.isPrimary) {
                     <span class="chip-primary-flag">Principal</span>
                   }
@@ -248,7 +282,7 @@
                 type="button"
                 (click)="openCustomLotModal()"
                 class="lot-chip-compact lot-chip-add"
-                title="Registrar otro lote físico">
+                title="Registrar otro lote físico en caliente">
                 <span class="material-symbols-outlined text-xs">add</span>
                 <span>+ Lote</span>
               </button>
@@ -294,11 +328,20 @@
             @if (inboundScannedCount() > 0) {
               <button
                 type="button"
-                (click)="finishDischargeManually()"
+                (click)="openConfirmDischargeModal()"
                 class="btn-hero-tool btn-tool-finish"
-                title="Notificar fin de maniobra física a mesa de control">
+                title="Concluir descarga física completa del camión">
                 <span class="material-symbols-outlined text-sm text-emerald-500">done_all</span>
                 <span>Concluir Descarga ({{ inboundScannedCount() }} T)</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openPartialDischargeModal()"
+                class="btn-hero-tool btn-tool-partial"
+                title="Registrar corte de descarga parcial por fin de turno">
+                <span class="material-symbols-outlined text-sm text-sky-500">pause_circle</span>
+                <span>Descarga Parcial</span>
               </button>
             }
           }
@@ -378,7 +421,8 @@
             'card--inbound': m.type === 'INBOUND_UNLOAD',
             'card--putaway': m.type === 'INTERNAL_PUTAWAY',
             'card--outbound': m.type === 'OUTBOUND_DISPATCH',
-            'card--urgent': m.priority === 'URGENT'
+            'card--urgent': m.priority === 'URGENT',
+            'card--partial': m.status === 'PARTIAL_DISCHARGED'
           }">
 
           <!-- Indicador lateral de color -->
@@ -397,6 +441,13 @@
 
                 @if (m.docNumber) {
                   <span class="queue-doc-tag">Remisión: {{ m.docNumber }}</span>
+                }
+
+                @if (m.status === 'PARTIAL_DISCHARGED') {
+                  <span class="queue-partial-pill">
+                    <span class="material-symbols-outlined text-xs">timelapse</span>
+                    <span>CORTE PARCIAL ({{ m.pallets?.length || 0 }}/{{ m.totalExpectedPallets || '?' }} T)</span>
+                  </span>
                 }
 
                 <span class="queue-time-chip">
@@ -438,25 +489,42 @@
               <span class="queue-prod-name">{{ m.productName }}</span>
               <span class="details-divider">•</span>
               <span class="queue-qty-badge">
-                {{ m.type === 'INBOUND_UNLOAD' ? (m.pallets?.length || 0) + ' Tarimas Descargadas' : m.quantity + ' ' + m.unit }}
+                {{ m.type === 'INBOUND_UNLOAD' ? (m.pallets?.length || 0) + (m.totalExpectedPallets ? '/' + m.totalExpectedPallets : '') + ' Tarimas Descargadas' : m.quantity + ' ' + m.unit }}
               </span>
               @if (m.transportPlate) {
                 <span class="details-divider">•</span>
                 <span class="queue-transport-tag">{{ m.transportPlate }}</span>
               }
+              @if (m.status === 'PARTIAL_DISCHARGED' && m.handoverNotes) {
+                <div class="queue-handover-note">
+                  <span class="material-symbols-outlined text-xs text-amber-500">assignment_return</span>
+                  <span>Relevo: "{{ m.handoverNotes }}"</span>
+                </div>
+              }
             </div>
           </div>
 
-          <!-- Botón de Acción: Ver y Comenzar -->
+          <!-- Botón de Acción: Ver y Comenzar o Reanudar Inmediatamente -->
           <div class="queue-card-action" (click)="$event.stopPropagation()">
-            <button
-              type="button"
-              (click)="openMissionDetail(m)"
-              class="btn-take-mission"
-              title="Ver información concreta e iniciar">
-              <span class="material-symbols-outlined text-xl">play_circle</span>
-              <span>VER & INICIAR</span>
-            </button>
+            @if (m.status === 'PARTIAL_DISCHARGED') {
+              <button
+                type="button"
+                (click)="resumePartialMission(m)"
+                class="btn-resume-partial"
+                title="Reanudar descarga desde tarima {{ (m.pallets?.length || 0) + 1 }}">
+                <span class="material-symbols-outlined text-xl">play_arrow</span>
+                <span>REANUDAR (T#{{ (m.pallets?.length || 0) + 1 }})</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                (click)="openMissionDetail(m)"
+                class="btn-take-mission"
+                title="Ver información concreta e iniciar">
+                <span class="material-symbols-outlined text-xl">play_circle</span>
+                <span>VER & INICIAR</span>
+              </button>
+            }
           </div>
 
         </div>
@@ -760,15 +828,17 @@
                   type="button"
                   (click)="selectScanningLot(lot.lotNumber)"
                   class="hud-quick-lot-btn"
-                  [class.hud-quick-lot-btn--active]="activeScanningLot() === lot.lotNumber">
-                  {{ lot.lotNumber }}
+                  [class.hud-quick-lot-btn--active]="activeScanningLot() === lot.lotNumber"
+                  [title]="'Activar lote ' + lot.lotNumber + ' para escaneo inmediato'">
+                  <span>{{ lot.lotNumber }}</span>
+                  <span class="hud-lot-count">({{ getPalletCountForLot(lot.lotNumber) }} T)</span>
                 </button>
               }
               <button
                 type="button"
                 (click)="openCustomLotModal()"
                 class="hud-quick-lot-btn hud-quick-lot-add"
-                title="Intercambiar por otro lote">
+                title="Intercambiar o registrar nuevo lote físico">
                 <span class="material-symbols-outlined text-xs">sync_saved_locally</span>
                 <span>+ Lote</span>
               </button>
@@ -975,11 +1045,20 @@
           @if (current.type === 'INBOUND_UNLOAD' && inboundScannedCount() > 0) {
             <button
               type="button"
-              (click)="finishDischargeManually()"
+              (click)="openConfirmDischargeModal()"
               class="btn-hud-contingency btn-hud-finish-discharge"
-              title="Finalizar descarga física y notificar a Mesa de Control">
-              <span class="material-symbols-outlined text-base text-emerald-500">done_all</span>
-              <span>Concluir ({{ inboundScannedCount() }} Tarimas)</span>
+              title="Finalizar descarga física y confirmar desglose de lotes">
+              <span class="material-symbols-outlined text-base text-emerald-400">check_circle</span>
+              <span>Terminar ({{ inboundScannedCount() }} T)</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="openPartialDischargeModal()"
+              class="btn-hud-contingency btn-hud-partial-discharge"
+              title="Registrar corte de descarga parcial por fin de turno">
+              <span class="material-symbols-outlined text-base text-sky-400">timelapse</span>
+              <span>Descarga Parcial</span>
             </button>
           }
 
@@ -1327,6 +1406,199 @@
             class="btn-modal-confirm-swap">
             <span class="material-symbols-outlined">sync_saved_locally</span>
             <span>CONFIRMAR Y APLICAR LOTE</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 9. MODAL 6: CONFIRMACIÓN DE FIN DE ESCANEO / DESCARGA COMPLETA ── -->
+  @if (showConfirmDischargeModal()) {
+    <div class="rf-modal-backdrop" (click)="closeConfirmDischargeModal()">
+      <div class="rf-modal-card modal-confirm-discharge-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header -->
+        <div class="rf-modal-header modal-header--finish">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-2xl text-emerald-400">task_alt</span>
+            <div>
+              <h2 class="rf-modal-title">¿Estás seguro de terminar el escaneo?</h2>
+              <p class="modal-subtitle">Se cerrará la descarga física y se notificará a Mesa de Control para validación.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closeConfirmDischargeModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="rf-modal-body">
+          @if (activeMission(); as mission) {
+            <!-- Resumen Tarimas y Piezas -->
+            <div class="confirm-summary-kpis">
+              <div class="kpi-block kpi-pallets">
+                <span class="kpi-lbl">Tarimas Descargadas</span>
+                <span class="kpi-val">{{ inboundScannedCount() }}</span>
+                <span class="kpi-sub">de {{ mission.totalExpectedPallets || inboundScannedCount() }} esperadas</span>
+              </div>
+              <div class="kpi-block kpi-pieces">
+                <span class="kpi-lbl">Total de Piezas</span>
+                <span class="kpi-val">{{ inboundTotalPieces() }}</span>
+                <span class="kpi-sub">{{ mission.unit }} confirmadas</span>
+              </div>
+              <div class="kpi-block kpi-dest">
+                <span class="kpi-lbl">Destino / Andén</span>
+                <span class="kpi-val-code">{{ mission.destinationLocation }}</span>
+                <span class="kpi-sub">{{ mission.transportPlate || 'Patio Andén' }}</span>
+              </div>
+            </div>
+
+            <!-- Desglose por Lote Físico -->
+            <div class="confirm-breakdown-section">
+              <div class="breakdown-header">
+                <span class="material-symbols-outlined text-sm text-amber-500">category</span>
+                <span>Desglose de Lotes Escaneados en el Camión:</span>
+              </div>
+
+              <div class="confirm-lots-table">
+                <div class="table-header-row">
+                  <span>Lote Físico</span>
+                  <span class="text-center">Tarimas</span>
+                  <span class="text-right">Piezas Totales</span>
+                </div>
+                @for (item of lotBreakdownSummary(); track item.lotNumber) {
+                  <div class="table-data-row">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-xs text-amber-400">qr_code_2</span>
+                      <strong class="text-amber-300 font-mono text-sm">{{ item.lotNumber }}</strong>
+                    </div>
+                    <div class="text-center">
+                      <span class="badge-lot-pallets">{{ item.palletCount }} Tarimas</span>
+                    </div>
+                    <div class="text-right font-bold text-slate-100">
+                      {{ item.totalPieces }} pzs
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="confirm-notice-alert">
+              <span class="material-symbols-outlined text-lg text-emerald-400">info</span>
+              <span>Al confirmar, la remisión <strong>{{ mission.docNumber || mission.folio }}</strong> pasa a estado <strong>DESCARGADO</strong>. Mesa de Control recibirá el desglose para auditoría.</span>
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeConfirmDischargeModal()" class="btn-modal-cancel">
+            <span class="material-symbols-outlined text-base">arrow_back</span>
+            <span>Regresar a Escanear</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="confirmFullDischarge()"
+            class="btn-modal-confirm-finish">
+            <span class="material-symbols-outlined text-lg">check_circle</span>
+            <span>SÍ, TERMINAR DESCARGA</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── 10. MODAL 7: REGISTRO DE DESCARGA PARCIAL POR FIN DE TURNO ── -->
+  @if (showPartialDischargeModal()) {
+    <div class="rf-modal-backdrop" (click)="closePartialDischargeModal()">
+      <div class="rf-modal-card modal-partial-discharge-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        
+        <!-- Header -->
+        <div class="rf-modal-header modal-header--partial">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-2xl text-sky-400">timelapse</span>
+            <div>
+              <h2 class="rf-modal-title">Registrar Descarga Parcial (Corte de Turno)</h2>
+              <p class="modal-subtitle">Guarda el avance físico para que el siguiente montacarguista continúe el tráiler sin reiniciar.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-modal-close" (click)="closePartialDischargeModal()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="rf-modal-body">
+          @if (targetMissionForPartial() || activeMission(); as mission) {
+            <!-- Tarjeta de Estado de Turno -->
+            <div class="shift-info-card">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-400">schedule</span>
+                  <span class="font-bold text-slate-100">{{ shiftStatus().name }} (Finaliza {{ shiftStatus().endTime }})</span>
+                </div>
+                <span class="shift-countdown-pill" [class.countdown--alert]="shiftStatus().isNearShiftEnd">
+                  {{ shiftStatus().remainingMinutes }} min restantes
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 mt-1">
+                Operador saliente: <strong>{{ operatorName() }}</strong> • Andén: <strong>{{ mission.originLocation }}</strong>
+              </p>
+            </div>
+
+            <!-- Progreso descargado -->
+            <div class="partial-progress-row">
+              <div class="partial-progress-stat">
+                <span class="stat-lbl">Tarimas Descargadas</span>
+                <span class="stat-num text-sky-400">{{ mission.pallets?.length || inboundScannedCount() }}</span>
+              </div>
+              <div class="partial-progress-sep">/</div>
+              <div class="partial-progress-stat">
+                <span class="stat-lbl">Tarimas Esperadas</span>
+                <span class="stat-num text-slate-400">{{ mission.totalExpectedPallets || 24 }}</span>
+              </div>
+              <div class="partial-progress-stat ml-auto">
+                <span class="stat-lbl">Piezas Acumuladas</span>
+                <span class="stat-num text-emerald-400">{{ inboundTotalPieces() }}</span>
+              </div>
+            </div>
+
+            <!-- Notas de Relevo Operativo -->
+            <div class="modal-form-group mt-3">
+              <label class="modal-label flex items-center justify-between">
+                <span>Instrucciones / Notas para el Montacarguista de Relevo</span>
+                <span class="text-[11px] text-amber-400 font-semibold">(Obligatorio)</span>
+              </label>
+              <textarea
+                rows="3"
+                [ngModel]="partialHandoverNoteInput()"
+                (ngModelChange)="partialHandoverNoteInput.set($event)"
+                placeholder="Ej: Se descargaron 8 tarimas de enfrente. Quedan 16 tarimas al fondo del tráiler con lote LOT-2026-Y02. Tráiler acoplado en Andén 04..."
+                class="modal-textarea font-sans"></textarea>
+            </div>
+
+            <div class="partial-notice-alert">
+              <span class="material-symbols-outlined text-base text-amber-400">notification_important</span>
+              <span>Esta remisión se marcará como <strong>CORTE PARCIAL</strong>. Aparecerá en la cola con botón <strong>REANUDAR</strong> para continuar directamente en la tarima #{{ (mission.pallets?.length || inboundScannedCount()) + 1 }}.</span>
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closePartialDischargeModal()" class="btn-modal-cancel">
+            <span>Cancelar</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="confirmPartialDischarge()"
+            class="btn-modal-confirm-partial">
+            <span class="material-symbols-outlined text-lg">history_toggle_off</span>
+            <span>GUARDAR CORTE Y ENTREGAR TURNO</span>
           </button>
         </div>
 

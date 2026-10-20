@@ -63,7 +63,12 @@ export const jwtInterceptor: HttpInterceptorFn = (
 
   return next(authRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      // 401 Unauthorized: intentar refrescar el token
+      // Si estamos en sesión de pruebas o token simulado de desarrollo, no invalidar ni cerrar sesión por 401
+      if (token && (token.startsWith('mock-') || token.startsWith('rf-'))) {
+        return throwError(() => error);
+      }
+
+      // 401 Unauthorized: intentar refrescar el token real
       if (error.status === 401 && !request.url.includes('/api/auth/refresh')) {
         return authService.refreshToken().pipe(
           switchMap((newToken) => {
