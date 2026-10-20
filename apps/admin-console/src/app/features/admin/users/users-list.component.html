@@ -612,89 +612,129 @@
               </fieldset>
             }
 
-            <!-- SECCIÓN 4 — Control & Auditoría en Tiempo Real ─────── -->
+            <!-- SECCIÓN 4 — Control & Auditoría en Tiempo Real (Homologada con Recepción) -->
             @if (formMode() === 'edit' && selectedUser()) {
-              <fieldset class="users-form-section users-form-section--readonly">
-                <legend class="users-form-section__legend">
-                  <span class="material-symbols-outlined">history</span>
-                  Información de Control & Auditoría
-                </legend>
-
-                <div class="users-readonly-grid">
-                  <div class="users-readonly-field">
-                    <span class="users-readonly-field__label">Organización</span>
-                    <span class="users-readonly-field__value">{{ selectedUser()!.orgName }}</span>
-                  </div>
-                  <div class="users-readonly-field">
-                    <span class="users-readonly-field__label">Último Inicio de Sesión</span>
-                    <span class="users-readonly-field__value">
-                      {{ selectedUser()!.lastLoginAt ? (selectedUser()!.lastLoginAt | date:'dd/MM/yyyy HH:mm') : 'Nunca' }}
+              <div class="users-form-section users-audit-section mt-4 pt-3 border-t border-subtle">
+                <div
+                  (click)="toggleShowAuditTimeline()"
+                  class="users-audit-accordion-header flex items-center justify-between p-3 rounded-xl bg-surface-variant/40 hover:bg-surface-variant/70 border border-subtle cursor-pointer transition-colors"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base text-gold">history</span>
+                    <span class="text-xs font-bold text-gold uppercase tracking-wider">
+                      Información de Control &amp; Auditoría
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gold/15 text-gold border border-gold/30">
+                      {{ auditEntries().length }} evento(s)
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    class="text-xs font-bold text-muted flex items-center gap-1 hover:text-foreground"
+                  >
+                    <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
+                    <span class="material-symbols-outlined text-base transition-transform duration-200" [class.rotate-180]="showAuditTimeline()">
+                      expand_more
+                    </span>
+                  </button>
                 </div>
 
-                <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA (BE GET /api/v1/users/{id}/audit) ── -->
-                <div class="carriers-timeline-preview">
-                  <div class="carriers-timeline-preview__header">
-                    <div class="carriers-timeline-preview__title">
-                      <span class="material-symbols-outlined text-base">timeline</span>
-                      <span>Línea de Tiempo de Auditoría</span>
+                @if (showAuditTimeline()) {
+                  <div class="mt-3 space-y-4">
+                    <!-- Metadatos de lectura rápida (4 Cards Bento idénticas a Recepción) -->
+                    <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div class="carriers-readonly-field">
+                        <span class="carriers-readonly-field__label">Usuario / Identificador</span>
+                        <span class="carriers-readonly-field__value font-mono font-black text-xs">&#64;{{ selectedUser()!.username }}</span>
+                      </div>
+                      <div class="carriers-readonly-field">
+                        <span class="carriers-readonly-field__label">Organización</span>
+                        <span class="carriers-readonly-field__value text-xs font-black">{{ selectedUser()!.orgName || '4GUARD LOGISTICS CORP' }}</span>
+                      </div>
+                      <div class="carriers-readonly-field">
+                        <span class="carriers-readonly-field__label">Rol Asignado</span>
+                        <span class="carriers-readonly-field__value text-xs font-black">{{ getRoleLabel(selectedUser()!.role) }}</span>
+                      </div>
+                      <div class="carriers-readonly-field">
+                        <span class="carriers-readonly-field__label">Último Inicio de Sesión</span>
+                        <span class="carriers-readonly-field__value text-xs font-mono font-black">
+                          {{ selectedUser()!.lastLoginAt ? (selectedUser()!.lastLoginAt | date:'dd/MM/yyyy HH:mm') : 'Nunca' }}
+                        </span>
+                      </div>
                     </div>
-                    <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
-                  </div>
 
-                  @if (isLoadingAudit()) {
-                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4 flex items-center justify-center gap-2">
-                      <span class="material-symbols-outlined animate-spin text-sm">sync</span>
-                      <span>Cargando bitácora de auditoría...</span>
-                    </div>
-                  } @else if (auditEntries().length === 0) {
-                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
-                      No se encontraron registros de auditoría para este usuario.
-                    </div>
-                  } @else {
-                    <div class="carriers-timeline-preview__nodes">
-                      @for (entry of auditEntries(); track entry.logId || $index; let isLast = $last) {
-                        <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
-                          <div class="carriers-tl-node__dot">
-                            <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
-                          </div>
-                          @if (!isLast) {
-                            <div class="carriers-tl-node__line"></div>
-                          }
-                          <div class="carriers-tl-node__content">
-                            <div class="carriers-tl-node__header">
-                              <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
-                              <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
-                            </div>
+                    <!-- Línea de Tiempo de Auditoría -->
+                    <div class="carriers-timeline-preview">
+                      <div class="carriers-timeline-preview__header">
+                        <div class="carriers-timeline-preview__title flex items-center gap-2">
+                          <span class="material-symbols-outlined text-base">timeline</span>
+                          <span>Línea de Tiempo de Auditoría (Trazabilidad WMS)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
+                          <button
+                            type="button"
+                            class="carriers-btn-icon"
+                            (click)="loadAuditLogs(selectedUser()!.id); $event.stopPropagation()"
+                            title="Actualizar bitácora">
+                            <span class="material-symbols-outlined text-sm" [class.spin]="isLoadingAudit()">refresh</span>
+                          </button>
+                        </div>
+                      </div>
 
-                            @if (entry.details && entry.details.length > 0) {
-                              <div class="carriers-tl-node__diffs">
-                                @for (d of entry.details; track d.fieldName) {
-                                  <div class="carriers-tl-diff">
-                                    <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                                    @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
-                                      <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
-                                      <span class="carriers-tl-diff__arrow">➔</span>
+                      @if (isLoadingAudit()) {
+                        <div class="carriers-timeline-preview__loading p-4 flex items-center justify-center gap-2 text-xs font-bold text-muted">
+                          <span class="material-symbols-outlined spin text-sm">sync</span>
+                          <span>Cargando bitácora de auditoría desde el servidor…</span>
+                        </div>
+                      } @else if (auditEntries().length === 0) {
+                        <div class="carriers-timeline-preview__empty text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
+                          No se encontraron registros de auditoría para este usuario.
+                        </div>
+                      } @else {
+                        <div class="carriers-timeline-preview__nodes">
+                          @for (entry of auditEntries(); track entry.logId || $index; let isLast = $last) {
+                            <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
+                              <div class="carriers-tl-node__dot">
+                                <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
+                              </div>
+                              @if (!isLast) {
+                                <div class="carriers-tl-node__line"></div>
+                              }
+                              <div class="carriers-tl-node__content">
+                                <div class="carriers-tl-node__header">
+                                  <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
+                                  <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
+                                </div>
+
+                                @if (entry.details && entry.details.length > 0) {
+                                  <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2 rounded-lg bg-surface border border-subtle">
+                                    @for (d of entry.details; track d.fieldName) {
+                                      <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                                        <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                        @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                          <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                          <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
+                                        }
+                                        <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                                      </div>
                                     }
-                                    <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                                   </div>
                                 }
-                              </div>
-                            }
 
-                            <span class="carriers-tl-node__meta">
-                              <span class="material-symbols-outlined text-[13px]">schedule</span>
-                              <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
-                            </span>
-                          </div>
+                                <span class="carriers-tl-node__meta flex items-center gap-1.5 mt-1">
+                                  <span class="material-symbols-outlined text-[13px]">schedule</span>
+                                  <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                                </span>
+                              </div>
+                            </div>
+                          }
                         </div>
                       }
                     </div>
-                  }
-                </div>
-
-              </fieldset>
+                  </div>
+                }
+              </div>
             }
 
             <!-- ── ACCIONES DEL FORMULARIO ──────────────────────── -->

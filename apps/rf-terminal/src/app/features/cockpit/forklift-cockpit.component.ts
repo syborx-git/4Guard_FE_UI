@@ -27,6 +27,8 @@ import {
   ForkliftMission,
   InboundPalletItem,
   AuthorizedLotItem,
+  LotBreakdownItem,
+  ShiftScheduleInfo,
   CockpitFilter,
   ScanFeedback,
 } from '../../core/services/forklift-mission.service';
@@ -105,6 +107,19 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     const elab = this.newCustomElaborationInput();
     return this.evaluateShelfLife(exp, elab);
   });
+
+  // ─── Modal 6: Confirmación de Cierre Total de Escaneo Inbound ─────────────
+  protected readonly showConfirmDischargeModal = signal(false);
+
+  // ─── Modal 7: Corte de Descarga Parcial por Fin de Turno ──────────────────
+  protected readonly showPartialDischargeModal = signal(false);
+  protected readonly partialHandoverNoteInput = signal('');
+  protected readonly targetMissionForPartial = signal<ForkliftMission | null>(null);
+
+  // ─── Turnos y Horarios Operativos ─────────────────────────────────────────
+  protected readonly shiftStatus = this.missionService.shiftStatus;
+  protected readonly isShiftEndingSoon = computed(() => this.shiftStatus().isNearShiftEnd);
+  protected readonly isShiftEnded = computed(() => this.shiftStatus().isShiftEnded);
 
   // ─── Datos Computados ─────────────────────────────────────────────────────
   protected readonly activeMission = this.missionService.activeMission;
@@ -553,17 +568,75 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.executeScan('CODIGO-ERRONEO-999');
   }
 
-  // ─── 7. Finalización Formal de Descarga Física (DISCHARGED) ───────────────
-  finishDischargeManually(): void {
+  // ─── 7. Finalización Formal de Descarga Física (DISCHARGED) con Confirmación ─
+  openConfirmDischargeModal(): void {
+    const current = this.activeMission();
+    if (!current) return;
+    this.audioService.playWarning();
+    this.showConfirmDischargeModal.set(true);
+  }
+
+  closeConfirmDischargeModal(): void {
+    this.showConfirmDischargeModal.set(false);
+  }
+
+  confirmFullDischarge(): void {
     const current = this.activeMission();
     if (!current) return;
 
+    this.showConfirmDischargeModal.set(false);
     this.stopCamera();
     this.missionService.finishInboundDischarge(current.id);
     this.justCompletedMission.set(current);
     this.showScanningModal.set(false);
     this.showCelebrationModal.set(true);
     this.audioService.playSuccess();
+  }
+
+  // Alias para mantener compatibilidad si se llama directo
+  finishDischargeManually(): void {
+    this.openConfirmDischargeModal();
+  }
+
+  // ─── 7.1 Corte de Descarga Parcial por Fin de Turno ───────────────────────
+  openPartialDischargeModal(mission?: ForkliftMission): void {
+    const target = mission || this.activeMission();
+    if (!target) return;
+    this.targetMissionForPartial.set(target);
+    const count = target.pallets?.length || this.inboundScannedCount();
+    const timeNow = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    this.partialHandoverNoteInput.set(`Corte por cambio de turno (${timeNow}). ${count} tarimas descargadas en buffer. Tráiler acoplado para relevo.`);
+    this.audioService.playWarning();
+    this.showPartialDischargeModal.set(true);
+  }
+
+  closePartialDischargeModal(): void {
+    this.showPartialDischargeModal.set(false);
+    this.targetMissionForPartial.set(null);
+  }
+
+  confirmPartialDischarge(): void {
+    const target = this.targetMissionForPartial() || this.activeMission();
+    if (!target) return;
+
+    const note = this.partialHandoverNoteInput().trim();
+    this.showPartialDischargeModal.set(false);
+    this.stopCamera();
+    this.showScanningModal.set(false);
+    this.missionService.recordPartialDischarge(target.id, note);
+  }
+
+  resumePartialMission(mission: ForkliftMission): void {
+    this.missionService.resumePartialDischarge(mission.id);
+  }
+
+  getPalletCountForLot(lotNumber: string): number {
+    const list = this.inboundPalletsList();
+    return list.filter((p) => p.lotNumber === lotNumber).length;
+  }
+
+  simulateShiftMinutes(minutes: number): void {
+    this.missionService.setMockShiftRemaining(minutes);
   }
 
   // ─── 8. Acciones sobre Misiones ──────────────────────────────────────────

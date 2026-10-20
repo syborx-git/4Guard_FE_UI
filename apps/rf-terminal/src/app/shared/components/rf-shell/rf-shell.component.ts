@@ -18,6 +18,7 @@ import { OfflineBannerComponent } from '../offline-banner/offline-banner.compone
 import { ToastContainerComponent } from '../toast-container/toast-container.component';
 import { RfNotificationsComponent } from '../rf-notifications/rf-notifications.component';
 import { ToastService } from '@4guard/shared-core';
+import { PwaService } from '../../../core/services/pwa.service';
 
 interface NavItem {
   path: string;
@@ -43,12 +44,16 @@ interface NavItem {
   styleUrl: './rf-shell.component.css',
 })
 export class RfShellComponent implements OnInit, OnDestroy {
-  private readonly router       = inject(Router);
+  private readonly router = inject(Router);
   protected readonly themeService = inject(RfThemeService);
-  protected readonly authState    = inject(AuthState);
-  protected readonly syncState    = inject(SyncState);
+  protected readonly authState = inject(AuthState);
+  protected readonly syncState = inject(SyncState);
   protected readonly audioService = inject(AudioFeedbackService);
-  protected readonly toast        = inject(ToastService);
+  protected readonly toast = inject(ToastService);
+  protected readonly pwaService = inject(PwaService);
+
+  protected readonly userRoles = UserRole;
+  protected readonly showIosModal = signal(false);
 
   private clockIntervalId: any = null;
 
@@ -151,12 +156,12 @@ export class RfShellComponent implements OnInit, OnDestroy {
 
   // ─── Catálogo Maestro de Accesos de Piso ─────────────────────────────────────
   private readonly allNavItems: NavItem[] = [
-    { path: '/menu',      icon: 'grid_view',     label: 'Menú'       },
-    { path: '/cockpit',   icon: 'forklift',      label: 'Cockpit'    },
-    { path: '/counting',  icon: 'checklist_rtl', label: 'Conteo'     },
-    { path: '/quality',   icon: 'verified_user', label: 'Calidad'    },
-    { path: '/security',  icon: 'local_police',  label: 'Seguridad'  },
-    { path: '/sync',      icon: 'sync',          label: 'Sync'       },
+    { path: '/menu', icon: 'grid_view', label: 'Menú' },
+    { path: '/cockpit', icon: 'forklift', label: 'Cockpit' },
+    { path: '/counting', icon: 'checklist_rtl', label: 'Conteo' },
+    { path: '/quality', icon: 'verified_user', label: 'Calidad' },
+    { path: '/security', icon: 'local_police', label: 'Seguridad' },
+    { path: '/sync', icon: 'sync', label: 'Sync' },
   ];
 
   // ─── Navegación Inferior Dinámica según Perfil RBAC ──────────────────────────
@@ -302,6 +307,7 @@ export class RfShellComponent implements OnInit, OnDestroy {
     this.audioService.playSuccess();
   }
 
+
   /** Alterna el tema Dark/Light */
   toggleTheme(): void {
     this.themeService.toggleTheme();
@@ -342,5 +348,40 @@ export class RfShellComponent implements OnInit, OnDestroy {
     }
 
     this.toast.success(`Código ${code} capturado y validado.`, 'ESCÁNER LÁSER');
+  }
+
+  // ─── PWA & Hardware Methods ───────────────────────────────────────────────
+
+  /** Lanza el prompt nativo de instalación de la PWA */
+  async promptInstallPwa(): Promise<void> {
+    const outcome = await this.pwaService.promptInstall();
+    if (outcome === 'accepted') {
+      this.toast.success('4GUARD Terminal instalada correctamente en el dispositivo.', 'PWA INSTALADA');
+    }
+  }
+
+  /** Abre instrucciones de instalación para iPad / iPhone */
+  openIosInstallModal(): void {
+    this.showIosModal.set(true);
+  }
+
+  /** Cierra instrucciones de instalación para iPad / iPhone */
+  closeIosInstallModal(): void {
+    this.showIosModal.set(false);
+  }
+
+  /** Alterna el bloqueo de suspensión de pantalla */
+  async toggleWakeLock(): Promise<void> {
+    if (this.pwaService.wakeLockActive()) {
+      await this.pwaService.releaseWakeLock();
+      this.toast.info('Bloqueo de pantalla desactivado.', 'PANTALLA');
+    } else {
+      const ok = await this.pwaService.requestWakeLock();
+      if (ok) {
+        this.toast.success('Pantalla configurada siempre activa para escaneo continuo.', 'WAKE LOCK ACTIVO');
+      } else {
+        this.toast.warning('Wake Lock no soportado en este navegador.', 'PANTALLA');
+      }
+    }
   }
 }

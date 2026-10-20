@@ -304,13 +304,15 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     }));
 
     const map = new Map<string, DriverSubmittedPass>();
-    // Prioridad 1: pases de backend
+    // Prioridad 1: pases de backend (descartando los rechazados)
     for (const pass of fromBackend) {
-      if (pass.token) map.set(pass.token, pass);
+      if (pass.token && !this.notifService.isPassDismissed(pass.token)) {
+        map.set(pass.token, pass);
+      }
     }
-    // Prioridad 2: incorporar o enriquecer con notificaciones en vivo
+    // Prioridad 2: incorporar o enriquecer con notificaciones en vivo (descartando los rechazados)
     for (const notifPass of fromNotifs) {
-      if (notifPass.token && !map.has(notifPass.token)) {
+      if (notifPass.token && !this.notifService.isPassDismissed(notifPass.token) && !map.has(notifPass.token)) {
         map.set(notifPass.token, notifPass);
       }
     }
@@ -408,9 +410,75 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
     );
   });
 
-  protected readonly filteredHistory = computed(() => {
-    const q = this.searchQuery().toLowerCase().trim();
+  // ─── Filtros & Búsqueda Específicos para Historial / Auditoría ──────────────
+  protected readonly historyFilter = signal<'ALL' | 'INBOUND' | 'OUTBOUND'>('ALL');
+  protected readonly historySearchQuery = signal<string>('');
+
+  /** Calcula la duración de estancia y clasifica el SLA operativo */
+  protected calculateStayDuration(entryTime: Date | string, departureTime?: Date | string): { text: string; sla: 'ok' | 'warn' | 'late' } {
+    if (!departureTime) return { text: 'En estancia', sla: 'ok' };
+    const entry = new Date(entryTime).getTime();
+    const exit = new Date(departureTime).getTime();
+    const diffMs = Math.max(0, exit - entry);
+    const diffMins = Math.round(diffMs / 60000);
+
+    let text = '';
+    if (diffMins < 60) {
+      text = `${diffMins} min`;
+    } else {
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      text = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+
+    let sla: 'ok' | 'warn' | 'late' = 'ok';
+    if (diffMins > 90) sla = 'late';
+    else if (diffMins > 45) sla = 'warn';
+
+    return { text, sla };
+  }
+
+  /** Métricas KPI del Historial para auditoría de patio */
+  protected readonly historyKpis = computed(() => {
     const list = this.historyVehicles();
+    const total = list.length;
+    const inbounds = list.filter(v => v.operationType === 'INBOUND').length;
+    const outbounds = list.filter(v => v.operationType === 'OUTBOUND').length;
+
+    let totalMins = 0;
+    let withExitCount = 0;
+    for (const v of list) {
+      if (v.departureTime && v.entryTime) {
+        const diff = new Date(v.departureTime).getTime() - new Date(v.entryTime).getTime();
+        if (diff > 0) {
+          totalMins += Math.round(diff / 60000);
+          withExitCount++;
+        }
+      }
+    }
+    const avgMins = withExitCount > 0 ? Math.round(totalMins / withExitCount) : 0;
+    const avgText = avgMins >= 60 ? `${Math.floor(avgMins / 60)}h ${avgMins % 60}m` : `${avgMins} min`;
+
+    return {
+      total,
+      inbounds,
+      outbounds,
+      avgStay: avgText,
+      avgSla: avgMins > 90 ? 'late' : (avgMins > 45 ? 'warn' : 'ok')
+    };
+  });
+
+  protected readonly filteredHistory = computed(() => {
+    const q = this.historySearchQuery().toLowerCase().trim() || this.searchQuery().toLowerCase().trim();
+    const filter = this.historyFilter();
+    let list = this.historyVehicles();
+
+    if (filter === 'INBOUND') {
+      list = list.filter(v => v.operationType === 'INBOUND');
+    } else if (filter === 'OUTBOUND') {
+      list = list.filter(v => v.operationType === 'OUTBOUND');
+    }
+
     if (!q) return list;
 
     return list.filter(
@@ -420,8 +488,10 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
         v.carrierName.toLowerCase().includes(q) ||
         v.tractorPlates.toLowerCase().includes(q) ||
         v.boxPlates.toLowerCase().includes(q) ||
+        (v.clientName && v.clientName.toLowerCase().includes(q)) ||
         (v.documentNumber && v.documentNumber.toLowerCase().includes(q)) ||
-        v.sealNumbers.some((s) => s.toLowerCase().includes(q))
+        v.sealNumbers.some((s) => s.toLowerCase().includes(q)) ||
+        (v.exitSealNumbers && v.exitSealNumbers.some((s) => s.toLowerCase().includes(q)))
     );
   });
 

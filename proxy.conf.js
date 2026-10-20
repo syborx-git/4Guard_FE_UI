@@ -5,11 +5,11 @@ const PROXY_CONFIG = {
     "target": target,
     "secure": false,
     "changeOrigin": true,
-    "logLevel": "info",
+    "logLevel": "silent",
     "onError": (err, req, res) => {
       if (res && res.writeHead && !res.headersSent) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: `Backend no disponible en ${target}. Verifica que Spring Boot este corriendo en el puerto 8080.`, details: err.message }));
+        res.end(JSON.stringify({ error: `Backend no disponible en ${target}. Verifica que Spring Boot esté corriendo en el puerto 8080.`, details: err.message }));
       }
     }
   }
