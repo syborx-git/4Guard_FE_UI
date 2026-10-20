@@ -646,14 +646,112 @@
   font-size: 0.75rem;
   font-weight: 800;
   color: var(--text-primary);
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
+.hardware-chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hardware-chip:active {
+  transform: translateY(0);
+}
+
+/* Puntos de Estado Luminosos (Status Dots) */
 .chip-status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 6px #10b981;
+  flex-shrink: 0;
+  transition: all 200ms ease;
+}
+
+.dot-emerald {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+}
+
+.dot-sky {
+  background: #0284c7;
+  box-shadow: 0 0 8px rgba(2, 132, 199, 0.7);
+}
+
+.dot-amber {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
+}
+
+.dot-rose {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  animation: dot-pulse-rose 1.2s infinite ease-in-out;
+}
+
+@keyframes dot-pulse-rose {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+/* Animación del Escáner Láser */
+.hardware-chip--scanner.is-laser-scanning {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+}
+
+.hardware-chip--scanner.is-laser-scanning .scanner-icon {
+  animation: laser-beam-pulse 0.4s infinite alternate;
+  color: #10b981;
+}
+
+@keyframes laser-beam-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px #10b981); }
+  100% { transform: scale(1.25); filter: drop-shadow(0 0 8px #10b981); }
+}
+
+/* Alerta de Impresora Desconectada (Rojo) */
+.hardware-chip--printer.is-printer-offline {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.10);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);
+  animation: printer-offline-pulse 2s infinite ease-in-out;
+}
+
+@keyframes printer-offline-pulse {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.85);
+  }
+}
+
+/* Animación Wi-Fi Ondas */
+.wifi-animated-icon {
+  animation: wifi-waves 2.8s infinite ease-in-out;
+}
+
+@keyframes wifi-waves {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.85;
+  }
+}
+
+.hardware-chip--wifi.is-wifi-offline {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.10);
+  animation: printer-offline-pulse 2s infinite ease-in-out;
 }
 
 .hardware-actions-group {

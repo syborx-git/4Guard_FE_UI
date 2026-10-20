@@ -35,22 +35,34 @@
         <span class="lease-text">{{ activeZoneName() }}</span>
       </div>
 
-      <!-- Network / Sync Badge (Detección Real de Conexión) -->
-      @if (!isOnline()) {
-        <div class="net-badge net-badge--offline" title="Dispositivo sin conexión a internet o red local">
+      <!-- Network / Sync Badge (Detección Real de Conexión & Animación Wi-Fi) -->
+      @if (!hardwareMonitor.isOnline()) {
+        <button
+          type="button"
+          (click)="hardwareMonitor.toggleWifiConnection()"
+          class="net-badge net-badge--offline"
+          title="Dispositivo sin conexión Wi-Fi / Red. Clic para simular reconexión.">
           <span class="material-symbols-outlined net-icon text-rose-400">wifi_off</span>
           <span class="net-text text-rose-300">Sin Red</span>
-        </div>
+        </button>
       } @else if (syncState.hasPending()) {
         <div class="net-badge net-badge--pending" routerLink="/sync" title="Operaciones pendientes de sincronización">
           <span class="pulse-dot"></span>
           <span>{{ syncState.pendingCount() }} pend.</span>
         </div>
       } @else {
-        <div class="net-badge net-badge--online" title="Conexión en línea activa y verificada con el servidor central">
-          <span class="material-symbols-outlined net-icon">wifi</span>
+        <button
+          type="button"
+          (click)="hardwareMonitor.toggleWifiConnection()"
+          class="net-badge net-badge--online wifi-live-badge"
+          [attr.data-signal]="hardwareMonitor.wifiSignalLevel()"
+          [title]="'Conexión Wi-Fi en Línea • ' + hardwareMonitor.signalPercentage() + '% (' + hardwareMonitor.pingMs() + ' ms) • Clic para test offline'">
+          <span class="wifi-wave-icon-wrap">
+            <span class="material-symbols-outlined net-icon wifi-signal-icon">{{ hardwareMonitor.wifiIcon() }}</span>
+          </span>
           <span class="net-text">En Línea</span>
-        </div>
+          <span class="wifi-pct-chip">{{ hardwareMonitor.signalPercentage() }}%</span>
+        </button>
       }
     </div>
 

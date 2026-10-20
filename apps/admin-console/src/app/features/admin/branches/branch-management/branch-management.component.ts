@@ -137,6 +137,13 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly totalBranches = computed(() => this.branchService.totalCount());

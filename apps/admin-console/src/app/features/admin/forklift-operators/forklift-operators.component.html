@@ -46,74 +46,124 @@
 
     </div>
 
-    <!-- ── KPI Cards Header ───────────────────────────────────────────── -->
-    <div class="carriers-kpi-grid" aria-label="Indicadores de montacarguistas">
-
-      <!-- Total -->
-      <div class="carriers-kpi-card carriers-kpi-card--total">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">engineering</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading()) {
-            <div class="skeleton skeleton--kpi"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ totalOperators() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Total</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Montacarguistas" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Operadores WMS</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activos -->
-      <div class="carriers-kpi-card carriers-kpi-card--active">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading()) {
-            <div class="skeleton skeleton--kpi"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ activeOperatorsCount() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Activos</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total:</span>
+              <strong class="wms-kpi-summary-value">{{ totalOperators() }}</strong>
+            </div>
 
-      <!-- Licencias DC-3 Vigentes -->
-      <div class="carriers-kpi-card carriers-kpi-card--active">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">verified</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading()) {
-            <div class="skeleton skeleton--kpi"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ validLicensesCount() }}</span>
-          }
-          <span class="carriers-kpi-card__label">DC-3 Vigentes</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ activeOperatorsCount() }}</strong>
+            </div>
 
-      <!-- Licencias en Alerta -->
-      <div class="carriers-kpi-card carriers-kpi-card--suspended">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">warning</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading()) {
-            <div class="skeleton skeleton--kpi"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ alertLicensesCount() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Licencias en Alerta</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">DC-3 Vigentes:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ validLicensesCount() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+              <span class="wms-kpi-summary-label">Licencias en Alerta:</span>
+              <strong class="wms-kpi-summary-value text-amber-500">{{ alertLicensesCount() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="carriers-kpi-grid animate-fade-in" aria-label="Indicadores de montacarguistas">
+
+          <!-- Total -->
+          <div class="carriers-kpi-card carriers-kpi-card--total">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">engineering</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ totalOperators() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Total</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="carriers-kpi-card carriers-kpi-card--active">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ activeOperatorsCount() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Activos</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Licencias DC-3 Vigentes -->
+          <div class="carriers-kpi-card carriers-kpi-card--active">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">verified</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ validLicensesCount() }}</span>
+              }
+              <span class="carriers-kpi-card__label">DC-3 Vigentes</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Licencias en Alerta -->
+          <div class="carriers-kpi-card carriers-kpi-card--suspended">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">warning</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ alertLicensesCount() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Licencias en Alerta</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+          </div>
+
+        </div>
+      }
+    </section>
 
   </header>
 
@@ -193,7 +243,7 @@
 
         <p class="carriers-search__hint">
           <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Filtra por nombre, código, licencia DC-3 o turno
+          Filtra por nombre, código o licencia DC-3
         </p>
       </div>
 
@@ -270,19 +320,18 @@
               <div class="carrier-item__body">
                 <div class="carrier-item__name">{{ op.fullName }}</div>
                 <div class="carrier-item__business" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 2px 0;">
-                  <span class="carrier-status-badge" style="background: rgba(197, 168, 107, 0.15); color: #9b7626; border-color: rgba(197, 168, 107, 0.3); font-size: 0.62rem; padding: 1px 6px;">
-                    <span class="material-symbols-outlined" style="font-size: 11px; margin-right: 2px;">badge</span>
-                    {{ op.jobTitle || 'Almacenista Montacargista' }}
-                  </span>
-                  <span style="color: var(--text-muted); font-size: 0.68rem;">·</span>
-                  <span style="font-size: 0.68rem; color: var(--text-secondary);">
-                    <span class="material-symbols-outlined" style="font-size: 12px; vertical-align: middle; margin-right: 1px;">schedule</span>
-                    {{ op.shift || 'Sin turno' }}
-                  </span>
+                  @if (op.hasAccess || op.userId) {
+                    <span class="carrier-status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3); font-size: 0.62rem; padding: 1px 6px;">
+                      <span class="material-symbols-outlined" style="font-size: 11px; margin-right: 2px;">tablet_mac</span>
+                      &#64;{{ op.username || op.code }}
+                    </span>
+                  }
                 </div>
                 <div class="carrier-item__meta">
                   <span class="carrier-item__rfc">{{ op.code }}</span>
-                  <span class="carrier-item__type">DC-3: {{ op.licenseNumberDc3 }}</span>
+                  @if (op.licenseNumberDc3) {
+                    <span class="carrier-item__type">DC-3: {{ op.licenseNumberDc3 }}</span>
+                  }
                 </div>
               </div>
 
@@ -368,6 +417,15 @@
               <div class="flex items-center gap-2">
                 <button
                   class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                  style="color: var(--accent-gold); border-color: rgba(197, 168, 107, 0.4);"
+                  type="button"
+                  (click)="openResetPinModal(selectedOperator()!)"
+                  title="Restablecer PIN de acceso a la terminal RF">
+                  <span class="material-symbols-outlined text-sm">lock_reset</span>
+                  Restablecer PIN
+                </button>
+                <button
+                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
                   style="color: var(--c-danger);"
                   type="button"
                   (click)="openDeleteModal(selectedOperator()!)">
@@ -388,27 +446,14 @@
             autocomplete="off"
             class="carriers-form">
 
-            <!-- SECCIÓN 1 — Información Personal & Puesto -->
+            <!-- SECCIÓN 1 — Información Personal -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
                 <span class="material-symbols-outlined">badge</span>
-                Información Personal y Puesto
+                Información Personal
               </legend>
 
-              <div class="carriers-form-grid carriers-form-grid--4">
-
-                <div class="fg-field">
-                  <label class="fg-label" for="jobTitle">Puesto / Cargo Operativo</label>
-                  <input
-                    id="jobTitle"
-                    class="fg-input"
-                    type="text"
-                    formControlName="jobTitle"
-                    placeholder="Ej. Almacenista Montacargista, Líder de Turno..."
-                    maxlength="100"
-                  />
-                  <span class="fg-hint">Rol funcional en planta/almacén.</span>
-                </div>
+              <div class="carriers-form-grid carriers-form-grid--3">
 
                 <div class="fg-field">
                   <label class="fg-label fg-label--required" for="firstName">Nombre(s)</label>
@@ -461,64 +506,142 @@
               </div>
             </fieldset>
 
-            <!-- SECCIÓN 2 — Certificación STPS (DC-3) y Asignación de Turno -->
+            <!-- SECCIÓN 2 — Acceso a Terminal RF / Tableta -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">tablet_mac</span>
+                Acceso a Terminal RF / Tableta Operativa
+              </legend>
+
+              @if (formMode() === 'create') {
+                <div style="background: rgba(197, 168, 107, 0.06); border: 1px solid rgba(197, 168, 107, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                  <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      formControlName="createAccess"
+                      style="width: 18px; height: 18px; accent-color: var(--accent-gold); cursor: pointer;"
+                    />
+                    <div>
+                      <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary); display: block;">
+                        Habilitar cuenta de acceso para Terminal RF / Tableta
+                      </span>
+                      <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">
+                        Crea automáticamente las credenciales con rol operativo. El montacarguista podrá definir su contraseña confidencial en su primer ingreso.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                @if (operatorForm.get('createAccess')?.value) {
+                  <div class="carriers-form-grid carriers-form-grid--2">
+                    <div class="fg-field">
+                      <label class="fg-label" for="username">Usuario para Tableta (Opcional)</label>
+                      <input
+                        id="username"
+                        class="fg-input fg-input--mono"
+                        type="text"
+                        formControlName="username"
+                        placeholder="Ej. MC-001 (Automático si se omite)"
+                        maxlength="50"
+                      />
+                      <span class="fg-hint">Por defecto usará el código asignado (MC-XXX).</span>
+                    </div>
+
+                    <div class="fg-field">
+                      <label class="fg-label fg-label--required" for="pin">PIN / Contraseña Temporal</label>
+                      <input
+                        id="pin"
+                        class="fg-input fg-input--mono"
+                        type="text"
+                        formControlName="pin"
+                        placeholder="Ej. 1234"
+                        maxlength="10"
+                      />
+                      <span class="fg-hint">PIN inicial configurado por el supervisor (mínimo 4 caracteres).</span>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <!-- Modo Edición: Resumen de Acceso RF -->
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
+                  <div class="flex items-center gap-4">
+                    <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(197, 168, 107, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-gold);">
+                      <span class="material-symbols-outlined" style="font-size: 24px;">phonelink_lock</span>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">
+                          Usuario RF: &#64;{{ selectedOperator()?.username || selectedOperator()?.code }}
+                        </span>
+                        @if (selectedOperator()?.hasAccess || selectedOperator()?.userId) {
+                          <span class="carrier-status-badge carrier-status-badge--active" style="font-size: 0.65rem;">
+                            Cuenta Activa
+                          </span>
+                        } @else {
+                          <span class="carrier-status-badge carrier-status-badge--inactive" style="font-size: 0.65rem;">
+                            Sin Acceso RF
+                          </span>
+                        }
+                      </div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                        @if (selectedOperator()?.changePasswordRequired) {
+                          <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">pending</span>
+                            Pendiente: El montacarguista debe cambiar su PIN temporal en su primer ingreso.
+                          </span>
+                        } @else {
+                          <span style="color: #10b981; display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">verified_user</span>
+                            PIN personalizado y activo.
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                    style="color: var(--accent-gold); border: 1px solid rgba(197, 168, 107, 0.35); padding: 8px 14px;"
+                    (click)="openResetPinModal(selectedOperator()!)">
+                    <span class="material-symbols-outlined text-sm">key</span>
+                    <span>Restablecer PIN</span>
+                  </button>
+                </div>
+              }
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Certificación STPS / DC-3 (Opcional) -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
                 <span class="material-symbols-outlined">verified_user</span>
-                Certificación STPS (DC-3) y Asignación Operativa
+                Certificación STPS / DC-3 (Opcional)
               </legend>
 
-              <div class="carriers-form-grid carriers-form-grid--3">
+              <div class="carriers-form-grid carriers-form-grid--2">
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="licenseNumberDc3">Número de Licencia DC-3</label>
+                  <label class="fg-label" for="licenseNumberDc3">Número de Licencia DC-3</label>
                   <input
                     id="licenseNumberDc3"
                     class="fg-input fg-input--mono"
-                    [class.fg-input--error]="operatorForm.get('licenseNumberDc3')?.invalid && operatorForm.get('licenseNumberDc3')?.touched"
                     type="text"
                     formControlName="licenseNumberDc3"
-                    placeholder="Ej. LIC-MC-9921"
+                    placeholder="Ej. LIC-MC-9921 (Opcional)"
                     maxlength="50"
                   />
-                  <span class="fg-hint">Número oficial registrado ante la STPS.</span>
-                  @if (operatorForm.get('licenseNumberDc3')?.invalid && operatorForm.get('licenseNumberDc3')?.touched) {
-                    <span class="fg-error" role="alert">La licencia DC-3 es obligatoria.</span>
-                  }
+                  <span class="fg-hint">Número oficial registrado ante la STPS si aplica.</span>
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="licenseExpirationDate">Vencimiento de Certificación</label>
+                  <label class="fg-label" for="licenseExpirationDate">Vencimiento de Certificación</label>
                   <input
                     id="licenseExpirationDate"
                     class="fg-input"
-                    [class.fg-input--error]="operatorForm.get('licenseExpirationDate')?.invalid && operatorForm.get('licenseExpirationDate')?.touched"
                     type="date"
                     formControlName="licenseExpirationDate"
                   />
-                  <span class="fg-hint">Determina la vigencia operativa en el WMS.</span>
-                  @if (operatorForm.get('licenseExpirationDate')?.invalid && operatorForm.get('licenseExpirationDate')?.touched) {
-                    <span class="fg-error" role="alert">La fecha de vencimiento es obligatoria.</span>
-                  }
-                </div>
-
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="shift">Turno Operativo Asignado</label>
-                  <select
-                    id="shift"
-                    class="fg-select"
-                    [class.fg-input--error]="operatorForm.get('shift')?.invalid && operatorForm.get('shift')?.touched"
-                    formControlName="shift"
-                  >
-                    <option value="">-- Seleccionar Turno --</option>
-                    @for (s of availableShifts(); track s.id) {
-                      <option [value]="s.id">{{ s.displayName }}</option>
-                    }
-                  </select>
-                  <span class="fg-hint">Catálogo Maestro de Turnos y Horarios.</span>
-                  @if (operatorForm.get('shift')?.invalid && operatorForm.get('shift')?.touched) {
-                    <span class="fg-error" role="alert">El turno asignado es obligatorio.</span>
-                  }
+                  <span class="fg-hint">Fecha de vencimiento si cuenta con certificación.</span>
                 </div>
 
               </div>
@@ -686,6 +809,65 @@
           <button type="button" (click)="confirmHardDelete()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer">
             <span class="material-symbols-outlined text-sm">delete_forever</span>
             <span>Sí, Confirmar Baja</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Restablecer PIN / Contraseña Temporal -->
+  @if (isResetPinModalOpen()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-md w-full p-6 space-y-4 shadow-2xl" style="background: var(--bg-card); border: 1px solid rgba(197, 168, 107, 0.4); border-radius: 16px;">
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-2" style="color: var(--accent-gold);">
+            <span class="material-symbols-outlined text-2xl">key</span>
+            <h3 class="font-bold text-sm uppercase">Restablecer PIN de Tableta</h3>
+          </div>
+          <button type="button" (click)="closeResetPinModal()" class="text-secondary hover:text-primary">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <div class="text-xs space-y-3 text-secondary">
+          <p>
+            Asigne un nuevo PIN o contraseña temporal para el montacarguista
+            <strong class="text-primary font-bold">{{ resetPinOperator()?.fullName }}</strong>
+            (<span class="font-mono text-amber-500">&#64;{{ resetPinOperator()?.username || resetPinOperator()?.code }}</span>).
+          </p>
+
+          <div class="fg-field" style="margin-top: 12px;">
+            <label class="fg-label fg-label--required" for="modalNewPin">Nuevo PIN Temporal</label>
+            <input
+              id="modalNewPin"
+              class="fg-input fg-input--mono"
+              type="text"
+              [value]="newPinValue()"
+              (input)="onPinInputChange($event)"
+              placeholder="Ej. 1234"
+              maxlength="10"
+              style="font-size: 1.1rem; letter-spacing: 2px; text-align: center; font-weight: bold; color: var(--accent-gold);"
+            />
+            <span class="fg-hint">Mínimo 4 caracteres numéricos o alfanuméricos.</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs flex items-start gap-2">
+            <span class="material-symbols-outlined text-base">info</span>
+            <span>
+              Al confirmar, se activará la bandera de <strong>cambio de contraseña obligatorio</strong> para que el montacarguista deba personalizar su propio PIN confidencial al iniciar sesión en su terminal RF.
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
+          <button type="button" (click)="closeResetPinModal()" class="carriers-btn carriers-btn--ghost text-xs">Cancelar</button>
+          <button
+            type="button"
+            (click)="submitResetPin()"
+            [disabled]="isSubmittingPin() || newPinValue().trim().length < 4"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer disabled:opacity-50">
+            <span class="material-symbols-outlined text-sm">check</span>
+            <span>{{ isSubmittingPin() ? 'Guardando...' : 'Confirmar y Asignar PIN' }}</span>
           </button>
         </div>
       </div>

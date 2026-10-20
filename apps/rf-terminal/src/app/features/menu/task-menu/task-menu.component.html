@@ -105,25 +105,52 @@
       </span>
 
       <!-- Chip Escáner Láser 2D -->
-      <div class="hardware-chip">
-        <span class="chip-status-dot"></span>
-        <span class="material-symbols-outlined chip-icon text-emerald-600 dark:text-emerald-400">barcode_scanner</span>
-        <span>Láser 2D Activo</span>
-      </div>
+      <button
+        type="button"
+        (click)="hardwareMonitor.triggerLaserPulse()"
+        class="hardware-chip hardware-chip--scanner"
+        [class.is-laser-scanning]="hardwareMonitor.isLaserTriggered()"
+        title="Escáner Láser 2D Imager Honeywell / Zebra DataWedge. Clic para simular disparo de escaneo.">
+        <span class="chip-status-dot dot-emerald"></span>
+        <span class="material-symbols-outlined chip-icon scanner-icon">barcode_scanner</span>
+        <span>{{ hardwareMonitor.isLaserTriggered() ? '¡Láser Disparado!' : 'Láser 2D Activo' }}</span>
+      </button>
 
       <!-- Chip Impresora Zebra -->
-      <div class="hardware-chip">
-        <span class="chip-status-dot"></span>
-        <span class="material-symbols-outlined chip-icon text-emerald-600 dark:text-emerald-400">print</span>
-        <span>Zebra BT Conectada</span>
-      </div>
+      <button
+        type="button"
+        (click)="hardwareMonitor.togglePrinterConnection()"
+        class="hardware-chip hardware-chip--printer"
+        [class.is-printer-connected]="hardwareMonitor.isPrinterConnected()"
+        [class.is-printer-offline]="!hardwareMonitor.isPrinterConnected()"
+        [title]="hardwareMonitor.isPrinterConnected() 
+          ? 'Impresora ' + hardwareMonitor.printerModel() + ' Conectada vía Bluetooth (' + hardwareMonitor.printerBattery() + '% Bat). Clic para desconectar.'
+          : '¡Alerta! Impresora Zebra Desconectada. Clic para conectar.'">
+        <span class="chip-status-dot" [class.dot-emerald]="hardwareMonitor.isPrinterConnected()" [class.dot-rose]="!hardwareMonitor.isPrinterConnected()"></span>
+        <span class="material-symbols-outlined chip-icon" [class.text-emerald-400]="hardwareMonitor.isPrinterConnected()" [class.text-rose-500]="!hardwareMonitor.isPrinterConnected()">print</span>
+        <span [class.text-rose-400]="!hardwareMonitor.isPrinterConnected()">
+          {{ hardwareMonitor.isPrinterConnected() ? 'Zebra BT Conectada' : 'Zebra Desconectada' }}
+        </span>
+      </button>
 
       <!-- Chip Wi-Fi Industrial -->
-      <div class="hardware-chip">
-        <span class="chip-status-dot"></span>
-        <span class="material-symbols-outlined chip-icon text-sky-600 dark:text-sky-400">wifi</span>
-        <span>WiFi 5GHz (100%)</span>
-      </div>
+      <button
+        type="button"
+        (click)="hardwareMonitor.toggleWifiConnection()"
+        class="hardware-chip hardware-chip--wifi"
+        [attr.data-signal]="hardwareMonitor.wifiSignalLevel()"
+        [class.is-wifi-offline]="!hardwareMonitor.isOnline()"
+        [title]="hardwareMonitor.isOnline()
+          ? 'Wi-Fi Industrial: ' + hardwareMonitor.connectionType() + ' • ' + hardwareMonitor.signalPercentage() + '% señal (' + hardwareMonitor.pingMs() + 'ms). Clic para test offline.'
+          : 'Sin conexión Wi-Fi. Clic para reconectar.'">
+        <span class="chip-status-dot" [class.dot-emerald]="hardwareMonitor.wifiSignalLevel() === 'excellent'" [class.dot-sky]="hardwareMonitor.wifiSignalLevel() === 'good'" [class.dot-amber]="hardwareMonitor.wifiSignalLevel() === 'fair'" [class.dot-rose]="hardwareMonitor.wifiSignalLevel() === 'poor' || !hardwareMonitor.isOnline()"></span>
+        <span class="material-symbols-outlined chip-icon wifi-animated-icon" [class.text-rose-500]="!hardwareMonitor.isOnline()">
+          {{ hardwareMonitor.wifiIcon() }}
+        </span>
+        <span [class.text-rose-400]="!hardwareMonitor.isOnline()">
+          {{ hardwareMonitor.isOnline() ? 'WiFi ' + hardwareMonitor.connectionType() + ' (' + hardwareMonitor.signalPercentage() + '%)' : 'WiFi Desconectado' }}
+        </span>
+      </button>
     </div>
 
     <!-- Botones de Acción Rápida: Sync & Reportar Incidencia -->

@@ -8,6 +8,6 @@
 export const environment = {
   production: false,
   envName: 'local',
-  apiBaseUrl: 'http://localhost:8080',
+  apiBaseUrl: '',
   appVersion: '1.0.0-local',
 };

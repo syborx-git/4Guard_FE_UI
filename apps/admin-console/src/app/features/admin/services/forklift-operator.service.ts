@@ -216,6 +216,25 @@ export class ForkliftOperatorAdminService {
     );
   }
 
+  // ─── RESET PIN / PASSWORD ─────────────────────────────────────────────────
+
+  resetPin(id: string, pin: string): Observable<ForkliftOperator> {
+    this.saving.set(true);
+    return this.http.post<ApiResponse<ForkliftOperator>>(`${this.BASE_URL}/${id}/reset-pin`, { pin }).pipe(
+      map((res) => this.normalize(res.data)),
+      tap((updated) => {
+        this.operatorsSignal.update((list) =>
+          list.map((op) => (op.id === updated.id ? updated : op))
+        );
+        this.saving.set(false);
+      }),
+      catchError((err) => {
+        this.saving.set(false);
+        return throwError(() => err);
+      })
+    );
+  }
+
   // ─── AUDIT HISTORY ─────────────────────────────────────────────────────────
 
   getAuditLogs(id: string): Observable<ForkliftOperatorAuditEntry[]> {

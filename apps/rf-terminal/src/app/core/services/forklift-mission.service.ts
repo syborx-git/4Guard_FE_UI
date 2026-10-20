@@ -8,11 +8,14 @@
  *   (con soporte de intercambio de lotes / embarque mixto en caliente), y concluye la descarga física (DISCHARGED).
  */
 
-import { Injectable, signal, computed, inject } from '@angular/core';
-import { ToastService, UnitOfMeasure } from '@4guard/shared-core';
+import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { ToastService, UnitOfMeasure, AuthState } from '@4guard/shared-core';
 import { AudioFeedbackService } from './audio-feedback.service';
 import { RfQualityStateService } from './rf-quality-state.service';
 import { WarehouseLayoutSyncService } from './warehouse-layout-sync.service';
+import { RfNotificationService } from './rf-notification.service';
 
 export type MovementType = 'INBOUND_UNLOAD' | 'INTERNAL_PUTAWAY' | 'OUTBOUND_DISPATCH';
 export type MissionPriority = 'URGENT' | 'HIGH' | 'NORMAL';
@@ -131,182 +134,11 @@ export interface ScanFeedback {
   phase: 'PICK_VALIDATED' | 'DROP_COMPLETED' | 'LOT_SWAPPED' | 'DISCHARGE_FINISHED' | 'ERROR' | 'ANOMALY_HOLD';
 }
 
-const INITIAL_MISSIONS: ForkliftMission[] = [
-  {
-    id: 'mis-001',
-    folio: 'MIS-INB-2026-081',
-    type: 'INBOUND_UNLOAD',
-    typeLabel: 'Descarga Inbound',
-    priority: 'URGENT',
-    priorityLabel: 'Urgente • Prioridad 4G',
-    status: 'ACTIVE_PICK',
-    statusLabel: 'En Descarga Activa (Andén)',
-    originLocation: 'Rampa 03 (Andén Norte - Tráiler F-92)',
-    originBarcode: 'RAMPA-03',
-    destinationLocation: 'Buffer 01 (Zona de Descarga / Pre-clasificación)',
-    destBarcode: 'LOC-BUFFER-01',
-    ssccBarcode: 'SSCC-175012345000000018',
-    sku: 'SKU-773091',
-    productName: 'Aceite Sintético 5W-30 Ultra',
-    supplierName: 'LUBRICANTES DE MÉXICO S.A. DE C.V.',
-    lotNumber: 'LOT-2026-X99',
-    quantity: 48,
-    unit: 'Cajas por Tarima',
-    weightKg: 840,
-    transportPlate: '88-AA-1Z • Transportes Monclova',
-    driverName: 'Armando Salazar',
-    docNumber: 'REM-2026-881',
-    carrierName: 'Transportes Monclova S.A.',
-    rampNumber: 3,
-    assignedVehicle: 'Montacargas Crown #07',
-    assignedZoneLease: 'Andén R-03 / Buffer 01',
-    slaCountdownMinutes: 8,
-    arrivalTime: '14:22',
-    notes: 'Mesa de Control autorizó Lote LOT-2026-X99 y Lote LOT-2026-Y02. El montacarguista escanea las tarimas físicas conforme salen del camión.',
-    defaultPiecesPerPallet: 48,
-    totalExpectedPallets: 24,
-    activeScanningLot: 'LOT-2026-X99',
-    currentPendingPieces: 48,
-    availableLots: [
-      { lotNumber: 'LOT-2026-X99', expirationDate: '2027-12-31', isPrimary: true },
-      { lotNumber: 'LOT-2026-Y02', expirationDate: '2028-06-30', isPrimary: false },
-      { lotNumber: 'LOT-2026-Z05', expirationDate: '2028-09-15', isPrimary: false },
-    ],
-    pallets: [], // Se llena dinámicamente conforme el operador escanea
-  },
-  {
-    id: 'mis-002',
-    folio: 'MIS-PUT-2026-042',
-    type: 'INTERNAL_PUTAWAY',
-    typeLabel: 'Reubicación / Putaway',
-    priority: 'HIGH',
-    priorityLabel: 'Alta Prioridad',
-    status: 'QUEUED',
-    statusLabel: 'En Cola FIFO',
-    originLocation: 'Buffer 02 (Recepción Lote A)',
-    originBarcode: 'LOC-BUFFER-02',
-    destinationLocation: 'Rack A-04-03 (Pasillo 04 - Nivel 3)',
-    destBarcode: 'LOC-A04-03',
-    ssccBarcode: 'SSCC-175012345000000029',
-    sku: 'SKU-992140',
-    productName: 'Filtros de Aire Heavy Duty HD-400 (36 Cajas)',
-    lotNumber: 'LOT-2026-B12',
-    quantity: 36,
-    unit: 'Cajas (1 Pallet)',
-    weightKg: 520,
-    assignedVehicle: 'Montacargas Crown #07',
-    assignedZoneLease: 'Pasillo 04',
-    slaCountdownMinutes: 15,
-    arrivalTime: '14:28',
-    notes: 'Requiere Zone Lease Pasillo 04 activo. Nivel medio de elevación.',
-  },
-  {
-    id: 'mis-003',
-    folio: 'MIS-OUT-2026-015',
-    type: 'OUTBOUND_DISPATCH',
-    typeLabel: 'Carga de Salida (Despacho)',
-    priority: 'URGENT',
-    priorityLabel: 'Urgente • Salida en 20m',
-    status: 'QUEUED',
-    statusLabel: 'En Cola FIFO',
-    originLocation: 'Stage Salidas ST-02 (Zona Consolidada)',
-    originBarcode: 'LOC-STAGE-02',
-    destinationLocation: 'Rampa 05 (Caja Fría 53ft - Tráiler Express)',
-    destBarcode: 'RAMPA-05',
-    ssccBarcode: 'SSCC-175012345000000055',
-    sku: 'SKU-441029',
-    productName: 'Líquido de Frenos DOT-4 Pro (60 Cajas)',
-    lotNumber: 'LOT-2026-C01',
-    quantity: 60,
-    unit: 'Cajas (1 Pallet)',
-    weightKg: 960,
-    transportPlate: '44-BB-9K • Logística Express',
-    driverName: 'Carlos Mendoza',
-    assignedVehicle: 'Montacargas Crown #07',
-    assignedZoneLease: 'Patio / Andén Salidas',
-    slaCountdownMinutes: 10,
-    arrivalTime: '14:31',
-    notes: 'Embarque urgente con cita de salida 15:00 hrs.',
-  },
-  {
-    id: 'mis-004',
-    folio: 'MIS-INB-2026-082',
-    type: 'INBOUND_UNLOAD',
-    typeLabel: 'Descarga Inbound',
-    priority: 'HIGH',
-    priorityLabel: 'Relevo de Turno',
-    status: 'PARTIAL_DISCHARGED',
-    statusLabel: 'Descarga Parcial (8 de 24 Tarimas listas)',
-    originLocation: 'Rampa 04 (Andén Sur - Tráiler R-10)',
-    originBarcode: 'RAMPA-04',
-    destinationLocation: 'Buffer 01 (Zona de Descarga / Pre-clasificación)',
-    destBarcode: 'LOC-BUFFER-01',
-    ssccBarcode: 'SSCC-175012345000000009',
-    sku: 'SKU-552011',
-    productName: 'Líquido Refrigerante Anticongelante 50/50',
-    lotNumber: 'LOT-2026-M04',
-    quantity: 40,
-    unit: 'Cajas por Tarima',
-    weightKg: 780,
-    transportPlate: '12-ZZ-3P • Transportes del Norte',
-    driverName: 'Jorge Valenzuela',
-    docNumber: 'REM-2026-904',
-    carrierName: 'Transportes del Norte S.A.',
-    rampNumber: 4,
-    assignedVehicle: 'Montacargas Crown #07',
-    assignedZoneLease: 'Pasillo 04',
-    slaCountdownMinutes: 25,
-    arrivalTime: '14:35',
-    totalExpectedPallets: 24,
-    partialDischargedAt: '19:48',
-    partialDischargeReason: 'Fin de turno vespertino (corte para relevo)',
-    handoverNotes: 'Tráiler acoplado en Rampa 04. 8 tarimas descargadas en Buffer 01 (5 de Lote M04, 3 de Lote N01). Faltan 16 tarimas.',
-    notes: 'Descarga parcial por fin de turno. Reanudable por montacarguista entrante.',
-    defaultPiecesPerPallet: 40,
-    activeScanningLot: 'LOT-2026-M04',
-    currentPendingPieces: 40,
-    availableLots: [
-      { lotNumber: 'LOT-2026-M04', expirationDate: '2028-11-30', isPrimary: true },
-      { lotNumber: 'LOT-2026-N01', expirationDate: '2028-12-15', isPrimary: false },
-    ],
-    pallets: [
-      { id: 'pal-p-1', palletNumber: 1, ssccBarcode: 'SSCC-175012345000000001', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:15' },
-      { id: 'pal-p-2', palletNumber: 2, ssccBarcode: 'SSCC-175012345000000002', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:19' },
-      { id: 'pal-p-3', palletNumber: 3, ssccBarcode: 'SSCC-175012345000000003', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:24' },
-      { id: 'pal-p-4', palletNumber: 4, ssccBarcode: 'SSCC-175012345000000004', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-N01', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:28' },
-      { id: 'pal-p-5', palletNumber: 5, ssccBarcode: 'SSCC-175012345000000005', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:33' },
-      { id: 'pal-p-6', palletNumber: 6, ssccBarcode: 'SSCC-175012345000000006', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-N01', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:38' },
-      { id: 'pal-p-7', palletNumber: 7, ssccBarcode: 'SSCC-175012345000000007', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-N01', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:42' },
-      { id: 'pal-p-8', palletNumber: 8, ssccBarcode: 'SSCC-175012345000000008', productId: 'SKU-552011', productName: 'Líquido Refrigerante Anticongelante 50/50', lotNumber: 'LOT-2026-M04', pieces: 40, unit: 'Cajas', weightKg: 780, palletTypeLabel: 'Tarima CHEP', status: 'STAGED', stagedAt: '19:46' },
-    ],
-  },
-  {
-    id: 'mis-005',
-    folio: 'MIS-PUT-2026-043',
-    type: 'INTERNAL_PUTAWAY',
-    typeLabel: 'Reubicación / Putaway',
-    priority: 'NORMAL',
-    priorityLabel: 'Normal',
-    status: 'QUEUED',
-    statusLabel: 'En Cola FIFO',
-    originLocation: 'Buffer 03 (Cuarentena Liberada QM)',
-    originBarcode: 'LOC-BUFFER-03',
-    destinationLocation: 'Rack B-02-01 (Pasillo 02 - Nivel 1)',
-    destBarcode: 'LOC-B02-01',
-    ssccBarcode: 'SSCC-175012345000000080',
-    sku: 'SKU-331002',
-    productName: 'Bujías de Iridio Industrial (24 Cajas)',
-    lotNumber: 'LOT-2026-K44',
-    quantity: 24,
-    unit: 'Cajas (1 Pallet)',
-    weightKg: 310,
-    assignedVehicle: 'Montacargas Crown #07',
-    assignedZoneLease: 'Pasillo 02',
-    slaCountdownMinutes: 35,
-    arrivalTime: '14:40',
-    notes: 'Liberado por control de calidad.',
-  },
-];
+const BUFFER_STORAGE_KEY = '4g_forklift_missions_buffer';
+const COMPLETED_STORAGE_KEY = '4g_forklift_completed_buffer';
+const ACTIVE_MISSION_ID_KEY = '4g_forklift_active_id';
+const PENDING_SYNC_QUEUE_KEY = '4g_forklift_pending_sync';
+const RECEPTIONS_CACHE_KEY = '4g_warehouse_receptions_cache';
 
 @Injectable({
   providedIn: 'root',
@@ -316,20 +148,473 @@ export class ForkliftMissionService {
   private readonly qualityState = inject(RfQualityStateService);
   private readonly toast        = inject(ToastService);
   private readonly layoutSync   = inject(WarehouseLayoutSyncService);
+  private readonly notifService = inject(RfNotificationService);
+  private readonly authState    = inject(AuthState);
+  private readonly http         = inject(HttpClient);
+  private readonly platformId   = inject(PLATFORM_ID);
 
   private eventSource: EventSource | null = null;
   private sseReconnectTimer: any = null;
   private sseFailureCount = 0;
+  private syncPollIntervalId: any = null;
+  private broadcastChannel: BroadcastChannel | null = null;
 
-  // ─── Estado Reactivo Principal ─────────────────────────────────────────────
-  private readonly rawMissions = signal<ForkliftMission[]>(INITIAL_MISSIONS);
-  private readonly activeMissionId = signal<string | null>('mis-001');
-  private readonly completedMissions = signal<ForkliftMission[]>([]);
+  // ─── Estado Reactivo Principal con Buffer Offline ──────────────────────────
+  private readonly rawMissions = signal<ForkliftMission[]>(this.loadBufferMissions());
+  private readonly activeMissionId = signal<string | null>(this.loadActiveMissionId());
+  private readonly completedMissions = signal<ForkliftMission[]>(this.loadCompletedBuffer());
   private readonly activeFilter = signal<CockpitFilter>('ALL');
   private readonly lastScanFeedback = signal<ScanFeedback | null>(null);
 
+  // ─── Estado de Conexión y Telemetría en Vivo ──────────────────────────────
+  public readonly isBackendConnected = signal<boolean>(true);
+  public readonly isSyncing = signal<boolean>(false);
+  public readonly lastSyncTime = signal<string>('En línea');
+  public readonly pendingOfflineCount = signal<number>(this.getPendingSyncQueue().length);
+
   constructor() {
     this.initRealtimeQualityAlertStream();
+    this.initCrossTabSync();
+    this.initConnectivityListeners();
+    this.loadMissionsFromBackend();
+    this.startPeriodicSync();
+  }
+
+  // ─── Persistencia y Buffer Local (Offline-First para Tableta) ───────────────
+
+  private loadBufferMissions(): ForkliftMission[] {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+      const stored = localStorage.getItem(BUFFER_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      // Si el buffer de misiones está vacío, inicializar desde el cache de recepciones
+      const recsCache = localStorage.getItem(RECEPTIONS_CACHE_KEY);
+      if (recsCache) {
+        const parsedRecs = JSON.parse(recsCache);
+        if (Array.isArray(parsedRecs) && parsedRecs.length > 0) {
+          const activeRecs = parsedRecs.filter((r: any) => r && r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
+          return activeRecs.map((r: any) => this.mapReceptionToMission(r));
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  public saveBufferMissions(missions: ForkliftMission[]): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      localStorage.setItem(BUFFER_STORAGE_KEY, JSON.stringify(missions));
+    } catch (_) {}
+  }
+
+  private loadCompletedBuffer(): ForkliftMission[] {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+      const stored = localStorage.getItem(COMPLETED_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  public saveCompletedBuffer(completed: ForkliftMission[]): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      localStorage.setItem(COMPLETED_STORAGE_KEY, JSON.stringify(completed.slice(0, 50)));
+    } catch (_) {}
+  }
+
+  private loadActiveMissionId(): string | null {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    try {
+      return localStorage.getItem(ACTIVE_MISSION_ID_KEY) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  public saveActiveMissionId(id: string | null): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      if (id) {
+        localStorage.setItem(ACTIVE_MISSION_ID_KEY, id);
+      } else {
+        localStorage.removeItem(ACTIVE_MISSION_ID_KEY);
+      }
+    } catch (_) {}
+  }
+
+  private getPendingSyncQueue(): any[] {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+      const raw = localStorage.getItem(PENDING_SYNC_QUEUE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  private enqueuePendingSync(item: any): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const queue = this.getPendingSyncQueue();
+      queue.push(item);
+      localStorage.setItem(PENDING_SYNC_QUEUE_KEY, JSON.stringify(queue));
+      this.pendingOfflineCount.set(queue.length);
+    } catch (_) {}
+  }
+
+  // ─── Mapeo de Recepciones Backend a Misiones de Montacargas ────────────────
+
+  public mapReceptionToMission(rec: any): ForkliftMission {
+    const rampNum = Number(rec.rampNumber || rec.checkIn?.rampNumber || 1);
+    const folio = String(rec.docNumber || rec.remision || rec.folio || `REC-${String(rec.id || Date.now()).slice(-6)}`).trim();
+    const client = rec.clientName || rec.client || rec.checkIn?.client || 'Cliente General';
+    const carrier = rec.carrierName || rec.carrierLine || rec.checkIn?.carrierLine || 'Transportista';
+    const plates = rec.tractorPlates || rec.plates || rec.checkIn?.tractorPlates || 'S/P';
+    const driver = rec.driverName || rec.checkIn?.driverName || 'Operador Chofer';
+    const sku = rec.sku || (rec.items && rec.items[0]?.sku) || 'SKU-INBOUND';
+    const productName = rec.productName || (rec.items && rec.items[0]?.productName) || rec.description || `${client} - Carga Inbound`;
+    const defaultLot = String(rec.lotNumber || (rec.items && rec.items[0]?.lotNumber) || `LOT-${new Date().getFullYear()}-01`).toUpperCase();
+    const pieces = Number(rec.totalPieces || rec.pieces || (rec.items && rec.items[0]?.pieces) || 48);
+    const expectedPallets = Number(rec.palletsExpected || rec.totalExpectedPallets || rec.totalPallets || 24);
+    const weightKg = Number(rec.totalWeight || (pieces * 17.5) || 840);
+
+    let availableLots: AuthorizedLotItem[] = [];
+    if (Array.isArray(rec.availableLots) && rec.availableLots.length > 0) {
+      availableLots = rec.availableLots.map((l: any) => ({
+        lotNumber: String(l.lotNumber || l).trim().toUpperCase(),
+        expirationDate: l.expirationDate,
+        elaborationDate: l.elaborationDate,
+        shelfLifePct: l.shelfLifePct,
+        isCompliant: l.isCompliant ?? true,
+        isPrimary: l.isPrimary ?? false,
+      }));
+    } else {
+      availableLots = [{ lotNumber: defaultLot, isPrimary: true }];
+    }
+
+    const arrivalTime = rec.createdAt
+      ? new Date(rec.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+      : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+    const status: MissionStatus = rec.status === 'PARTIAL_DISCHARGED'
+      ? 'PARTIAL_DISCHARGED'
+      : (rec.status === 'IN_PROGRESS' || rec.status === 'ACTIVE_PICK' ? 'ACTIVE_PICK' : 'QUEUED');
+
+    return {
+      id: String(rec.id || folio),
+      folio: folio,
+      type: 'INBOUND_UNLOAD',
+      typeLabel: 'Descarga Inbound',
+      priority: rec.priority || (rampNum ? 'URGENT' : 'NORMAL'),
+      priorityLabel: rampNum ? `Rampa ${rampNum} • Asignada` : 'Normal',
+      status: status,
+      statusLabel: status === 'PARTIAL_DISCHARGED' ? 'Descarga Parcial (Reanudable)' : (status === 'ACTIVE_PICK' ? 'En Descarga Activa' : 'En Cola FIFO'),
+      originLocation: `Rampa ${String(rampNum).padStart(2, '0')} (${carrier})`,
+      originBarcode: `RAMPA-${String(rampNum).padStart(2, '0')}`,
+      destinationLocation: `Buffer ${String(rampNum).padStart(2, '0')} (Zona de Descarga / Pre-clasificación)`,
+      destBarcode: `LOC-BUFFER-${String(rampNum).padStart(2, '0')}`,
+      ssccBarcode: `SSCC-175012345000000001`,
+      sku: sku,
+      productName: productName,
+      supplierName: client,
+      lotNumber: defaultLot,
+      quantity: pieces,
+      unit: 'Cajas por Tarima',
+      weightKg: weightKg,
+      transportPlate: `${plates} • ${carrier}`,
+      driverName: driver,
+      docNumber: folio,
+      carrierName: carrier,
+      rampNumber: rampNum,
+      assignedVehicle: 'Montacargas Crown #07',
+      assignedZoneLease: `Andén R-${String(rampNum).padStart(2, '0')} / Buffer`,
+      slaCountdownMinutes: 30,
+      arrivalTime: arrivalTime,
+      notes: rec.notes || `Recepción registrada en Caseta / Mesa de Control. Operador: ${driver}.`,
+      defaultPiecesPerPallet: pieces,
+      totalExpectedPallets: expectedPallets,
+      activeScanningLot: defaultLot,
+      currentPendingPieces: pieces,
+      availableLots: availableLots,
+      pallets: rec.pallets || [],
+    };
+  }
+
+  // ─── Conexión a la Base de Datos Backend ───────────────────────────────────
+
+  private getOrgId(): string {
+    const user = this.authState.user() as any;
+    if (user?.organizationId && user.organizationId.length === 36 && user.organizationId !== '44444444-4444-4444-4444-444444444444') {
+      return user.organizationId;
+    }
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session.organizationId && session.organizationId.length === 36) return session.organizationId;
+      }
+    } catch (_) {}
+    return 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+  }
+
+  public loadMissionsFromBackend(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.isSyncing.set(true);
+
+    const orgId = this.getOrgId();
+    const params = new HttpParams().set('organizationId', orgId);
+
+    this.http.get<any>(`/api/v1/warehouse-receptions`, { params }).subscribe({
+      next: (res) => {
+        this.isBackendConnected.set(true);
+        this.isSyncing.set(false);
+        this.lastSyncTime.set(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+
+        const rawList = res?.data || res || [];
+        if (Array.isArray(rawList)) {
+          this.mergeBackendReceptionsWithBuffer(rawList);
+        }
+      },
+      error: () => {
+        this.isSyncing.set(false);
+        this.isBackendConnected.set(false);
+        // Fallback al cache local si el backend está momentáneamente inaccesible
+        const localRecs = this.loadLocalReceptionsCache();
+        if (localRecs.length > 0) {
+          this.mergeBackendReceptionsWithBuffer(localRecs);
+        }
+      }
+    });
+  }
+
+  private loadLocalReceptionsCache(): any[] {
+    try {
+      if (typeof localStorage === 'undefined') return [];
+      const raw = localStorage.getItem(RECEPTIONS_CACHE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  private mergeBackendReceptionsWithBuffer(backendList: any[]): void {
+    const activeBackend = backendList.filter(
+      (r: any) => r && r.status !== 'COMPLETED' && r.status !== 'CANCELLED'
+    );
+
+    const currentMissions = this.rawMissions();
+    const completedList = this.completedMissions();
+
+    const mergedList: ForkliftMission[] = [];
+    const handledIds = new Set<string>();
+
+    for (const rec of activeBackend) {
+      const mapped = this.mapReceptionToMission(rec);
+      const key = mapped.id;
+      handledIds.add(key);
+
+      // Si ya está completada localmente, omitir
+      if (completedList.some((c) => c.id === key || c.folio === mapped.folio)) {
+        continue;
+      }
+
+      // Si ya existía en la cola activa, preservar el progreso de escaneo del montacarguista
+      const existing = currentMissions.find((m) => m.id === key || m.folio === mapped.folio);
+      if (existing) {
+        mergedList.push({
+          ...mapped,
+          status: existing.status,
+          statusLabel: existing.statusLabel,
+          activeScanningLot: existing.activeScanningLot,
+          currentPendingPieces: existing.currentPendingPieces,
+          currentPendingSscc: existing.currentPendingSscc,
+          pallets: existing.pallets && existing.pallets.length > 0 ? existing.pallets : mapped.pallets,
+          notes: existing.notes || mapped.notes,
+        });
+      } else {
+        mergedList.push(mapped);
+      }
+    }
+
+    // Mantener misiones internas (reubicaciones Putaway o despachos locales)
+    for (const m of currentMissions) {
+      if (!handledIds.has(m.id) && m.type !== 'INBOUND_UNLOAD') {
+        mergedList.push(m);
+      }
+    }
+
+    this.rawMissions.set(mergedList);
+    this.saveBufferMissions(mergedList);
+
+    // Si la misión activa no está en la lista, fijar la primera disponible
+    const curActive = this.activeMissionId();
+    if (!curActive || !mergedList.some((m) => m.id === curActive)) {
+      if (mergedList.length > 0) {
+        this.activeMissionId.set(mergedList[0].id);
+        this.saveActiveMissionId(mergedList[0].id);
+      } else {
+        this.activeMissionId.set(null);
+        this.saveActiveMissionId(null);
+      }
+    }
+  }
+
+  // ─── Eventos en Tiempo Real (BroadcastChannel & Storage Multi-Dispositivo) ─
+
+  private initCrossTabSync(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    try {
+      if ('BroadcastChannel' in window) {
+        this.broadcastChannel = new BroadcastChannel('4guard_wms_events');
+        this.broadcastChannel.onmessage = (event) => {
+          this.handleIncomingBroadcastEvent(event.data);
+        };
+      }
+    } catch (_) {}
+
+    window.addEventListener('storage', (e: StorageEvent) => {
+      if (e.key === '4g_cross_tab_event' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          this.handleIncomingBroadcastEvent(parsed);
+        } catch (_) {}
+      } else if (e.key === RECEPTIONS_CACHE_KEY && e.newValue) {
+        try {
+          const list = JSON.parse(e.newValue);
+          if (Array.isArray(list)) {
+            this.mergeBackendReceptionsWithBuffer(list);
+          }
+        } catch (_) {}
+      }
+    });
+  }
+
+  private handleIncomingBroadcastEvent(event: any): void {
+    if (!event) return;
+    const type = event.type || event.category;
+    const data = event.data || event.notification?.data || event;
+
+    if (type === 'NEW_RECEPTION' || type === 'RECEIVING' || event.category === 'RECEIVING') {
+      this.handleIncomingNewReception(data);
+    }
+  }
+
+  private handleIncomingNewReception(recData: any): void {
+    if (!recData) return;
+    const mission = this.mapReceptionToMission(recData);
+
+    // Evitar duplicar si ya está completada
+    if (this.completedMissions().some((c) => c.id === mission.id || c.folio === mission.folio)) {
+      return;
+    }
+
+    const current = this.rawMissions();
+    const existingIndex = current.findIndex((m) => m.id === mission.id || m.folio === mission.folio);
+
+    if (existingIndex >= 0) {
+      const updated = [...current];
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        rampNumber: mission.rampNumber,
+        originLocation: mission.originLocation,
+        originBarcode: mission.originBarcode,
+        destinationLocation: mission.destinationLocation,
+        destBarcode: mission.destBarcode,
+        notes: mission.notes,
+      };
+      this.rawMissions.set(updated);
+      this.saveBufferMissions(updated);
+    } else {
+      const nextList = [mission, ...current];
+      this.rawMissions.set(nextList);
+      this.saveBufferMissions(nextList);
+
+      if (!this.activeMissionId() || current.length === 0) {
+        this.activeMissionId.set(mission.id);
+        this.saveActiveMissionId(mission.id);
+      }
+
+      // Alerta acústica en la Tableta
+      this.audioService.playFriendlyArrivalChime(1.0);
+
+      // Alerta háptica (Vibración de tableta Android)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([150, 80, 150, 80, 250]);
+      }
+
+      // Notificación Toast en pantalla
+      this.toast.success(
+        `🚜 Nueva Remisión Inbound: Rampa ${mission.rampNumber || 1} • ${mission.folio} (${mission.supplierName})`,
+        '¡NUEVA MISIÓN ASIGNADA!'
+      );
+
+      // Registrar en el Centro de Notificaciones de Terminal RF
+      this.notifService.addReceptionAlert({
+        id: mission.id,
+        folio: mission.folio,
+        client: mission.supplierName || 'Cliente',
+        carrier: mission.carrierName || 'Transportista',
+        rampNumber: mission.rampNumber,
+        docNumber: mission.docNumber,
+        driverName: mission.driverName,
+        time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        pieces: mission.quantity,
+      });
+    }
+  }
+
+  private startPeriodicSync(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.syncPollIntervalId = setInterval(() => {
+      this.loadMissionsFromBackend();
+      this.syncPendingQueue();
+    }, 20000);
+  }
+
+  private initConnectivityListeners(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    window.addEventListener('online', () => {
+      this.isBackendConnected.set(true);
+      this.toast.success('Conexión con la Base de Datos restablecida.', '📶 EN LÍNEA');
+      this.syncPendingQueue();
+      this.loadMissionsFromBackend();
+    });
+
+    window.addEventListener('offline', () => {
+      this.isBackendConnected.set(false);
+      this.toast.warning('Operando en Modo Buffer Offline. Tus escaneos están protegidos en la tableta.', '📶 MODO OFFLINE');
+    });
+  }
+
+  public syncPendingQueue(): void {
+    const queue = this.getPendingSyncQueue();
+    if (queue.length === 0) return;
+
+    const remainingItems: any[] = [];
+
+    for (const item of queue) {
+      if (item.type === 'COMPLETE_RECEPTION') {
+        this.http.post(`/api/v1/warehouse-receptions/${item.id}/complete`, item.payload).subscribe({
+          next: () => {},
+          error: () => {
+            remainingItems.push(item);
+          }
+        });
+      } else {
+        remainingItems.push(item);
+      }
+    }
+
+    try {
+      localStorage.setItem(PENDING_SYNC_QUEUE_KEY, JSON.stringify(remainingItems));
+      this.pendingOfflineCount.set(remainingItems.length);
+    } catch (_) {}
   }
 
   /**
@@ -610,9 +895,13 @@ export class ForkliftMissionService {
 
     const target = { ...list[targetIndex], status: 'ACTIVE_PICK' as MissionStatus, statusLabel: 'En Descarga Activa (Andén)' };
     const remaining = list.filter((m) => m.id !== missionId);
+    const updated = [target, ...remaining];
 
-    this.rawMissions.set([target, ...remaining]);
+    this.rawMissions.set(updated);
+    this.saveBufferMissions(updated);
     this.activeMissionId.set(missionId);
+    this.saveActiveMissionId(missionId);
+
     this.lastScanFeedback.set({
       success: true,
       message: `Misión ${target.folio} activada con éxito. Procede al andén: ${target.originLocation}`,
@@ -628,16 +917,18 @@ export class ForkliftMissionService {
    */
   setActiveScanningLot(missionId: string, lotNumber: string): void {
     const cleanLot = (lotNumber || '').trim().toUpperCase();
-    this.rawMissions.update((list) =>
-      list.map((m) => {
+    this.rawMissions.update((list) => {
+      const updated = list.map((m) => {
         if (m.id !== missionId) return m;
         return {
           ...m,
           activeScanningLot: cleanLot,
           lotNumber: cleanLot,
         };
-      })
-    );
+      });
+      this.saveBufferMissions(updated);
+      return updated;
+    });
     this.audioService.playSuccess();
   }
 
@@ -655,8 +946,8 @@ export class ForkliftMissionService {
     const cleanLot = (customLot || '').trim().toUpperCase();
     if (!cleanLot) return;
 
-    this.rawMissions.update((list) =>
-      list.map((m) => {
+    this.rawMissions.update((list) => {
+      const updated = list.map((m) => {
         if (m.id !== missionId) return m;
         const lots = m.availableLots ? [...m.availableLots] : [];
         if (!lots.some((l) => l.lotNumber === cleanLot)) {
@@ -676,8 +967,10 @@ export class ForkliftMissionService {
           lotNumber: cleanLot,
           notes: `${m.notes || ''} [Lote agregado en andén: ${cleanLot} (${reason || 'Intercambio'}${expirationDate ? ` • Cad: ${expirationDate}` : ''})]`,
         };
-      })
-    );
+      });
+      this.saveBufferMissions(updated);
+      return updated;
+    });
 
     this.lastScanFeedback.set({
       success: true,
@@ -692,9 +985,11 @@ export class ForkliftMissionService {
    */
   setCurrentPendingPieces(missionId: string, pieces: number): void {
     if (pieces <= 0) return;
-    this.rawMissions.update((list) =>
-      list.map((m) => (m.id === missionId ? { ...m, currentPendingPieces: pieces } : m))
-    );
+    this.rawMissions.update((list) => {
+      const updated = list.map((m) => (m.id === missionId ? { ...m, currentPendingPieces: pieces } : m));
+      this.saveBufferMissions(updated);
+      return updated;
+    });
   }
 
   /**
@@ -715,8 +1010,8 @@ export class ForkliftMissionService {
 
     let targetPalletNum = 1;
 
-    this.rawMissions.update((list) =>
-      list.map((m) => {
+    this.rawMissions.update((list) => {
+      const updated = list.map((m) => {
         if (m.id !== missionId) return m;
 
         const updatedPallets = (m.pallets || []).map((p) => {
@@ -741,8 +1036,10 @@ export class ForkliftMissionService {
           ...m,
           pallets: updatedPallets,
         };
-      })
-    );
+      });
+      this.saveBufferMissions(updated);
+      return updated;
+    });
 
     this.lastScanFeedback.set({
       success: true,
@@ -831,18 +1128,20 @@ export class ForkliftMissionService {
         // Asignar el SSCC escaneado o generado
         const finalSscc = cleanCode.startsWith('SSCC-') ? cleanCode : (cleanCode === current.originBarcode ? `SSCC-1750123450000000${String(nextPalletNum).padStart(2, '0')}` : cleanCode);
 
-        this.rawMissions.update((list) =>
-          list.map((m) =>
+        this.rawMissions.update((list) => {
+          const updated = list.map((m) =>
             m.id === current.id
               ? {
                   ...m,
                   currentPendingSscc: finalSscc,
-                  status: 'ACTIVE_DROP',
+                  status: 'ACTIVE_DROP' as MissionStatus,
                   statusLabel: `En Tránsito (Tarima #${nextPalletNum} en curso)`,
                 }
               : m
-          )
-        );
+          );
+          this.saveBufferMissions(updated);
+          return updated;
+        });
 
         const feedback: ScanFeedback = {
           success: true,
@@ -884,20 +1183,22 @@ export class ForkliftMissionService {
           const updatedPallets = [...pallets, newPallet];
           const nextNextSscc = `SSCC-1750123450000000${String(nextPalletNum + 1).padStart(2, '0')}`;
 
-          this.rawMissions.update((list) =>
-            list.map((m) =>
+          this.rawMissions.update((list) => {
+            const updated = list.map((m) =>
               m.id === current.id
                 ? {
                     ...m,
                     pallets: updatedPallets,
                     ssccBarcode: nextNextSscc,
                     currentPendingSscc: undefined,
-                    status: 'ACTIVE_PICK',
+                    status: 'ACTIVE_PICK' as MissionStatus,
                     statusLabel: `En Descarga Activa (${updatedPallets.length} Tarimas en Buffer)`,
                   }
                 : m
-            )
-          );
+            );
+            this.saveBufferMissions(updated);
+            return updated;
+          });
 
           const feedback: ScanFeedback = {
             success: true,
@@ -1030,6 +1331,10 @@ export class ForkliftMissionService {
     this.rawMissions.set(remaining);
     this.completedMissions.update((prev) => [discharged, ...prev]);
 
+    // Persistir inmediatamente en Buffer Local de la Tableta
+    this.saveBufferMissions(remaining);
+    this.saveCompletedBuffer(this.completedMissions());
+
     // Sincronizar ocupación de bahía en Layout 2D tras concluir descarga física
     const targetBay = target.destBarcode || target.destinationLocation;
     if (targetBay && !targetBay.startsWith('RAMPA') && !targetBay.includes('RAMPA-')) {
@@ -1043,9 +1348,38 @@ export class ForkliftMissionService {
       );
     }
 
+    // Enviar conclusión formal a la Base de Datos Backend
+    const totalPzas = finalPallets.reduce((acc, p) => acc + (p.pieces || 0), 0);
+    const completePayload = {
+      status: 'DISCHARGED',
+      completedAt: new Date().toISOString(),
+      palletsScanned: finalPallets,
+      totalPieces: totalPzas,
+      notes: discharged.notes,
+      operatorName: this.authState.userFullName() || 'Montacarguista',
+    };
+
+    this.http.post<any>(`/api/v1/warehouse-receptions/${missionId}/complete`, completePayload).subscribe({
+      next: () => {
+        this.isBackendConnected.set(true);
+        this.toast.success(`Descarga ${discharged.folio} guardada en Base de Datos.`, '✅ BD ACTUALIZADA');
+      },
+      error: () => {
+        // Encolar en buffer offline para sincronizar al volver la red
+        this.enqueuePendingSync({
+          type: 'COMPLETE_RECEPTION',
+          id: missionId,
+          payload: completePayload,
+          timestamp: Date.now(),
+        });
+        this.toast.info(`Descarga física protegida en el buffer de la tableta. Se enviará a la BD al reconectar.`, '📶 BUFFER OFFLINE');
+      }
+    });
+
     if (remaining.length > 0) {
       const nextMission = remaining[0];
       this.activeMissionId.set(nextMission.id);
+      this.saveActiveMissionId(nextMission.id);
       this.rawMissions.update((q) =>
         q.map((m, idx) =>
           idx === 0 ? { ...m, status: 'ACTIVE_PICK', statusLabel: 'En Descarga Activa / Pick' } : m
@@ -1053,6 +1387,7 @@ export class ForkliftMissionService {
       );
     } else {
       this.activeMissionId.set(null);
+      this.saveActiveMissionId(null);
     }
   }
 
@@ -1093,19 +1428,33 @@ export class ForkliftMissionService {
       );
     }
 
-    // Mantener la misión en la lista pero con estatus PARTIAL_DISCHARGED
+    // Mantener la misión en la lista pero con estatus PARTIAL_DISCHARGED y guardar en buffer
     const updatedList = list.map((m) => (m.id === missionId ? partialMission : m));
     this.rawMissions.set(updatedList);
+    this.saveBufferMissions(updatedList);
+
+    // Enviar actualización de parámetros a la Base de Datos
+    this.http.put<any>(`/api/v1/warehouse-receptions/${missionId}/parameters`, {
+      status: 'PARTIAL_DISCHARGED',
+      palletsScanned: currentPallets,
+      handoverNotes: partialMission.handoverNotes,
+      partialDischargedAt: new Date().toISOString(),
+    }).subscribe({
+      next: () => this.isBackendConnected.set(true),
+      error: () => this.isBackendConnected.set(false),
+    });
 
     // Si la misión activa era esta, pasar a la siguiente disponible o dejar null
     const otherActives = updatedList.filter((m) => m.id !== missionId && m.status !== 'PARTIAL_DISCHARGED');
     if (otherActives.length > 0) {
       this.activeMissionId.set(otherActives[0].id);
+      this.saveActiveMissionId(otherActives[0].id);
       this.rawMissions.update((q) =>
         q.map((m) => (m.id === otherActives[0].id ? { ...m, status: 'ACTIVE_PICK', statusLabel: 'En Descarga Activa / Pick' } : m))
       );
     } else {
       this.activeMissionId.set(null);
+      this.saveActiveMissionId(null);
     }
 
     const feedback: ScanFeedback = {
@@ -1114,7 +1463,7 @@ export class ForkliftMissionService {
       phase: 'DISCHARGE_FINISHED',
     };
     this.lastScanFeedback.set(feedback);
-    this.toast.warning(`Descarga parcial registrada: ${currentPallets.length} tarimas guardadas. Notificado a Mesa de Control.`);
+    this.toast.warning(`Descarga parcial registrada: ${currentPallets.length} tarimas guardadas en buffer.`);
     this.audioService.playWarning();
   }
 
@@ -1141,8 +1490,11 @@ export class ForkliftMissionService {
     };
 
     const remaining = list.filter((m) => m.id !== missionId);
-    this.rawMissions.set([resumedMission, ...remaining]);
+    const updated = [resumedMission, ...remaining];
+    this.rawMissions.set(updated);
+    this.saveBufferMissions(updated);
     this.activeMissionId.set(missionId);
+    this.saveActiveMissionId(missionId);
 
     const feedback: ScanFeedback = {
       success: true,
@@ -1171,14 +1523,17 @@ export class ForkliftMissionService {
     const remaining = list.filter((m) => m.id !== missionId);
     const newQueue = [...remaining, updatedTarget];
     this.rawMissions.set(newQueue);
+    this.saveBufferMissions(newQueue);
 
     if (newQueue.length > 0) {
       this.activeMissionId.set(newQueue[0].id);
+      this.saveActiveMissionId(newQueue[0].id);
       this.rawMissions.update((q) => {
         return q.map((m, idx) => (idx === 0 ? { ...m, status: 'ACTIVE_PICK', statusLabel: 'En Curso (Esperando Pick)' } : m));
       });
     } else {
       this.activeMissionId.set(null);
+      this.saveActiveMissionId(null);
     }
 
     this.lastScanFeedback.set({
@@ -1208,13 +1563,18 @@ export class ForkliftMissionService {
     this.rawMissions.set(remaining);
     this.completedMissions.update((prev) => [flagged, ...prev]);
 
+    this.saveBufferMissions(remaining);
+    this.saveCompletedBuffer(this.completedMissions());
+
     if (remaining.length > 0) {
       this.activeMissionId.set(remaining[0].id);
+      this.saveActiveMissionId(remaining[0].id);
       this.rawMissions.update((q) => {
         return q.map((m, idx) => (idx === 0 ? { ...m, status: 'ACTIVE_PICK', statusLabel: 'En Curso (Esperando Pick)' } : m));
       });
     } else {
       this.activeMissionId.set(null);
+      this.saveActiveMissionId(null);
     }
 
     this.lastScanFeedback.set({
@@ -1226,22 +1586,30 @@ export class ForkliftMissionService {
     this.audioService.playWarning();
   }
 
-  /** Reiniciar cola demo con las 5 misiones de prueba */
-  resetDemoQueue(): void {
-    this.rawMissions.set(JSON.parse(JSON.stringify(INITIAL_MISSIONS)));
-    this.activeMissionId.set('mis-001');
-    this.completedMissions.set([]);
-    this.lastScanFeedback.set(null);
-    this.activeFilter.set('ALL');
+  /**
+   * Refrescar y sincronizar misiones directamente con la Base de Datos
+   */
+  refreshMissions(): void {
+    this.loadMissionsFromBackend();
+    this.syncPendingQueue();
     this.audioService.playSuccess();
+  }
+
+  /**
+   * Alias de compatibilidad: redirige al sincronizador con la Base de Datos
+   */
+  resetDemoQueue(): void {
+    this.refreshMissions();
   }
 
   // ─── Helpers Internos ──────────────────────────────────────────────────────
 
   private updateMissionStatus(missionId: string, status: MissionStatus, statusLabel: string): void {
-    this.rawMissions.update((list) =>
-      list.map((m) => (m.id === missionId ? { ...m, status, statusLabel } : m))
-    );
+    this.rawMissions.update((list) => {
+      const updated = list.map((m) => (m.id === missionId ? { ...m, status, statusLabel } : m));
+      this.saveBufferMissions(updated);
+      return updated;
+    });
   }
 
   private completeMission(missionId: string): void {
@@ -1263,6 +1631,9 @@ export class ForkliftMissionService {
     this.rawMissions.set(remaining);
     this.completedMissions.update((prev) => [completed, ...prev]);
 
+    this.saveBufferMissions(remaining);
+    this.saveCompletedBuffer(this.completedMissions());
+
     // Sincronizar ocupación de bahía o rack en Layout 2D tras completar movimiento
     const targetBay = target.destBarcode || target.destinationLocation;
     if (targetBay && !targetBay.startsWith('RAMPA') && !targetBay.includes('RAMPA-')) {
@@ -1279,6 +1650,7 @@ export class ForkliftMissionService {
     if (remaining.length > 0) {
       const nextMission = remaining[0];
       this.activeMissionId.set(nextMission.id);
+      this.saveActiveMissionId(nextMission.id);
       this.rawMissions.update((q) =>
         q.map((m, idx) =>
           idx === 0 ? { ...m, status: 'ACTIVE_PICK', statusLabel: 'En Curso (Esperando Pick)' } : m
@@ -1286,6 +1658,7 @@ export class ForkliftMissionService {
       );
     } else {
       this.activeMissionId.set(null);
+      this.saveActiveMissionId(null);
     }
   }
 }

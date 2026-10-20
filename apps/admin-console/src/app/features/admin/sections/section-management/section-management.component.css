@@ -821,8 +821,10 @@
 .sections-form-section {
   border: none;
   border-bottom: 1px solid var(--border-card);
-  padding: 1.4rem 1.5rem;
+  padding: 1.6rem 1.5rem 1.5rem;
   margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .sections-form-section--readonly {
@@ -838,10 +840,11 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-gold);
-  margin-bottom: 1.1rem;
+  margin-top: 0.35rem;
+  margin-bottom: 1.25rem;
   width: 100%;
   padding: 0;
-  float: unset;
+  float: left;
 }
 
 .sections-form-section__legend .material-symbols-outlined { font-size: 16px; }

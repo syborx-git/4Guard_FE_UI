@@ -19,6 +19,7 @@ import { ToastContainerComponent } from '../toast-container/toast-container.comp
 import { RfNotificationsComponent } from '../rf-notifications/rf-notifications.component';
 import { ToastService } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
+import { HardwareMonitorService } from '../../../core/services/hardware-monitor.service';
 
 interface NavItem {
   path: string;
@@ -51,6 +52,7 @@ export class RfShellComponent implements OnInit, OnDestroy {
   protected readonly audioService = inject(AudioFeedbackService);
   protected readonly toast = inject(ToastService);
   protected readonly pwaService = inject(PwaService);
+  protected readonly hardwareMonitor = inject(HardwareMonitorService);
 
   protected readonly userRoles = UserRole;
   protected readonly showIosModal = signal(false);

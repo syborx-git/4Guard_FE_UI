@@ -48,7 +48,7 @@ export interface RevokeSessionResponse {
 export class ActiveSessionsService {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
-  private readonly API_URL = 'http://localhost:8080/api/v1/audit/active-sessions';
+  private readonly API_URL = '/api/v1/audit/active-sessions';
 
   /**
    * Obtiene la lista de sesiones activas del sistema.

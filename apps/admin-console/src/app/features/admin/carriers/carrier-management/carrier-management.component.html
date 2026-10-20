@@ -51,74 +51,124 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="carriers-kpi-grid" aria-label="Indicadores de transportistas">
-
-      <!-- Total -->
-      <div class="carriers-kpi-card carriers-kpi-card--total">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">local_shipping</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading) {
-            <div class="carriers-kpi-card__skeleton"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ totalCarriers() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Total</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Transportistas" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Líneas de Transporte</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activos -->
-      <div class="carriers-kpi-card carriers-kpi-card--active">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading) {
-            <div class="carriers-kpi-card__skeleton"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ kpiActive() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Activos</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total:</span>
+              <strong class="wms-kpi-summary-value">{{ totalCarriers() }}</strong>
+            </div>
 
-      <!-- Suspendidos -->
-      <div class="carriers-kpi-card carriers-kpi-card--suspended">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">pause_circle</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading) {
-            <div class="carriers-kpi-card__skeleton"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ kpiSuspended() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Suspendidos</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiActive() }}</strong>
+            </div>
 
-      <!-- Inactivos -->
-      <div class="carriers-kpi-card carriers-kpi-card--inactive">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          @if (isLoading) {
-            <div class="carriers-kpi-card__skeleton"></div>
-          } @else {
-            <span class="carriers-kpi-card__value">{{ kpiInactive() }}</span>
-          }
-          <span class="carriers-kpi-card__label">Inactivos</span>
-        </div>
-        <div class="carriers-kpi-card__bar carriers-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+              <span class="wms-kpi-summary-label">Suspendidos:</span>
+              <strong class="wms-kpi-summary-value text-amber-500">{{ kpiSuspended() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivos:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ kpiInactive() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="carriers-kpi-grid animate-fade-in" aria-label="Indicadores de transportistas">
+
+          <!-- Total -->
+          <div class="carriers-kpi-card carriers-kpi-card--total">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">local_shipping</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading) {
+                <div class="carriers-kpi-card__skeleton"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ totalCarriers() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Total</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="carriers-kpi-card carriers-kpi-card--active">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading) {
+                <div class="carriers-kpi-card__skeleton"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ kpiActive() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Activos</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Suspendidos -->
+          <div class="carriers-kpi-card carriers-kpi-card--suspended">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">pause_circle</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading) {
+                <div class="carriers-kpi-card__skeleton"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ kpiSuspended() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Suspendidos</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+          </div>
+
+          <!-- Inactivos -->
+          <div class="carriers-kpi-card carriers-kpi-card--inactive">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading) {
+                <div class="carriers-kpi-card__skeleton"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ kpiInactive() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Inactivos</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--inactive"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════

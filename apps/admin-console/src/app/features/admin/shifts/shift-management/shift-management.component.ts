@@ -91,6 +91,13 @@ import { RouterLink } from '@angular/router';
   styleUrl: './shift-management.component.css',
 })
 export class ShiftManagementComponent implements OnInit, OnDestroy {
+  // ── Estado: KPIs Comprimidos / Colapsables ───────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // Exponer KPI de conflictos
   protected readonly conflictCount = computed(() => this.shiftService.conflictCount());
 
