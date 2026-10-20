@@ -28,7 +28,7 @@ const PROXY_CONFIG = {
     "target": target,
     "secure": false,
     "changeOrigin": true,
-    "logLevel": "info",
+    "logLevel": "silent",
     "bypass": function(req, res, proxyOptions) {
       const url = req.url || '';
 

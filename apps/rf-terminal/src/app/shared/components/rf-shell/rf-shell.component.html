@@ -54,11 +54,43 @@
       }
     </div>
 
-    <!-- Right Controls: Notifications + Theme Switcher + Scan Simulator + User Avatar Menu -->
+    <!-- Right Controls: PWA Actions + Notifications + Theme Switcher + User Avatar Menu -->
     <div class="rf-header__actions">
+      <!-- PWA Nueva Versión Lista -->
+      @if (pwaService.versionReady()) {
+        <button 
+          type="button" 
+          class="pwa-badge-btn pwa-badge-btn--update animate-pulse" 
+          (click)="pwaService.activateUpdate()"
+          title="Nueva versión disponible. Clic para actualizar ahora">
+          <span class="material-symbols-outlined text-amber-400">system_update</span>
+          <span class="pwa-btn-label">Actualizar</span>
+        </button>
+      }
+
+      <!-- PWA Instalar App (Chromium / Zebra / Honeywell / Edge) -->
+      @if (pwaService.canInstall()) {
+        <button 
+          type="button" 
+          class="pwa-badge-btn pwa-badge-btn--install" 
+          (click)="promptInstallPwa()"
+          title="Instalar 4GUARD Terminal como aplicación en este dispositivo">
+          <span class="material-symbols-outlined text-emerald-400">install_mobile</span>
+          <span class="pwa-btn-label">Instalar App</span>
+        </button>
+      } @else if (pwaService.isIos() && !pwaService.isIosStandalone()) {
+        <button 
+          type="button" 
+          class="pwa-badge-btn pwa-badge-btn--ios" 
+          (click)="openIosInstallModal()"
+          title="Instalar en iPad / iPhone">
+          <span class="material-symbols-outlined text-sky-400">ios_share</span>
+          <span class="pwa-btn-label">Instalar</span>
+        </button>
+      }
+
       <!-- Centro de Notificaciones Operativas en Tiempo Real (Pre-Recepciones y Andenes) -->
       <fg-rf-notifications />
-
 
       <!-- Theme Switcher (Dark/Light) -->
       <button 
@@ -236,7 +268,38 @@
               {{ isOnline() ? '📶 En Línea (Tiempo Real)' : '📵 Sin Conexión' }}
             </strong>
           </div>
+          <div class="profile-meta-item">
+            <span class="meta-label">Modo Aplicación:</span>
+            <strong class="meta-value" [class.meta-value--highlight]="pwaService.isInstalled()">
+              {{ pwaService.isInstalled() ? '⚡ PWA Standalone (Instalada)' : '🌐 Navegador Web' }}
+            </strong>
+          </div>
+          <div class="profile-meta-item">
+            <span class="meta-label">Pantalla Activa:</span>
+            <button 
+              type="button" 
+              class="wakelock-toggle-btn" 
+              [class.wakelock-toggle-btn--active]="pwaService.wakeLockActive()"
+              (click)="toggleWakeLock()"
+              title="Mantener pantalla encendida continuamente para escaneo">
+              <span class="material-symbols-outlined text-sm">
+                {{ pwaService.wakeLockActive() ? 'lock' : 'lock_open' }}
+              </span>
+              <span>{{ pwaService.wakeLockActive() ? 'Activa (Wake Lock ON)' : 'Inactiva (Auto-sleep)' }}</span>
+            </button>
+          </div>
         </div>
+
+        <!-- Botón de Instalación Directa si no está instalada -->
+        @if (pwaService.canInstall()) {
+          <div class="profile-install-banner">
+            <button type="button" class="btn-pwa-install-full" (click)="promptInstallPwa()">
+              <span class="material-symbols-outlined">install_mobile</span>
+              <span>Instalar Terminal en este Dispositivo</span>
+            </button>
+          </div>
+        }
+
 
         <!-- Botón de Cierre de Sesión -->
         <div class="profile-popover__footer">
@@ -275,6 +338,44 @@
           <button type="button" class="btn-modal-danger" (click)="confirmLogout()">
             <span class="material-symbols-outlined text-sm">exit_to_app</span>
             <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── 7. Modal de Instrucciones de Instalación iOS (iPad/iPhone) ── -->
+  @if (showIosModal()) {
+    <div class="scan-modal-backdrop" (click)="closeIosInstallModal()">
+      <div class="scan-modal scan-modal--sm animate-scale-in" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="scan-modal__header">
+          <div class="modal-title-wrap">
+            <span class="material-symbols-outlined modal-icon text-sky-400">ios_share</span>
+            <h2 class="scan-modal__title">Instalar en iPad / iPhone</h2>
+          </div>
+          <button type="button" class="modal-close-btn" (click)="closeIosInstallModal()" aria-label="Cerrar modal">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="ios-install-steps">
+          <div class="ios-step">
+            <span class="step-num">1</span>
+            <p>En la barra de Safari, pulsa el botón <strong>Compartir</strong> <span class="material-symbols-outlined inline-icon text-sky-400">ios_share</span>.</p>
+          </div>
+          <div class="ios-step">
+            <span class="step-num">2</span>
+            <p>Desplaza hacia abajo y selecciona <strong>Agregar a pantalla de inicio</strong> <span class="material-symbols-outlined inline-icon text-amber-400">add_box</span>.</p>
+          </div>
+          <div class="ios-step">
+            <span class="step-num">3</span>
+            <p>Pulsa <strong>Agregar</strong> en la esquina superior derecha para iniciar 4GUARD en modo pantalla completa sin bordes de navegador.</p>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button type="button" class="btn-modal-cancel w-full" (click)="closeIosInstallModal()">
+            Entendido
           </button>
         </div>
       </div>

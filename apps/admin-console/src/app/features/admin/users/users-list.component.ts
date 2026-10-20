@@ -62,6 +62,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
   // ── Audit Logs ───────────────────────────────────────────
   protected readonly auditEntries = signal<UserAuditLogDto[]>([]);
   protected readonly isLoadingAudit = signal<boolean>(false);
+  protected readonly showAuditTimeline = signal<boolean>(true);
+
+  protected toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
 
   // ── Estado: KPIs Comprimidos (Estilo Recepción) ───────────
   protected readonly isKpiCollapsed = signal<boolean>(true);

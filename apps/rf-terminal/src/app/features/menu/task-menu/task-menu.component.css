@@ -521,25 +521,28 @@
 /* Homologación de Botones de Módulo (SDD Standard Ejecutivo) */
 .btn-module-action {
   width: 100%;
-  min-height: 48px;
-  border-radius: 11px;
+  min-height: 54px;
+  height: 54px;
+  border-radius: 12px;
   background: #ffffff;
   color: #172033;
   border: 1.5px solid rgba(197, 168, 107, 0.35);
   font-family: var(--font-body);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.15rem;
+  padding: 0 1.25rem;
   cursor: pointer;
   transition: all 180ms ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   position: relative;
   z-index: 2;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 :host-context(.theme-dark) .btn-module-action,

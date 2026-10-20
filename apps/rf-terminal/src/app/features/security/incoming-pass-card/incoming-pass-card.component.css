@@ -392,19 +392,31 @@
   color: #34d399;
 }
 
+.rf-pass-card__action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.rf-pass-card__action-group .rf-pass-card__btn-load-action {
+  flex: 1;
+}
+
 .rf-pass-card__btn-cancel-load {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.35rem 0.65rem;
-  border-radius: 7px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.25);
   color: #ef4444;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 800;
   cursor: pointer;
   transition: all 130ms ease;
+  white-space: nowrap;
 }
 
 .rf-pass-card__btn-cancel-load:hover {

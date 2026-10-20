@@ -362,10 +362,18 @@ export class RfNotificationService {
   }
 
   private readonly dismissedTokens = new Set<string>();
+  public readonly dismissedTokensVersion = signal<number>(0);
+
+  public isPassDismissed(token: string): boolean {
+    if (!token) return false;
+    this.dismissedTokensVersion(); // Registro de dependencia reactiva
+    return this.dismissedTokens.has(token);
+  }
 
   public dismissDriverPass(token: string): void {
     if (!token) return;
     this.dismissedTokens.add(token);
+    this.dismissedTokensVersion.update(v => v + 1);
     this.pendingDriverPasses.update(list => list.filter(p => p.token !== token));
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -391,20 +399,43 @@ export class RfNotificationService {
     }, 12000);
   }
 
+  private backendFailureCount = 0;
+
   /**
    * Carga inicial y sondeo periódico contra la base de datos a través de los endpoints REST
    */
   private loadInitialPasses(): void {
-    this.fetchActivePassesFromBackend();
-    this.fetchInYardPassesFromBackend();
+    if (this.isSecurityContext()) {
+      this.fetchActivePassesFromBackend();
+      this.fetchInYardPassesFromBackend();
+    } else {
+      this.loadPassesFromStorageFallback();
+    }
   }
 
   private startBackgroundSync(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.pollIntervalId = setInterval(() => {
+      // 1. Solo sondeos en Caseta / Seguridad (no montacargas ni almacén)
+      if (!this.isSecurityContext()) return;
+
+      // 2. Si el backend está caído (ECONNREFUSED / 502), no saturar la consola cada 4s
+      if (this.backendFailureCount >= 3) {
+        // En modo offline, leemos de storage local
+        this.loadPassesFromStorageFallback();
+        return;
+      }
+
       this.fetchActivePassesFromBackend();
       this.fetchInYardPassesFromBackend();
     }, 4000);
+
+    // Sondeo lento cada 60s para auto-recuperar si el backend vuelve a estar en línea
+    setInterval(() => {
+      if (this.backendFailureCount >= 3 && this.isSecurityContext()) {
+        this.fetchActivePassesFromBackend();
+      }
+    }, 60000);
   }
 
   private getOrgId(): string {
@@ -433,6 +464,7 @@ export class RfNotificationService {
 
     this.http.get<any>(`/api/v1/security-gate/passes/active`, { params }).subscribe({
       next: (res) => {
+        this.backendFailureCount = 0;
         const rawList = res?.data || res || [];
         if (Array.isArray(rawList)) {
           const submittedOnly = rawList.filter((p: any) => p && p.status === 'SUBMITTED' && !this.dismissedTokens.has(p.token));
@@ -470,6 +502,7 @@ export class RfNotificationService {
         }
       },
       error: () => {
+        this.backendFailureCount++;
         // En caso de que el backend esté offline, leer de localStorage de la caseta
         this.loadPassesFromStorageFallback();
       }
@@ -482,6 +515,7 @@ export class RfNotificationService {
 
     this.http.get<any>(`/api/v1/security-gate/passes/in-yard`, { params }).subscribe({
       next: (res) => {
+        this.backendFailureCount = 0;
         const rawList = res?.data || res || [];
         if (Array.isArray(rawList)) {
           const readyList = rawList.filter((p: any) => p && (p.isReadyForExit || p.status === 'DISCHARGE_FINISHED'));
@@ -505,7 +539,9 @@ export class RfNotificationService {
           this.readyForExitPasses.set(mapped);
         }
       },
-      error: () => {}
+      error: () => {
+        this.backendFailureCount++;
+      }
     });
   }
 

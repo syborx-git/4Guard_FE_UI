@@ -47,30 +47,36 @@ export class LoginService {
     let role = UserRole.ADMIN;
     let fullName = 'Carlos Herrera';
 
-    if (email.includes('director') || email.includes('admin') || email.includes('ceo')) {
+    // Extraer solo la parte local del usuario para no colisionar con el dominio @4guard.mx
+    const userPrefix = email.split('@')[0];
+
+    if (userPrefix.includes('director') || userPrefix.includes('admin') || userPrefix.includes('ceo')) {
       role = UserRole.ADMIN;
       fullName = 'Ing. Carlos Herrera (Director General)';
-    } else if (email.includes('manager') || email.includes('gerente')) {
+    } else if (userPrefix.includes('manager') || userPrefix.includes('gerente')) {
       role = UserRole.OPERATIONS_MANAGER;
       fullName = 'Ing. Roberto Garza (Gerente Operaciones)';
-    } else if (email.includes('coord')) {
+    } else if (userPrefix.includes('coord')) {
       role = UserRole.OPERATIONS_COORDINATOR;
       fullName = 'Lic. Fernando Lozano (Coordinador Operaciones)';
-    } else if (email.includes('super') || email.includes('sup')) {
+    } else if (userPrefix.includes('super') || userPrefix.includes('sup')) {
       role = UserRole.OPERATIONS_SUPERVISOR;
       fullName = 'Ing. Héctor Salinas (Supervisor Operaciones)';
-    } else if (email.includes('control') || email.includes('mesa')) {
+    } else if (userPrefix.includes('control') || userPrefix.includes('mesa')) {
       role = UserRole.CONTROL_DESK;
       fullName = 'Lic. Patricia Gómez (Mesa de Control)';
-    } else if (email.includes('lider') || email.includes('shift')) {
+    } else if (userPrefix.includes('lider') || userPrefix.includes('shift')) {
       role = UserRole.SHIFT_LEADER;
       fullName = 'Ricardo Peña (Líder de Turno)';
-    } else if (email.includes('qm') || email.includes('calidad')) {
+    } else if (userPrefix.includes('qm') || userPrefix.includes('calidad')) {
       role = UserRole.QM_INSPECTOR;
       fullName = 'Dra. Elena Ramos (Inspector de Calidad)';
-    } else if (email.includes('security') || email.includes('guard') || email.includes('caseta')) {
+    } else if (userPrefix.includes('security') || userPrefix.includes('guard') || userPrefix.includes('caseta') || userPrefix.includes('vigilant')) {
       role = UserRole.SECURITY_GUARD;
       fullName = 'Carlos Mendoza (Guardia Caseta)';
+    } else if (userPrefix.includes('montacarg') || userPrefix.includes('operad') || userPrefix.includes('fork') || userPrefix.includes('op')) {
+      role = UserRole.WAREHOUSE_OPERATOR;
+      fullName = 'Roberto Sánchez (Montacarguista)';
     } else {
       role = UserRole.WAREHOUSE_OPERATOR;
       fullName = 'Roberto Sánchez (Montacarguista)';
