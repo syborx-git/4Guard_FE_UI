@@ -4,30 +4,9 @@
      ================================================================ -->
 <div class="rf-menu-workspace">
 
-  <!-- ── 0. BARRA DE SIMULACIÓN Y CONMUTACIÓN DE ROLES (DEMO RBAC) ──── -->
-  <div class="rf-role-switcher-bar">
-    <div class="role-switcher-label">
-      <span class="material-symbols-outlined text-base text-amber-500">theater_comedy</span>
-      <span class="font-bold text-xs uppercase tracking-wider">Simulador de Rol:</span>
-    </div>
-    
-    <div class="role-pills-wrap">
-      @for (r of demoRoles; track r.role) {
-        <button
-          type="button"
-          (click)="switchDemoRole(r.role)"
-          class="role-pill-btn"
-          [class.role-pill-btn--active]="currentRole() === r.role"
-          [title]="'Cambiar a vista de ' + r.label">
-          <span class="material-symbols-outlined text-sm">{{ r.icon }}</span>
-          <span>{{ r.label }}</span>
-        </button>
-      }
-    </div>
-  </div>
 
   <!-- ── 1. SECCIÓN SUPERIOR: ENCABEZADO Y REANUDAR TAREA ─────────── -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+  <div class="rf-dashboard-top-section">
     
     <!-- Encabezado Operativo Dinámico según Rol -->
     <div class="lg:col-span-4 rf-terminal-info-card">

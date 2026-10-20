@@ -19,6 +19,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
+import { WarehouseLayoutSyncService } from '../../../core/services/warehouse-layout-sync.service';
 
 export type PutawayStep = 'SCAN_PALLET' | 'SCAN_RACK' | 'BATCH_COMPLETED';
 
@@ -51,8 +52,9 @@ export interface PutawayItem {
 export class PutawayScanComponent implements AfterViewInit {
   @ViewChild('scanInput') scanInput!: ElementRef<HTMLInputElement>;
 
-  private readonly router = inject(Router);
-  private readonly audio  = inject(AudioFeedbackService);
+  private readonly router     = inject(Router);
+  private readonly audio      = inject(AudioFeedbackService);
+  private readonly layoutSync = inject(WarehouseLayoutSyncService);
 
   // Datos de la orden de recepción preasignada por Pablo
   protected readonly assignedTask = signal<AssignedPutawayTask>({
@@ -229,6 +231,15 @@ export class PutawayScanComponent implements AfterViewInit {
       // Mover de pendiente a guardado
       this.pendingPallets.update(list => list.filter(p => p.sscc !== pallet.sscc));
       this.storedBuffer.update(list => [storedItem, ...list]);
+
+      // Sincronizar ocupación en el Layout 2D (WarehouseLayoutService)
+      this.layoutSync.recordMovement(
+        pallet.assignedRack,
+        1,
+        pallet.description,
+        undefined,
+        `Putaway en Rack (${this.assignedTask().folio})`
+      );
 
       this.activePallet.set(null);
       this.isProcessing.set(false);

@@ -78,15 +78,48 @@
   <!-- Main Content Area -->
   <main class="driver-portal__main">
     @if (submitSuccess()) {
-      <!-- SUCCESS SCREEN -->
+      <!-- SUCCESS SCREEN CON PASE DIGITAL QR OFICIAL PARA MOSTRAR A CASETA -->
       <div class="success-card animate-fade-in">
         <div class="success-icon-wrap">
           <span class="success-check">✓</span>
         </div>
-        <h2 class="success-title">¡Registro Enviado a Caseta!</h2>
+        <h2 class="success-title">¡Pase Digital de Acceso Listo!</h2>
         <p class="success-subtitle">
-          Sus datos han sido transmitidos exitosamente a la Caseta de Vigilancia Principal.
+          Muestre este <strong>Código QR</strong> al oficial de seguridad en la caseta de acceso a planta.
         </p>
+
+        <!-- Contenedor Destacado del Código QR para Escaneo en Caseta -->
+        <div class="my-4 p-4 bg-white rounded-2xl shadow-lg border-2 border-amber-400 inline-block mx-auto text-center">
+          <div class="relative inline-flex items-center justify-center p-2 bg-white rounded-xl">
+            <img 
+              [src]="getQrCodeUrl()" 
+              alt="Código QR del Pase de Acceso" 
+              class="w-52 h-52 sm:w-60 sm:h-60 object-contain rounded-lg" />
+          </div>
+          <div class="mt-2 font-mono font-black text-sm text-slate-900 bg-amber-50 py-1 px-3 rounded-lg border border-amber-200">
+            FOLIO: {{ token() }}
+          </div>
+        </div>
+
+        <!-- Botones de Acción: WhatsApp & Editar Formulario -->
+        <div class="actions-grid mb-4" style="display: flex; flex-direction: column; gap: 0.65rem; width: 100%;">
+          <button 
+            type="button" 
+            (click)="sharePassViaWhatsApp()"
+            class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-md transition-all w-full cursor-pointer"
+            style="background: #059669; border: none; font-size: 0.9rem; font-weight: 800; padding: 0.85rem 1rem; border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);">
+            <span style="font-size: 1.2rem;">💬</span>
+            <span>Compartir Pase por WhatsApp</span>
+          </button>
+
+          <button 
+            type="button" 
+            (click)="switchToFormView()"
+            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-amber-300 font-bold text-xs transition-all w-full cursor-pointer"
+            style="background: rgba(208, 175, 103, 0.15); border: 1px solid rgba(208, 175, 103, 0.4); font-size: 0.8rem; font-weight: 700; padding: 0.65rem 1rem; border-radius: 10px; color: #e1c47c; display: flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer;">
+            <span>✏️ Modificar Datos / Volver al Formulario</span>
+          </button>
+        </div>
 
         <div class="success-info-box">
           <div class="info-row">
@@ -94,28 +127,38 @@
             <span class="value font-bold text-accent">{{ checkInForm.get('operacion')?.value }}</span>
           </div>
           <div class="info-row">
+            <span class="label">Documento:</span>
+            <span class="value font-mono font-bold">{{ checkInForm.get('operacion')?.value === 'CARGA' ? (checkInForm.get('noCartaPorte')?.value || 'N/A') : (checkInForm.get('remision')?.value || 'N/A') }}</span>
+          </div>
+          <div class="info-row">
             <span class="label">Chofer:</span>
-            <span class="value">{{ checkInForm.get('nombreOperador')?.value }}</span>
+            <span class="value font-bold">{{ checkInForm.get('nombreOperador')?.value || 'Transportista' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Transportista:</span>
+            <span class="value">{{ checkInForm.get('carrierLine')?.value || '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Tracto / Caja:</span>
+            <span class="value font-mono font-bold">{{ checkInForm.get('placasTracto')?.value || '-' }}{{ checkInForm.get('noEcoTractor')?.value ? ' (' + checkInForm.get('noEcoTractor')?.value + ')' : '' }} / {{ checkInForm.get('placasCaja')?.value || '-' }}{{ checkInForm.get('noEcoCaja')?.value ? ' (' + checkInForm.get('noEcoCaja')?.value + ')' : '' }}</span>
           </div>
           @if (checkInForm.get('driverPhone')?.value) {
             <div class="info-row">
-              <span class="label">WhatsApp / Tel:</span>
+              <span class="label">WhatsApp Chofer:</span>
               <span class="value font-mono">{{ checkInForm.get('driverPhone')?.value }}</span>
             </div>
           }
-          <div class="info-row">
-            <span class="label">Tracto / Caja:</span>
-            <span class="value">{{ checkInForm.get('placasTracto')?.value }}{{ checkInForm.get('noEcoTractor')?.value ? ' (' + checkInForm.get('noEcoTractor')?.value + ')' : '' }} / {{ checkInForm.get('placasCaja')?.value }}{{ checkInForm.get('noEcoCaja')?.value ? ' (' + checkInForm.get('noEcoCaja')?.value + ')' : '' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Pase ID:</span>
-            <span class="value font-mono text-gold">{{ token() }}</span>
-          </div>
+          @if (sealList().length > 0) {
+            <div class="info-row">
+              <span class="label">Sellos de Seguridad:</span>
+              <span class="value font-mono" style="color: #34d399; font-weight: bold;">{{ sealList().join(', ') }}</span>
+            </div>
+          }
         </div>
 
         <div class="success-instruction">
           <span class="alert-icon">⚠️</span>
-          <span>Por favor <strong>permanezca en su unidad</strong> en el carril de acceso. El guardia verificará sus datos físicos, revisará sellos y le asignará su rampa de descarga/embarque.</span>
+          <span>Por favor <strong>permanezca en su unidad</strong> en el carril de acceso. El guardia escaneará su código QR desde su terminal para autorizar su ingreso e inspección F01.</span>
         </div>
       </div>
     } @else {

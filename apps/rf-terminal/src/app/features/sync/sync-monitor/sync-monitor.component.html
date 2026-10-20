@@ -9,7 +9,7 @@
   <header class="sync-rf-header">
     <div class="sync-rf-header__top">
       <div class="sync-rf-header__left">
-        <button type="button" (click)="goBack()" class="btn-back-rf" title="Regresar al Cockpit">
+        <button type="button" (click)="goBack()" class="btn-back-rf" [title]="roleConfig().backTooltip">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
         <div class="sync-rf-header__icon-wrap">
@@ -17,15 +17,16 @@
         </div>
         <div class="sync-rf-header__copy">
           <div class="sync-rf-header__eyebrow">
-            <span>Terminal RF</span>
-            <span class="eyebrow-sep">·</span>
-            <span class="eyebrow-gold">Offline-First Engine</span>
-            <span class="eyebrow-sep">·</span>
-            <span>Telemetría de Red</span>
+            @for (crumb of roleConfig().moduleEyebrow; track crumb; let isLast = $last) {
+              <span [class.eyebrow-gold]="$index === 1">{{ crumb }}</span>
+              @if (!isLast) {
+                <span class="eyebrow-sep">·</span>
+              }
+            }
           </div>
-          <h1 class="sync-rf-header__title">Sincronización de Datos &amp; Zone Lease</h1>
+          <h1 class="sync-rf-header__title">{{ roleConfig().title }}</h1>
           <p class="sync-rf-header__subtitle">
-            Gestión de cola local IndexedDB, resolución de conflictos y arrendamiento de pasillo (HU-155 / HU-200).
+            {{ roleConfig().subtitle }}
           </p>
         </div>
       </div>
@@ -39,10 +40,10 @@
           <span>{{ isOnline() ? 'EN LÍNEA (' + pingLatencyMs() + 'ms)' : 'SIN CONEXIÓN' }}</span>
         </div>
 
-        <!-- Chip de Zone Lease (HU-155) -->
-        <div class="sync-lease-chip" title="Arrendamiento de Pasillo Activo (30 min)">
-          <span class="material-symbols-outlined text-amber-500 text-sm">lock_clock</span>
-          <span class="font-mono font-bold">{{ leaseService.formattedTime() }}</span>
+        <!-- Chip de Área Asignada / Concesión Operativa -->
+        <div class="sync-lease-chip" [title]="roleConfig().chipTitle">
+          <span class="material-symbols-outlined text-amber-500 text-sm">{{ roleConfig().areaIcon }}</span>
+          <span class="font-mono font-bold">{{ roleConfig().chipLabel }}</span>
         </div>
 
         <!-- Botón Conmutar Red (Demo) -->
@@ -83,14 +84,14 @@
       </div>
     </div>
 
-    <!-- KPI 2: Zone Lease Protocol (HU-155) -->
+    <!-- KPI 2: Concesión de Área / Caseta / Zone Lease -->
     <div class="sync-kpi-card sync-kpi-card--primary">
       <div class="sync-kpi-card__icon">
-        <span class="material-symbols-outlined">lock_clock</span>
+        <span class="material-symbols-outlined">{{ roleConfig().areaIcon }}</span>
       </div>
       <div class="sync-kpi-card__info">
         <div class="flex items-center justify-between">
-          <span class="sync-kpi-card__label">ZONE LEASE (30 MIN)</span>
+          <span class="sync-kpi-card__label">{{ roleConfig().assignedAreaLabel }}</span>
           <span class="kpi-chip-status font-mono font-bold" [ngClass]="{
             'chip--active': leaseService.leaseStatus() === 'ACTIVE',
             'chip--warn': leaseService.leaseStatus() === 'WARNING',
@@ -107,12 +108,12 @@
             type="button"
             (click)="renewLease()"
             class="btn-renew-lease"
-            title="Renovar concesión de 30 minutos">
+            [title]="roleConfig().renewToastMessage">
             <span class="material-symbols-outlined text-xs">sync</span>
-            <span>Renovar</span>
+            <span>{{ roleConfig().renewButtonText }}</span>
           </button>
         </div>
-        <span class="sync-kpi-card__sub">Pasillo 04 • Zona A (HU-155)</span>
+        <span class="sync-kpi-card__sub">{{ roleConfig().assignedAreaSub }}</span>
       </div>
     </div>
 
@@ -161,7 +162,7 @@
               {{ isSyncing() ? 'Transmitiendo datos con el Servidor Central...' : (isOnline() ? (pendingCount() > 0 ? 'Tienes ' + pendingCount() + ' operaciones listas para sincronizar' : 'Todo sincronizado • Base de datos al día') : 'Modo Fuera de Línea • Los datos se guardan en esta tableta') }}
             </h2>
             <p class="hero-sync-sub-diag">
-              <span>📡 Estado: <strong>{{ isOnline() ? 'Conectado al WMS Central' : 'Sin señal WiFi' }}</strong></span>
+              <span>📡 Estado: <strong>{{ isOnline() ? 'Conectado al Servidor Central' : 'Sin señal WiFi' }}</strong></span>
               <span class="diag-dot">•</span>
               <span>Último envío: <strong>{{ lastSyncTime() ? formatTime(lastSyncTime()!.toISOString()) : 'Al iniciar' }}</strong></span>
             </p>
@@ -229,13 +230,19 @@
                 'badge--picking': item.opType === 'PICK_CONFIRM',
                 'badge--counting': item.opType === 'BLIND_COUNT',
                 'badge--anomaly': item.opType === 'ANOMALY_REPORT',
-                'badge--lease': item.opType === 'ZONE_LEASE'
+                'badge--lease': item.opType === 'ZONE_LEASE',
+                'badge--checkin': item.opType === 'CHECK_IN_F01',
+                'badge--checkout': item.opType === 'CHECK_OUT_VERIF',
+                'badge--passqr': item.opType === 'DRIVER_PASS_QR',
+                'badge--qminspect': item.opType === 'QM_INSPECTION',
+                'badge--qmsample': item.opType === 'SAMPLE_RELEASE',
+                'badge--traffic': item.opType === 'RAMP_ASSIGN' || item.opType === 'TRAFFIC_RELEASE'
               }">
                 <span class="material-symbols-outlined text-xs">{{ getTypeIcon(item.opType) }}</span>
                 <span>{{ getTypeLabel(item.opType) }}</span>
               </span>
 
-              <!-- Código de Referencia / SSCC -->
+              <!-- Código de Referencia / Folio -->
               <span class="item-ref-pill font-mono font-bold">
                 <span class="material-symbols-outlined text-xs">qr_code_2</span>
                 <span>{{ item.referenceCode }}</span>
@@ -277,8 +284,8 @@
           <div class="empty-icon-ring">
             <span class="material-symbols-outlined text-3xl text-emerald-500">cloud_done</span>
           </div>
-          <h3 class="empty-title">Todo Sincronizado</h3>
-          <p class="empty-sub">No hay transacciones pendientes en esta tableta. Todos los datos están en el WMS central.</p>
+          <h3 class="empty-title">{{ roleConfig().emptyTitle }}</h3>
+          <p class="empty-sub">{{ roleConfig().emptySub }}</p>
         </div>
       }
     </div>

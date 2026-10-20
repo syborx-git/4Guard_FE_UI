@@ -953,22 +953,31 @@
                       [value]="operatorSearchQuery()"
                       (input)="onOperatorInput($any($event.target).value)"
                       (focus)="isOperatorDropdownOpen.set(true)"
-                      placeholder="Buscar montacarguista..."
-                      class="fg-input font-bold w-full pr-8"
+                      (click)="isOperatorDropdownOpen.set(true)"
+                      placeholder="Seleccionar montacarguista..."
+                      class="fg-input font-bold w-full pr-14 cursor-pointer"
                       autocomplete="off"
                     />
-                    @if (operatorSearchQuery()) {
+                    <div class="absolute right-1.5 flex items-center gap-0.5">
+                      @if (operatorSearchQuery()) {
+                        <button
+                          type="button"
+                          (click)="clearOperatorSelection(); $event.stopPropagation()"
+                          class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                          title="Limpiar montacarguista seleccionado"
+                        >
+                          <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      }
                       <button
                         type="button"
-                        (click)="clearOperatorSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
-                        title="Limpiar montacarguista seleccionado"
+                        (click)="toggleOperatorDropdown(); $event.stopPropagation()"
+                        class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Ver lista de montacarguistas"
                       >
-                        <span class="material-symbols-outlined text-sm">close</span>
+                        <span class="material-symbols-outlined text-lg transition-transform" [class.rotate-180]="isOperatorDropdownOpen()">expand_more</span>
                       </button>
-                    } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
-                    }
+                    </div>
                   </div>
 
                   <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
@@ -1042,22 +1051,31 @@
                       [value]="rampSearchQuery()"
                       (input)="onRampInput($any($event.target).value)"
                       (focus)="isRampDropdownOpen.set(true)"
+                      (click)="isRampDropdownOpen.set(true)"
                       placeholder="Seleccionar rampa..."
-                      class="fg-input font-bold w-full pr-8"
+                      class="fg-input font-bold w-full pr-14 cursor-pointer"
                       autocomplete="off"
                     />
-                    @if (rampSearchQuery()) {
+                    <div class="absolute right-1.5 flex items-center gap-0.5">
+                      @if (rampSearchQuery()) {
+                        <button
+                          type="button"
+                          (click)="clearRampSelection(); $event.stopPropagation()"
+                          class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                          title="Limpiar rampa seleccionada"
+                        >
+                          <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      }
                       <button
                         type="button"
-                        (click)="clearRampSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
-                        title="Limpiar rampa seleccionada"
+                        (click)="toggleRampDropdown(); $event.stopPropagation()"
+                        class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Ver lista de rampas"
                       >
-                        <span class="material-symbols-outlined text-sm">close</span>
+                        <span class="material-symbols-outlined text-lg transition-transform" [class.rotate-180]="isRampDropdownOpen()">expand_more</span>
                       </button>
-                    } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">meeting_room</span>
-                    }
+                    </div>
                   </div>
 
                   <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
@@ -1124,22 +1142,31 @@
                       [value]="supplierSearchQuery()"
                       (input)="onSupplierInput($any($event.target).value)"
                       (focus)="isSupplierDropdownOpen.set(true)"
-                      placeholder="Buscar proveedor..."
-                      class="fg-input font-bold w-full pr-8"
+                      (click)="isSupplierDropdownOpen.set(true)"
+                      placeholder="Seleccionar o escribir proveedor..."
+                      class="fg-input font-bold w-full pr-14 cursor-pointer"
                       autocomplete="off"
                     />
-                    @if (supplierSearchQuery()) {
+                    <div class="absolute right-1.5 flex items-center gap-0.5">
+                      @if (supplierSearchQuery()) {
+                        <button
+                          type="button"
+                          (click)="clearSupplierSelection(); $event.stopPropagation()"
+                          class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                          title="Limpiar proveedor seleccionado"
+                        >
+                          <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      }
                       <button
                         type="button"
-                        (click)="clearSupplierSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
-                        title="Limpiar proveedor seleccionado"
+                        (click)="toggleSupplierDropdown(); $event.stopPropagation()"
+                        class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Ver lista de proveedores"
                       >
-                        <span class="material-symbols-outlined text-sm">close</span>
+                        <span class="material-symbols-outlined text-lg transition-transform" [class.rotate-180]="isSupplierDropdownOpen()">expand_more</span>
                       </button>
-                    } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
-                    }
+                    </div>
                   </div>
 
                   <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
@@ -1267,22 +1294,31 @@
                       [value]="skuSearchQuery()"
                       (input)="onSkuInput($any($event.target).value)"
                       (focus)="isSkuDropdownOpen.set(true)"
-                      placeholder="Escribe dígitos del SKU (ej. 4321)..."
-                      class="fg-input font-bold w-full pr-8"
+                      (click)="isSkuDropdownOpen.set(true)"
+                      placeholder="Seleccionar o escribir SKU (ej. 8500297)..."
+                      class="fg-input font-bold w-full pr-14 cursor-pointer"
                       autocomplete="off"
                     />
-                    @if (skuSearchQuery()) {
+                    <div class="absolute right-1.5 flex items-center gap-0.5">
+                      @if (skuSearchQuery()) {
+                        <button
+                          type="button"
+                          (click)="clearSkuSelection(); $event.stopPropagation()"
+                          class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                          title="Limpiar SKU seleccionado"
+                        >
+                          <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      }
                       <button
                         type="button"
-                        (click)="clearSkuSelection()"
-                        class="absolute right-2 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
-                        title="Limpiar SKU seleccionado"
+                        (click)="toggleSkuDropdown(); $event.stopPropagation()"
+                        class="text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+                        title="Ver catálogo de SKUs"
                       >
-                        <span class="material-symbols-outlined text-sm">close</span>
+                        <span class="material-symbols-outlined text-lg transition-transform" [class.rotate-180]="isSkuDropdownOpen()">expand_more</span>
                       </button>
-                    } @else {
-                      <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">search</span>
-                    }
+                    </div>
                   </div>
 
                   <!-- Backdrop transparente para cerrar el dropdown al hacer clic fuera -->
@@ -1932,10 +1968,10 @@
               >
                 @if (isAssigning()) {
                   <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                  <span>Asignando y Despachando...</span>
+                  <span>Enviando Asignación a Caseta...</span>
                 } @else {
-                  <span class="material-symbols-outlined text-base">send</span>
-                  <span>Asignar a Montacarguista y Bloquear Andén</span>
+                  <span class="material-symbols-outlined text-base">forward_to_inbox</span>
+                  <span>Mandar Asignación de Rampa a Caseta de Seguridad</span>
                 }
               </button>
             </div>
@@ -3773,11 +3809,11 @@
     </div>
   }
 
-  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS (22 PALLETS) -->
+  <!-- MODAL: SELECTOR VISUAL DE BAHÍAS -->
   @if (showBaySelectorModal()) {
     <fg-bay-occupancy-selector
       [selectedLocationCode]="isReallocatingMode() ? reallocatingSourceBay() : altaForm.value.storageLocation"
-      [dialogTitle]="isReallocatingMode() ? 'Reubicación de Buffer Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías (Estándar 22 Pallets)'"
+      [dialogTitle]="isReallocatingMode() ? 'Reubicación de Buffer Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías'"
       (locationSelected)="onBaySelected($event)"
       (closed)="closeBaySelectorModal()"
     ></fg-bay-occupancy-selector>

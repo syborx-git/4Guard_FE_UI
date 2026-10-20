@@ -37,6 +37,20 @@ export const authGuard: CanActivateFn = (route, state) => {
   }
 
   // ─ CASO 2 / 3: Sesión expirada o inexistente ────────────────────────────────
+  // Detección de dispositivo móvil (smartphone o tablet de chofer en caseta):
+  // Los choferes jamás deben ver la pantalla de login institucional del WMS.
+  const isMobile = typeof navigator !== 'undefined' && 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const queryParams: Record<string, string> = {};
+    if (searchParams) {
+      searchParams.forEach((v, k) => { queryParams[k] = v; });
+    }
+    return router.createUrlTree(['/carrier-checkin'], { queryParams });
+  }
+
   const shouldSaveReturnUrl =
     requestedUrl &&
     !EXCLUDED_RETURN_PATHS.some((p) => requestedUrl.startsWith(p));
@@ -55,7 +69,7 @@ export const authGuard: CanActivateFn = (route, state) => {
     return false;
   }
 
-  // Sin sesión: redirigir directamente al login.
+  // Sin sesión en escritorio: redirigir directamente al login.
   return router.createUrlTree(['/login']);
 };
 

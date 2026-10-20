@@ -24,8 +24,9 @@ import {
   ReturnDetectionResponse,
   ExpectedReturnPalletDto,
   VerifyPalletResponse,
-  VerifyPalletRequest,
   LocationStockInfo,
+  ProductSkuItem,
+  STANDARD_PRODUCTS,
 } from '../../models/warehouse-movements.models';
 import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
@@ -457,11 +458,17 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const rec = this.selectedReception();
     if (!rec) return { bayCode: 'N/A', totalCapacity: 22, currentThisRec: 0, otherPallets: 0, availableCupo: 22 };
     const bayCode = rec.storageLocation || (rec as any).storageLocationCode || 'POS-A-001';
+    const clean = bayCode.trim().toUpperCase();
     const live = this.movementsService.getBayLiveOccupancy(bayCode);
     const thisRecPallets = rec.pallets?.length || 0;
     const totalStoredInBay = live ? live.totalPallets : thisRecPallets;
     const otherPallets = Math.max(0, totalStoredInBay - thisRecPallets);
-    const totalCapacity = 22;
+
+    const locMap = this.movementsService.locations();
+    const loc = locMap[clean] || 
+                (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
+                (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
+    const totalCapacity = this.movementsService.resolveBayCapacity(loc);
     const availableCupo = Math.max(0, totalCapacity - totalStoredInBay);
     return {
       bayCode,
@@ -548,7 +555,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   suppliers = this.movementsService.suppliers;
 
-  products = signal<{ id: string; code: string; name: string; defaultPieces: number }[]>([]);
+  products = signal<ProductSkuItem[]>(STANDARD_PRODUCTS);
 
   // ── AUTOCOMPLETE PREDICTIVO DE PRODUCTO (SKU) ──
   skuSearchQuery = signal<string>('');
@@ -2102,15 +2109,14 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.isAssigning.set(false);
           this.selectedReception.set(updated);
           this.patchAltaFormWithReception(updated);
-          this.loadAuditLogs(updated.folio);
-          this.toast.success(`¡Folio #${updated.folio} asignado a Rampa ${updated.checkIn.rampNumber} y Montacarguista ${updated.checkIn.forkliftOperator}! Notificación enviada a la terminal.`);
+          this.toast.success(`¡Folio #${updated.folio} asignado a Rampa ${updated.checkIn.rampNumber}! Asignación enviada a Caseta de Seguridad.`);
 
           // Despachar alerta en vivo a Caseta de Seguridad
           const rNum = updated.checkIn.rampNumber;
           const rLabel = rNum ? `R-${String(rNum).padStart(2, '0')}` : 'Andén';
           this.smartNotification.dispatch({
             category: 'SECURITY',
-            title: '🎯 Rampa Asignada por Almacén',
+            title: '🎯 Rampa Asignada por Operaciones',
             message: `Rampa ${rLabel} asignada para Folio #${updated.folio} (${updated.checkIn.client || 'Cliente'}) — Chofer: ${updated.checkIn.driverName || 'Transportista'} (Placas: ${updated.checkIn.tractorPlates})`,
             referenceFolio: updated.folio,
             route: '/security',
@@ -3234,6 +3240,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
       });
   }
 
+  toggleSkuDropdown(): void {
+    this.isSkuDropdownOpen.update((v) => !v);
+  }
+
   onSkuInput(value: string): void {
     this.skuSearchQuery.set(value);
     this.isSkuDropdownOpen.set(true);
@@ -3247,11 +3257,20 @@ export class ReceivingSubmoduleComponent implements OnInit {
       return;
     }
 
-    const exact = this.products().find((p) => p.code === val || p.id === val);
+    const exact = this.products().find((p) => p.code.toLowerCase() === val.toLowerCase() || p.id.toLowerCase() === val.toLowerCase());
     if (exact) {
       this.altaForm.patchValue({
         productId: exact.code || exact.id,
         productName: exact.name,
+      });
+      if (exact.defaultPieces && (!this.altaForm.get('piecesPerPallet')?.value || this.altaForm.get('piecesPerPallet')?.value === 0)) {
+        this.altaForm.patchValue({ piecesPerPallet: exact.defaultPieces });
+      }
+    } else {
+      // Permite entrada directa manual de cualquier SKU
+      this.altaForm.patchValue({
+        productId: val,
+        productName: `Producto SKU ${val}`,
       });
     }
   }
@@ -3261,6 +3280,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
       productId: prod.code || prod.id,
       productName: prod.name,
     });
+    if (prod.defaultPieces && (!this.altaForm.get('piecesPerPallet')?.value || this.altaForm.get('piecesPerPallet')?.value === 0)) {
+      this.altaForm.patchValue({ piecesPerPallet: prod.defaultPieces });
+    }
     this.skuSearchQuery.set(`${prod.code} - ${prod.name}`);
     this.isSkuDropdownOpen.set(false);
   }
@@ -3285,6 +3307,18 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }
   }
 
+  toggleOperatorDropdown(): void {
+    this.isOperatorDropdownOpen.update((v) => !v);
+  }
+
+  toggleSupplierDropdown(): void {
+    this.isSupplierDropdownOpen.update((v) => !v);
+  }
+
+  toggleRampDropdown(): void {
+    this.isRampDropdownOpen.update((v) => !v);
+  }
+
   // ── MANEJADORES DE AUTOCOMPLETE MONTACARGUISTA ──
   onOperatorInput(value: string): void {
     this.operatorSearchQuery.set(value);
@@ -3299,9 +3333,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const exact = this.forkliftOperators().find(
       (op) => op.name.toLowerCase() === val.toLowerCase() || op.code.toLowerCase() === val.toLowerCase()
     );
-    if (exact) {
-      this.altaForm.patchValue({ forkliftOperator: exact.name });
-    }
+    this.altaForm.patchValue({ forkliftOperator: exact ? exact.name : val });
   }
 
   selectForkliftOperator(op: { code: string; name: string }): void {
@@ -3330,9 +3362,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const exact = this.suppliers().find(
       (s) => s.name.toLowerCase() === val.toLowerCase() || s.code.toLowerCase() === val.toLowerCase()
     );
-    if (exact) {
-      this.altaForm.patchValue({ supplierName: exact.name });
-    }
+    this.altaForm.patchValue({ supplierName: exact ? exact.name : val });
   }
 
   selectSupplier(sup: { code: string; name: string }): void {

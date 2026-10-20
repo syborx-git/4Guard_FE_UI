@@ -250,12 +250,15 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     const available      = positions.filter(p => p.status === 'AVAILABLE' && (p.currentTarimas === 0 || p.currentTarimas == null)).length;
     const blocked        = positions.filter(p => p.status === 'BLOCKED').length;
 
+    const fixedOccupiedTarimas = fixedPos.reduce((acc, p) => acc + (p.currentTarimas || 0), 0);
+    const tempOccupiedTarimas  = tempPos.reduce((acc, p) => acc + (p.currentTarimas || 0), 0);
+
     const fixedCapacity  = fixedPos.reduce((acc, p) => acc + (p.capacityTarimas || 22), 0) || (fixedCount * 22);
     const tempCapacity   = tempPos.reduce((acc, p) => acc + (p.capacityTarimas || 22), 0) || (tempCount * 22);
     const totalCapacity  = fixedCapacity + tempCapacity;
 
-    const nominalOccupancyPct = fixedCapacity > 0 ? Math.min(100, Math.round(((fixedOccupied * 22) / fixedCapacity) * 100)) : 0;
-    const overflowPct = fixedCapacity > 0 ? Math.round(((tempOccupied * 22) / fixedCapacity) * 100) : 0;
+    const nominalOccupancyPct = fixedCapacity > 0 ? Math.min(100, Math.round((fixedOccupiedTarimas / fixedCapacity) * 100)) : 0;
+    const overflowPct = fixedCapacity > 0 ? Math.round((tempOccupiedTarimas / fixedCapacity) * 100) : 0;
 
     return {
       total,
@@ -1052,7 +1055,15 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     const secId = defaultSecId || this.selectedSection()?.id || (this.sections().length > 0 ? this.sections()[0].id : '');
     this.newPosSectionId.set(secId);
     this.newPosCategory.set('FIXED_STORAGE');
-    this.newPosCapacity.set(22);
+
+    const sec = this.sections().find(s => s.id === secId || s.code === secId);
+    let defaultCap = 22;
+    if (sec?.factorEstiba) {
+      const match = sec.factorEstiba.match(/\d+/);
+      if (match) defaultCap = parseInt(match[0], 10);
+    }
+    this.newPosCapacity.set(defaultCap);
+
     this.newPosAisle.set('01');
     this.newPosRack.set('01');
     this.newPosLevel.set(1);
@@ -1168,7 +1179,13 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected enterEditPositionMode(): void {
     const pos = this.inspectedPosition();
     if (!pos) return;
-    this.editPosCapacity.set(pos.capacityTarimas || 22);
+    const sec = this.sections().find(s => s.id === pos.sectionId || s.name === pos.sectionName);
+    let defaultCap = 22;
+    if (sec?.factorEstiba) {
+      const match = sec.factorEstiba.match(/\d+/);
+      if (match) defaultCap = parseInt(match[0], 10);
+    }
+    this.editPosCapacity.set(pos.capacityTarimas || defaultCap);
     this.editPosCategory.set(pos.category || 'FIXED_STORAGE');
     this.editPosSku.set(pos.skuDescription || '');
     this.isEditPositionMode.set(true);

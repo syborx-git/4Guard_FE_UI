@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { WarehouseMovementsApiService } from '../../warehouse-movements/services/warehouse-movements-api.service';
-import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
+
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'fg-carrier-checkin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   templateUrl: './carrier-checkin.component.html',
   styleUrl: './carrier-checkin.component.css'
 })
@@ -16,7 +17,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(WarehouseMovementsApiService);
-  private readonly movementsService = inject(WarehouseMovementsService);
 
   @ViewChild('signatureCanvas') signatureCanvasRef?: ElementRef<HTMLCanvasElement>;
 
@@ -162,11 +162,35 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.token.set(qToken.trim().toUpperCase());
         this.loadPassData(this.token());
       } else {
-        // Modo directo / QR local
-        this.token.set('PASS-LOCAL-' + Date.now().toString().slice(-4));
+        // Generar folio oficial para el nuevo registro de auto-ingreso
+        const randomFolio = Math.floor(100000 + Math.random() * 900000);
+        const autoToken = 'PASS-4G-' + randomFolio;
+        this.token.set(autoToken);
         this.isLoadingPass.set(false);
+
+        // Notificar de inmediato a Caseta que un chofer abrió el formulario ("QR esperando captura")
+        this.api.submitPublicDriverCheckin(autoToken, {
+          status: 'PENDING_DRIVER',
+          organizationId: this.organizationId(),
+          branchId: this.branchId(),
+          operationType: 'DESCARGA',
+          driverName: '',
+          nombreOperador: ''
+        }).subscribe({ error: () => {} });
       }
     });
+  }
+
+  protected switchToFormView(): void {
+    this.submitSuccess.set(false);
+  }
+
+  protected switchToPassView(): void {
+    this.submitSuccess.set(true);
+  }
+
+  protected populateDemoPassIfEmpty(): void {
+    // No-op: los datos deben ser capturados limpiamente por el operador
   }
 
   protected loadCatalogs(): void {
@@ -328,6 +352,10 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.isLoadingPass.set(false);
         if (pass) {
           this.applyPassDataToForm(pass);
+          const st = String(pass.status || '').toUpperCase();
+          if (st === 'SUBMITTED' || st === 'ACTIVE' || st === 'IN_YARD' || st === 'IN_DOCK' || st === 'CALL_TO_DOCK' || st === 'COMPLETED' || pass.submittedAt) {
+            this.submitSuccess.set(true);
+          }
         }
       },
       error: () => {
@@ -684,7 +712,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       sealNumbers: seals,
       observations: f.observaciones || 'Registro completado por chofer vía smartphone',
       driverSignature: sigData || 'FIRMA_DIGITAL_AUTORIZADA_CHOFER',
-      checklistData: null
+      checklistData: null,
+      status: 'SUBMITTED'
     };
 
     const tokenToSend = this.token() || 'PASS-DEMO';
@@ -694,7 +723,6 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       next: () => {
         this.isSubmitting.set(false);
         this.submitSuccess.set(true);
-        this.movementsService.reloadReceptions();
       },
       error: (err) => {
         this.isSubmitting.set(false);
@@ -702,5 +730,27 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.submitError.set(msg);
       }
     });
+  }
+
+  protected getQrCodeUrl(): string {
+    const val = this.token() || 'PASS-4G-OFICIAL';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=2&ecc=H&data=${encodeURIComponent(val)}`;
+  }
+
+  protected sharePassViaWhatsApp(): void {
+    const f = this.checkInForm.value;
+    const token = this.token();
+    const op = f.operacion || 'DESCARGA';
+    const text = `*4GUARD WMS — Pase Digital de Acceso*\n` +
+      `*Pase Folio:* ${token}\n` +
+      `*Operación:* ${op}\n` +
+      `*Chofer:* ${f.nombreOperador}\n` +
+      `*Transportista:* ${f.carrierLine}\n` +
+      `*Placas Tracto:* ${f.placasTracto || '-'}\n` +
+      `*Placas Caja:* ${f.placasCaja || '-'}\n` +
+      `*Documento:* ${op === 'CARGA' ? (f.noCartaPorte || '-') : (f.remision || '-')}\n\n` +
+      `Presenta este pase QR en la caseta de vigilancia para acceso inmediato.`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   }
 }

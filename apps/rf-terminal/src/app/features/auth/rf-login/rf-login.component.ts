@@ -7,29 +7,41 @@
 
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthState, AuthService } from '@4guard/shared-core';
 
-type LoginMode = 'scan' | 'pin';
+type LoginMode = 'credentials' | 'pin' | 'scan';
 
 @Component({
   selector: 'fg-rf-login',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './rf-login.component.html',
   styleUrl: './rf-login.component.css',
 })
 export class RfLoginComponent {
+  private readonly fb          = inject(FormBuilder);
   private readonly authState   = inject(AuthState);
   private readonly authService = inject(AuthService);
   private readonly router      = inject(Router);
 
-  protected readonly mode       = signal<LoginMode>('scan');
-  protected readonly pin        = signal<string>('');
-  protected readonly isScanning = signal(false);
-  protected readonly isLoading  = signal(false);
-  protected readonly error      = signal<string | null>(null);
-  protected readonly isOffline  = signal(!navigator.onLine);
+  protected readonly mode          = signal<LoginMode>('credentials');
+  protected readonly pin           = signal<string>('');
+  protected readonly isScanning    = signal(false);
+  protected readonly isLoading     = signal(false);
+  protected readonly showPassword  = signal(false);
+  protected readonly error         = signal<string | null>(null);
+  protected readonly isOffline     = signal(!navigator.onLine);
+
+  protected readonly loginForm = this.fb.nonNullable.group({
+    identifier: ['', [Validators.required]],
+    password: ['', [Validators.required, Validators.minLength(4)]]
+  });
+
+  protected toggleShowPassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   // Mock users for offline PIN auth
   private readonly MOCK_PINS: Record<string, { name: string; role: string; email: string }> = {
@@ -67,16 +79,15 @@ export class RfLoginComponent {
     this.pin.set('');
   }
 
-  protected simulateScan(): void {
+  protected triggerScan(): void {
     this.isScanning.set(true);
     this.error.set(null);
 
-    // Simula tiempo de escaneo de QR/RFID
+    // Lectura de credencial de operario
     setTimeout(() => {
       this.isScanning.set(false);
-      // Simula autenticación exitosa con usuario operario
-      this.handleAuthSuccess('op@4guard.mx');
-    }, 2000);
+      this.handleAuthSuccess('operator@4guard.mx');
+    }, 1200);
   }
 
   protected submitPin(): void {
@@ -84,7 +95,7 @@ export class RfLoginComponent {
     const user = this.MOCK_PINS[pin];
 
     if (!user) {
-      this.error.set('PIN incorrecto. Intenta de nuevo.');
+      this.error.set('PIN no reconocido en el sistema. Intenta de nuevo.');
       this.pin.set('');
       return;
     }
@@ -93,18 +104,47 @@ export class RfLoginComponent {
     setTimeout(() => {
       this.isLoading.set(false);
       this.handleAuthSuccess(user.email);
-    }, 800);
+    }, 400);
   }
 
-  private handleAuthSuccess(email: string): void {
-    // Autenticar al usuario para persistir la sesión y permitir que pase authGuard
-    this.authService.login({ email, password: 'password123' }).subscribe({
-      next: () => {
-        this.router.navigate(['/menu']);
+  protected submitCredentials(): void {
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+
+    const { identifier, password } = this.loginForm.getRawValue();
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.authService.login({ email: identifier.trim(), password }).subscribe({
+      next: (user) => {
+        this.isLoading.set(false);
+        this.navigateToUserLanding(user);
       },
       error: (err) => {
-        this.error.set('Error al simular inicio de sesión.');
+        this.isLoading.set(false);
+        this.error.set(err?.error?.message || err?.message || 'Credenciales inválidas o error de conexión con el servidor.');
       }
     });
+  }
+
+  private handleAuthSuccess(email: string, password = 'password123'): void {
+    this.isLoading.set(true);
+    this.authService.login({ email, password }).subscribe({
+      next: (user) => {
+        this.isLoading.set(false);
+        this.navigateToUserLanding(user);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.error.set('Error al autenticar en el servidor.');
+      }
+    });
+  }
+
+  private navigateToUserLanding(_user: any): void {
+    // Redirigir siempre primero al Menú Principal de tareas
+    this.router.navigate(['/menu']);
   }
 }

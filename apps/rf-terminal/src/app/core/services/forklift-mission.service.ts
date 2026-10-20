@@ -12,6 +12,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { ToastService, UnitOfMeasure } from '@4guard/shared-core';
 import { AudioFeedbackService } from './audio-feedback.service';
 import { RfQualityStateService } from './rf-quality-state.service';
+import { WarehouseLayoutSyncService } from './warehouse-layout-sync.service';
 
 export type MovementType = 'INBOUND_UNLOAD' | 'INTERNAL_PUTAWAY' | 'OUTBOUND_DISPATCH';
 export type MissionPriority = 'URGENT' | 'HIGH' | 'NORMAL';
@@ -24,6 +25,9 @@ export type CockpitFilter = 'ALL' | 'INBOUND' | 'INTERNAL' | 'OUTBOUND' | 'URGEN
 export interface AuthorizedLotItem {
   lotNumber: string;
   expirationDate?: string;
+  elaborationDate?: string;
+  shelfLifePct?: number;
+  isCompliant?: boolean;
   isPrimary?: boolean;
 }
 
@@ -41,6 +45,10 @@ export interface InboundPalletItem {
   originalLotNumber?: string;
   isLotSwapped?: boolean;
   lotSwapReason?: string;
+  expirationDate?: string;
+  elaborationDate?: string;
+  shelfLifePct?: number;
+  isShelfLifeCompliant?: boolean;
   pieces: number;
   unit: string;
   weightKg: number;
@@ -265,7 +273,8 @@ const INITIAL_MISSIONS: ForkliftMission[] = [
 export class ForkliftMissionService {
   private readonly audioService = inject(AudioFeedbackService);
   private readonly qualityState = inject(RfQualityStateService);
-  private readonly toast = inject(ToastService);
+  private readonly toast        = inject(ToastService);
+  private readonly layoutSync   = inject(WarehouseLayoutSyncService);
 
   private eventSource: EventSource | null = null;
   private sseReconnectTimer: any = null;
@@ -525,7 +534,14 @@ export class ForkliftMissionService {
   /**
    * Agregar un Lote Nuevo / No Previsto en caliente (Intercambio de Lote)
    */
-  addCustomLot(missionId: string, customLot: string, reason?: string): void {
+  addCustomLot(
+    missionId: string,
+    customLot: string,
+    reason?: string,
+    expirationDate?: string,
+    elaborationDate?: string,
+    shelfLifeEval?: { remainingPct?: number; isCompliant?: boolean }
+  ): void {
     const cleanLot = (customLot || '').trim().toUpperCase();
     if (!cleanLot) return;
 
@@ -534,14 +550,21 @@ export class ForkliftMissionService {
         if (m.id !== missionId) return m;
         const lots = m.availableLots ? [...m.availableLots] : [];
         if (!lots.some((l) => l.lotNumber === cleanLot)) {
-          lots.push({ lotNumber: cleanLot, isPrimary: false });
+          lots.push({
+            lotNumber: cleanLot,
+            expirationDate,
+            elaborationDate,
+            shelfLifePct: shelfLifeEval?.remainingPct,
+            isCompliant: shelfLifeEval?.isCompliant,
+            isPrimary: false,
+          });
         }
         return {
           ...m,
           availableLots: lots,
           activeScanningLot: cleanLot,
           lotNumber: cleanLot,
-          notes: `${m.notes || ''} [Lote agregado en andén: ${cleanLot} (${reason || 'Intercambio'})]`,
+          notes: `${m.notes || ''} [Lote agregado en andén: ${cleanLot} (${reason || 'Intercambio'}${expirationDate ? ` • Cad: ${expirationDate}` : ''})]`,
         };
       })
     );
@@ -567,7 +590,16 @@ export class ForkliftMissionService {
   /**
    * Modificar el lote o piezas de una tarima ya escaneada previamente
    */
-  swapPalletLot(missionId: string, palletId: string, newLot: string, pieces: number, reason: string): boolean {
+  swapPalletLot(
+    missionId: string,
+    palletId: string,
+    newLot: string,
+    pieces: number,
+    reason: string,
+    expirationDate?: string,
+    elaborationDate?: string,
+    shelfLifeEval?: { remainingPct?: number; isCompliant?: boolean }
+  ): boolean {
     const cleanLot = (newLot || '').trim().toUpperCase();
     if (!cleanLot) return false;
 
@@ -588,6 +620,10 @@ export class ForkliftMissionService {
             isLotSwapped: cleanLot !== orig,
             lotSwapReason: reason || 'Intercambio manual de lote por montacarguista',
             pieces: pieces > 0 ? pieces : p.pieces,
+            expirationDate: expirationDate || p.expirationDate,
+            elaborationDate: elaborationDate || p.elaborationDate,
+            shelfLifePct: shelfLifeEval?.remainingPct ?? p.shelfLifePct,
+            isShelfLifeCompliant: shelfLifeEval?.isCompliant ?? p.isShelfLifeCompliant,
           };
         });
 
@@ -884,6 +920,19 @@ export class ForkliftMissionService {
     this.rawMissions.set(remaining);
     this.completedMissions.update((prev) => [discharged, ...prev]);
 
+    // Sincronizar ocupación de bahía en Layout 2D tras concluir descarga física
+    const targetBay = target.destBarcode || target.destinationLocation;
+    if (targetBay && !targetBay.startsWith('RAMPA') && !targetBay.includes('RAMPA-')) {
+      this.layoutSync.recordMovement(
+        targetBay,
+        finalPallets.length,
+        target.productName,
+        target.activeScanningLot || target.lotNumber,
+        target.folio,
+        target.assignedVehicle || 'Montacargas'
+      );
+    }
+
     if (remaining.length > 0) {
       const nextMission = remaining[0];
       this.activeMissionId.set(nextMission.id);
@@ -1004,6 +1053,19 @@ export class ForkliftMissionService {
     const remaining = list.filter((m) => m.id !== missionId);
     this.rawMissions.set(remaining);
     this.completedMissions.update((prev) => [completed, ...prev]);
+
+    // Sincronizar ocupación de bahía o rack en Layout 2D tras completar movimiento
+    const targetBay = target.destBarcode || target.destinationLocation;
+    if (targetBay && !targetBay.startsWith('RAMPA') && !targetBay.includes('RAMPA-')) {
+      this.layoutSync.recordMovement(
+        targetBay,
+        1,
+        target.productName,
+        target.lotNumber,
+        target.folio,
+        target.assignedVehicle || 'Montacargas'
+      );
+    }
 
     if (remaining.length > 0) {
       const nextMission = remaining[0];

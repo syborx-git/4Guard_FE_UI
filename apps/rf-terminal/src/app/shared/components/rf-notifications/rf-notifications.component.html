@@ -1,0 +1,329 @@
+<!-- ================================================================
+     RF Notifications — Centro Compacto de Eventos en Tiempo Real
+     Conforme a ADR-012, ADR-017 & ADR-018
+     ================================================================ -->
+<div class="rf-notif" (click)="$event.stopPropagation()">
+
+  <!-- ── 1. Botón / Badge Superior en Header ──────────────────────── -->
+  <button
+    type="button"
+    class="rf-notif__badge"
+    [class.rf-notif__badge--security]="isSecurityContext()"
+    [class.rf-notif__badge--pulse]="hasNewArrivalBeacon()"
+    [class.rf-notif__badge--active]="isOpen()"
+    (click)="toggleDropdown($event)"
+    [attr.aria-expanded]="isOpen()"
+    aria-haspopup="dialog"
+    title="Notificaciones Operativas">
+    
+    <div class="rf-notif__badge-icon-box">
+      <span class="material-symbols-outlined rf-notif__icon" [class.animate-pulse]="hasNewArrivalBeacon()">
+        @if (isSecurityContext()) {
+          {{ pendingRampAssignmentsCount() > 0 ? 'dock' : (readyForExitCount() > 0 ? 'logout' : 'how_to_reg') }}
+        } @else {
+          move_to_inbox
+        }
+      </span>
+    </div>
+
+    <div class="rf-notif__badge-content">
+      <span class="rf-notif__badge-text">
+        @if (isSecurityContext()) {
+          @if (readyForExitCount() > 0 && pendingDriverPassesCount() > 0) {
+            {{ readyForExitCount() }} SAL · {{ pendingDriverPassesCount() }} QR
+          } @else if (readyForExitCount() > 0) {
+            {{ readyForExitCount() }} {{ readyForExitCount() === 1 ? 'SALIDA' : 'SALIDAS' }}
+          } @else if (pendingRampAssignmentsCount() > 0) {
+            {{ pendingRampAssignmentsCount() }} {{ pendingRampAssignmentsCount() === 1 ? 'RAMPA' : 'RAMPAS' }}
+          } @else if (pendingDriverPassesCount() > 0) {
+            {{ pendingDriverPassesCount() }} {{ pendingDriverPassesCount() === 1 ? 'CHOFER QR' : 'CHOFERES QR' }}
+          } @else {
+            CASETA OK
+          }
+        } @else {
+          @if (pendingReceptionsCount() > 0) {
+            {{ pendingReceptionsCount() }} {{ pendingReceptionsCount() === 1 ? 'PRE-REC' : 'PRE-REC' }}
+          } @else {
+            ALMACÉN OK
+          }
+        }
+      </span>
+    </div>
+
+    @if (hasNewArrivalBeacon()) {
+      <span class="rf-notif__beacon" aria-hidden="true">
+        <span class="rf-notif__beacon-ping"></span>
+      </span>
+    }
+  </button>
+
+  <!-- ── 2. Panel Flotante Compacto ───────────────────────────────── -->
+  @if (isOpen()) {
+    <div class="rf-notif__dropdown animate-fade-up" role="dialog" aria-modal="true" aria-label="Notificaciones Operativas">
+      
+      <!-- Header Compacto -->
+      <div class="rf-notif__header">
+        <div class="rf-notif__header-left">
+          <div class="rf-notif__icon-wrap" [class.rf-notif__icon-wrap--security]="isSecurityContext()">
+            <span class="material-symbols-outlined text-[18px]">
+              {{ isSecurityContext() ? 'local_police' : 'move_to_inbox' }}
+            </span>
+          </div>
+          <div class="rf-notif__header-text">
+            <h4 class="rf-notif__title">
+              {{ isSecurityContext() ? 'Eventos de Caseta' : 'Recepciones en Espera' }}
+            </h4>
+            <p class="rf-notif__subtitle">
+              {{ isSecurityContext() ? 'Auto-registros y andenes en vivo' : 'Unidades en caseta para descarga' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="rf-notif__header-right">
+          <span class="rf-notif__live-pill">
+            <span class="rf-notif__live-dot"></span>
+            <span>VIVO</span>
+          </span>
+
+          <button
+            type="button"
+            class="rf-notif__icon-btn"
+            [class.rf-notif__icon-btn--muted]="isSoundMuted()"
+            (click)="toggleMute()"
+            [title]="isSoundMuted() ? 'Activar sonido amigable' : 'Silenciar sonido'">
+            <span class="material-symbols-outlined text-[16px]">
+              {{ isSoundMuted() ? 'volume_off' : 'volume_up' }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="rf-notif__close-btn"
+            (click)="closeDropdown()"
+            aria-label="Cerrar">
+            <span class="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pestañas de Filtro (si es Caseta) -->
+      @if (isSecurityContext() && totalVisibleCount() > 0) {
+        <div class="rf-notif__tabs-bar">
+          <button
+            type="button"
+            class="rf-notif__tab"
+            [class.rf-notif__tab--active]="selectedTab() === 'ALL'"
+            (click)="setTab('ALL')">
+            <span>Todos ({{ totalVisibleCount() }})</span>
+          </button>
+          @if (pendingDriverPassesCount() > 0) {
+            <button
+              type="button"
+              class="rf-notif__tab"
+              [class.rf-notif__tab--active]="selectedTab() === 'QR_PASSES'"
+              (click)="setTab('QR_PASSES')">
+              <span>QR ({{ pendingDriverPassesCount() }})</span>
+            </button>
+          }
+          @if (readyForExitCount() > 0) {
+            <button
+              type="button"
+              class="rf-notif__tab"
+              [class.rf-notif__tab--active]="selectedTab() === 'EXITS'"
+              (click)="setTab('EXITS')">
+              <span>Salidas ({{ readyForExitCount() }})</span>
+            </button>
+          }
+          @if (pendingRampAssignmentsCount() > 0) {
+            <button
+              type="button"
+              class="rf-notif__tab"
+              [class.rf-notif__tab--active]="selectedTab() === 'RAMPS'"
+              (click)="setTab('RAMPS')">
+              <span>Rampas ({{ pendingRampAssignmentsCount() }})</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Lista de Tarjetas Operativas Compactas -->
+      <div class="rf-notif__list">
+        @if (totalVisibleCount() === 0) {
+          <div class="rf-notif__empty">
+            <span class="material-symbols-outlined text-emerald-400 text-2xl">verified</span>
+            <div class="rf-notif__empty-title">Sin eventos pendientes</div>
+            <div class="rf-notif__empty-desc">Patio y caseta al día sin demoras.</div>
+          </div>
+        }
+
+        <!-- ── 1. CHOFERES QR (SUBMITTED) ── -->
+        @if (isSecurityContext() && (selectedTab() === 'ALL' || selectedTab() === 'QR_PASSES')) {
+          @for (pass of pendingDriverPasses(); track pass.token) {
+            <div class="rf-notif__card rf-notif__card--qr">
+              <div class="rf-notif__card-header">
+                <span class="rf-notif__chip rf-notif__chip--emerald">
+                  <span>📱</span>
+                  <span>CHOFER QR</span>
+                </span>
+                <span class="rf-notif__chip-folio font-mono">#{{ pass.token }}</span>
+                <span class="rf-notif__chip-time font-mono">{{ pass.time }}</span>
+              </div>
+
+              <div class="rf-notif__card-body">
+                <div class="rf-notif__card-title">{{ pass.driverName }}</div>
+                <div class="rf-notif__card-sub">
+                  <span>🚚 {{ pass.carrierName }}</span>
+                  <span class="rf-notif__dot">·</span>
+                  <span class="font-mono">{{ pass.tractorPlates }}</span>
+                </div>
+              </div>
+
+              <div class="rf-notif__card-footer">
+                <span class="rf-notif__tag font-mono">✓ F01 ENVIADO</span>
+                <button
+                  type="button"
+                  class="rf-notif__btn rf-notif__btn--emerald"
+                  (click)="loadDriverPassIntoGate(pass)"
+                  title="Cargar automáticamente datos en Formulario F01">
+                  <span class="material-symbols-outlined text-[14px]">download</span>
+                  <span>Cargar en Caseta</span>
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- ── 2. UNIDADES LISTAS PARA SALIDA (CHECK-OUT) ── -->
+        @if (isSecurityContext() && (selectedTab() === 'ALL' || selectedTab() === 'EXITS')) {
+          @for (exitPass of readyForExitPasses(); track exitPass.folio) {
+            <div class="rf-notif__card rf-notif__card--exit">
+              <div class="rf-notif__card-header">
+                <span class="rf-notif__chip rf-notif__chip--amber">
+                  <span>🏁</span>
+                  <span>LISTO SALIDA</span>
+                </span>
+                <span class="rf-notif__chip-folio font-mono">#{{ exitPass.folio }}</span>
+                <span class="rf-notif__chip-time font-mono">{{ exitPass.time }}</span>
+              </div>
+
+              <div class="rf-notif__card-body">
+                <div class="rf-notif__card-title">{{ exitPass.driverName }}</div>
+                <div class="rf-notif__card-sub">
+                  <span>🚚 {{ exitPass.carrierName }}</span>
+                  <span class="rf-notif__dot">·</span>
+                  <span class="font-mono">{{ exitPass.tractorPlates }}</span>
+                  @if (exitPass.rampCode) {
+                    <span class="rf-notif__dot">·</span>
+                    <span class="font-mono text-amber-400">{{ exitPass.rampCode }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="rf-notif__card-footer">
+                <span class="rf-notif__tag rf-notif__tag--amber font-mono">✓ MANIOBRA CONCLUIDA</span>
+                <button
+                  type="button"
+                  class="rf-notif__btn rf-notif__btn--amber"
+                  (click)="openCheckout(exitPass)">
+                  <span class="material-symbols-outlined text-[14px]">logout</span>
+                  <span>Check-Out</span>
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- ── 3. RAMPAS ASIGNADAS ── -->
+        @if (isSecurityContext() && (selectedTab() === 'ALL' || selectedTab() === 'RAMPS')) {
+          @for (ramp of pendingRampAssignments(); track ramp.folio) {
+            <div class="rf-notif__card rf-notif__card--ramp">
+              <div class="rf-notif__card-header">
+                <span class="rf-notif__chip rf-notif__chip--emerald">
+                  <span>🏢</span>
+                  <span>RAMPA {{ ramp.rampNumber }}</span>
+                </span>
+                <span class="rf-notif__chip-folio font-mono">#{{ ramp.folio }}</span>
+                <span class="rf-notif__chip-time font-mono">{{ ramp.time }}</span>
+              </div>
+
+              <div class="rf-notif__card-body">
+                <div class="rf-notif__card-title">{{ ramp.client }}</div>
+                <div class="rf-notif__card-sub">
+                  <span>👤 {{ ramp.driverName }}</span>
+                  <span class="rf-notif__dot">·</span>
+                  <span class="font-mono">{{ ramp.tractorPlates }}</span>
+                </div>
+              </div>
+
+              <div class="rf-notif__card-footer">
+                <span class="rf-notif__tag font-mono text-emerald-400">ANDÉN ASIGNADO</span>
+                <button
+                  type="button"
+                  class="rf-notif__btn rf-notif__btn--emerald"
+                  (click)="openRampAccess(ramp)">
+                  <span>Dar Acceso</span>
+                  <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- ── 4. PRE-RECEPCIONES (ALMACÉN / COCKPIT) ── -->
+        @if (!isSecurityContext()) {
+          @for (rec of pendingReceptions(); track rec.folio) {
+            <div class="rf-notif__card rf-notif__card--receiving">
+              <div class="rf-notif__card-header">
+                <span class="rf-notif__chip rf-notif__chip--amber">
+                  <span>📥</span>
+                  <span>RECEPCIÓN</span>
+                </span>
+                <span class="rf-notif__chip-folio font-mono">#{{ rec.folio }}</span>
+                <span class="rf-notif__chip-time font-mono">{{ rec.time }}</span>
+              </div>
+
+              <div class="rf-notif__card-body">
+                <div class="rf-notif__card-title">{{ rec.client }}</div>
+                <div class="rf-notif__card-sub">
+                  <span>🚚 {{ rec.carrier }}</span>
+                  @if (rec.rampNumber) {
+                    <span class="rf-notif__dot">·</span>
+                    <span class="font-mono text-amber-400">Rampa {{ rec.rampNumber }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="rf-notif__card-footer">
+                <span class="rf-notif__tag font-mono text-amber-400">EN CASETA</span>
+                <button
+                  type="button"
+                  class="rf-notif__btn rf-notif__btn--amber"
+                  (click)="openReceptionInCockpit(rec)">
+                  <span>Atender Folio</span>
+                  <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Footer Compacto de Navegación -->
+      <div class="rf-notif__footer">
+        @if (isSecurityContext()) {
+          <button type="button" class="rf-notif__footer-link" (click)="goToCockpit()">
+            <span class="material-symbols-outlined text-[14px]">forklift</span>
+            <span>Ver Cockpit de Almacén</span>
+          </button>
+        } @else {
+          <button type="button" class="rf-notif__footer-link" (click)="goToSecurityModule()">
+            <span class="material-symbols-outlined text-[14px]">local_police</span>
+            <span>Ver Caseta de Seguridad</span>
+          </button>
+        }
+      </div>
+
+    </div>
+  }
+
+</div>
