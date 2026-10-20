@@ -81,12 +81,63 @@ export class SmartNotificationService {
   // Pase seleccionado para ser cargado automáticamente en el formulario de Caseta
   public readonly requestedPassToLoad = signal<any | null>(null);
 
+  // Solicitud global para desplegar el modal de notificaciones operativas
+  public readonly isDropdownOpenRequested = signal<boolean>(false);
+
+  public openDropdown(): void {
+    this.isDropdownOpenRequested.set(true);
+  }
+
+  public clearDropdownOpenRequest(): void {
+    this.isDropdownOpenRequested.set(false);
+  }
+
   public requestLoadDriverPass(pass: any): void {
     this.requestedPassToLoad.set(pass);
   }
 
   public clearRequestedPassToLoad(): void {
     this.requestedPassToLoad.set(null);
+  }
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      if ('BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('4guard_wms_events');
+          bc.onmessage = (event) => {
+            if (event.data?.type === 'NOTIFICATION' && event.data.notification) {
+              const notif = event.data.notification;
+              if (!this._notifications().some((n) => n.id === notif.id)) {
+                this._notifications.update((list) => [notif, ...list.slice(0, 49)]);
+                if (this.isRelevantForCurrentUser(notif)) {
+                  this.latestNotification.set(notif);
+                  this.playChime(notif.severity);
+                }
+              }
+            }
+          };
+        } catch (_) {}
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === '4g_last_notification' && e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed?.notification) {
+              const notif = parsed.notification;
+              if (!this._notifications().some((n) => n.id === notif.id)) {
+                this._notifications.update((list) => [notif, ...list.slice(0, 49)]);
+                if (this.isRelevantForCurrentUser(notif)) {
+                  this.latestNotification.set(notif);
+                  this.playChime(notif.severity);
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      });
+    }
   }
 
   /**
