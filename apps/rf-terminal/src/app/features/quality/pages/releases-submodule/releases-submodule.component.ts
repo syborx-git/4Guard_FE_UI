@@ -76,7 +76,7 @@ export class RfReleasesSubmoduleComponent {
   }
 
   submitRelease(): void {
-    const userName = this.authState.userFullName() || 'Roberto Sánchez (Auditor RF)';
+    const userName = this.authState.userFullName() || 'Auditor de Calidad';
 
     this.qmState.createRelease({
       blockId: this.selectedBlockId(),

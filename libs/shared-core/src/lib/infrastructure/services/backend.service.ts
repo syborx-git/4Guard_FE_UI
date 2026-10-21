@@ -69,7 +69,7 @@ const INITIAL_DB = {
     }
   ],
   transfer_orders: [
-    { id: "TO-2024-001", orderNumber: "ORD-001", type: TransferOrderType.OUTBOUND, status: TransferOrderStatus.PENDING, priority: 1, clientId: "CLI-NESPRESSO", clientName: "Nespresso", branchId: "BR-MTY-01", assignedOperatorId: "u-op1", assignedOperatorName: "Roberto Sánchez", dueDate: "2026-06-25T18:00:00Z", startedAt: null, completedAt: null, clientOrderReference: "REF-NES-990", lines: [], notes: null, createdAt: "2026-06-22T08:00:00Z", updatedAt: "2026-06-22T08:00:00Z" }
+    { id: "TO-2024-001", orderNumber: "ORD-001", type: TransferOrderType.OUTBOUND, status: TransferOrderStatus.PENDING, priority: 1, clientId: "CLI-NESPRESSO", clientName: "Nespresso", branchId: "b73f0907-9fa5-4bdf-87db-2eb5e7683936", assignedOperatorId: "u-op1", assignedOperatorName: "Oficial Montacarguista", dueDate: "2026-06-25T18:00:00Z", startedAt: null, completedAt: null, clientOrderReference: "REF-NES-990", lines: [], notes: null, createdAt: "2026-06-22T08:00:00Z", updatedAt: "2026-06-22T08:00:00Z" }
   ]
 };
 

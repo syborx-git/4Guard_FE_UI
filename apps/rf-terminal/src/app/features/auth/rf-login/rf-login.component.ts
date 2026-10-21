@@ -1,8 +1,8 @@
 /**
  * @file rf-login.component.ts
  * @description P6 — Login RF (Acceso Rápido) [HU-002].
- * Botón masivo para QR/RFID. PIN numérico como alternativa.
- * Validación offline contra caché local.
+ * Botón masivo para QR/RFID. PIN numérico con código de operador.
+ * Autenticación real contra el backend (/api/v1/auth/login) y base de datos PostgreSQL.
  */
 
 import { Component, signal, inject } from '@angular/core';
@@ -13,13 +13,6 @@ import { AuthState, AuthService, UserRole } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
 
 type LoginMode = 'credentials' | 'pin' | 'scan';
-
-interface MockPinConfig {
-  name: string;
-  role: UserRole;
-  email: string;
-  landing: string;
-}
 
 @Component({
   selector: 'fg-rf-login',
@@ -35,13 +28,14 @@ export class RfLoginComponent {
   private readonly router      = inject(Router);
   protected readonly pwaService = inject(PwaService);
 
-  protected readonly mode          = signal<LoginMode>('credentials');
-  protected readonly pin           = signal<string>('');
-  protected readonly isScanning    = signal(false);
-  protected readonly isLoading     = signal(false);
-  protected readonly showPassword  = signal(false);
-  protected readonly error         = signal<string | null>(null);
-  protected readonly isOffline     = signal(!navigator.onLine);
+  protected readonly mode            = signal<LoginMode>('credentials');
+  protected readonly pin             = signal<string>('');
+  protected readonly operatorCode    = signal<string>('');
+  protected readonly isScanning      = signal(false);
+  protected readonly isLoading       = signal(false);
+  protected readonly showPassword    = signal(false);
+  protected readonly error           = signal<string | null>(null);
+  protected readonly isOffline       = signal(!navigator.onLine);
   protected readonly currentLiveTime = signal<string>(new Date().toLocaleTimeString('es-MX'));
 
   protected readonly loginForm = this.fb.nonNullable.group({
@@ -64,60 +58,14 @@ export class RfLoginComponent {
     await this.pwaService.promptInstall();
   }
 
-  // ─── Perfiles de Acceso Rápido / PIN Offline / Demo ─────────────────────────
-  private readonly MOCK_PINS: Record<string, MockPinConfig> = {
-    '1234': {
-      name: 'Roberto Sánchez (Montacarguista #07)',
-      role: UserRole.WAREHOUSE_OPERATOR,
-      email: 'montacarguista@4guard.mx',
-      landing: '/menu'
-    },
-    '9999': {
-      name: 'Carlos Mendoza (Guardia Caseta)',
-      role: UserRole.SECURITY_GUARD,
-      email: 'guard@4guard.mx',
-      landing: '/security'
-    },
-    '5678': {
-      name: 'Miguel Torres (Líder de Turno)',
-      role: UserRole.SHIFT_LEADER,
-      email: 'lider@4guard.mx',
-      landing: '/menu'
-    },
-    '0000': {
-      name: 'Dra. Elena Ramos (Calidad QM)',
-      role: UserRole.QM_INSPECTOR,
-      email: 'qm@4guard.mx',
-      landing: '/quality'
-    },
-  };
-
-  /** Acceso Directo 1-Clic: Perfil Genérico Montacarguista (#07) */
-  public loginAsForklift(): void {
-    this.isLoading.set(true);
+  protected setOperatorCode(val: string): void {
+    this.operatorCode.set(val ? val.toUpperCase() : '');
     this.error.set(null);
-    setTimeout(() => {
-      this.authState.switchRoleForTesting(
-        UserRole.WAREHOUSE_OPERATOR,
-        'Roberto Sánchez (Montacarguista #07)'
-      );
-      this.isLoading.set(false);
-      this.router.navigate(['/menu']);
-    }, 200);
   }
 
-  /** Acceso Directo 1-Clic: Perfil Guardia de Caseta */
-  public loginAsSecurityGuard(): void {
-    this.isLoading.set(true);
+  protected clearOperatorCode(): void {
+    this.operatorCode.set('');
     this.error.set(null);
-    setTimeout(() => {
-      this.authState.switchRoleForTesting(
-        UserRole.SECURITY_GUARD,
-        'Carlos Mendoza (Guardia Caseta)'
-      );
-      this.isLoading.set(false);
-      this.router.navigate(['/security']);
-    }, 200);
   }
 
   protected get pinDisplay(): string {
@@ -125,12 +73,13 @@ export class RfLoginComponent {
   }
 
   protected get canSubmitPin(): boolean {
-    return this.pin().length === 4;
+    return this.pin().length === 4 && this.operatorCode().trim().length > 0;
   }
 
   protected switchMode(m: LoginMode): void {
     this.mode.set(m);
     this.pin.set('');
+    this.operatorCode.set('');
     this.error.set(null);
   }
 
@@ -153,34 +102,43 @@ export class RfLoginComponent {
     this.isScanning.set(true);
     this.error.set(null);
 
-    // Lectura automática de gafete RFID / QR de Montacarguista
+    // Detección óptica de gafete / credencial RFID
     setTimeout(() => {
       this.isScanning.set(false);
-      this.loginAsForklift();
-    }, 900);
+      this.mode.set('pin');
+    }, 700);
   }
 
   protected submitPin(): void {
+    const code = this.operatorCode().trim().toUpperCase();
     const pin = this.pin();
-    const config = this.MOCK_PINS[pin];
 
-    if (!config) {
-      this.error.set('PIN no reconocido. Usa "1234" para Montacarguista o "9999" para Caseta.');
-      this.pin.set('');
+    if (!code) {
+      this.error.set('Por favor ingresa tu código de operador o gafete (ej. MC-001).');
+      return;
+    }
+
+    if (pin.length !== 4) {
+      this.error.set('El PIN debe contener exactamente 4 dígitos.');
       return;
     }
 
     this.isLoading.set(true);
-    this.authService.login({ email: config.email, password: 'password123' }).subscribe({
-      next: (_user) => {
+    this.error.set(null);
+
+    // Autenticación real contra backend WMS (/api/v1/auth/login)
+    this.authService.login({ email: code, password: pin }).subscribe({
+      next: (user) => {
         this.isLoading.set(false);
-        this.router.navigate([config.landing || '/menu']);
+        this.pin.set('');
+        this.operatorCode.set('');
+        this.navigateToUserLanding(user);
       },
-      error: () => {
-        // Fallback local resiliente para testing y modo offline
+      error: (err) => {
         this.isLoading.set(false);
-        this.authState.switchRoleForTesting(config.role, config.name);
-        this.router.navigate([config.landing || '/menu']);
+        this.pin.set('');
+        const msg = err?.error?.message || err?.message || 'Código de operador o PIN incorrecto. Verifica tus credenciales en el sistema.';
+        this.error.set(msg);
       }
     });
   }
@@ -195,35 +153,13 @@ export class RfLoginComponent {
     this.isLoading.set(true);
     this.error.set(null);
 
-    const lower = identifier.toLowerCase();
-    const userPrefix = lower.split('@')[0];
-    const isForklift = userPrefix.includes('montacarg') || userPrefix.includes('operad') || userPrefix.includes('fork') || userPrefix === 'op';
-    const isGuard = userPrefix.includes('guard') || userPrefix.includes('caseta') || userPrefix.includes('seguridad') || userPrefix.includes('vigilan');
-
-    this.authService.login({ email: identifier.trim(), password }).subscribe({
+    const cleanIdentifier = identifier.trim();
+    this.authService.login({ email: cleanIdentifier, password }).subscribe({
       next: (user) => {
         this.isLoading.set(false);
-        if (user.role === UserRole.SECURITY_GUARD || isGuard) {
-          this.router.navigate(['/security']);
-        } else {
-          this.router.navigate(['/menu']);
-        }
+        this.navigateToUserLanding(user);
       },
       error: (err) => {
-        // Si no responde el backend local o no existe el usuario, fallback resiliente
-        if (isForklift) {
-          this.isLoading.set(false);
-          this.authState.switchRoleForTesting(UserRole.WAREHOUSE_OPERATOR, 'Roberto Sánchez (Montacarguista #07)');
-          this.router.navigate(['/menu']);
-          return;
-        }
-        if (isGuard) {
-          this.isLoading.set(false);
-          this.authState.switchRoleForTesting(UserRole.SECURITY_GUARD, 'Carlos Mendoza (Guardia Caseta)');
-          this.router.navigate(['/security']);
-          return;
-        }
-
         this.isLoading.set(false);
         this.error.set(err?.error?.message || err?.message || 'Credenciales inválidas o error de conexión con el servidor.');
       }

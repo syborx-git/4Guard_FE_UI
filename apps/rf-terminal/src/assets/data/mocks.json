@@ -1,7 +1,7 @@
 {
   "offline_users": [
-    { "id": "u-005", "fullName": "Roberto Sánchez", "pin": "1234", "role": "ROLE_WAREHOUSE_OPERATOR", "branchId": "BR-MTY-01" },
-    { "id": "u-003", "fullName": "Miguel Torres", "pin": "5678", "role": "ROLE_DOCK_SUPERVISOR", "branchId": "BR-MTY-01" }
+    { "id": "u-005", "fullName": "Oficial Montacarguista", "pin": "1234", "role": "ROLE_WAREHOUSE_OPERATOR", "branchId": "b73f0907-9fa5-4bdf-87db-2eb5e7683936" },
+    { "id": "u-003", "fullName": "Miguel Torres", "pin": "5678", "role": "ROLE_DOCK_SUPERVISOR", "branchId": "b73f0907-9fa5-4bdf-87db-2eb5e7683936" }
   ],
   "active_receipts": [
     {

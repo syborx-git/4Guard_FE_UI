@@ -76,16 +76,16 @@ export class LoginService {
       fullName = 'Carlos Mendoza (Guardia Caseta)';
     } else if (userPrefix.includes('montacarg') || userPrefix.includes('operad') || userPrefix.includes('fork') || userPrefix.includes('op')) {
       role = UserRole.WAREHOUSE_OPERATOR;
-      fullName = 'Roberto Sánchez (Montacarguista)';
+      fullName = 'Oficial Montacarguista';
     } else {
       role = UserRole.WAREHOUSE_OPERATOR;
-      fullName = 'Roberto Sánchez (Montacarguista)';
+      fullName = 'Oficial Montacarguista';
     }
 
     // Asignar sucursal según el correo electrónico para simular la base de datos
     const isQueretaro = email.includes('qro') || email.includes('queretaro');
-    const branchId = isQueretaro ? 'BR-QRO-01' : 'BR-TOL-01';
-    const branchName = isQueretaro ? '4GUARD Querétaro' : '4GUARD Toluca';
+    const branchId = isQueretaro ? 'BR-QRO-01' : 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+    const branchName = isQueretaro ? '4GUARD Querétaro' : 'CENTRO DE DISTRIBUCION CDMX';
 
     const mockUser = {
       id: `u-${role.toLowerCase()}`,

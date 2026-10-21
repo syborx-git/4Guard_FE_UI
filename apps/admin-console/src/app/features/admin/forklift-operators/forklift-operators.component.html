@@ -387,7 +387,7 @@
               </div>
 
               @if (selectedOperator() && formMode() !== 'create') {
-                <span class="carrier-status-badge" style="background: rgba(197, 168, 107, 0.15); color: #9b7626; border-color: rgba(197, 168, 107, 0.3);">
+                <span class="carrier-status-badge" style="background: var(--gold-bg); color: var(--text-gold); border: 1px solid var(--gold-border);">
                   <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">badge</span>
                   {{ selectedOperator()?.jobTitle || 'Almacenista Montacargista' }}
                 </span>

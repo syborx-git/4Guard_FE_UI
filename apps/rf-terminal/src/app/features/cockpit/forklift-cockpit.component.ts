@@ -135,7 +135,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly scanFeedback = this.missionService.scanFeedback;
 
   protected readonly operatorName = computed(() => {
-    return this.authState.userFullName() || this.authState.user()?.fullName || 'Roberto Sánchez';
+    return this.authState.userFullName() || this.authState.user()?.fullName || 'Oficial Montacarguista';
   });
 
   /** Lista dinámica de tarimas escaneadas en la descarga */

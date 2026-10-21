@@ -818,12 +818,19 @@
   align-items: center;
   gap: 1.1rem;
   padding: 0.9rem 1.25rem;
-  background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(248, 250, 252, 0.9));
-  border: 1px solid rgba(197, 168, 107, 0.32);
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(23, 32, 51, 0.04);
+  box-shadow: var(--shadow-card);
   margin-bottom: 1.25rem;
   backdrop-filter: blur(10px);
+}
+
+:host-context(.theme-dark) .user-preview-card,
+:host-context(.dark) .user-preview-card {
+  background: linear-gradient(135deg, rgba(23, 35, 52, 0.90), rgba(15, 23, 38, 0.96));
+  border: 1px solid rgba(197, 168, 107, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
 }
 
 .user-preview-card__avatar {
@@ -873,6 +880,29 @@
   gap: 0.5rem;
   margin-top: 0.15rem;
 }
+
+:host-context(.theme-dark) .user-preview-card .user-item__username,
+:host-context(.dark) .user-preview-card .user-item__username {
+  color: var(--gold-light, #e0c87a);
+}
+
+:host-context(.theme-dark) .user-preview-card .user-item__email,
+:host-context(.dark) .user-preview-card .user-item__email {
+  color: var(--text-secondary);
+}
+
+:host-context(.theme-dark) .user-preview-card .user-item__branch,
+:host-context(.dark) .user-preview-card .user-item__branch {
+  color: var(--text-muted);
+}
+
+:host-context(.theme-dark) .user-role-badge--preview,
+:host-context(.dark) .user-role-badge--preview {
+  background: rgba(208, 175, 103, 0.14);
+  color: #dfbf75;
+  border: 1px solid rgba(208, 175, 103, 0.32);
+}
+
 
 /* ── ESTADOS DE LISTA ── */
 .users-state {
