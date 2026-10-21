@@ -534,8 +534,8 @@ export class BayOccupancySelectorComponent implements OnInit {
     }
 
     let category: BayCategory = p.category || 'FIXED_STORAGE';
-    if (!p.category) {
-      if (p.code.includes('-T') || p.code.includes('TMP')) {
+    if (!p.category || p.category === 'FIXED_STORAGE') {
+      if (p.code.includes('-T') || p.code.includes('TMP') || p.code.startsWith('STAGING') || p.code.includes('BUFFER')) {
         category = 'TEMPORARY_BUFFER';
       } else if (p.code.includes('-PRE') || p.code.includes('PRECARGA') || p.code.includes('PRE')) {
         category = 'PRELOAD_STAGING';

@@ -542,9 +542,37 @@ export class WarehouseMovementsService {
   }
 
   // Bahías Ocupadas y Disponibles (Computadas)
-  readonly occupiedLocations = computed(() =>
-    Object.values(this.locationsSignal()).filter((loc) => loc.totalPallets > 0)
-  );
+  readonly occupiedLocations = computed(() => {
+    const map: Record<string, LocationStockInfo> = { ...this.locationsSignal() };
+
+    // 1. Incorporar posiciones con inventario en localStorage (e.g. STAGING-R01..R12 o bahías simuladas)
+    try {
+      const simRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_simulated_bay_positions') : null;
+      if (simRaw) {
+        const simMap = JSON.parse(simRaw);
+        for (const [code, simBay] of Object.entries<any>(simMap)) {
+          const cleanCode = code.toUpperCase().trim();
+          if (simBay && (simBay.currentTarimas > 0 || (simBay.tarimas && simBay.tarimas > 0))) {
+            if (!map[cleanCode] || map[cleanCode].totalPallets === 0) {
+              map[cleanCode] = this.getLocationInfo(cleanCode);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Incorporar bahías temporales de andenes activos según recepciones
+    for (const ramp of this.rampOccupancyStatus()) {
+      if (ramp.status === 'OCCUPIED_INBOUND') {
+        const stagingCode = `STAGING-R${ramp.rampNumber.toString().padStart(2, '0')}`;
+        if (!map[stagingCode] || map[stagingCode].totalPallets === 0) {
+          map[stagingCode] = this.getLocationInfo(stagingCode);
+        }
+      }
+    }
+
+    return Object.values(map).filter((loc) => loc.totalPallets > 0);
+  });
 
   readonly availableLocations = computed(() =>
     Object.values(this.locationsSignal()).filter((loc) => loc.totalPallets === 0 && !loc.isBlocked)
@@ -3619,10 +3647,103 @@ export class WarehouseMovementsService {
   // Consulta estado de bahía (Ubicación)
   getLocationInfo(locationCode: string): LocationStockInfo {
     const locs = this.locationsSignal();
-    const code = locationCode.toUpperCase().trim();
+    const code = (locationCode || '').toUpperCase().trim();
+    if (locs[code] && locs[code].totalPallets > 0) {
+      return locs[code];
+    }
+
+    // 1. Consultar si existe en almacenamiento simulado (LocalStorage)
+    try {
+      const simRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_simulated_bay_positions') : null;
+      if (simRaw) {
+        const simMap = JSON.parse(simRaw);
+        const simBay = simMap[code] || simMap[code.replace(/^LOC-/, 'POS-')] || simMap[code.replace(/^POS-/, 'LOC-')];
+        const count = simBay ? Number(simBay.currentTarimas || simBay.tarimas || 0) : 0;
+        if (count > 0) {
+          const cap = simBay.capacityTarimas || 22;
+          const sku = simBay.skuDescription || 'Mercancía Inbound General';
+          const lot = simBay.batchNumber || 'LOT-2026-INB';
+          const isStaging = code.startsWith('STAGING');
+
+          const pallets: ReceptionPalletItem[] = Array.from({ length: count }, (_, i) => ({
+            id: `pal-${code}-${i + 1}`,
+            palletCode: `UA-${code}-${(i + 1).toString().padStart(2, '0')}`,
+            palletNumber: i + 1,
+            productId: 'SKU-' + (12500000 + i),
+            description: sku,
+            lotNumber: lot,
+            pieces: 48,
+            grossWeight: 450,
+            locationCode: code,
+            palletTypeId: 'MADERA_ESTANDAR',
+            palletTypeLabel: 'Madera Estándar',
+            supplierName: isStaging ? 'Descarga de Andén Inbound' : 'Nestlé / Purina México',
+            docNumber: 'REM-2026-INB',
+          }));
+
+          return {
+            locationCode: code,
+            warehouseName: isStaging ? 'Andenes & Zona de Pre-Almacén' : (locs[code]?.warehouseName || 'Bodega Central'),
+            zone: isStaging ? 'Buffer Temporal Andenes' : (locs[code]?.zone || 'Zona General'),
+            aisle: isStaging ? 'Corredor de Descarga' : (locs[code]?.aisle || 'Pasillo 01'),
+            rack: code,
+            level: isStaging ? 'Piso Andén' : (locs[code]?.level || 'Nivel 01'),
+            capacity: cap,
+            occupancy: count,
+            availableCapacity: Math.max(0, cap - count),
+            totalPallets: count,
+            totalPieces: count * 48,
+            pallets,
+          };
+        }
+      }
+    } catch (_) {}
+
+    // 2. Si es una bahía de staging vinculada a una rampa ocupada activa
+    if (code.startsWith('STAGING-R')) {
+      const rampNum = parseInt(code.replace('STAGING-R', ''), 10);
+      const activeRamp = this.rampOccupancyStatus().find(
+        (r) => r.rampNumber === rampNum && r.status === 'OCCUPIED_INBOUND'
+      );
+      if (activeRamp) {
+        const palletCount = 14;
+        const pallets: ReceptionPalletItem[] = Array.from({ length: palletCount }, (_, i) => ({
+          id: `pal-${code}-${i + 1}`,
+          palletCode: `UA-RAMP${rampNum}-${(i + 1).toString().padStart(2, '0')}`,
+          palletNumber: i + 1,
+          productId: 'SKU-INB-' + (1000 + i),
+          description: `Mercancía Remisión ${activeRamp.docNumber || 'S/N'} (${activeRamp.carrierName || 'Inbound'})`,
+          lotNumber: 'LOT-RAMP-2026',
+          pieces: 50,
+          grossWeight: 500,
+          locationCode: code,
+          palletTypeId: 'MADERA_ESTANDAR',
+          palletTypeLabel: 'Madera Estándar',
+          supplierName: activeRamp.carrierName || 'Transportista Inbound',
+          docNumber: activeRamp.docNumber || 'REM-INB',
+        }));
+
+        return {
+          locationCode: code,
+          warehouseName: 'Andenes & Zona de Pre-Almacén',
+          zone: 'Buffer Temporal Andenes',
+          aisle: 'Corredor de Descarga',
+          rack: code,
+          level: 'Piso Andén',
+          capacity: 22,
+          occupancy: palletCount,
+          availableCapacity: 8,
+          totalPallets: palletCount,
+          totalPieces: palletCount * 50,
+          pallets,
+        };
+      }
+    }
+
     if (locs[code]) {
       return locs[code];
     }
+
     return {
       locationCode: code,
       warehouseName: 'Bodega Central',
@@ -3750,6 +3871,36 @@ export class WarehouseMovementsService {
     };
 
     this.locationsSignal.set(locs);
+
+    // Sincronizar almacenamiento simulado (LocalStorage) si se involucró bahía de andén o simulada
+    try {
+      const simRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_simulated_bay_positions') : null;
+      if (simRaw) {
+        const simMap = JSON.parse(simRaw);
+        if (simMap[origin]) {
+          simMap[origin].currentTarimas = Math.max(0, (simMap[origin].currentTarimas || 0) - palletsToMove.length);
+          if (simMap[origin].currentTarimas === 0) {
+            simMap[origin].status = 'AVAILABLE';
+            simMap[origin].skuDescription = 'Posición Disponible (Desalojada)';
+          }
+        }
+        if (!simMap[destination]) {
+          simMap[destination] = {
+            code: destination,
+            currentTarimas: totalResultingPallets,
+            capacityTarimas: destCap,
+            skuDescription: palletsToMove[0]?.description || 'Mercancía Reubicada',
+            batchNumber: palletsToMove[0]?.lotNumber || 'LOT-2026-TR',
+            status: 'OCCUPIED',
+          };
+        } else {
+          simMap[destination].currentTarimas = (simMap[destination].currentTarimas || 0) + palletsToMove.length;
+          simMap[destination].status = 'OCCUPIED';
+        }
+        localStorage.setItem('4g_simulated_bay_positions', JSON.stringify(simMap));
+      }
+    } catch (_) {}
+
     this.transfersSignal.update((list) => [newTransfer, ...list]);
 
     // Actualizar lotes de inventario (inventoryBatchesSignal) reactivamente

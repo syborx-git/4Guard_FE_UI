@@ -19,6 +19,7 @@ import {
   WarehouseBay
 } from '../../models/warehouse-catalog.models';
 import { WarehouseSectionSetupModalComponent } from '../../components/warehouse-section-setup-modal/warehouse-section-setup-modal.component';
+import { WarehouseMovementsService } from '../../../warehouse-movements/services/warehouse-movements.service';
 
 export interface SvgBayItem {
   id: string;
@@ -67,6 +68,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   @ViewChild('blueprintContainer') blueprintContainerRef?: ElementRef<HTMLDivElement>;
 
   protected readonly layoutService = inject(WarehouseLayoutService);
+  protected readonly movementsService = inject(WarehouseMovementsService);
   private readonly ngZone = inject(NgZone);
   protected readonly Math = Math;
 
@@ -512,6 +514,7 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly svgBays = computed<SvgBayItem[]>(() => {
     const g = this.BAY_GEOMETRY;
     const allPositions = this.allPositions();
+    const simMap = this.layoutService.getSimulatedPositions();
     const result: SvgBayItem[] = [];
 
     for (const zone of this.zoneBayLayout()) {
@@ -523,33 +526,155 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
       for (const a of zone.aisles) {
         for (const slot of a.slots) {
-          const pos = zonePositions[posIdx] || null;
           posIdx++;
-          const alert = this.getPosAlert(pos);
-          result.push({
+          const candidateCode = `POS-${zoneCode}-${posIdx.toString().padStart(3, '0')}`;
+          const pos = zonePositions.find(p => p.code.toUpperCase() === candidateCode) || zonePositions[posIdx - 1] || null;
+          const codeKey = (pos?.code || candidateCode).toUpperCase();
+          const sim = simMap[codeKey];
+
+          const currentTarimas = sim?.currentTarimas !== undefined
+            ? sim.currentTarimas
+            : (pos?.currentTarimas || 0);
+
+          const status: PositionStatus = sim?.status
+            ? (sim.status as PositionStatus)
+            : (pos?.status || (currentTarimas > 0 ? 'OCCUPIED' : 'AVAILABLE'));
+
+          const skuDescription = sim?.skuDescription || pos?.skuDescription || 'Sin Material Asignado';
+          const batchNumber = sim?.batchNumber || pos?.batchNumber;
+
+          const bayItem: SvgBayItem = {
             id: pos?.id || `bay-${zoneCode}-${a.aisleCode}-${posIdx}`,
-            code: pos?.code || `POS-${zoneCode}-${posIdx.toString().padStart(3, '0')}`,
+            code: codeKey,
             sectionCode: zoneCode,
             sectionId: pos?.sectionId || `sec-${zoneCode.toLowerCase()}`,
             x: slot.x,
             y: slot.y,
             width: g.bayW,
             height: g.bayH,
-            status: pos?.status || 'AVAILABLE',
+            status,
             category: pos?.category || 'FIXED_STORAGE',
             aisle: a.aisleCode,
             rack: slot.rack,
             level: 1,
             capacityTarimas: pos?.capacityTarimas || 22,
-            currentTarimas: pos?.currentTarimas || 0,
-            skuDescription: pos?.skuDescription || 'Sin Material Asignado',
-            batchNumber: pos?.batchNumber,
-            rawPosition: pos || undefined,
-            alertType: alert.type,
-            alertMessage: alert.message
-          });
+            currentTarimas,
+            skuDescription,
+            batchNumber,
+            rawPosition: pos ? { ...pos, currentTarimas, status, skuDescription, batchNumber } : undefined,
+            alertType: 'NONE'
+          };
+          const alert = this.getPosAlert(bayItem.rawPosition || null);
+          bayItem.alertType = alert.type;
+          bayItem.alertMessage = alert.message;
+          result.push(bayItem);
         }
       }
+    }
+
+    // Helper para normalizar cualquier variante tipográfica o código de rampa
+    const normalizeRampKey = (code?: string | null): string => {
+      if (!code) return '';
+      let clean = code.trim().toUpperCase();
+      clean = clean.replace(/STATING/gi, 'STAGING').replace(/STAGIN/gi, 'STAGING');
+      clean = clean.replace(/R[O](\d)/gi, 'R0$1');
+      const m = clean.match(/(?:STAGING[-_ ]?|LOC[-_]RAMP[-_]?|RAMPA[-_ ]?|R[-_]?)0?(\d+)/i);
+      if (m && m[1]) {
+        const num = parseInt(m[1], 10);
+        if (num >= 1 && num <= 12) return `STAGING-R${String(num).padStart(2, '0')}`;
+      }
+      return clean;
+    };
+
+    // Bahías de Staging Temporal situadas con precisión en las cortinas/andenes de rampa (DXF)
+    const rampStagingCoords: Array<{ code: string; x: number; y: number; ramp: number; label: string }> = [
+      { code: 'STAGING-R01', x: 810, y: 785, ramp: 1, label: 'R-01' },
+      { code: 'STAGING-R02', x: 792, y: 785, ramp: 2, label: 'R-02' },
+      { code: 'STAGING-R03', x: 775, y: 785, ramp: 3, label: 'R-03' },
+      { code: 'STAGING-R04', x: 759, y: 785, ramp: 4, label: 'R-04' },
+      { code: 'STAGING-R05', x: 743, y: 785, ramp: 5, label: 'R-05' },
+      { code: 'STAGING-R06', x: 727, y: 785, ramp: 6, label: 'R-06' },
+      { code: 'STAGING-R07', x: 710, y: 785, ramp: 7, label: 'R-07' },
+      { code: 'STAGING-R08', x: 332, y: 825, ramp: 8, label: 'R-08' },
+      { code: 'STAGING-R09', x: 304, y: 825, ramp: 9, label: 'R-09' },
+      { code: 'STAGING-R10', x: 288, y: 825, ramp: 10, label: 'R-10' },
+      { code: 'STAGING-R11', x: 260, y: 825, ramp: 11, label: 'R-11' },
+      { code: 'STAGING-R12', x: 235, y: 825, ramp: 12, label: 'R-12' },
+    ];
+
+    const allReceptions = this.movementsService.receptions();
+
+    for (const r of rampStagingCoords) {
+      // 1. Buscar en simMap (posiciones simuladas en localStorage con normalización flexible)
+      let sim = simMap[r.code] || simMap[`STAGING-R${r.ramp}`];
+      if (!sim) {
+        const foundKey = Object.keys(simMap).find(k => normalizeRampKey(k) === r.code);
+        if (foundKey) sim = simMap[foundKey];
+      }
+
+      // 2. Buscar en recepciones activas en movementsService
+      const activeRec = allReceptions.find(rec => {
+        if (rec.status === 'CANCELLED') return false;
+        const normLoc = normalizeRampKey(rec.storageLocation || (rec as any).storageLocationCode);
+        if (normLoc === r.code) return true;
+        const rampNum = Number(rec.checkIn?.rampNumber || (rec as any).rampNumber);
+        if (rampNum === r.ramp) return true;
+        return false;
+      });
+
+      let currentTarimas = sim?.currentTarimas !== undefined ? sim.currentTarimas : 0;
+      let skuDesc = sim?.skuDescription;
+      let batchNum = sim?.batchNumber;
+      let lastMove = sim?.lastMovement;
+
+      if (activeRec) {
+        const recPallets = (activeRec.pallets?.length || (activeRec as any).totalPallets || (activeRec as any).checkIn?.palletsExpected || 14);
+        if (recPallets > currentTarimas) {
+          currentTarimas = recPallets;
+          skuDesc = activeRec.productName || (activeRec as any).skuName || (activeRec as any).checkIn?.productName || 'Mercancía en Descarga';
+          batchNum = activeRec.lotNumber || (activeRec as any).checkIn?.lotNumber || 'LOT-2026';
+          lastMove = `Descarga en progreso (${activeRec.folio || 'REC-WMS'})`;
+        }
+      }
+
+      const status: PositionStatus = (currentTarimas > 0) ? 'OCCUPIED' : 'AVAILABLE';
+
+      const stagingBay: SvgBayItem = {
+        id: `bay-${r.code.toLowerCase()}`,
+        code: r.code,
+        sectionCode: 'SEC-RAMP',
+        sectionId: 'sec-ramp',
+        x: r.x,
+        y: r.y,
+        width: 14,
+        height: 12,
+        status,
+        category: 'TEMPORARY_BUFFER',
+        aisle: 'ANDÉN',
+        rack: 'PISO',
+        level: 1,
+        capacityTarimas: 22,
+        currentTarimas,
+        skuDescription: skuDesc || `Buffer Temporal Rampa ${r.ramp}`,
+        batchNumber: batchNum || 'N/A',
+        rawPosition: {
+          id: `pos-${r.code.toLowerCase()}`,
+          positionNumber: 900 + r.ramp,
+          code: r.code,
+          sectionId: 'sec-ramp',
+          sectionName: `Andén Rampa ${r.ramp}`,
+          category: 'TEMPORARY_BUFFER',
+          skuDescription: skuDesc || `Buffer Temporal Rampa ${r.ramp}`,
+          status,
+          capacityTarimas: 22,
+          currentTarimas,
+          batchNumber: batchNum || 'N/A',
+          lastMovement: lastMove || 'Zona de descarga en andén'
+        },
+        alertType: currentTarimas > 0 ? 'WARNING' : 'NONE',
+        alertMessage: currentTarimas > 0 ? `Mercancía en Andén (${currentTarimas} T) - Requiere Traslado a Nave Fija` : undefined
+      };
+      result.push(stagingBay);
     }
 
     return result;
@@ -561,13 +686,16 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     if (bay.status === 'BLOCKED' || bay.alertType === 'CRITICAL') {
       return 'cad__bay-slot--heat-blocked';
     }
-    // 2. Buffer Temporal -> MORADO
+    // 2. Buffer Temporal -> MORADO ACTIVO si tiene tarimas, o vacante si está libre
     if (bay.category === 'TEMPORARY_BUFFER') {
-      return 'cad__bay-slot--heat-temp';
+      if (bay.sectionCode === 'SEC-RAMP' && bay.currentTarimas === 0) {
+        return 'cad__bay-slot--ramp-vacant';
+      }
+      return bay.currentTarimas > 0 ? 'cad__bay-slot--heat-temp' : 'cad__bay-slot--heat-vacant';
     }
-    // 3. Precarga / Staging -> DORADO
+    // 3. Precarga / Staging -> DORADO ACTIVO si tiene tarimas, o vacante si está libre
     if (bay.category === 'PRELOAD_STAGING') {
-      return 'cad__bay-slot--heat-preload';
+      return bay.currentTarimas > 0 ? 'cad__bay-slot--heat-preload' : 'cad__bay-slot--heat-vacant';
     }
     // 4. Ocupación Proporcional (Estándar Logístico WMS)
     const cap = bay.capacityTarimas || 22;
@@ -790,13 +918,43 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     this.isRadarCollapsed.update(v => !v);
   }
 
+  protected readonly totalActivePositionsCount = computed(() => {
+    return this.svgBays().length || 1702;
+  });
+
+  protected readonly totalOccupiedPositionsCount = computed(() => {
+    return this.svgBays().filter(b => b.currentTarimas > 0).length;
+  });
+
   protected getSectionOccupancyRate(sec: WarehouseSection): number {
+    const secCode = (sec.code || '').toUpperCase().trim();
+    const bays = this.svgBays().filter(b =>
+      (b.sectionCode || '').toUpperCase().trim() === secCode ||
+      b.code.startsWith(`POS-${secCode}-`)
+    );
+
+    if (this.isCleanMode()) {
+      if (!bays || bays.length === 0) return 0;
+      const totalOccupied = bays.reduce((acc, b) => acc + (b.currentTarimas || 0), 0);
+      const totalCap = bays.reduce((acc, b) => acc + (b.capacityTarimas || 22), 0) || (sec.capacidadTarimas || 1);
+      return totalCap > 0 ? Math.min(100, Math.round((totalOccupied / totalCap) * 100)) : 0;
+    }
+
+    // Modo normal / demo: si hay bahías con stock, calcular el porcentaje real
+    if (bays && bays.length > 0) {
+      const totalOccupied = bays.reduce((acc, b) => acc + (b.currentTarimas || 0), 0);
+      const totalCap = bays.reduce((acc, b) => acc + (b.capacityTarimas || 22), 0);
+      if (totalCap > 0 && totalOccupied > 0) {
+        return Math.min(100, Math.round((totalOccupied / totalCap) * 100));
+      }
+    }
+
     const map: Record<string, number> = {
       'A': 82, 'B': 65, 'C': 78, 'D': 91, 'E': 45, 'F': 88,
       'G': 72, 'H': 60, 'I': 85, 'J': 68, 'K': 94, 'L': 79, 'M': 50,
       'SEC-RAMP': 40, 'SEC-ALM': 25
     };
-    return map[(sec.code || '').toUpperCase().trim()] || 70;
+    return map[secCode] || 0;
   }
 
   protected resetView(): void {

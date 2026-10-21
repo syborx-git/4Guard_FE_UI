@@ -435,9 +435,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return false;
   });
 
-  // ── Cartel Oficial QR para Entrada (Impresión Tamaño Carta) ──
-  protected readonly showPosterModal = signal<boolean>(false);
-
+  // ── Cartel Oficial QR para Entrada ──
   protected getCurrentPeriodLabel(): string {
     const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     const now = new Date();
@@ -479,12 +477,74 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     };
   });
 
+  // ── Cartel Oficial QR para Entrada (Impresión Tamaño Carta) ──
+  protected readonly showPosterModal = signal<boolean>(false);
+  protected readonly posterZoom = signal<number>(1);
+  protected readonly isFitToScreen = signal<boolean>(true);
+  protected readonly posterZoomPercent = computed<string>(() => `${Math.round(this.posterZoom() * 100)}%`);
+
   protected openPosterPrintModal(): void {
     this.showPosterModal.set(true);
+    // Calcular automáticamente la escala óptima una vez renderizado el canvas
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        this.recalculatePosterFit();
+      }, 70);
+    });
   }
 
   protected closePosterPrintModal(): void {
     this.showPosterModal.set(false);
+  }
+
+  protected recalculatePosterFit(): void {
+    const canvas = document.getElementById('poster-canvas-container');
+    if (!canvas) return;
+
+    // Medidas útiles del canvas restando márgenes y paddings
+    const paddingX = window.innerWidth < 640 ? 16 : 40;
+    const paddingY = window.innerWidth < 640 ? 16 : 40;
+    const availableWidth = Math.max(100, canvas.clientWidth - paddingX);
+    const availableHeight = Math.max(100, canvas.clientHeight - paddingY);
+
+    // Dimensiones base de Hoja Carta Paisaje a 96 DPI: 1056 x 816 px (279.4mm x 215.9mm)
+    const baseWidth = 1056;
+    const baseHeight = 816;
+
+    const scaleX = availableWidth / baseWidth;
+    const scaleY = availableHeight / baseHeight;
+    // Escala que permite ver la hoja COMPLETA sin scroll con margen confortable
+    const optimalScale = Math.min(scaleX, scaleY) * 0.96;
+
+    const safeScale = Math.min(1.0, Math.max(0.35, Math.round(optimalScale * 100) / 100));
+    this.posterZoom.set(safeScale);
+    this.isFitToScreen.set(true);
+  }
+
+  @HostListener('window:resize')
+  protected onWindowResize(): void {
+    if (this.showPosterModal() && this.isFitToScreen()) {
+      this.recalculatePosterFit();
+    }
+  }
+
+  protected zoomInPoster(): void {
+    this.isFitToScreen.set(false);
+    this.posterZoom.update(z => Math.min(1.5, Math.round((z + 0.1) * 10) / 10));
+  }
+
+  protected zoomOutPoster(): void {
+    this.isFitToScreen.set(false);
+    this.posterZoom.update(z => Math.max(0.35, Math.round((z - 0.1) * 10) / 10));
+  }
+
+  protected resetPosterZoom(): void {
+    this.isFitToScreen.set(false);
+    this.posterZoom.set(1);
+  }
+
+  protected toggleFitToScreen(): void {
+    this.recalculatePosterFit();
   }
 
   @HostListener('window:keydown.escape')
@@ -495,11 +555,19 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected printPoster(): void {
-    this.printService.printElement('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}`);
+    this.printService.printElement('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}`, { orientation: 'landscape' });
   }
 
-  protected downloadPosterPdf(): void {
-    this.printService.downloadPdf('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}.pdf`);
+  protected async downloadPosterPdf(): Promise<void> {
+    const prevZoom = this.posterZoom();
+    try {
+      // Temporalmente escalar a 1 para captura de ultra alta resolución limpia
+      this.posterZoom.set(1);
+      await new Promise(resolve => setTimeout(resolve, 60));
+      await this.printService.downloadPdf('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}.pdf`, { orientation: 'landscape', margin: 0 });
+    } finally {
+      this.posterZoom.set(prevZoom);
+    }
   }
 
   // ── Check-Out (Salida de Planta) ──
