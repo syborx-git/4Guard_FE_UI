@@ -189,6 +189,40 @@
       @if (mode() === 'pin') {
         <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-pin">
           
+          <!-- Campo Código de Operador / Gafete -->
+          <div class="rf-field" style="margin-bottom: 1.25rem;">
+            <label for="rf-operator-input" class="rf-field__label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="display: inline-flex; align-items: center; gap: 6px;">
+                <span class="material-symbols-outlined text-sm text-amber-400">badge</span>
+                <span>Código de Operador / Gafete</span>
+              </span>
+              <span class="text-xs text-amber-400 font-mono" style="font-weight: 600; letter-spacing: 0.04em;">Requerido</span>
+            </label>
+            <div class="rf-field__control">
+              <span class="rf-field__icon" aria-hidden="true">
+                <span class="material-symbols-outlined text-lg text-amber-400">forklift</span>
+              </span>
+              <input
+                id="rf-operator-input"
+                type="text"
+                [value]="operatorCode()"
+                (input)="setOperatorCode($any($event.target).value)"
+                placeholder="Ej. MC-001"
+                class="rf-field__input"
+                style="text-transform: uppercase; font-family: monospace; letter-spacing: 0.08em; font-weight: 700;"
+                autocomplete="off" />
+              @if (operatorCode()) {
+                <button
+                  type="button"
+                  class="rf-field__toggle"
+                  (click)="clearOperatorCode()"
+                  aria-label="Limpiar código">
+                  <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+              }
+            </div>
+          </div>
+
           <!-- Display estilizado del PIN -->
           <div class="pin-display" aria-label="PIN ingresado" aria-live="polite">
             <span class="pin-dots">{{ pinDisplay }}</span>

@@ -2701,4 +2701,26 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #b8860b !important;
 }
 
+/* ── Visor y Cartel Oficial QR Centrado & Responsivo ── */
+#poster-canvas-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.poster-scalable-wrapper {
+  margin: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#gate-qr-poster-target {
+  margin: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 

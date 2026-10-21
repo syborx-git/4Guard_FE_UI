@@ -6,16 +6,69 @@
  *  - Inyectar el token '4g_token' (Bearer) a todas las peticiones salientes.
  *  - Excluir endpoints públicos y de autenticación base (/login, /refresh, /logout).
  *  - Interceptar errores 401 Unauthorized de forma transparente.
- *  - Detener peticiones en vuelo ante un 401, ejecutar refresh token asíncronamente
- *    y reintentar de forma transparente la petición original con el nuevo token.
- *  - Forzar cierre de sesión si el refresh también falla con 401.
+ *  - Detener peticiones concurrentes ante un 401 mediante Mutex (isRefreshing)
+ *    y reintentar con el nuevo token obtenido una única vez.
+ *  - Forzar cierre de sesión si el refresh falla.
  */
 
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse, HttpRequest, HttpHandlerFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, filter, switchMap, take, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+
+let isRefreshing = false;
+const refreshTokenSubject = new BehaviorSubject<string | null>(null);
+
+function handle401Error(
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn,
+  authService: AuthService,
+  router: Router,
+  originalError: HttpErrorResponse
+) {
+  if (!isRefreshing) {
+    isRefreshing = true;
+    refreshTokenSubject.next(null);
+
+    return authService.refreshToken().pipe(
+      switchMap((response) => {
+        isRefreshing = false;
+        const newToken = response?.data?.accessToken || authService.getAccessToken();
+        if (!newToken) {
+          authService.clearSessionAndRedirect('session_expired');
+          return throwError(() => originalError);
+        }
+
+        refreshTokenSubject.next(newToken);
+        return next(
+          req.clone({
+            headers: req.headers.set('Authorization', `Bearer ${newToken}`)
+          })
+        );
+      }),
+      catchError((refreshError) => {
+        isRefreshing = false;
+        refreshTokenSubject.next(null);
+        authService.clearSessionAndRedirect('session_expired');
+        return throwError(() => refreshError);
+      })
+    );
+  } else {
+    // Si ya hay un refresco en progreso, esperar a que emita el nuevo token
+    return refreshTokenSubject.pipe(
+      filter((token): token is string => token !== null),
+      take(1),
+      switchMap((newToken) => {
+        return next(
+          req.clone({
+            headers: req.headers.set('Authorization', `Bearer ${newToken}`)
+          })
+        );
+      })
+    );
+  }
+}
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -38,30 +91,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!isAuthOrPublic) {
     const token = authService.getAccessToken();
     if (token) {
-      // Si el token almacenado ya expiró por tiempo, renovarlo antes de enviar la petición
+      // Si el token almacenado ya expiró por tiempo antes de enviarlo
       if (authService.isTokenExpired()) {
-        return authService.refreshToken().pipe(
-          switchMap((response) => {
-            const newToken = response?.data?.accessToken || authService.getAccessToken();
-            if (!newToken) {
-              return throwError(() => new Error('No se pudo renovar token expirado'));
-            }
-            const refreshedReq = req.clone({
-              headers: req.headers.set('Authorization', `Bearer ${newToken}`)
-            });
-            return next(refreshedReq);
-          }),
-          catchError((refreshErr) => {
-            if (
-              !router.url.includes('/login') &&
-              !router.url.includes('/carrier-checkin') &&
-              !router.url.includes('/driver-checkin')
-            ) {
-              authService.clearSessionAndRedirect('session_expired');
-            }
-            return throwError(() => refreshErr);
-          })
-        );
+        return handle401Error(req, next, authService, router, new HttpErrorResponse({ status: 401, statusText: 'Token Expired' }));
       }
 
       activeReq = req.clone({
@@ -80,39 +112,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
          error.error.message.toLowerCase().includes('no autenticado') ||
          error.error.message.toLowerCase().includes('jwt expired'));
 
-      // Interceptar 401 Unauthorized (o 403 con mensaje de expiración) únicamente en peticiones protegidas
+      // Interceptar 401 Unauthorized únicamente en peticiones protegidas
       if ((error.status === 401 || isExpiredForbidden) && !isAuthOrPublic) {
-        // Detener flujo, llamar a refreshToken() y reintentar con el nuevo token obtenido
-        return authService.refreshToken().pipe(
-          switchMap((response) => {
-            const newToken = response?.data?.accessToken || authService.getAccessToken();
-            if (!newToken) {
-              return throwError(() => error);
-            }
-
-            // Clonar la petición original con el nuevo Bearer Token
-            const retriedReq = req.clone({
-              headers: req.headers.set('Authorization', `Bearer ${newToken}`)
-            });
-
-            return next(retriedReq);
-          }),
-          catchError((refreshError) => {
-            // Si el refresh falla definitivamente (401), forzar cierre de sesión
-            if (
-              !router.url.includes('/login') &&
-              !router.url.includes('/carrier-checkin') &&
-              !router.url.includes('/driver-checkin')
-            ) {
-              authService.clearSessionAndRedirect('session_expired');
-            }
-            return throwError(() => refreshError);
-          })
-        );
+        return handle401Error(req, next, authService, router, error);
       }
-
-      // Nota de Arquitectura: Errores 403 Forbidden representan denegación de permisos
-      // sobre un recurso específico, NO expiración de sesión. No se debe expulsar al usuario.
 
       return throwError(() => error);
     })

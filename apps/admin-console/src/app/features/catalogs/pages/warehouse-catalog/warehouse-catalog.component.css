@@ -1056,18 +1056,46 @@
   filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9)) !important;
 }
 
-/* 🟣 Púrpura / Morado: Buffer Temporal */
+/* 🟣 Púrpura / Morado: Buffer Temporal Activo con Mercancía */
 .cad__bay-slot--heat-temp {
-  fill: rgba(168, 85, 247, 0.32) !important;
-  stroke: #c084fc !important;
-  stroke-width: 0.7px !important;
+  fill: rgba(168, 85, 247, 0.65) !important;
+  stroke: #d8b4fe !important;
+  stroke-width: 1.5px !important;
   vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.95)) !important;
+  animation: cad-pulse-temp 2.4s infinite ease-in-out;
 }
 .cad__bay-slot--heat-temp:hover {
-  fill: rgba(168, 85, 247, 0.55) !important;
-  stroke: #e9d5ff !important;
-  stroke-width: 1.5px !important;
-  filter: drop-shadow(0 0 4px rgba(192, 132, 252, 0.8)) !important;
+  fill: rgba(168, 85, 247, 0.9) !important;
+  stroke: #ffffff !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 10px rgba(192, 132, 252, 1)) !important;
+}
+
+/* Andén de Rampa Vacante (esperando descarga) */
+.cad__bay-slot--ramp-vacant {
+  fill: rgba(30, 41, 59, 0.45) !important;
+  stroke: rgba(234, 195, 73, 0.4) !important;
+  stroke-width: 0.8px !important;
+  stroke-dasharray: 2, 2;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--ramp-vacant:hover {
+  fill: rgba(30, 41, 59, 0.8) !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 1.2px !important;
+  stroke-dasharray: none;
+}
+
+@keyframes cad-pulse-temp {
+  0%, 100% {
+    fill: rgba(168, 85, 247, 0.55) !important;
+    stroke: #c084fc !important;
+  }
+  50% {
+    fill: rgba(168, 85, 247, 0.85) !important;
+    stroke: #f3e8ff !important;
+  }
 }
 
 /* 🟠 Dorado / Ámbar Cobre: Precarga / Staging */

@@ -52,58 +52,102 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="skus-kpi-grid" aria-label="Indicadores de productos">
-
-      <!-- Total SKUs -->
-      <div class="skus-kpi-card skus-kpi-card--total">
-        <div class="skus-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">inventory_2</span>
-        </div>
-        <div class="skus-kpi-card__body">
-          @if (isLoading) {
-            <div class="skus-kpi-card__skeleton"></div>
-          } @else {
-            <span class="skus-kpi-card__value">{{ totalSkus() }}</span>
-          }
-          <span class="skus-kpi-card__label">Total Registrados</span>
-        </div>
-        <div class="skus-kpi-card__bar skus-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de SKUs" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Catálogo de SKUs</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- SKUs Activos -->
-      <div class="skus-kpi-card skus-kpi-card--active">
-        <div class="skus-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="skus-kpi-card__body">
-          @if (isLoading) {
-            <div class="skus-kpi-card__skeleton"></div>
-          } @else {
-            <span class="skus-kpi-card__value">{{ activeSkus() }}</span>
-          }
-          <span class="skus-kpi-card__label">SKUs Activos</span>
-        </div>
-        <div class="skus-kpi-card__bar skus-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total SKUs:</span>
+              <strong class="wms-kpi-summary-value">{{ totalSkus() }}</strong>
+            </div>
 
-      <!-- SKUs Inactivos -->
-      <div class="skus-kpi-card skus-kpi-card--inactive">
-        <div class="skus-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">pause_circle</span>
-        </div>
-        <div class="skus-kpi-card__body">
-          @if (isLoading) {
-            <div class="skus-kpi-card__skeleton"></div>
-          } @else {
-            <span class="skus-kpi-card__value">{{ inactiveSkus() }}</span>
-          }
-          <span class="skus-kpi-card__label">SKUs Inactivos</span>
-        </div>
-        <div class="skus-kpi-card__bar skus-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ activeSkus() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivos:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ inactiveSkus() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="skus-kpi-grid animate-fade-in" aria-label="Indicadores de productos">
+
+          <!-- Total SKUs -->
+          <div class="skus-kpi-card skus-kpi-card--total">
+            <div class="skus-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">inventory_2</span>
+            </div>
+            <div class="skus-kpi-card__body">
+              @if (isLoading) {
+                <div class="skus-kpi-card__skeleton"></div>
+              } @else {
+                <span class="skus-kpi-card__value">{{ totalSkus() }}</span>
+              }
+              <span class="skus-kpi-card__label">Total Registrados</span>
+            </div>
+            <div class="skus-kpi-card__bar skus-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- SKUs Activos -->
+          <div class="skus-kpi-card skus-kpi-card--active">
+            <div class="skus-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="skus-kpi-card__body">
+              @if (isLoading) {
+                <div class="skus-kpi-card__skeleton"></div>
+              } @else {
+                <span class="skus-kpi-card__value">{{ activeSkus() }}</span>
+              }
+              <span class="skus-kpi-card__label">SKUs Activos</span>
+            </div>
+            <div class="skus-kpi-card__bar skus-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- SKUs Inactivos -->
+          <div class="skus-kpi-card skus-kpi-card--inactive">
+            <div class="skus-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">pause_circle</span>
+            </div>
+            <div class="skus-kpi-card__body">
+              @if (isLoading) {
+                <div class="skus-kpi-card__skeleton"></div>
+              } @else {
+                <span class="skus-kpi-card__value">{{ inactiveSkus() }}</span>
+              }
+              <span class="skus-kpi-card__label">SKUs Inactivos</span>
+            </div>
+            <div class="skus-kpi-card__bar skus-kpi-card__bar--inactive"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════

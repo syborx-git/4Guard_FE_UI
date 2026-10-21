@@ -94,7 +94,8 @@
             "host": "0.0.0.0",
             "disableHostCheck": true,
             "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"],
-            "proxyConfig": "proxy.conf.js"
+            "proxyConfig": "proxy.conf.js",
+            "prebundle": false
           }
         },
         "test": {
@@ -208,7 +209,8 @@
           "options": {
             "port": 4201,
             "host": "localhost",
-            "proxyConfig": "proxy.conf.js"
+            "proxyConfig": "proxy.conf.js",
+            "prebundle": false
           }
         },
         "test": {

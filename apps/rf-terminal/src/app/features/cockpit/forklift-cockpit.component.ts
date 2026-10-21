@@ -121,6 +121,12 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly isShiftEndingSoon = computed(() => this.shiftStatus().isNearShiftEnd);
   protected readonly isShiftEnded = computed(() => this.shiftStatus().isShiftEnded);
 
+  // ─── Telemetría de Base de Datos y Conectividad en Tiempo Real ───────────
+  protected readonly isBackendConnected = this.missionService.isBackendConnected;
+  protected readonly isSyncing = this.missionService.isSyncing;
+  protected readonly lastSyncTime = this.missionService.lastSyncTime;
+  protected readonly pendingOfflineCount = this.missionService.pendingOfflineCount;
+
   // ─── Datos Computados ─────────────────────────────────────────────────────
   protected readonly activeMission = this.missionService.activeMission;
   protected readonly queuedMissions = this.missionService.queuedMissions;
@@ -129,7 +135,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly scanFeedback = this.missionService.scanFeedback;
 
   protected readonly operatorName = computed(() => {
-    return this.authState.userFullName() || this.authState.user()?.fullName || 'Roberto Sánchez';
+    return this.authState.userFullName() || this.authState.user()?.fullName || 'Oficial Montacarguista';
   });
 
   /** Lista dinámica de tarimas escaneadas en la descarga */
@@ -689,12 +695,17 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.justCompletedMission.set(null);
   }
 
-  // ─── 11. Reinicio Demo y Menú ────────────────────────────────────────────
-  resetDemo(): void {
+  // ─── 11. Sincronización con Base de Datos y Menú ────────────────────────
+  refreshMissions(): void {
     this.stopCamera();
-    this.missionService.resetDemoQueue();
+    this.missionService.refreshMissions();
+    this.toast.info('Sincronizando cola de misiones con la Base de Datos...');
     this.closeScanningModal();
     this.closeMissionDetail();
+  }
+
+  resetDemo(): void {
+    this.refreshMissions();
   }
 
   goToMenu(): void {

@@ -191,6 +191,13 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     this.filterPreferredCtrl.setValue(false);
   }
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Tarjetas KPI de Cabecera (Computed) ───────────────────────────────────
 
   protected readonly totalCount       = computed(() => this.supplierService.totalActiveCount());

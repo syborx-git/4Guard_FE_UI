@@ -105,7 +105,7 @@ export class RfLoadVerificationSubmoduleComponent {
   }
 
   submitVerification(): void {
-    const inspector = this.authState.userFullName() || 'Roberto Sánchez (Auditor RF)';
+    const inspector = this.authState.userFullName() || 'Auditor de Calidad';
 
     this.qmState.createLoadVerification({
       remisionNumber: this.formRemision(),

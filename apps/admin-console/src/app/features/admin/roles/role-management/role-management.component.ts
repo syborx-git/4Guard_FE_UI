@@ -165,6 +165,13 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
     return Math.min(this.currentPage() * this.pageSize(), this.filteredRoles().length);
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly kpiTotalRoles  = computed(() => this.roleService.totalCount());

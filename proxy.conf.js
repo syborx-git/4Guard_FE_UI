@@ -6,7 +6,7 @@
  * sincronizando instantáneamente el móvil con la pantalla de Caseta de Seguridad.
  */
 
-const target = process.env.BACKEND_URL || 'https://fourguard-be-huzh.onrender.com';
+const target = process.env.BACKEND_URL || 'http://localhost:8080';
 
 const inMemoryPasses = new Map();
 const inMemoryReceptions = new Map();
@@ -134,6 +134,16 @@ const PROXY_CONFIG = {
           } catch (e) {
             sendJson(res, 400, { success: false, message: 'JSON malformado' });
           }
+        });
+        return true;
+      }
+
+      // 1.5.1 GET /api/v1/warehouse-receptions/next-pallet-number
+      if (req.method === 'GET' && url.includes('/warehouse-receptions/next-pallet-number')) {
+        sendJson(res, 200, {
+          success: true,
+          message: 'Siguiente número de pallet generado',
+          data: { nextPalletNumber: 1 }
         });
         return true;
       }
@@ -306,8 +316,8 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // Para el resto de peticiones (catálogos, auth, etc.), continuar al backend de Render
-      return false;
+      // Para el resto de peticiones (catálogos, auth, etc.), retornar undefined para que el proxy continúe hacia target
+      return undefined;
     },
     "onError": (err, req, res) => {
       if (res && res.writeHead && !res.headersSent) {

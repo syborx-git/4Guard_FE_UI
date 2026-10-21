@@ -50,74 +50,124 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="sections-kpi-grid" aria-label="Indicadores de secciones">
-
-      <!-- Total -->
-      <div class="sections-kpi-card sections-kpi-card--total">
-        <div class="sections-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">grid_view</span>
-        </div>
-        <div class="sections-kpi-card__body">
-          @if (isLoading()) {
-            <div class="sections-kpi-card__skeleton"></div>
-          } @else {
-            <span class="sections-kpi-card__value">{{ totalSections() }}</span>
-          }
-          <span class="sections-kpi-card__label">Total Secciones</span>
-        </div>
-        <div class="sections-kpi-card__bar sections-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Secciones" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Secciones de Almacén</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activas -->
-      <div class="sections-kpi-card sections-kpi-card--active">
-        <div class="sections-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="sections-kpi-card__body">
-          @if (isLoading()) {
-            <div class="sections-kpi-card__skeleton"></div>
-          } @else {
-            <span class="sections-kpi-card__value">{{ activeSectionsCount() }}</span>
-          }
-          <span class="sections-kpi-card__label">Activas</span>
-        </div>
-        <div class="sections-kpi-card__bar sections-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total Secciones:</span>
+              <strong class="wms-kpi-summary-value">{{ totalSections() }}</strong>
+            </div>
 
-      <!-- Inactivas -->
-      <div class="sections-kpi-card sections-kpi-card--inactive">
-        <div class="sections-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="sections-kpi-card__body">
-          @if (isLoading()) {
-            <div class="sections-kpi-card__skeleton"></div>
-          } @else {
-            <span class="sections-kpi-card__value">{{ inactiveSectionsCount() }}</span>
-          }
-          <span class="sections-kpi-card__label">Inactivas</span>
-        </div>
-        <div class="sections-kpi-card__bar sections-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activas:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ activeSectionsCount() }}</strong>
+            </div>
 
-      <!-- Sucursales / Almacenes -->
-      <div class="sections-kpi-card sections-kpi-card--branches">
-        <div class="sections-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">domain</span>
-        </div>
-        <div class="sections-kpi-card__body">
-          @if (isLoading()) {
-            <div class="sections-kpi-card__skeleton"></div>
-          } @else {
-            <span class="sections-kpi-card__value">{{ totalBranches() }}</span>
-          }
-          <span class="sections-kpi-card__label">Almacenes</span>
-        </div>
-        <div class="sections-kpi-card__bar sections-kpi-card__bar--branches"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivas:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ inactiveSectionsCount() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--branches"></span>
+              <span class="wms-kpi-summary-label">Almacenes:</span>
+              <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ totalBranches() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="sections-kpi-grid animate-fade-in" aria-label="Indicadores de secciones">
+
+          <!-- Total -->
+          <div class="sections-kpi-card sections-kpi-card--total">
+            <div class="sections-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">grid_view</span>
+            </div>
+            <div class="sections-kpi-card__body">
+              @if (isLoading()) {
+                <div class="sections-kpi-card__skeleton"></div>
+              } @else {
+                <span class="sections-kpi-card__value">{{ totalSections() }}</span>
+              }
+              <span class="sections-kpi-card__label">Total Secciones</span>
+            </div>
+            <div class="sections-kpi-card__bar sections-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activas -->
+          <div class="sections-kpi-card sections-kpi-card--active">
+            <div class="sections-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="sections-kpi-card__body">
+              @if (isLoading()) {
+                <div class="sections-kpi-card__skeleton"></div>
+              } @else {
+                <span class="sections-kpi-card__value">{{ activeSectionsCount() }}</span>
+              }
+              <span class="sections-kpi-card__label">Activas</span>
+            </div>
+            <div class="sections-kpi-card__bar sections-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Inactivas -->
+          <div class="sections-kpi-card sections-kpi-card--inactive">
+            <div class="sections-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="sections-kpi-card__body">
+              @if (isLoading()) {
+                <div class="sections-kpi-card__skeleton"></div>
+              } @else {
+                <span class="sections-kpi-card__value">{{ inactiveSectionsCount() }}</span>
+              }
+              <span class="sections-kpi-card__label">Inactivas</span>
+            </div>
+            <div class="sections-kpi-card__bar sections-kpi-card__bar--inactive"></div>
+          </div>
+
+          <!-- Sucursales / Almacenes -->
+          <div class="sections-kpi-card sections-kpi-card--branches">
+            <div class="sections-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">domain</span>
+            </div>
+            <div class="sections-kpi-card__body">
+              @if (isLoading()) {
+                <div class="sections-kpi-card__skeleton"></div>
+              } @else {
+                <span class="sections-kpi-card__value">{{ totalBranches() }}</span>
+              }
+              <span class="sections-kpi-card__label">Almacenes</span>
+            </div>
+            <div class="sections-kpi-card__bar sections-kpi-card__bar--branches"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════

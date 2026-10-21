@@ -5,7 +5,7 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import {
   WarehouseSection,
   PositionDetail,
@@ -145,7 +145,39 @@ export class WarehouseLayoutService {
   }
 
   fetchPositions(sectionId?: string, status?: string, query?: string): Observable<PositionDetail[]> {
-    return this.repository.getAllPositions(sectionId, status, query);
+    return this.repository.getAllPositions(sectionId, status, query).pipe(
+      map((positions) => {
+        const sim = this.getSimulatedPositions();
+        const isClean = this.isCleanMode();
+
+        return positions.map((pos) => {
+          let base = isClean
+            ? {
+                ...pos,
+                currentTarimas: 0,
+                status: 'AVAILABLE' as PositionStatus,
+                skuDescription: 'Posición Disponible',
+                batchNumber: 'N/A',
+                blockReason: undefined,
+              }
+            : pos;
+
+          const override = sim[pos.code.toUpperCase()];
+          if (override) {
+            return {
+              ...base,
+              currentTarimas: override.currentTarimas ?? base.currentTarimas,
+              skuDescription: override.skuDescription ?? base.skuDescription,
+              batchNumber: override.batchNumber ?? base.batchNumber,
+              status: (override.status as PositionStatus) ?? base.status,
+              lastMovement: override.lastMovement ?? base.lastMovement,
+              blockReason: override.blockReason ?? base.blockReason,
+            };
+          }
+          return base;
+        });
+      })
+    );
   }
 
   getSectionById(id: string): WarehouseSection | undefined {
@@ -213,41 +245,145 @@ export class WarehouseLayoutService {
       code: cleanCode,
       currentTarimas: tarimas,
       capacityTarimas: capacity,
-      skuDescription: skuDesc || 'Mercancía General WMS',
-      batchNumber: batchNumber || 'LOT-2026-INBOUND',
+      skuDescription: tarimas > 0 ? (skuDesc || 'Mercancía General WMS') : 'Posición Disponible',
+      batchNumber: tarimas > 0 ? (batchNumber || 'LOT-2026-INBOUND') : 'N/A',
       status,
-      lastMovement: `Recepcionado vía ${folio || 'Inbound Express'} (${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`
+      lastMovement: tarimas > 0
+        ? `Recepcionado vía ${folio || 'Inbound Express'} (${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`
+        : `Liberado / Vacante (${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`
     };
+
     try {
       localStorage.setItem(this.SIM_STORAGE_KEY, JSON.stringify(currentSim));
     } catch (e) {
       console.warn('Could not persist to localStorage', e);
     }
 
-    // Actualizar en cache de secciones
-    this._positionsCache.forEach((list) => {
-      const target = list.find(p => p.code.toUpperCase() === cleanCode);
-      if (target) {
-        target.currentTarimas = tarimas;
-        target.skuDescription = currentSim[cleanCode].skuDescription!;
-        target.batchNumber = currentSim[cleanCode].batchNumber!;
-        target.status = status;
-        target.lastMovement = currentSim[cleanCode].lastMovement!;
-      }
-    });
+    this.applySimulationOverrides();
+  }
 
-    // Actualizar en _allPositions
-    const all = [...this._allPositions()];
-    const targetAll = all.find(p => p.code.toUpperCase() === cleanCode);
-    if (targetAll) {
-      targetAll.currentTarimas = tarimas;
-      targetAll.skuDescription = currentSim[cleanCode].skuDescription!;
-      targetAll.batchNumber = currentSim[cleanCode].batchNumber!;
-      targetAll.status = status;
-      targetAll.lastMovement = currentSim[cleanCode].lastMovement!;
-      this._allPositions.set(all);
+  transferSimulatedInventory(
+    originBayCode: string,
+    destinationBayCode: string,
+    tarimasToMove: number,
+    skuDesc?: string,
+    batchNumber?: string,
+    folio?: string
+  ): void {
+    if (!originBayCode || !destinationBayCode) return;
+    const cleanOrigin = originBayCode.trim().toUpperCase();
+    const cleanDest = destinationBayCode.trim().toUpperCase();
+    const count = Number(tarimasToMove) || 14;
+    const timestamp = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+    const currentSim = this.getSimulatedPositions();
+    const originExisting = currentSim[cleanOrigin];
+    const originPrevTarimas = originExisting?.currentTarimas ?? 14;
+    const originRemaining = Math.max(0, originPrevTarimas - count);
+
+    const sku = skuDesc || originExisting?.skuDescription || 'Mercancía Transferida';
+    const lot = batchNumber || originExisting?.batchNumber || 'LOT-2026-TR';
+
+    // 1. Actualizar Origen (Buffer o Rack)
+    currentSim[cleanOrigin] = {
+      code: cleanOrigin,
+      currentTarimas: originRemaining,
+      capacityTarimas: 22,
+      skuDescription: originRemaining > 0 ? sku : 'Posición Disponible (Desalojada)',
+      batchNumber: originRemaining > 0 ? lot : 'N/A',
+      status: originRemaining > 0 ? 'OCCUPIED' : 'AVAILABLE',
+      lastMovement: `Reubicado a ${cleanDest} vía Folio ${folio || 'TR-Directo'} (${timestamp})`
+    };
+
+    // 2. Actualizar Destino
+    const destExisting = currentSim[cleanDest];
+    const destPrevTarimas = destExisting?.currentTarimas ?? 0;
+    const destTotal = destPrevTarimas + count;
+
+    currentSim[cleanDest] = {
+      code: cleanDest,
+      currentTarimas: destTotal,
+      capacityTarimas: 22,
+      skuDescription: sku,
+      batchNumber: lot,
+      status: 'OCCUPIED',
+      lastMovement: `Recibido de ${cleanOrigin} vía Folio ${folio || 'TR-Directo'} (${timestamp})`
+    };
+
+    try {
+      localStorage.setItem(this.SIM_STORAGE_KEY, JSON.stringify(currentSim));
+    } catch (e) {
+      console.warn('Could not persist to localStorage', e);
     }
 
+    this.applySimulationOverrides();
+  }
+
+  clearSimulatedBay(bayCode: string): void {
+    if (!bayCode) return;
+    const cleanCode = bayCode.trim().toUpperCase();
+    const currentSim = this.getSimulatedPositions();
+    currentSim[cleanCode] = {
+      code: cleanCode,
+      currentTarimas: 0,
+      capacityTarimas: 22,
+      skuDescription: 'Posición Disponible',
+      batchNumber: 'N/A',
+      status: 'AVAILABLE',
+      lastMovement: `Desalojado manualmente (${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`
+    };
+    try {
+      localStorage.setItem(this.SIM_STORAGE_KEY, JSON.stringify(currentSim));
+    } catch (e) {}
+
+    this.applySimulationOverrides();
+  }
+
+  private applySimulationOverrides(): void {
+    const currentSim = this.getSimulatedPositions();
+    const all = [...this._allPositions()];
+
+    for (const [codeKey, override] of Object.entries(currentSim)) {
+      const cleanKey = codeKey.toUpperCase();
+      let target = all.find(p => p.code.toUpperCase() === cleanKey);
+      if (target) {
+        target.currentTarimas = override.currentTarimas ?? target.currentTarimas;
+        target.skuDescription = override.skuDescription ?? target.skuDescription;
+        target.batchNumber = override.batchNumber ?? target.batchNumber;
+        target.status = (override.status as PositionStatus) ?? target.status;
+        target.lastMovement = override.lastMovement ?? target.lastMovement;
+      } else {
+        const zoneChar = cleanKey.includes('-') ? cleanKey.split('-')[1]?.toUpperCase() : 'A';
+        const isTemp = cleanKey.includes('-T') || cleanKey.startsWith('STAGING') || cleanKey.startsWith('BUF');
+        all.push({
+          id: `pos-${cleanKey.toLowerCase()}`,
+          positionNumber: 999,
+          code: cleanKey,
+          sectionId: `sec-${zoneChar.toLowerCase()}`,
+          sectionName: `Nave ${zoneChar}`,
+          category: isTemp ? 'TEMPORARY_BUFFER' : 'FIXED_STORAGE',
+          skuDescription: override.skuDescription || 'Sin Material Asignado',
+          status: (override.status as PositionStatus) || 'AVAILABLE',
+          capacityTarimas: override.capacityTarimas || 22,
+          currentTarimas: override.currentTarimas || 0,
+          batchNumber: override.batchNumber || 'N/A',
+          lastMovement: override.lastMovement || 'Sin movimientos'
+        });
+      }
+
+      this._positionsCache.forEach((list) => {
+        const item = list.find(p => p.code.toUpperCase() === cleanKey);
+        if (item) {
+          item.currentTarimas = override.currentTarimas ?? item.currentTarimas;
+          item.skuDescription = override.skuDescription ?? item.skuDescription;
+          item.batchNumber = override.batchNumber ?? item.batchNumber;
+          item.status = (override.status as PositionStatus) ?? item.status;
+          item.lastMovement = override.lastMovement ?? item.lastMovement;
+        }
+      });
+    }
+
+    this._allPositions.set(all);
     this._positionsVersion.update(v => v + 1);
   }
 

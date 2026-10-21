@@ -4,7 +4,7 @@
     { "id": "u-002", "fullName": "Sofía Ramírez", "email": "manager@4guard.mx", "role": "ROLE_WAREHOUSE_MANAGER", "branchId": "BR-MTY-01", "isActive": true },
     { "id": "u-003", "fullName": "Miguel Torres", "email": "dock@4guard.mx", "role": "ROLE_DOCK_SUPERVISOR", "branchId": "BR-MTY-01", "isActive": true },
     { "id": "u-004", "fullName": "Ana López", "email": "qm@4guard.mx", "role": "ROLE_QM_INSPECTOR", "branchId": "BR-MTY-01", "isActive": true },
-    { "id": "u-005", "fullName": "Roberto Sánchez", "email": "op1@4guard.mx", "role": "ROLE_WAREHOUSE_OPERATOR", "branchId": "BR-MTY-01", "isActive": true }
+    { "id": "u-005", "fullName": "Oficial Montacarguista", "email": "montacarguista@4guard.mx", "role": "ROLE_WAREHOUSE_OPERATOR", "branchId": "b73f0907-9fa5-4bdf-87db-2eb5e7683936", "isActive": true }
   ],
   "items": [
     { "id": "SSCC-0001", "sku": "SKU-CAFE-001", "description": "Café Molido Premium 500g", "lot": "L2024-001", "status": 30, "locationId": "LOC-A1-01", "clientId": "CLI-NESPRESSO", "quantity": 48, "unit": "CAJA", "receivedAt": "2024-06-10T08:00:00Z", "expiresAt": "2025-06-10T00:00:00Z" },

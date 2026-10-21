@@ -36,45 +36,96 @@
   </header>
 
   <!-- ==================== METRICAS SUPERIORES (KPIs) ==================== -->
-  <section class="shift-kpis" aria-label="Resumen de turnos">
-    <article class="shift-kpi-card" data-tone="neutral">
-      <div class="shift-kpi-card__icon">
-        <span class="material-symbols-outlined">schedule</span>
-      </div>
-      <div class="shift-kpi-card__content">
-        <span class="shift-kpi-card__label">Total Turnos</span>
-        <strong class="shift-kpi-card__value">{{ shiftService.totalShiftCount() }}</strong>
-      </div>
-    </article>
+  <section aria-label="Métricas de Turnos" class="wms-kpi-section">
+    <div class="wms-kpi-header">
+      <span class="wms-kpi-header__title">
+        <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+        <span>Métricas de Turnos y Horarios</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="wms-kpi-toggle-btn"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
+    </div>
 
-    <article class="shift-kpi-card" data-tone="success">
-      <div class="shift-kpi-card__icon">
-        <span class="material-symbols-outlined">check_circle</span>
-      </div>
-      <div class="shift-kpi-card__content">
-        <span class="shift-kpi-card__label">Turnos Activos</span>
-        <strong class="shift-kpi-card__value">{{ shiftService.activeShiftCount() }}</strong>
-      </div>
-    </article>
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+      <div class="wms-kpi-summary-bar animate-fade-in">
+        <div class="wms-kpi-summary-items">
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+            <span class="wms-kpi-summary-label">Total Turnos:</span>
+            <strong class="wms-kpi-summary-value">{{ shiftService.totalShiftCount() }}</strong>
+          </div>
 
-    <article class="shift-kpi-card" data-tone="info">
-      <div class="shift-kpi-card__icon">
-        <span class="material-symbols-outlined">nightlight</span>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+            <span class="wms-kpi-summary-label">Activos:</span>
+            <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ shiftService.activeShiftCount() }}</strong>
+          </div>
+
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--blue"></span>
+            <span class="wms-kpi-summary-label">Sucursal:</span>
+            <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">CDMX-01</strong>
+          </div>
+
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+            <span class="wms-kpi-summary-label">Conflictos:</span>
+            <strong class="wms-kpi-summary-value text-amber-500">{{ shiftService.conflictCount() }}</strong>
+          </div>
+        </div>
       </div>
-      <div class="shift-kpi-card__content">
-        <span class="shift-kpi-card__label">Sucursal Activa</span>
-        <strong class="shift-kpi-card__value shift-kpi-card__value--text">CDMX-01</strong>
-      </div>
-    </article>
-    <article class="shift-kpi-card" data-tone="warning">
-      <div class="shift-kpi-card__icon">
-        <span class="material-symbols-outlined">warning</span>
-      </div>
-      <div class="shift-kpi-card__content">
-        <span class="shift-kpi-card__label">Conflictos de Horario</span>
-        <strong class="shift-kpi-card__value">{{ shiftService.conflictCount() }}</strong>
-      </div>
-    </article>
+    } @else {
+      <!-- Grid Completo de Tarjetas Grandes -->
+      <section class="shift-kpis animate-fade-in" aria-label="Resumen de turnos">
+        <article class="shift-kpi-card" data-tone="neutral">
+          <div class="shift-kpi-card__icon">
+            <span class="material-symbols-outlined">schedule</span>
+          </div>
+          <div class="shift-kpi-card__content">
+            <span class="shift-kpi-card__label">Total Turnos</span>
+            <strong class="shift-kpi-card__value">{{ shiftService.totalShiftCount() }}</strong>
+          </div>
+        </article>
+
+        <article class="shift-kpi-card" data-tone="success">
+          <div class="shift-kpi-card__icon">
+            <span class="material-symbols-outlined">check_circle</span>
+          </div>
+          <div class="shift-kpi-card__content">
+            <span class="shift-kpi-card__label">Turnos Activos</span>
+            <strong class="shift-kpi-card__value">{{ shiftService.activeShiftCount() }}</strong>
+          </div>
+        </article>
+
+        <article class="shift-kpi-card" data-tone="info">
+          <div class="shift-kpi-card__icon">
+            <span class="material-symbols-outlined">nightlight</span>
+          </div>
+          <div class="shift-kpi-card__content">
+            <span class="shift-kpi-card__label">Sucursal Activa</span>
+            <strong class="shift-kpi-card__value shift-kpi-card__value--text">CDMX-01</strong>
+          </div>
+        </article>
+
+        <article class="shift-kpi-card" data-tone="warning">
+          <div class="shift-kpi-card__icon">
+            <span class="material-symbols-outlined">warning</span>
+          </div>
+          <div class="shift-kpi-card__content">
+            <span class="shift-kpi-card__label">Conflictos de Horario</span>
+            <strong class="shift-kpi-card__value">{{ shiftService.conflictCount() }}</strong>
+          </div>
+        </article>
+      </section>
+    }
   </section>
 
   <!-- ==================== MASTER-DETAIL SPLIT VIEW (35/65) ==================== -->
