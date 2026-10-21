@@ -1263,10 +1263,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
       ? ''
       : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
 
-    const bayLoc = rec.storageLocation || rec.storageLocationCode || 'POS-A-001';
-    this.selectedBayName.set(bayLoc);
-
     const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
+    let bayLoc = rec.storageLocation || rec.storageLocationCode;
+    if (!bayLoc || bayLoc === 'POS-A-001') {
+      bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-R01';
+    }
+    this.selectedBayName.set(bayLoc);
 
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
@@ -2359,7 +2361,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   isTemporaryBay(code?: string | null): boolean {
     if (!code) return false;
     const c = code.toUpperCase().trim();
-    return c.includes('-T') || c.includes('TMP') || c.startsWith('T') || c.includes('TEMPORAL');
+    return c.includes('-T') || c.includes('TMP') || c.startsWith('T') || c.includes('TEMPORAL') || c.includes('STAGING') || c.includes('BUFFER');
   }
 
   openBaySelector(): void {
@@ -2368,7 +2370,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   openReallocationModal(rec: ReceptionHeader): void {
-    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'POS-A-T01';
+    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'STAGING-R01';
     this.isReallocatingMode.set(true);
     this.reallocatingSourceBay.set(bay);
     this.showBaySelectorModal.set(true);
@@ -2401,7 +2403,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   onBaySelected(res: BaySelectionResult): void {
     const isReallocation = this.isReallocatingMode();
-    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'Buffer Temporal';
+    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'STAGING-R01';
     const targetBay = res.locationCode;
 
     this.selectedBayName.set(targetBay);
@@ -2432,11 +2434,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
       this.selectedReception.set(updatedRec);
 
       // Sincronizar de inmediato con el catálogo/croquis 2D
-      if (targetBay && !targetBay.startsWith('LOC-RAMP') && targetBay !== 'Buffer Temporal') {
+      if (targetBay && targetBay !== 'Buffer Temporal') {
         const pCount = (currentRec.pallets || []).length || 14;
         const pSku = currentRec.productName || this.altaForm.value.productName || 'Mercancía Asignada';
         const pLot = currentRec.lotNumber || this.altaForm.value.lotNumber || 'LOT-2026';
-        this.layoutService.recordSimulatedInbound(targetBay, pCount, pSku, pLot, currentRec.folio);
+        if (isReallocation && sourceBay) {
+          this.layoutService.transferSimulatedInventory(sourceBay, targetBay, pCount, pSku, pLot, currentRec.folio);
+        } else {
+          this.layoutService.recordSimulatedInbound(targetBay, pCount, pSku, pLot, currentRec.folio);
+        }
       }
 
       // Registrar explícitamente en la línea de tiempo de auditoría
@@ -3217,8 +3223,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
           this.movementsService.reloadReceptions();
 
           // Sincronización con el Catálogo y Croquis 2D
-          const assignedBay = formVals.storageLocation || (formVals as any)?.storageLocationCode || this.selectedBayName();
-          if (assignedBay && !assignedBay.startsWith('LOC-RAMP') && assignedBay !== 'Buffer Temporal') {
+          let assignedBay = formVals.storageLocation || (formVals as any)?.storageLocationCode || this.selectedBayName();
+          if (assignedBay && (assignedBay.startsWith('LOC-RAMP') || assignedBay.startsWith('R-') || assignedBay.startsWith('RAMP'))) {
+            const m = assignedBay.match(/\d+/);
+            assignedBay = m ? `STAGING-R${String(m[0]).padStart(2, '0')}` : 'STAGING-R01';
+          }
+          if (assignedBay && assignedBay !== 'Buffer Temporal') {
             const skuName = formVals.productName || rec.productName || 'Mercancía Recepcionada';
             const lotNum = formVals.lotNumber || rec.lotNumber || 'LOT-2026';
             this.layoutService.recordSimulatedInbound(

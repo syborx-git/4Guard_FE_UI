@@ -230,9 +230,14 @@ export interface GateQrPosterPrintData {
   `,
   styles: [`
     :host {
-      display: block;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
       color: #0f172a;
       font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0 auto;
     }
 
     /* ── HOJA CARTA HORIZONTAL / LANDSCAPE (Letter: 279.4mm × 215.9mm) ── */
@@ -246,9 +251,11 @@ export interface GateQrPosterPrintData {
       padding: 4.5mm 5.5mm;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25);
       position: relative;
       overflow: hidden;
+      margin: 0 auto;
+      border-radius: 4px;
     }
 
     /* ── MARCO DOBLE DE SEGURIDAD ── */
@@ -807,9 +814,17 @@ export interface GateQrPosterPrintData {
 
     /* ── REGLAS DE IMPRESIÓN OFICIALES (@media print) ── */
     @media print {
+      :host {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
       @page {
         size: letter landscape;
-        margin: 3mm;
+        margin: 0;
       }
 
       body {
@@ -821,13 +836,14 @@ export interface GateQrPosterPrintData {
       .poster-sheet {
         box-shadow: none !important;
         margin: 0 auto !important;
-        padding: 3mm !important;
+        padding: 4.5mm 5.5mm !important;
         width: 279.4mm !important;
         height: 215.9mm !important;
         max-width: 100% !important;
         max-height: 100% !important;
-        page-break-after: avoid;
-        page-break-inside: avoid;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+        border-radius: 0 !important;
       }
     }
   `]

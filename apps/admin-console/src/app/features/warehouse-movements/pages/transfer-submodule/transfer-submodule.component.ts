@@ -21,6 +21,7 @@ import { PrintTransferLayoutComponent } from '../../components/print-layouts/pri
 import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
 import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+import { WarehouseLayoutService } from '../../../catalogs/services/warehouse-layout.service';
 
 export interface ForkliftOperatorOption {
   id: string;
@@ -56,6 +57,7 @@ export class TransferSubmoduleComponent implements OnInit {
   public readonly authState = inject(AuthState);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly layoutService = inject(WarehouseLayoutService);
 
   // -- ESTADO DEL WORKBENCH UNIFICADO (MASTER-DETAIL) --
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
@@ -1175,6 +1177,20 @@ export class TransferSubmoduleComponent implements OnInit {
           this.toast.success('Reubicación completada exitosamente.');
           this.resetToIdle();
         }
+
+        // Sincronizar de inmediato con el catálogo / croquis 2D del WMS
+        const moveCount = this.selectedTotalPallets() || selectedPallets.length || 1;
+        const firstPallet = selectedPallets[0];
+        const pSku = firstPallet?.description || (firstPallet as any)?.productName || 'Mercancía Reubicada';
+        const pLot = firstPallet?.lotNumber || (firstPallet as any)?.batchNumber || 'LOT-2026-TR';
+        this.layoutService.transferSimulatedInventory(
+          origin,
+          destination,
+          moveCount,
+          pSku,
+          pLot,
+          res?.folio || executedTransfer?.folio
+        );
 
         // Sincronizar datos frescos del Backend (ADR-007)
         this.movementsService.reloadTransfers();

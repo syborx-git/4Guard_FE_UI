@@ -2,6 +2,11 @@ import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+export interface PrintOptions {
+  orientation?: 'portrait' | 'landscape';
+  margin?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -11,7 +16,7 @@ export class PrintService {
    * Genera internamente el documento jsPDF para descarga física de archivo .pdf.
    * Utiliza html2canvas optimizado a 2x DPI.
    */
-  private async createPdfDocument(target: HTMLElement | string): Promise<{ pdf: jsPDF; canvas: HTMLCanvasElement } | null> {
+  private async createPdfDocument(target: HTMLElement | string, options?: PrintOptions): Promise<{ pdf: jsPDF; canvas: HTMLCanvasElement } | null> {
     let element: HTMLElement | null = null;
     if (typeof target === 'string') {
       element = document.querySelector<HTMLElement>(target);
@@ -31,16 +36,17 @@ export class PrintService {
       logging: false
     });
 
+    const isLandscape = options?.orientation === 'landscape' || (canvas.width > canvas.height * 1.15);
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
-      orientation: 'portrait',
+      orientation: isLandscape ? 'landscape' : 'portrait',
       unit: 'mm',
       format: 'letter'
     });
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 8; // Margen simétrico de 8mm
+    const margin = options?.margin !== undefined ? options.margin : (isLandscape ? 0 : 8);
     const maxUsableWidth = pageWidth - (margin * 2);
     const maxUsableHeight = pageHeight - (margin * 2);
 
@@ -54,7 +60,8 @@ export class PrintService {
         printWidth = printWidth * scaleFactor;
       }
       const xOffset = margin + (maxUsableWidth - printWidth) / 2;
-      pdf.addImage(imgData, 'PNG', xOffset, margin, printWidth, printHeight);
+      const yOffset = margin + (maxUsableHeight - printHeight) / 2;
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, printWidth, printHeight);
     } else {
       let heightLeft = printHeight;
       let position = margin;
@@ -78,10 +85,11 @@ export class PrintService {
    *
    * @param target Elemento DOM o selector CSS
    * @param filename Nombre del archivo (ej. "26510")
+   * @param options Opciones de orientación y márgenes
    */
-  public async downloadPdf(target: HTMLElement | string, filename: string): Promise<void> {
+  public async downloadPdf(target: HTMLElement | string, filename: string, options?: PrintOptions): Promise<void> {
     try {
-      const doc = await this.createPdfDocument(target);
+      const doc = await this.createPdfDocument(target, options);
       if (!doc) return;
 
       const cleanFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
@@ -98,8 +106,9 @@ export class PrintService {
    *
    * @param target Elemento DOM o selector CSS del contenedor a imprimir
    * @param documentTitle Título del documento en la ventana de impresión
+   * @param options Opciones de orientación
    */
-  public printElement(target: HTMLElement | string, documentTitle = 'Comprobante'): void {
+  public printElement(target: HTMLElement | string, documentTitle = 'Comprobante', options?: PrintOptions): void {
     try {
       let element: HTMLElement | null = null;
       if (typeof target === 'string') {
@@ -114,6 +123,9 @@ export class PrintService {
       }
 
       const cleanTitle = documentTitle.replace(/\.pdf$/i, '');
+      const isLandscape = options?.orientation === 'landscape' || (element.clientWidth > element.clientHeight * 1.15);
+      const pageOrientation = isLandscape ? 'landscape' : 'portrait';
+      const pageMargin = options?.margin !== undefined ? `${options.margin}mm` : (isLandscape ? '0' : '6mm');
 
       // 1. Recopilar todas las hojas de estilo del documento (Tailwind, fuentes, iconos)
       const styleSheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
@@ -151,8 +163,8 @@ export class PrintService {
             ${styleSheets}
             <style>
               @page {
-                size: letter portrait;
-                margin: 6mm;
+                size: letter ${pageOrientation};
+                margin: ${pageMargin};
               }
               @media print {
                 html, body {
@@ -170,6 +182,12 @@ export class PrintService {
                   padding: 0 !important;
                   max-width: 100% !important;
                   width: 100% !important;
+                }
+                .origin-top-left, .poster-scalable-wrapper, #gate-qr-poster-target {
+                  transform: none !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  margin: 0 auto !important;
                 }
               }
               body {

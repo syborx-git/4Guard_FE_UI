@@ -393,7 +393,7 @@
 
               <div class="wmap__hud-lp-footer">
                 <span class="wmap__hud-lp-footer-dot"></span>
-                <span>1,702 Posiciones Totales · En Vivo</span>
+                <span>{{ totalActivePositionsCount() | number }} Posiciones Totales · {{ totalOccupiedPositionsCount() | number }} Ocupadas</span>
               </div>
             }
           </div>
@@ -669,6 +669,40 @@
                       (mouseleave)="onSvgBayMouseLeave()"
                       (click)="onSvgBayClick(bay, $event)"
                     />
+                    @if (bay.sectionCode === 'SEC-RAMP') {
+                      <text
+                        [attr.x]="bay.x + bay.width / 2"
+                        [attr.y]="bay.y + bay.height / 2 + 1.8"
+                        font-family="monospace"
+                        font-size="4.5"
+                        font-weight="bold"
+                        [attr.fill]="bay.currentTarimas > 0 ? '#ffffff' : 'rgba(234, 195, 73, 0.75)'"
+                        text-anchor="middle"
+                        pointer-events="none"
+                      >{{ bay.code.replace('STAGING-R', 'R') }}</text>
+                      @if (bay.currentTarimas > 0) {
+                        <!-- Indicador de tarimas activas en andén -->
+                        <g pointer-events="none">
+                          <circle
+                            [attr.cx]="bay.x + bay.width - 1.5"
+                            [attr.cy]="bay.y + 1.5"
+                            r="2.2"
+                            fill="#a855f7"
+                            stroke="#ffffff"
+                            stroke-width="0.5"
+                          />
+                          <text
+                            [attr.x]="bay.x + bay.width / 2"
+                            [attr.y]="bay.y + bay.height + 4.5"
+                            font-family="monospace"
+                            font-size="3.8"
+                            font-weight="bold"
+                            fill="#d8b4fe"
+                            text-anchor="middle"
+                          >{{ bay.currentTarimas }}T</text>
+                        </g>
+                      }
+                    }
                   }
                 </g>
               }

@@ -1994,30 +1994,85 @@
      ══════════════════════════════════════════════════════════════════════════════ -->
 @if (showPosterModal()) {
   <div 
-    class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain animate-fade-in cursor-pointer"
+    class="print-modal-overlay fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fade-in"
     (click)="closePosterPrintModal()"
     aria-modal="true"
     role="dialog"
   >
     <!-- Contenedor Modal de Alta Definición (Landscape Optimizado) -->
     <div 
-      class="w-full max-w-[1180px] bg-slate-900 border border-slate-700/60 rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.7)] flex flex-col my-auto cursor-default shrink-0"
+      class="print-modal-card w-[96vw] max-w-[1160px] h-[86vh] max-h-[740px] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden text-slate-100 animate-scale-in my-auto"
       (click)="$event.stopPropagation()"
     >
-      <!-- Top Bar / Acciones de Impresión -->
-      <div class="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-800 gap-3 shrink-0">
+      <!-- Top Bar / Acciones de Impresión y Controles de Zoom -->
+      <div class="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap sm:flex-nowrap">
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-            <span class="material-symbols-outlined text-amber-400 text-base">print</span>
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400">
+            <span class="material-symbols-outlined text-lg">qr_code_2</span>
           </div>
           <div class="min-w-0">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wide truncate">
-              Cartel Oficial de Entrada — Formato Horizontal (Carta Paisaje 11" × 8.5")
-            </h3>
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-wide truncate">
+                Cartel Oficial de Entrada — Auto-Registro
+              </h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+                11" × 8.5" Paisaje
+              </span>
+            </div>
             <p class="text-[10px] text-slate-400 truncate mt-0.5">
-              Formato Apaisado F01-PO-CP-7.1.3-03-QR • Listo para enmicar en Caseta de Vigilancia (Clic fuera para cerrar)
+              Formato Apaisado F01-PO-CP-7.1.3-03-QR • Escaneable a 3 metros
             </p>
           </div>
+        </div>
+
+        <!-- Controles Centrales de Zoom y Escala Responsiva -->
+        <div class="flex items-center gap-1.5 bg-slate-950/70 border border-slate-800 px-2 py-1 rounded-xl shrink-0">
+          <button
+            type="button"
+            (click)="zoomOutPoster()"
+            class="w-7 h-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            title="Alejar (-)"
+            aria-label="Alejar"
+          >
+            <span class="material-symbols-outlined text-base">remove</span>
+          </button>
+
+          <span class="text-[11px] font-mono font-bold text-slate-200 min-w-[42px] text-center select-none">
+            {{ posterZoomPercent() }}
+          </span>
+
+          <button
+            type="button"
+            (click)="zoomInPoster()"
+            class="w-7 h-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            title="Acercar (+)"
+            aria-label="Acercar"
+          >
+            <span class="material-symbols-outlined text-base">add</span>
+          </button>
+
+          <div class="w-px h-4 bg-slate-800 mx-0.5"></div>
+
+          <button
+            type="button"
+            (click)="toggleFitToScreen()"
+            [ngClass]="isFitToScreen() ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'"
+            class="text-[10px] font-semibold px-2 py-1 rounded-lg border flex items-center gap-1 transition-colors cursor-pointer"
+            title="Ajustar automáticamente al tamaño de la pantalla"
+          >
+            <span class="material-symbols-outlined text-sm">fit_screen</span>
+            <span class="hidden md:inline">Ajustar</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="resetPosterZoom()"
+            [ngClass]="(!isFitToScreen() && posterZoom() === 1) ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'"
+            class="text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors cursor-pointer"
+            title="Ver al 100% de tamaño físico"
+          >
+            100%
+          </button>
         </div>
 
         <!-- Action Buttons -->
@@ -2053,9 +2108,27 @@
       </div>
 
       <!-- Lienzo con el Cartel Centrado en Hoja Carta Horizontal -->
-      <div class="flex-1 overflow-auto overscroll-contain bg-[#0b0f1a] p-4 sm:p-8 flex justify-center items-center min-h-[400px]">
-        <div id="gate-qr-poster-target" class="flex justify-center items-center">
-          <fg-print-gate-qr-poster-layout [data]="posterPrintData()"></fg-print-gate-qr-poster-layout>
+      <div 
+        id="poster-canvas-container" 
+        class="flex-1 min-h-0 overflow-auto bg-[#070b14] p-3 sm:p-5 flex items-center justify-center relative select-none"
+      >
+        <!-- Envoltorio escalado responsivo centrado -->
+        <div 
+          class="poster-scalable-wrapper flex items-center justify-center m-auto transition-all duration-150 ease-out"
+          [style.width.px]="1056 * posterZoom()"
+          [style.height.px]="816 * posterZoom()"
+          style="flex-shrink: 0;"
+        >
+          <div 
+            id="gate-qr-poster-target" 
+            class="origin-center transition-transform duration-150 ease-out flex items-center justify-center"
+            [style.width.px]="1056"
+            [style.height.px]="816"
+            [style.transform]="'scale(' + posterZoom() + ')'"
+            style="flex-shrink: 0;"
+          >
+            <fg-print-gate-qr-poster-layout [data]="posterPrintData()"></fg-print-gate-qr-poster-layout>
+          </div>
         </div>
       </div>
 
@@ -2063,10 +2136,10 @@
       <div class="px-4 py-2 bg-slate-900 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-1.5">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          <span>Vigencia: <strong>{{ posterPrintData().periodLabel }}</strong> • Sucursal: <strong>{{ posterPrintData().branchName }}</strong></span>
+          <span>Vigencia: <strong>{{ posterPrintData().periodLabel }}</strong> • Sucursal: <strong>{{ posterPrintData().branchName }}</strong> ({{ posterPrintData().branchCode }})</span>
         </div>
         <div class="flex items-center gap-3">
-          <span class="text-[9px] text-slate-400">Presione <strong>✕</strong> o haga clic fuera para volver a Caseta</span>
+          <span class="text-[9px] text-slate-400">Clic fuera o tecla <strong>Esc</strong> para volver</span>
           <span class="font-mono text-slate-500 text-[9px]">4GUARD WMS • SEGURIDAD PATRIMONIAL</span>
         </div>
       </div>
