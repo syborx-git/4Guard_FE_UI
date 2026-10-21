@@ -173,7 +173,9 @@ export class RfNotificationService {
     try {
       const stored = localStorage.getItem('4g_rf_sound_muted');
       if (stored !== null) {
-        this.isSoundMuted.set(stored === 'true');
+        const isMuted = stored === 'true';
+        this.isSoundMuted.set(isMuted);
+        this.audioFeedback.setMuted(isMuted);
       }
     } catch (_) {}
   }
@@ -181,15 +183,14 @@ export class RfNotificationService {
   public toggleSound(): void {
     const next = !this.isSoundMuted();
     this.isSoundMuted.set(next);
-    try {
-      localStorage.setItem('4g_rf_sound_muted', String(next));
-    } catch (_) {}
+    this.audioFeedback.setMuted(next);
     if (!next) {
       this.playFriendlyArrivalChime();
     }
   }
 
   public playFriendlyArrivalChime(): void {
+    if (this.isSoundMuted()) return;
     this.audioFeedback.playFriendlyArrivalChime(1.0);
   }
 

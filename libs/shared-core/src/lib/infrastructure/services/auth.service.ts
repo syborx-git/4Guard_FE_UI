@@ -94,7 +94,7 @@ export class AuthService {
           role,
           organizationId: rawUser?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
           branchId: rawUser?.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
-          branchName: rawUser?.branchName || rawUser?.organizationName || '4GUARD LOGISTICS',
+          branchName: rawUser?.branchName || (rawUser?.branchId === 'b73f0907-9fa5-4bdf-87db-2eb5e7683936' ? 'CENTRO DE DISTRIBUCION CDMX' : null) || 'CENTRO DE DISTRIBUCION CDMX',
           organizationName: rawUser?.organizationName || '4GUARD LOGISTICS CORP',
           active: true,
           createdAt: new Date().toISOString(),
@@ -221,9 +221,9 @@ export class AuthService {
       [UserRole.OPERATIONS_SUPERVISOR]:  'Ing. Héctor Salinas (Supervisor Operaciones)',
       [UserRole.CONTROL_DESK]:           'Lic. Patricia Gómez (Mesa de Control)',
       [UserRole.SHIFT_LEADER]:           'Ricardo Peña (Líder de Turno)',
-      [UserRole.WAREHOUSE_OPERATOR]:     'Roberto Sánchez (Montacarguista)',
+      [UserRole.WAREHOUSE_OPERATOR]:     'Oficial Montacarguista',
       [UserRole.QM_INSPECTOR]:           'Dra. Elena Ramos (Inspector de Calidad)',
-      [UserRole.SECURITY_GUARD]:         'Carlos Mendoza (Guardia de Seguridad)',
+      [UserRole.SECURITY_GUARD]:         'Oficial de Turno Caseta',
     };
 
     const updatedUser: User = {
@@ -231,8 +231,8 @@ export class AuthService {
       fullName: customName || roleNames[role] || 'Usuario Operativo',
       email: `${role.toLowerCase().replace('role_', '')}@4guard.mx`,
       role,
-      branchId: 'BR-MTY-01',
-      branchName: 'CEDIS Central Monterrey',
+      branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+      branchName: 'CENTRO DE DISTRIBUCION CDMX',
       active: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -271,10 +271,13 @@ export class AuthService {
   }
 
   private clearSession(): void {
-    // 1. Limpiar JWTs del LocalStorage
+    // 1. Limpiar JWTs y buffers residuales del LocalStorage
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem('4guard_backend_db');
+    localStorage.removeItem('4guard_active_mission');
+    localStorage.removeItem('4guard_missions_buffer');
 
     // 2. Limpiar SessionStorage por completo (previene persistencia en pestaña)
     sessionStorage.clear();

@@ -10,6 +10,9 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthState, SyncState, UserRole } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
+import { ForkliftMissionService } from '../../../core/services/forklift-mission.service';
+import { RfNotificationService } from '../../../core/services/rf-notification.service';
+import { HardwareMonitorService } from '../../../core/services/hardware-monitor.service';
 
 export interface RfOperationalModule {
   id: string;
@@ -57,14 +60,14 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
     priorityTag: 'Nivel 4G: Máxima Prioridad',
     leaseTag: 'Arrendamiento Activo',
     activeTask: {
-      folio: 'MIS-INB-2026-081',
-      statusBadge: 'En Progreso',
-      title: 'Descarga Inbound • Tarima 1 de 6 • Rampa 03',
-      subtitle: 'Asignado a: Roberto Sánchez • 8 min SLA restante',
-      operatorName: 'Roberto Sánchez',
-      elapsedMinutes: 4,
-      icon: 'forklift',
-      actionLabel: 'REANUDAR TAREA',
+      folio: 'SIN TAREA ACTIVA',
+      statusBadge: 'Al Día',
+      title: 'Cola de Trabajo Despejada',
+      subtitle: 'Sin maniobras asignadas en este momento',
+      operatorName: 'Operador',
+      elapsedMinutes: 0,
+      icon: 'task_alt',
+      actionLabel: 'VER COCKPIT',
       route: '/cockpit',
       bannerTheme: 'inbound',
     },
@@ -264,10 +267,13 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
   styleUrl: './task-menu.component.css',
 })
 export class TaskMenuComponent {
-  protected readonly authState    = inject(AuthState);
-  protected readonly syncState    = inject(SyncState);
-  protected readonly audioService = inject(AudioFeedbackService);
-  private readonly router         = inject(Router);
+  protected readonly authState      = inject(AuthState);
+  protected readonly syncState      = inject(SyncState);
+  protected readonly audioService   = inject(AudioFeedbackService);
+  protected readonly missionService = inject(ForkliftMissionService);
+  protected readonly notifService   = inject(RfNotificationService);
+  protected readonly hardwareMonitor = inject(HardwareMonitorService);
+  private readonly router           = inject(Router);
 
   // ─── Modal de Reportar Incidencia ────────────────────────────────────────────
   protected readonly showIncidentModal = signal(false);
@@ -279,7 +285,7 @@ export class TaskMenuComponent {
       icon: 'forklift',
       title: 'Cockpit Montacarguista (Unificado)',
       description: 'Gestión integral de movimientos: Descargas Inbound, Reubicaciones Putaway y Cargas de Salida en cola FIFO dinámica.',
-      badgeText: '5 en Cola (2 Urgentes)',
+      badgeText: '0 en Cola • Al día',
       badgeType: 'amber',
       actionLabel: 'Abrir Cockpit',
       route: '/cockpit',
@@ -289,7 +295,7 @@ export class TaskMenuComponent {
       icon: 'local_police',
       title: 'Seguridad & Caseta de Vigilancia',
       description: 'Control de accesos de transporte, captura de placas, fotos de sellos y liberación de patio con checklist F01.',
-      badgeText: '4 en Patio',
+      badgeText: 'Patio en Línea',
       badgeType: 'gold',
       actionLabel: 'Acceso Caseta',
       route: '/security',
@@ -310,7 +316,7 @@ export class TaskMenuComponent {
       icon: 'rv_hookup',
       title: 'Patio & Andenes Activos',
       description: 'Monitoreo de tiempos de estancia en patio, semáforo SLA de permanencia y asignación de rampas en vivo.',
-      badgeText: '4 en Patio (1 Alerta)',
+      badgeText: 'Patio Activo',
       badgeType: 'gold',
       actionLabel: 'Monitorear Patio',
       route: '/security?tab=IN_YARD',
@@ -320,7 +326,7 @@ export class TaskMenuComponent {
       icon: 'output',
       title: 'Salida & Check-Out',
       description: 'Cotejo final de sellos de seguridad, validación de documentación y liberación oficial de transporte.',
-      badgeText: '1 Listo para Salida',
+      badgeText: '0 Pendientes',
       badgeType: 'emerald',
       actionLabel: 'Autorizar Salida',
       route: '/security?tab=CHECKOUT',
@@ -340,7 +346,7 @@ export class TaskMenuComponent {
       icon: 'verified_user',
       title: 'Calidad & Cuarentena QM',
       description: 'Inspección técnica, reporte de empaque dañado, retenciones y liberación de producto por supervisor.',
-      badgeText: '2 en Cuarentena',
+      badgeText: 'Control QM',
       badgeType: 'rose',
       actionLabel: 'Ver Calidad',
       route: '/quality',
@@ -377,13 +383,120 @@ export class TaskMenuComponent {
     return ROLE_PROFILES[role] || ROLE_PROFILES[UserRole.WAREHOUSE_OPERATOR];
   });
 
+  /** Tarea activa conectada 100% en vivo a la Base de Datos y al buffer de montacargas */
   protected readonly activeTask = computed<ActiveTaskSummary>(() => {
+    const role = this.currentRole();
+
+    // 1. Rol Montacarguista / Almacén: reflejar la misión real en curso o cola despejada
+    if (
+      role === UserRole.WAREHOUSE_OPERATOR ||
+      role === UserRole.SHIFT_LEADER ||
+      role === UserRole.ADMIN ||
+      role === UserRole.CONTROL_DESK
+    ) {
+      const active = this.missionService.activeMission();
+      if (active) {
+        const palletCount = (active.pallets?.length || 0) + 1;
+        const totalExpected = active.totalExpectedPallets || 24;
+        const statusLabel = active.status === 'PARTIAL_DISCHARGED'
+          ? 'Descarga Parcial'
+          : (active.status === 'ACTIVE_PICK' || active.status === 'ACTIVE_DROP' ? 'En Progreso' : 'En Cola FIFO');
+
+        return {
+          folio: active.folio,
+          statusBadge: statusLabel,
+          title: `${active.typeLabel} • Tarima ${palletCount} de ${totalExpected} • ${active.originLocation}`,
+          subtitle: `Asignado a: ${this.authState.userFullName() || 'Montacarguista'} • ${active.slaCountdownMinutes} min SLA restante`,
+          operatorName: this.authState.userFullName() || 'Montacarguista',
+          elapsedMinutes: 5,
+          icon: 'forklift',
+          actionLabel: 'REANUDAR TAREA',
+          route: '/cockpit',
+          bannerTheme: 'inbound',
+        };
+      }
+
+      // Si no hay misiones pendientes en la base de datos ni en el buffer
+      return {
+        folio: 'ALMACÉN AL DÍA',
+        statusBadge: 'Al Día',
+        title: 'Cola de Trabajo Despejada • Sin Maniobras Pendientes',
+        subtitle: 'Esperando asignación de tráilers en andén desde Caseta de Seguridad.',
+        operatorName: this.authState.userFullName() || 'Montacarguista',
+        elapsedMinutes: 0,
+        icon: 'task_alt',
+        actionLabel: 'ABRIR COCKPIT',
+        route: '/cockpit',
+        bannerTheme: 'inbound',
+      };
+    }
+
+    // 2. Rol Guardia de Caseta: reflejar pases reales recibidos
+    if (role === UserRole.SECURITY_GUARD) {
+      const passes = this.notifService.pendingDriverPasses();
+      if (passes.length > 0) {
+        const first = passes[0];
+        return {
+          folio: first.token || first.documentNumber || 'QR-CASETA',
+          statusBadge: 'Pase Chofer Recibido',
+          title: `Chofer en Caseta: ${first.driverName} • ${first.tractorPlates}`,
+          subtitle: `Línea: ${first.carrierName} • Remisión: ${first.documentNumber || 'S/N'}`,
+          operatorName: first.driverName,
+          elapsedMinutes: 1,
+          icon: 'local_police',
+          actionLabel: 'CARGAR EN CASETA',
+          route: '/security?tab=REGISTRATION',
+          bannerTheme: 'security',
+        };
+      }
+    }
+
+    // Respaldo para otros roles
     return this.currentProfile().activeTask;
   });
 
   protected readonly visibleModules = computed<RfOperationalModule[]>(() => {
     const allowed = this.currentProfile().allowedModuleIds;
-    return this.allModules.filter(m => allowed.includes(m.id));
+    const missionCounts = this.missionService.counts();
+    const qrPassesCount = this.notifService.pendingDriverPassesCount();
+    const readyExitCount = this.notifService.readyForExitCount();
+
+    return this.allModules
+      .filter(m => allowed.includes(m.id))
+      .map(m => {
+        if (m.id === 'mod-cockpit') {
+          const all = missionCounts.all;
+          const urgent = missionCounts.urgent;
+          return {
+            ...m,
+            badgeText: all === 0 ? '0 en Cola • Al día' : `${all} en Cola (${urgent} Urgentes)`,
+            badgeType: all > 0 ? (urgent > 0 ? 'amber' : 'emerald') : 'emerald',
+          };
+        }
+        if (m.id === 'mod-sec-qr') {
+          return {
+            ...m,
+            badgeText: qrPassesCount > 0 ? `${qrPassesCount} Choferes QR` : 'Sin pases en espera',
+            badgeType: qrPassesCount > 0 ? 'sky' : 'emerald',
+          };
+        }
+        if (m.id === 'mod-sec-checkout') {
+          return {
+            ...m,
+            badgeText: readyExitCount > 0 ? `${readyExitCount} Listos para Salida` : '0 pendientes',
+            badgeType: readyExitCount > 0 ? 'emerald' : 'sky',
+          };
+        }
+        if (m.id === 'mod-print') {
+          const connected = this.hardwareMonitor.isPrinterConnected();
+          return {
+            ...m,
+            badgeText: connected ? 'Zebra ZT411 OK' : 'Zebra Desconectada',
+            badgeType: connected ? 'emerald' : 'rose',
+          };
+        }
+        return m;
+      });
   });
 
   // ─── Métodos de Interacción ─────────────────────────────────────────────────

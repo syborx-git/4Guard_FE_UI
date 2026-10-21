@@ -83,6 +83,13 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     { value: 'THIRD_PARTY', label: 'Terceros (External Owner)', icon: 'partner_exchange' },
   ];
 
+  // ── Estado: KPIs Comprimidos / Colapsables ───────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ── Computed KPIs ────────────────────────────────────────
   protected readonly totalOrgs = computed(() => this.orgService.organizations().length);
   protected readonly kpiActive = computed(() => this.orgService.organizations().filter(o => o.status === 'ACTIVE').length);

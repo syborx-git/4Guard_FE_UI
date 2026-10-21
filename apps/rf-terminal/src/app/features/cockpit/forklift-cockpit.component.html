@@ -41,6 +41,22 @@
 
     <!-- Telemetría de Operador & Acciones Rápidas -->
     <div class="topbar-right">
+      <!-- Telemetría de Base de Datos / Buffer Offline -->
+      <div 
+        class="telemetry-chip"
+        [ngClass]="isBackendConnected() ? 'lease-chip' : 'bg-amber-500/10 text-amber-500 border border-amber-500/30'"
+        [title]="isBackendConnected() ? 'Conectado a Base de Datos Central' : 'Operando con Buffer Local Offline'">
+        <span class="material-symbols-outlined text-lg" [ngClass]="isBackendConnected() ? 'text-emerald-500' : 'text-amber-500'">
+          {{ isBackendConnected() ? 'cloud_done' : 'cloud_off' }}
+        </span>
+        <div class="telemetry-text">
+          <span class="telemetry-label">BD WMS</span>
+          <span class="telemetry-val text-xs font-semibold">
+            {{ isBackendConnected() ? 'En Línea' : 'Buffer Local' }}
+          </span>
+        </div>
+      </div>
+
       <div class="telemetry-chip lease-chip" title="Operador Asignado">
         <span class="material-symbols-outlined text-emerald-500 text-lg">verified_user</span>
         <div class="telemetry-text">
@@ -51,11 +67,12 @@
 
       <button
         type="button"
-        (click)="resetDemo()"
+        (click)="refreshMissions()"
+        [disabled]="isSyncing()"
         class="btn-reset-demo"
-        title="Reiniciar misiones de demostración">
-        <span class="material-symbols-outlined text-lg">restart_alt</span>
-        <span class="hidden md:inline">Reiniciar Demo</span>
+        title="Sincronizar misiones con la Base de Datos">
+        <span class="material-symbols-outlined text-lg" [class.animate-spin]="isSyncing()">sync</span>
+        <span class="hidden md:inline">{{ isSyncing() ? 'Sincronizando...' : 'Sincronizar BD' }}</span>
       </button>
     </div>
   </header>
@@ -388,10 +405,11 @@
       </p>
       <button
         type="button"
-        (click)="resetDemo()"
+        (click)="refreshMissions()"
+        [disabled]="isSyncing()"
         class="mt-4 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 mx-auto shadow-lg">
-        <span class="material-symbols-outlined">restart_alt</span>
-        <span>Cargar Misiones Demo</span>
+        <span class="material-symbols-outlined" [class.animate-spin]="isSyncing()">sync</span>
+        <span>{{ isSyncing() ? 'Consultando Base de Datos...' : 'Actualizar Misiones de Almacén' }}</span>
       </button>
     </div>
   }

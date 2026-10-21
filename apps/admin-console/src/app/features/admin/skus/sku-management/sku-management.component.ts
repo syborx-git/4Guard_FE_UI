@@ -161,6 +161,13 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
     return Math.min(this.currentPage() * this.pageSize(), this.filteredSkus().length);
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly totalSkus    = computed(() => this.skuService.totalCount());

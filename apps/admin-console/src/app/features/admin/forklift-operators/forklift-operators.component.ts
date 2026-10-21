@@ -17,7 +17,6 @@ import {
   CreateForkliftOperatorRequest,
   UpdateForkliftOperatorRequest,
 } from '../models/forklift-operator.models';
-import { ShiftService } from '../shifts/services/shift.service';
 
 /** Default organization ID — resolved from the active user session context. */
 const DEFAULT_ORG_ID = 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
@@ -33,7 +32,6 @@ export type FormMode = 'idle' | 'create' | 'edit';
 })
 export class ForkliftOperatorsComponent implements OnInit {
   protected readonly forkliftService = inject(ForkliftOperatorAdminService);
-  protected readonly shiftService    = inject(ShiftService);
   private readonly fb                = inject(FormBuilder);
 
   @ViewChild('formSection') formSection!: ElementRef<HTMLElement>;
@@ -62,6 +60,13 @@ export class ForkliftOperatorsComponent implements OnInit {
   protected readonly auditEntries  = signal<any[]>([]);
   protected readonly isLoadingAudit = signal<boolean>(false);
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── KPI Computeds ──────────────────────────────────────────────────────────
   protected readonly totalOperators       = computed(() => this.forkliftService.operators().length);
   protected readonly activeOperatorsCount = computed(() => this.forkliftService.activeOperators().length);
@@ -73,24 +78,6 @@ export class ForkliftOperatorsComponent implements OnInit {
       (op) => op.licenseStatus === 'POR_VENCER' || op.licenseStatus === 'VENCIDA'
     ).length
   );
-
-  // ─── Turnos del Catálogo Maestro ────────────────────────────────────────────
-  protected readonly availableShifts = computed(() => {
-    const catalogShifts = this.shiftService.shifts();
-    if (catalogShifts && catalogShifts.length > 0) {
-      return catalogShifts.map((s) => ({
-        id: s.id,
-        name: s.name,
-        displayName: `${s.name} (${s.startTime?.substring(0, 5) || '06:00'} - ${s.endTime?.substring(0, 5) || '14:00'})`,
-      }));
-    }
-    // Fallback visual mientras el catálogo de turnos carga
-    return [
-      { id: 'shift-1', name: 'Turno 1 - Matutino',   displayName: 'Turno 1 - Matutino (06:00 - 14:00)' },
-      { id: 'shift-2', name: 'Turno 2 - Vespertino',  displayName: 'Turno 2 - Vespertino (14:00 - 22:00)' },
-      { id: 'shift-3', name: 'Turno 3 - Nocturno',    displayName: 'Turno 3 - Nocturno (22:00 - 06:00)' },
-    ];
-  });
 
   // ─── Operador Seleccionado ──────────────────────────────────────────────────
   protected readonly selectedOperator = computed(() => {
@@ -118,27 +105,27 @@ export class ForkliftOperatorsComponent implements OnInit {
     });
   });
 
+  // ─── Modal de Restablecer PIN / Contraseña ────────────────────────────────
+  protected readonly isResetPinModalOpen   = signal<boolean>(false);
+  protected readonly resetPinOperator       = signal<ForkliftOperator | null>(null);
+  protected readonly newPinValue            = signal<string>('1234');
+  protected readonly isSubmittingPin        = signal<boolean>(false);
+
   // ─── Formulario Reactivo ────────────────────────────────────────────────────
   protected readonly operatorForm = this.fb.group({
-    jobTitle:              ['', [Validators.maxLength(100)]],
     firstName:             ['', [Validators.required, Validators.minLength(2)]],
     lastNamePaternal:      ['', [Validators.required, Validators.minLength(2)]],
     lastNameMaternal:      ['', [Validators.required, Validators.minLength(2)]],
-    licenseNumberDc3:      ['', [Validators.required]],
-    licenseExpirationDate: ['', [Validators.required]],
-    shift:                 ['', [Validators.required]], // stores the shift UUID (shiftId)
+    licenseNumberDc3:      [''],
+    licenseExpirationDate: [''],
+    createAccess:          [true],
+    username:              [''],
+    pin:                   ['1234', [Validators.minLength(4)]],
   });
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    // Load shifts catalog from backend
-    try {
-      this.shiftService.loadShifts();
-    } catch (e) {
-      console.warn('Cargando turnos desde respaldo local:', e);
-    }
-
     this.startNewOperator();
     this.reloadOperators();
   }
@@ -231,16 +218,15 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   private populateForm(op: ForkliftOperator): void {
-    // Use shiftId for the form control; fall back to shiftId if available
-    const shiftValue = op.shiftId || op.shift || '';
     this.operatorForm.patchValue({
-      jobTitle:              op.jobTitle || '',
       firstName:             op.firstName,
       lastNamePaternal:      op.lastNamePaternal,
       lastNameMaternal:      op.lastNameMaternal,
-      licenseNumberDc3:      op.licenseNumberDc3,
-      licenseExpirationDate: op.licenseExpirationDate,
-      shift:                 shiftValue,
+      licenseNumberDc3:      op.licenseNumberDc3 || '',
+      licenseExpirationDate: op.licenseExpirationDate || '',
+      createAccess:          !!op.userId,
+      username:              op.username || '',
+      pin:                   '',
     });
   }
 
@@ -262,13 +248,12 @@ export class ForkliftOperatorsComponent implements OnInit {
       const request: UpdateForkliftOperatorRequest = {
         id:                    selectedId,
         organizationId:        currentOp?.organizationId || orgId,
-        jobTitle:              val.jobTitle || undefined,
+        jobTitle:              currentOp?.jobTitle || 'Montacarguista',
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
         lastNameMaternal:      val.lastNameMaternal!,
-        licenseNumberDc3:      val.licenseNumberDc3!,
-        licenseExpirationDate: val.licenseExpirationDate!,
-        shiftId:               val.shift || undefined,
+        licenseNumberDc3:      val.licenseNumberDc3?.trim() || undefined,
+        licenseExpirationDate: val.licenseExpirationDate || undefined,
         version:               currentOp?.version,
       };
 
@@ -288,13 +273,15 @@ export class ForkliftOperatorsComponent implements OnInit {
     } else {
       const request: CreateForkliftOperatorRequest = {
         organizationId:        orgId,
-        jobTitle:              val.jobTitle || undefined,
+        jobTitle:              'Montacarguista',
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
         lastNameMaternal:      val.lastNameMaternal!,
-        licenseNumberDc3:      val.licenseNumberDc3!,
-        licenseExpirationDate: val.licenseExpirationDate!,
-        shiftId:               val.shift || undefined,
+        licenseNumberDc3:      val.licenseNumberDc3?.trim() || undefined,
+        licenseExpirationDate: val.licenseExpirationDate || undefined,
+        createAccess:          val.createAccess ?? true,
+        username:              val.username?.trim() || undefined,
+        pin:                   val.pin?.trim() || '1234',
       };
 
       this.forkliftService.createOperator(request).subscribe({
@@ -325,7 +312,16 @@ export class ForkliftOperatorsComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.operatorForm.reset({ shift: '', jobTitle: '' });
+    this.operatorForm.reset({
+      firstName: '',
+      lastNamePaternal: '',
+      lastNameMaternal: '',
+      licenseNumberDc3: '',
+      licenseExpirationDate: '',
+      createAccess: true,
+      username: '',
+      pin: '1234',
+    });
   }
 
   // ─── Toggle Estatus ─────────────────────────────────────────────────────────
@@ -380,6 +376,52 @@ export class ForkliftOperatorsComponent implements OnInit {
         this.showToast('error', msg);
         this.closeDeleteModal();
       },
+    });
+  }
+
+  // ─── Modal de Restablecer PIN / Contraseña ────────────────────────────────
+
+  openResetPinModal(op: ForkliftOperator, event?: Event): void {
+    event?.stopPropagation();
+    this.resetPinOperator.set(op);
+    this.newPinValue.set('1234');
+    this.isResetPinModalOpen.set(true);
+  }
+
+  closeResetPinModal(): void {
+    this.isResetPinModalOpen.set(false);
+    this.resetPinOperator.set(null);
+  }
+
+  onPinInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.newPinValue.set(input.value);
+  }
+
+  submitResetPin(): void {
+    const op = this.resetPinOperator();
+    const pin = this.newPinValue().trim();
+    if (!op) return;
+    if (!pin || pin.length < 4) {
+      this.showToast('error', 'El PIN debe tener al menos 4 caracteres.');
+      return;
+    }
+
+    this.isSubmittingPin.set(true);
+    this.forkliftService.resetPin(op.id, pin).subscribe({
+      next: (updated) => {
+        this.isSubmittingPin.set(false);
+        this.closeResetPinModal();
+        this.showToast('success', `PIN restablecido exitosamente para ${updated.fullName} (@${updated.username}).`);
+        this.selectedOperatorId.set(updated.id);
+        this.populateForm(updated);
+        this.loadAuditLogs(updated.id);
+      },
+      error: (err) => {
+        this.isSubmittingPin.set(false);
+        const msg = err?.error?.message || 'Error al restablecer el PIN. Intente de nuevo.';
+        this.showToast('error', msg);
+      }
     });
   }
 

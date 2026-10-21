@@ -51,74 +51,124 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="supplier-kpi-grid" aria-label="Resumen de proveedores">
-
-      <!-- Total -->
-      <div class="supplier-kpi-card supplier-kpi-card--total">
-        <div class="supplier-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">storefront</span>
-        </div>
-        <div class="supplier-kpi-card__body">
-          @if (isLoading) {
-            <div class="supplier-kpi-card__skeleton"></div>
-          } @else {
-            <span class="supplier-kpi-card__value">{{ totalCount() }}</span>
-          }
-          <span class="supplier-kpi-card__label">TOTAL</span>
-        </div>
-        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Proveedores" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas del Catálogo de Proveedores</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activos -->
-      <div class="supplier-kpi-card supplier-kpi-card--active">
-        <div class="supplier-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="supplier-kpi-card__body">
-          @if (isLoading) {
-            <div class="supplier-kpi-card__skeleton"></div>
-          } @else {
-            <span class="supplier-kpi-card__value">{{ activeCount() }}</span>
-          }
-          <span class="supplier-kpi-card__label">ACTIVOS</span>
-        </div>
-        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total:</span>
+              <strong class="wms-kpi-summary-value">{{ totalCount() }}</strong>
+            </div>
 
-      <!-- No disponibles -->
-      <div class="supplier-kpi-card supplier-kpi-card--unavailable">
-        <div class="supplier-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="supplier-kpi-card__body">
-          @if (isLoading) {
-            <div class="supplier-kpi-card__skeleton"></div>
-          } @else {
-            <span class="supplier-kpi-card__value">{{ unavailableCount() }}</span>
-          }
-          <span class="supplier-kpi-card__label">NO DISPONIBLES</span>
-        </div>
-        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--unavailable"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ activeCount() }}</strong>
+            </div>
 
-      <!-- Preferentes -->
-      <div class="supplier-kpi-card supplier-kpi-card--preferred">
-        <div class="supplier-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">star</span>
-        </div>
-        <div class="supplier-kpi-card__body">
-          @if (isLoading) {
-            <div class="supplier-kpi-card__skeleton"></div>
-          } @else {
-            <span class="supplier-kpi-card__value">{{ preferredCount() }}</span>
-          }
-          <span class="supplier-kpi-card__label">PREFERENTES</span>
-        </div>
-        <div class="supplier-kpi-card__bar supplier-kpi-card__bar--preferred"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">No Disponibles:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ unavailableCount() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--preferred"></span>
+              <span class="wms-kpi-summary-label">Preferentes:</span>
+              <strong class="wms-kpi-summary-value text-purple-600 dark:text-purple-400">{{ preferredCount() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="supplier-kpi-grid animate-fade-in" aria-label="Resumen de proveedores">
+
+          <!-- Total -->
+          <div class="supplier-kpi-card supplier-kpi-card--total">
+            <div class="supplier-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">storefront</span>
+            </div>
+            <div class="supplier-kpi-card__body">
+              @if (isLoading) {
+                <div class="supplier-kpi-card__skeleton"></div>
+              } @else {
+                <span class="supplier-kpi-card__value">{{ totalCount() }}</span>
+              }
+              <span class="supplier-kpi-card__label">TOTAL</span>
+            </div>
+            <div class="supplier-kpi-card__bar supplier-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="supplier-kpi-card supplier-kpi-card--active">
+            <div class="supplier-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="supplier-kpi-card__body">
+              @if (isLoading) {
+                <div class="supplier-kpi-card__skeleton"></div>
+              } @else {
+                <span class="supplier-kpi-card__value">{{ activeCount() }}</span>
+              }
+              <span class="supplier-kpi-card__label">ACTIVOS</span>
+            </div>
+            <div class="supplier-kpi-card__bar supplier-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- No disponibles -->
+          <div class="supplier-kpi-card supplier-kpi-card--unavailable">
+            <div class="supplier-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="supplier-kpi-card__body">
+              @if (isLoading) {
+                <div class="supplier-kpi-card__skeleton"></div>
+              } @else {
+                <span class="supplier-kpi-card__value">{{ unavailableCount() }}</span>
+              }
+              <span class="supplier-kpi-card__label">NO DISPONIBLES</span>
+            </div>
+            <div class="supplier-kpi-card__bar supplier-kpi-card__bar--unavailable"></div>
+          </div>
+
+          <!-- Preferentes -->
+          <div class="supplier-kpi-card supplier-kpi-card--preferred">
+            <div class="supplier-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">star</span>
+            </div>
+            <div class="supplier-kpi-card__body">
+              @if (isLoading) {
+                <div class="supplier-kpi-card__skeleton"></div>
+              } @else {
+                <span class="supplier-kpi-card__value">{{ preferredCount() }}</span>
+              }
+              <span class="supplier-kpi-card__label">PREFERENTES</span>
+            </div>
+            <div class="supplier-kpi-card__bar supplier-kpi-card__bar--preferred"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════

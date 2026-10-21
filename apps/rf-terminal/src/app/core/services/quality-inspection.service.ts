@@ -75,7 +75,7 @@ const INITIAL_QM_ITEMS: QualityInspectionItem[] = [
     severity: 'CRITICAL',
     severityLabel: 'Crítica • Bloqueo Inmediato',
     retentionReason: 'Pallet inclinado con riesgo de colapso y 2 cajas inferiores con deformación por impacto.',
-    reportedBy: 'Montacarguista Crown #07 (Roberto Sánchez)',
+    reportedBy: 'Montacarguista Crown #07 (Oficial Montacarguista)',
     reportedAt: '14:24',
     photoUrl: 'assets/mock-damaged-pallet.jpg',
     decision: 'PENDING_INSPECTION',

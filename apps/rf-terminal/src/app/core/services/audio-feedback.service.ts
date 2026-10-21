@@ -5,15 +5,35 @@
  * y reproduce archivos .mpeg/.mp3 con amplificación de ganancia para entornos ruidosos de almacén.
  */
 
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class AudioFeedbackService {
   private audioCtx: AudioContext | null = null;
   private cachedBuffer: AudioBuffer | null = null;
 
+  /** Estado global de silencio acústico sincronizado con localStorage */
+  public readonly isMuted = signal<boolean>(
+    typeof localStorage !== 'undefined' && localStorage.getItem('4g_rf_sound_muted') === 'true'
+  );
+
   constructor() {
     this.initAudioUnlock();
+  }
+
+  public setMuted(muted: boolean): void {
+    this.isMuted.set(muted);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('4g_rf_sound_muted', String(muted));
+      }
+    } catch (_) {}
+  }
+
+  public toggleMute(): boolean {
+    const next = !this.isMuted();
+    this.setMuted(next);
+    return next;
   }
 
   private getAudioContext(): AudioContext | null {
@@ -39,6 +59,8 @@ export class AudioFeedbackService {
    * Reproduce un archivo de audio personalizado con amplificación de ganancia (+60% de volumen).
    */
   async playAudioFile(filename = 'notification.mpeg', volume = 1.0, onFallback?: () => void): Promise<void> {
+    if (this.isMuted()) return;
+
     const audioPath = filename.startsWith('/') || filename.startsWith('assets/')
       ? filename
       : `/assets/sounds/${filename}`;
@@ -119,6 +141,7 @@ export class AudioFeedbackService {
    */
   playFriendlyArrivalChime(volume = 1.0): void {
     this.vibrate([40, 60, 40]);
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
 
@@ -175,6 +198,7 @@ export class AudioFeedbackService {
    */
   playSuccess(): void {
     this.vibrate([50]);
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
 
@@ -201,6 +225,7 @@ export class AudioFeedbackService {
    */
   playError(): void {
     this.vibrate([100, 50, 100]);
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
 
@@ -228,6 +253,7 @@ export class AudioFeedbackService {
    */
   playWarning(): void {
     this.vibrate([150, 100, 150]);
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
 

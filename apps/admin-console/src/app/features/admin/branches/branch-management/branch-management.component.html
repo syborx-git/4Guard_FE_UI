@@ -51,58 +51,102 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="branches-kpi-grid" aria-label="Indicadores de sucursales">
-
-      <!-- Total -->
-      <div class="branches-kpi-card branches-kpi-card--total">
-        <div class="branches-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">domain</span>
-        </div>
-        <div class="branches-kpi-card__body">
-          @if (isLoading) {
-            <div class="branches-kpi-card__skeleton"></div>
-          } @else {
-            <span class="branches-kpi-card__value">{{ totalBranches() }}</span>
-          }
-          <span class="branches-kpi-card__label">Total Registradas</span>
-        </div>
-        <div class="branches-kpi-card__bar branches-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Sucursales" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Red de Sucursales</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activas -->
-      <div class="branches-kpi-card branches-kpi-card--active">
-        <div class="branches-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="branches-kpi-card__body">
-          @if (isLoading) {
-            <div class="branches-kpi-card__skeleton"></div>
-          } @else {
-            <span class="branches-kpi-card__value">{{ kpiActive() }}</span>
-          }
-          <span class="branches-kpi-card__label">Sucursales Activas</span>
-        </div>
-        <div class="branches-kpi-card__bar branches-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total Sucursales:</span>
+              <strong class="wms-kpi-summary-value">{{ totalBranches() }}</strong>
+            </div>
 
-      <!-- Inactivas -->
-      <div class="branches-kpi-card branches-kpi-card--inactive">
-        <div class="branches-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="branches-kpi-card__body">
-          @if (isLoading) {
-            <div class="branches-kpi-card__skeleton"></div>
-          } @else {
-            <span class="branches-kpi-card__value">{{ kpiInactive() }}</span>
-          }
-          <span class="branches-kpi-card__label">Sucursales Inactivas</span>
-        </div>
-        <div class="branches-kpi-card__bar branches-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activas:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiActive() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivas:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ kpiInactive() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="branches-kpi-grid animate-fade-in" aria-label="Indicadores de sucursales">
+
+          <!-- Total -->
+          <div class="branches-kpi-card branches-kpi-card--total">
+            <div class="branches-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">domain</span>
+            </div>
+            <div class="branches-kpi-card__body">
+              @if (isLoading) {
+                <div class="branches-kpi-card__skeleton"></div>
+              } @else {
+                <span class="branches-kpi-card__value">{{ totalBranches() }}</span>
+              }
+              <span class="branches-kpi-card__label">Total Registradas</span>
+            </div>
+            <div class="branches-kpi-card__bar branches-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activas -->
+          <div class="branches-kpi-card branches-kpi-card--active">
+            <div class="branches-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="branches-kpi-card__body">
+              @if (isLoading) {
+                <div class="branches-kpi-card__skeleton"></div>
+              } @else {
+                <span class="branches-kpi-card__value">{{ kpiActive() }}</span>
+              }
+              <span class="branches-kpi-card__label">Sucursales Activas</span>
+            </div>
+            <div class="branches-kpi-card__bar branches-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Inactivas -->
+          <div class="branches-kpi-card branches-kpi-card--inactive">
+            <div class="branches-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="branches-kpi-card__body">
+              @if (isLoading) {
+                <div class="branches-kpi-card__skeleton"></div>
+              } @else {
+                <span class="branches-kpi-card__value">{{ kpiInactive() }}</span>
+              }
+              <span class="branches-kpi-card__label">Sucursales Inactivas</span>
+            </div>
+            <div class="branches-kpi-card__bar branches-kpi-card__bar--inactive"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════

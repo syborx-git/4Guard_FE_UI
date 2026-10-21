@@ -51,74 +51,124 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="clients-kpi-grid" aria-label="Indicadores de clientes">
-
-      <!-- Total Clientes -->
-      <div class="clients-kpi-card clients-kpi-card--total">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">corporate_fare</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ totalClients() }}</span>
-          }
-          <span class="clients-kpi-card__label">Empresas Registradas</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Clientes" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Cartera de Clientes</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activos -->
-      <div class="clients-kpi-card clients-kpi-card--active">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ kpiActive() }}</span>
-          }
-          <span class="clients-kpi-card__label">Clientes Activos</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Empresas:</span>
+              <strong class="wms-kpi-summary-value">{{ totalClients() }}</strong>
+            </div>
 
-      <!-- Inactivos -->
-      <div class="clients-kpi-card clients-kpi-card--inactive">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ kpiInactive() }}</span>
-          }
-          <span class="clients-kpi-card__label">Clientes Inactivos</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiActive() }}</strong>
+            </div>
 
-      <!-- Total Destinos Físicos -->
-      <div class="clients-kpi-card clients-kpi-card--destinations">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">factory</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ totalDestinations() }}</span>
-          }
-          <span class="clients-kpi-card__label">Destinos / Bodegas</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--destinations"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivos:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ kpiInactive() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--destinations"></span>
+              <span class="wms-kpi-summary-label">Destinos / Bodegas:</span>
+              <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ totalDestinations() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="clients-kpi-grid animate-fade-in" aria-label="Indicadores de clientes">
+
+          <!-- Total Clientes -->
+          <div class="clients-kpi-card clients-kpi-card--total">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">corporate_fare</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ totalClients() }}</span>
+              }
+              <span class="clients-kpi-card__label">Empresas Registradas</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="clients-kpi-card clients-kpi-card--active">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ kpiActive() }}</span>
+              }
+              <span class="clients-kpi-card__label">Clientes Activos</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Inactivos -->
+          <div class="clients-kpi-card clients-kpi-card--inactive">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ kpiInactive() }}</span>
+              }
+              <span class="clients-kpi-card__label">Clientes Inactivos</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--inactive"></div>
+          </div>
+
+          <!-- Total Destinos Físicos -->
+          <div class="clients-kpi-card clients-kpi-card--destinations">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">factory</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ totalDestinations() }}</span>
+              }
+              <span class="clients-kpi-card__label">Destinos / Bodegas</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--destinations"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════

@@ -136,7 +136,7 @@ export class RfBlocksSubmoduleComponent {
   }
 
   submitBlock(): void {
-    const reporter = this.authState.userFullName() || 'Roberto Sánchez (Operador QM)';
+    const reporter = this.authState.userFullName() || 'Inspector de Calidad';
 
     this.qmState.createBlock({
       sku: this.formSku(),

@@ -146,10 +146,8 @@ export class AuthService {
         }
       }),
       catchError(error => {
-        // Solo expulsar si el token realmente ya expiró por fecha verificable
-        if (this.isTokenExpired()) {
-          this.clearSessionAndRedirect('session_expired');
-        }
+        // Si el refresh falla (401 o 403), el token ya no es válido -> limpiar de inmediato
+        this.clearSessionAndRedirect('session_expired');
         return throwError(() => error);
       })
     );
@@ -224,6 +222,8 @@ export class AuthService {
       .subscribe();
   }
 
+  private isRedirecting = false;
+
   /**
    * Limpia el almacenamiento de sesión e inicia redirección al login.
    */
@@ -237,9 +237,14 @@ export class AuthService {
     
     this.sessionStorageService.clearSession();
     
+    if (this.isRedirecting) return;
+
     if (!this.router.url.includes('/login') && !this.router.url.includes('/carrier-checkin') && !this.router.url.includes('/driver-checkin')) {
+      this.isRedirecting = true;
       const queryParams = reason ? { reason } : {};
-      this.router.navigate(['/login'], { queryParams });
+      this.router.navigate(['/login'], { queryParams }).finally(() => {
+        setTimeout(() => { this.isRedirecting = false; }, 1000);
+      });
     }
   }
 

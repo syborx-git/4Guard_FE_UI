@@ -132,6 +132,13 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly totalClients      = computed(() => this.clientService.totalCount());

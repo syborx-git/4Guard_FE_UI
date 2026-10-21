@@ -149,6 +149,13 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── KPIs computados ─────────────────────────────────────────────────────────
 
   protected readonly totalSections = computed(() => this.sectionService.sections().length);

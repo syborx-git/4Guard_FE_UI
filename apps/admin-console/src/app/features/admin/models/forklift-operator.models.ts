@@ -57,6 +57,12 @@ export interface ForkliftOperator {
 
   status: ForkliftOperatorStatus;
 
+  /** Datos de cuenta de acceso a Tableta RF */
+  userId?: string;
+  username?: string;
+  hasAccess?: boolean;
+  changePasswordRequired?: boolean;
+
   version?: number;
   createdBy?: string;
   updatedBy?: string;
@@ -77,9 +83,12 @@ export interface CreateForkliftOperatorRequest {
   firstName: string;
   lastNamePaternal: string;
   lastNameMaternal: string;
-  licenseNumberDc3: string;
-  licenseExpirationDate: string; // YYYY-MM-DD
+  licenseNumberDc3?: string;
+  licenseExpirationDate?: string; // YYYY-MM-DD
   shiftId?: string;
+  createAccess?: boolean;
+  username?: string;
+  pin?: string;
 }
 
 /** DTO para actualizar datos de un Montacarguista existente. */
@@ -91,9 +100,10 @@ export interface UpdateForkliftOperatorRequest {
   firstName: string;
   lastNamePaternal: string;
   lastNameMaternal: string;
-  licenseNumberDc3: string;
-  licenseExpirationDate: string; // YYYY-MM-DD
+  licenseNumberDc3?: string;
+  licenseExpirationDate?: string; // YYYY-MM-DD
   shiftId?: string;
+  resetPin?: string;
   version?: number;
 }
 
