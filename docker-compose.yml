@@ -1,0 +1,32 @@
+services:
+  4guard-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 4guard-frontend
+    restart: unless-stopped
+    ports:
+      # Puerto Host : Puerto Contenedor
+      # Se usan 8081 y 8082 para no chocar con puertos 80/443 de tu app de producción
+      - "8081:8080" # Consola Web Admin -> http://<TU_IP_HETZNER>:8081
+      - "8082:8081" # Terminal RF Tablet -> http://<TU_IP_HETZNER>:8082
+    
+    # ─────────────────────────────────────────────────────────────
+    # LÍMITES ESTRICTOS DE RECURSOS (Protege tu RAM de producción)
+    # Nginx en runtime consume solo ~15MB, el límite de 128MB garantiza
+    # que NUNCA afectará a las demás aplicaciones en tu servidor de 8GB.
+    # ─────────────────────────────────────────────────────────────
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          memory: 32M
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

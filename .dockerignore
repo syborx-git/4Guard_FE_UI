@@ -1,0 +1,19 @@
+# Ignorar dependencias locales y caches
+node_modules/
+.angular/
+dist/
+.git/
+.github/
+.vscode/
+.idea/
+
+# Documentos y pruebas e2e no necesarios en el build
+docs/
+e2e/
+playwright-report/
+test-results/
+*.md
+*.dxf
+.prettierrc.json
+.editorconfig
+playwright.config.ts
